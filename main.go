@@ -36,6 +36,16 @@ func main() {
 			r.Get("/projects", handlers.ListProjects)
 			r.Post("/projects", handlers.CreateProject)
 			r.Get("/projects/{id}", handlers.GetProject)
+
+			// New endpoints (stubs to be implemented)
+			r.Get("/buildings", handlers.ListBuildings)
+			r.Post("/buildings", handlers.CreateBuilding)
+			r.Get("/buildings/{id}", handlers.GetBuilding)
+			r.Put("/buildings/{id}", handlers.UpdateBuilding)
+			r.Get("/buildings/{id}/floors", handlers.ListFloors)
+			r.Post("/markup", handlers.SubmitMarkup)
+			r.Get("/logs/{building_id}", handlers.GetLogs)
+			r.Get("/me", handlers.Me)
 		})
 	})
 

@@ -2,8 +2,11 @@
 package db
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"arxline/models"
@@ -54,6 +57,7 @@ func Connect() {
 	sqlDB.SetConnMaxLifetime(5 * time.Minute) // Maximum lifetime of a connection
 
 	DB = db
+	models.DB = DB
 	log.Println("✅ Database connected successfully")
 }
 
@@ -97,4 +101,36 @@ func Close() {
 	} else {
 		log.Println("✅ Database connection closed successfully")
 	}
+}
+
+func ListMarkups(w http.ResponseWriter, r *http.Request) {
+	floorID := r.URL.Query().Get("floor_id")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	var total int64
+	query := DB.Model(&models.Markup{})
+	if floorID != "" {
+		query = query.Where("floor_id = ?", floorID)
+	}
+	query.Count(&total)
+
+	var markups []models.Markup
+	query.Offset(offset).Limit(pageSize).Find(&markups)
+
+	resp := map[string]interface{}{
+		"results":     markups,
+		"page":        page,
+		"page_size":   pageSize,
+		"total":       total,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	}
+	json.NewEncoder(w).Encode(resp)
 }

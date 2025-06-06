@@ -10,36 +10,43 @@ import (
 	"arxline/models"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/golang-jwt/jwt/v4"
 )
 
-func getUserID(r *http.Request) (uint, error) {
-	tokenStr := r.Header.Get("Authorization")[7:]
-	token, _ := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-		return []byte("your-secret"), nil
-	})
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		id := uint(claims["user_id"].(float64))
-		return id, nil
-	}
-	return 0, http.ErrNoCookie
-}
-
 func ListProjects(w http.ResponseWriter, r *http.Request) {
-	userID, err := getUserID(r)
+	user, err := GetUserFromRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	var total int64
+	query := db.DB.Model(&models.Project{}).Where("user_id = ?", user.ID)
+	query.Count(&total)
 
 	var projects []models.Project
-	db.DB.Where("user_id = ?", userID).Find(&projects)
-	json.NewEncoder(w).Encode(projects)
+	query.Offset(offset).Limit(pageSize).Find(&projects)
+
+	resp := map[string]interface{}{
+		"results":     projects,
+		"page":        page,
+		"page_size":   pageSize,
+		"total":       total,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 func CreateProject(w http.ResponseWriter, r *http.Request) {
-	userID, err := getUserID(r)
+	user, err := GetUserFromRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -47,13 +54,13 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 
 	var p models.Project
 	json.NewDecoder(r.Body).Decode(&p)
-	p.UserID = userID
+	p.UserID = user.ID
 	db.DB.Create(&p)
 	json.NewEncoder(w).Encode(p)
 }
 
 func GetProject(w http.ResponseWriter, r *http.Request) {
-	userID, err := getUserID(r)
+	user, err := GetUserFromRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -68,7 +75,7 @@ func GetProject(w http.ResponseWriter, r *http.Request) {
 
 	var p models.Project
 	db.DB.First(&p, id)
-	if p.UserID != userID {
+	if p.UserID != user.ID {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}

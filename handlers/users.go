@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"arxline/db"
@@ -17,7 +18,9 @@ import (
 )
 
 type AuthRequest struct {
+	Login    string `json:"login"`
 	Email    string `json:"email"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -35,7 +38,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := models.User{Email: req.Email, Password: string(hash)}
+	user := models.User{Email: req.Email, Username: req.Username, Password: string(hash)}
 	if err := db.DB.Create(&user).Error; err != nil {
 		http.Error(w, "User exists or DB error", 400)
 		return
@@ -50,7 +53,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&req)
 
 	var user models.User
-	err := db.DB.Where("email = ?", req.Email).First(&user).Error
+	err := db.DB.Where("email = ? OR username = ?", req.Login, req.Login).First(&user).Error
 	if err != nil {
 		http.Error(w, "Invalid credentials", 400)
 		return
@@ -96,9 +99,31 @@ func ListBuildings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	var total int64
+	query := db.DB.Model(&models.Building{}).Where("owner_id = ?", userID)
+	query.Count(&total)
+
 	var buildings []models.Building
-	db.DB.Where("owner_id = ?", userID).Find(&buildings)
-	json.NewEncoder(w).Encode(buildings)
+	query.Offset(offset).Limit(pageSize).Find(&buildings)
+
+	resp := map[string]interface{}{
+		"results":     buildings,
+		"page":        page,
+		"page_size":   pageSize,
+		"total":       total,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 // CreateBuilding creates a new building (Owner only)
@@ -189,9 +214,31 @@ func ListFloors(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	var total int64
+	query := db.DB.Model(&models.Floor{}).Where("building_id = ?", buildingID)
+	query.Count(&total)
+
 	var floors []models.Floor
-	db.DB.Where("building_id = ?", buildingID).Find(&floors)
-	json.NewEncoder(w).Encode(floors)
+	query.Offset(offset).Limit(pageSize).Find(&floors)
+
+	resp := map[string]interface{}{
+		"results":     floors,
+		"page":        page,
+		"page_size":   pageSize,
+		"total":       total,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	}
+	json.NewEncoder(w).Encode(resp)
 }
 
 // SubmitMarkup allows a user to submit a markup for a building/floor
@@ -235,4 +282,99 @@ func GetLogs(w http.ResponseWriter, r *http.Request) {
 	var logs []models.Log
 	db.DB.Where("building_id = ?", buildingID).Order("created_at desc").Find(&logs)
 	json.NewEncoder(w).Encode(logs)
+}
+
+// HTMX: Return <option> list for all buildings owned by the user
+func HTMXListBuildings(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var buildings []models.Building
+	db.DB.Where("owner_id = ?", userID).Find(&buildings)
+	w.Header().Set("Content-Type", "text/html")
+	for _, b := range buildings {
+		w.Write([]byte("<option value=\"" + itoa(b.ID) + "\">" + b.Name + "</option>"))
+	}
+}
+
+// HTMX: Return <option> list for all floors in a building
+func HTMXListFloors(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	buildingID := chi.URLParam(r, "id")
+	var b models.Building
+	if err := db.DB.First(&b, buildingID).Error; err != nil {
+		http.Error(w, "Building not found", http.StatusNotFound)
+		return
+	}
+	if b.OwnerID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	var floors []models.Floor
+	db.DB.Where("building_id = ?", buildingID).Find(&floors)
+	w.Header().Set("Content-Type", "text/html")
+	for _, f := range floors {
+		w.Write([]byte("<option value=\"" + itoa(f.ID) + "\">" + f.Name + "</option>"))
+	}
+}
+
+// HTMX: Return <li> list for all buildings by role (owner/shared)
+func HTMXListBuildingsSidebar(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	role := r.URL.Query().Get("role")
+	var buildings []models.Building
+
+	if role == "owner" {
+		db.DB.Where("owner_id = ?", userID).Find(&buildings)
+	} else if role == "shared" {
+		// Join with user_category_permissions to find shared buildings
+		db.DB.Raw(`
+			SELECT DISTINCT b.* FROM buildings b
+			JOIN user_category_permissions ucp ON ucp.project_id = b.project_id
+			WHERE ucp.user_id = ? AND b.owner_id != ?`, userID, userID).Scan(&buildings)
+	} else {
+		http.Error(w, "Invalid role", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	for _, b := range buildings {
+		w.Write([]byte("<li data-building-id=\"" + itoa(b.ID) + "\" class=\"cursor-pointer hover:bg-blue-50 rounded px-2 py-1\">" + b.Name + "</li>"))
+	}
+}
+
+// Helper to convert uint to string
+func itoa(i uint) string {
+	return strconv.FormatUint(uint64(i), 10)
+}
+
+// DeleteMarkup deletes a markup by ID
+func DeleteMarkup(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	markupID := chi.URLParam(r, "id")
+	var markup models.Markup
+	if err := db.DB.First(&markup, markupID).Error; err != nil {
+		http.Error(w, "Markup not found", http.StatusNotFound)
+		return
+	}
+	if markup.UserID != userID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	db.DB.Delete(&markup)
+	w.WriteHeader(http.StatusNoContent)
 }

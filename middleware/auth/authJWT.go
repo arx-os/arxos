@@ -53,3 +53,31 @@ func RequireAuth(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// RequireRole returns middleware that only allows users with one of the given roles
+func RequireRole(roles ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			tokenStr := r.Header.Get("Authorization")
+			if tokenStr == "" || len(tokenStr) < 8 {
+				http.Error(w, "Missing token", http.StatusUnauthorized)
+				return
+			}
+			token, _ := jwt.Parse(tokenStr[7:], func(t *jwt.Token) (interface{}, error) {
+				return []byte(os.Getenv("JWT_SECRET")), nil
+			})
+			if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+				userRole, _ := claims["role"].(string)
+				for _, role := range roles {
+					if userRole == role {
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+				http.Error(w, "Forbidden: insufficient role", http.StatusForbidden)
+				return
+			}
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+		})
+	}
+}

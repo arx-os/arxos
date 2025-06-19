@@ -15,13 +15,23 @@ import (
 	"bytes"
 	"log"
 
-	"arxline/middleware"
-
 	"fmt"
 
+	"strings"
+
+	"encoding/xml"
+	"io"
+
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 )
+
+// ElementInfo represents a parsed SVG element with its key attributes
+type ElementInfo struct {
+	Tag      string
+	ID       string
+	DataName string
+	Attrs    map[string]string
+}
 
 func extractProjectID(r *http.Request) (uint, error) {
 	projectIDStr := chi.URLParam(r, "projectID")
@@ -325,6 +335,10 @@ func UploadBIMModel(w http.ResponseWriter, r *http.Request) {
 
 	roomIDMap := make(map[string]bool)
 	for i, room := range bimModel.Rooms {
+		if !models.IsValidObjectId(room.ID) {
+			http.Error(w, "Invalid room ID format in BIMModel", http.StatusBadRequest)
+			return
+		}
 		roomIDMap[room.ID] = true
 		bimModel.Rooms[i].SourceSVG = sourceSVG
 		bimModel.Rooms[i].Layer = layer
@@ -336,6 +350,10 @@ func UploadBIMModel(w http.ResponseWriter, r *http.Request) {
 			bimModel.Rooms[i].SVGID = room.SVGID
 		}
 		for j := range room.Devices {
+			if !models.IsValidObjectId(room.Devices[j].ID) {
+				http.Error(w, "Invalid device ID format in BIMModel", http.StatusBadRequest)
+				return
+			}
 			bimModel.Rooms[i].Devices[j].RoomID = room.ID
 			bimModel.Rooms[i].Devices[j].SourceSVG = sourceSVG
 			bimModel.Rooms[i].Devices[j].Layer = layer
@@ -346,42 +364,29 @@ func UploadBIMModel(w http.ResponseWriter, r *http.Request) {
 			if bimModel.Rooms[i].Devices[j].SVGID == "" && room.Devices[j].SVGID != "" {
 				bimModel.Rooms[i].Devices[j].SVGID = room.Devices[j].SVGID
 			}
-		}
-	}
-	for i := range bimModel.Walls {
-		bimModel.Walls[i].SourceSVG = sourceSVG
-		bimModel.Walls[i].Layer = layer
-		bimModel.Walls[i].CreatedBy = user.ID
-		bimModel.Walls[i].Status = "draft"
-		bimModel.Walls[i].LockedBy = 0
-		bimModel.Walls[i].AssignedTo = 0
-		if bimModel.Walls[i].SVGID == "" {
-			bimModel.Walls[i].SVGID = bimModel.Walls[i].ID
-		}
-	}
-	for i := range bimModel.Doors {
-		bimModel.Doors[i].SourceSVG = sourceSVG
-		bimModel.Doors[i].Layer = layer
-		bimModel.Doors[i].CreatedBy = user.ID
-		bimModel.Doors[i].Status = "draft"
-		bimModel.Doors[i].LockedBy = 0
-		bimModel.Doors[i].AssignedTo = 0
-		if bimModel.Doors[i].SVGID == "" {
-			bimModel.Doors[i].SVGID = bimModel.Doors[i].ID
-		}
-	}
-	for i := range bimModel.Windows {
-		bimModel.Windows[i].SourceSVG = sourceSVG
-		bimModel.Windows[i].Layer = layer
-		bimModel.Windows[i].CreatedBy = user.ID
-		bimModel.Windows[i].Status = "draft"
-		bimModel.Windows[i].LockedBy = 0
-		bimModel.Windows[i].AssignedTo = 0
-		if bimModel.Windows[i].SVGID == "" {
-			bimModel.Windows[i].SVGID = bimModel.Windows[i].ID
+			valid, invalidFields := models.ValidateMetadataLinks(map[string]string{
+				"panel_id":      bimModel.Rooms[i].Devices[j].PanelID,
+				"circuit_id":    bimModel.Rooms[i].Devices[j].CircuitID,
+				"upstream_id":   bimModel.Rooms[i].Devices[j].UpstreamID,
+				"downstream_id": bimModel.Rooms[i].Devices[j].DownstreamID,
+				"pipe_id":       bimModel.Rooms[i].Devices[j].PipeID,
+			})
+			if !valid {
+				http.Error(w, "Invalid metadata link field(s) in BIMModel device: "+strings.Join(invalidFields, ", "), http.StatusBadRequest)
+				_ = models.LogChange(db.DB, user.ID, "Device", bimModel.Rooms[i].Devices[j].ID, "validation_failed", map[string]interface{}{
+					"error":          "Invalid metadata link field(s) in BIMModel device: " + strings.Join(invalidFields, ", "),
+					"invalid_fields": invalidFields,
+					"device":         bimModel.Rooms[i].Devices[j],
+				})
+				return
+			}
 		}
 	}
 	for i := range bimModel.Labels {
+		if !models.IsValidObjectId(bimModel.Labels[i].ID) {
+			http.Error(w, "Invalid label ID format in BIMModel", http.StatusBadRequest)
+			return
+		}
 		bimModel.Labels[i].SourceSVG = sourceSVG
 		bimModel.Labels[i].Layer = layer
 		bimModel.Labels[i].CreatedBy = user.ID
@@ -391,8 +396,25 @@ func UploadBIMModel(w http.ResponseWriter, r *http.Request) {
 		if bimModel.Labels[i].SVGID == "" {
 			bimModel.Labels[i].SVGID = bimModel.Labels[i].ID
 		}
+		valid, invalidFields := models.ValidateMetadataLinks(map[string]string{
+			"upstream_id":   bimModel.Labels[i].UpstreamID,
+			"downstream_id": bimModel.Labels[i].DownstreamID,
+		})
+		if !valid {
+			http.Error(w, "Invalid metadata link field(s) in BIMModel label: "+strings.Join(invalidFields, ", "), http.StatusBadRequest)
+			_ = models.LogChange(db.DB, user.ID, "Label", bimModel.Labels[i].ID, "validation_failed", map[string]interface{}{
+				"error":          "Invalid metadata link field(s) in BIMModel label: " + strings.Join(invalidFields, ", "),
+				"invalid_fields": invalidFields,
+				"label":          bimModel.Labels[i],
+			})
+			return
+		}
 	}
 	for i := range bimModel.Zones {
+		if !models.IsValidObjectId(bimModel.Zones[i].ID) {
+			http.Error(w, "Invalid zone ID format in BIMModel", http.StatusBadRequest)
+			return
+		}
 		bimModel.Zones[i].SourceSVG = sourceSVG
 		bimModel.Zones[i].Layer = layer
 		bimModel.Zones[i].CreatedBy = user.ID
@@ -408,21 +430,6 @@ func UploadBIMModel(w http.ResponseWriter, r *http.Request) {
 	for _, room := range bimModel.Rooms {
 		allDevices = append(allDevices, room.Devices...)
 	}
-	if len(bimModel.Walls) > 0 {
-		db.DB.Create(&bimModel.Walls)
-	}
-	if len(bimModel.Rooms) > 0 {
-		db.DB.Create(&bimModel.Rooms)
-	}
-	if len(bimModel.Doors) > 0 {
-		db.DB.Create(&bimModel.Doors)
-	}
-	if len(bimModel.Windows) > 0 {
-		db.DB.Create(&bimModel.Windows)
-	}
-	if len(allDevices) > 0 {
-		db.DB.Create(&allDevices)
-	}
 	if len(bimModel.Labels) > 0 {
 		db.DB.Create(&bimModel.Labels)
 	}
@@ -435,7 +442,7 @@ func UploadBIMModel(w http.ResponseWriter, r *http.Request) {
 	// Webhook/notification support
 	webhookURL := os.Getenv("BIM_WEBHOOK_URL")
 	if webhookURL != "" {
-		totalObjects := len(bimModel.Walls) + len(bimModel.Rooms) + len(bimModel.Doors) + len(bimModel.Windows) + len(allDevices) + len(bimModel.Labels) + len(bimModel.Zones)
+		totalObjects := len(bimModel.Labels) + len(bimModel.Zones)
 		payload := map[string]interface{}{
 			"event":      "bim_imported",
 			"count":      totalObjects,
@@ -467,10 +474,7 @@ func GetBIMModel(w http.ResponseWriter, r *http.Request) {
 		fmt.Sscanf(floorIDStr, "%d", &floorID)
 	}
 	bimModel := models.BIMModel{
-		Walls:   []models.Wall{},
 		Rooms:   []models.Room{},
-		Doors:   []models.Door{},
-		Windows: []models.Window{},
 		Devices: []models.Device{},
 		Labels:  []models.Label{},
 		Zones:   []models.Zone{},
@@ -494,191 +498,11 @@ func GetDevicesInRoom(roomID string) ([]models.Device, error) {
 	return devices, err
 }
 
-// Helper: Get all walls in a room
-func GetWallsInRoom(roomID string) ([]models.Wall, error) {
-	var walls []models.Wall
-	err := db.DB.Where("room_id = ?", roomID).Find(&walls).Error
-	return walls, err
-}
-
-// Helper: Get all doors in a room
-func GetDoorsInRoom(roomID string) ([]models.Door, error) {
-	var doors []models.Door
-	err := db.DB.Where("room_id = ?", roomID).Find(&doors).Error
-	return doors, err
-}
-
-// Helper: Get all windows in a room
-func GetWindowsInRoom(roomID string) ([]models.Window, error) {
-	var windows []models.Window
-	err := db.DB.Where("room_id = ?", roomID).Find(&windows).Error
-	return windows, err
-}
-
 // Helper: Get all labels in a room
 func GetLabelsInRoom(roomID string) ([]models.Label, error) {
 	var labels []models.Label
 	err := db.DB.Where("room_id = ?", roomID).Find(&labels).Error
 	return labels, err
-}
-
-// --- BIM Object Update/Lock/Assign/Status Endpoints ---
-// Suggested routes (add to your router):
-// PATCH /api/wall/{id}           -> UpdateWall
-// POST  /api/wall/{id}/lock      -> LockWall
-// POST  /api/wall/{id}/unlock    -> UnlockWall
-// POST  /api/wall/{id}/assign    -> AssignWall
-// POST  /api/wall/{id}/status    -> UpdateWallStatus
-// Repeat for room, door, window, device, label, zone
-
-// Example for Wall (repeat for other types):
-
-func UpdateWall(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	var wall models.Wall
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", chi.URLParam(r, "id"), projectID).First(&wall).Error; err != nil {
-		http.Error(w, "Wall not found", http.StatusNotFound)
-		return
-	}
-	if !middleware.CheckObjectPermission(db.DB, user, wall.Category, "edit", projectID) {
-		http.Error(w, "Forbidden: insufficient object permission", http.StatusForbidden)
-		return
-	}
-	var update struct {
-		Status     *string `json:"status"`
-		AssignedTo *uint   `json:"assigned_to"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	if update.Status != nil {
-		wall.Status = *update.Status
-	}
-	if update.AssignedTo != nil {
-		wall.AssignedTo = *update.AssignedTo
-	}
-	db.DB.Save(&wall)
-	json.NewEncoder(w).Encode(wall)
-}
-
-func LockWall(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	wallID := chi.URLParam(r, "id")
-	var wall models.Wall
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
-		http.Error(w, "Wall not found", http.StatusNotFound)
-		return
-	}
-	if wall.LockedBy != 0 && wall.LockedBy != user.ID {
-		http.Error(w, "Wall is already locked by another user", http.StatusForbidden)
-		return
-	}
-	wall.LockedBy = user.ID
-	db.DB.Save(&wall)
-	json.NewEncoder(w).Encode(wall)
-}
-
-func UnlockWall(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	wallID := chi.URLParam(r, "id")
-	var wall models.Wall
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
-		http.Error(w, "Wall not found", http.StatusNotFound)
-		return
-	}
-	if wall.LockedBy != user.ID {
-		http.Error(w, "You do not own the lock", http.StatusForbidden)
-		return
-	}
-	wall.LockedBy = 0
-	db.DB.Save(&wall)
-	json.NewEncoder(w).Encode(wall)
-}
-
-func AssignWall(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	wallID := chi.URLParam(r, "id")
-	var wall models.Wall
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
-		http.Error(w, "Wall not found", http.StatusNotFound)
-		return
-	}
-	var assign struct {
-		AssignedTo uint `json:"assigned_to"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&assign); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	wall.AssignedTo = assign.AssignedTo
-	db.DB.Save(&wall)
-	json.NewEncoder(w).Encode(wall)
-}
-
-func UpdateWallStatus(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	wallID := chi.URLParam(r, "id")
-	var wall models.Wall
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
-		http.Error(w, "Wall not found", http.StatusNotFound)
-		return
-	}
-	var status struct {
-		Status string `json:"status"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	wall.Status = status.Status
-	db.DB.Save(&wall)
-	json.NewEncoder(w).Encode(wall)
 }
 
 // --- Room Handlers ---
@@ -703,6 +527,10 @@ func UpdateRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", roomID, projectID).First(&room).Error; err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(room.ID) {
+		http.Error(w, "Invalid room ID format", http.StatusBadRequest)
 		return
 	}
 	var update struct {
@@ -740,6 +568,10 @@ func LockRoom(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(room.ID) {
+		http.Error(w, "Invalid room ID format", http.StatusBadRequest)
+		return
+	}
 	if room.LockedBy != 0 && room.LockedBy != user.ID {
 		http.Error(w, "Room is already locked by another user", http.StatusForbidden)
 		return
@@ -766,6 +598,10 @@ func UnlockRoom(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(room.ID) {
+		http.Error(w, "Invalid room ID format", http.StatusBadRequest)
+		return
+	}
 	if room.LockedBy != user.ID {
 		http.Error(w, "You do not own the lock", http.StatusForbidden)
 		return
@@ -790,6 +626,10 @@ func AssignRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", roomID, projectID).First(&room).Error; err != nil {
 		http.Error(w, "Room not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(room.ID) {
+		http.Error(w, "Invalid room ID format", http.StatusBadRequest)
 		return
 	}
 	var assign struct {
@@ -821,6 +661,10 @@ func UpdateRoomStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Room not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(room.ID) {
+		http.Error(w, "Invalid room ID format", http.StatusBadRequest)
+		return
+	}
 	var status struct {
 		Status string `json:"status"`
 	}
@@ -833,310 +677,6 @@ func UpdateRoomStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(room)
 }
 
-// --- Door Handlers ---
-// PATCH /api/door/{id}           -> UpdateDoor
-// POST  /api/door/{id}/lock      -> LockDoor
-// POST  /api/door/{id}/unlock    -> UnlockDoor
-// POST  /api/door/{id}/assign    -> AssignDoor
-// POST  /api/door/{id}/status    -> UpdateDoorStatus
-
-func UpdateDoor(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	doorID := chi.URLParam(r, "id")
-	var door models.Door
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", doorID, projectID).First(&door).Error; err != nil {
-		http.Error(w, "Door not found", http.StatusNotFound)
-		return
-	}
-	var update struct {
-		Status     *string `json:"status"`
-		AssignedTo *uint   `json:"assigned_to"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	if update.Status != nil {
-		door.Status = *update.Status
-	}
-	if update.AssignedTo != nil {
-		door.AssignedTo = *update.AssignedTo
-	}
-	db.DB.Save(&door)
-	json.NewEncoder(w).Encode(door)
-}
-
-func LockDoor(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	doorID := chi.URLParam(r, "id")
-	var door models.Door
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", doorID, projectID).First(&door).Error; err != nil {
-		http.Error(w, "Door not found", http.StatusNotFound)
-		return
-	}
-	if door.LockedBy != 0 && door.LockedBy != user.ID {
-		http.Error(w, "Door is already locked by another user", http.StatusForbidden)
-		return
-	}
-	door.LockedBy = user.ID
-	db.DB.Save(&door)
-	json.NewEncoder(w).Encode(door)
-}
-
-func UnlockDoor(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	doorID := chi.URLParam(r, "id")
-	var door models.Door
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", doorID, projectID).First(&door).Error; err != nil {
-		http.Error(w, "Door not found", http.StatusNotFound)
-		return
-	}
-	if door.LockedBy != user.ID {
-		http.Error(w, "You do not own the lock", http.StatusForbidden)
-		return
-	}
-	door.LockedBy = 0
-	db.DB.Save(&door)
-	json.NewEncoder(w).Encode(door)
-}
-
-func AssignDoor(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	deviceID := chi.URLParam(r, "id")
-	var device models.Device
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", deviceID, projectID).First(&device).Error; err != nil {
-		http.Error(w, "Device not found", http.StatusNotFound)
-		return
-	}
-	var assign struct {
-		AssignedTo uint `json:"assigned_to"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&assign); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	device.AssignedTo = assign.AssignedTo
-	db.DB.Save(&device)
-	json.NewEncoder(w).Encode(device)
-}
-
-func UpdateDoorStatus(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	deviceID := chi.URLParam(r, "id")
-	var device models.Device
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", deviceID, projectID).First(&device).Error; err != nil {
-		http.Error(w, "Device not found", http.StatusNotFound)
-		return
-	}
-	var status struct {
-		Status string `json:"status"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	device.Status = status.Status
-	db.DB.Save(&device)
-	json.NewEncoder(w).Encode(device)
-}
-
-// --- Window Handlers ---
-// PATCH /api/window/{id}           -> UpdateWindow
-// POST  /api/window/{id}/lock      -> LockWindow
-// POST  /api/window/{id}/unlock    -> UnlockWindow
-// POST  /api/window/{id}/assign    -> AssignWindow
-// POST  /api/window/{id}/status    -> UpdateWindowStatus
-
-func UpdateWindow(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	windowID := chi.URLParam(r, "id")
-	var window models.Window
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", windowID, projectID).First(&window).Error; err != nil {
-		http.Error(w, "Window not found", http.StatusNotFound)
-		return
-	}
-	var update struct {
-		Status     *string `json:"status"`
-		AssignedTo *uint   `json:"assigned_to"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	if update.Status != nil {
-		window.Status = *update.Status
-	}
-	if update.AssignedTo != nil {
-		window.AssignedTo = *update.AssignedTo
-	}
-	db.DB.Save(&window)
-	json.NewEncoder(w).Encode(window)
-}
-
-func LockWindow(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	windowID := chi.URLParam(r, "id")
-	var window models.Window
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", windowID, projectID).First(&window).Error; err != nil {
-		http.Error(w, "Window not found", http.StatusNotFound)
-		return
-	}
-	if window.LockedBy != 0 && window.LockedBy != user.ID {
-		http.Error(w, "Window is already locked by another user", http.StatusForbidden)
-		return
-	}
-	window.LockedBy = user.ID
-	db.DB.Save(&window)
-	json.NewEncoder(w).Encode(window)
-}
-
-func UnlockWindow(w http.ResponseWriter, r *http.Request) {
-	user, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	windowID := chi.URLParam(r, "id")
-	var window models.Window
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", windowID, projectID).First(&window).Error; err != nil {
-		http.Error(w, "Window not found", http.StatusNotFound)
-		return
-	}
-	if window.LockedBy != user.ID {
-		http.Error(w, "You do not own the lock", http.StatusForbidden)
-		return
-	}
-	window.LockedBy = 0
-	db.DB.Save(&window)
-	json.NewEncoder(w).Encode(window)
-}
-
-func AssignWindow(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	windowID := chi.URLParam(r, "id")
-	var window models.Window
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", windowID, projectID).First(&window).Error; err != nil {
-		http.Error(w, "Window not found", http.StatusNotFound)
-		return
-	}
-	var assign struct {
-		AssignedTo uint `json:"assigned_to"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&assign); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	window.AssignedTo = assign.AssignedTo
-	db.DB.Save(&window)
-	json.NewEncoder(w).Encode(window)
-}
-
-func UpdateWindowStatus(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	windowID := chi.URLParam(r, "id")
-	var window models.Window
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	if err := db.DB.Where("id = ? AND project_id = ?", windowID, projectID).First(&window).Error; err != nil {
-		http.Error(w, "Window not found", http.StatusNotFound)
-		return
-	}
-	var status struct {
-		Status string `json:"status"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	window.Status = status.Status
-	db.DB.Save(&window)
-	json.NewEncoder(w).Encode(window)
-}
-
 // --- Device Handlers ---
 // PATCH /api/device/{id}           -> UpdateDevice
 // POST  /api/device/{id}/lock      -> LockDevice
@@ -1145,7 +685,7 @@ func UpdateWindowStatus(w http.ResponseWriter, r *http.Request) {
 // POST  /api/device/{id}/status    -> UpdateDeviceStatus
 
 func UpdateDevice(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
+	user, err := GetUserFromRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -1159,6 +699,26 @@ func UpdateDevice(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", deviceID, projectID).First(&device).Error; err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
+		return
+	}
+	valid, invalidFields := models.ValidateMetadataLinks(map[string]string{
+		"panel_id":      device.PanelID,
+		"circuit_id":    device.CircuitID,
+		"upstream_id":   device.UpstreamID,
+		"downstream_id": device.DownstreamID,
+		"pipe_id":       device.PipeID,
+	})
+	if !valid {
+		http.Error(w, "Invalid metadata link field(s) in device: "+strings.Join(invalidFields, ", "), http.StatusBadRequest)
+		_ = models.LogChange(db.DB, user.ID, "Device", device.ID, "validation_failed", map[string]interface{}{
+			"error":          "Invalid metadata link field(s) in device: " + strings.Join(invalidFields, ", "),
+			"invalid_fields": invalidFields,
+			"device":         device,
+		})
 		return
 	}
 	var update struct {
@@ -1196,6 +756,10 @@ func LockDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
+		return
+	}
 	if device.LockedBy != 0 && device.LockedBy != user.ID {
 		http.Error(w, "Device is already locked by another user", http.StatusForbidden)
 		return
@@ -1222,6 +786,10 @@ func UnlockDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
+		return
+	}
 	if device.LockedBy != user.ID {
 		http.Error(w, "You do not own the lock", http.StatusForbidden)
 		return
@@ -1246,6 +814,10 @@ func AssignDevice(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", deviceID, projectID).First(&device).Error; err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
 		return
 	}
 	var assign struct {
@@ -1277,6 +849,10 @@ func UpdateDeviceStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
+		return
+	}
 	var status struct {
 		Status string `json:"status"`
 	}
@@ -1297,7 +873,7 @@ func UpdateDeviceStatus(w http.ResponseWriter, r *http.Request) {
 // POST  /api/label/{id}/status    -> UpdateLabelStatus
 
 func UpdateLabel(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
+	user, err := GetUserFromRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -1311,6 +887,23 @@ func UpdateLabel(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", labelID, projectID).First(&label).Error; err != nil {
 		http.Error(w, "Label not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(label.ID) {
+		http.Error(w, "Invalid label ID format", http.StatusBadRequest)
+		return
+	}
+	valid, invalidFields := models.ValidateMetadataLinks(map[string]string{
+		"upstream_id":   label.UpstreamID,
+		"downstream_id": label.DownstreamID,
+	})
+	if !valid {
+		http.Error(w, "Invalid metadata link field(s) in label: "+strings.Join(invalidFields, ", "), http.StatusBadRequest)
+		_ = models.LogChange(db.DB, user.ID, "Label", label.ID, "validation_failed", map[string]interface{}{
+			"error":          "Invalid metadata link field(s) in label: " + strings.Join(invalidFields, ", "),
+			"invalid_fields": invalidFields,
+			"label":          label,
+		})
 		return
 	}
 	var update struct {
@@ -1348,6 +941,10 @@ func LockLabel(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Label not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(label.ID) {
+		http.Error(w, "Invalid label ID format", http.StatusBadRequest)
+		return
+	}
 	if label.LockedBy != 0 && label.LockedBy != user.ID {
 		http.Error(w, "Label is already locked by another user", http.StatusForbidden)
 		return
@@ -1374,6 +971,10 @@ func UnlockLabel(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Label not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(label.ID) {
+		http.Error(w, "Invalid label ID format", http.StatusBadRequest)
+		return
+	}
 	if label.LockedBy != user.ID {
 		http.Error(w, "You do not own the lock", http.StatusForbidden)
 		return
@@ -1398,6 +999,10 @@ func UpdateLabelStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", labelID, projectID).First(&label).Error; err != nil {
 		http.Error(w, "Label not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(label.ID) {
+		http.Error(w, "Invalid label ID format", http.StatusBadRequest)
 		return
 	}
 	var status struct {
@@ -1427,6 +1032,10 @@ func AssignLabel(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", labelID, projectID).First(&label).Error; err != nil {
 		http.Error(w, "Label not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(label.ID) {
+		http.Error(w, "Invalid label ID format", http.StatusBadRequest)
 		return
 	}
 	var assign struct {
@@ -1465,6 +1074,10 @@ func UpdateZone(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Zone not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(zone.ID) {
+		http.Error(w, "Invalid zone ID format", http.StatusBadRequest)
+		return
+	}
 	var update struct {
 		Status     *string `json:"status"`
 		AssignedTo *uint   `json:"assigned_to"`
@@ -1500,6 +1113,10 @@ func LockZone(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Zone not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(zone.ID) {
+		http.Error(w, "Invalid zone ID format", http.StatusBadRequest)
+		return
+	}
 	if zone.LockedBy != 0 && zone.LockedBy != user.ID {
 		http.Error(w, "Zone is already locked by another user", http.StatusForbidden)
 		return
@@ -1526,6 +1143,10 @@ func UnlockZone(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Zone not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(zone.ID) {
+		http.Error(w, "Invalid zone ID format", http.StatusBadRequest)
+		return
+	}
 	if zone.LockedBy != user.ID {
 		http.Error(w, "You do not own the lock", http.StatusForbidden)
 		return
@@ -1550,6 +1171,10 @@ func AssignZone(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := db.DB.Where("id = ? AND project_id = ?", zoneID, projectID).First(&zone).Error; err != nil {
 		http.Error(w, "Zone not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(zone.ID) {
+		http.Error(w, "Invalid zone ID format", http.StatusBadRequest)
 		return
 	}
 	var assign struct {
@@ -1581,6 +1206,10 @@ func UpdateZoneStatus(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Zone not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(zone.ID) {
+		http.Error(w, "Invalid zone ID format", http.StatusBadRequest)
+		return
+	}
 	var status struct {
 		Status string `json:"status"`
 	}
@@ -1594,37 +1223,6 @@ func UpdateZoneStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // Paginated list endpoints for BIM objects
-func ListWalls(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
-	var total int64
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	db.DB.Model(&models.Wall{}).Where("project_id = ?", projectID).Count(&total)
-
-	var walls []models.Wall
-	db.DB.Where("project_id = ?", projectID).Offset(offset).Limit(pageSize).Find(&walls)
-
-	resp := map[string]interface{}{
-		"results":     walls,
-		"page":        page,
-		"page_size":   pageSize,
-		"total":       total,
-		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
-	}
-	json.NewEncoder(w).Encode(resp)
-}
 
 func ListRooms(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -1650,70 +1248,6 @@ func ListRooms(w http.ResponseWriter, r *http.Request) {
 
 	resp := map[string]interface{}{
 		"results":     rooms,
-		"page":        page,
-		"page_size":   pageSize,
-		"total":       total,
-		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
-	}
-	json.NewEncoder(w).Encode(resp)
-}
-
-func ListDoors(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
-	var total int64
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	db.DB.Model(&models.Door{}).Where("project_id = ?", projectID).Count(&total)
-
-	var doors []models.Door
-	db.DB.Where("project_id = ?", projectID).Offset(offset).Limit(pageSize).Find(&doors)
-
-	resp := map[string]interface{}{
-		"results":     doors,
-		"page":        page,
-		"page_size":   pageSize,
-		"total":       total,
-		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
-	}
-	json.NewEncoder(w).Encode(resp)
-}
-
-func ListWindows(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
-	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
-	var total int64
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	db.DB.Model(&models.Window{}).Where("project_id = ?", projectID).Count(&total)
-
-	var windows []models.Window
-	db.DB.Where("project_id = ?", projectID).Offset(offset).Limit(pageSize).Find(&windows)
-
-	resp := map[string]interface{}{
-		"results":     windows,
 		"page":        page,
 		"page_size":   pageSize,
 		"total":       total,
@@ -1821,37 +1355,12 @@ func ListZones(w http.ResponseWriter, r *http.Request) {
 // Export BIM data as JSON
 func ExportBIMAsJSON(w http.ResponseWriter, r *http.Request) {
 	var bimModel models.BIMModel
-	db.DB.Find(&bimModel.Walls)
 	db.DB.Find(&bimModel.Rooms)
-	db.DB.Find(&bimModel.Doors)
-	db.DB.Find(&bimModel.Windows)
 	db.DB.Find(&bimModel.Devices)
 	db.DB.Find(&bimModel.Labels)
 	db.DB.Find(&bimModel.Zones)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(bimModel)
-}
-
-// Export BIM geometry as GeoJSON FeatureCollection
-func ExportBIMAsGeoJSON(w http.ResponseWriter, r *http.Request) {
-	// This is a minimal implementation; for full GeoJSON, map each object to a Feature
-	features := []map[string]interface{}{}
-	var walls []models.Wall
-	db.DB.Find(&walls)
-	for _, wall := range walls {
-		features = append(features, map[string]interface{}{
-			"type":       "Feature",
-			"geometry":   wall.Geometry, // You may need to convert to GeoJSON geometry
-			"properties": wall,
-		})
-	}
-	// Repeat for other types as needed
-	geojson := map[string]interface{}{
-		"type":     "FeatureCollection",
-		"features": features,
-	}
-	w.Header().Set("Content-Type", "application/geo+json")
-	json.NewEncoder(w).Encode(geojson)
 }
 
 // Stub: Export as IFC-lite
@@ -1924,6 +1433,10 @@ func SavePlacedDevice(w http.ResponseWriter, r *http.Request) {
 		CreatedBy: user.ID,
 		Status:    "draft",
 	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
+		return
+	}
 	db.DB.Create(&device)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(device)
@@ -1947,6 +1460,10 @@ func GetDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(device)
 }
@@ -1967,6 +1484,10 @@ func UpdateDeviceDetails(w http.ResponseWriter, r *http.Request) {
 	var device models.Device
 	if err := db.DB.Where("id = ? AND project_id = ?", deviceID, projectID).First(&device).Error; err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(device.ID) {
+		http.Error(w, "Invalid device ID format", http.StatusBadRequest)
 		return
 	}
 	var update struct {
@@ -2018,7 +1539,6 @@ func CreateRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	route := models.Route{
-		ID:        uuid.New().String(),
 		ProjectID: req.ProjectID,
 		FloorID:   req.FloorID,
 		System:    req.System,
@@ -2026,76 +1546,42 @@ func CreateRoute(w http.ResponseWriter, r *http.Request) {
 		Circuit:   req.Circuit,
 		Geometry:  req.Geometry,
 		CreatedBy: user.ID,
-		Status:    "draft",
 	}
 	db.DB.Create(&route)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(route)
 }
 
-// GetRoute returns a route by ID as JSON
-func GetRoute(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+func ParseSVGElements(svg string) map[string]ElementInfo {
+	decoder := xml.NewDecoder(strings.NewReader(svg))
+	elements := make(map[string]ElementInfo)
+	for {
+		t, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			break
+		}
+		switch se := t.(type) {
+		case xml.StartElement:
+			attrs := make(map[string]string)
+			var id string
+			for _, attr := range se.Attr {
+				attrs[attr.Name.Local] = attr.Value
+				if attr.Name.Local == "id" {
+					id = attr.Value
+				}
+			}
+			if id != "" {
+				elements[id] = ElementInfo{
+					Tag:      se.Name.Local,
+					ID:       id,
+					DataName: attrs["data-name"],
+					Attrs:    attrs,
+				}
+			}
+		}
 	}
-	routeID := chi.URLParam(r, "id")
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	var route models.Route
-	if err := db.DB.Where("id = ? AND project_id = ?", routeID, projectID).First(&route).Error; err != nil {
-		http.Error(w, "Route not found", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(route)
-}
-
-// UpdateRoute allows PATCH to update route fields
-func UpdateRoute(w http.ResponseWriter, r *http.Request) {
-	_, err := GetUserFromRequest(r)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-	routeID := chi.URLParam(r, "id")
-	projectID, err := extractProjectID(r)
-	if err != nil {
-		http.Error(w, "Invalid project ID", http.StatusBadRequest)
-		return
-	}
-	var route models.Route
-	if err := db.DB.Where("id = ? AND project_id = ?", routeID, projectID).First(&route).Error; err != nil {
-		http.Error(w, "Route not found", http.StatusNotFound)
-		return
-	}
-	var update struct {
-		Label    *string          `json:"label"`
-		Circuit  *string          `json:"circuit"`
-		System   *string          `json:"system"`
-		Geometry *models.Geometry `json:"geometry"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		http.Error(w, "Invalid body", http.StatusBadRequest)
-		return
-	}
-	if update.Label != nil {
-		route.Label = *update.Label
-	}
-	if update.Circuit != nil {
-		route.Circuit = *update.Circuit
-	}
-	if update.System != nil {
-		route.System = *update.System
-	}
-	if update.Geometry != nil {
-		route.Geometry = *update.Geometry
-	}
-	db.DB.Save(&route)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(route)
+	return elements
 }

@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"arxline-backend/logic_engine"
 	"arxline/db"
 	"arxline/handlers"
 	"arxline/middleware/auth"
@@ -26,8 +25,6 @@ func main() {
 	db.Connect()
 	db.Migrate()
 	models.SeedCategories(db.DB)
-
-	logic_engine.LoadRegistries()
 
 	// Set up router
 	r := chi.NewRouter()
@@ -72,26 +69,26 @@ func main() {
 			// BIM Object endpoints (edit)
 			r.Group(func(r chi.Router) {
 				r.Use(auth.RequireRole("admin", "editor"))
-				r.Patch("/wall/{id}", handlers.UpdateWall)
-				r.Post("/wall/{id}/lock", handlers.LockWall)
-				r.Post("/wall/{id}/unlock", handlers.UnlockWall)
-				r.Post("/wall/{id}/assign", handlers.AssignWall)
-				r.Post("/wall/{id}/status", handlers.UpdateWallStatus)
+				// r.Patch("/wall/{id}", handlers.UpdateWall)
+				// r.Post("/wall/{id}/lock", handlers.LockWall)
+				// r.Post("/wall/{id}/unlock", handlers.UnlockWall)
+				// r.Post("/wall/{id}/assign", handlers.AssignWall)
+				// r.Post("/wall/{id}/status", handlers.UpdateWallStatus)
+				// r.Patch("/door/{id}", handlers.UpdateDoor)
+				// r.Post("/door/{id}/lock", handlers.LockDoor)
+				// r.Post("/door/{id}/unlock", handlers.UnlockDoor)
+				// r.Post("/door/{id}/assign", handlers.AssignDoor)
+				// r.Post("/door/{id}/status", handlers.UpdateDoorStatus)
 				r.Patch("/room/{id}", handlers.UpdateRoom)
 				r.Post("/room/{id}/lock", handlers.LockRoom)
 				r.Post("/room/{id}/unlock", handlers.UnlockRoom)
 				r.Post("/room/{id}/assign", handlers.AssignRoom)
 				r.Post("/room/{id}/status", handlers.UpdateRoomStatus)
-				r.Patch("/door/{id}", handlers.UpdateDoor)
-				r.Post("/door/{id}/lock", handlers.LockDoor)
-				r.Post("/door/{id}/unlock", handlers.UnlockDoor)
-				r.Post("/door/{id}/assign", handlers.AssignDoor)
-				r.Post("/door/{id}/status", handlers.UpdateDoorStatus)
-				r.Patch("/window/{id}", handlers.UpdateWindow)
-				r.Post("/window/{id}/lock", handlers.LockWindow)
-				r.Post("/window/{id}/unlock", handlers.UnlockWindow)
-				r.Post("/window/{id}/assign", handlers.AssignWindow)
-				r.Post("/window/{id}/status", handlers.UpdateWindowStatus)
+				// r.Patch("/window/{id}", handlers.UpdateWindow)
+				// r.Post("/window/{id}/lock", handlers.LockWindow)
+				// r.Post("/window/{id}/unlock", handlers.UnlockWindow)
+				// r.Post("/window/{id}/assign", handlers.AssignWindow)
+				// r.Post("/window/{id}/status", handlers.UpdateWindowStatus)
 				r.Patch("/device/{id}", handlers.UpdateDeviceDetails)
 				r.Post("/device/{id}/lock", handlers.LockDevice)
 				r.Post("/device/{id}/unlock", handlers.UnlockDevice)
@@ -110,17 +107,17 @@ func main() {
 			})
 
 			// Paginated list endpoints for BIM objects
-			r.Get("/walls", handlers.ListWalls)
+			// r.Get("/walls", handlers.ListWalls)
 			r.Get("/rooms", handlers.ListRooms)
-			r.Get("/doors", handlers.ListDoors)
-			r.Get("/windows", handlers.ListWindows)
+			// r.Get("/doors", handlers.ListDoors)
+			// r.Get("/windows", handlers.ListWindows)
 			r.Get("/devices", handlers.ListDevices)
 			r.Get("/labels", handlers.ListLabels)
 			r.Get("/zones", handlers.ListZones)
 
 			// BIM Export endpoints
 			r.Get("/bim/export/json", handlers.ExportBIMAsJSON)
-			r.Get("/bim/export/geojson", handlers.ExportBIMAsGeoJSON)
+			// r.Get("/bim/export/geojson", handlers.ExportBIMAsGeoJSON)
 			r.Get("/bim/export/ifc", handlers.ExportBIMAsIFC)
 			r.Get("/bim/export/dxf", handlers.ExportBIMAsDXF)
 			r.Get("/bim/export/svg", handlers.ExportBIMAsSVG)
@@ -157,6 +154,15 @@ func main() {
 
 			r.Get("/api/object-types", handlers.GetObjectTypesRegistry)
 			r.Get("/api/behavior-profiles", handlers.GetBehaviorProfilesRegistry)
+
+			r.Post("/floor/{id}/snapshot", handlers.SaveFloorSnapshot)
+			r.Post("/floor/{id}/undo", handlers.UndoFloorVersion)
+			r.Post("/floor/{id}/redo", handlers.RedoFloorVersion)
+			r.Get("/floor/{id}/history", handlers.ListFloorHistory)
+			r.Get("/floor/{id}/version/{version}", handlers.GetFloorVersion)
+			r.Delete("/floor/{id}/version/{version}", handlers.DeleteFloorVersion)
+			r.Post("/floor/{id}/restore/{version}", handlers.RestoreFloorVersion)
+			r.Get("/floor/{id}/compare", handlers.CompareFloorVersions)
 		})
 	})
 

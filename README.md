@@ -8,14 +8,14 @@ We are currently in the **Minimum Viable Product (MVP)** development phase.
 
 ## 📌 Project Overview
 
-Arxline’s core innovation is its SVG-based building canvas. Each building is represented as one or more SVG files, which serve as the “as-built” or “redline” drawings. These are updated collaboratively by contributors based on the work they've performed on-site.
+Arxline's core innovation is its SVG-based building canvas. Each building is represented as one or more SVG files, which serve as the "as-built" or "redline" drawings. These are updated collaboratively by contributors based on the work they've performed on-site.
 
 Users contribute to the SVG in one of the following ways:
 - Uploading construction documents for parsing and conversion.
 - Drawing directly via a markup interface (browser-based or mobile).
 - Using virtual measurements via Augmented Reality (AR).
 
-Each element (e.g., outlets, lights, pipes) is placed and scaled accurately on the SVG’s mathematical grid to align with real-world spatial orientation.
+Each element (e.g., outlets, lights, pipes) is placed and scaled accurately on the SVG's mathematical grid to align with real-world spatial orientation.
 
 ---------------------------------------------------------------
 
@@ -54,7 +54,7 @@ Arxline is the **central nervous system** for building infrastructure:
 - Admin privileges over one or more properties.
 - Full markup/editing capabilities.
 - Can assign edit permissions to contractors.
-- Can toggle a building as “open” for collaborative markup.
+- Can toggle a building as "open" for collaborative markup.
 - Access to maintenance dashboard (CMMS-lite design).
 
 ### Builder / Contractor
@@ -78,7 +78,7 @@ Arxline is the **central nervous system** for building infrastructure:
 ### Edit Mode
 - Requires permission toggle.
 - Enables markup and annotation tools.
-- “Save?” prompt appears after any changes.
+- "Save?" prompt appears after any changes.
 - Saved versions become the active state; full edit history is retained.
 
 > **Note:** Historical versions and markup history will be accessible via a paid subscription tier.
@@ -106,6 +106,125 @@ All system elements are color-coded and filterable via a sidebar toggle:
 
 - Structural elements are editable but do not expose frequent editing tools.
 - Each markup action is associated with a user, logged, and auditable.
+
+----------------------------------------------------------------
+
+Object ID Naming Convention Version 1
+
+Arxos Object Naming Convention (MVP)
+====================================
+
+ID Format
+---------
+Each object in the SVG/ASCII-BIM system must follow:
+
+  BuildingID_Floor_SystemCode_ObjectType_Instance
+
+Example:
+  TCHS_L2_E_Receptacle_015
+
+Legend:
+  - BuildingID: 3–10 uppercase alphanumeric characters
+  - Floor: L1, L2, etc.
+  - SystemCode: E, LV, FA, N, M, P
+  - ObjectType: PascalCase (e.g., Receptacle)
+  - Instance: Zero-padded 3-digit sequence (e.g., 015)
+
+
+System Codes & Object Hierarchies
+----------------------------------
+
+Electrical (E)
+--------------
+E_Transformer        # Main incoming service (utility/generator)
+  └─ E_Panel         # Main panel
+        └─ E_Circuit         # Abstracted branch circuits
+              ├─ E_Receptacle      # Power outlet
+              ├─ E_Light           # Ceiling or wall light
+              ├─ E_Switch          # Switch controlling light/load
+              ├─ E_Disconnect      # Manual shutoff (HVAC)
+              └─ E_Load            # General powered equipment (fridge, pump)
+      |_subpanel
+
+Low Voltage (LV)
+----------------
+LV_Controller        # Core processor for LV system (intercom, bell, security)
+  └─ LV_Bus          # Backbone cabling
+        └─ LV_Zone           # Logical serving zone (room, wing)
+              ├─ LV_Speaker        # PA or bell speaker
+              ├─ LV_Camera         # Surveillance camera
+              ├─ LV_Intercom       # Call or room communication
+              └─ LV_Display        # Digital signage, scoreboard, etc.
+
+Fire Alarm (FA)
+---------------
+FA_Panel             # Fire Alarm Control Panel
+  └─ FA_Loop         # SLC or NAC loop
+        ├─ FA_Sensor         # Smoke, heat, CO detector
+        ├─ FA_Alarm          # Horn/strobe unit
+        ├─ FA_PullStation    # Manual alarm activator
+        └─ FA_Module         # Monitor/control module (elevator shutdown, etc.)
+
+Network/Data (N)
+----------------
+N_Router             # Building network gateway or firewall
+  └─ N_Switch        # Distribution switch (IDF/MDF)
+        └─ N_Port            # Specific patch port
+              ├─ N_AP              # Wireless Access Point
+              ├─ N_Jack            # Ethernet wall jack
+              └─ N_Device          # Printer, camera, projector, etc.
+
+Mechanical (M)
+--------------
+M_RTU                # Rooftop HVAC unit
+  └─ M_Duct          # Main or branch duct
+        └─ M_VAV             # Airflow regulator
+              ├─ M_Diffuser        # Ceiling or wall vent
+              ├─ M_Exhaust         # Exhaust fan
+              └─ M_Thermostat      # Zone temperature control
+
+Plumbing (P)
+------------
+P_SupplyMain         # Building water entry point (cold/hot)
+  └─ P_Pipe          # Water line
+        └─ P_Valve           # Shutoff valve (local or branch)
+              ├─ P_Fixture         # Sink, toilet, urinal, etc.
+              ├─ P_Heater          # Water heater
+              └─ P_Drain           # Floor drain or fixture drain
+
+
+Metadata Links (example JSON structure)
+---------------------------------------
+Each object will include references to its upstream/downstream relations:
+
+Example for an electrical receptacle:
+{
+  "id": "TCHS_L2_E_Receptacle_015",
+  "panel_id": "TCHS_L2_E_Panel_001",
+  "circuit_id": "TCHS_L2_E_Circuit_003",
+  "zone": "Room 205",
+  "voltage": "120V",
+  "fed_by": "TCHS_L2_E_Circuit_003"
+}
+
+Example for a plumbing fixture:
+{
+  "id": "TCHS_L1_P_Fixture_008",
+  "pipe_id": "TCHS_L1_P_Pipe_004",
+  "valve_id": "TCHS_L1_P_Valve_002",
+  "flow_rate": "1.6 GPF",
+  "hot_cold": "cold"
+}
+
+Validation Schema Pattern
+-------------------------
+  ^[A-Z0-9]{3,10}_L[0-9]{1,2}_(E|LV|FA|N|M|P)_[A-Z][a-zA-Z]+_[0-9]{3}$
+
+Example Valid IDs:
+  - WESTHS_L1_E_Panel_001
+  - BLDG33_L2_M_Thermostat_004
+  - TCHS_L3_FA_Sensor_029
+
 
 ----------------------------------------------------------------
 
@@ -255,7 +374,7 @@ Testing is critical to maintaining code reliability and stability as Arxline sca
 
 ### 🔹 1. Go Backend (Chi)
 
-We use Go’s built-in testing tools with the `testing` package.
+We use Go's built-in testing tools with the `testing` package.
 
 #### Run all tests:
 
@@ -366,6 +485,58 @@ Linting and formatting checks
           ▼                            ▼
      Cloud Infrastructure      (Data storage and query)
    (DigitalOcean & Azure)
+
+------------------------------------------------------------------
+
+# Arxline Backend API: Validation & Error Responses
+
+## Validation Requirements
+
+- **Object IDs**: Must match the required format (see below for details).
+- **Metadata Links**: All references (e.g., `panel_id`, `circuit_id`, etc.) must be valid object IDs or empty.
+- **Batch/Bulk Endpoints**: Every object in the batch is validated individually.
+
+### Object ID Format
+- All object IDs must pass backend validation (`IsValidObjectId`).
+- Example format: `TCHS_L2_E_Receptacle_015` (see code for exact regex).
+
+## Error Responses
+
+- **HTTP 400**: Returned for any validation failure.
+    - **Body**: Plain text or JSON with a message indicating the field(s) that failed.
+        - `"Invalid object ID format: <id>"`
+        - `"Invalid metadata link field(s): panel_id, upstream_id"`
+        - `"Invalid metadata link field(s) in device: panel_id, circuit_id"`
+- **HTTP 401/403**: For authentication/authorization errors.
+- **HTTP 404**: For not found.
+- **HTTP 500**: For server errors.
+
+### Example Error Response
+```json
+{
+  "error": "Invalid metadata link field(s) in device: panel_id, circuit_id"
+}
+```
+Or (if plain text):
+```
+Invalid metadata link field(s) in device: panel_id, circuit_id
+```
+
+## Error Response Summary Table
+
+| Error Type         | HTTP Code | Example Message                                 | When Triggered                        |
+|--------------------|-----------|------------------------------------------------|---------------------------------------|
+| Invalid Object ID  | 400       | Invalid object ID format: <id>                  | On any invalid object ID              |
+| Invalid Reference  | 400       | Invalid metadata link field(s): panel_id        | On any invalid metadata reference     |
+| Unauthorized       | 401       | Unauthorized                                   | If not authenticated                  |
+| Forbidden          | 403       | Forbidden: insufficient role                   | If lacking permissions                |
+| Not Found          | 404       | Device not found                               | If resource does not exist            |
+| Server Error       | 500       | DB error                                       | On internal server/database errors    |
+
+## Notes for Integrators
+- Always check for HTTP 400 responses and parse the error message for details.
+- Ensure all IDs and references are valid before submitting requests.
+- For bulk/batch endpoints, every object is validated and the entire batch may be rejected if any object fails validation.
 
 ------------------------------------------------------------------
 

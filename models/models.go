@@ -3,6 +3,8 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
+	"regexp"
 	"time"
 
 	"gorm.io/datatypes"
@@ -10,6 +12,12 @@ import (
 )
 
 var DB *gorm.DB
+
+var idPattern = regexp.MustCompile(`^[A-Z0-9]{3,10}_L[0-9]{1,2}_(E|LV|FA|N|M|P)_[A-Z][a-zA-Z]+_[0-9]{3}$`)
+
+func IsValidObjectId(id string) bool {
+	return idPattern.MatchString(id)
+}
 
 // User represents a system user (Owner, Builder, or Guest).
 type User struct {
@@ -129,22 +137,6 @@ type Geometry struct {
 	Scale    float64 `json:"scale,omitempty"`
 }
 
-type Wall struct {
-	ID         string   `gorm:"primaryKey" json:"id"`
-	Geometry   Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
-	Material   string   `json:"material,omitempty"`
-	Layer      string   `json:"layer,omitempty"`
-	CreatedBy  uint     `json:"created_by"`
-	Status     string   `json:"status,omitempty"`
-	SourceSVG  string   `json:"source_svg,omitempty"`
-	SVGID      string   `json:"svg_id,omitempty"`
-	LockedBy   uint     `json:"locked_by,omitempty"`
-	AssignedTo uint     `json:"assigned_to,omitempty"`
-	RoomID     string   `gorm:"index" json:"room_id,omitempty"` // Optional: wall-to-room relationship
-	Category   string   `json:"category"`
-	ProjectID  uint     `json:"project_id"`
-}
-
 type Room struct {
 	ID         string   `gorm:"primaryKey" json:"id"`
 	Name       string   `json:"name"`
@@ -157,38 +149,6 @@ type Room struct {
 	SVGID      string   `json:"svg_id,omitempty"`
 	LockedBy   uint     `json:"locked_by,omitempty"`
 	AssignedTo uint     `json:"assigned_to,omitempty"`
-	Category   string   `json:"category"`
-	ProjectID  uint     `json:"project_id"`
-}
-
-type Door struct {
-	ID         string   `gorm:"primaryKey" json:"id"`
-	Geometry   Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
-	Material   string   `json:"material,omitempty"`
-	Layer      string   `json:"layer,omitempty"`
-	CreatedBy  uint     `json:"created_by"`
-	Status     string   `json:"status,omitempty"`
-	SourceSVG  string   `json:"source_svg,omitempty"`
-	SVGID      string   `json:"svg_id,omitempty"`
-	LockedBy   uint     `json:"locked_by,omitempty"`
-	AssignedTo uint     `json:"assigned_to,omitempty"`
-	RoomID     string   `gorm:"index" json:"room_id,omitempty"` // Optional: door-to-room relationship
-	Category   string   `json:"category"`
-	ProjectID  uint     `json:"project_id"`
-}
-
-type Window struct {
-	ID         string   `gorm:"primaryKey" json:"id"`
-	Geometry   Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
-	Material   string   `json:"material,omitempty"`
-	Layer      string   `json:"layer,omitempty"`
-	CreatedBy  uint     `json:"created_by"`
-	Status     string   `json:"status,omitempty"`
-	SourceSVG  string   `json:"source_svg,omitempty"`
-	SVGID      string   `json:"svg_id,omitempty"`
-	LockedBy   uint     `json:"locked_by,omitempty"`
-	AssignedTo uint     `json:"assigned_to,omitempty"`
-	RoomID     string   `gorm:"index" json:"room_id,omitempty"` // Optional: window-to-room relationship
 	Category   string   `json:"category"`
 	ProjectID  uint     `json:"project_id"`
 }
@@ -209,44 +169,51 @@ type Device struct {
 	AssignedTo uint     `json:"assigned_to,omitempty"`
 	Category   string   `json:"category"`
 	ProjectID  uint     `json:"project_id"`
+	// Metadata links
+	PanelID      string `json:"panel_id,omitempty"`
+	CircuitID    string `json:"circuit_id,omitempty"`
+	UpstreamID   string `json:"upstream_id,omitempty"`
+	DownstreamID string `json:"downstream_id,omitempty"`
+	PipeID       string `json:"pipe_id,omitempty"`
 }
 
 type Label struct {
-	ID         string   `gorm:"primaryKey" json:"id"`
-	Text       string   `json:"text"`
-	Geometry   Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
-	Layer      string   `json:"layer,omitempty"`
-	CreatedBy  uint     `json:"created_by"`
-	Status     string   `json:"status,omitempty"`
-	SourceSVG  string   `json:"source_svg,omitempty"`
-	SVGID      string   `json:"svg_id,omitempty"`
-	LockedBy   uint     `json:"locked_by,omitempty"`
-	AssignedTo uint     `json:"assigned_to,omitempty"`
-	RoomID     string   `gorm:"index" json:"room_id,omitempty"` // Optional: label-to-room relationship
-	Category   string   `json:"category"`
-	ProjectID  uint     `json:"project_id"`
+	ID           string   `gorm:"primaryKey" json:"id"`
+	Text         string   `json:"text"`
+	Geometry     Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
+	Layer        string   `json:"layer,omitempty"`
+	CreatedBy    uint     `json:"created_by"`
+	Status       string   `json:"status,omitempty"`
+	SourceSVG    string   `json:"source_svg,omitempty"`
+	SVGID        string   `json:"svg_id,omitempty"`
+	LockedBy     uint     `json:"locked_by,omitempty"`
+	AssignedTo   uint     `json:"assigned_to,omitempty"`
+	RoomID       string   `gorm:"index" json:"room_id,omitempty"` // Optional: label-to-room relationship
+	Category     string   `json:"category"`
+	ProjectID    uint     `json:"project_id"`
+	UpstreamID   string   `json:"upstream_id,omitempty"`
+	DownstreamID string   `json:"downstream_id,omitempty"`
 }
 
 type Zone struct {
-	ID         string   `gorm:"primaryKey" json:"id"`
-	Name       string   `json:"name"`
-	Geometry   Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
-	Layer      string   `json:"layer,omitempty"`
-	CreatedBy  uint     `json:"created_by"`
-	Status     string   `json:"status,omitempty"`
-	SourceSVG  string   `json:"source_svg,omitempty"`
-	SVGID      string   `json:"svg_id,omitempty"`
-	LockedBy   uint     `json:"locked_by,omitempty"`
-	AssignedTo uint     `json:"assigned_to,omitempty"`
-	Category   string   `json:"category"`
-	ProjectID  uint     `json:"project_id"`
+	ID           string   `gorm:"primaryKey" json:"id"`
+	Name         string   `json:"name"`
+	Geometry     Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
+	Layer        string   `json:"layer,omitempty"`
+	CreatedBy    uint     `json:"created_by"`
+	Status       string   `json:"status,omitempty"`
+	SourceSVG    string   `json:"source_svg,omitempty"`
+	SVGID        string   `json:"svg_id,omitempty"`
+	LockedBy     uint     `json:"locked_by,omitempty"`
+	AssignedTo   uint     `json:"assigned_to,omitempty"`
+	Category     string   `json:"category"`
+	ProjectID    uint     `json:"project_id"`
+	UpstreamID   string   `json:"upstream_id,omitempty"`
+	DownstreamID string   `json:"downstream_id,omitempty"`
 }
 
 type BIMModel struct {
-	Walls   []Wall   `json:"walls"`
 	Rooms   []Room   `json:"rooms"`
-	Doors   []Door   `json:"doors"`
-	Windows []Window `json:"windows"`
 	Devices []Device `json:"devices"`
 	Labels  []Label  `json:"labels"`
 	Zones   []Zone   `json:"zones"`
@@ -328,15 +295,17 @@ type CatalogItem struct {
 }
 
 type Route struct {
-	ID        string   `gorm:"primaryKey" json:"id"`
-	ProjectID uint     `json:"project_id"`
-	FloorID   uint     `json:"floor_id"`
-	System    string   `json:"system"`
-	Label     string   `json:"label"`
-	Circuit   string   `json:"circuit"`
-	Geometry  Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
-	CreatedBy uint     `json:"created_by"`
-	Status    string   `json:"status"`
+	ID           string   `gorm:"primaryKey" json:"id"`
+	ProjectID    uint     `json:"project_id"`
+	FloorID      uint     `json:"floor_id"`
+	System       string   `json:"system"`
+	Label        string   `json:"label"`
+	Circuit      string   `json:"circuit"`
+	Geometry     Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
+	CreatedBy    uint     `json:"created_by"`
+	Status       string   `json:"status"`
+	UpstreamID   string   `json:"upstream_id,omitempty"`
+	DownstreamID string   `json:"downstream_id,omitempty"`
 }
 
 type Pin struct {
@@ -349,4 +318,40 @@ type Pin struct {
 	CreatedBy uint      `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// DrawingVersion stores a version of the SVG for a floor, for undo/redo/versioning
+type DrawingVersion struct {
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	FloorID       uint      `gorm:"index;not null" json:"floor_id"`
+	SVG           string    `gorm:"type:text;not null" json:"svg"`
+	VersionNumber int       `gorm:"not null" json:"version_number"`
+	UserID        uint      `gorm:"index;not null" json:"user_id"`
+	ActionType    string    `gorm:"type:varchar(32);not null" json:"action_type"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// GenerateObjectId creates an object ID from building, floor, system, type, and instance number.
+// TODO: In the future, auto-increment instance if not provided.
+func GenerateObjectId(building, floor, system, objType string, instance int) string {
+	// Example: TCHS_L2_E_Receptacle_015
+	return fmt.Sprintf("%s_%s_%s_%s_%03d", building, floor, system, objType, instance)
+}
+
+// GetNextInstanceNumber returns the next available instance number for the given object context.
+// TODO: Implement DB query to find the highest instance for building, floor, system, and type.
+func GetNextInstanceNumber(building, floor, system, objType string) int {
+	// Example stub: always return 1 for now
+	return 1
+}
+
+// Validation helper for metadata links
+func ValidateMetadataLinks(links map[string]string) (bool, []string) {
+	var invalidFields []string
+	for field, id := range links {
+		if id != "" && !IsValidObjectId(id) {
+			invalidFields = append(invalidFields, field)
+		}
+	}
+	return len(invalidFields) == 0, invalidFields
 }

@@ -23,7 +23,7 @@ func IsValidObjectId(id string) bool {
 type User struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	UpdatedAt time.Time      `json:"last_modified"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
 	Username  string         `gorm:"uniqueIndex;not null" json:"username"`
@@ -36,7 +36,7 @@ type User struct {
 type Project struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	UpdatedAt time.Time      `json:"last_modified"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	Name      string         `gorm:"not null" json:"name"`
 	UserID    uint           `gorm:"index;not null" json:"user_id"`
@@ -47,7 +47,7 @@ type Project struct {
 type Drawing struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	UpdatedAt time.Time      `json:"last_modified"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	ProjectID uint           `gorm:"index;not null" json:"project_id"`
 	Name      string         `gorm:"not null" json:"name"`
@@ -58,7 +58,7 @@ type Drawing struct {
 type Building struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	UpdatedAt time.Time      `json:"last_modified"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	Name      string         `gorm:"not null" json:"name"`
 	Address   string         `json:"address"`
@@ -70,7 +70,7 @@ type Building struct {
 type Floor struct {
 	ID         uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	UpdatedAt  time.Time      `json:"last_modified"`
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 	BuildingID uint           `gorm:"index;not null" json:"building_id"`
 	Name       string         `gorm:"not null" json:"name"`
@@ -101,7 +101,7 @@ type Log struct {
 type SVGObject struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	UpdatedAt time.Time      `json:"last_modified"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 	FloorID   uint           `gorm:"index;not null" json:"floor_id"`
 	ObjectID  string         `gorm:"not null" json:"object_id"` // SVG element ID
@@ -116,7 +116,7 @@ type SVGObject struct {
 type Comment struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
 	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
+	UpdatedAt   time.Time      `json:"last_modified"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 	SVGObjectID uint           `gorm:"index;not null" json:"svg_object_id"`
 	UserID      uint           `gorm:"index;not null" json:"user_id"`
@@ -317,7 +317,7 @@ type Pin struct {
 	Y         float64   `json:"y"`
 	CreatedBy uint      `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UpdatedAt time.Time `json:"last_modified"`
 }
 
 // DrawingVersion stores a version of the SVG for a floor, for undo/redo/versioning

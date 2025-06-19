@@ -62,6 +62,7 @@ func main() {
 			r.Get("/buildings/{id}/floors", handlers.HTMXListFloors)
 
 			r.Post("/drawings", handlers.CreateDrawing)
+			r.Get("/drawings/{drawingID}/last_modified", handlers.GetDrawingLastModified)
 
 			r.Put("/comment/{id}", handlers.EditComment)
 			r.Delete("/comment/{id}", handlers.DeleteComment)

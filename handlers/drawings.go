@@ -130,6 +130,31 @@ func GetDrawing(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(drawing)
 }
 
+// GetDrawingLastModified returns the last modified timestamp for a Drawing
+func GetDrawingLastModified(w http.ResponseWriter, r *http.Request) {
+	drawingIDStr := chi.URLParam(r, "drawingID")
+	drawingID, err := strconv.Atoi(drawingIDStr)
+	if err != nil {
+		http.Error(w, "Invalid drawing ID", http.StatusBadRequest)
+		return
+	}
+
+	var drawing models.Drawing
+	if err := db.DB.First(&drawing, drawingID).Error; err != nil {
+		http.Error(w, "Drawing not found", http.StatusNotFound)
+		return
+	}
+
+	response := struct {
+		LastModified string `json:"last_modified"`
+	}{
+		LastModified: drawing.UpdatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 // ServeFloorSVG returns the SVG markup for the requested floor, with data-object-id attributes.
 func ServeFloorSVG(w http.ResponseWriter, r *http.Request) {
 	projectID, err := extractProjectID(r)
@@ -149,6 +174,7 @@ func ServeFloorSVG(w http.ResponseWriter, r *http.Request) {
 	}
 	// Try to read SVG from file path if exists
 	svgContent := ""
+	var drawingID *uint = nil
 	if floor.SVGPath != "" {
 		data, err := os.ReadFile(floor.SVGPath)
 		if err == nil {
@@ -160,13 +186,21 @@ func ServeFloorSVG(w http.ResponseWriter, r *http.Request) {
 		var drawing models.Drawing
 		if err := db.DB.Where("name = ? AND project_id = ?", floor.Name, projectID).First(&drawing).Error; err == nil {
 			svgContent = drawing.SVG
+			drawingID = &drawing.ID
 		}
 	}
 	if svgContent == "" {
 		svgContent = "<svg><!-- SVG not found --></svg>"
 	}
-	w.Header().Set("Content-Type", "image/svg+xml")
-	w.Write([]byte(svgContent))
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		SVG       string `json:"svg"`
+		DrawingID *uint  `json:"drawing_id"`
+	}{
+		SVG:       svgContent,
+		DrawingID: drawingID,
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 // ServeObjectInfo returns HTML/HTMX partial with object info and comments, using Go templates.

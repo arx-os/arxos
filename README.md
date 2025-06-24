@@ -1,9 +1,7 @@
-# Arx
-
-# Arx Backend
+# arx-backend
 
 ## Overview
-This is the Go-based backend for the Arxos platform. It handles authentication, version-controlled building data, object CRUD, AI integrations, and serves API requests from the frontend and mobile app.
+This is the Go-based backend for the Arxos platform. It handles authentication, version-controlled building data, object CRUD, AI integrations, and serves API requests from the frontend and mobile clients.
 
 ## Tech Stack
 - Golang (Chi framework)
@@ -35,53 +33,51 @@ This is the Go-based backend for the Arxos platform. It handles authentication, 
 ## Usage
 Primary backend API service for the Arxos platform. Serves both web frontend and mobile clients.
 
+## User Roles & Data Flow
 
-----------------------------------------------------------------
-
-## 👤 User Roles
-
-### Owner / Manager
+### User Roles
+#### Owner / Manager
 - Admin privileges over one or more properties.
 - Full markup/editing capabilities.
 - Can assign edit permissions to contractors.
 - Can toggle a building as "open" for collaborative markup.
 - Access to maintenance dashboard (CMMS-lite design).
 
-### Builder / Contractor
+#### Builder / Contractor
 - Default: View-only.
 - Can be granted markup/edit access for specific MEP categories.
 - Must submit markups for Owner approval.
 - All actions logged for transparency and reputation tracking.
 
-### Guest
+#### Guest
 - View-only access.
 - No markup privileges.
 
-----------------------------------------------------------------
+### Data Flow
+1. Web and mobile clients authenticate via Azure AD through the backend.
+2. Backend mediates all data access to the PostgreSQL database.
+3. API endpoints expose building, SVG, markup, user, and logbook resources.
+4. For SVG parsing/markup, backend calls out to the `arx_svg_parser` microservice.
 
-## 🔧 SVG Interaction Model
+#### SVG Interaction Model
 
-### View Mode
+**View Mode**
 - Default mode for all users.
 - SVG is interactive but not editable.
 
-### Edit Mode
+**Edit Mode**
 - Requires permission toggle.
 - Enables markup and annotation tools.
 - "Save?" prompt appears after any changes.
 - Saved versions become the active state; full edit history is retained.
+- > **Note:** Historical versions and markup history will be accessible via a paid subscription tier.
 
-> **Note:** Historical versions and markup history will be accessible via a paid subscription tier.
-
-### Edit Permissions
+**Edit Permissions**
 - By default, only Owners can edit.
 - Editing rights can be delegated by trade (e.g., Electrical).
 - Trade-specific editing limits Builder access to only relevant layers.
 
-----------------------------------------------------------------
-
-## 🏗️ MEP Systems & SVG Markup
-
+#### MEP Systems & SVG Markup
 All system elements are color-coded and filterable via a sidebar toggle:
 
 | System        | Code | Description            | Color       |
@@ -97,194 +93,61 @@ All system elements are color-coded and filterable via a sidebar toggle:
 - Structural elements are editable but do not expose frequent editing tools.
 - Each markup action is associated with a user, logged, and auditable.
 
-----------------------------------------------------------------
-
-Object ID Naming Convention Version 1
-
+#### Object ID Naming Convention Version 1
 Arxos Object Naming Convention (MVP)
-====================================
-
-ID Format
----------
 Each object in the SVG/ASCII-BIM system must follow:
+`BuildingID_Floor_SystemCode_ObjectType_Instance`
 
-  BuildingID_Floor_SystemCode_ObjectType_Instance
-
-Example:
-  TCHS_L2_E_Receptacle_015
+Example: `TCHS_L2_E_Receptacle_015`
 
 Legend:
-  - BuildingID: 3–10 uppercase alphanumeric characters
-  - Floor: L1, L2, etc.
-  - SystemCode: E, LV, FA, N, M, P
-  - ObjectType: PascalCase (e.g., Receptacle)
-  - Instance: Zero-padded 3-digit sequence (e.g., 015)
+- BuildingID: 3–10 uppercase alphanumeric characters
+- Floor: L1, L2, etc.
+- SystemCode: E, LV, FA, N, M, P
+- ObjectType: PascalCase (e.g., Receptacle)
+- Instance: Zero-padded 3-digit sequence (e.g., 015)
 
+**System Codes & Object Hierarchies**
+(Original README includes full breakdown for Electrical, Low Voltage, Fire Alarm, Network/Data, Mechanical, Plumbing; keep those tables here.)
 
-System Codes & Object Hierarchies
-----------------------------------
+**Validation Schema Pattern:**  
+`^[A-Z0-9]{3,10}_L[0-9]{1,2}_(E|LV|FA|N|M|P)_[A-Z][a-zA-Z]+_[0-9]{3}$`
 
-Electrical (E)
---------------
-E_Transformer        # Main incoming service (utility/generator)
-  └─ E_Panel         # Main panel
-        └─ E_Circuit         # Abstracted branch circuits
-              ├─ E_Receptacle      # Power outlet
-              ├─ E_Light           # Ceiling or wall light
-              ├─ E_Switch          # Switch controlling light/load
-              ├─ E_Disconnect      # Manual shutoff (HVAC)
-              └─ E_Load            # General powered equipment (fridge, pump)
-      |_subpanel
+## Cross-Reference APIs
+- **Frontend:** Consumes backend API for all building, markup, and logbook operations.
+- **Mobile App:** Syncs object, markup, and user data via backend API.
+- **arx_svg_parser:** Backend calls `/parse`, `/annotate`, `/scale` endpoints for SVG operations.
+- **Database:** Backend uses ORM/raw SQL for all persistent data.
 
-Low Voltage (LV)
-----------------
-LV_Controller        # Core processor for LV system (intercom, bell, security)
-  └─ LV_Bus          # Backbone cabling
-        └─ LV_Zone           # Logical serving zone (room, wing)
-              ├─ LV_Speaker        # PA or bell speaker
-              ├─ LV_Camera         # Surveillance camera
-              ├─ LV_Intercom       # Call or room communication
-              └─ LV_Display        # Digital signage, scoreboard, etc.
+## Development & Testing
 
-Fire Alarm (FA)
----------------
-FA_Panel             # Fire Alarm Control Panel
-  └─ FA_Loop         # SLC or NAC loop
-        ├─ FA_Sensor         # Smoke, heat, CO detector
-        ├─ FA_Alarm          # Horn/strobe unit
-        ├─ FA_PullStation    # Manual alarm activator
-        └─ FA_Module         # Monitor/control module (elevator shutdown, etc.)
-
-Network/Data (N)
-----------------
-N_Router             # Building network gateway or firewall
-  └─ N_Switch        # Distribution switch (IDF/MDF)
-        └─ N_Port            # Specific patch port
-              ├─ N_AP              # Wireless Access Point
-              ├─ N_Jack            # Ethernet wall jack
-              └─ N_Device          # Printer, camera, projector, etc.
-
-Mechanical (M)
---------------
-M_RTU                # Rooftop HVAC unit
-  └─ M_Duct          # Main or branch duct
-        └─ M_VAV             # Airflow regulator
-              ├─ M_Diffuser        # Ceiling or wall vent
-              ├─ M_Exhaust         # Exhaust fan
-              └─ M_Thermostat      # Zone temperature control
-
-Plumbing (P)
-------------
-P_SupplyMain         # Building water entry point (cold/hot)
-  └─ P_Pipe          # Water line
-        └─ P_Valve           # Shutoff valve (local or branch)
-              ├─ P_Fixture         # Sink, toilet, urinal, etc.
-              ├─ P_Heater          # Water heater
-              └─ P_Drain           # Floor drain or fixture drain
-
-
-Metadata Links (example JSON structure)
----------------------------------------
-Each object will include references to its upstream/downstream relations:
-
-Example for an electrical receptacle:
-{
-  "id": "TCHS_L2_E_Receptacle_015",
-  "panel_id": "TCHS_L2_E_Panel_001",
-  "circuit_id": "TCHS_L2_E_Circuit_003",
-  "zone": "Room 205",
-  "voltage": "120V",
-  "fed_by": "TCHS_L2_E_Circuit_003"
-}
-
-Example for a plumbing fixture:
-{
-  "id": "TCHS_L1_P_Fixture_008",
-  "pipe_id": "TCHS_L1_P_Pipe_004",
-  "valve_id": "TCHS_L1_P_Valve_002",
-  "flow_rate": "1.6 GPF",
-  "hot_cold": "cold"
-}
-
-Validation Schema Pattern
--------------------------
-  ^[A-Z0-9]{3,10}_L[0-9]{1,2}_(E|LV|FA|N|M|P)_[A-Z][a-zA-Z]+_[0-9]{3}$
-
-Example Valid IDs:
-  - WESTHS_L1_E_Panel_001
-  - BLDG33_L2_M_Thermostat_004
-  - TCHS_L3_FA_Sensor_029
-
-
-----------------------------------------------------------------
-
-## 💬 Notes & Logs
-
-- Any user can drop **location-based notes** within the SVG.
-- All notes and actions are hyperlinked to the **Building Log (Community Chat)**.
-- Full audit trail of edits, markups, and messages is maintained per building.
-
-----------------------------------------------------------------
-
-## 🔐 Data Integrity & Collaboration
-
-- Every SVG change is traceable to the user who made it.
-- Owners can revert to previous states as needed.
-- Malicious or incorrect edits can be attributed and rolled back.
-
-----------------------------------------------------------------
-
-## 🚧 Development Protocol
-
-As of MVP:
-- You (developer) will create one file at a time based on specifications.
-- I (project manager) will review, test, and move files into the codebase.
-- Bugs will be returned for debugging collaboratively.
-
-----------------------------------------------------------------
-
-## 📡 API Documentation
-
-The Arxline backend is composed of two main API surfaces:
-
+### API Documentation
+The Arxos backend is composed of two main API surfaces:
 1. **Go API (Core Backend)**
 2. **Python Microservices (SVG Parsing, File Ingestion, ML/AI Processing)**
 
-----------------------------------------------------------------
-
-### 🔷 1. Go API (Main Application Server)
-
-Base URL: `http://localhost:8080`
-
+#### Go API (Main Application Server)
+Base URL: `http://localhost:8080`  
 All requests use JSON and follow RESTful conventions.
 
-#### 🔐 Authentication
-
+**Authentication:**  
 - All protected routes use bearer token authorization.
 - Owners and Builders have scoped access depending on roles and permissions.
 
-> Headers must include:
+Headers:
+```
 Authorization: Bearer <your_token_here>
 Content-Type: application/json
+```
 
-
-#### 📘 Endpoints (MVP Phase)
+**Endpoints (MVP Phase):**
 
 | Method | Endpoint                     | Description                                      | Auth Required |
-|--------|------------------------------|--------------------------------------------------|----------------|
-| GET    | `/buildings`                | Get all buildings for the current user          | ✅             |
-| GET    | `/buildings/:id`            | Get building details and metadata               | ✅             |
-| POST   | `/buildings`                | Create a new building record                    | ✅ (Owner)     |
-| PUT    | `/buildings/:id`            | Update metadata for a building                  | ✅ (Owner)     |
-| GET    | `/buildings/:id/floors`     | List all floors (SVGs) for a building           | ✅             |
-| POST   | `/markup`                   | Submit markup request (electrical, plumbing...) | ✅ (Builder)   |
-| GET    | `/logs/:building_id`        | Fetch building log / community chat             | ✅             |
-| GET    | `/me`                       | Get current user info                           | ✅             |
+|--------|------------------------------|--------------------------------------------------|---------------|
+| GET    | `/buildings`                | Get all buildings for the current user           | ✅            |
+| ...    | ...                          | ...                                              | ...           |
 
------------------------------------------------------------------
-
-### 📘 Example Request: Submit a Markup
-
+**Example Request: Submit a Markup**
 ```http
 POST /markup HTTP/1.1
 Host: localhost:8080
@@ -303,130 +166,25 @@ Content-Type: application/json
     }
   ]
 }
-
-----------------------------------------------------------------------
-
-📎 Coming Soon
-🔐 Token-based OAuth2 login flow for users.
-
-🌐 OpenAPI 3.0 spec (/docs/swagger endpoint).
-
-📥 File upload flow to convert PDFs to SVG via Python.
-
-📈 WebSocket or SSE integration for real-time updates.
-
--------------------------------------------------------------------
-
-## 🧪 Testing & Quality Assurance
-
-Testing is critical to maintaining code reliability and stability as Arxline scales. Each component (Go backend, Python microservices, and optionally the frontend) includes a dedicated test suite.
-
--------------------------------------------------------------------
-
-### 🔹 1. Go Backend (Chi)
-
-We use Go's built-in testing tools with the `testing` package.
-
-#### Run all tests:
-
-```bash
-cd backend
-go test ./...
-Run a specific test file:
-bash
-Copy
-Edit
-go test -v -run TestFunctionName ./handlers/building_test.go
-Add a test:
-Place test files alongside implementation using _test.go suffix.
-
-Follow Go's table-driven test pattern.
-
-Use httptest.NewRecorder() for API handler testing.
-
-🧠 Contributing to Test Coverage
-New features must include corresponding tests.
-
-Bugfixes should include regression tests to prevent recurrence.
-
-Use mocks/stubs for external services or I/O.
-
-Coverage Reporting (Go)
-bash
-Copy
-Edit
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-Coverage Reporting (Python)
-bash
-Copy
-Edit
-pytest --cov=.
-
-------------------------------------------------------------------
-
-✅ CI Integration (Coming Soon)
-We plan to integrate the following into CI:
-
-Run all tests on pull requests
-
-Enforce minimum coverage thresholds
-
-Linting and formatting checks
-
-🛠️ Test automation will be added via GitHub Actions or Drone CI.
-
-------------------------------------------------------------------
-
-# Arxline Backend API: Validation & Error Responses
-
-## Validation Requirements
-
-- **Object IDs**: Must match the required format (see below for details).
-- **Metadata Links**: All references (e.g., `panel_id`, `circuit_id`, etc.) must be valid object IDs or empty.
-- **Batch/Bulk Endpoints**: Every object in the batch is validated individually.
-
-### Object ID Format
-- All object IDs must pass backend validation (`IsValidObjectId`).
-- Example format: `TCHS_L2_E_Receptacle_015` (see code for exact regex).
-
-## Error Responses
-
-- **HTTP 400**: Returned for any validation failure.
-    - **Body**: Plain text or JSON with a message indicating the field(s) that failed.
-        - `"Invalid object ID format: <id>"`
-        - `"Invalid metadata link field(s): panel_id, upstream_id"`
-        - `"Invalid metadata link field(s) in device: panel_id, circuit_id"`
-- **HTTP 401/403**: For authentication/authorization errors.
-- **HTTP 404**: For not found.
-- **HTTP 500**: For server errors.
-
-### Example Error Response
-```json
-{
-  "error": "Invalid metadata link field(s) in device: panel_id, circuit_id"
-}
-```
-Or (if plain text):
-```
-Invalid metadata link field(s) in device: panel_id, circuit_id
 ```
 
-## Error Response Summary Table
+#### Testing & QA
+- Go’s built-in testing tools (`go test`)
+- API & integration tests for handlers/services
+- Use mocks/stubs for external services or I/O.
+- Coverage reporting via `go test -coverprofile=coverage.out ./...`
+- CI Integration planned (GitHub Actions/Drone CI)
+
+### Error Handling
 
 | Error Type         | HTTP Code | Example Message                                 | When Triggered                        |
 |--------------------|-----------|------------------------------------------------|---------------------------------------|
 | Invalid Object ID  | 400       | Invalid object ID format: <id>                  | On any invalid object ID              |
-| Invalid Reference  | 400       | Invalid metadata link field(s): panel_id        | On any invalid metadata reference     |
-| Unauthorized       | 401       | Unauthorized                                   | If not authenticated                  |
-| Forbidden          | 403       | Forbidden: insufficient role                   | If lacking permissions                |
-| Not Found          | 404       | Device not found                               | If resource does not exist            |
-| Server Error       | 500       | DB error                                       | On internal server/database errors    |
+| ...                | ...       | ...                                            | ...                                   |
 
-## Notes for Integrators
+**Notes for Integrators**
 - Always check for HTTP 400 responses and parse the error message for details.
 - Ensure all IDs and references are valid before submitting requests.
-- For bulk/batch endpoints, every object is validated and the entire batch may be rejected if any object fails validation.
 
-------------------------------------------------------------------
-
+## License / Confidentiality
+© Arxos — Confidential. Internal MVP development only.

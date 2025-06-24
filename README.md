@@ -1,50 +1,40 @@
-# Arxline
+# Arx
 
-**Arxline** is a Building Information System (BIS) offered as a Software-as-a-Service (SaaS). Our platform empowers building professionals to collaboratively document and manage the physical infrastructure of buildings using scalable, editable SVG maps as a central canvas.
+# Arx Backend
 
-We are currently in the **Minimum Viable Product (MVP)** development phase.
+## Overview
+This is the Go-based backend for the Arxos platform. It handles authentication, version-controlled building data, object CRUD, AI integrations, and serves API requests from the frontend and mobile app.
 
----------------------------------------------------------------
+## Tech Stack
+- Golang (Chi framework)
+- PostgreSQL + PostGIS
+- Azure AD (Auth)
+- JSON-based API
+- Optional: gRPC for microservice comms
 
-## 📌 Project Overview
+## Features
+- SVG-BIM and ASCII-BIM repo management
+- User & permission handling
+- AI/NLP service proxying
+- Arxfile.yaml parsing and validation
+- Data sync and share payout handling
 
-Arxline's core innovation is its SVG-based building canvas. Each building is represented as one or more SVG files, which serve as the "as-built" or "redline" drawings. These are updated collaboratively by contributors based on the work they've performed on-site.
+## Project Structure
+```
+/arx-backend
+├── cmd/
+├── internal/
+│   ├── handlers/
+│   ├── services/
+│   ├── models/
+├── config/
+├── main.go
+└── README.txt
+```
 
-Users contribute to the SVG in one of the following ways:
-- Uploading construction documents for parsing and conversion.
-- Drawing directly via a markup interface (browser-based or mobile).
-- Using virtual measurements via Augmented Reality (AR).
+## Usage
+Primary backend API service for the Arxos platform. Serves both web frontend and mobile clients.
 
-Each element (e.g., outlets, lights, pipes) is placed and scaled accurately on the SVG's mathematical grid to align with real-world spatial orientation.
-
----------------------------------------------------------------
-
-## 🧠 Product Vision
-
-Arxline is the **central nervous system** for building infrastructure:
-
-- **Owners/Managers** maintain a digital twin of their properties, accessible and editable in real-time.
-- **Builders/Contractors** document their work visually on the map as a persistent, verified layer.
-- **Guests** gain access to view and interpret the infrastructure without altering it.
-
-### Floor & Building Representation
-
-- Each **building address** maps to a single SVG canvas.
-- Separate buildings = separated visually in the same SVG canvas.
-- **Multi-floor buildings** = multiple SVGs, one per floor.
-- Floor selection is handled via a UI tab system.
-
-----------------------------------------------------------------
-
-## 🧱 Architecture
-
-| Layer                     | Technology Stack                |
-|---------------------------|---------------------------------|
-| **Frontend**              | HTML/X, Tailwind CSS            |
-| **Backend**               | Go (Chi framework)              |
-| **Microservices**      | Python (SVG Parser, File Ingestion)|
-| **Database**              | PostgreSQL with PostGIS         |
-| **Cloud**                 | DigitalOcean, Azure             |
 
 ----------------------------------------------------------------
 
@@ -253,28 +243,6 @@ As of MVP:
 
 ----------------------------------------------------------------
 
-## 📍 Roadmap
-
-- [ ] Backend Go services scaffold
-- [ ] Frontend markup canvas + sidebar filters
-- [ ] Python SVG parser microservice
-- [ ] Database schema (PostGIS + user/role/storage schema)
-- [ ] Version control and audit log for SVGs
-- [ ] CMMS-lite dashboard for Owners
-- [ ] AR support prototype
-
-----------------------------------------------------------------
-
-## 🤝 Contribution Guidelines
-
-Currently closed-source and internal. Contribution flow:
-1. Discuss vision with PM.
-2. Write scoped module/file.
-3. Submit to PM for merge.
-4. Debug collaboratively.
-
-----------------------------------------------------------------
-
 ## 📡 API Documentation
 
 The Arxline backend is composed of two main API surfaces:
@@ -314,23 +282,6 @@ Content-Type: application/json
 | GET    | `/me`                       | Get current user info                           | ✅             |
 
 -----------------------------------------------------------------
-
-### 🟨 2. Python Microservices
-
-#### A. SVG Parser Service
-
-Base URL: `http://localhost:5000`
-
-| Method | Endpoint         | Description                                   |
-|--------|------------------|-----------------------------------------------|
-| POST   | `/parse`         | Upload and parse an SVG file for markup       |
-| POST   | `/annotate`      | Add markup elements to a parsed SVG           |
-| POST   | `/scale`         | Scale and align SVG based on measurement data |
-| GET    | `/health`        | Health check for microservice                 |
-
-Request and response formats will be standardized in the future using OpenAPI schema definitions.
-
---------------------------------------------------------------------
 
 ### 📘 Example Request: Submit a Markup
 
@@ -393,42 +344,6 @@ Follow Go's table-driven test pattern.
 
 Use httptest.NewRecorder() for API handler testing.
 
-🟨 2. Python Microservices
-Each service (e.g. SVG parser) uses pytest for test discovery and execution.
-
-Run all tests:
-bash
-Copy
-Edit
-cd services/svg-parser
-pytest
-Install dev dependencies:
-bash
-Copy
-Edit
-pip install -r requirements-dev.txt
-Typical layout:
-
-pgsql
-Copy
-Edit
-svg-parser/
-├── app.py
-├── tests/
-│   ├── test_parse.py
-│   └── test_scale.py
-🎨 3. Frontend (Optional for MVP)
-If using React:
-
-Unit tests are written using Jest + React Testing Library.
-
-Test files follow .test.jsx or .test.tsx naming.
-
-bash
-Copy
-Edit
-cd frontend
-npm run test
 🧠 Contributing to Test Coverage
 New features must include corresponding tests.
 
@@ -460,31 +375,6 @@ Enforce minimum coverage thresholds
 Linting and formatting checks
 
 🛠️ Test automation will be added via GitHub Actions or Drone CI.
-
-------------------------------------------------------------------
-
-                  ┌────────────────────────────────────────┐
-                  │  AR/Virtual Measurement Module         │
-                  │  (iOS App — Swift + ARKit + LiDAR)     │
-                  └──────────────▲─────────────────────────┘
-                                 │
-                                 ▼
-                         ┌────────────┐
-                         │  SVG Canvas│◄──── Frontend (HTML/X)
-                         └────┬───────┘
-                              │
-            ┌────────────────▼────────────────┐
-            │        Go Backend API (Chi)     │
-            └─────┬──────────────┬────────────┘
-                  │              │
-     ┌────────────▼────┐    ┌────▼────────────┐
-     │ Python SVG      │    │ PostgreSQL +    │
-     │ Microservice    │    │ PostGIS DB      │
-     └────┬────────────┘    └──────────▲──────┘
-          │                            │
-          ▼                            ▼
-     Cloud Infrastructure      (Data storage and query)
-   (DigitalOcean & Azure)
 
 ------------------------------------------------------------------
 

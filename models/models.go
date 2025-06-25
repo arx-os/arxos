@@ -153,6 +153,30 @@ type Room struct {
 	ProjectID  uint     `json:"project_id"`
 }
 
+type Wall struct {
+	ID         string   `gorm:"primaryKey" json:"id"`
+	Name       string   `json:"name"`
+	Geometry   Geometry `gorm:"embedded;embeddedPrefix:geometry_" json:"geometry"`
+	Type       string   `json:"type,omitempty"`     // e.g., "exterior", "interior", "fire", "load-bearing"
+	Material   string   `json:"material,omitempty"` // e.g., "concrete", "drywall", "brick"
+	Thickness  float64  `json:"thickness,omitempty"`
+	Height     float64  `json:"height,omitempty"`
+	Layer      string   `json:"layer,omitempty"`
+	CreatedBy  uint     `json:"created_by"`
+	Status     string   `json:"status,omitempty"`
+	SourceSVG  string   `json:"source_svg,omitempty"`
+	SVGID      string   `json:"svg_id,omitempty"`
+	LockedBy   uint     `json:"locked_by,omitempty"`
+	AssignedTo uint     `json:"assigned_to,omitempty"`
+	Category   string   `json:"category"`
+	ProjectID  uint     `json:"project_id"`
+	// Wall-specific metadata
+	RoomID1    string `json:"room_id_1,omitempty"`   // First room this wall borders
+	RoomID2    string `json:"room_id_2,omitempty"`   // Second room this wall borders
+	FireRating string `json:"fire_rating,omitempty"` // e.g., "1-hour", "2-hour"
+	Insulation string `json:"insulation,omitempty"`  // e.g., "R-13", "R-19"
+}
+
 type Device struct {
 	ID         string   `gorm:"primaryKey" json:"id"`
 	Type       string   `json:"type"`
@@ -214,6 +238,7 @@ type Zone struct {
 
 type BIMModel struct {
 	Rooms   []Room   `json:"rooms"`
+	Walls   []Wall   `json:"walls"`
 	Devices []Device `json:"devices"`
 	Labels  []Label  `json:"labels"`
 	Zones   []Zone   `json:"zones"`

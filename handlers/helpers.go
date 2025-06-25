@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"arxline-backend/logic_engine"
 	"arxline/db"
+	"arxline/logic_engine"
 	"arxline/models"
 	"encoding/json"
 	"net/http"
 	"os"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 // getUserFromRequest extracts the user from the JWT and fetches the user object from the database.

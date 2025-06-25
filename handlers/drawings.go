@@ -711,6 +711,202 @@ func UpdateRoomStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(room)
 }
 
+// --- Wall Handlers ---
+// PATCH /api/wall/{id}           -> UpdateWall
+// POST  /api/wall/{id}/lock      -> LockWall
+// POST  /api/wall/{id}/unlock    -> UnlockWall
+// POST  /api/wall/{id}/assign    -> AssignWall
+// POST  /api/wall/{id}/status    -> UpdateWallStatus
+
+func UpdateWall(w http.ResponseWriter, r *http.Request) {
+	_, err := GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	wallID := chi.URLParam(r, "id")
+	var wall models.Wall
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
+		http.Error(w, "Wall not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(wall.ID) {
+		http.Error(w, "Invalid wall ID format", http.StatusBadRequest)
+		return
+	}
+	var update struct {
+		Status     *string  `json:"status"`
+		AssignedTo *uint    `json:"assigned_to"`
+		Type       *string  `json:"type"`
+		Material   *string  `json:"material"`
+		Thickness  *float64 `json:"thickness"`
+		Height     *float64 `json:"height"`
+		FireRating *string  `json:"fire_rating"`
+		Insulation *string  `json:"insulation"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+	if update.Status != nil {
+		wall.Status = *update.Status
+	}
+	if update.AssignedTo != nil {
+		wall.AssignedTo = *update.AssignedTo
+	}
+	if update.Type != nil {
+		wall.Type = *update.Type
+	}
+	if update.Material != nil {
+		wall.Material = *update.Material
+	}
+	if update.Thickness != nil {
+		wall.Thickness = *update.Thickness
+	}
+	if update.Height != nil {
+		wall.Height = *update.Height
+	}
+	if update.FireRating != nil {
+		wall.FireRating = *update.FireRating
+	}
+	if update.Insulation != nil {
+		wall.Insulation = *update.Insulation
+	}
+	db.DB.Save(&wall)
+	json.NewEncoder(w).Encode(wall)
+}
+
+func LockWall(w http.ResponseWriter, r *http.Request) {
+	user, err := GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	wallID := chi.URLParam(r, "id")
+	var wall models.Wall
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
+		http.Error(w, "Wall not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(wall.ID) {
+		http.Error(w, "Invalid wall ID format", http.StatusBadRequest)
+		return
+	}
+	if wall.LockedBy != 0 && wall.LockedBy != user.ID {
+		http.Error(w, "Wall is already locked by another user", http.StatusForbidden)
+		return
+	}
+	wall.LockedBy = user.ID
+	db.DB.Save(&wall)
+	json.NewEncoder(w).Encode(wall)
+}
+
+func UnlockWall(w http.ResponseWriter, r *http.Request) {
+	user, err := GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	wallID := chi.URLParam(r, "id")
+	var wall models.Wall
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
+		http.Error(w, "Wall not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(wall.ID) {
+		http.Error(w, "Invalid wall ID format", http.StatusBadRequest)
+		return
+	}
+	if wall.LockedBy != user.ID {
+		http.Error(w, "You do not own the lock", http.StatusForbidden)
+		return
+	}
+	wall.LockedBy = 0
+	db.DB.Save(&wall)
+	json.NewEncoder(w).Encode(wall)
+}
+
+func AssignWall(w http.ResponseWriter, r *http.Request) {
+	_, err := GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	wallID := chi.URLParam(r, "id")
+	var wall models.Wall
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
+		http.Error(w, "Wall not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(wall.ID) {
+		http.Error(w, "Invalid wall ID format", http.StatusBadRequest)
+		return
+	}
+	var assign struct {
+		AssignedTo uint `json:"assigned_to"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&assign); err != nil {
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+	wall.AssignedTo = assign.AssignedTo
+	db.DB.Save(&wall)
+	json.NewEncoder(w).Encode(wall)
+}
+
+func UpdateWallStatus(w http.ResponseWriter, r *http.Request) {
+	_, err := GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	wallID := chi.URLParam(r, "id")
+	var wall models.Wall
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+	if err := db.DB.Where("id = ? AND project_id = ?", wallID, projectID).First(&wall).Error; err != nil {
+		http.Error(w, "Wall not found", http.StatusNotFound)
+		return
+	}
+	if !models.IsValidObjectId(wall.ID) {
+		http.Error(w, "Invalid wall ID format", http.StatusBadRequest)
+		return
+	}
+	var status struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&status); err != nil {
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+	wall.Status = status.Status
+	db.DB.Save(&wall)
+	json.NewEncoder(w).Encode(wall)
+}
+
 // --- Device Handlers ---
 // PATCH /api/device/{id}           -> UpdateDevice
 // POST  /api/device/{id}/lock      -> LockDevice
@@ -1290,6 +1486,38 @@ func ListRooms(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
+func ListWalls(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	var total int64
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+	db.DB.Model(&models.Wall{}).Where("project_id = ?", projectID).Count(&total)
+
+	var walls []models.Wall
+	db.DB.Where("project_id = ?", projectID).Offset(offset).Limit(pageSize).Find(&walls)
+
+	resp := map[string]interface{}{
+		"results":     walls,
+		"page":        page,
+		"page_size":   pageSize,
+		"total":       total,
+		"total_pages": (total + int64(pageSize) - 1) / int64(pageSize),
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
 func ListDevices(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
@@ -1390,6 +1618,7 @@ func ListZones(w http.ResponseWriter, r *http.Request) {
 func ExportBIMAsJSON(w http.ResponseWriter, r *http.Request) {
 	var bimModel models.BIMModel
 	db.DB.Find(&bimModel.Rooms)
+	db.DB.Find(&bimModel.Walls)
 	db.DB.Find(&bimModel.Devices)
 	db.DB.Find(&bimModel.Labels)
 	db.DB.Find(&bimModel.Zones)

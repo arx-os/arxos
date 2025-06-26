@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"arxline/db"
-	"arxline/models"
+	"arx/db"
+	"arx/models"
 	"os"
 
 	"html/template"

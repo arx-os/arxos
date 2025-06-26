@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"arxline/models"
+	"arx/models"
 
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
@@ -75,6 +75,7 @@ func Migrate() {
 		&models.Floor{},
 		&models.Markup{},
 		&models.Log{},
+		&models.SymbolLibraryCache{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"arxline/db"
-	"arxline/models"
+	"arx/db"
+	"arx/models"
 )
 
 type AdminDeviceRequest struct {

@@ -1,14 +1,13 @@
 package handlers
 
 import (
+	"arx/models"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	"arxline/models"
-
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 // POST /api/pins

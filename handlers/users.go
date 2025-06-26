@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"arxline/db"
-	"arxline/middleware/auth"
-	"arxline/models"
+	"arx/db"
+	"arx/middleware/auth"
+	"arx/models"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v4"
@@ -26,6 +26,23 @@ type AuthRequest struct {
 
 type AuthResponse struct {
 	Token string `json:"token"`
+}
+
+// getUserIDFromToken extracts user ID from JWT token
+func getUserIDFromToken(r *http.Request) (uint, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return 0, http.ErrNoCookie
+	}
+	tokenStr := authHeader[7:]
+	claims := &auth.Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+	if err != nil || !token.Valid {
+		return 0, http.ErrNoCookie
+	}
+	return claims.UserID, nil
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
@@ -253,6 +270,19 @@ func SubmitMarkup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
+	// Validate Elements as MarkupElements
+	var elements models.MarkupElements
+	if err := json.Unmarshal([]byte(m.Elements), &elements); err != nil {
+		http.Error(w, "Elements must be valid JSON with a symbols array", http.StatusBadRequest)
+		return
+	}
+	for _, sym := range elements.Symbols {
+		if sym.SymbolID == "" {
+			http.Error(w, "Each symbol must have a symbol_id", http.StatusBadRequest)
+			return
+		}
+		// x and y are required (0 is valid)
+	}
 	m.UserID = userID
 	m.CreatedAt = time.Now()
 	if err := db.DB.Create(&m).Error; err != nil {
@@ -260,6 +290,34 @@ func SubmitMarkup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(m)
+}
+
+// ListMarkups returns all markups for the current user (with parsed symbols)
+func ListMarkups(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var markups []models.Markup
+	db.DB.Where("user_id = ?", userID).Find(&markups)
+	// Parse Elements for each markup
+	var result []map[string]interface{}
+	for _, m := range markups {
+		var elements models.MarkupElements
+		_ = json.Unmarshal([]byte(m.Elements), &elements)
+		item := map[string]interface{}{
+			"id":          m.ID,
+			"building_id": m.BuildingID,
+			"floor_id":    m.FloorID,
+			"user_id":     m.UserID,
+			"system":      m.System,
+			"created_at":  m.CreatedAt,
+			"symbols":     elements.Symbols,
+		}
+		result = append(result, item)
+	}
+	json.NewEncoder(w).Encode(result)
 }
 
 // GetLogs returns all logs for a building

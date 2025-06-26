@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"arxline/db"
-	"arxline/models"
+	"arx/db"
+	"arx/models"
 
 	"github.com/go-chi/chi/v5"
 )

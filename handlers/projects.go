@@ -2,12 +2,11 @@
 package handlers
 
 import (
+	"arx/db"
+	"arx/models"
 	"encoding/json"
 	"net/http"
 	"strconv"
-
-	"arxline/db"
-	"arxline/models"
 
 	"github.com/go-chi/chi/v5"
 )

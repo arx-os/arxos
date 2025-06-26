@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"arxline/models"
+	"arx/models"
 
 	"gorm.io/gorm"
 )

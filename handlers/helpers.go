@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"arxline/db"
-	"arxline/logic_engine"
-	"arxline/models"
+	"arx/db"
+	"arx/logic_engine"
+	"arx/models"
 	"encoding/json"
 	"net/http"
 	"os"

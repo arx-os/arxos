@@ -1,12 +1,11 @@
 package handlers
 
 import (
+	"arx/db"
+	"arx/models"
 	"encoding/json"
 	"net/http"
 	"strconv"
-
-	"arxline/db"
-	"arxline/models"
 )
 
 // GET /api/svg-objects?object_id=...&floor_id=...&type=...&label=...&page=...&page_size=...

@@ -169,7 +169,7 @@ Content-Type: application/json
 ```
 
 #### Testing & QA
-- Go’s built-in testing tools (`go test`)
+- Go's built-in testing tools (`go test`)
 - API & integration tests for handlers/services
 - Use mocks/stubs for external services or I/O.
 - Coverage reporting via `go test -coverprofile=coverage.out ./...`
@@ -188,3 +188,50 @@ Content-Type: application/json
 
 ## License / Confidentiality
 © Arxos — Confidential. Internal MVP development only.
+
+## Markup Symbol Placement API
+
+When submitting a markup (POST /api/markup), the `elements` field should be a JSON string with the following structure:
+
+```
+{
+  "symbols": [
+    {
+      "symbol_id": "ahu",
+      "x": 100.0,
+      "y": 200.0,
+      "rotation": 0,
+      "scale": 1.0,
+      "metadata": { "label": "AHU-1" }
+    }
+  ]
+}
+```
+
+- `symbol_id` (string): Required. The ID of the symbol from the symbol library.
+- `x`, `y` (float): Required. The position of the symbol.
+- `rotation` (float): Optional. Rotation in degrees.
+- `scale` (float): Optional. Scale factor.
+- `metadata` (object): Optional. Any additional metadata.
+
+### Example: Submit a markup with a symbol
+
+```
+curl -X POST http://localhost:8080/api/markup \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "building_id": 1,
+    "floor_id": 1,
+    "system": "hvac",
+    "elements": "{\"symbols\":[{\"symbol_id\":\"ahu\",\"x\":100,\"y\":200,\"rotation\":0,\"scale\":1.0,\"metadata\":{\"label\":\"AHU-1\"}}]}"
+  }'
+```
+
+### Example: Retrieve markups with placed symbols
+
+```
+curl -X GET http://localhost:8080/api/markups -H "Authorization: Bearer <token>"
+```
+
+The response will include a `symbols` array for each markup.

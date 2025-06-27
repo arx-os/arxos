@@ -2,21 +2,25 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"arx/db"
 	"arx/handlers"
+	securityMiddleware "arx/middleware"
 	"arx/middleware/auth"
 	"arx/models"
+	"arx/services"
 
 	"github.com/joho/godotenv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
 )
 
@@ -27,16 +31,66 @@ func main() {
 	db.Migrate()
 	models.SeedCategories(db.DB)
 
+	// Initialize logging service
+	loggingService, err := services.NewLoggingService(db.DB, "./logs")
+	if err != nil {
+		log.Fatalf("Failed to initialize logging service: %v", err)
+	}
+	defer loggingService.Close()
+
+	// Initialize monitoring service
+	monitoringService := services.NewMonitoringService(db.DB)
+
 	// Initialize CMMS client
 	handlers.InitCMMSClient()
 
 	// Initialize Export Activity handler
 	exportActivityHandler := handlers.NewExportActivityHandler(db.DB)
 
+	// Initialize Security handler
+	securityHandler := handlers.NewSecurityHandler()
+
+	// Initialize Monitoring handler
+	monitoringHandler := handlers.NewMonitoringHandler(monitoringService, loggingService)
+
+	// Initialize Data Vendor handler
+	dataVendorHandler := handlers.NewDataVendorHandler(db.DB, loggingService, monitoringService)
+
+	// Initialize Data Vendor Admin handler
+	dataVendorAdminHandler := handlers.NewDataVendorAdminHandler(db.DB, loggingService, monitoringService)
+
 	// Set up router
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(chimiddleware.Logger)
 	r.Use(cors.AllowAll().Handler)
+
+	// Apply security middleware globally
+	r.Use(securityMiddleware.SecurityHeadersMiddleware)
+	r.Use(securityMiddleware.AuditLoggingMiddleware)
+	r.Use(securityMiddleware.RateLimitMiddleware(100, 200)) // 100 requests per second, burst of 200
+
+	// Add request logging middleware
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+
+			// Create log context
+			ctx := &services.LogContext{
+				RequestID: r.Header.Get("X-Request-ID"),
+				IPAddress: r.RemoteAddr,
+				Endpoint:  r.URL.Path,
+				Method:    r.Method,
+				UserAgent: r.UserAgent(),
+			}
+
+			// Call next handler
+			next.ServeHTTP(w, r)
+
+			// Log request
+			duration := time.Since(start)
+			loggingService.LogAPIRequest(ctx, 200, duration, 0) // Status code will be updated in handlers
+		})
+	})
 
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/register", handlers.Register)
@@ -44,6 +98,7 @@ func main() {
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.RequireAuth)
+			r.Use(securityMiddleware.RateLimitMiddleware(50, 100)) // Stricter rate limiting for authenticated users
 			r.Get("/floor/svg", handlers.ServeFloorSVG)
 			r.Get("/object/{objectId}/info", handlers.ServeObjectInfo)
 			r.Post("/object/{objectId}/comment", handlers.PostObjectComment)
@@ -211,30 +266,38 @@ func main() {
 			// Clear symbol cache (admin only, but for now public)
 			r.Delete("/symbols/cache", handlers.ClearSymbolCache)
 
-			// Asset Inventory endpoints (with audit logging)
-			r.Post("/buildings/{buildingId}/assets", handlers.CreateBuildingAssetWithAudit)
-			r.Get("/buildings/{buildingId}/assets", handlers.GetBuildingAssets)
-			r.Get("/assets/{assetId}", handlers.GetBuildingAsset)
-			r.Put("/assets/{assetId}", handlers.UpdateBuildingAssetWithAudit)
-			r.Delete("/assets/{assetId}", handlers.DeleteBuildingAssetWithAudit)
+			// Asset Inventory endpoints (with audit logging and role-based access)
+			r.Group(func(r chi.Router) {
+				r.Use(auth.RequireRole("admin", "editor", "maintenance"))
 
-			// Asset History and Maintenance
-			r.Post("/assets/{assetId}/history", handlers.AddAssetHistory)
-			r.Post("/assets/{assetId}/maintenance", handlers.AddAssetMaintenance)
-			r.Post("/assets/{assetId}/valuations", handlers.AddAssetValuation)
+				r.Post("/buildings/{buildingId}/assets", handlers.CreateBuildingAssetWithAudit)
+				r.Get("/buildings/{buildingId}/assets", handlers.GetBuildingAssets)
+				r.Get("/assets/{assetId}", handlers.GetBuildingAsset)
+				r.Put("/assets/{assetId}", handlers.UpdateBuildingAssetWithAudit)
+				r.Delete("/assets/{assetId}", handlers.DeleteBuildingAssetWithAudit)
 
-			// Asset Inventory Export and Summary (with audit logging)
-			r.Get("/buildings/{buildingId}/inventory/export", handlers.ExportBuildingInventoryWithAudit)
-			r.Get("/buildings/{buildingId}/inventory/summary", handlers.GetBuildingInventorySummary)
+				// Asset History and Maintenance
+				r.Post("/assets/{assetId}/history", handlers.AddAssetHistory)
+				r.Post("/assets/{assetId}/maintenance", handlers.AddAssetMaintenance)
+				r.Post("/assets/{assetId}/valuations", handlers.AddAssetValuation)
 
-			// Enhanced Audit Logs endpoints
-			r.Get("/audit-logs", handlers.ListAuditLogs)
-			r.Get("/audit-logs/asset/{asset_id}", handlers.GetAssetAuditLogs)
-			r.Get("/audit-logs/export/{export_id}", handlers.GetExportAuditLogs)
-			r.Get("/audit-logs/user/{user_id}", handlers.GetUserAuditLogs)
+				// Asset Inventory Export and Summary (with audit logging)
+				r.Get("/buildings/{buildingId}/inventory/export", handlers.ExportBuildingInventoryWithAudit)
+				r.Get("/buildings/{buildingId}/inventory/summary", handlers.GetBuildingInventorySummary)
 
-			// Industry Benchmarks
-			r.Get("/industry-benchmarks", handlers.GetIndustryBenchmarks)
+				// Industry Benchmarks
+				r.Get("/industry-benchmarks", handlers.GetIndustryBenchmarks)
+			})
+
+			// Enhanced Audit Logs endpoints (admin/auditor only)
+			r.Group(func(r chi.Router) {
+				r.Use(auth.RequireRole("admin", "auditor"))
+
+				r.Get("/audit-logs", handlers.ListAuditLogs)
+				r.Get("/audit-logs/asset/{asset_id}", handlers.GetAssetAuditLogs)
+				r.Get("/audit-logs/export/{export_id}", handlers.GetExportAuditLogs)
+				r.Get("/audit-logs/user/{user_id}", handlers.GetUserAuditLogs)
+			})
 
 			// CMMS Integration endpoints
 			r.Group(func(r chi.Router) {
@@ -318,16 +381,94 @@ func main() {
 				r.Post("/data-vendor-usage", exportActivityHandler.CreateDataVendorUsage)
 				r.Get("/data-vendor-usage", exportActivityHandler.GetDataVendorUsage)
 			})
+
+			// Compliance and Reporting endpoints
+			r.Group(func(r chi.Router) {
+				r.Use(auth.RequireRole("admin", "auditor"))
+
+				// Initialize Compliance Reporting handler
+				complianceHandler := handlers.NewComplianceReportingHandler(db.DB)
+
+				// Data Access Logs
+				r.Get("/compliance/data-access-logs", complianceHandler.GetDataAccessLogs)
+
+				// Change History
+				r.Get("/compliance/change-history/{object_type}/{object_id}", complianceHandler.GetChangeHistory)
+
+				// Export Activity Summary
+				r.Get("/compliance/export-activity-summary", complianceHandler.GetExportActivitySummary)
+
+				// Data Retention Policies
+				r.Get("/compliance/data-retention-policies", complianceHandler.GetDataRetentionPolicies)
+				r.Post("/compliance/data-retention-policies", complianceHandler.CreateDataRetentionPolicy)
+				r.Put("/compliance/data-retention-policies/{id}", complianceHandler.UpdateDataRetentionPolicy)
+
+				// Data Retention Operations
+				r.Post("/compliance/archive-old-logs", complianceHandler.ArchiveOldLogs)
+				r.Post("/compliance/process-retention-policies", func(w http.ResponseWriter, r *http.Request) {
+					// Initialize retention service and process policies
+					retentionService := services.NewDataRetentionService(db.DB)
+					stats, err := retentionService.ProcessRetentionPolicies()
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"stats":  stats,
+						"status": "completed",
+					})
+				})
+
+				// Retention Statistics
+				r.Get("/compliance/retention-stats", func(w http.ResponseWriter, r *http.Request) {
+					retentionService := services.NewDataRetentionService(db.DB)
+					stats, err := retentionService.GetRetentionStats()
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					w.Header().Set("Content-Type", "application/json")
+					json.NewEncoder(w).Encode(stats)
+				})
+			})
+
+			// Security Management endpoints
+			r.Group(func(r chi.Router) {
+				r.Use(auth.RequireRole("admin", "security"))
+
+				// Register security routes
+				securityHandler.RegisterSecurityRoutes(r)
+			})
+
+			// Data Vendor Admin endpoints
+			r.Group(func(r chi.Router) {
+				r.Use(auth.RequireRole("admin"))
+
+				// Register data vendor admin routes
+				dataVendorAdminHandler.RegisterDataVendorAdminRoutes(r)
+			})
+
+			// Monitoring endpoints
+			r.Group(func(r chi.Router) {
+				r.Use(auth.RequireRole("admin", "monitor"))
+
+				// Register monitoring routes
+				monitoringHandler.RegisterMonitoringRoutes(r)
+			})
 		})
 	})
 
 	// Data Vendor API routes (separate from authenticated routes)
 	r.Route("/api/vendor", func(r chi.Router) {
-		r.Get("/buildings", handlers.GetAvailableBuildings)
-		r.Get("/buildings/{buildingId}/inventory", handlers.GetBuildingInventory)
-		r.Get("/buildings/{buildingId}/summary", handlers.GetBuildingSummary)
-		r.Get("/industry-benchmarks", handlers.GetIndustryBenchmarks)
+		dataVendorHandler.RegisterDataVendorRoutes(r)
 	})
+
+	// Start metrics server in background
+	go func() {
+		log.Println("📊 Starting metrics server on :9090")
+		monitoringService.StartMetricsServer(":9090")
+	}()
 
 	// Graceful shutdown
 	go func() {
@@ -343,6 +484,17 @@ func main() {
 	<-sig
 
 	log.Println("Shutting down server...")
+
+	// Log system shutdown event
+	loggingService.LogSystemEvent(&services.LogContext{
+		RequestID: "shutdown",
+		IPAddress: "system",
+		Endpoint:  "/shutdown",
+		Method:    "SYSTEM",
+	}, "system_shutdown", "Server shutting down gracefully", map[string]interface{}{
+		"reason": "signal_received",
+	})
+
 	db.Close()
 	log.Println("Server stopped")
 }

@@ -55,13 +55,13 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := models.User{Email: req.Email, Username: req.Username, Password: string(hash)}
+	user := models.User{Email: req.Email, Username: req.Username, Password: string(hash), Role: "user"}
 	if err := db.DB.Create(&user).Error; err != nil {
 		http.Error(w, "User exists or DB error", 400)
 		return
 	}
 
-	token, _ := auth.GenerateJWT(user.ID)
+	token, _ := auth.GenerateJWT(user.ID, user.Role)
 	json.NewEncoder(w).Encode(AuthResponse{Token: token})
 }
 
@@ -82,7 +82,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, _ := auth.GenerateJWT(user.ID)
+	token, _ := auth.GenerateJWT(user.ID, user.Role)
 	json.NewEncoder(w).Encode(AuthResponse{Token: token})
 }
 

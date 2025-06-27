@@ -56,14 +56,20 @@ type Drawing struct {
 
 // Building represents a physical building managed in the system.
 type Building struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"last_modified"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-	Name      string         `gorm:"not null" json:"name"`
-	Address   string         `json:"address"`
-	OwnerID   uint           `gorm:"index;not null" json:"owner_id"`
-	Floors    []Floor        `gorm:"constraint:OnDelete:CASCADE;" json:"floors"`
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"last_modified"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	Name         string         `gorm:"not null" json:"name"`
+	Address      string         `json:"address"`
+	City         string         `json:"city"`
+	State        string         `json:"state"`
+	ZipCode      string         `json:"zip_code"`
+	BuildingType string         `json:"building_type"`
+	Status       string         `gorm:"default:'active'" json:"status"`
+	AccessLevel  string         `gorm:"default:'public'" json:"access_level"`
+	OwnerID      uint           `gorm:"index;not null" json:"owner_id"`
+	Floors       []Floor        `gorm:"constraint:OnDelete:CASCADE;" json:"floors"`
 }
 
 // Floor represents a floor (SVG) within a building.
@@ -889,4 +895,135 @@ type UserExportStats struct {
 	ExportCount   int    `json:"export_count"`
 	DownloadCount int    `json:"download_count"`
 	TotalFileSize int64  `json:"total_file_size"`
+}
+
+// ========================
+// COMPLIANCE MODELS
+// ========================
+
+// DataRetentionPolicy defines retention policies for different object types
+type DataRetentionPolicy struct {
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	ObjectType      string    `gorm:"index;not null" json:"object_type"`
+	RetentionPeriod int       `gorm:"not null" json:"retention_period"` // in days
+	ArchiveAfter    int       `gorm:"not null" json:"archive_after"`    // in days
+	DeleteAfter     int       `gorm:"not null" json:"delete_after"`     // in days
+	IsActive        bool      `gorm:"default:true" json:"is_active"`
+	Description     string    `gorm:"type:text" json:"description"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// ArchivedAuditLog stores archived audit logs for long-term retention
+type ArchivedAuditLog struct {
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	OriginalID   uint           `gorm:"not null" json:"original_id"`
+	UserID       uint           `gorm:"index;not null" json:"user_id"`
+	ObjectType   string         `gorm:"index;not null" json:"object_type"`
+	ObjectID     string         `gorm:"index;not null" json:"object_id"`
+	Action       string         `gorm:"not null" json:"action"`
+	Payload      datatypes.JSON `json:"payload"`
+	IPAddress    string         `json:"ip_address"`
+	UserAgent    string         `gorm:"type:text" json:"user_agent"`
+	SessionID    string         `json:"session_id"`
+	BuildingID   *uint          `json:"building_id"`
+	FloorID      *uint          `json:"floor_id"`
+	AssetID      *string        `json:"asset_id"`
+	ExportID     *uint          `json:"export_id"`
+	FieldChanges datatypes.JSON `json:"field_changes"`
+	Context      datatypes.JSON `json:"context"`
+	CreatedAt    time.Time      `json:"created_at"`
+	ArchivedAt   time.Time      `json:"archived_at"`
+}
+
+// ComplianceReport stores generated compliance reports
+type ComplianceReport struct {
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	ReportType   string         `gorm:"index;not null" json:"report_type"` // data_access, change_history, export_summary, retention_audit
+	ReportName   string         `gorm:"not null" json:"report_name"`
+	GeneratedBy  uint           `gorm:"index;not null" json:"generated_by"`
+	Parameters   datatypes.JSON `json:"parameters"` // Report parameters and filters
+	FilePath     string         `json:"file_path"`  // Path to generated report file
+	FileSize     int64          `json:"file_size"`
+	Format       string         `json:"format"`                             // csv, json, pdf, xlsx
+	Status       string         `gorm:"default:'generating'" json:"status"` // generating, completed, failed
+	ErrorMessage string         `gorm:"type:text" json:"error_message"`
+	ExpiresAt    *time.Time     `json:"expires_at"`
+	CreatedAt    time.Time      `json:"created_at"`
+	CompletedAt  *time.Time     `json:"completed_at"`
+
+	// Relationships
+	User User `json:"user,omitempty"`
+}
+
+// DataAccessLog tracks detailed data access for auditors
+type DataAccessLog struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	UserID      uint      `gorm:"index;not null" json:"user_id"`
+	Action      string    `gorm:"index;not null" json:"action"` // view, export, modify, delete
+	ObjectType  string    `gorm:"index;not null" json:"object_type"`
+	ObjectID    string    `gorm:"index;not null" json:"object_id"`
+	IPAddress   string    `json:"ip_address"`
+	UserAgent   string    `gorm:"type:text" json:"user_agent"`
+	SessionID   string    `json:"session_id"`
+	BuildingID  *uint     `json:"building_id"`
+	FloorID     *uint     `json:"floor_id"`
+	AssetID     *string   `json:"asset_id"`
+	ExportID    *uint     `json:"export_id"`
+	AccessLevel string    `json:"access_level"` // basic, premium, enterprise, admin
+	CreatedAt   time.Time `json:"created_at"`
+
+	// Relationships
+	User User `json:"user,omitempty"`
+}
+
+// SecurityAlert represents security-related alerts and incidents
+type SecurityAlert struct {
+	ID         uint           `gorm:"primaryKey" json:"id"`
+	AlertType  string         `gorm:"index;not null" json:"alert_type"` // authentication_failure, rate_limit_exceeded, suspicious_activity, etc.
+	Severity   string         `gorm:"index;not null" json:"severity"`   // low, medium, high, critical
+	IPAddress  string         `gorm:"index" json:"ip_address"`
+	UserAgent  string         `gorm:"type:text" json:"user_agent"`
+	Path       string         `json:"path"`
+	Method     string         `json:"method"`
+	UserID     *uint          `gorm:"index" json:"user_id"`
+	SessionID  string         `json:"session_id"`
+	Details    datatypes.JSON `json:"details"` // Additional alert details
+	IsResolved bool           `gorm:"default:false" json:"is_resolved"`
+	ResolvedBy *uint          `gorm:"index" json:"resolved_by"`
+	ResolvedAt *time.Time     `json:"resolved_at"`
+	Notes      string         `gorm:"type:text" json:"notes"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+
+	// Relationships
+	User           User `json:"user,omitempty"`
+	ResolvedByUser User `gorm:"foreignKey:ResolvedBy" json:"resolved_by_user,omitempty"`
+}
+
+// APIKeyUsage represents detailed API key usage tracking
+type APIKeyUsage struct {
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	APIKeyID     uint      `gorm:"index;not null" json:"api_key_id"`
+	Endpoint     string    `gorm:"index;not null" json:"endpoint"`
+	Method       string    `gorm:"not null" json:"method"`
+	Status       int       `gorm:"not null" json:"status"`
+	ResponseTime int       `json:"response_time"` // in milliseconds
+	RequestSize  int64     `json:"request_size"`  // in bytes
+	ResponseSize int64     `json:"response_size"` // in bytes
+	IPAddress    string    `gorm:"index" json:"ip_address"`
+	UserAgent    string    `gorm:"type:text" json:"user_agent"`
+	ErrorCode    string    `json:"error_code"`
+	ErrorMessage string    `gorm:"type:text" json:"error_message"`
+	RateLimitHit bool      `gorm:"default:false" json:"rate_limit_hit"`
+	CreatedAt    time.Time `json:"created_at"`
+
+	// Relationships
+	APIKey DataVendorAPIKey `json:"api_key,omitempty"`
+}
+
+// Add archived field to existing AuditLog struct
+func (al *AuditLog) AfterFind(tx *gorm.DB) error {
+	// This ensures the archived field is always available
+	return nil
 }

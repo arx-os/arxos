@@ -8,8 +8,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"os"
+
+	"github.com/dgrijalva/jwt-go"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -147,6 +151,13 @@ func UpdateBuildingAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user role from token
+	userRole, err := getUserRoleFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	assetID := chi.URLParam(r, "assetId")
 
 	// Get the current asset state for audit logging
@@ -157,6 +168,12 @@ func UpdateBuildingAsset(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Error(w, "Failed to retrieve asset", http.StatusInternalServerError)
+		return
+	}
+
+	// Check access permissions
+	if !hasAssetModificationPermission(userID, userRole, &currentAsset) {
+		http.Error(w, "Forbidden: insufficient permissions to modify this asset", http.StatusForbidden)
 		return
 	}
 
@@ -192,7 +209,14 @@ func UpdateBuildingAsset(w http.ResponseWriter, r *http.Request) {
 
 // DeleteBuildingAsset deletes an asset
 func DeleteBuildingAsset(w http.ResponseWriter, r *http.Request) {
-	_, err := getUserIDFromToken(r)
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get user role from token
+	userRole, err := getUserRoleFromToken(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -200,9 +224,32 @@ func DeleteBuildingAsset(w http.ResponseWriter, r *http.Request) {
 
 	assetID := chi.URLParam(r, "assetId")
 
+	// Get the current asset state for audit logging and permission check
+	var currentAsset models.BuildingAsset
+	if err := db.DB.Where("id = ?", assetID).First(&currentAsset).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			http.Error(w, "Asset not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to retrieve asset", http.StatusInternalServerError)
+		return
+	}
+
+	// Check access permissions - only admins and asset owners can delete
+	if !hasAssetDeletionPermission(userID, userRole, &currentAsset) {
+		http.Error(w, "Forbidden: insufficient permissions to delete this asset", http.StatusForbidden)
+		return
+	}
+
 	if err := db.DB.Delete(&models.BuildingAsset{}, "id = ?", assetID).Error; err != nil {
 		http.Error(w, "Failed to delete asset", http.StatusInternalServerError)
 		return
+	}
+
+	// Log the asset deletion
+	if err := models.LogAssetChange(db.DB, userID, assetID, "delete", &currentAsset, nil, r); err != nil {
+		// Log error but don't fail the request
+		fmt.Printf("Failed to log asset deletion: %v\n", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -520,4 +567,84 @@ func exportToCSV(w http.ResponseWriter, assets []models.BuildingAsset) {
 		}
 		writer.Write(row)
 	}
+}
+
+// hasAssetModificationPermission checks if user has permission to modify an asset
+func hasAssetModificationPermission(userID uint, userRole string, asset *models.BuildingAsset) bool {
+	// Admins can modify any asset
+	if userRole == "admin" {
+		return true
+	}
+
+	// Asset owners can modify their own assets
+	if asset.CreatedBy == userID {
+		return true
+	}
+
+	// Editors can modify assets in buildings they have access to
+	if userRole == "editor" {
+		// Check if user has access to the building
+		var building models.Building
+		if err := db.DB.Where("id = ?", asset.BuildingID).First(&building).Error; err == nil {
+			// For now, assume editors have access to all buildings
+			// In a more complex system, you'd check building-specific permissions
+			return true
+		}
+	}
+
+	// Maintenance users can modify assets they're assigned to maintain
+	if userRole == "maintenance" {
+		// Check if user is assigned to maintain this asset
+		var maintenanceRecord models.AssetMaintenance
+		if err := db.DB.Where("asset_id = ? AND assigned_to = ?", asset.ID, userID).First(&maintenanceRecord).Error; err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+// hasAssetDeletionPermission checks if user has permission to delete an asset
+func hasAssetDeletionPermission(userID uint, userRole string, asset *models.BuildingAsset) bool {
+	// Only admins and asset owners can delete assets
+	if userRole == "admin" {
+		return true
+	}
+
+	// Asset owners can delete their own assets
+	if asset.CreatedBy == userID {
+		return true
+	}
+
+	return false
+}
+
+// getUserRoleFromToken extracts user role from JWT token
+func getUserRoleFromToken(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", fmt.Errorf("no authorization header")
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenStr == authHeader {
+		return "", fmt.Errorf("invalid authorization format")
+	}
+
+	// Parse JWT token
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	if err != nil || !token.Valid {
+		return "", fmt.Errorf("invalid token")
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		if role, exists := claims["role"].(string); exists {
+			return role, nil
+		}
+	}
+
+	return "", fmt.Errorf("role not found in token")
 }

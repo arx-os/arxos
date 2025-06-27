@@ -13,16 +13,24 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
+
+	"arx/services"
 )
 
-// DataVendorHandler handles data vendor API access
+// DataVendorHandler handles data vendor API endpoints
 type DataVendorHandler struct {
-	db *gorm.DB
+	db                *gorm.DB
+	loggingService    *services.LoggingService
+	monitoringService *services.MonitoringService
 }
 
 // NewDataVendorHandler creates a new data vendor handler
-func NewDataVendorHandler(db *gorm.DB) *DataVendorHandler {
-	return &DataVendorHandler{db: db}
+func NewDataVendorHandler(db *gorm.DB, loggingService *services.LoggingService, monitoringService *services.MonitoringService) *DataVendorHandler {
+	return &DataVendorHandler{
+		db:                db,
+		loggingService:    loggingService,
+		monitoringService: monitoringService,
+	}
 }
 
 // DataVendorAPIKey represents an API key for data vendor access
@@ -358,4 +366,540 @@ func exportInventoryToCSV(w http.ResponseWriter, assets []models.BuildingAsset, 
 		}
 		writer.Write(row)
 	}
+}
+
+// validateAPIKey validates the API key and returns vendor information
+func (h *DataVendorHandler) validateAPIKey(apiKey string) (*models.DataVendorAPIKey, error) {
+	var vendorKey models.DataVendorAPIKey
+	err := h.db.Where("key = ? AND is_active = ? AND expires_at > ?", apiKey, true, time.Now()).First(&vendorKey).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Update last used timestamp
+	h.db.Model(&vendorKey).Update("last_used", time.Now())
+
+	return &vendorKey, nil
+}
+
+// logVendorRequest logs a vendor API request for auditing and billing
+func (h *DataVendorHandler) logVendorRequest(vendorKey *models.DataVendorAPIKey, r *http.Request, statusCode int, duration time.Duration, responseSize int64) {
+	// Create log context
+	ctx := &services.LogContext{
+		RequestID: r.Header.Get("X-Request-ID"),
+		IPAddress: r.RemoteAddr,
+		Endpoint:  r.URL.Path,
+		Method:    r.Method,
+		UserAgent: r.UserAgent(),
+		Metadata: map[string]interface{}{
+			"vendor_name":  vendorKey.VendorName,
+			"vendor_email": vendorKey.Email,
+			"access_level": vendorKey.AccessLevel,
+			"api_key_id":   vendorKey.ID,
+		},
+	}
+
+	// Log the request
+	h.loggingService.LogAPIRequest(ctx, statusCode, duration, responseSize)
+
+	// Record metrics
+	h.monitoringService.RecordAPIRequest(r.Method, r.URL.Path, strconv.Itoa(statusCode), "data_vendor", duration)
+
+	// Store API key usage for billing
+	usage := models.APIKeyUsage{
+		APIKeyID:     vendorKey.ID,
+		Endpoint:     r.URL.Path,
+		Method:       r.Method,
+		Status:       statusCode,
+		ResponseTime: int(duration.Milliseconds()),
+		IPAddress:    r.RemoteAddr,
+		UserAgent:    r.UserAgent(),
+		RequestSize:  0, // Could be calculated from request body
+		ResponseSize: responseSize,
+		CreatedAt:    time.Now(),
+	}
+
+	h.db.Create(&usage)
+}
+
+// GetAvailableBuildings returns list of buildings available to data vendors
+func (h *DataVendorHandler) GetAvailableBuildings(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	// Validate API key
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey == "" {
+		respondWithError(w, http.StatusUnauthorized, "API key required")
+		return
+	}
+
+	vendorKey, err := h.validateAPIKey(apiKey)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid or expired API key")
+		return
+	}
+
+	// Check rate limiting
+	if !h.checkRateLimit(vendorKey, r.URL.Path) {
+		h.loggingService.LogSecurityEvent(&services.LogContext{
+			IPAddress: r.RemoteAddr,
+			Endpoint:  r.URL.Path,
+			Method:    r.Method,
+		}, "rate_limit_exceeded", "high", map[string]interface{}{
+			"vendor_name": vendorKey.VendorName,
+			"api_key_id":  vendorKey.ID,
+		})
+		respondWithError(w, http.StatusTooManyRequests, "Rate limit exceeded")
+		return
+	}
+
+	// Get query parameters
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+	status := r.URL.Query().Get("status")
+
+	limit := 50 // default limit
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	offset := 0
+	if offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	// Build query
+	query := h.db.Model(&models.Building{}).Where("is_active = ?", true)
+
+	// Apply status filter
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	// Apply access level restrictions
+	switch vendorKey.AccessLevel {
+	case "basic":
+		query = query.Where("access_level IN (?)", []string{"public", "basic"})
+	case "premium":
+		query = query.Where("access_level IN (?)", []string{"public", "basic", "premium"})
+	case "enterprise":
+		// Enterprise has access to all buildings
+	default:
+		query = query.Where("access_level = ?", "public")
+	}
+
+	// Get total count
+	var total int64
+	query.Count(&total)
+
+	// Get buildings
+	var buildings []models.Building
+	err = query.Select("id, name, address, city, state, zip_code, building_type, status, access_level, created_at, updated_at").
+		Limit(limit).
+		Offset(offset).
+		Order("created_at DESC").
+		Find(&buildings).Error
+
+	if err != nil {
+		h.loggingService.LogAPIError(&services.LogContext{
+			IPAddress: r.RemoteAddr,
+			Endpoint:  r.URL.Path,
+			Method:    r.Method,
+		}, err, http.StatusInternalServerError)
+		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve buildings")
+		return
+	}
+
+	// Prepare response
+	response := map[string]interface{}{
+		"buildings": buildings,
+		"pagination": map[string]interface{}{
+			"total":    total,
+			"limit":    limit,
+			"offset":   offset,
+			"has_more": offset+limit < int(total),
+		},
+		"vendor_info": map[string]interface{}{
+			"vendor_name":  vendorKey.VendorName,
+			"access_level": vendorKey.AccessLevel,
+			"rate_limit":   vendorKey.RateLimit,
+		},
+	}
+
+	// Log the request
+	duration := time.Since(start)
+	responseSize := int64(len(fmt.Sprintf("%+v", response)))
+	h.logVendorRequest(vendorKey, r, http.StatusOK, duration, responseSize)
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+// GetBuildingInventory returns detailed inventory for a specific building
+func (h *DataVendorHandler) GetBuildingInventory(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	// Validate API key
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey == "" {
+		respondWithError(w, http.StatusUnauthorized, "API key required")
+		return
+	}
+
+	vendorKey, err := h.validateAPIKey(apiKey)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid or expired API key")
+		return
+	}
+
+	// Check rate limiting
+	if !h.checkRateLimit(vendorKey, r.URL.Path) {
+		h.loggingService.LogSecurityEvent(&services.LogContext{
+			IPAddress: r.RemoteAddr,
+			Endpoint:  r.URL.Path,
+			Method:    r.Method,
+		}, "rate_limit_exceeded", "high", map[string]interface{}{
+			"vendor_name": vendorKey.VendorName,
+			"api_key_id":  vendorKey.ID,
+		})
+		respondWithError(w, http.StatusTooManyRequests, "Rate limit exceeded")
+		return
+	}
+
+	// Get building ID from URL
+	buildingID := chi.URLParam(r, "buildingId")
+	if buildingID == "" {
+		respondWithError(w, http.StatusBadRequest, "Building ID required")
+		return
+	}
+
+	// Check if building exists and vendor has access
+	var building models.Building
+	err = h.db.Where("id = ? AND is_active = ?", buildingID, true).First(&building).Error
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Building not found")
+		return
+	}
+
+	// Check access level
+	if !h.hasBuildingAccess(vendorKey, &building) {
+		respondWithError(w, http.StatusForbidden, "Access denied to this building")
+		return
+	}
+
+	// Get query parameters
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+	category := r.URL.Query().Get("category")
+	status := r.URL.Query().Get("status")
+
+	limit := 100 // default limit
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	offset := 0
+	if offsetStr != "" {
+		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	// Build query for assets
+	query := h.db.Model(&models.BuildingAsset{}).Where("building_id = ?", buildingID)
+
+	// Apply filters
+	if category != "" {
+		query = query.Where("category = ?", category)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	// Get total count
+	var total int64
+	query.Count(&total)
+
+	// Get assets
+	var assets []models.BuildingAsset
+	err = query.Limit(limit).
+		Offset(offset).
+		Order("created_at DESC").
+		Find(&assets).Error
+
+	if err != nil {
+		h.loggingService.LogAPIError(&services.LogContext{
+			IPAddress: r.RemoteAddr,
+			Endpoint:  r.URL.Path,
+			Method:    r.Method,
+		}, err, http.StatusInternalServerError)
+		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve building inventory")
+		return
+	}
+
+	// Prepare response
+	response := map[string]interface{}{
+		"building": map[string]interface{}{
+			"id":      building.ID,
+			"name":    building.Name,
+			"address": building.Address,
+		},
+		"inventory": assets,
+		"pagination": map[string]interface{}{
+			"total":    total,
+			"limit":    limit,
+			"offset":   offset,
+			"has_more": offset+limit < int(total),
+		},
+		"vendor_info": map[string]interface{}{
+			"vendor_name":  vendorKey.VendorName,
+			"access_level": vendorKey.AccessLevel,
+		},
+	}
+
+	// Log the request
+	duration := time.Since(start)
+	responseSize := int64(len(fmt.Sprintf("%+v", response)))
+	h.logVendorRequest(vendorKey, r, http.StatusOK, duration, responseSize)
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+// GetBuildingSummary returns summary statistics for a building
+func (h *DataVendorHandler) GetBuildingSummary(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	// Validate API key
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey == "" {
+		respondWithError(w, http.StatusUnauthorized, "API key required")
+		return
+	}
+
+	vendorKey, err := h.validateAPIKey(apiKey)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid or expired API key")
+		return
+	}
+
+	// Check rate limiting
+	if !h.checkRateLimit(vendorKey, r.URL.Path) {
+		h.loggingService.LogSecurityEvent(&services.LogContext{
+			IPAddress: r.RemoteAddr,
+			Endpoint:  r.URL.Path,
+			Method:    r.Method,
+		}, "rate_limit_exceeded", "high", map[string]interface{}{
+			"vendor_name": vendorKey.VendorName,
+			"api_key_id":  vendorKey.ID,
+		})
+		respondWithError(w, http.StatusTooManyRequests, "Rate limit exceeded")
+		return
+	}
+
+	// Get building ID from URL
+	buildingID := chi.URLParam(r, "buildingId")
+	if buildingID == "" {
+		respondWithError(w, http.StatusBadRequest, "Building ID required")
+		return
+	}
+
+	// Check if building exists and vendor has access
+	var building models.Building
+	err = h.db.Where("id = ? AND is_active = ?", buildingID, true).First(&building).Error
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Building not found")
+		return
+	}
+
+	// Check access level
+	if !h.hasBuildingAccess(vendorKey, &building) {
+		respondWithError(w, http.StatusForbidden, "Access denied to this building")
+		return
+	}
+
+	// Get summary statistics
+	var summary struct {
+		TotalAssets       int64            `json:"total_assets"`
+		TotalValue        float64          `json:"total_value"`
+		AvgAge            float64          `json:"avg_age"`
+		MaintenanceDue    int64            `json:"maintenance_due"`
+		CriticalAssets    int64            `json:"critical_assets"`
+		CategoryBreakdown map[string]int64 `json:"category_breakdown"`
+	}
+
+	// Get total assets and value
+	h.db.Model(&models.BuildingAsset{}).
+		Where("building_id = ?", buildingID).
+		Select("COUNT(*) as total_assets, COALESCE(SUM(current_value), 0) as total_value").
+		Scan(&summary)
+
+	// Get average age
+	h.db.Model(&models.BuildingAsset{}).
+		Where("building_id = ? AND installation_date IS NOT NULL", buildingID).
+		Select("AVG(EXTRACT(YEAR FROM AGE(CURRENT_DATE, installation_date))) as avg_age").
+		Scan(&summary)
+
+	// Get maintenance due count
+	h.db.Model(&models.BuildingAsset{}).
+		Where("building_id = ? AND next_maintenance_date <= ?", buildingID, time.Now().AddDate(0, 1, 0)).
+		Count(&summary.MaintenanceDue)
+
+	// Get critical assets count
+	h.db.Model(&models.BuildingAsset{}).
+		Where("building_id = ? AND criticality = ?", buildingID, "critical").
+		Count(&summary.CriticalAssets)
+
+	// Get category breakdown
+	var categoryStats []struct {
+		Category string
+		Count    int64
+	}
+	h.db.Model(&models.BuildingAsset{}).
+		Where("building_id = ?", buildingID).
+		Select("category, COUNT(*) as count").
+		Group("category").
+		Scan(&categoryStats)
+
+	summary.CategoryBreakdown = make(map[string]int64)
+	for _, stat := range categoryStats {
+		summary.CategoryBreakdown[stat.Category] = stat.Count
+	}
+
+	// Prepare response
+	response := map[string]interface{}{
+		"building": map[string]interface{}{
+			"id":      building.ID,
+			"name":    building.Name,
+			"address": building.Address,
+		},
+		"summary": summary,
+		"vendor_info": map[string]interface{}{
+			"vendor_name":  vendorKey.VendorName,
+			"access_level": vendorKey.AccessLevel,
+		},
+	}
+
+	// Log the request
+	duration := time.Since(start)
+	responseSize := int64(len(fmt.Sprintf("%+v", response)))
+	h.logVendorRequest(vendorKey, r, http.StatusOK, duration, responseSize)
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+// GetIndustryBenchmarks returns industry benchmark data
+func (h *DataVendorHandler) GetIndustryBenchmarks(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	// Validate API key
+	apiKey := r.Header.Get("X-API-Key")
+	if apiKey == "" {
+		respondWithError(w, http.StatusUnauthorized, "API key required")
+		return
+	}
+
+	vendorKey, err := h.validateAPIKey(apiKey)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid or expired API key")
+		return
+	}
+
+	// Check rate limiting
+	if !h.checkRateLimit(vendorKey, r.URL.Path) {
+		h.loggingService.LogSecurityEvent(&services.LogContext{
+			IPAddress: r.RemoteAddr,
+			Endpoint:  r.URL.Path,
+			Method:    r.Method,
+		}, "rate_limit_exceeded", "high", map[string]interface{}{
+			"vendor_name": vendorKey.VendorName,
+			"api_key_id":  vendorKey.ID,
+		})
+		respondWithError(w, http.StatusTooManyRequests, "Rate limit exceeded")
+		return
+	}
+
+	// Get query parameters
+	buildingType := r.URL.Query().Get("building_type")
+	region := r.URL.Query().Get("region")
+
+	// Build query for benchmarks
+	query := h.db.Model(&models.IndustryBenchmark{})
+
+	if buildingType != "" {
+		query = query.Where("building_type = ?", buildingType)
+	}
+	if region != "" {
+		query = query.Where("region = ?", region)
+	}
+
+	var benchmarks []models.IndustryBenchmark
+	err = query.Order("created_at DESC").Find(&benchmarks).Error
+
+	if err != nil {
+		h.loggingService.LogAPIError(&services.LogContext{
+			IPAddress: r.RemoteAddr,
+			Endpoint:  r.URL.Path,
+			Method:    r.Method,
+		}, err, http.StatusInternalServerError)
+		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve industry benchmarks")
+		return
+	}
+
+	// Prepare response
+	response := map[string]interface{}{
+		"benchmarks": benchmarks,
+		"filters": map[string]interface{}{
+			"building_type": buildingType,
+			"region":        region,
+		},
+		"vendor_info": map[string]interface{}{
+			"vendor_name":  vendorKey.VendorName,
+			"access_level": vendorKey.AccessLevel,
+		},
+	}
+
+	// Log the request
+	duration := time.Since(start)
+	responseSize := int64(len(fmt.Sprintf("%+v", response)))
+	h.logVendorRequest(vendorKey, r, http.StatusOK, duration, responseSize)
+
+	respondWithJSON(w, http.StatusOK, response)
+}
+
+// checkRateLimit checks if the vendor has exceeded their rate limit
+func (h *DataVendorHandler) checkRateLimit(vendorKey *models.DataVendorAPIKey, endpoint string) bool {
+	// Count requests in the last minute
+	var count int64
+	h.db.Model(&models.APIKeyUsage{}).
+		Where("api_key_id = ? AND created_at > ?", vendorKey.ID, time.Now().Add(-time.Minute)).
+		Count(&count)
+
+	return int(count) < vendorKey.RateLimit
+}
+
+// hasBuildingAccess checks if the vendor has access to the building
+func (h *DataVendorHandler) hasBuildingAccess(vendorKey *models.DataVendorAPIKey, building *models.Building) bool {
+	switch vendorKey.AccessLevel {
+	case "basic":
+		return building.AccessLevel == "public" || building.AccessLevel == "basic"
+	case "premium":
+		return building.AccessLevel == "public" || building.AccessLevel == "basic" || building.AccessLevel == "premium"
+	case "enterprise":
+		return true // Enterprise has access to all buildings
+	default:
+		return building.AccessLevel == "public"
+	}
+}
+
+// RegisterDataVendorRoutes registers data vendor API routes
+func (h *DataVendorHandler) RegisterDataVendorRoutes(r chi.Router) {
+	r.Get("/buildings", h.GetAvailableBuildings)
+	r.Get("/buildings/{buildingId}/inventory", h.GetBuildingInventory)
+	r.Get("/buildings/{buildingId}/summary", h.GetBuildingSummary)
+	r.Get("/industry-benchmarks", h.GetIndustryBenchmarks)
 }

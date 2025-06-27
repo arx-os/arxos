@@ -43,3 +43,15 @@ func GetBehaviorProfilesRegistry(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(logic_engine.BehaviorProfilesRegistry)
 }
+
+// respondWithJSON sends a JSON response with the given status code and data
+func respondWithJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+// respondWithError sends a JSON error response with the given status code and message
+func respondWithError(w http.ResponseWriter, statusCode int, message string) {
+	respondWithJSON(w, statusCode, map[string]string{"error": message})
+}

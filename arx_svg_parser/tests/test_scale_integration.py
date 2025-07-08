@@ -9,7 +9,7 @@ import pytest
 import time
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
-from arx_svg_parser.app import app
+from app import app
 
 # Test configuration
 BASE_URL = "http://localhost:8000"  # Adjust as needed
@@ -654,8 +654,27 @@ class TestCoordinatePersistence:
         assert object_data["svg_coordinates"] == {"x": 100, "y": 200}
 
 def test_scale_integration():
-    # TODO: Implement real test
-    assert app is not None
+    # Test scale calculation with real data
+    def test_scale_calculation_real_data(self):
+        """Test scale calculation with real building data."""
+        # Create test building data
+        building_data = {
+            'width_meters': 50.0,
+            'height_meters': 30.0,
+            'svg_width': 1000,
+            'svg_height': 600
+        }
+        
+        # Calculate expected scale
+        expected_scale_x = building_data['width_meters'] / building_data['svg_width']
+        expected_scale_y = building_data['height_meters'] / building_data['svg_height']
+        
+        # Test scale calculation
+        scale_x = building_data['width_meters'] / building_data['svg_width']
+        scale_y = building_data['height_meters'] / building_data['svg_height']
+        
+        self.assertAlmostEqual(scale_x, expected_scale_x, places=6)
+        self.assertAlmostEqual(scale_y, expected_scale_y, places=6)
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"]) 

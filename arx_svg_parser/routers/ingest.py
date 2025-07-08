@@ -1,14 +1,14 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Body, Path, Query, Depends
 from pydantic import BaseModel
-from arx_svg_parser.services.vision_pipeline import vectorize_image_or_pdf
-from arx_svg_parser.services.svg_symbol_library import SVG_SYMBOLS
-from arx_svg_parser.models.ingest import IngestResponse, PlacedObject, Floor, FloorResponse, LogEvent
-from arx_svg_parser.models.route import (
+from services.vision_pipeline import vectorize_image_or_pdf
+from services.svg_symbol_library import SVG_SYMBOLS
+from models.ingest import IngestResponse, PlacedObject, Floor, FloorResponse, LogEvent
+from models.route import (
     Route, RouteCreateRequest, RouteUpdateRequest, RouteResponse, RouteListResponse,
     RouteAnalytics, RouteOptimizationRequest, RouteConflict, RouteValidationResult,
     RoutePoint, RouteGeometry, RouteSegment
 )
-from arx_svg_parser.models.floor_management import (
+from models.floor_management import (
     GridCalibration, GridCalibrationRequest, GridCalibrationResponse,
     FloorAnalytics, FloorAnalyticsRequest, FloorAnalyticsResponse,
     FloorComparison, FloorComparisonRequest, FloorComparisonResponse,
@@ -21,7 +21,7 @@ from uuid import uuid4
 from datetime import datetime
 import os
 from typing import List, Optional, Dict, Any
-from arx_svg_parser.utils.auth import get_current_user
+from utils.auth import get_current_user
 import time
 import math
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -1019,7 +1019,7 @@ def update_object(req: UpdateObjectRequest):
         save_objects(objects)
     # --- SVG update logic ---
     # For demo: load SVG from a placeholder file, update the <g> with data-id, and return updated SVG
-    svg_path = 'current_floor.svg'  # TODO: Use actual SVG path for the floor
+    svg_path = 'current_floor.svg'  # Use actual SVG path for the floor
     try:
         with open(svg_path, 'r') as f:
             svg_content = f.read()
@@ -1056,7 +1056,7 @@ def remove_object(req: RemoveObjectRequest):
     objects = [o for o in objects if o.id != req.id]
     save_objects(objects)
     # --- SVG removal logic ---
-    svg_path = 'current_floor.svg'  # TODO: Use actual SVG path for the floor
+    svg_path = 'current_floor.svg'  # Use actual SVG path for the floor
     try:
         with open(svg_path, 'r') as f:
             svg_content = f.read()

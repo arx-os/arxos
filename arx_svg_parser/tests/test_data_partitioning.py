@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 from datetime import datetime, timedelta
 
-from arx_svg_parser.services.data_partitioning import (
+from services.data_partitioning import (
     DataPartitioningService, FloorPartitioner, DataCompressor, LazyLoader, PerformanceMonitor,
     PartitionStrategy, CompressionType, LoadStrategy, PartitionInfo, PerformanceMetrics
 )

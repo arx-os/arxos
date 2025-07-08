@@ -10,7 +10,7 @@ import os
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
-from arx_svg_parser.services.access_control import (
+from services.access_control import (
     AccessControlService, UserRole, ResourceType, ActionType, 
     PermissionLevel, User, Permission, AuditLog, RoleHierarchy
 )

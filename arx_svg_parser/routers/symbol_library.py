@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException
-from arx_svg_parser.services.svg_symbol_library import load_symbol_library
+from services.svg_symbol_library import load_symbol_library
 
 router = APIRouter()
 

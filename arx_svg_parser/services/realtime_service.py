@@ -528,7 +528,7 @@ class RealTimeService:
             presence.cursor_position = message["cursor_position"]
         
         if "metadata" in message:
-            presence.metadata.update(message["metadata"])
+            presence.symbol_metadata.update(message["metadata"])
         
         # Broadcast presence update to room
         if presence.floor_id:

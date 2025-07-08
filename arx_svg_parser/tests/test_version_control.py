@@ -10,7 +10,7 @@ from pathlib import Path
 from datetime import datetime
 from unittest.mock import patch, MagicMock
 
-from arx_svg_parser.services.version_control import (
+from services.version_control import (
     VersionControlService, Version, Branch, MergeRequest, 
     Conflict, Annotation, Comment, VersionType, BranchStatus, 
     MergeStatus, ConflictType, ConflictResolution

@@ -535,7 +535,7 @@ class ArxLogger:
         # Add to buffer for async processing
         try:
             self.log_buffer.put_nowait(entry)
-        except:
+        except Exception:
             # Buffer full, process synchronously
             self._process_log_entry(entry)
         
@@ -623,9 +623,11 @@ class ArxLogger:
         if status_code:
             extra_fields['status_code'] = status_code
         
-        self._log(logging.ERROR, f"API Error {method} {endpoint}", extra_fields)
+        self._log(logging.ERROR, f"API Error {method} {endpoint}", 
+                 extra_fields)
     
-    def security_event(self, event_type: str, severity: str, details: Dict[str, Any] = None):
+    def security_event(self, event_type: str, severity: str, 
+                      details: Dict[str, Any] = None):
         """Log security events"""
         extra_fields = {
             'event_type': event_type,
@@ -646,7 +648,8 @@ class ArxLogger:
         with self.performance_lock:
             if self.processing_times:
                 metrics['recent_avg_processing_time_ms'] = round(
-                    sum(self.processing_times) / len(self.processing_times) * 1000, 3
+                    sum(self.processing_times) / len(self.processing_times) * 1000, 
+                    3
                 )
             else:
                 metrics['recent_avg_processing_time_ms'] = 0.0
@@ -707,17 +710,5 @@ class ArxLogger:
 # Global logger instance
 logger = ArxLogger()
 
-# Convenience functions - DEPRECATED: Use logger instance directly
-# These functions are kept for backward compatibility but should be replaced
-# with direct logger method calls for better performance and clarity
-
 # Set environment from environment variable
-logger.logger.environment = os.getenv('ARX_ENVIRONMENT', 'development')
-
-def generate_correlation_id() -> str:
-    """Generate a unique correlation ID for request tracing"""
-    return str(uuid.uuid4())
-
-def generate_request_id() -> str:
-    """Generate a unique request ID for request tracking"""
-    return str(uuid.uuid4()) 
+logger.logger.environment = os.getenv('ARX_ENVIRONMENT', 'development') 

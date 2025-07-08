@@ -5,8 +5,8 @@ from typing import Dict, Any, Optional, List
 import xml.etree.ElementTree as ET
 from io import BytesIO
 import base64
-from arx_svg_parser.services.symbol_recognition import SymbolRecognitionEngine
-from arx_svg_parser.services.symbol_renderer import SymbolRenderer
+from services.symbol_recognition import SymbolRecognitionEngine
+from services.symbol_renderer import SymbolRenderer
 
 logger = logging.getLogger(__name__)
 

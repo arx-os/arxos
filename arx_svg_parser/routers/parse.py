@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Query
 from typing import Optional, List, Dict, Any
 import logging
-from arx_svg_parser.services.symbol_recognition import SymbolRecognitionEngine
-from arx_svg_parser.services.symbol_renderer import SymbolRenderer
-from arx_svg_parser.services.bim_extraction import BIMExtractor
-from arx_svg_parser.models.parse import ParseRequest, ParseResponse, SymbolRecognitionRequest, SymbolRecognitionResponse
-from arx_svg_parser.services.pdf_processor import PDFProcessor
+from services.symbol_recognition import SymbolRecognitionEngine
+from services.symbol_renderer import SymbolRenderer
+from services.bim_extraction import BIMExtractor
+from models.parse import ParseRequest, ParseResponse, SymbolRecognitionRequest, SymbolRecognitionResponse
+from services.pdf_processor import PDFProcessor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/parse", tags=["parse"])

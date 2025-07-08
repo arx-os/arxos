@@ -23,23 +23,23 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Import all test modules
-from arx_svg_parser.tests.test_comprehensive_unit import (
+from tests.test_comprehensive_unit import (
     TestVersionControlHandlers,
     TestRouteManagement,
     TestFloorSpecificFeatures,
     TestErrorHandling,
     TestEdgeCases
 )
-from arx_svg_parser.services.realtime_service import RealTimeService as RealtimeService, WebSocketManager
+from services.realtime_service import RealTimeService as RealtimeService, WebSocketManager
 
-from arx_svg_parser.tests.test_integration_comprehensive import (
+from tests.test_integration_comprehensive import (
     TestEndToEndVersionControlWorkflows,
     TestRouteManagementIntegration,
     TestFloorComparisonFunctionality,
     TestMultiUserCollaboration
 )
 
-from arx_svg_parser.tests.test_edge_cases_comprehensive import (
+from tests.test_edge_cases_comprehensive import (
     TestEmptyFloorsAndLargeDatasets,
     TestConcurrentEditScenarios,
     TestFailedRestoreOperations,
@@ -47,7 +47,7 @@ from arx_svg_parser.tests.test_edge_cases_comprehensive import (
     TestBoundaryConditions
 )
 
-from arx_svg_parser.tests.test_stress_performance import (
+from tests.test_stress_performance import (
     TestLoadTesting,
     TestMemoryUsageMonitoring,
     TestDatabasePerformance,

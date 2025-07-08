@@ -17,7 +17,7 @@ import os
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 
-from arx_svg_parser.services.auto_snapshot import (
+from services.auto_snapshot import (
     AutoSnapshotService, SnapshotConfig, SnapshotTrigger, 
     SnapshotPriority, ChangeMetrics, ChangeDetector,
     IntelligentSnapshotScheduler, SnapshotCleanupManager,

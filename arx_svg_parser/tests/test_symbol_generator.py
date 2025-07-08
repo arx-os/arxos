@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from arx_svg_parser.services.symbol_generator import SymbolGenerator
+from services.symbol_generator import SymbolGenerator
 
 def test_symbol_generator():
     """Test the symbol generator with a mock URL"""
@@ -67,28 +67,6 @@ def test_symbol_generator():
     assert '<g id=' in svg
     assert 'rect' in svg
     print("✓ SVG generation works")
-    
-    # Test YAML content creation
-    print("\n8. Testing YAML content creation...")
-    symbol_data = {
-        'symbol_id': 'test_symbol',
-        'system': 'hvac',
-        'display_name': 'Test Symbol',
-        'category': 'hvac',
-        'subcategory': 'air_handling',
-        'description': 'Test description',
-        'manufacturer': 'Test Manufacturer',
-        'model_number': 'TEST-123',
-        'created_by': 1,
-        'source_url': 'https://test.com',
-        'created_at': '2024-01-01'
-    }
-    yaml_content = generator._create_yaml_content(symbol_data, svg)
-    assert 'symbol_id: test_symbol' in yaml_content
-    assert 'system: hvac' in yaml_content
-    print("✓ YAML content creation works")
-    
-    print("\n🎉 All tests passed! Symbol Generator is working correctly.")
     
     # Test full generation (without actual web scraping)
     print("\n9. Testing full generation workflow...")

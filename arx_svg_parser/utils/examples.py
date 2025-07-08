@@ -7,12 +7,12 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from .response_helpers import (
+from services.response_helpers import (
     ResponseHelper, success_response, error_response, 
     validation_error_response, not_found_response,
     list_response, created_response, updated_response, deleted_response
 )
-from .error_handlers import handle_exception, log_error
+from services.error_handlers import handle_exception, log_error
 
 # Example router using response helpers
 router = APIRouter(prefix="/example", tags=["example"])

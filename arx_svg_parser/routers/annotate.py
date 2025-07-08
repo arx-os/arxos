@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from arx_svg_parser.services.svg_writer import write_svg
-from arx_svg_parser.models.annotate import Annotation, AnnotateRequest, AnnotateResponse
+from services.svg_writer import write_svg
+from models.annotate import Annotation, AnnotateRequest, AnnotateResponse
 
 router = APIRouter()
 

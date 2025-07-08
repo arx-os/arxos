@@ -9,7 +9,7 @@ from datetime import datetime
 from pydantic import BaseModel
 import logging
 
-from arx_svg_parser.services.access_control import (
+from services.access_control import (
     access_control_service, UserRole, ResourceType, ActionType, 
     PermissionLevel, User, Permission, AuditLog
 )

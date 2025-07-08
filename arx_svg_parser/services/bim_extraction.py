@@ -1,413 +1,346 @@
 """
-Enhanced service for extracting and classifying BIM data from SVG with recognized symbols.
-This service processes recognized symbols and creates structured BIM data.
+BIM Extraction Service
+
+Extracts BIM elements and relationships from SVG content using
+advanced pattern recognition and machine learning techniques.
 """
 
-import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-from arx_svg_parser.services.symbol_recognition import SymbolRecognitionEngine
-from arx_svg_parser.services.symbol_renderer import SymbolRenderer
+import re
+from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
+from models.bim import BIMElement, Room, Wall, Device, Geometry, GeometryType
+from models.svg import SVGElement
+
+
+@dataclass
+class ExtractionResult:
+    """Result of BIM extraction process."""
+    elements: List[BIMElement]
+    relationships: List[Dict[str, Any]]
+    confidence: float
+    metadata: Dict[str, Any]
+
 
 class BIMExtractor:
-    """Enhanced BIM data extraction from SVG with recognized symbols."""
+    """Extracts BIM elements from SVG content."""
     
     def __init__(self):
-        self.symbol_recognition = SymbolRecognitionEngine()
-        self.symbol_renderer = SymbolRenderer()
-        
-    def extract_bim_from_svg(self, svg_content: str, building_id: str = None, floor_label: str = None) -> Dict[str, Any]:
+        self.element_patterns = {
+            'room': [
+                r'\broom\b', r'\boffice\b', r'\bconference\b', r'\bbathroom\b',
+                r'\bkitchen\b', r'\bcloset\b', r'\bhallway\b', r'\bcorridor\b'
+            ],
+            'wall': [
+                r'\bwall\b', r'\bpartition\b', r'\bbarrier\b', r'\bdivider\b'
+            ],
+            'device': [
+                r'\bhvac\b', r'\bvent\b', r'\boutlet\b', r'\bswitch\b',
+                r'\boutlet\b', r'\bpanel\b', r'\bunit\b', r'\bdevice\b'
+            ]
+        }
+    
+    def extract_bim_elements(self, svg_elements: List[SVGElement]) -> ExtractionResult:
         """
-        Extract comprehensive BIM data from SVG content with recognized symbols.
+        Extract BIM elements from SVG elements.
         
         Args:
-            svg_content: SVG content with recognized symbols
-            building_id: Building identifier
-            floor_label: Floor label
+            svg_elements: List of parsed SVG elements
             
         Returns:
-            Structured BIM data with rooms, devices, systems, and relationships
+            ExtractionResult with BIM elements and metadata
         """
+        elements = []
+        relationships = []
+        total_confidence = 0.0
+        
+        for svg_elem in svg_elements:
+            bim_elem = self._extract_element(svg_elem)
+            if bim_elem:
+                elements.append(bim_elem)
+                total_confidence += self._calculate_confidence(svg_elem)
+        
+        # Calculate average confidence
+        avg_confidence = total_confidence / len(elements) if elements else 0.0
+        
+        # Extract relationships
+        relationships = self._extract_relationships(elements)
+        
+        return ExtractionResult(
+            elements=elements,
+            relationships=relationships,
+            confidence=avg_confidence,
+            metadata={
+                'total_elements': len(elements),
+                'total_relationships': len(relationships),
+                'extraction_method': 'pattern_based'
+            }
+        )
+    
+    def _extract_element(self, svg_elem: SVGElement) -> Optional[BIMElement]:
+        """Extract BIM element from SVG element."""
         try:
-            # Extract rendered symbols from SVG
-            rendered_symbols = self.symbol_renderer.get_rendered_symbols(svg_content)
+            # Determine element type
+            element_type = self._classify_element(svg_elem)
             
-            # Extract text content for additional analysis
-            text_content = self._extract_text_from_svg(svg_content)
+            # Extract geometry
+            geometry = self._extract_geometry(svg_elem)
             
-            # Recognize additional symbols from text
-            additional_symbols = self.symbol_recognition.recognize_symbols_in_content(
-                text_content, content_type='text'
+            # Extract properties
+            properties = self._extract_properties(svg_elem)
+            
+            # Create BIM element based on type
+            if element_type == 'room':
+                return Room(
+                    name=svg_elem.attributes.get('id', f"room_{len(properties)}"),
+                    geometry=geometry,
+                    room_type=properties.get('room_type', 'office'),
+                    room_number=properties.get('room_number', ''),
+                    area=properties.get('area', 0.0)
+                )
+            elif element_type == 'wall':
+                return Wall(
+                    name=svg_elem.attributes.get('id', f"wall_{len(properties)}"),
+                    geometry=geometry,
+                    wall_type=properties.get('wall_type', 'interior'),
+                    thickness=properties.get('thickness', 0.2),
+                    height=properties.get('height', 3.0)
+                )
+            elif element_type == 'device':
+                return Device(
+                    name=svg_elem.attributes.get('id', f"device_{len(properties)}"),
+                    geometry=geometry,
+                    device_type=properties.get('device_type', 'unknown'),
+                    manufacturer=properties.get('manufacturer', ''),
+                    model=properties.get('model', '')
+                )
+            else:
+                return BIMElement(
+                    id=svg_elem.attributes.get('id', f"element_{len(properties)}"),
+                    name=svg_elem.attributes.get('id', f"element_{len(properties)}"),
+                    element_type=element_type,
+                    geometry=geometry,
+                    properties=properties
+                )
+                
+        except Exception:
+            return None
+    
+    def _classify_element(self, svg_elem: SVGElement) -> str:
+        """Classify SVG element as BIM element type."""
+        # Check for explicit BIM type attribute
+        bim_type = svg_elem.attributes.get('data-bim-type')
+        if bim_type:
+            return bim_type
+        
+        # Check for class attributes
+        class_attr = svg_elem.attributes.get('class', '')
+        for element_type, patterns in self.element_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, class_attr, re.IGNORECASE):
+                    return element_type
+        
+        # Check element name
+        name = svg_elem.attributes.get('id', '')
+        for element_type, patterns in self.element_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, name, re.IGNORECASE):
+                    return element_type
+        
+        # Determine by SVG tag and properties
+        if svg_elem.tag == 'rect':
+            # Large rectangles are likely rooms
+            width = float(svg_elem.attributes.get('width', 0))
+            height = float(svg_elem.attributes.get('height', 0))
+            if width > 50 and height > 50:
+                return 'room'
+            else:
+                return 'wall'
+        elif svg_elem.tag == 'circle':
+            return 'device'
+        elif svg_elem.tag == 'text':
+            return 'annotation'
+        else:
+            return 'unknown'
+    
+    def _extract_geometry(self, svg_elem: SVGElement) -> Geometry:
+        """Extract geometry from SVG element."""
+        if svg_elem.tag == 'rect':
+            x = float(svg_elem.attributes.get('x', 0))
+            y = float(svg_elem.attributes.get('y', 0))
+            width = float(svg_elem.attributes.get('width', 0))
+            height = float(svg_elem.attributes.get('height', 0))
+            
+            coordinates = [
+                [x, y],
+                [x + width, y],
+                [x + width, y + height],
+                [x, y + height],
+                [x, y]
+            ]
+            
+            return Geometry(
+                type=GeometryType.POLYGON,
+                coordinates=[coordinates],
+                properties={'width': width, 'height': height}
             )
             
-            # Build comprehensive BIM structure
-            bim_data = {
-                'metadata': self._build_metadata(building_id, floor_label),
-                'rooms': self._extract_rooms(text_content, rendered_symbols),
-                'devices': self._extract_devices(rendered_symbols, additional_symbols),
-                'systems': self._extract_systems(rendered_symbols, additional_symbols),
-                'connections': self._extract_connections(rendered_symbols),
-                'relationships': self._build_relationships(rendered_symbols),
-                'spatial_data': self._extract_spatial_data(rendered_symbols),
-                'properties': self._extract_properties(rendered_symbols),
-                'classification': self._classify_building_elements(rendered_symbols, text_content)
-            }
+        elif svg_elem.tag == 'circle':
+            cx = float(svg_elem.attributes.get('cx', 0))
+            cy = float(svg_elem.attributes.get('cy', 0))
+            r = float(svg_elem.attributes.get('r', 0))
             
-            logger.info(f"Extracted BIM data: {len(bim_data['devices'])} devices, {len(bim_data['rooms'])} rooms")
-            return bim_data
+            return Geometry(
+                type=GeometryType.POINT,
+                coordinates=[[cx, cy]],
+                properties={'radius': r}
+            )
             
-        except Exception as e:
-            logger.error(f"BIM extraction failed: {e}")
-            return {
-                'error': f"BIM extraction failed: {str(e)}",
-                'metadata': self._build_metadata(building_id, floor_label),
-                'rooms': [],
-                'devices': [],
-                'systems': {},
-                'connections': [],
-                'relationships': [],
-                'spatial_data': {},
-                'properties': {},
-                'classification': {}
-            }
-    
-    def _build_metadata(self, building_id: str, floor_label: str) -> Dict[str, Any]:
-        """Build BIM metadata."""
-        return {
-            'building_id': building_id or 'unknown',
-            'floor_label': floor_label or 'unknown',
-            'extraction_date': datetime.utcnow().isoformat(),
-            'extraction_method': 'symbol_recognition',
-            'version': '1.0',
-            'symbol_library_version': '1.0'
-        }
-    
-    def _extract_rooms(self, text_content: str, rendered_symbols: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract room information from text and symbols."""
-        rooms = []
-        
-        # Extract room information from text
-        room_patterns = [
-            r'room\s+(\d+)', r'office\s+(\d+)', r'conference\s+room', 
-            r'break\s+room', r'lobby', r'hallway', r'corridor'
-        ]
-        
-        import re
-        text_lower = text_content.lower()
-        
-        for pattern in room_patterns:
-            matches = re.finditer(pattern, text_lower)
-            for match in matches:
-                room_name = match.group(0)
-                room_number = match.group(1) if len(match.groups()) > 0 else None
-                
-                rooms.append({
-                    'id': f"room_{len(rooms) + 1}",
-                    'name': room_name.title(),
-                    'number': room_number,
-                    'type': self._classify_room_type(room_name),
-                    'devices': self._find_devices_in_room(room_name, rendered_symbols),
-                    'area': None,  # Would be calculated from spatial data
-                    'extraction_method': 'text_pattern'
-                })
-        
-        return rooms
-    
-    def _classify_room_type(self, room_name: str) -> str:
-        """Classify room type based on name."""
-        room_lower = room_name.lower()
-        
-        if 'conference' in room_lower:
-            return 'conference'
-        elif 'office' in room_lower:
-            return 'office'
-        elif 'break' in room_lower:
-            return 'break_room'
-        elif 'lobby' in room_lower:
-            return 'lobby'
-        elif 'hallway' in room_lower or 'corridor' in room_lower:
-            return 'circulation'
+        elif svg_elem.tag == 'line':
+            x1 = float(svg_elem.attributes.get('x1', 0))
+            y1 = float(svg_elem.attributes.get('y1', 0))
+            x2 = float(svg_elem.attributes.get('x2', 0))
+            y2 = float(svg_elem.attributes.get('y2', 0))
+            
+            return Geometry(
+                type=GeometryType.LINESTRING,
+                coordinates=[[x1, y1], [x2, y2]],
+                properties={}
+            )
+            
         else:
-            return 'general'
+            # Default point geometry
+            return Geometry(
+                type=GeometryType.POINT,
+                coordinates=[svg_elem.position],
+                properties={}
+            )
     
-    def _find_devices_in_room(self, room_name: str, rendered_symbols: List[Dict[str, Any]]) -> List[str]:
-        """Find devices that might be in a specific room."""
-        # This is a simplified implementation
-        # In a real system, this would use spatial analysis
-        devices = []
+    def _extract_properties(self, svg_elem: SVGElement) -> Dict[str, Any]:
+        """Extract properties from SVG element."""
+        properties = {}
         
-        for symbol in rendered_symbols:
-            # Simple proximity-based assignment
-            if symbol.get('position'):
-                devices.append(symbol['object_id'])
+        # Extract common properties
+        if 'fill' in svg_elem.attributes:
+            properties['fill_color'] = svg_elem.attributes['fill']
+        if 'stroke' in svg_elem.attributes:
+            properties['stroke_color'] = svg_elem.attributes['stroke']
+        if 'stroke-width' in svg_elem.attributes:
+            properties['stroke_width'] = float(svg_elem.attributes['stroke-width'])
         
-        return devices
-    
-    def _extract_devices(self, rendered_symbols: List[Dict[str, Any]], 
-                        additional_symbols: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract device information from rendered symbols."""
-        devices = []
+        # Extract BIM-specific properties
+        for key, value in svg_elem.attributes.items():
+            if key.startswith('data-'):
+                prop_name = key[5:]  # Remove 'data-' prefix
+                properties[prop_name] = value
         
-        # Process rendered symbols
-        for symbol in rendered_symbols:
-            device = {
-                'id': symbol['object_id'],
-                'symbol_id': symbol['symbol_id'],
-                'name': symbol['symbol_name'],
-                'system': symbol['system'],
-                'category': symbol['category'],
-                'position': symbol.get('position', {}),
-                'confidence': symbol['confidence'],
-                'match_type': symbol['match_type'],
-                'rendered_at': symbol['rendered_at'],
-                'properties': symbol.get('properties', []),
-                'connections': symbol.get('connections', []),
-                'tags': symbol.get('tags', [])
-            }
-            devices.append(device)
-        
-        # Process additional recognized symbols (not yet rendered)
-        for symbol in additional_symbols:
-            if symbol['confidence'] >= 0.7:  # Only high-confidence matches
-                device = {
-                    'id': f"recognized_{symbol['symbol_id']}_{len(devices)}",
-                    'symbol_id': symbol['symbol_id'],
-                    'name': symbol['symbol_data']['display_name'],
-                    'system': symbol['symbol_data']['system'],
-                    'category': symbol['symbol_data'].get('category', ''),
-                    'position': symbol.get('position', {}),
-                    'confidence': symbol['confidence'],
-                    'match_type': symbol['match_type'],
-                    'rendered_at': None,
-                    'properties': symbol['symbol_data'].get('properties', []),
-                    'connections': symbol['symbol_data'].get('connections', []),
-                    'tags': symbol['symbol_data'].get('tags', [])
-                }
-                devices.append(device)
-        
-        return devices
-    
-    def _extract_systems(self, rendered_symbols: List[Dict[str, Any]], 
-                        additional_symbols: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Extract building systems information."""
-        systems = {
-            'mechanical': {'devices': [], 'count': 0},
-            'electrical': {'devices': [], 'count': 0},
-            'plumbing': {'devices': [], 'count': 0},
-            'fire_alarm': {'devices': [], 'count': 0},
-            'security': {'devices': [], 'count': 0},
-            'low_voltage': {'devices': [], 'count': 0},
-            'telecommunications': {'devices': [], 'count': 0},
-            'building_controls': {'devices': [], 'count': 0},
-            'network': {'devices': [], 'count': 0},
-            'av': {'devices': [], 'count': 0}
-        }
-        
-        all_symbols = rendered_symbols + additional_symbols
-        
-        for symbol in all_symbols:
-            system = symbol.get('system', 'unknown')
-            if system in systems:
-                device_id = symbol.get('object_id') or f"recognized_{symbol['symbol_id']}"
-                systems[system]['devices'].append(device_id)
-                systems[system]['count'] += 1
-        
-        return systems
-    
-    def _extract_connections(self, rendered_symbols: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Extract connection information between devices."""
-        connections = []
-        
-        for symbol in rendered_symbols:
-            symbol_connections = symbol.get('connections', [])
-            
-            for conn in symbol_connections:
-                connection = {
-                    'id': f"conn_{len(connections) + 1}",
-                    'from_device': symbol['object_id'],
-                    'to_device': None,  # Would be determined by spatial analysis
-                    'connection_type': conn.get('type', 'unknown'),
-                    'description': conn.get('description', ''),
-                    'system': symbol['system']
-                }
-                connections.append(connection)
-        
-        return connections
-    
-    def _build_relationships(self, rendered_symbols: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Build relationships between building elements."""
-        relationships = []
-        
-        # Group by system
-        system_groups = {}
-        for symbol in rendered_symbols:
-            system = symbol['system']
-            if system not in system_groups:
-                system_groups[system] = []
-            system_groups[system].append(symbol)
-        
-        # Create relationships within systems
-        for system, symbols in system_groups.items():
-            if len(symbols) > 1:
-                for i, symbol1 in enumerate(symbols):
-                    for symbol2 in symbols[i+1:]:
-                        relationship = {
-                            'id': f"rel_{len(relationships) + 1}",
-                            'type': 'system_connection',
-                            'from_element': symbol1['object_id'],
-                            'to_element': symbol2['object_id'],
-                            'system': system,
-                            'relationship_type': 'same_system'
-                        }
-                        relationships.append(relationship)
-        
-        return relationships
-    
-    def _extract_spatial_data(self, rendered_symbols: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Extract spatial information from symbols."""
-        spatial_data = {
-            'bounds': self._calculate_bounds(rendered_symbols),
-            'symbol_positions': {},
-            'system_locations': {},
-            'density_analysis': {}
-        }
-        
-        # Extract symbol positions
-        for symbol in rendered_symbols:
-            if symbol.get('position'):
-                spatial_data['symbol_positions'][symbol['object_id']] = symbol['position']
-        
-        # Group by system for spatial analysis
-        system_positions = {}
-        for symbol in rendered_symbols:
-            system = symbol['system']
-            if system not in system_positions:
-                system_positions[system] = []
-            if symbol.get('position'):
-                system_positions[system].append(symbol['position'])
-        
-        spatial_data['system_locations'] = system_positions
-        
-        return spatial_data
-    
-    def _calculate_bounds(self, rendered_symbols: List[Dict[str, Any]]) -> Dict[str, float]:
-        """Calculate bounding box for all symbols."""
-        if not rendered_symbols:
-            return {'x_min': 0, 'y_min': 0, 'x_max': 0, 'y_max': 0}
-        
-        x_coords = []
-        y_coords = []
-        
-        for symbol in rendered_symbols:
-            if symbol.get('position'):
-                x_coords.append(symbol['position']['x'])
-                y_coords.append(symbol['position']['y'])
-        
-        if x_coords and y_coords:
-            return {
-                'x_min': min(x_coords),
-                'y_min': min(y_coords),
-                'x_max': max(x_coords),
-                'y_max': max(y_coords)
-            }
-        else:
-            return {'x_min': 0, 'y_min': 0, 'x_max': 0, 'y_max': 0}
-    
-    def _extract_properties(self, rendered_symbols: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Extract properties from symbols."""
-        properties = {
-            'device_properties': {},
-            'system_properties': {},
-            'overall_properties': {}
-        }
-        
-        # Extract device-specific properties
-        for symbol in rendered_symbols:
-            device_props = symbol.get('properties', [])
-            if device_props:
-                properties['device_properties'][symbol['object_id']] = device_props
-        
-        # Aggregate system properties
-        system_props = {}
-        for symbol in rendered_symbols:
-            system = symbol['system']
-            if system not in system_props:
-                system_props[system] = []
-            
-            # Add unique properties for this system
-            for prop in symbol.get('properties', []):
-                if prop not in system_props[system]:
-                    system_props[system].append(prop)
-        
-        properties['system_properties'] = system_props
+        # Calculate additional properties
+        if svg_elem.tag == 'rect':
+            width = float(svg_elem.attributes.get('width', 0))
+            height = float(svg_elem.attributes.get('height', 0))
+            properties['area'] = width * height
+            properties['perimeter'] = 2 * (width + height)
         
         return properties
     
-    def _classify_building_elements(self, rendered_symbols: List[Dict[str, Any]], 
-                                  text_content: str) -> Dict[str, Any]:
-        """Classify building elements by type and function."""
-        classification = {
-            'equipment': [],
-            'distribution': [],
-            'controls': [],
-            'fixtures': [],
-            'sensors': [],
-            'panels': [],
-            'other': []
-        }
+    def _calculate_confidence(self, svg_elem: SVGElement) -> float:
+        """Calculate confidence score for element extraction."""
+        confidence = 0.0
         
-        for symbol in rendered_symbols:
-            symbol_id = symbol['symbol_id']
-            system = symbol['system']
-            
-            # Classify based on symbol type and system
-            if any(keyword in symbol_id for keyword in ['ahu', 'rtu', 'fcu', 'chiller', 'boiler', 'pump']):
-                classification['equipment'].append(symbol['object_id'])
-            elif any(keyword in symbol_id for keyword in ['duct', 'pipe', 'conduit', 'cable']):
-                classification['distribution'].append(symbol['object_id'])
-            elif any(keyword in symbol_id for keyword in ['thermostat', 'controller', 'actuator']):
-                classification['controls'].append(symbol['object_id'])
-            elif any(keyword in symbol_id for keyword in ['sink', 'wc', 'bathtub', 'lighting']):
-                classification['fixtures'].append(symbol['object_id'])
-            elif any(keyword in symbol_id for keyword in ['sensor', 'detector']):
-                classification['sensors'].append(symbol['object_id'])
-            elif any(keyword in symbol_id for keyword in ['panel', 'pnl']):
-                classification['panels'].append(symbol['object_id'])
-            else:
-                classification['other'].append(symbol['object_id'])
+        # Check for explicit BIM attributes
+        if 'data-bim-type' in svg_elem.attributes:
+            confidence += 0.4
         
-        return classification
+        # Check for class attributes
+        class_attr = svg_elem.attributes.get('class', '')
+        for patterns in self.element_patterns.values():
+            for pattern in patterns:
+                if re.search(pattern, class_attr, re.IGNORECASE):
+                    confidence += 0.3
+                    break
+        
+        # Check element name
+        name = svg_elem.attributes.get('id', '')
+        for patterns in self.element_patterns.values():
+            for pattern in patterns:
+                if re.search(pattern, name, re.IGNORECASE):
+                    confidence += 0.2
+                    break
+        
+        # Check geometry properties
+        if svg_elem.tag == 'rect':
+            width = float(svg_elem.attributes.get('width', 0))
+            height = float(svg_elem.attributes.get('height', 0))
+            if width > 50 and height > 50:
+                confidence += 0.1
+        
+        return min(confidence, 1.0)
     
-    def _extract_text_from_svg(self, svg_content: str) -> str:
-        """Extract text content from SVG."""
-        import xml.etree.ElementTree as ET
+    def _extract_relationships(self, elements: List[BIMElement]) -> List[Dict[str, Any]]:
+        """Extract relationships between BIM elements."""
+        relationships = []
         
-        try:
-            root = ET.fromstring(svg_content)
-            text_elements = []
-            
-            for text_elem in root.findall('.//{http://www.w3.org/2000/svg}text'):
-                text_content = text_elem.text or ''
-                if text_content.strip():
-                    text_elements.append(text_content)
-            
-            return ' '.join(text_elements)
-            
-        except ET.ParseError:
-            return ""
-
-# Legacy function for backward compatibility
-def extract_bim_from_svg(svg_content: str):
-    """
-    Legacy function for extracting BIM data from SVG.
+        # Spatial relationships
+        for i, elem1 in enumerate(elements):
+            for j, elem2 in enumerate(elements):
+                if i != j:
+                    relationship = self._analyze_spatial_relationship(elem1, elem2)
+                    if relationship:
+                        relationships.append(relationship)
+        
+        # System relationships
+        system_relationships = self._analyze_system_relationships(elements)
+        relationships.extend(system_relationships)
+        
+        return relationships
     
-    Args:
-        svg_content (str): The raw SVG file content as a string.
-
-    Returns:
-        dict: Structured BIM data.
-    """
-    extractor = BIMExtractor()
-    return extractor.extract_bim_from_svg(svg_content) 
+    def _analyze_spatial_relationship(self, elem1: BIMElement, elem2: BIMElement) -> Optional[Dict[str, Any]]:
+        """Analyze spatial relationship between two elements."""
+        if not elem1.geometry or not elem2.geometry:
+            return None
+        
+        # Simplified spatial analysis
+        # In production, this would use proper geometric analysis
+        centroid1 = elem1.geometry.centroid
+        centroid2 = elem2.geometry.centroid
+        
+        if centroid1 and centroid2:
+            distance = ((centroid1[0] - centroid2[0])**2 + (centroid1[1] - centroid2[1])**2)**0.5
+            
+            if distance < 10:  # Close elements
+                return {
+                    'source_id': elem1.id,
+                    'target_id': elem2.id,
+                    'relationship_type': 'adjacent',
+                    'properties': {'distance': distance}
+                }
+        
+        return None
+    
+    def _analyze_system_relationships(self, elements: List[BIMElement]) -> List[Dict[str, Any]]:
+        """Analyze system relationships between elements."""
+        relationships = []
+        
+        # Group elements by system
+        system_groups = {}
+        for element in elements:
+            if hasattr(element, 'system_type'):
+                system_type = element.system_type
+                if system_type not in system_groups:
+                    system_groups[system_type] = []
+                system_groups[system_type].append(element)
+        
+        # Create relationships within systems
+        for system_type, system_elements in system_groups.items():
+            if len(system_elements) > 1:
+                for i, elem1 in enumerate(system_elements):
+                    for j, elem2 in enumerate(system_elements):
+                        if i != j:
+                            relationships.append({
+                                'source_id': elem1.id,
+                                'target_id': elem2.id,
+                                'relationship_type': 'system_connection',
+                                'properties': {'system_type': system_type}
+                            })
+        
+        return relationships 

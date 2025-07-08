@@ -3,16 +3,17 @@ Real-time WebSocket Router
 Handles WebSocket connections, real-time updates, and collaborative editing
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from typing import Dict, List, Optional, Any
 import json
 import logging
 from datetime import datetime
 
-from arx_svg_parser.services.realtime_service import realtime_service, LockType
-from arx_svg_parser.services.cache_service import cache_service
-from arx_svg_parser.utils.auth import get_current_user_optional
+from services.realtime_service import realtime_service, LockType
+from services.cache_service import cache_service
+from utils.auth import get_current_user_optional
+from services.realtime_telemetry import TelemetryProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,10 @@ router = APIRouter(prefix="/realtime", tags=["realtime"])
 
 # Store active WebSocket connections
 active_connections: Dict[str, WebSocket] = {}
+
+# Assume a global or singleton processor instance is available
+from services.realtime_telemetry import create_telemetry_processor
+processor = create_telemetry_processor()
 
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
@@ -229,7 +234,7 @@ async def get_active_locks(resource_id: str, current_user: Optional[Dict] = Depe
                     "username": lock.username,
                     "acquired_at": lock.acquired_at.isoformat(),
                     "expires_at": lock.expires_at.isoformat(),
-                    "metadata": lock.metadata
+                    "symbol_metadata": lock.symbol_metadata
                 })
         
         return JSONResponse({
@@ -258,7 +263,7 @@ async def get_user_presence(user_id: str, current_user: Optional[Dict] = Depends
                 "cursor_position": presence.cursor_position,
                 "last_seen": presence.last_seen.isoformat(),
                 "is_active": presence.is_active,
-                "metadata": presence.metadata,
+                "symbol_metadata": presence.symbol_metadata,
                 "timestamp": datetime.utcnow().isoformat()
             })
         else:
@@ -420,4 +425,9 @@ async def resolve_conflict(
     
     except Exception as e:
         logger.error(f"Error resolving conflict: {e}")
-        raise HTTPException(status_code=500, detail="Failed to resolve conflict") 
+        raise HTTPException(status_code=500, detail="Failed to resolve conflict")
+
+@router.get("/analytics")
+def get_analytics(data_type: Optional[str] = Query(None)):
+    """Get analytics results for a data type or all types"""
+    return processor.get_analytics_results(data_type) 

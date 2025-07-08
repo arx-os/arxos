@@ -9,12 +9,12 @@ import json
 from datetime import datetime, timedelta
 from unittest.mock import Mock, AsyncMock, patch
 
-from arx_svg_parser.services.realtime_service import (
+from services.realtime_service import (
     RealTimeService as RealtimeService, WebSocketManager, 
     CollaborativeEditingManager, ConflictResolutionManager,
     LockType, ConflictSeverity, UserPresence, EditingLock, Conflict
 )
-from arx_svg_parser.services.cache_service import (
+from services.cache_service import (
     CacheService, RedisCacheManager, IntelligentPreloader,
     CacheStrategy, CachePriority, CacheDecorator
 )

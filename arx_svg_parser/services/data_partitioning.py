@@ -626,7 +626,7 @@ class DataPartitioningService:
         
         try:
             # Get partition data
-            partition_data = partition.metadata.get("grid_data") or partition.metadata.get("object_data")
+            partition_data = partition.symbol_metadata.get("grid_data") or partition.symbol_metadata.get("object_data")
             if not partition_data:
                 # Create basic partition data
                 partition_data = {

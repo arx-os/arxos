@@ -10,10 +10,10 @@ import json
 import logging
 from datetime import datetime
 
-from arx_svg_parser.services.data_partitioning import (
+from services.data_partitioning import (
     data_partitioning_service, PartitionStrategy, CompressionType, LoadStrategy
 )
-from arx_svg_parser.utils.auth import get_current_user_optional
+from utils.auth import get_current_user_optional
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ async def partition_floor(
                 "compressed_size": partition.compressed_size,
                 "compression_ratio": partition.compression_ratio,
                 "created_at": partition.created_at.isoformat(),
-                "metadata": partition.metadata
+                "symbol_metadata": partition.symbol_metadata
             })
         
         return JSONResponse({
@@ -102,7 +102,7 @@ async def get_floor_partitions(
                 "last_accessed": partition.last_accessed.isoformat(),
                 "access_count": partition.access_count,
                 "is_loaded": data_partitioning_service.lazy_loader.is_partition_loaded(partition.partition_id),
-                "metadata": partition.metadata
+                "symbol_metadata": partition.symbol_metadata
             })
         
         return JSONResponse({

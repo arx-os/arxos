@@ -12,7 +12,7 @@ class SymbolRenderer:
     
     def __init__(self):
         self.svg_namespace = "http://www.w3.org/2000/svg"
-        self.arx_namespace = "http://arxos.com/svg"
+        self.arx_namespace = "http://arxos.io/svg"
         
     def render_recognized_symbols(self, svg_content: str, recognized_symbols: List[Dict[str, Any]], 
                                 building_id: str, floor_label: str) -> Dict[str, Any]:

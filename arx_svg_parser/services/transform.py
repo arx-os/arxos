@@ -2,8 +2,8 @@ from lxml import etree as ET
 from lxml.etree import QName
 import math
 from typing import List, Dict, Any, Tuple, Optional
-from arx_svg_parser.services.coordinate_validator import validate_coordinates, validate_scale_factors, validate_anchor_points, CoordinateValidationError
-from arx_svg_parser.services.coordinate_validator import validate_transformation_matrix as validate_matrix
+from services.coordinate_validator import validate_coordinates, validate_scale_factors, validate_anchor_points, CoordinateValidationError
+from services.coordinate_validator import validate_transformation_matrix as validate_matrix
 
 SVG_NS = "http://www.w3.org/2000/svg"
 

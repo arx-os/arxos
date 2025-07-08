@@ -758,7 +758,7 @@ class CMMSIntegrationService:
                     "maintenance_interval_days": asset.maintenance_interval_days,
                     "created_at": asset.created_at.isoformat(),
                     "updated_at": asset.updated_at.isoformat(),
-                    "metadata": asset.metadata
+                    "symbol_metadata": asset.symbol_metadata
                 })
             
             return {
@@ -840,7 +840,7 @@ class CMMSIntegrationService:
                     "next_scheduled": schedule.next_scheduled.isoformat() if schedule.next_scheduled else None,
                     "created_at": schedule.created_at.isoformat(),
                     "updated_at": schedule.updated_at.isoformat(),
-                    "metadata": schedule.metadata
+                    "symbol_metadata": schedule.symbol_metadata
                 })
             
             return {
@@ -936,7 +936,7 @@ class CMMSIntegrationService:
                     "notes": work_order.notes,
                     "created_at": work_order.created_at.isoformat(),
                     "updated_at": work_order.updated_at.isoformat(),
-                    "metadata": work_order.metadata
+                    "symbol_metadata": work_order.symbol_metadata
                 })
             
             return {

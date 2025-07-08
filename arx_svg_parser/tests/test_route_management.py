@@ -10,11 +10,11 @@ import os
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-from arx_svg_parser.models.route import (
+from models.route import (
     Route, RoutePoint, RouteGeometry, RouteSegment, RouteCreateRequest,
     RouteUpdateRequest, RouteAnalytics, RouteConflict, RouteValidationResult
 )
-from arx_svg_parser.services.route_manager import RouteManager, RouteMetrics
+from services.route_manager import RouteManager, RouteMetrics
 
 class TestRouteManager:
     """Test suite for RouteManager service"""

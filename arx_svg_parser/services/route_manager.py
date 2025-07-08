@@ -13,7 +13,7 @@ import numpy as np
 from dataclasses import dataclass
 from enum import Enum
 
-from arx_svg_parser.models.route import (
+from models.route import (
     Route, RoutePoint, RouteGeometry, RouteSegment, RouteAnalytics,
     RouteConflict, RouteValidationResult, RouteOptimizationRequest
 )

@@ -1,4 +1,4 @@
-from arx_svg_parser.models.system_elements import (
+from models.system_elements import (
     ExtractionResponse, SystemElement, ElectricalElement, FireAlarmElement, PlumbingElement
 )
 from typing import List, Dict, Any

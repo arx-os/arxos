@@ -29,14 +29,14 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from typing import Dict, List, Any
 
 # Import all services
-from arx_svg_parser.services.version_control import VersionControlService
-from arx_svg_parser.services.route_manager import RouteManager
-from arx_svg_parser.services.floor_manager import FloorManager
-from arx_svg_parser.services.auto_snapshot import AutoSnapshotService
-from arx_svg_parser.services.realtime_service import RealTimeService as RealtimeService
-from arx_svg_parser.services.cache_service import CacheService
-from arx_svg_parser.services.data_partitioning import DataPartitioningService
-from arx_svg_parser.services.access_control import AccessControlService
+from services.version_control import VersionControlService
+from services.route_manager import RouteManager
+from services.floor_manager import FloorManager
+from services.auto_snapshot import AutoSnapshotService
+from services.realtime_service import RealTimeService as RealtimeService
+from services.cache_service import CacheService
+from services.data_partitioning import DataPartitioningService
+from services.access_control import AccessControlService
 
 
 class TestLoadTesting:

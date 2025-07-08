@@ -1,13 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional, Dict, Any
-from arx_svg_parser.services.transform import (
+from services.transform import (
     apply_affine_transform, 
     convert_to_real_world_coordinates,
     validate_coordinate_system,
     calculate_scale_factors,
     transform_coordinates_batch
 )
-from arx_svg_parser.models.scale import (
+from models.scale import (
     AnchorPoint, 
     ScaleRequest, 
     ScaleResponse,
@@ -19,7 +19,7 @@ from arx_svg_parser.models.scale import (
     CoordinateTransformResponse,
     CoordinateValidationResult
 )
-from arx_svg_parser.services.coordinate_validator import validate_coordinates, CoordinateValidationError
+from services.coordinate_validator import validate_coordinates, CoordinateValidationError
 
 router = APIRouter()
 

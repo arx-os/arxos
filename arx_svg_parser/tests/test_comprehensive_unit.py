@@ -21,16 +21,16 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from typing import Dict, List, Any
 
 # Import all services and handlers
-from arx_svg_parser.services.version_control import VersionControlService, Version, Branch, MergeRequest
-from arx_svg_parser.services.route_manager import RouteManager, Route, RouteType, RouteStatus
-from arx_svg_parser.services.floor_manager import FloorManager, Floor, FloorStatus
-from arx_svg_parser.services.auto_snapshot import AutoSnapshotService, SnapshotConfig, ChangeMetrics
-from arx_svg_parser.services.realtime_service import RealTimeService as RealtimeService, WebSocketManager
-from arx_svg_parser.services.cache_service import CacheService, RedisCacheManager
-from arx_svg_parser.services.data_partitioning import DataPartitioningService
-from arx_svg_parser.services.access_control import AccessControlService, User, UserRole, Permission
-from arx_svg_parser.routers import version_control, auto_snapshot
-from arx_svg_parser.routers import realtime, partitioning, access_control
+from services.version_control import VersionControlService, Version, Branch, MergeRequest
+from services.route_manager import RouteManager, Route, RouteType, RouteStatus
+from services.floor_manager import FloorManager, Floor, FloorStatus
+from services.auto_snapshot import AutoSnapshotService, SnapshotConfig, ChangeMetrics
+from services.realtime_service import RealTimeService as RealtimeService, WebSocketManager
+from services.cache_service import CacheService, RedisCacheManager
+from services.data_partitioning import DataPartitioningService
+from services.access_control import AccessControlService, User, UserRole, Permission
+from routers import version_control, auto_snapshot
+from routers import realtime, partitioning, access_control
 
 
 class TestVersionControlHandlers:

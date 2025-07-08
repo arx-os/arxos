@@ -565,7 +565,7 @@ class VersionControlService:
                 merge_request.building_id, merge_request.status.value,
                 merge_request.created_by, merge_request.created_at.isoformat(),
                 json.dumps(merge_request.conflicts), merge_request.resolution_strategy,
-                merge_request.description, json.dumps(merge_request.metadata)
+                merge_request.description, json.dumps(merge_request.model_metadata)
             ))
             
             # Store conflicts

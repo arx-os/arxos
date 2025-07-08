@@ -4,7 +4,6 @@ Generates YAML symbol definitions from building system product URLs
 """
 
 import requests
-import yaml
 import re
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urlparse
@@ -43,7 +42,7 @@ class SymbolGenerator:
     
     def generate_symbol_from_url(self, url: str, user_id: int) -> Dict:
         """
-        Generate a symbol YAML from a product URL
+        Generate a symbol JSON from a product URL
         
         Args:
             url: Product URL to scrape
@@ -84,13 +83,13 @@ class SymbolGenerator:
             # Generate SVG
             svg_content = self._generate_svg(product_data)
             
-            # Create YAML content
-            yaml_content = self._create_yaml_content(symbol_data, svg_content)
+            # Create JSON content
+            json_content = self._create_json_content(symbol_data, svg_content)
             
             return {
                 'success': True,
                 'symbol_data': symbol_data,
-                'yaml_content': yaml_content,
+                'json_content': json_content,
                 'svg_preview': svg_content,
                 'product_data': product_data
             }
@@ -354,10 +353,10 @@ class SymbolGenerator:
         
         return svg
     
-    def _create_yaml_content(self, symbol_data: Dict, svg_content: str) -> str:
-        """Create YAML content for the symbol"""
+    def _create_json_content(self, symbol_data: Dict, svg_content: str) -> str:
+        """Create JSON content for the symbol"""
         
-        yaml_data = {
+        json_data = {
             'symbol_id': symbol_data['symbol_id'],
             'system': symbol_data['system'],
             'display_name': symbol_data['display_name'],
@@ -409,18 +408,18 @@ class SymbolGenerator:
             }
         }
         
-        return yaml.dump(yaml_data, default_flow_style=False, sort_keys=False)
+        return json.dumps(json_data, indent=4)
     
-    def save_symbol(self, yaml_content: str, symbol_id: str) -> bool:
+    def save_symbol(self, json_content: str, symbol_id: str) -> bool:
         """Save the generated symbol to the symbol library"""
         try:
             # Create symbol library path
             symbol_library_path = Path("../arx-symbol-library")
-            symbol_file = symbol_library_path / f"{symbol_id}.yaml"
+            symbol_file = symbol_library_path / f"{symbol_id}.json"
             
-            # Write YAML file
+            # Write JSON file
             with open(symbol_file, 'w', encoding='utf-8') as f:
-                f.write(yaml_content)
+                f.write(json_content)
             
             return True
         except Exception as e:

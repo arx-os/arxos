@@ -9,8 +9,8 @@ from typing import Dict, Optional
 import json
 from datetime import datetime
 
-from arx_svg_parser.services.symbol_generator import SymbolGenerator
-from arx_svg_parser.utils.auth import get_current_user
+from services.symbol_generator import SymbolGenerator
+from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/symbol-generator", tags=["Symbol Generator"])
 
@@ -23,14 +23,13 @@ class SymbolGenerationRequest(BaseModel):
 class SymbolGenerationResponse(BaseModel):
     success: bool
     symbol_data: Optional[Dict] = None
-    yaml_content: Optional[str] = None
     svg_preview: Optional[str] = None
     product_data: Optional[Dict] = None
     error: Optional[str] = None
 
 class SymbolSaveRequest(BaseModel):
     symbol_id: str
-    yaml_content: str
+    json_content: str
     custom_name: Optional[str] = None
 
 @router.post("/generate", response_model=SymbolGenerationResponse)
@@ -95,7 +94,7 @@ async def save_generated_symbol(
         
         # Save symbol to library
         success = generator.save_symbol(
-            yaml_content=request.yaml_content,
+            json_content=request.json_content,
             symbol_id=request.symbol_id
         )
         
@@ -105,7 +104,7 @@ async def save_generated_symbol(
         return {
             "success": True,
             "message": f"Symbol {request.symbol_id} saved successfully",
-            "symbol_file": f"{request.symbol_id}.yaml"
+            "symbol_file": f"{request.symbol_id}.json"
         }
         
     except Exception as e:

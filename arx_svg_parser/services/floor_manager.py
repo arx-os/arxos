@@ -13,22 +13,22 @@ import math
 import os
 from pathlib import Path
 
-from arx_svg_parser.models.floor_management import (
+from models.floor_management import (
     EnhancedFloor, GridCalibration, FloorAnalytics, FloorComparison,
     GridCalibrationRequest, GridCalibrationResponse, FloorAnalyticsRequest,
     FloorAnalyticsResponse, FloorComparisonRequest, FloorComparisonResponse,
     FloorMergeRequest, FloorMergeResponse, FloorDashboardResponse,
     GridPoint
 )
-from arx_svg_parser.models.route import (
+from models.route import (
     Route, RoutePoint, RouteGeometry, RouteSegment,
     RouteCreateRequest, RouteUpdateRequest, RouteResponse,
     RouteListResponse, RouteAnalytics, RouteOptimizationRequest,
     RouteConflict, RouteValidationResult
 )
-from arx_svg_parser.utils.logger import logger
-from arx_svg_parser.utils.auth import get_current_user
-from arx_svg_parser.services.cache_service import cache_service
+from utils.logger import logger
+from utils.auth import get_current_user
+from services.cache_service import cache_service
 
 class FloorStatus:
     """Floor status constants"""

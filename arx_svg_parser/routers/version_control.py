@@ -7,8 +7,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from arx_svg_parser.services.version_control import version_control_service, VersionType, MergeStatus
-from arx_svg_parser.utils.auth import get_current_user_optional
+from services.version_control import version_control_service, VersionType, MergeStatus
+from utils.auth import get_current_user_optional
 
 router = APIRouter(prefix="/version-control", tags=["version_control"])
 

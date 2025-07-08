@@ -269,7 +269,7 @@ class ViewportCullingTestSuite(unittest.TestCase):
         try:
             response = requests.get(f"{self.base_url}/api/viewport/state")
             return response.json() if response.status_code == 200 else None
-        except:
+        except Exception:
             return None
     
     def toggle_culling(self, enable: bool) -> Dict[str, Any]:
@@ -278,7 +278,7 @@ class ViewportCullingTestSuite(unittest.TestCase):
             response = requests.post(f"{self.base_url}/api/viewport/culling", 
                                    json={'enabled': enable})
             return response.json() if response.status_code == 200 else None
-        except:
+        except Exception:
             return None
     
     def generate_test_objects(self, count: int) -> List[Dict[str, Any]]:
@@ -291,14 +291,14 @@ class ViewportCullingTestSuite(unittest.TestCase):
                 self.test_objects.extend(data.get('objects', []))
                 return data.get('objects', [])
             return []
-        except:
+        except Exception:
             return []
     
     def clear_test_objects(self):
         """Clear test objects"""
         try:
             requests.delete(f"{self.base_url}/api/test/clear-objects")
-        except:
+        except Exception:
             pass
     
     def set_viewport_zoom(self, zoom: float):
@@ -306,7 +306,7 @@ class ViewportCullingTestSuite(unittest.TestCase):
         try:
             requests.post(f"{self.base_url}/api/viewport/zoom", 
                          json={'zoom': zoom})
-        except:
+        except Exception:
             pass
     
     def get_culling_stats(self) -> Dict[str, Any]:
@@ -314,7 +314,7 @@ class ViewportCullingTestSuite(unittest.TestCase):
         try:
             response = requests.get(f"{self.base_url}/api/viewport/culling/stats")
             return response.json() if response.status_code == 200 else {}
-        except:
+        except Exception:
             return {}
     
     def get_memory_usage(self) -> Dict[str, Any]:
@@ -322,7 +322,7 @@ class ViewportCullingTestSuite(unittest.TestCase):
         try:
             response = requests.get(f"{self.base_url}/api/performance/memory")
             return response.json() if response.status_code == 200 else {}
-        except:
+        except Exception:
             return {}
     
     def set_culling_margin(self, margin: int):
@@ -330,7 +330,7 @@ class ViewportCullingTestSuite(unittest.TestCase):
         try:
             requests.post(f"{self.base_url}/api/viewport/culling/margin",
                          json={'margin': margin})
-        except:
+        except Exception:
             pass
     
     def test_culling_performance(self, object_count: int) -> Dict[str, Any]:
@@ -357,7 +357,7 @@ class ViewportCullingTestSuite(unittest.TestCase):
             response = requests.post(f"{self.base_url}/api/test/comprehensive",
                                    json=test_config)
             return response.json() if response.status_code == 200 else []
-        except:
+        except Exception:
             return []
     
     def generate_performance_report(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:

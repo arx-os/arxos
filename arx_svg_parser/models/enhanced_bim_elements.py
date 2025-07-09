@@ -84,7 +84,7 @@ class ElementCategory(Enum):
     
     # Network
     ROUTER = "router"
-    SWITCH = "switch"
+    NETWORK_SWITCH = "network_switch"
     SERVER = "server"
     ACCESS_POINT = "access_point"
     CABLE = "cable"

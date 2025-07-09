@@ -12,7 +12,7 @@ import unittest
 import time
 from typing import Dict, Any
 
-from services.bim_assembly import (
+from ..services.enhanced_bim_assembly import (
     BIMAssemblyPipeline, AssemblyConfig, AssemblyStep, ConflictType, ValidationLevel
 )
 from models.bim import BIMElement, BIMSystem, BIMSpace, BIMRelationship

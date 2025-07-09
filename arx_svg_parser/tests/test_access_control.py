@@ -10,9 +10,9 @@ import os
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
-from services.access_control import (
+from ..services.access_control import (
     AccessControlService, UserRole, ResourceType, ActionType, 
-    PermissionLevel, User, Permission, AuditLog, RoleHierarchy
+    PermissionLevel, User, Permission, AuditLog
 )
 
 class TestAccessControlService:

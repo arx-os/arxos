@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.geometry_resolver import (
+from ..services.geometry_resolver import (
     GeometryResolver, GeometricObject, Constraint, Point3D, BoundingBox,
     ConstraintType, ConflictType, GeometricConflict, ResolutionResult
 )
@@ -394,9 +394,9 @@ class TestGeometryResolverCLI(unittest.TestCase):
         if root_path not in sys.path:
             sys.path.insert(0, root_path)
         try:
-            from cmd.geometry_resolver_cli import GeometryResolverCLI
+            from ..cmd.geometry_resolver_cli import GeometryResolverCLI
         except ImportError:
-            from cmd.geometry_resolver_cli import GeometryResolverCLI
+            from ..cmd.geometry_resolver_cli import GeometryResolverCLI
         self.cli = GeometryResolverCLI()
     
     def test_create_sample_scene(self):
@@ -428,9 +428,9 @@ class TestGeometryResolverCLI(unittest.TestCase):
             
             # Import GeometryResolverCLI for new instance
             try:
-                from cmd.geometry_resolver_cli import GeometryResolverCLI
+                from ..cmd.geometry_resolver_cli import GeometryResolverCLI
             except ImportError:
-                from cmd.geometry_resolver_cli import GeometryResolverCLI
+                from ..cmd.geometry_resolver_cli import GeometryResolverCLI
             # Create new CLI and load scene
             new_cli = GeometryResolverCLI()
             success = new_cli.load_scene(temp_file)

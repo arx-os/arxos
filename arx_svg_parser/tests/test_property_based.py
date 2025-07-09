@@ -6,8 +6,8 @@ Property-Based Tests for SVG-BIM System (using hypothesis)
 
 import unittest
 from hypothesis import given, strategies as st
-from models.bim import Geometry, GeometryType, Room, Wall, Device, BIMModel, RoomType, SystemType, DeviceCategory
-from services.bim_assembly import BIMAssemblyPipeline
+from ..models.bim import Geometry, GeometryType, Room, Wall, Device, BIMModel, RoomType, SystemType, DeviceCategory
+from ..services.bim_assembly import BIMAssemblyPipeline
 
 class TestGeometryPropertyBased(unittest.TestCase):
     @given(

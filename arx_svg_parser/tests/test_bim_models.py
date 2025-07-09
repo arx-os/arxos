@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any
 
-from models.bim import (
+from ..models.bim import (
     Geometry, GeometryType, SystemType, RoomType, DeviceCategory,
     BIMElementBase, Room, Wall, Door, Window, HVACZone, AirHandler, VAVBox,
     ElectricalCircuit, ElectricalPanel, ElectricalOutlet,

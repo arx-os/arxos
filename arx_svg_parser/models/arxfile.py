@@ -49,8 +49,7 @@ class LicenseStatus(str, Enum):
     PENDING = "pending"
 
 
-@dataclass
-class ShareDistribution:
+class ShareDistribution(BaseModel):
     """Share distribution configuration for building contributors."""
     
     contributor_id: str
@@ -58,8 +57,8 @@ class ShareDistribution:
     percentage: float = Field(ge=0.0, le=100.0)
     start_date: datetime
     end_date: Optional[datetime] = None
-    conditions: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    conditions: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     
     @validator('percentage')
     def validate_percentage(cls, v):
@@ -68,8 +67,7 @@ class ShareDistribution:
         return v
 
 
-@dataclass
-class Contract:
+class Contract(BaseModel):
     """Contract configuration for building management."""
     
     contract_id: str
@@ -77,14 +75,13 @@ class Contract:
     parties: List[str]
     start_date: datetime
     end_date: Optional[datetime] = None
-    terms: Dict[str, Any] = field(default_factory=dict)
-    obligations: List[str] = field(default_factory=list)
-    penalties: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    terms: Dict[str, Any] = Field(default_factory=dict)
+    obligations: List[str] = Field(default_factory=list)
+    penalties: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class Permission:
+class Permission(BaseModel):
     """Permission configuration for building access."""
     
     user_id: str
@@ -94,12 +91,11 @@ class Permission:
     system_code: Optional[str] = None  # E, LV, FA, N, M, P, S
     start_date: datetime
     end_date: Optional[datetime] = None
-    conditions: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    conditions: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-@dataclass
-class AuditConfig:
+class AuditConfig(BaseModel):
     """Audit configuration for building repository."""
     
     enabled: bool = True
@@ -108,11 +104,10 @@ class AuditConfig:
     export_format: str = "json"
     include_metadata: bool = True
     real_time_alerts: bool = False
-    alert_recipients: List[str] = field(default_factory=list)
+    alert_recipients: List[str] = Field(default_factory=list)
 
 
-@dataclass
-class SyncConfig:
+class SyncConfig(BaseModel):
     """Synchronization configuration for building repository."""
     
     auto_sync: bool = True

@@ -21,7 +21,7 @@ from services.bim_validator import BIMValidator, ValidationLevel as ValidatorLev
 from services.bim_export_import import BIMExportImportService, ExportFormat, ImportFormat, ExportOptions, ImportOptions
 from services.bim_visualization import BIMVisualizer, ViewMode, VisualizationStyle
 from services.bim_collaboration import BIMCollaborationService, UserRole, ChangeType, ConflictResolution
-from models.bim import (
+from ..models.bim import (
     Room, Wall, Door, Window, Device, SystemType, DeviceCategory,
     Geometry, GeometryType, BIMModel
 )

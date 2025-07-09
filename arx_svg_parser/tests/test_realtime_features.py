@@ -14,7 +14,7 @@ from services.realtime_service import (
     CollaborativeEditingManager, ConflictResolutionManager,
     LockType, ConflictSeverity, UserPresence, EditingLock, Conflict
 )
-from services.cache_service import (
+from ..services.cache_service import (
     CacheService, RedisCacheManager, IntelligentPreloader,
     CacheStrategy, CachePriority, CacheDecorator
 )

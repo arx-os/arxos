@@ -13,11 +13,11 @@ import time
 from datetime import datetime, timezone
 from typing import Dict, List, Any
 
-from services.enhanced_spatial_reasoning import (
+from ..services.enhanced_spatial_reasoning import (
     EnhancedSpatialReasoningEngine, SpatialIndexType, TopologyType,
     SpatialHierarchyLevel, TopologyValidation, ZoneCalculation
 )
-from models.bim import (
+from ..models.bim import (
     BIMModel, Room, Wall, Door, Window, Device, SystemType, DeviceCategory,
     Geometry, GeometryType, RoomType
 )

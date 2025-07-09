@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 
 from services.svg_parser import extract_svg_elements
-from services.bim_assembly import BIMAssemblyPipeline, AssemblyConfig
+from services.enhanced_bim_assembly import EnhancedBIMAssembly, AssemblyConfig
 from services.export_integration import ExportIntegration
 from utils.errors import (
     SVGParseError, BIMAssemblyError, GeometryError, RelationshipError, 
@@ -26,6 +26,19 @@ from utils.errors import (
 )
 from routers import symbol_management
 from routers import auth
+from routers import export_interoperability
+from routers import advanced_infrastructure
+from routers import advanced_security
+from routers import ahj_api
+from routers import arkit_calibration_sync
+from routers import smart_tagging_kits
+from routers import data_api_structuring
+from routers import contributor_reputation
+from routers import cmms_maintenance_hooks
+from routers import data_vendor_api_expansion
+from routers import multi_system_integration
+from routers import ahj_api_integration
+from routers import advanced_export_interoperability
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +49,25 @@ app = FastAPI(
 )
 
 # Initialize services
-bim_pipeline = BIMAssemblyPipeline()
+bim_pipeline = EnhancedBIMAssembly()
 export_service = ExportIntegration()
 
 # Include routers
 app.include_router(symbol_management.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(export_interoperability.router, prefix="/api/v1")
+app.include_router(advanced_infrastructure.router, prefix="/api/v1")
+app.include_router(advanced_security.router, prefix="/api/v1")
+app.include_router(ahj_api.router, prefix="/api/v1")
+app.include_router(arkit_calibration_sync.router, prefix="/api/v1")
+app.include_router(smart_tagging_kits.router, prefix="/api/v1")
+app.include_router(data_api_structuring.router, prefix="/api/v1")
+app.include_router(contributor_reputation.router, prefix="/api/v1")
+app.include_router(cmms_maintenance_hooks.router, prefix="/api/v1")
+app.include_router(data_vendor_api_expansion.router, prefix="/api/v1")
+app.include_router(multi_system_integration.router, prefix="/api/v1")
+app.include_router(ahj_api_integration.router, prefix="/api/v1")
+app.include_router(advanced_export_interoperability.router, prefix="/api/v1")
 
 class HealthResponse(BaseModel):
     status: str

@@ -270,10 +270,10 @@ class TestCLIIntegration:
         
         # Test CLI module imports
         try:
-            from cmd.symbol_manager_cli import SymbolManagerCLI
-            from cmd.geometry_resolver_cli import GeometryResolverCLI
-            from cmd.validate_building import main as validate_building_main
-            from cmd.rule_manager import RuleManagerCLI
+            from ..cmd.symbol_manager_cli import SymbolManagerCLI
+            from ..cmd.geometry_resolver_cli import GeometryResolverCLI
+            from ..cmd.validate_building import main as validate_building_main
+            from ..cmd.rule_manager import RuleManagerCLI
             from cmd.realtime_telemetry_cli import RealtimeTelemetryCLI
             from cmd.failure_detection_cli import FailureDetectionCLI
             from cmd.system_simulator import SystemSimulatorCLI

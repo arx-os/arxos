@@ -20,7 +20,7 @@ import sys
 # Add the parent directory to the path to import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from services.symbol_manager import SymbolManager
+from ..services.symbol_manager import SymbolManager
 
 
 class TestSymbolManager(unittest.TestCase):

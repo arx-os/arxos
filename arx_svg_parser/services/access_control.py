@@ -41,6 +41,7 @@ class ResourceType(str, Enum):
     SYSTEM = "system"
     REPORT = "report"
     EXPORT = "export"
+    AUDIT = "audit"
 
 class ActionType(str, Enum):
     """Action types for permission management."""
@@ -112,7 +113,8 @@ class AccessControlService(BaseManager, BaseService):
     """Comprehensive access control service with RBAC."""
     
     def __init__(self, db_path: str = "data/access_control.db"):
-        super().__init__(db_path)
+        super().__init__()
+        self.db_path = db_path
         self.roles: Dict[str, Role] = {}
         self.permissions: Dict[str, Permission] = {}
         self.user_sessions: Dict[str, Dict[str, Any]] = {}

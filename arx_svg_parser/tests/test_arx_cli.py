@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from cmd.arx_cli import ArxCLI
+from ..cli_commands.arx_cli import ArxCLI
 from models.arxfile import ArxfileSchema, PermissionLevel, ShareType, ContractType
 
 
@@ -539,7 +539,7 @@ def test_main_function():
         mock_cli.run.return_value = 0
         mock_cli_class.return_value = mock_cli
         
-        from cmd.arx_cli import main
+        from ..cmd.arx_cli import main
         result = main()
         
         assert result == 0

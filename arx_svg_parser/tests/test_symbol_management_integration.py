@@ -33,23 +33,23 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import with error handling for missing modules
 try:
-    from services.symbol_manager import SymbolManager
+    from ..services.symbol_manager import SymbolManager
     from services.json_symbol_library import JSONSymbolLibrary
-    from services.symbol_schema_validator import SymbolSchemaValidator
+    from ..services.symbol_schema_validator import SymbolSchemaValidator
     _services_available = True
 except ImportError as e:
     print(f"Warning: Services not available: {e}")
     _services_available = False
 
 try:
-    from cmd.symbol_manager_cli import SymbolManagerCLI
+    from ..cmd.symbol_manager_cli import SymbolManagerCLI
     _cli_available = True
 except ImportError as e:
     print(f"Warning: CLI not available: {e}")
     _cli_available = False
 
 try:
-    from routers.symbol_management import router, symbol_manager, schema_validator
+    from ..routers.symbol_management import router, symbol_manager, schema_validator
     _api_available = True
 except ImportError as e:
     print(f"Warning: API not available: {e}")

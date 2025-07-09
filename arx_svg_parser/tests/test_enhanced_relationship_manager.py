@@ -17,7 +17,7 @@ from services.relationship_manager import (
     RelationshipManager, BIMRelationship, RelationshipType, 
     RelationshipDirection, RelationshipStrength, RelationshipConstraint
 )
-from models.bim import (
+from ..models.bim import (
     BIMModel, Room, Device, SystemType, DeviceCategory,
     Geometry, GeometryType, HVACZone, ElectricalPanel
 )

@@ -20,7 +20,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime, timedelta
 
-from services.advanced_symbol_management import (
+from ..services.advanced_symbol_management import (
     AdvancedSymbolManagement,
     SymbolVersion,
     SymbolCollaboration,

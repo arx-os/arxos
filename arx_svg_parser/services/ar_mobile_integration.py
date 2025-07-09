@@ -133,7 +133,7 @@ class ARMobileIntegration:
             'lidar_conversion_accuracy': 0.95,
             'mobile_app_timeout': 300,  # 5 minutes
             'bim_viewer_cache_size': 1000,
-            **options or {}
+            **(options or {})
         }
         
         # Initialize databases

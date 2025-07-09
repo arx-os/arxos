@@ -7,8 +7,8 @@ Fuzzing Tests for SVG and BIM Importers
 import unittest
 import random
 import string
-from services.bim_assembly import BIMAssemblyPipeline
-from models.bim import BIMModel
+from ..services.bim_assembly import BIMAssemblyPipeline
+from ..models.bim import BIMModel
 
 class TestSVGFuzzing(unittest.TestCase):
     def random_svg(self, length=100):

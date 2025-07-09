@@ -13,7 +13,7 @@ import math
 import numpy as np
 from typing import Dict, Any
 
-from services.geometry_resolver import (
+from ..services.geometry_resolver import (
     GeometryProcessor, GeometryOptimizer,
     CoordinateSystem, ValidationError, GeometryType
 )

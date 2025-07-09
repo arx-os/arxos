@@ -21,8 +21,8 @@ from enum import Enum
 import numpy as np
 from datetime import datetime
 import logging
-from ..utils.errors import GeometryError, ValidationError
-from ..utils.response_helpers import ResponseHelper
+from utils.errors import GeometryError, ValidationError
+from utils.response_helpers import ResponseHelper
 
 logger = logging.getLogger(__name__)
 

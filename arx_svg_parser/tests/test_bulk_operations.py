@@ -18,9 +18,9 @@ import io
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
-from routers.symbol_management import router, job_tracker, process_bulk_import, process_bulk_export, ExportFormat
-from services.symbol_manager import SymbolManager
-from utils.auth import User, UserRole
+from ..routers.symbol_management import router, job_tracker, process_bulk_import, process_bulk_export, ExportFormat
+from ..services.symbol_manager import SymbolManager
+from ..utils.auth import User, UserRole
 
 # Test client
 client = TestClient(router)

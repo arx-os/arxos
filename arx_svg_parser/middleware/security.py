@@ -15,7 +15,7 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from fastapi import Request, Response, HTTPException, status
-from fastapi.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 import logging
 

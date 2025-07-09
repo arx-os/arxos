@@ -12,7 +12,7 @@ from pathlib import Path
 # Add the current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.advanced_svg_features import AdvancedSVGFeatures
+from ..services.advanced_svg_features import AdvancedSVGFeatures
 
 
 def test_basic_functionality():

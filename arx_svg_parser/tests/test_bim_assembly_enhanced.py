@@ -9,7 +9,7 @@ import pytest
 import json
 from typing import Dict, List, Any
 
-from ..services.bim_assembly import (
+from ..services.enhanced_bim_assembly import (
     BIMAssemblyPipeline, AssemblyConfig, extract_and_convert_properties,
     determine_device_category, BIM_CLASS_MAP
 )

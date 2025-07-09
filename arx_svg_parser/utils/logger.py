@@ -711,4 +711,8 @@ class ArxLogger:
 logger = ArxLogger()
 
 # Set environment from environment variable
-logger.logger.environment = os.getenv('ARX_ENVIRONMENT', 'development') 
+logger.logger.environment = os.getenv('ARX_ENVIRONMENT', 'development')
+
+def get_logger(name: str = None) -> ArxLogger:
+    """Get logger instance for compatibility"""
+    return logger 

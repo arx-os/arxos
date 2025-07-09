@@ -1,1075 +1,1235 @@
 """
-Logic Engine - SVG Parser + Behavior Profiles
+Logic Engine Service
 
-This module provides a programmable simulation and markup validation environment
-for smart SVGs with comprehensive MEP behavior profiles and rule engine capabilities.
+This service provides advanced rule-based logic processing and automated
+decision making capabilities including:
+- Rule-based decision making and workflow automation
+- Conditional logic processing with complex expressions
+- Intelligent data analysis and pattern recognition
+- Rule management and versioning
+- Performance optimization and caching
+- Multi-threaded execution and parallel processing
+- Error handling and recovery mechanisms
+
+Performance Targets:
+- Rule evaluation completes within 100ms for simple rules
+- Complex rule chains complete within 500ms
+- Support for 1000+ concurrent rule evaluations
+- 99.9%+ rule execution accuracy
+- Comprehensive rule validation and error handling
 """
 
 import json
-import logging
-import math
-from typing import Dict, List, Any, Optional, Tuple, Union, Callable
-from dataclasses import dataclass, field
-from datetime import datetime
-from pathlib import Path
-import networkx as nx
+import time
+import threading
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Union, Callable
+from dataclasses import dataclass, asdict
 from enum import Enum
+import sqlite3
+from pathlib import Path
+import uuid
+import hashlib
+import re
+import operator
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+from contextlib import contextmanager
+import yaml
+import ast
+from functools import lru_cache
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class BehaviorType(Enum):
-    """Types of behavior profiles"""
+class RuleType(Enum):
+    """Rule type enumeration."""
+    CONDITIONAL = "conditional"
+    TRANSFORMATION = "transformation"
     VALIDATION = "validation"
-    SIMULATION = "simulation"
-    CONNECTIVITY = "connectivity"
-    PERFORMANCE = "performance"
-    SAFETY = "safety"
+    WORKFLOW = "workflow"
+    ANALYSIS = "analysis"
+
+
+class RuleStatus(Enum):
+    """Rule status enumeration."""
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    DRAFT = "draft"
+    ARCHIVED = "archived"
+    ERROR = "error"
+
+
+class ExecutionStatus(Enum):
+    """Execution status enumeration."""
+    SUCCESS = "success"
+    FAILED = "failed"
+    PARTIAL = "partial"
+    TIMEOUT = "timeout"
+    ERROR = "error"
+
+
+class DataType(Enum):
+    """Data type enumeration."""
+    STRING = "string"
+    NUMBER = "number"
+    BOOLEAN = "boolean"
+    ARRAY = "array"
+    OBJECT = "object"
+    NULL = "null"
 
 
 @dataclass
-class BehaviorProfile:
-    """Behavior profile for MEP objects"""
-    object_type: str
-    behavior_type: BehaviorType
-    version: str = "1.0"
-    description: Optional[str] = None
-    rules: Dict[str, Any] = field(default_factory=dict)
-    constraints: Dict[str, Any] = field(default_factory=dict)
-    calculations: Dict[str, str] = field(default_factory=dict)
-    dependencies: List[str] = field(default_factory=list)
-    enabled: bool = True
+class Rule:
+    """Represents a logic rule."""
+    rule_id: str
+    name: str
+    description: str
+    rule_type: RuleType
+    status: RuleStatus
+    conditions: List[Dict[str, Any]]
+    actions: List[Dict[str, Any]]
+    priority: int
+    version: str
+    created_at: datetime
+    updated_at: datetime
+    metadata: Dict[str, Any]
+    tags: List[str]
+    execution_count: int = 0
+    success_count: int = 0
+    error_count: int = 0
+    avg_execution_time: float = 0.0
 
 
 @dataclass
-class LogicNode:
-    """Node in the logic graph representing an object"""
-    node_id: str
-    object_type: str
-    properties: Dict[str, Any]
-    position: Tuple[float, float]
-    behavior_profiles: List[str] = field(default_factory=list)
-    status: str = "active"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+class RuleExecution:
+    """Represents a rule execution result."""
+    execution_id: str
+    rule_id: str
+    input_data: Dict[str, Any]
+    output_data: Dict[str, Any]
+    status: ExecutionStatus
+    execution_time: float
+    error_message: Optional[str]
+    timestamp: datetime
+    metadata: Dict[str, Any]
 
 
 @dataclass
-class LogicEdge:
-    """Edge in the logic graph representing connections"""
-    edge_id: str
-    source_id: str
-    target_id: str
-    connection_type: str
-    properties: Dict[str, Any] = field(default_factory=dict)
-    direction: str = "bidirectional"
+class RuleChain:
+    """Represents a chain of rules."""
+    chain_id: str
+    name: str
+    description: str
+    rules: List[str]
+    execution_order: str
+    status: RuleStatus
+    created_at: datetime
+    updated_at: datetime
+    metadata: Dict[str, Any]
 
 
 @dataclass
-class ValidationResult:
-    """Result of a validation check"""
-    rule_name: str
-    object_id: str
-    passed: bool
-    message: str
-    severity: str = "error"
-    timestamp: datetime = field(default_factory=datetime.now)
-
-
-@dataclass
-class SimulationResult:
-    """Result of a simulation run"""
-    simulation_id: str
-    object_id: str
-    simulation_type: str
-    status: str  # 'normal', 'warning', 'critical', 'failed'
-    metrics: Dict[str, Any]
-    timestamp: datetime = field(default_factory=datetime.now)
-    alerts: List[str] = field(default_factory=list)
+class DataContext:
+    """Represents data context for rule evaluation."""
+    data: Dict[str, Any]
+    variables: Dict[str, Any]
+    functions: Dict[str, Callable]
+    metadata: Dict[str, Any]
 
 
 class LogicEngine:
-    """Main logic engine for SVG-BIM behavior simulation and validation"""
+    """
+    Advanced logic engine for rule-based decision making and workflow automation.
     
-    def __init__(self):
-        self.behavior_profiles: Dict[str, BehaviorProfile] = {}
-        self.logic_graph = nx.DiGraph()
-        self.rule_handlers: Dict[str, Callable] = {}
-        self.simulation_handlers: Dict[str, Callable] = {}
-        self.validation_handlers: Dict[str, Callable] = {}
-        
-        # Initialize MEP behavior profiles
-        self._initialize_mep_profiles()
-        self._initialize_rule_handlers()
-        self._initialize_simulation_handlers()
-        self._initialize_validation_handlers()
+    This engine provides comprehensive rule processing capabilities including
+    conditional logic, data transformation, validation, and workflow automation
+    with performance optimization and error handling.
+    """
     
-    def _initialize_mep_profiles(self):
-        """Initialize behavior profiles for all MEP types"""
+    def __init__(self, db_path: str = "logic_engine.db"):
+        """
+        Initialize the logic engine.
         
-        # Electrical System Profiles
-        electrical_profiles = {
-            "panel": {
-                "validation": {
-                    "voltage": {"min": 120, "max": 480, "unit": "V"},
-                    "current": {"min": 0, "max": 4000, "unit": "A"},
-                    "circuits": {"min": 1, "max": 84, "unit": "count"}
-                },
-                "simulation": {
-                    "power_consumption": "P = sum(circuit_currents) * voltage",
-                    "heat_generation": "Q = power_consumption * 0.05",
-                    "load_factor": "load_factor = total_load / rated_capacity"
-                }
-            },
-            "circuit": {
-                "validation": {
-                    "current": {"min": 0, "max": 200, "unit": "A"},
-                    "voltage": {"min": 120, "max": 480, "unit": "V"},
-                    "load": {"min": 0, "max": 100, "unit": "%"}
-                },
-                "simulation": {
-                    "power": "P = voltage * current * power_factor",
-                    "heat": "Q = power * (1 - efficiency)",
-                    "voltage_drop": "V_drop = current * resistance * length"
-                }
-            },
-            "outlet": {
-                "validation": {
-                    "voltage": {"min": 120, "max": 240, "unit": "V"},
-                    "current": {"min": 0, "max": 20, "unit": "A"}
-                },
-                "simulation": {
-                    "power": "P = voltage * current",
-                    "load": "load = connected_devices_power / rated_power"
-                }
-            },
-            "lighting": {
-                "validation": {
-                    "wattage": {"min": 0, "max": 1000, "unit": "W"},
-                    "voltage": {"min": 120, "max": 277, "unit": "V"}
-                },
-                "simulation": {
-                    "power": "P = wattage * quantity",
-                    "illuminance": "E = luminous_flux / area",
-                    "efficiency": "efficiency = luminous_flux / power"
-                }
-            }
+        Args:
+            db_path: Path to the database file
+        """
+        self.db_path = db_path
+        self.rules: Dict[str, Rule] = {}
+        self.rule_chains: Dict[str, RuleChain] = {}
+        self.execution_cache = {}
+        self.lock = threading.RLock()
+        self.executor = ThreadPoolExecutor(max_workers=10)
+        
+        # Performance metrics
+        self.total_executions = 0
+        self.successful_executions = 0
+        self.failed_executions = 0
+        self.average_execution_time = 0.0
+        
+        # Initialize components
+        self._init_database()
+        self._init_builtin_functions()
+        self._load_rules()
+        
+        logger.info("Logic Engine initialized successfully")
+    
+    def _init_database(self) -> None:
+        """Initialize database schema."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS rules (
+                        rule_id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        rule_type TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        conditions TEXT NOT NULL,
+                        actions TEXT NOT NULL,
+                        priority INTEGER NOT NULL,
+                        version TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        metadata TEXT,
+                        tags TEXT,
+                        execution_count INTEGER DEFAULT 0,
+                        success_count INTEGER DEFAULT 0,
+                        error_count INTEGER DEFAULT 0,
+                        avg_execution_time REAL DEFAULT 0.0
+                    )
+                """)
+                
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS rule_executions (
+                        execution_id TEXT PRIMARY KEY,
+                        rule_id TEXT NOT NULL,
+                        input_data TEXT NOT NULL,
+                        output_data TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        execution_time REAL NOT NULL,
+                        error_message TEXT,
+                        timestamp TEXT NOT NULL,
+                        metadata TEXT
+                    )
+                """)
+                
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS rule_chains (
+                        chain_id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        rules TEXT NOT NULL,
+                        execution_order TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        metadata TEXT
+                    )
+                """)
+                
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS rule_templates (
+                        template_id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        template_type TEXT NOT NULL,
+                        template_data TEXT NOT NULL,
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        usage_count INTEGER DEFAULT 0
+                    )
+                """)
+                
+                conn.commit()
+            
+            logger.info("Database initialized successfully")
+            
+        except Exception as e:
+            logger.error(f"Database initialization failed: {e}")
+            raise
+    
+    def _init_builtin_functions(self) -> None:
+        """Initialize built-in functions for rule evaluation."""
+        self.builtin_functions = {
+            # String functions
+            'length': len,
+            'lower': str.lower,
+            'upper': str.upper,
+            'trim': str.strip,
+            'substring': lambda s, start, end: s[start:end],
+            'contains': lambda s, substr: substr in s,
+            'startsWith': lambda s, prefix: s.startswith(prefix),
+            'endsWith': lambda s, suffix: s.endswith(suffix),
+            'replace': str.replace,
+            'split': str.split,
+            'join': lambda arr, sep: sep.join(arr),
+            
+            # Number functions
+            'abs': abs,
+            'round': round,
+            'floor': lambda x: int(x),
+            'ceil': lambda x: int(x + 1) if x % 1 != 0 else int(x),
+            'min': min,
+            'max': max,
+            'sum': sum,
+            'avg': lambda arr: sum(arr) / len(arr) if arr else 0,
+            
+            # Array functions
+            'size': len,
+            'isEmpty': lambda arr: len(arr) == 0,
+            'first': lambda arr: arr[0] if arr else None,
+            'last': lambda arr: arr[-1] if arr else None,
+            'push': lambda arr, item: arr + [item],
+            'pop': lambda arr: arr[:-1] if arr else [],
+            'filter': lambda arr, func: [x for x in arr if func(x)],
+            'map': lambda arr, func: [func(x) for x in arr],
+            'reduce': lambda arr, func, initial: reduce(func, arr, initial),
+            
+            # Object functions
+            'keys': dict.keys,
+            'values': dict.values,
+            'hasKey': lambda obj, key: key in obj,
+            'get': lambda obj, key, default=None: obj.get(key, default),
+            'set': lambda obj, key, value: {**obj, key: value},
+            'merge': lambda obj1, obj2: {**obj1, **obj2},
+            
+            # Type functions
+            'isString': lambda x: isinstance(x, str),
+            'isNumber': lambda x: isinstance(x, (int, float)),
+            'isBoolean': lambda x: isinstance(x, bool),
+            'isArray': lambda x: isinstance(x, list),
+            'isObject': lambda x: isinstance(x, dict),
+            'isNull': lambda x: x is None,
+            
+            # Logic functions
+            'if': lambda condition, true_val, false_val: true_val if condition else false_val,
+            'and': lambda *args: all(args),
+            'or': lambda *args: any(args),
+            'not': lambda x: not x,
+            
+            # Date functions
+            'now': datetime.now,
+            'date': lambda dt: dt.date() if dt else None,
+            'time': lambda dt: dt.time() if dt else None,
+            'year': lambda dt: dt.year if dt else None,
+            'month': lambda dt: dt.month if dt else None,
+            'day': lambda dt: dt.day if dt else None,
+            'hour': lambda dt: dt.hour if dt else None,
+            'minute': lambda dt: dt.minute if dt else None,
+            'second': lambda dt: dt.second if dt else None,
+            
+            # Math functions
+            'add': lambda x, y: x + y,
+            'subtract': lambda x, y: x - y,
+            'multiply': lambda x, y: x * y,
+            'divide': lambda x, y: x / y if y != 0 else None,
+            'modulo': lambda x, y: x % y if y != 0 else None,
+            'power': lambda x, y: x ** y,
+            
+            # Utility functions
+            'uuid': lambda: str(uuid.uuid4()),
+            'hash': lambda data: hashlib.md5(str(data).encode()).hexdigest(),
+            'random': lambda min_val=0, max_val=1: random.uniform(min_val, max_val),
+            'format': lambda template, *args: template.format(*args),
+            'parseJson': json.loads,
+            'stringify': json.dumps,
         }
+    
+    def _load_rules(self) -> None:
+        """Load rules from database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT rule_id, name, description, rule_type, status, conditions,
+                           actions, priority, version, created_at, updated_at,
+                           metadata, tags, execution_count, success_count,
+                           error_count, avg_execution_time
+                    FROM rules
+                    WHERE status != 'archived'
+                    ORDER BY priority DESC, created_at ASC
+                """)
+                
+                for row in cursor.fetchall():
+                    rule = Rule(
+                        rule_id=row[0],
+                        name=row[1],
+                        description=row[2],
+                        rule_type=RuleType(row[3]),
+                        status=RuleStatus(row[4]),
+                        conditions=json.loads(row[5]),
+                        actions=json.loads(row[6]),
+                        priority=row[7],
+                        version=row[8],
+                        created_at=datetime.fromisoformat(row[9]),
+                        updated_at=datetime.fromisoformat(row[10]),
+                        metadata=json.loads(row[11]) if row[11] else {},
+                        tags=json.loads(row[12]) if row[12] else [],
+                        execution_count=row[13],
+                        success_count=row[14],
+                        error_count=row[15],
+                        avg_execution_time=row[16]
+                    )
+                    self.rules[rule.rule_id] = rule
+            
+            logger.info(f"Loaded {len(self.rules)} rules from database")
+            
+        except Exception as e:
+            logger.error(f"Failed to load rules: {e}")
+    
+    def create_rule(self, name: str, description: str, rule_type: RuleType,
+                   conditions: List[Dict[str, Any]], actions: List[Dict[str, Any]],
+                   priority: int = 1, tags: List[str] = None,
+                   metadata: Dict[str, Any] = None) -> str:
+        """
+        Create a new rule.
         
-        # Mechanical System Profiles
-        mechanical_profiles = {
-            "ahu": {
-                "validation": {
-                    "airflow": {"min": 100, "max": 50000, "unit": "CFM"},
-                    "pressure": {"min": 0.5, "max": 8.0, "unit": "inWC"},
-                    "temperature": {"min": 50, "max": 85, "unit": "°F"}
-                },
-                "simulation": {
-                    "cooling_capacity": "Q_cool = airflow * 1.08 * (supply_temp - return_temp)",
-                    "heating_capacity": "Q_heat = airflow * 1.08 * (supply_temp - return_temp)",
-                    "power": "P = fan_power + compressor_power"
-                }
-            },
-            "vav": {
-                "validation": {
-                    "airflow": {"min": 50, "max": 2000, "unit": "CFM"},
-                    "pressure": {"min": 0.1, "max": 2.0, "unit": "inWC"}
-                },
-                "simulation": {
-                    "airflow": "CFM = damper_position * max_airflow",
-                    "cooling": "Q = airflow * 1.08 * (supply_temp - room_temp)",
-                    "reheat": "Q_reheat = airflow * 1.08 * (supply_temp - reheat_temp)"
-                }
-            },
-            "duct": {
-                "validation": {
-                    "velocity": {"min": 500, "max": 2000, "unit": "FPM"},
-                    "pressure": {"min": 0.1, "max": 8.0, "unit": "inWC"}
-                },
-                "simulation": {
-                    "pressure_loss": "ΔP = f * (L/D) * (V²/2g)",
-                    "velocity": "V = airflow / area",
-                    "friction": "f = 0.25 / (log10(roughness/(3.7*diameter))²"
-                }
-            },
-            "chiller": {
-                "validation": {
-                    "capacity": {"min": 10, "max": 2000, "unit": "tons"},
-                    "efficiency": {"min": 0.4, "max": 0.8, "unit": "COP"}
-                },
-                "simulation": {
-                    "cooling_capacity": "Q = capacity * 12000",  # BTU/hr
-                    "power": "P = capacity / cop",
-                    "efficiency": "COP = cooling_capacity / power"
-                }
-            }
-        }
+        Args:
+            name: Rule name
+            description: Rule description
+            rule_type: Type of rule
+            conditions: List of conditions
+            actions: List of actions
+            priority: Rule priority (higher = more important)
+            tags: Rule tags
+            metadata: Additional metadata
+            
+        Returns:
+            Rule ID
+        """
+        try:
+            rule_id = str(uuid.uuid4())
+            now = datetime.now()
+            
+            rule = Rule(
+                rule_id=rule_id,
+                name=name,
+                description=description,
+                rule_type=rule_type,
+                status=RuleStatus.ACTIVE,
+                conditions=conditions,
+                actions=actions,
+                priority=priority,
+                version="1.0.0",
+                created_at=now,
+                updated_at=now,
+                metadata=metadata or {},
+                tags=tags or []
+            )
+            
+            # Validate rule
+            self._validate_rule(rule)
+            
+            # Save to database
+            self._save_rule(rule)
+            
+            # Add to memory
+            self.rules[rule_id] = rule
+            
+            logger.info(f"Created rule: {rule_id} ({name})")
+            return rule_id
+            
+        except Exception as e:
+            logger.error(f"Failed to create rule: {e}")
+            raise
+    
+    def _validate_rule(self, rule: Rule) -> None:
+        """Validate rule structure and syntax."""
+        if not rule.name:
+            raise ValueError("Rule name is required")
         
-        # Plumbing System Profiles
-        plumbing_profiles = {
-            "pipe": {
-                "validation": {
-                    "diameter": {"min": 0.5, "max": 24, "unit": "inches"},
-                    "pressure": {"min": 0, "max": 150, "unit": "PSI"},
-                    "velocity": {"min": 2, "max": 10, "unit": "ft/s"}
-                },
-                "simulation": {
-                    "flow_rate": "Q = velocity * area",
-                    "pressure_loss": "ΔP = f * (L/D) * (V²/2g)",
-                    "head_loss": "h = f * (L/D) * (V²/2g)"
-                }
-            },
-            "pump": {
-                "validation": {
-                    "flow_rate": {"min": 1, "max": 1000, "unit": "GPM"},
-                    "head": {"min": 10, "max": 500, "unit": "ft"},
-                    "power": {"min": 0.5, "max": 100, "unit": "HP"}
-                },
-                "simulation": {
-                    "power": "P = (flow_rate * head * specific_gravity) / (3960 * efficiency)",
-                    "efficiency": "η = (flow_rate * head) / (power * 3960)",
-                    "operating_point": "intersection of pump_curve and system_curve"
-                }
-            },
-            "valve": {
-                "validation": {
-                    "flow_coefficient": {"min": 0.1, "max": 1000, "unit": "Cv"},
-                    "pressure_drop": {"min": 0, "max": 50, "unit": "PSI"}
-                },
-                "simulation": {
-                    "flow_rate": "Q = Cv * sqrt(ΔP / specific_gravity)",
-                    "pressure_drop": "ΔP = (Q / Cv)² * specific_gravity",
-                    "cavitation": "cavitation_risk = pressure_drop > vapor_pressure"
-                }
-            },
-            "fixture": {
-                "validation": {
-                    "flow_rate": {"min": 0.5, "max": 10, "unit": "GPM"},
-                    "pressure": {"min": 15, "max": 80, "unit": "PSI"}
-                },
-                "simulation": {
-                    "flow_rate": "Q = fixture_units * 0.5",
-                    "pressure": "P = supply_pressure - head_loss",
-                    "demand": "demand = peak_factor * base_demand"
-                }
-            }
-        }
+        if not rule.conditions:
+            raise ValueError("Rule must have at least one condition")
         
-        # Fire Protection System Profiles
-        fire_profiles = {
-            "sprinkler": {
-                "validation": {
-                    "coverage_area": {"min": 100, "max": 400, "unit": "sqft"},
-                    "pressure": {"min": 7, "max": 175, "unit": "PSI"},
-                    "flow_rate": {"min": 15, "max": 50, "unit": "GPM"}
-                },
-                "simulation": {
-                    "flow_rate": "Q = K * sqrt(P)",
-                    "coverage": "coverage = π * (spacing/2)²",
-                    "density": "density = flow_rate / coverage_area"
-                }
-            },
-            "smoke_detector": {
-                "validation": {
-                    "coverage_area": {"min": 900, "max": 1200, "unit": "sqft"},
-                    "sensitivity": {"min": 0.5, "max": 4.0, "unit": "%/ft"}
-                },
-                "simulation": {
-                    "detection_time": "t = smoke_density / sensitivity",
-                    "coverage": "coverage = area / detector_count",
-                    "redundancy": "redundancy = detector_count / min_required"
-                }
-            }
-        }
+        if not rule.actions:
+            raise ValueError("Rule must have at least one action")
         
-        # Create behavior profile objects
-        all_profiles = {
-            **electrical_profiles,
-            **mechanical_profiles,
-            **plumbing_profiles,
-            **fire_profiles
-        }
+        # Validate conditions
+        for condition in rule.conditions:
+            if 'field' not in condition:
+                raise ValueError("Condition must have 'field'")
+            if 'operator' not in condition:
+                raise ValueError("Condition must have 'operator'")
+            if 'value' not in condition:
+                raise ValueError("Condition must have 'value'")
         
-        for object_type, profile_data in all_profiles.items():
-            for behavior_type, rules in profile_data.items():
-                profile = BehaviorProfile(
-                    object_type=object_type,
-                    behavior_type=BehaviorType(behavior_type),
-                    rules=rules,
-                    description=f"{behavior_type.title()} behavior for {object_type}"
+        # Validate actions
+        for action in rule.actions:
+            if 'type' not in action:
+                raise ValueError("Action must have 'type'")
+    
+    def _save_rule(self, rule: Rule) -> None:
+        """Save rule to database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO rules 
+                    (rule_id, name, description, rule_type, status, conditions,
+                     actions, priority, version, created_at, updated_at,
+                     metadata, tags, execution_count, success_count,
+                     error_count, avg_execution_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    rule.rule_id,
+                    rule.name,
+                    rule.description,
+                    rule.rule_type.value,
+                    rule.status.value,
+                    json.dumps(rule.conditions),
+                    json.dumps(rule.actions),
+                    rule.priority,
+                    rule.version,
+                    rule.created_at.isoformat(),
+                    rule.updated_at.isoformat(),
+                    json.dumps(rule.metadata),
+                    json.dumps(rule.tags),
+                    rule.execution_count,
+                    rule.success_count,
+                    rule.error_count,
+                    rule.avg_execution_time
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to save rule: {e}")
+            raise
+    
+    def get_rule(self, rule_id: str) -> Optional[Rule]:
+        """
+        Get rule by ID.
+        
+        Args:
+            rule_id: Rule identifier
+            
+        Returns:
+            Rule object or None if not found
+        """
+        return self.rules.get(rule_id)
+    
+    def list_rules(self, rule_type: Optional[RuleType] = None,
+                   status: Optional[RuleStatus] = None,
+                   tags: List[str] = None) -> List[Rule]:
+        """
+        List rules with optional filtering.
+        
+        Args:
+            rule_type: Filter by rule type
+            status: Filter by status
+            tags: Filter by tags
+            
+        Returns:
+            List of matching rules
+        """
+        rules = list(self.rules.values())
+        
+        if rule_type:
+            rules = [r for r in rules if r.rule_type == rule_type]
+        
+        if status:
+            rules = [r for r in rules if r.status == status]
+        
+        if tags:
+            rules = [r for r in rules if any(tag in r.tags for tag in tags)]
+        
+        return sorted(rules, key=lambda r: (r.priority, r.created_at), reverse=True)
+    
+    def update_rule(self, rule_id: str, updates: Dict[str, Any]) -> bool:
+        """
+        Update an existing rule.
+        
+        Args:
+            rule_id: Rule identifier
+            updates: Updates to apply
+            
+        Returns:
+            True if successful
+        """
+        try:
+            rule = self.get_rule(rule_id)
+            if not rule:
+                return False
+            
+            # Apply updates
+            for key, value in updates.items():
+                if hasattr(rule, key):
+                    setattr(rule, key, value)
+            
+            rule.updated_at = datetime.now()
+            
+            # Re-validate if conditions or actions changed
+            if 'conditions' in updates or 'actions' in updates:
+                self._validate_rule(rule)
+            
+            # Save to database
+            self._save_rule(rule)
+            
+            logger.info(f"Updated rule: {rule_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update rule {rule_id}: {e}")
+            return False
+    
+    def delete_rule(self, rule_id: str) -> bool:
+        """
+        Delete a rule.
+        
+        Args:
+            rule_id: Rule identifier
+            
+        Returns:
+            True if successful
+        """
+        try:
+            if rule_id not in self.rules:
+                return False
+            
+            # Mark as archived instead of deleting
+            rule = self.rules[rule_id]
+            rule.status = RuleStatus.ARCHIVED
+            rule.updated_at = datetime.now()
+            
+            # Save to database
+            self._save_rule(rule)
+            
+            # Remove from memory
+            del self.rules[rule_id]
+            
+            logger.info(f"Deleted rule: {rule_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to delete rule {rule_id}: {e}")
+            return False
+    
+    def execute_rule(self, rule_id: str, data: Dict[str, Any],
+                    context: Optional[DataContext] = None) -> RuleExecution:
+        """
+        Execute a single rule.
+        
+        Args:
+            rule_id: Rule identifier
+            data: Input data
+            context: Optional execution context
+            
+        Returns:
+            Rule execution result
+        """
+        try:
+            rule = self.get_rule(rule_id)
+            if not rule:
+                raise ValueError(f"Rule {rule_id} not found")
+            
+            if rule.status != RuleStatus.ACTIVE:
+                raise ValueError(f"Rule {rule_id} is not active")
+            
+            execution_id = str(uuid.uuid4())
+            start_time = time.time()
+            
+            # Create execution context
+            if context is None:
+                context = DataContext(
+                    data=data,
+                    variables={},
+                    functions=self.builtin_functions,
+                    metadata={}
                 )
-                self.behavior_profiles[f"{object_type}_{behavior_type}"] = profile
-    
-    def _initialize_rule_handlers(self):
-        """Initialize rule handlers for different validation types"""
-        self.rule_handlers = {
-            "electrical": self._validate_electrical,
-            "mechanical": self._validate_mechanical,
-            "plumbing": self._validate_plumbing,
-            "fire": self._validate_fire,
-            "connectivity": self._validate_connectivity,
-            "performance": self._validate_performance,
-            "safety": self._validate_safety
-        }
-    
-    def _initialize_simulation_handlers(self):
-        """Initialize simulation handlers for different system types"""
-        self.simulation_handlers = {
-            "electrical": self._simulate_electrical,
-            "mechanical": self._simulate_mechanical,
-            "plumbing": self._simulate_plumbing,
-            "fire": self._simulate_fire,
-            "thermal": self._simulate_thermal,
-            "acoustic": self._simulate_acoustic
-        }
-    
-    def _initialize_validation_handlers(self):
-        """Initialize validation handlers for different check types"""
-        self.validation_handlers = {
-            "code_compliance": self._check_code_compliance,
-            "design_rules": self._check_design_rules,
-            "conflict_detection": self._check_conflicts,
-            "quality_assurance": self._check_quality,
-            "accessibility": self._check_accessibility
-        }
-    
-    def add_logic_node(self, node: LogicNode) -> bool:
-        """Add a node to the logic graph"""
-        try:
-            self.logic_graph.add_node(
-                node.node_id,
-                object_type=node.object_type,
-                properties=node.properties,
-                position=node.position,
-                behavior_profiles=node.behavior_profiles,
-                status=node.status,
-                metadata=node.metadata
-            )
-            logger.info(f"Added logic node: {node.node_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding logic node {node.node_id}: {e}")
-            return False
-    
-    def add_logic_edge(self, edge: LogicEdge) -> bool:
-        """Add an edge to the logic graph"""
-        try:
-            self.logic_graph.add_edge(
-                edge.source_id,
-                edge.target_id,
-                edge_id=edge.edge_id,
-                connection_type=edge.connection_type,
-                properties=edge.properties,
-                direction=edge.direction
-            )
-            logger.info(f"Added logic edge: {edge.edge_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding logic edge {edge.edge_id}: {e}")
-            return False
-    
-    def validate_object(self, object_id: str, validation_type: str = "all") -> List[ValidationResult]:
-        """Validate an object against its behavior profiles"""
-        try:
-            if object_id not in self.logic_graph:
-                return [ValidationResult(
-                    rule_name="object_not_found",
-                    object_id=object_id,
-                    passed=False,
-                    message=f"Object {object_id} not found in logic graph"
-                )]
             
-            node_data = self.logic_graph.nodes[object_id]
-            object_type = node_data['object_type']
-            properties = node_data['properties']
+            # Evaluate conditions
+            conditions_met = self._evaluate_conditions(rule.conditions, context)
             
-            results = []
-            
-            # Get applicable behavior profiles
-            profiles = self._get_applicable_profiles(object_type, validation_type)
-            
-            for profile in profiles:
-                validation_result = self._execute_validation(profile, object_id, properties)
-                results.append(validation_result)
-            
-            return results
-            
-        except Exception as e:
-            logger.error(f"Error validating object {object_id}: {e}")
-            return [ValidationResult(
-                rule_name="validation_error",
-                object_id=object_id,
-                passed=False,
-                message=f"Validation error: {str(e)}"
-            )]
-    
-    def simulate_object(self, object_id: str, simulation_type: str = "all") -> List[SimulationResult]:
-        """Simulate an object's behavior"""
-        try:
-            if object_id not in self.logic_graph:
-                return []
-            
-            node_data = self.logic_graph.nodes[object_id]
-            object_type = node_data['object_type']
-            properties = node_data['properties']
-            
-            results = []
-            
-            # Get applicable simulation profiles
-            profiles = self._get_applicable_profiles(object_type, simulation_type)
-            
-            for profile in profiles:
-                if profile.behavior_type == BehaviorType.SIMULATION:
-                    simulation_result = self._execute_simulation(profile, object_id, properties)
-                    results.append(simulation_result)
-            
-            return results
-            
-        except Exception as e:
-            logger.error(f"Error simulating object {object_id}: {e}")
-            return []
-    
-    def check_connectivity(self, object_id: str) -> Dict[str, Any]:
-        """Check object connectivity and dependencies"""
-        try:
-            if object_id not in self.logic_graph:
-                return {"error": f"Object {object_id} not found"}
-            
-            # Get upstream and downstream connections
-            upstream = list(self.logic_graph.predecessors(object_id))
-            downstream = list(self.logic_graph.successors(object_id))
-            
-            # Check for missing dependencies
-            node_data = self.logic_graph.nodes[object_id]
-            behavior_profiles = node_data.get('behavior_profiles', [])
-            
-            missing_dependencies = []
-            for profile_name in behavior_profiles:
-                if profile_name in self.behavior_profiles:
-                    profile = self.behavior_profiles[profile_name]
-                    for dep in profile.dependencies:
-                        if dep not in upstream and dep not in downstream:
-                            missing_dependencies.append(dep)
-            
-            return {
-                "object_id": object_id,
-                "upstream": upstream,
-                "downstream": downstream,
-                "missing_dependencies": missing_dependencies,
-                "connectivity_status": "complete" if not missing_dependencies else "incomplete"
-            }
-            
-        except Exception as e:
-            logger.error(f"Error checking connectivity for {object_id}: {e}")
-            return {"error": str(e)}
-    
-    def propagate_event(self, source_id: str, event_type: str, event_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Propagate an event through the logic graph"""
-        try:
-            if source_id not in self.logic_graph:
-                return []
-            
-            propagated_events = []
-            visited = set()
-            queue = [(source_id, event_data)]
-            
-            while queue:
-                current_id, current_data = queue.pop(0)
-                
-                if current_id in visited:
-                    continue
-                
-                visited.add(current_id)
-                
-                # Process event at current node
-                processed_event = self._process_event(current_id, event_type, current_data)
-                if processed_event:
-                    propagated_events.append(processed_event)
-                
-                # Propagate to downstream nodes
-                for successor in self.logic_graph.successors(current_id):
-                    edge_data = self.logic_graph.edges[current_id, successor]
-                    propagated_data = self._propagate_through_edge(current_data, edge_data)
-                    queue.append((successor, propagated_data))
-            
-            return propagated_events
-            
-        except Exception as e:
-            logger.error(f"Error propagating event from {source_id}: {e}")
-            return []
-    
-    def _get_applicable_profiles(self, object_type: str, profile_type: str) -> List[BehaviorProfile]:
-        """Get applicable behavior profiles for an object type"""
-        profiles = []
-        
-        for profile_id, profile in self.behavior_profiles.items():
-            if profile.object_type == object_type and profile.enabled:
-                if profile_type == "all" or profile.behavior_type.value == profile_type:
-                    profiles.append(profile)
-        
-        return profiles
-    
-    def _execute_validation(self, profile: BehaviorProfile, object_id: str, properties: Dict[str, Any]) -> ValidationResult:
-        """Execute validation for a behavior profile"""
-        try:
-            validation_handler = self.rule_handlers.get(profile.object_type.split('_')[0], self._validate_general)
-            is_valid, message = validation_handler(profile.rules, properties)
-            
-            return ValidationResult(
-                rule_name=f"{profile.object_type}_{profile.behavior_type.value}",
-                object_id=object_id,
-                passed=is_valid,
-                message=message,
-                severity="error" if not is_valid else "info"
-            )
-            
-        except Exception as e:
-            logger.error(f"Error executing validation for {object_id}: {e}")
-            return ValidationResult(
-                rule_name=f"{profile.object_type}_{profile.behavior_type.value}",
-                object_id=object_id,
-                passed=False,
-                message=f"Validation execution error: {str(e)}"
-            )
-    
-    def _execute_simulation(self, profile: BehaviorProfile, object_id: str, properties: Dict[str, Any]) -> SimulationResult:
-        """Execute simulation for a behavior profile"""
-        try:
-            simulation_handler = self.simulation_handlers.get(profile.object_type.split('_')[0], self._simulate_general)
-            metrics, status, alerts = simulation_handler(profile.calculations, properties)
-            
-            return SimulationResult(
-                simulation_id=f"{object_id}_{profile.behavior_type.value}",
-                object_id=object_id,
-                simulation_type=profile.behavior_type.value,
-                status=status,
-                metrics=metrics,
-                alerts=alerts
-            )
-            
-        except Exception as e:
-            logger.error(f"Error executing simulation for {object_id}: {e}")
-            return SimulationResult(
-                simulation_id=f"{object_id}_{profile.behavior_type.value}",
-                object_id=object_id,
-                simulation_type=profile.behavior_type.value,
-                status="failed",
-                metrics={},
-                alerts=[f"Simulation error: {str(e)}"]
-            )
-    
-    def _process_event(self, object_id: str, event_type: str, event_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Process an event at a specific object"""
-        try:
-            node_data = self.logic_graph.nodes[object_id]
-            object_type = node_data['object_type']
-            
-            # Apply event processing based on object type
-            if object_type in ['panel', 'circuit']:
-                return self._process_electrical_event(object_id, event_type, event_data)
-            elif object_type in ['ahu', 'vav', 'duct']:
-                return self._process_mechanical_event(object_id, event_type, event_data)
-            elif object_type in ['pipe', 'pump', 'valve']:
-                return self._process_plumbing_event(object_id, event_type, event_data)
+            if conditions_met:
+                # Execute actions
+                output_data = self._execute_actions(rule.actions, context)
+                status = ExecutionStatus.SUCCESS
+                error_message = None
             else:
-                return self._process_general_event(object_id, event_type, event_data)
-                
+                output_data = data
+                status = ExecutionStatus.SUCCESS  # Conditions not met is not an error
+                error_message = None
+            
+            execution_time = time.time() - start_time
+            
+            # Create execution result
+            execution = RuleExecution(
+                execution_id=execution_id,
+                rule_id=rule_id,
+                input_data=data,
+                output_data=output_data,
+                status=status,
+                execution_time=execution_time,
+                error_message=error_message,
+                timestamp=datetime.now(),
+                metadata={"conditions_met": conditions_met}
+            )
+            
+            # Update rule statistics
+            self._update_rule_stats(rule, execution_time, status == ExecutionStatus.SUCCESS)
+            
+            # Save execution result
+            self._save_execution(execution)
+            
+            # Update performance metrics
+            self._update_performance_metrics(execution_time, status == ExecutionStatus.SUCCESS)
+            
+            return execution
+            
         except Exception as e:
-            logger.error(f"Error processing event at {object_id}: {e}")
+            logger.error(f"Rule execution failed for {rule_id}: {e}")
+            
+            # Create error execution result
+            execution = RuleExecution(
+                execution_id=str(uuid.uuid4()),
+                rule_id=rule_id,
+                input_data=data,
+                output_data=data,
+                status=ExecutionStatus.ERROR,
+                execution_time=time.time() - start_time if 'start_time' in locals() else 0,
+                error_message=str(e),
+                timestamp=datetime.now(),
+                metadata={}
+            )
+            
+            # Update rule statistics
+            if rule_id in self.rules:
+                self._update_rule_stats(self.rules[rule_id], execution.execution_time, False)
+            
+            return execution
+    
+    def _evaluate_conditions(self, conditions: List[Dict[str, Any]], 
+                           context: DataContext) -> bool:
+        """
+        Evaluate rule conditions.
+        
+        Args:
+            conditions: List of conditions
+            context: Execution context
+            
+        Returns:
+            True if all conditions are met
+        """
+        try:
+            for condition in conditions:
+                field = condition['field']
+                operator = condition['operator']
+                value = condition['value']
+                
+                # Get field value from context
+                field_value = self._get_field_value(field, context)
+                
+                # Evaluate condition
+                if not self._evaluate_condition(field_value, operator, value):
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Condition evaluation failed: {e}")
+            return False
+    
+    def _get_field_value(self, field_path: str, context: DataContext) -> Any:
+        """
+        Get field value from context using dot notation.
+        
+        Args:
+            field_path: Field path (e.g., "user.name", "data.items[0].value")
+            context: Execution context
+            
+        Returns:
+            Field value
+        """
+        try:
+            # Handle array indexing
+            if '[' in field_path:
+                base_path, index_part = field_path.split('[', 1)
+                index = int(index_part.rstrip(']'))
+                base_value = self._get_field_value(base_path, context)
+                return base_value[index] if isinstance(base_value, list) and 0 <= index < len(base_value) else None
+            
+            # Handle dot notation
+            if '.' in field_path:
+                parts = field_path.split('.')
+                current = context.data
+                
+                for part in parts:
+                    if isinstance(current, dict):
+                        current = current.get(part)
+                    elif hasattr(current, part):
+                        current = getattr(current, part)
+                    else:
+                        return None
+                
+                return current
+            
+            # Simple field access
+            return context.data.get(field_path)
+            
+        except Exception as e:
+            logger.error(f"Failed to get field value for {field_path}: {e}")
             return None
     
-    def _propagate_through_edge(self, event_data: Dict[str, Any], edge_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Propagate event data through an edge"""
-        try:
-            connection_type = edge_data.get('connection_type', 'default')
-            properties = edge_data.get('properties', {})
+    def _evaluate_condition(self, field_value: Any, operator: str, expected_value: Any) -> bool:
+        """
+        Evaluate a single condition.
+        
+        Args:
+            field_value: Actual field value
+            operator: Comparison operator
+            expected_value: Expected value
             
-            # Apply edge-specific transformations
-            if connection_type == 'electrical':
-                return self._propagate_electrical(event_data, properties)
-            elif connection_type == 'mechanical':
-                return self._propagate_mechanical(event_data, properties)
-            elif connection_type == 'plumbing':
-                return self._propagate_plumbing(event_data, properties)
+        Returns:
+            True if condition is met
+        """
+        try:
+            if operator == 'equals':
+                return field_value == expected_value
+            elif operator == 'not_equals':
+                return field_value != expected_value
+            elif operator == 'greater_than':
+                return field_value > expected_value
+            elif operator == 'greater_than_or_equal':
+                return field_value >= expected_value
+            elif operator == 'less_than':
+                return field_value < expected_value
+            elif operator == 'less_than_or_equal':
+                return field_value <= expected_value
+            elif operator == 'contains':
+                return expected_value in field_value if isinstance(field_value, (str, list)) else False
+            elif operator == 'not_contains':
+                return expected_value not in field_value if isinstance(field_value, (str, list)) else True
+            elif operator == 'starts_with':
+                return field_value.startswith(expected_value) if isinstance(field_value, str) else False
+            elif operator == 'ends_with':
+                return field_value.endswith(expected_value) if isinstance(field_value, str) else False
+            elif operator == 'is_empty':
+                return not field_value or (isinstance(field_value, (str, list, dict)) and len(field_value) == 0)
+            elif operator == 'is_not_empty':
+                return field_value and (not isinstance(field_value, (str, list, dict)) or len(field_value) > 0)
+            elif operator == 'is_null':
+                return field_value is None
+            elif operator == 'is_not_null':
+                return field_value is not None
+            elif operator == 'matches':
+                return bool(re.match(expected_value, str(field_value))) if isinstance(expected_value, str) else False
+            elif operator == 'in':
+                return field_value in expected_value if isinstance(expected_value, (list, tuple)) else False
+            elif operator == 'not_in':
+                return field_value not in expected_value if isinstance(expected_value, (list, tuple)) else True
             else:
-                return event_data
+                logger.warning(f"Unknown operator: {operator}")
+                return False
                 
         except Exception as e:
-            logger.error(f"Error propagating through edge: {e}")
-            return event_data
+            logger.error(f"Condition evaluation failed: {e}")
+            return False
     
-    # Validation handlers
-    def _validate_electrical(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate electrical system properties"""
-        try:
-            for rule_name, rule_data in rules.items():
-                if rule_name in properties:
-                    value = properties[rule_name]
-                    if 'min' in rule_data and value < rule_data['min']:
-                        return False, f"{rule_name} value {value} below minimum {rule_data['min']}"
-                    if 'max' in rule_data and value > rule_data['max']:
-                        return False, f"{rule_name} value {value} above maximum {rule_data['max']}"
+    def _execute_actions(self, actions: List[Dict[str, Any]], 
+                        context: DataContext) -> Dict[str, Any]:
+        """
+        Execute rule actions.
+        
+        Args:
+            actions: List of actions
+            context: Execution context
             
-            return True, "Electrical validation passed"
+        Returns:
+            Updated data
+        """
+        try:
+            result_data = context.data.copy()
+            
+            for action in actions:
+                action_type = action['type']
+                
+                if action_type == 'set_field':
+                    field = action['field']
+                    value = action['value']
+                    self._set_field_value(field, value, result_data)
+                
+                elif action_type == 'remove_field':
+                    field = action['field']
+                    self._remove_field_value(field, result_data)
+                
+                elif action_type == 'transform_field':
+                    field = action['field']
+                    transformation = action['transformation']
+                    self._transform_field_value(field, transformation, result_data, context)
+                
+                elif action_type == 'call_function':
+                    function_name = action['function']
+                    params = action.get('params', [])
+                    result = self._call_function(function_name, params, context)
+                    
+                    if 'result_field' in action:
+                        self._set_field_value(action['result_field'], result, result_data)
+                
+                elif action_type == 'conditional_action':
+                    condition = action['condition']
+                    true_actions = action['true_actions']
+                    false_actions = action.get('false_actions', [])
+                    
+                    if self._evaluate_conditions([condition], context):
+                        result_data = self._execute_actions(true_actions, context)
+                    else:
+                        result_data = self._execute_actions(false_actions, context)
+                
+                elif action_type == 'loop_action':
+                    array_field = action['array_field']
+                    actions_to_execute = action['actions']
+                    
+                    array_value = self._get_field_value(array_field, context)
+                    if isinstance(array_value, list):
+                        for i, item in enumerate(array_value):
+                            loop_context = DataContext(
+                                data=result_data,
+                                variables={**context.variables, 'item': item, 'index': i},
+                                functions=context.functions,
+                                metadata=context.metadata
+                            )
+                            result_data = self._execute_actions(actions_to_execute, loop_context)
+            
+            return result_data
             
         except Exception as e:
-            return False, f"Electrical validation error: {str(e)}"
+            logger.error(f"Action execution failed: {e}")
+            return context.data
     
-    def _validate_mechanical(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate mechanical system properties"""
+    def _set_field_value(self, field_path: str, value: Any, data: Dict[str, Any]) -> None:
+        """Set field value using dot notation."""
         try:
-            for rule_name, rule_data in rules.items():
-                if rule_name in properties:
-                    value = properties[rule_name]
-                    if 'min' in rule_data and value < rule_data['min']:
-                        return False, f"{rule_name} value {value} below minimum {rule_data['min']}"
-                    if 'max' in rule_data and value > rule_data['max']:
-                        return False, f"{rule_name} value {value} above maximum {rule_data['max']}"
+            if '.' in field_path:
+                parts = field_path.split('.')
+                current = data
+                
+                for part in parts[:-1]:
+                    if part not in current:
+                        current[part] = {}
+                    current = current[part]
+                
+                current[parts[-1]] = value
+            else:
+                data[field_path] = value
+                
+        except Exception as e:
+            logger.error(f"Failed to set field value for {field_path}: {e}")
+    
+    def _remove_field_value(self, field_path: str, data: Dict[str, Any]) -> None:
+        """Remove field value using dot notation."""
+        try:
+            if '.' in field_path:
+                parts = field_path.split('.')
+                current = data
+                
+                for part in parts[:-1]:
+                    if part in current:
+                        current = current[part]
+                    else:
+                        return
+                
+                if parts[-1] in current:
+                    del current[parts[-1]]
+            else:
+                if field_path in data:
+                    del data[field_path]
+                    
+        except Exception as e:
+            logger.error(f"Failed to remove field value for {field_path}: {e}")
+    
+    def _transform_field_value(self, field_path: str, transformation: Dict[str, Any],
+                             data: Dict[str, Any], context: DataContext) -> None:
+        """Transform field value."""
+        try:
+            field_value = self._get_field_value(field_path, DataContext(data, context.variables, context.functions, context.metadata))
             
-            return True, "Mechanical validation passed"
+            transform_type = transformation['type']
+            
+            if transform_type == 'uppercase':
+                result = str(field_value).upper()
+            elif transform_type == 'lowercase':
+                result = str(field_value).lower()
+            elif transform_type == 'trim':
+                result = str(field_value).strip()
+            elif transform_type == 'replace':
+                old_value = transformation['old_value']
+                new_value = transformation['new_value']
+                result = str(field_value).replace(old_value, new_value)
+            elif transform_type == 'format':
+                format_string = transformation['format']
+                result = format_string.format(field_value)
+            elif transform_type == 'function':
+                function_name = transformation['function']
+                params = transformation.get('params', [field_value])
+                result = self._call_function(function_name, params, context)
+            else:
+                result = field_value
+            
+            self._set_field_value(field_path, result, data)
             
         except Exception as e:
-            return False, f"Mechanical validation error: {str(e)}"
+            logger.error(f"Failed to transform field value for {field_path}: {e}")
     
-    def _validate_plumbing(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate plumbing system properties"""
+    def _call_function(self, function_name: str, params: List[Any], 
+                      context: DataContext) -> Any:
+        """Call a function with parameters."""
         try:
-            for rule_name, rule_data in rules.items():
-                if rule_name in properties:
-                    value = properties[rule_name]
-                    if 'min' in rule_data and value < rule_data['min']:
-                        return False, f"{rule_name} value {value} below minimum {rule_data['min']}"
-                    if 'max' in rule_data and value > rule_data['max']:
-                        return False, f"{rule_name} value {value} above maximum {rule_data['max']}"
+            if function_name in context.functions:
+                return context.functions[function_name](*params)
+            else:
+                logger.warning(f"Function {function_name} not found")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Function call failed for {function_name}: {e}")
+            return None
+    
+    def execute_rule_chain(self, chain_id: str, data: Dict[str, Any],
+                          context: Optional[DataContext] = None) -> List[RuleExecution]:
+        """
+        Execute a chain of rules.
+        
+        Args:
+            chain_id: Chain identifier
+            data: Input data
+            context: Optional execution context
             
-            return True, "Plumbing validation passed"
+        Returns:
+            List of execution results
+        """
+        try:
+            chain = self.rule_chains.get(chain_id)
+            if not chain:
+                raise ValueError(f"Rule chain {chain_id} not found")
+            
+            if chain.status != RuleStatus.ACTIVE:
+                raise ValueError(f"Rule chain {chain_id} is not active")
+            
+            executions = []
+            current_data = data.copy()
+            
+            # Execute rules based on execution order
+            if chain.execution_order == 'sequential':
+                for rule_id in chain.rules:
+                    execution = self.execute_rule(rule_id, current_data, context)
+                    executions.append(execution)
+                    current_data = execution.output_data
+                    
+                    if execution.status == ExecutionStatus.ERROR:
+                        break
+            
+            elif chain.execution_order == 'parallel':
+                # Execute rules in parallel
+                futures = []
+                for rule_id in chain.rules:
+                    future = self.executor.submit(self.execute_rule, rule_id, current_data, context)
+                    futures.append(future)
+                
+                for future in as_completed(futures):
+                    execution = future.result()
+                    executions.append(execution)
+            
+            elif chain.execution_order == 'conditional':
+                # Execute rules until one succeeds
+                for rule_id in chain.rules:
+                    execution = self.execute_rule(rule_id, current_data, context)
+                    executions.append(execution)
+                    
+                    if execution.status == ExecutionStatus.SUCCESS:
+                        break
+            
+            return executions
             
         except Exception as e:
-            return False, f"Plumbing validation error: {str(e)}"
+            logger.error(f"Rule chain execution failed for {chain_id}: {e}")
+            return []
     
-    def _validate_fire(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate fire protection system properties"""
-        try:
-            for rule_name, rule_data in rules.items():
-                if rule_name in properties:
-                    value = properties[rule_name]
-                    if 'min' in rule_data and value < rule_data['min']:
-                        return False, f"{rule_name} value {value} below minimum {rule_data['min']}"
-                    if 'max' in rule_data and value > rule_data['max']:
-                        return False, f"{rule_name} value {value} above maximum {rule_data['max']}"
+    def create_rule_chain(self, name: str, description: str, rules: List[str],
+                         execution_order: str = 'sequential',
+                         metadata: Dict[str, Any] = None) -> str:
+        """
+        Create a new rule chain.
+        
+        Args:
+            name: Chain name
+            description: Chain description
+            rules: List of rule IDs
+            execution_order: Execution order (sequential, parallel, conditional)
+            metadata: Additional metadata
             
-            return True, "Fire protection validation passed"
+        Returns:
+            Chain ID
+        """
+        try:
+            chain_id = str(uuid.uuid4())
+            now = datetime.now()
+            
+            chain = RuleChain(
+                chain_id=chain_id,
+                name=name,
+                description=description,
+                rules=rules,
+                execution_order=execution_order,
+                status=RuleStatus.ACTIVE,
+                created_at=now,
+                updated_at=now,
+                metadata=metadata or {}
+            )
+            
+            # Validate chain
+            for rule_id in rules:
+                if rule_id not in self.rules:
+                    raise ValueError(f"Rule {rule_id} not found")
+            
+            # Save to database
+            self._save_rule_chain(chain)
+            
+            # Add to memory
+            self.rule_chains[chain_id] = chain
+            
+            logger.info(f"Created rule chain: {chain_id} ({name})")
+            return chain_id
             
         except Exception as e:
-            return False, f"Fire protection validation error: {str(e)}"
+            logger.error(f"Failed to create rule chain: {e}")
+            raise
     
-    def _validate_connectivity(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate connectivity requirements"""
+    def _save_rule_chain(self, chain: RuleChain) -> None:
+        """Save rule chain to database."""
         try:
-            # Check for required connections
-            required_connections = rules.get('required_connections', [])
-            actual_connections = properties.get('connections', [])
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO rule_chains 
+                    (chain_id, name, description, rules, execution_order,
+                     status, created_at, updated_at, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    chain.chain_id,
+                    chain.name,
+                    chain.description,
+                    json.dumps(chain.rules),
+                    chain.execution_order,
+                    chain.status.value,
+                    chain.created_at.isoformat(),
+                    chain.updated_at.isoformat(),
+                    json.dumps(chain.metadata)
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to save rule chain: {e}")
+            raise
+    
+    def _save_execution(self, execution: RuleExecution) -> None:
+        """Save execution result to database."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    INSERT INTO rule_executions 
+                    (execution_id, rule_id, input_data, output_data, status,
+                     execution_time, error_message, timestamp, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    execution.execution_id,
+                    execution.rule_id,
+                    json.dumps(execution.input_data),
+                    json.dumps(execution.output_data),
+                    execution.status.value,
+                    execution.execution_time,
+                    execution.error_message,
+                    execution.timestamp.isoformat(),
+                    json.dumps(execution.metadata)
+                ))
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Failed to save execution: {e}")
+    
+    def _update_rule_stats(self, rule: Rule, execution_time: float, success: bool) -> None:
+        """Update rule execution statistics."""
+        try:
+            rule.execution_count += 1
+            if success:
+                rule.success_count += 1
+            else:
+                rule.error_count += 1
             
-            for required in required_connections:
-                if required not in actual_connections:
-                    return False, f"Missing required connection: {required}"
+            # Update average execution time
+            total_time = rule.avg_execution_time * (rule.execution_count - 1) + execution_time
+            rule.avg_execution_time = total_time / rule.execution_count
             
-            return True, "Connectivity validation passed"
+            # Save updated stats
+            self._save_rule(rule)
             
         except Exception as e:
-            return False, f"Connectivity validation error: {str(e)}"
+            logger.error(f"Failed to update rule stats: {e}")
     
-    def _validate_performance(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate performance requirements"""
+    def _update_performance_metrics(self, execution_time: float, success: bool) -> None:
+        """Update overall performance metrics."""
         try:
-            # Check performance metrics
-            for metric, threshold in rules.items():
-                if metric in properties:
-                    value = properties[metric]
-                    if value < threshold:
-                        return False, f"Performance metric {metric} below threshold: {value} < {threshold}"
+            self.total_executions += 1
+            if success:
+                self.successful_executions += 1
+            else:
+                self.failed_executions += 1
             
-            return True, "Performance validation passed"
+            # Update average execution time
+            total_time = self.average_execution_time * (self.total_executions - 1) + execution_time
+            self.average_execution_time = total_time / self.total_executions
             
         except Exception as e:
-            return False, f"Performance validation error: {str(e)}"
+            logger.error(f"Failed to update performance metrics: {e}")
     
-    def _validate_safety(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Validate safety requirements"""
-        try:
-            # Check safety thresholds
-            for safety_check, threshold in rules.items():
-                if safety_check in properties:
-                    value = properties[safety_check]
-                    if value > threshold:
-                        return False, f"Safety threshold exceeded: {safety_check} = {value} > {threshold}"
-            
-            return True, "Safety validation passed"
-            
-        except Exception as e:
-            return False, f"Safety validation error: {str(e)}"
-    
-    def _validate_general(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """General validation handler"""
-        try:
-            for rule_name, rule_data in rules.items():
-                if rule_name in properties:
-                    value = properties[rule_name]
-                    if 'min' in rule_data and value < rule_data['min']:
-                        return False, f"{rule_name} value {value} below minimum {rule_data['min']}"
-                    if 'max' in rule_data and value > rule_data['max']:
-                        return False, f"{rule_name} value {value} above maximum {rule_data['max']}"
-            
-            return True, "General validation passed"
-            
-        except Exception as e:
-            return False, f"General validation error: {str(e)}"
-    
-    # Simulation handlers
-    def _simulate_electrical(self, calculations: Dict[str, str], properties: Dict[str, Any]) -> Tuple[Dict[str, Any], str, List[str]]:
-        """Simulate electrical system behavior"""
-        try:
-            metrics = {}
-            alerts = []
-            
-            # Execute calculations
-            for metric, formula in calculations.items():
-                try:
-                    # Simple formula evaluation (in production, use a proper expression evaluator)
-                    if "power_consumption" in formula:
-                        voltage = properties.get('voltage', 120)
-                        current = properties.get('current', 0)
-                        metrics[metric] = voltage * current
-                    elif "heat_generation" in formula:
-                        power = properties.get('power', 0)
-                        metrics[metric] = power * 0.05  # 5% heat loss
-                    elif "load_factor" in formula:
-                        total_load = properties.get('total_load', 0)
-                        rated_capacity = properties.get('rated_capacity', 1)
-                        metrics[metric] = total_load / rated_capacity if rated_capacity > 0 else 0
-                except Exception as e:
-                    alerts.append(f"Calculation error for {metric}: {str(e)}")
-            
-            # Determine status
-            status = "normal"
-            if metrics.get('load_factor', 0) > 0.8:
-                status = "warning"
-                alerts.append("High load factor detected")
-            if metrics.get('load_factor', 0) > 1.0:
-                status = "critical"
-                alerts.append("Overload condition detected")
-            
-            return metrics, status, alerts
-            
-        except Exception as e:
-            return {}, "failed", [f"Electrical simulation error: {str(e)}"]
-    
-    def _simulate_mechanical(self, calculations: Dict[str, str], properties: Dict[str, Any]) -> Tuple[Dict[str, Any], str, List[str]]:
-        """Simulate mechanical system behavior"""
-        try:
-            metrics = {}
-            alerts = []
-            
-            # Execute calculations
-            for metric, formula in calculations.items():
-                try:
-                    if "cooling_capacity" in formula:
-                        airflow = properties.get('airflow', 0)
-                        supply_temp = properties.get('supply_temp', 55)
-                        return_temp = properties.get('return_temp', 75)
-                        metrics[metric] = airflow * 1.08 * (supply_temp - return_temp)
-                    elif "heating_capacity" in formula:
-                        airflow = properties.get('airflow', 0)
-                        supply_temp = properties.get('supply_temp', 85)
-                        return_temp = properties.get('return_temp', 70)
-                        metrics[metric] = airflow * 1.08 * (supply_temp - return_temp)
-                    elif "power" in formula:
-                        fan_power = properties.get('fan_power', 0)
-                        compressor_power = properties.get('compressor_power', 0)
-                        metrics[metric] = fan_power + compressor_power
-                except Exception as e:
-                    alerts.append(f"Calculation error for {metric}: {str(e)}")
-            
-            # Determine status
-            status = "normal"
-            if metrics.get('power', 0) > properties.get('rated_power', float('inf')):
-                status = "warning"
-                alerts.append("Power consumption exceeds rated capacity")
-            
-            return metrics, status, alerts
-            
-        except Exception as e:
-            return {}, "failed", [f"Mechanical simulation error: {str(e)}"]
-    
-    def _simulate_plumbing(self, calculations: Dict[str, str], properties: Dict[str, Any]) -> Tuple[Dict[str, Any], str, List[str]]:
-        """Simulate plumbing system behavior"""
-        try:
-            metrics = {}
-            alerts = []
-            
-            # Execute calculations
-            for metric, formula in calculations.items():
-                try:
-                    if "flow_rate" in formula:
-                        velocity = properties.get('velocity', 0)
-                        diameter = properties.get('diameter', 0)
-                        area = math.pi * (diameter / 2) ** 2
-                        metrics[metric] = velocity * area
-                    elif "pressure_loss" in formula:
-                        flow_rate = properties.get('flow_rate', 0)
-                        diameter = properties.get('diameter', 0)
-                        length = properties.get('length', 0)
-                        # Simplified pressure loss calculation
-                        metrics[metric] = (flow_rate ** 2) * length / (diameter ** 5)
-                    elif "power" in formula:
-                        flow_rate = properties.get('flow_rate', 0)
-                        head = properties.get('head', 0)
-                        efficiency = properties.get('efficiency', 0.7)
-                        metrics[metric] = (flow_rate * head * 8.34) / (3960 * efficiency)
-                except Exception as e:
-                    alerts.append(f"Calculation error for {metric}: {str(e)}")
-            
-            # Determine status
-            status = "normal"
-            if metrics.get('pressure_loss', 0) > properties.get('max_pressure_loss', float('inf')):
-                status = "warning"
-                alerts.append("Pressure loss exceeds maximum allowable")
-            
-            return metrics, status, alerts
-            
-        except Exception as e:
-            return {}, "failed", [f"Plumbing simulation error: {str(e)}"]
-    
-    def _simulate_fire(self, calculations: Dict[str, str], properties: Dict[str, Any]) -> Tuple[Dict[str, Any], str, List[str]]:
-        """Simulate fire protection system behavior"""
-        try:
-            metrics = {}
-            alerts = []
-            
-            # Execute calculations
-            for metric, formula in calculations.items():
-                try:
-                    if "flow_rate" in formula:
-                        pressure = properties.get('pressure', 0)
-                        k_factor = properties.get('k_factor', 5.6)
-                        metrics[metric] = k_factor * math.sqrt(pressure)
-                    elif "coverage" in formula:
-                        spacing = properties.get('spacing', 12)
-                        metrics[metric] = math.pi * (spacing / 2) ** 2
-                    elif "density" in formula:
-                        flow_rate = properties.get('flow_rate', 0)
-                        coverage_area = properties.get('coverage_area', 1)
-                        metrics[metric] = flow_rate / coverage_area
-                except Exception as e:
-                    alerts.append(f"Calculation error for {metric}: {str(e)}")
-            
-            # Determine status
-            status = "normal"
-            if metrics.get('density', 0) < properties.get('min_density', 0):
-                status = "critical"
-                alerts.append("Sprinkler density below minimum requirement")
-            
-            return metrics, status, alerts
-            
-        except Exception as e:
-            return {}, "failed", [f"Fire protection simulation error: {str(e)}"]
-    
-    def _simulate_thermal(self, calculations: Dict[str, str], properties: Dict[str, Any]) -> Tuple[Dict[str, Any], str, List[str]]:
-        """Simulate thermal system behavior"""
-        try:
-            metrics = {}
-            alerts = []
-            
-            # Execute calculations
-            for metric, formula in calculations.items():
-                try:
-                    if "thermal_resistance" in formula:
-                        thickness = properties.get('thickness', 0)
-                        conductivity = properties.get('conductivity', 1)
-                        metrics[metric] = thickness / conductivity
-                    elif "heat_transfer" in formula:
-                        area = properties.get('area', 0)
-                        temp_diff = properties.get('temp_diff', 0)
-                        resistance = properties.get('thermal_resistance', 1)
-                        metrics[metric] = area * temp_diff / resistance
-                except Exception as e:
-                    alerts.append(f"Calculation error for {metric}: {str(e)}")
-            
-            return metrics, "normal", alerts
-            
-        except Exception as e:
-            return {}, "failed", [f"Thermal simulation error: {str(e)}"]
-    
-    def _simulate_acoustic(self, calculations: Dict[str, str], properties: Dict[str, Any]) -> Tuple[Dict[str, Any], str, List[str]]:
-        """Simulate acoustic system behavior"""
-        try:
-            metrics = {}
-            alerts = []
-            
-            # Execute calculations
-            for metric, formula in calculations.items():
-                try:
-                    if "sound_power" in formula:
-                        flow_rate = properties.get('flow_rate', 0)
-                        pressure = properties.get('pressure', 0)
-                        metrics[metric] = 10 * math.log10(flow_rate * pressure)
-                    elif "transmission_loss" in formula:
-                        frequency = properties.get('frequency', 1000)
-                        mass = properties.get('mass', 1)
-                        metrics[metric] = 20 * math.log10(frequency * mass) - 47
-                except Exception as e:
-                    alerts.append(f"Calculation error for {metric}: {str(e)}")
-            
-            return metrics, "normal", alerts
-            
-        except Exception as e:
-            return {}, "failed", [f"Acoustic simulation error: {str(e)}"]
-    
-    def _simulate_general(self, calculations: Dict[str, str], properties: Dict[str, Any]) -> Tuple[Dict[str, Any], str, List[str]]:
-        """General simulation handler"""
-        try:
-            metrics = {}
-            alerts = []
-            
-            # Execute basic calculations
-            for metric, formula in calculations.items():
-                try:
-                    # Simple metric calculation
-                    if metric in properties:
-                        metrics[metric] = properties[metric]
-                except Exception as e:
-                    alerts.append(f"Calculation error for {metric}: {str(e)}")
-            
-            return metrics, "normal", alerts
-            
-        except Exception as e:
-            return {}, "failed", [f"General simulation error: {str(e)}"]
-    
-    # Event processing methods
-    def _process_electrical_event(self, object_id: str, event_type: str, event_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process electrical system events"""
+    def get_performance_metrics(self) -> Dict[str, Any]:
+        """
+        Get performance metrics.
+        
+        Returns:
+            Performance metrics
+        """
         return {
-            "object_id": object_id,
-            "event_type": event_type,
-            "processed_data": event_data,
-            "timestamp": datetime.now().isoformat()
+            'total_executions': self.total_executions,
+            'successful_executions': self.successful_executions,
+            'failed_executions': self.failed_executions,
+            'success_rate': (self.successful_executions / self.total_executions * 100) if self.total_executions > 0 else 0,
+            'average_execution_time': self.average_execution_time,
+            'total_rules': len(self.rules),
+            'active_rules': len([r for r in self.rules.values() if r.status == RuleStatus.ACTIVE]),
+            'total_chains': len(self.rule_chains),
+            'active_chains': len([c for c in self.rule_chains.values() if c.status == RuleStatus.ACTIVE])
         }
     
-    def _process_mechanical_event(self, object_id: str, event_type: str, event_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process mechanical system events"""
-        return {
-            "object_id": object_id,
-            "event_type": event_type,
-            "processed_data": event_data,
-            "timestamp": datetime.now().isoformat()
-        }
-    
-    def _process_plumbing_event(self, object_id: str, event_type: str, event_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process plumbing system events"""
-        return {
-            "object_id": object_id,
-            "event_type": event_type,
-            "processed_data": event_data,
-            "timestamp": datetime.now().isoformat()
-        }
-    
-    def _process_general_event(self, object_id: str, event_type: str, event_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Process general system events"""
-        return {
-            "object_id": object_id,
-            "event_type": event_type,
-            "processed_data": event_data,
-            "timestamp": datetime.now().isoformat()
-        }
-    
-    # Event propagation methods
-    def _propagate_electrical(self, event_data: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-        """Propagate electrical events through connections"""
-        # Apply electrical-specific transformations
-        return event_data
-    
-    def _propagate_mechanical(self, event_data: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-        """Propagate mechanical events through connections"""
-        # Apply mechanical-specific transformations
-        return event_data
-    
-    def _propagate_plumbing(self, event_data: Dict[str, Any], properties: Dict[str, Any]) -> Dict[str, Any]:
-        """Propagate plumbing events through connections"""
-        # Apply plumbing-specific transformations
-        return event_data
-    
-    # Validation check methods
-    def _check_code_compliance(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Check code compliance"""
-        return True, "Code compliance check passed"
-    
-    def _check_design_rules(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Check design rules"""
-        return True, "Design rules check passed"
-    
-    def _check_conflicts(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Check for conflicts"""
-        return True, "Conflict check passed"
-    
-    def _check_quality(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Check quality assurance"""
-        return True, "Quality check passed"
-    
-    def _check_accessibility(self, rules: Dict[str, Any], properties: Dict[str, Any]) -> Tuple[bool, str]:
-        """Check accessibility compliance"""
-        return True, "Accessibility check passed"
-    
-    def get_behavior_profiles(self) -> Dict[str, BehaviorProfile]:
-        """Get all behavior profiles"""
-        return self.behavior_profiles
-    
-    def get_logic_graph(self) -> nx.DiGraph:
-        """Get the logic graph"""
-        return self.logic_graph
-    
-    def export_logic_data(self) -> Dict[str, Any]:
-        """Export logic engine data for persistence"""
-        return {
-            "behavior_profiles": {
-                profile_id: {
-                    "object_type": profile.object_type,
-                    "behavior_type": profile.behavior_type.value,
-                    "version": profile.version,
-                    "description": profile.description,
-                    "rules": profile.rules,
-                    "constraints": profile.constraints,
-                    "calculations": profile.calculations,
-                    "dependencies": profile.dependencies,
-                    "enabled": profile.enabled
-                }
-                for profile_id, profile in self.behavior_profiles.items()
-            },
-            "logic_graph": nx.node_link_data(self.logic_graph)
-        }
-    
-    def import_logic_data(self, data: Dict[str, Any]) -> bool:
-        """Import logic engine data from persistence"""
-        try:
-            # Import behavior profiles
-            for profile_id, profile_data in data.get("behavior_profiles", {}).items():
-                profile = BehaviorProfile(
-                    object_type=profile_data["object_type"],
-                    behavior_type=BehaviorType(profile_data["behavior_type"]),
-                    version=profile_data.get("version", "1.0"),
-                    description=profile_data.get("description"),
-                    rules=profile_data.get("rules", {}),
-                    constraints=profile_data.get("constraints", {}),
-                    calculations=profile_data.get("calculations", {}),
-                    dependencies=profile_data.get("dependencies", []),
-                    enabled=profile_data.get("enabled", True)
-                )
-                self.behavior_profiles[profile_id] = profile
+    def get_rule_statistics(self, rule_id: str) -> Dict[str, Any]:
+        """
+        Get statistics for a specific rule.
+        
+        Args:
+            rule_id: Rule identifier
             
-            # Import logic graph
-            if "logic_graph" in data:
-                self.logic_graph = nx.node_link_graph(data["logic_graph"], directed=True)
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error importing logic data: {e}")
-            return False 
+        Returns:
+            Rule statistics
+        """
+        rule = self.get_rule(rule_id)
+        if not rule:
+            return {}
+        
+        return {
+            'rule_id': rule.rule_id,
+            'name': rule.name,
+            'execution_count': rule.execution_count,
+            'success_count': rule.success_count,
+            'error_count': rule.error_count,
+            'success_rate': (rule.success_count / rule.execution_count * 100) if rule.execution_count > 0 else 0,
+            'average_execution_time': rule.avg_execution_time,
+            'last_updated': rule.updated_at.isoformat()
+        }
+    
+    def shutdown(self) -> None:
+        """Shutdown the logic engine."""
+        logger.info("Shutting down Logic Engine...")
+        
+        # Shutdown thread pool
+        self.executor.shutdown(wait=True)
+        
+        logger.info("Logic Engine shutdown complete")
+    
+    def __del__(self):
+        """Cleanup on engine destruction."""
+        self.shutdown() 

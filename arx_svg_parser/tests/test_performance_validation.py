@@ -18,7 +18,7 @@ from pathlib import Path
 
 # Import the actual viewport manager for performance testing
 try:
-    from services.viewport_manager import ViewportManager
+    from ..services.viewport_manager import ViewportManager
     HAS_VIEWPORT_MANAGER = True
 except ImportError:
     HAS_VIEWPORT_MANAGER = False

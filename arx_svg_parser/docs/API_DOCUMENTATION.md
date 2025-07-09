@@ -1,569 +1,1325 @@
-# Arxos SVG-BIM API Documentation
+# Arxos API Documentation
 
-## Table of Contents
-1. [Installation](#installation)
-2. [Quick Start](#quick-start)
-3. [API Reference](#api-reference)
-4. [Authentication](#authentication)
-5. [Error Handling](#error-handling)
-6. [Best Practices](#best-practices)
-7. [Examples](#examples)
-8. [Troubleshooting](#troubleshooting)
+## Overview
 
-## Installation
+The Arxos API provides comprehensive RESTful endpoints for SVG-BIM conversion, symbol management, security controls, and advanced features. This documentation covers all available endpoints with examples and usage guidelines.
 
-### Prerequisites
-- Python 3.8+
-- FastAPI
-- Uvicorn (for server)
-- Required dependencies (see requirements.txt)
+## Base URL
 
-### Install Dependencies
-```bash
-pip install -r requirements.txt
 ```
-
-### Start the API Server
-```bash
-# Development server
-uvicorn arx_svg_parser.api.api_layer:app --reload --host 0.0.0.0 --port 8000
-
-# Production server
-uvicorn arx_svg_parser.api.api_layer:app --host 0.0.0.0 --port 8000
-```
-
-## Quick Start
-
-### 1. Basic BIM Assembly
-```python
-import requests
-
-# Assemble BIM from SVG
-response = requests.post("http://localhost:8000/bim/assemble", json={
-    "svg_data": "<svg>...</svg>",
-    "user_id": "user123",
-    "project_id": "project456"
-})
-
-model_id = response.json()["model_id"]
-print(f"BIM Model ID: {model_id}")
-```
-
-### 2. Query BIM Model
-```python
-# Query rooms in the model
-response = requests.post("http://localhost:8000/bim/query", json={
-    "model_id": model_id,
-    "user_id": "user123",
-    "project_id": "project456",
-    "query": {"type": "room"}
-})
-
-rooms = response.json()["results"]
-print(f"Found {len(rooms)} rooms")
-```
-
-### 3. Export BIM Model
-```python
-# Export to JSON
-response = requests.post("http://localhost:8000/bim/export", json={
-    "model_id": model_id,
-    "user_id": "user123",
-    "project_id": "project456",
-    "format": "json"
-})
-
-bim_data = response.json()["data"]
-```
-
-## API Reference
-
-### Base URL
-```
-http://localhost:8000
-```
-
-### Authentication
-All endpoints require authentication via JWT tokens in the Authorization header:
-```
-Authorization: Bearer <your_jwt_token>
-```
-
-### Endpoints
-
-#### 1. BIM Assembly
-**POST** `/bim/assemble`
-
-Assembles a BIM model from SVG data.
-
-**Request Body:**
-```json
-{
-    "svg_data": "<svg>...</svg>",
-    "user_id": "string",
-    "project_id": "string",
-    "metadata": {
-        "building_name": "string",
-        "floor_number": "integer",
-        "description": "string"
-    },
-    "options": {
-        "validate_geometry": true,
-        "auto_resolve_conflicts": true,
-        "performance_level": "high"
-    }
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "model_id": "string",
-    "elements_count": 10,
-    "systems_count": 3,
-    "spaces_count": 5,
-    "relationships_count": 15,
-    "warnings": [],
-    "processing_time": 1.23
-}
-```
-
-#### 2. BIM Query
-**POST** `/bim/query`
-
-Queries BIM model elements.
-
-**Request Body:**
-```json
-{
-    "model_id": "string",
-    "user_id": "string",
-    "project_id": "string",
-    "query": {
-        "type": "room|wall|device|system",
-        "properties": {
-            "room_type": "office",
-            "area_min": 50.0
-        },
-        "spatial": {
-            "bounds": [x1, y1, x2, y2],
-            "contains_point": [x, y]
-        }
-    },
-    "options": {
-        "include_geometry": true,
-        "include_relationships": true,
-        "limit": 100
-    }
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "results": [
-        {
-            "id": "string",
-            "type": "room",
-            "name": "Office 101",
-            "properties": {},
-            "geometry": {},
-            "relationships": []
-        }
-    ],
-    "total_count": 10,
-    "query_time": 0.05
-}
-```
-
-#### 3. BIM Export
-**POST** `/bim/export`
-
-Exports BIM model in various formats.
-
-**Request Body:**
-```json
-{
-    "model_id": "string",
-    "user_id": "string",
-    "project_id": "string",
-    "format": "json|csv|xml|ifc|gbxml",
-    "options": {
-        "pretty_print": true,
-        "include_metadata": true,
-        "compression": false
-    }
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "format": "json",
-    "data": "string",
-    "file_size": 1024,
-    "export_time": 0.12
-}
-```
-
-#### 4. BIM Validation
-**POST** `/bim/validate`
-
-Validates BIM model consistency.
-
-**Request Body:**
-```json
-{
-    "model_id": "string",
-    "user_id": "string",
-    "project_id": "string",
-    "validation_rules": {
-        "check_geometry": true,
-        "check_relationships": true,
-        "check_properties": true
-    }
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "valid": true,
-    "errors": [],
-    "warnings": [],
-    "validation_time": 0.08
-}
-```
-
-#### 5. Health Check
-**GET** `/health`
-
-Returns system health status.
-
-**Response:**
-```json
-{
-    "status": "healthy",
-    "timestamp": "2024-01-01T00:00:00Z",
-    "version": "1.0.0",
-    "services": {
-        "database": "connected",
-        "cache": "connected",
-        "storage": "available"
-    }
-}
-```
-
-#### 6. Webhook Registration
-**POST** `/webhooks/register`
-
-Registers webhook endpoints for events.
-
-**Request Body:**
-```json
-{
-    "url": "https://your-webhook-url.com/events",
-    "events": ["bim.assembled", "bim.exported", "bim.validated"],
-    "secret": "webhook_secret",
-    "user_id": "string"
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "webhook_id": "string",
-    "status": "active"
-}
-```
-
-#### 7. File Download
-**GET** `/files/{file_id}`
-
-Downloads exported files.
-
-**Response:**
-```
-File content with appropriate Content-Type header
+https://api.arxos.com/api/v1
 ```
 
 ## Authentication
 
-### JWT Token Structure
-```json
-{
-    "user_id": "string",
-    "project_id": "string",
-    "permissions": ["read", "write", "admin"],
-    "exp": 1640995200
-}
+All API endpoints require authentication. Use the following headers:
+
+```http
+Authorization: Bearer <your_access_token>
+Content-Type: application/json
 ```
 
-### Token Generation
-```python
-import jwt
-from datetime import datetime, timedelta
+## Response Format
 
-def generate_token(user_id: str, project_id: str, secret: str):
-    payload = {
-        "user_id": user_id,
-        "project_id": project_id,
-        "permissions": ["read", "write"],
-        "exp": datetime.utcnow() + timedelta(hours=24)
-    }
-    return jwt.encode(payload, secret, algorithm="HS256")
+All API responses follow this standard format:
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operation completed successfully",
+  "timestamp": "2024-12-19T10:30:00Z"
+}
 ```
 
 ## Error Handling
 
-### Error Response Format
+Errors follow this format:
+
 ```json
 {
-    "success": false,
-    "error": {
-        "code": "VALIDATION_ERROR",
-        "message": "Invalid SVG data",
-        "details": {
-            "field": "svg_data",
-            "issue": "Malformed XML"
-        }
-    },
-    "timestamp": "2024-01-01T00:00:00Z"
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input parameters",
+    "details": { ... }
+  },
+  "timestamp": "2024-12-19T10:30:00Z"
 }
 ```
 
-### Common Error Codes
-- `AUTHENTICATION_ERROR`: Invalid or missing token
-- `AUTHORIZATION_ERROR`: Insufficient permissions
-- `VALIDATION_ERROR`: Invalid request data
-- `NOT_FOUND_ERROR`: Resource not found
-- `PROCESSING_ERROR`: Internal processing error
-- `RATE_LIMIT_ERROR`: Too many requests
-- `SERVICE_UNAVAILABLE`: Service temporarily unavailable
+---
 
-### Error Handling Example
-```python
-import requests
+## 🔐 Security Endpoints
 
-try:
-    response = requests.post("http://localhost:8000/bim/assemble", json={
-        "svg_data": "<svg>...</svg>",
+### Privacy Controls
+
+#### Classify Data
+**POST** `/security/privacy/classify`
+
+Classify data based on content and type for privacy controls.
+
+**Request Body:**
+```json
+{
+  "data_type": "building_data",
+  "content": {
+    "building_id": "building_001",
+    "floors": 5,
+    "systems": ["electrical", "plumbing"]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data_type": "building_data",
+    "classification": "internal",
+    "classification_level": "INTERNAL"
+  }
+}
+```
+
+#### Apply Privacy Controls
+**POST** `/security/privacy/controls`
+
+Apply privacy controls to data based on classification.
+
+**Request Body:**
+```json
+{
+  "data": {
+    "building_info": "sensitive data"
+  },
+  "classification": "confidential"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data": "encrypted_data_here",
+    "privacy_metadata": {
+      "classification": "confidential",
+      "encryption_required": true,
+      "audit_required": true,
+      "retention_days": 1095,
+      "sharing_allowed": false
+    }
+  }
+}
+```
+
+#### Anonymize Data
+**POST** `/security/privacy/anonymize`
+
+Anonymize data for external sharing.
+
+**Request Body:**
+```json
+{
+  "data": {
+    "user_id": "user123",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "building_data": "non-sensitive"
+  },
+  "fields_to_anonymize": ["user_id", "email", "name"]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "anonymized_data": {
+      "user_id": "anon_a1b2c3d4",
+      "email": "anon_e5f6g7h8",
+      "name": "anon_i9j0k1l2",
+      "building_data": "non-sensitive"
+    }
+  }
+}
+```
+
+### Encryption
+
+#### Encrypt Data
+**POST** `/security/encryption/encrypt`
+
+Encrypt data using specified layer.
+
+**Request Body:**
+```json
+{
+  "data": "sensitive building information",
+  "layer": "storage"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "encrypted_data": "a1b2c3d4e5f6...",
+    "layer": "storage",
+    "data_size": 256
+  }
+}
+```
+
+#### Decrypt Data
+**POST** `/security/encryption/decrypt`
+
+Decrypt data using specified layer.
+
+**Request Body:**
+```json
+{
+  "encrypted_data": "a1b2c3d4e5f6...",
+  "layer": "storage"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "decrypted_data": "sensitive building information",
+    "layer": "storage"
+  }
+}
+```
+
+#### Rotate Encryption Keys
+**POST** `/security/encryption/rotate-keys`
+
+Rotate encryption keys.
+
+**Request Body:**
+```json
+{
+  "key_type": "all"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Successfully rotated all encryption keys",
+    "rotation_timestamp": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+#### Get Encryption Metrics
+**GET** `/security/encryption/metrics`
+
+Get encryption performance metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_operations": 1250,
+    "total_time_ms": 12500.0,
+    "average_time_ms": 10.0
+  }
+}
+```
+
+### Audit Trail
+
+#### Log Audit Event
+**POST** `/security/audit/log`
+
+Log audit event with full details.
+
+**Request Body:**
+```json
+{
+  "event_type": "data_access",
+  "user_id": "user123",
+  "resource_id": "building_001",
+  "action": "read",
+  "details": {
+    "data_type": "building_data",
+    "classification": "internal"
+  },
+  "correlation_id": "corr_123456",
+  "ip_address": "192.168.1.100",
+  "user_agent": "Mozilla/5.0...",
+  "success": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "event_id": "evt_a1b2c3d4e5f6",
+    "timestamp": "2024-12-19T10:30:00Z",
+    "status": "logged"
+  }
+}
+```
+
+#### Get Audit Logs
+**GET** `/security/audit/logs`
+
+Get audit logs with filtering.
+
+**Query Parameters:**
+- `event_type` (optional): Filter by event type
+- `user_id` (optional): Filter by user ID
+- `resource_id` (optional): Filter by resource ID
+- `start_date` (optional): Start date (ISO format)
+- `end_date` (optional): End date (ISO format)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "logs": [
+      {
+        "event_id": "evt_a1b2c3d4e5f6",
+        "event_type": "data_access",
         "user_id": "user123",
-        "project_id": "project456"
-    })
-    
-    if response.status_code == 200:
-        result = response.json()
-        if result["success"]:
-            print(f"Success: {result['model_id']}")
-        else:
-            print(f"Error: {result['error']['message']}")
-    else:
-        print(f"HTTP Error: {response.status_code}")
-        
-except requests.exceptions.RequestException as e:
-    print(f"Request failed: {e}")
+        "resource_id": "building_001",
+        "action": "read",
+        "timestamp": "2024-12-19T10:30:00Z",
+        "correlation_id": "corr_123456",
+        "details": { ... },
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0...",
+        "success": true
+      }
+    ],
+    "total_count": 1,
+    "filters_applied": { ... }
+  }
+}
 ```
 
-## Best Practices
+#### Generate Compliance Report
+**POST** `/security/audit/compliance-report`
 
-### 1. Request Optimization
-- Use appropriate batch sizes for large datasets
-- Include only necessary fields in queries
-- Use pagination for large result sets
+Generate compliance report.
 
-### 2. Error Handling
-- Always check response status codes
-- Implement retry logic for transient errors
-- Log errors for debugging
-
-### 3. Performance
-- Use connection pooling for multiple requests
-- Cache frequently accessed data
-- Use compression for large payloads
-
-### 4. Security
-- Validate all input data
-- Use HTTPS in production
-- Implement rate limiting
-- Sanitize SVG data
-
-### 5. Monitoring
-- Track API usage and performance
-- Monitor error rates
-- Set up alerts for critical issues
-
-## Examples
-
-### Complete Workflow Example
-```python
-import requests
-import json
-
-class ArxosClient:
-    def __init__(self, base_url: str, token: str):
-        self.base_url = base_url
-        self.headers = {"Authorization": f"Bearer {token}"}
-    
-    def assemble_bim(self, svg_data: str, user_id: str, project_id: str):
-        """Assemble BIM from SVG data."""
-        response = requests.post(
-            f"{self.base_url}/bim/assemble",
-            headers=self.headers,
-            json={
-                "svg_data": svg_data,
-                "user_id": user_id,
-                "project_id": project_id
-            }
-        )
-        return response.json()
-    
-    def query_rooms(self, model_id: str, user_id: str, project_id: str):
-        """Query rooms in BIM model."""
-        response = requests.post(
-            f"{self.base_url}/bim/query",
-            headers=self.headers,
-            json={
-                "model_id": model_id,
-                "user_id": user_id,
-                "project_id": project_id,
-                "query": {"type": "room"}
-            }
-        )
-        return response.json()
-    
-    def export_model(self, model_id: str, user_id: str, project_id: str, format: str):
-        """Export BIM model."""
-        response = requests.post(
-            f"{self.base_url}/bim/export",
-            headers=self.headers,
-            json={
-                "model_id": model_id,
-                "user_id": user_id,
-                "project_id": project_id,
-                "format": format
-            }
-        )
-        return response.json()
-
-# Usage
-client = ArxosClient("http://localhost:8000", "your_token")
-
-# Assemble BIM
-svg_data = "<svg>...</svg>"
-result = client.assemble_bim(svg_data, "user123", "project456")
-model_id = result["model_id"]
-
-# Query rooms
-rooms = client.query_rooms(model_id, "user123", "project456")
-
-# Export model
-export = client.export_model(model_id, "user123", "project456", "json")
+**Request Body:**
+```json
+{
+  "report_type": "data_access",
+  "start_date": "2024-12-01T00:00:00Z",
+  "end_date": "2024-12-19T23:59:59Z"
+}
 ```
 
-### Batch Processing Example
-```python
-def process_multiple_svgs(svg_files: list, client: ArxosClient):
-    """Process multiple SVG files in batch."""
-    results = []
-    
-    for svg_file in svg_files:
-        with open(svg_file, 'r') as f:
-            svg_data = f.read()
-        
-        try:
-            result = client.assemble_bim(svg_data, "user123", "project456")
-            results.append({
-                "file": svg_file,
-                "success": True,
-                "model_id": result["model_id"]
-            })
-        except Exception as e:
-            results.append({
-                "file": svg_file,
-                "success": False,
-                "error": str(e)
-            })
-    
-    return results
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "report_type": "data_access",
+    "total_events": 1250,
+    "unique_users": 45,
+    "unique_resources": 23,
+    "successful_access": 1200,
+    "failed_access": 50,
+    "events_by_user": { ... },
+    "events_by_resource": { ... }
+  }
+}
 ```
 
-### Webhook Integration Example
-```python
-from flask import Flask, request
+#### Enforce Retention Policies
+**POST** `/security/audit/enforce-retention`
 
-app = Flask(__name__)
+Enforce data retention policies.
 
-@app.route('/webhook', methods=['POST'])
-def webhook_handler():
-    """Handle webhook events from Arxos API."""
-    event = request.json
-    
-    if event["event"] == "bim.assembled":
-        # Handle BIM assembly completion
-        model_id = event["data"]["model_id"]
-        print(f"BIM model {model_id} assembled successfully")
-        
-    elif event["event"] == "bim.exported":
-        # Handle BIM export completion
-        export_id = event["data"]["export_id"]
-        print(f"BIM export {export_id} completed")
-    
-    return {"status": "received"}, 200
-
-if __name__ == "__main__":
-    app.run(port=5000)
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Retention policies enforced successfully",
+    "timestamp": "2024-12-19T10:30:00Z"
+  }
+}
 ```
 
-## Troubleshooting
+#### Get Audit Metrics
+**GET** `/security/audit/metrics`
 
-### Common Issues
+Get audit trail performance metrics.
 
-#### 1. Authentication Errors
-**Problem:** 401 Unauthorized errors
-**Solution:** Check token validity and expiration
-
-#### 2. Validation Errors
-**Problem:** 400 Bad Request with validation errors
-**Solution:** Validate SVG data format and required fields
-
-#### 3. Processing Timeouts
-**Problem:** Long processing times for large SVGs
-**Solution:** Use batch processing or optimize SVG size
-
-#### 4. Memory Issues
-**Problem:** Out of memory errors
-**Solution:** Process smaller batches or increase server memory
-
-#### 5. Network Issues
-**Problem:** Connection timeouts
-**Solution:** Implement retry logic with exponential backoff
-
-### Debug Mode
-Enable debug logging:
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_events": 1250,
+    "events_by_type": {
+      "data_access": 800,
+      "user_login": 200,
+      "permission_change": 50,
+      "encryption_operation": 200
+    },
+    "average_logging_time_ms": 0.8
+  }
+}
 ```
 
-### Performance Monitoring
-Monitor API performance:
-```python
-import time
+### Role-Based Access Control (RBAC)
 
-start_time = time.time()
-response = client.assemble_bim(svg_data, user_id, project_id)
-processing_time = time.time() - start_time
-print(f"Processing time: {processing_time:.2f} seconds")
+#### Create Role
+**POST** `/security/rbac/roles`
+
+Create role with specific permissions.
+
+**Request Body:**
+```json
+{
+  "role_name": "Building Administrator",
+  "permissions": ["building:read", "building:write", "floor:read", "system:read"],
+  "description": "Full building management permissions"
+}
 ```
 
-### Support
-For additional support:
-- Check the logs for detailed error messages
-- Review the API documentation
-- Contact the development team with specific error details 
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "role_id": "role_a1b2c3d4e5f6",
+    "role_name": "Building Administrator",
+    "permissions": ["building:read", "building:write", "floor:read", "system:read"],
+    "description": "Full building management permissions"
+  }
+}
+```
+
+#### Assign User to Role
+**POST** `/security/rbac/assign`
+
+Assign user to role.
+
+**Request Body:**
+```json
+{
+  "user_id": "user123",
+  "role_id": "role_a1b2c3d4e5f6"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "User user123 assigned to role role_a1b2c3d4e5f6",
+    "user_id": "user123",
+    "role_id": "role_a1b2c3d4e5f6"
+  }
+}
+```
+
+#### Check Permission
+**POST** `/security/rbac/check-permission`
+
+Check if user has permission for action on resource.
+
+**Request Body:**
+```json
+{
+  "user_id": "user123",
+  "resource": "building",
+  "action": "read"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user_id": "user123",
+    "resource": "building",
+    "action": "read",
+    "has_permission": true
+  }
+}
+```
+
+#### Get User Permissions
+**GET** `/security/rbac/users/{user_id}/permissions`
+
+Get all permissions for user.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "user_id": "user123",
+    "permissions": ["building:read", "building:write", "floor:read", "system:read"],
+    "permission_count": 4
+  }
+}
+```
+
+#### Remove User from Role
+**DELETE** `/security/rbac/assign`
+
+Remove user from role.
+
+**Request Body:**
+```json
+{
+  "user_id": "user123",
+  "role_id": "role_a1b2c3d4e5f6"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "User user123 removed from role role_a1b2c3d4e5f6",
+    "user_id": "user123",
+    "role_id": "role_a1b2c3d4e5f6"
+  }
+}
+```
+
+#### Get RBAC Metrics
+**GET** `/security/rbac/metrics`
+
+Get RBAC performance metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_permission_checks": 5000,
+    "successful_checks": 4800,
+    "failed_checks": 200,
+    "average_check_time_ms": 0.8
+  }
+}
+```
+
+### AHJ API Integration
+
+#### Create Inspection Layer
+**POST** `/security/ahj/inspections`
+
+Create AHJ inspection layer.
+
+**Request Body:**
+```json
+{
+  "building_id": "building_001",
+  "ahj_id": "ahj_001",
+  "inspector_id": "inspector_123",
+  "metadata": {
+    "inspection_type": "annual",
+    "priority": "high"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "layer_id": "layer_a1b2c3d4e5f6",
+    "building_id": "building_001",
+    "ahj_id": "ahj_001",
+    "inspector_id": "inspector_123",
+    "created_at": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+#### Add Inspection Annotation
+**POST** `/security/ahj/annotations`
+
+Add inspection annotation.
+
+**Request Body:**
+```json
+{
+  "layer_id": "layer_a1b2c3d4e5f6",
+  "inspector_id": "inspector_123",
+  "location": {
+    "floor": 1,
+    "room": "101",
+    "system": "fire_safety"
+  },
+  "annotation_type": "violation",
+  "description": "Missing fire extinguisher in room 101",
+  "severity": "critical",
+  "code_reference": "IFC 906.1",
+  "image_attachments": ["violation_photo_001.jpg"],
+  "metadata": {
+    "priority": "high"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "annotation_id": "ann_a1b2c3d4e5f6",
+    "layer_id": "layer_a1b2c3d4e5f6",
+    "annotation_type": "violation",
+    "severity": "critical",
+    "created_at": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+#### Add Code Violation
+**POST** `/security/ahj/violations`
+
+Add building code violation.
+
+**Request Body:**
+```json
+{
+  "layer_id": "layer_a1b2c3d4e5f6",
+  "inspector_id": "inspector_123",
+  "code_section": "IFC 906.1",
+  "description": "Fire extinguisher required but not present",
+  "severity": "critical",
+  "location": {
+    "floor": 1,
+    "room": "101"
+  },
+  "required_action": "Install fire extinguisher within 30 days",
+  "deadline": "2025-01-18T10:30:00Z",
+  "metadata": {
+    "priority": "high"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "violation_id": "viol_a1b2c3d4e5f6",
+    "layer_id": "layer_a1b2c3d4e5f6",
+    "code_section": "IFC 906.1",
+    "severity": "critical",
+    "created_at": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+#### Get Inspection History
+**GET** `/security/ahj/inspections/{layer_id}`
+
+Get complete inspection history.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "layer_id": "layer_a1b2c3d4e5f6",
+    "building_id": "building_001",
+    "ahj_id": "ahj_001",
+    "inspector_id": "inspector_123",
+    "created_at": "2024-12-19T10:30:00Z",
+    "status": "violation_found",
+    "annotations": [
+      {
+        "annotation_id": "ann_a1b2c3d4e5f6",
+        "timestamp": "2024-12-19T10:30:00Z",
+        "type": "violation",
+        "description": "Missing fire extinguisher in room 101",
+        "severity": "critical",
+        "code_reference": "IFC 906.1",
+        "location": { ... }
+      }
+    ],
+    "violations": [
+      {
+        "violation_id": "viol_a1b2c3d4e5f6",
+        "timestamp": "2024-12-19T10:30:00Z",
+        "code_section": "IFC 906.1",
+        "description": "Fire extinguisher required but not present",
+        "severity": "critical",
+        "required_action": "Install fire extinguisher within 30 days",
+        "deadline": "2025-01-18T10:30:00Z",
+        "status": "open"
+      }
+    ],
+    "metadata": { ... }
+  }
+}
+```
+
+#### Get AHJ Jurisdictions
+**GET** `/security/ahj/jurisdictions`
+
+Get all supported AHJ jurisdictions.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "jurisdictions": [
+      {
+        "ahj_id": "ahj_001",
+        "name": "City of Seattle Building Department",
+        "state": "WA",
+        "type": "municipal",
+        "contact_info": {
+          "phone": "(206) 684-8600",
+          "email": "building@seattle.gov",
+          "address": "700 5th Ave, Seattle, WA 98104"
+        },
+        "supported_codes": ["IBC", "IRC", "IMC", "IFC", "IEBC"]
+      }
+    ],
+    "total_count": 3
+  }
+}
+```
+
+#### Get Building Inspections
+**GET** `/security/ahj/buildings/{building_id}/inspections`
+
+Get all inspections for a building.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "building_id": "building_001",
+    "inspections": [
+      {
+        "layer_id": "layer_a1b2c3d4e5f6",
+        "ahj_id": "ahj_001",
+        "inspector_id": "inspector_123",
+        "created_at": "2024-12-19T10:30:00Z",
+        "status": "violation_found",
+        "annotation_count": 1,
+        "violation_count": 1
+      }
+    ],
+    "total_count": 1
+  }
+}
+```
+
+#### Update Violation Status
+**PUT** `/security/ahj/violations/{violation_id}`
+
+Update violation status.
+
+**Request Body:**
+```json
+{
+  "status": "in_progress",
+  "notes": "Fire extinguisher ordered"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "violation_id": "viol_a1b2c3d4e5f6",
+    "status": "in_progress",
+    "updated_at": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+#### Generate AHJ Compliance Report
+**POST** `/security/ahj/compliance-report`
+
+Generate compliance report for building.
+
+**Request Body:**
+```json
+{
+  "building_id": "building_001",
+  "start_date": "2024-12-01T00:00:00Z",
+  "end_date": "2024-12-19T23:59:59Z"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "building_id": "building_001",
+    "report_generated": "2024-12-19T10:30:00Z",
+    "total_inspections": 1,
+    "total_violations": 1,
+    "violations_by_severity": {
+      "minor": 0,
+      "moderate": 0,
+      "major": 0,
+      "critical": 1
+    },
+    "open_violations": 1,
+    "resolved_violations": 0,
+    "compliance_score": 75.0
+  }
+}
+```
+
+#### Get AHJ Metrics
+**GET** `/security/ahj/metrics`
+
+Get AHJ API performance metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_inspections": 50,
+    "total_annotations": 125,
+    "total_violations": 75,
+    "average_inspection_time_ms": 85.0,
+    "jurisdictions_supported": 3
+  }
+}
+```
+
+### Data Retention
+
+#### Create Retention Policy
+**POST** `/security/retention/policies`
+
+Create data retention policy.
+
+**Request Body:**
+```json
+{
+  "data_type": "building_data",
+  "retention_period_days": 1825,
+  "deletion_strategy": "archive_delete",
+  "description": "Building data - 5 year retention",
+  "metadata": {
+    "compliance_standard": "SOX"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "policy_id": "policy_a1b2c3d4e5f6",
+    "data_type": "building_data",
+    "retention_period_days": 1825,
+    "deletion_strategy": "archive_delete",
+    "description": "Building data - 5 year retention"
+  }
+}
+```
+
+#### Apply Retention Policy
+**POST** `/security/retention/apply`
+
+Apply retention policy to data.
+
+**Request Body:**
+```json
+{
+  "data_id": "building_001",
+  "policy_id": "policy_a1b2c3d4e5f6",
+  "data_type": "building_data"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data_id": "building_001",
+    "policy_id": "policy_a1b2c3d4e5f6",
+    "applied_at": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+#### Schedule Data Deletion
+**POST** `/security/retention/schedule-deletion`
+
+Schedule data for deletion.
+
+**Request Body:**
+```json
+{
+  "data_id": "temp_data_789",
+  "deletion_date": "2024-12-20T10:30:00Z",
+  "deletion_strategy": "hard_delete"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "job_id": "job_a1b2c3d4e5f6",
+    "data_id": "temp_data_789",
+    "scheduled_at": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+#### Execute Retention Policies
+**POST** `/security/retention/execute`
+
+Execute scheduled retention policies.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "jobs_executed": 5,
+    "jobs_failed": 0,
+    "data_deleted": 25,
+    "data_archived": 10,
+    "errors": []
+  }
+}
+```
+
+#### Archive Data
+**POST** `/security/retention/archive`
+
+Archive data for long-term storage.
+
+**Request Body:**
+```json
+{
+  "data_id": "old_building_data",
+  "archive_path": "/custom/archive/path"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data_id": "old_building_data",
+    "archived_at": "2024-12-19T10:30:00Z",
+    "success": true
+  }
+}
+```
+
+#### Get Retention Policies
+**GET** `/security/retention/policies`
+
+Get all retention policies.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "policies": [
+      {
+        "policy_id": "policy_a1b2c3d4e5f6",
+        "data_type": "building_data",
+        "retention_period_days": 1825,
+        "deletion_strategy": "archive_delete",
+        "description": "Building data - 5 year retention",
+        "created_at": "2024-12-19T10:30:00Z",
+        "active": true,
+        "metadata": { ... }
+      }
+    ],
+    "total_count": 8
+  }
+}
+```
+
+#### Get Data Lifecycle
+**GET** `/security/retention/lifecycle`
+
+Get data lifecycle information.
+
+**Query Parameters:**
+- `data_id` (optional): Specific data ID
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "lifecycle": [
+      {
+        "data_id": "building_001",
+        "data_type": "building_data",
+        "policy_id": "policy_a1b2c3d4e5f6",
+        "created_at": "2024-12-19T10:30:00Z",
+        "last_accessed": "2024-12-19T10:30:00Z",
+        "deletion_date": "2029-12-19T10:30:00Z",
+        "status": "active",
+        "metadata": { ... }
+      }
+    ],
+    "total_count": 1
+  }
+}
+```
+
+#### Generate Retention Compliance Report
+**POST** `/security/retention/compliance-report`
+
+Generate compliance report for data retention.
+
+**Request Body:**
+```json
+{
+  "start_date": "2024-12-01T00:00:00Z",
+  "end_date": "2024-12-19T23:59:59Z"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "report_generated": "2024-12-19T10:30:00Z",
+    "total_data_items": 100,
+    "active_data": 80,
+    "archived_data": 15,
+    "deleted_data": 5,
+    "compliance_violations": 0,
+    "compliance_score": 100.0,
+    "data_by_type": {
+      "building_data": 50,
+      "user_data": 30,
+      "audit_logs": 20
+    }
+  }
+}
+```
+
+#### Get Retention Metrics
+**GET** `/security/retention/metrics`
+
+Get data retention performance metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "total_policies": 8,
+    "total_data_items": 100,
+    "total_deletions": 25,
+    "total_archives": 15,
+    "average_deletion_time_ms": 150.0,
+    "compliance_violations": 0
+  }
+}
+```
+
+### Integrated Security
+
+#### Secure Data Access
+**POST** `/security/secure-access`
+
+Secure data access with full security controls.
+
+**Request Body:**
+```json
+{
+  "user_id": "user123",
+  "resource_id": "building",
+  "action": "read",
+  "data": {
+    "building_info": "sensitive data"
+  },
+  "data_type": "building_data",
+  "correlation_id": "corr_123456"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data": "encrypted_data_here",
+    "privacy_metadata": {
+      "classification": "internal",
+      "encryption_required": true,
+      "audit_required": true,
+      "retention_days": 730,
+      "sharing_allowed": false
+    }
+  }
+}
+```
+
+#### Get Security Metrics
+**GET** `/security/metrics`
+
+Get comprehensive security metrics.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "privacy_controls": {
+      "data_classifications": 8,
+      "privacy_rules": 5
+    },
+    "encryption": {
+      "total_operations": 1250,
+      "average_time_ms": 10.0
+    },
+    "audit_trail": {
+      "total_events": 5000,
+      "average_logging_time_ms": 0.8
+    },
+    "rbac": {
+      "total_permission_checks": 5000,
+      "average_check_time_ms": 0.8
+    },
+    "overall": {
+      "total_operations": 6250,
+      "average_operation_time_ms": 5.4
+    }
+  }
+}
+```
+
+#### Security Health Check
+**GET** `/security/health`
+
+Health check for security services.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "services": {
+      "privacy_controls": "operational",
+      "encryption": "operational",
+      "audit_trail": "operational",
+      "rbac": "operational",
+      "ahj_api": "operational",
+      "data_retention": "operational"
+    },
+    "timestamp": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+---
+
+## 🔧 Core Platform Endpoints
+
+### Health Check
+**GET** `/health`
+
+Health check endpoint.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "message": "SVG-BIM API is running",
+  "version": "1.0.0"
+}
+```
+
+### SVG Upload
+**POST** `/upload/svg`
+
+Upload and parse SVG file.
+
+**Request:**
+```http
+POST /upload/svg
+Content-Type: multipart/form-data
+
+file: [SVG file]
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "SVG uploaded and parsed successfully",
+  "element_count": 150,
+  "svg_id": "svg_150_12345"
+}
+```
+
+### BIM Assembly
+**POST** `/assemble/bim`
+
+Assemble BIM from SVG content.
+
+**Request:**
+```http
+POST /assemble/bim
+Content-Type: application/x-www-form-urlencoded
+
+svg_content: <svg>...</svg>
+format: json
+validation_level: standard
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "BIM assembled successfully",
+  "file_path": "/tmp/bim_12345.json",
+  "format": "json"
+}
+```
+
+### BIM Export
+**GET** `/export/bim/{file_id}`
+
+Export BIM data in specified format.
+
+**Query Parameters:**
+- `format` (optional): Export format (json, xml, etc.)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "BIM exported successfully",
+  "file_path": "/tmp/bim_12345.json",
+  "format": "json"
+}
+```
+
+### BIM Query
+**GET** `/query/bim/{file_id}`
+
+Query BIM data.
+
+**Query Parameters:**
+- `query_type` (optional): Query type (summary, elements, systems, etc.)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "summary": {
+      "element_count": 150,
+      "system_count": 5,
+      "space_count": 10
+    }
+  },
+  "count": 150
+}
+```
+
+### File Download
+**GET** `/download/{file_path:path}`
+
+Download generated files.
+
+**Response:**
+File download with appropriate headers.
+
+---
+
+## 📊 Error Codes
+
+| Code | Description | HTTP Status |
+|------|-------------|-------------|
+| `VALIDATION_ERROR` | Invalid input parameters | 400 |
+| `AUTHENTICATION_ERROR` | Invalid or missing authentication | 401 |
+| `AUTHORIZATION_ERROR` | Insufficient permissions | 403 |
+| `NOT_FOUND` | Resource not found | 404 |
+| `RATE_LIMIT_EXCEEDED` | Too many requests | 429 |
+| `INTERNAL_ERROR` | Internal server error | 500 |
+| `SERVICE_UNAVAILABLE` | Service temporarily unavailable | 503 |
+
+---
+
+## 🔒 Security Considerations
+
+### Authentication
+- All endpoints require valid authentication tokens
+- Tokens expire after 24 hours
+- Refresh tokens available for extended sessions
+
+### Rate Limiting
+- 1000 requests per hour per user
+- 100 requests per minute per endpoint
+- Rate limit headers included in responses
+
+### Data Protection
+- All sensitive data encrypted at rest
+- TLS 1.3 for data in transit
+- Audit trail for all data access
+- Privacy controls applied automatically
+
+### Compliance
+- GDPR compliant data handling
+- HIPAA compliant for healthcare data
+- SOX compliant audit trails
+- Industry-standard security practices
+
+---
+
+## 📚 Additional Resources
+
+- [User Guide](./USER_GUIDE.md) - End-user documentation
+- [Admin Guide](./ADMIN_GUIDE.md) - System administration
+- [Integration Guide](./INTEGRATION_GUIDE.md) - Third-party integrations
+- [Troubleshooting](./TROUBLESHOOTING.md) - Common issues and solutions
+
+---
+
+**API Version**: 1.0.0  
+**Last Updated**: December 19, 2024  
+**Contact**: api-support@arxos.com 

@@ -17,10 +17,10 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, List, Any
 
-from services.symbol_manager import SymbolManager
+from ..services.symbol_manager import SymbolManager
 from services.json_symbol_library import JSONSymbolLibrary
-from services.symbol_schema_validator import SymbolSchemaValidator
-from routers.symbol_management import router
+from ..services.symbol_schema_validator import SymbolSchemaValidator
+from ..routers.symbol_management import router
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 

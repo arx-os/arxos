@@ -14,7 +14,7 @@ import time
 from typing import Dict, List, Any
 from unittest.mock import Mock, patch
 
-from services.robust_error_handling import (
+from ..services.robust_error_handling import (
     WarningCollector, RecoveryManager, ErrorReporter, RobustErrorHandler,
     WarningLevel, RecoveryStrategy, AssemblyWarning, RecoveryAction, ErrorReport,
     create_error_handler, handle_assembly_warning, handle_recovery_action,

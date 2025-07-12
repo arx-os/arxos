@@ -1,0 +1,22 @@
+{
+  "id": "av_box",
+  "name": "AV Box",
+  "description": "Generic audiovisual interface box for signal routing and processing",
+  "system": "av",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "<g id=\"av_box\">\n    <rect x=\"0\" y=\"0\" width=\"10\" height=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n    <text x=\"5\" y=\"8\" font-size=\"7\" text-anchor=\"middle\">AV</text>\n  </g>",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

@@ -1,0 +1,33 @@
+# Core dependencies for MCP Rule Validation Engine
+# Version requirements are conservative for stability
+
+# JSON processing and data validation
+jsonschema>=4.0.0
+
+# Date and time handling
+python-dateutil>=2.8.0
+
+# Mathematical operations and calculations
+numpy>=1.21.0
+
+# Path handling and file operations
+pathlib2>=2.3.0; python_version < "3.4"
+
+# Logging and debugging
+colorlog>=6.0.0
+
+# Type checking and validation
+typing-extensions>=4.0.0; python_version < "3.8"
+
+# Optional: PDF generation (if needed for advanced PDF reports)
+# reportlab>=3.6.0
+# weasyprint>=54.0
+
+# Optional: Advanced mathematical operations
+# scipy>=1.7.0
+
+# Development dependencies (optional)
+# pytest>=6.0.0
+# pytest-cov>=2.0.0
+# black>=21.0.0
+# flake8>=3.8.0 

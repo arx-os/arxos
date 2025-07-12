@@ -1,0 +1,49 @@
+{
+  "system": "telecommunications",
+  "display_name": "Main Distribution Frame (MDF)",
+  "description": "Main distribution frame for telecommunications cabling and equipment",
+  "svg": "<g id=\"mdf\">\n  <rect x=\"0\" y=\"0\" width=\"15\" height=\"15\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"7\" y=\"12\" font-size=\"7\" text-anchor=\"middle\">MDF</text>\n</g>\n",
+  "properties": {
+    "height": 15,
+    "width": 15,
+    "rack_units": "42U",
+    "cable_management": "horizontal_vertical",
+    "power_requirements": "120V_30A",
+    "cooling_requirements": "5000_BTU",
+    "backup_power": "UPS_required",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "service_entrance",
+      "description": "Service entrance cabling"
+    },
+    {
+      "type": "backbone",
+      "description": "Backbone cabling to IDFs"
+    },
+    {
+      "type": "power",
+      "description": "Power distribution"
+    },
+    {
+      "type": "grounding",
+      "description": "Telecommunications grounding"
+    },
+    {
+      "type": "telco_entrance",
+      "description": "Telecommunications service entrance"
+    }
+  ],
+  "tags": [
+    "telecommunications",
+    "distribution",
+    "main",
+    "cabling",
+    "infrastructure"
+  ]
+}

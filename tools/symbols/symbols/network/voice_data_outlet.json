@@ -1,0 +1,22 @@
+{
+  "id": "voice_data_outlet",
+  "name": "Voice/Data Outlet",
+  "description": "Combined voice and data outlet",
+  "system": "network",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

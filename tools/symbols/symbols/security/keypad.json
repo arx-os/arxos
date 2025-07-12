@@ -1,0 +1,44 @@
+{
+  "system": "security",
+  "display_name": "Keypad",
+  "description": "Numeric keypad for access control system",
+  "svg": "<g id=\"keypad\">\n  <rect x=\"0\" y=\"0\" width=\"10\" height=\"15\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"5\" y=\"12\" font-size=\"7\" text-anchor=\"middle\">KP</text>\n</g>\n",
+  "properties": {
+    "height": 15,
+    "width": 10,
+    "mounting_height": "48_inches",
+    "key_type": "numeric_alpha",
+    "backlight": "LED",
+    "voltage": "12V_DC",
+    "current_draw": "50_mA",
+    "communication": "wiegand_rs485",
+    "weather_resistance": "indoor_outdoor",
+    "tamper_protection": true,
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "access_control_network",
+      "description": "Connection to access control system"
+    },
+    {
+      "type": "power",
+      "description": "12V DC power supply"
+    },
+    {
+      "type": "ground",
+      "description": "Equipment grounding"
+    }
+  ],
+  "tags": [
+    "security",
+    "keypad",
+    "access_control",
+    "numeric",
+    "authentication"
+  ]
+}

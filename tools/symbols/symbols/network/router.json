@@ -1,0 +1,50 @@
+{
+  "system": "network",
+  "display_name": "Router",
+  "description": "Network router for data packet routing and network segmentation",
+  "svg": "<g id=\"router\">\n  <ellipse cx=\"10\" cy=\"10\" rx=\"10\" ry=\"6\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"10\" y=\"13\" font-size=\"8\" text-anchor=\"middle\">RTR</text>\n</g>\n",
+  "properties": {
+    "height": 12,
+    "width": 20,
+    "mounting_type": "rack_mounted",
+    "ports": 48162448,
+    "port_speed": "1G_10G_25G_100G",
+    "routing_protocols": "OSPF_BGP_RIP",
+    "switching_capacity": "1_10_100_Tbps",
+    "packet_forwarding_rate": "1_10_100_Mpps",
+    "power_consumption": "50_500W",
+    "redundancy": "dual_power_supply",
+    "management": "SNMP_SSH_Web",
+    "security": "ACL_firewall_VPN",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "network_interfaces",
+      "description": "Network interface connections"
+    },
+    {
+      "type": "power",
+      "description": "AC power supply"
+    },
+    {
+      "type": "console",
+      "description": "Console management interface"
+    },
+    {
+      "type": "management_network",
+      "description": "Management network connection"
+    }
+  ],
+  "tags": [
+    "network",
+    "router",
+    "routing",
+    "internetworking",
+    "data_communication"
+  ]
+}

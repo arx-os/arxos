@@ -1,0 +1,43 @@
+{
+  "system": "fire_alarm",
+  "display_name": "Horn/Strobe",
+  "description": "Combined horn and strobe light for fire alarm notification",
+  "svg": "<g id=\"horn_strobe\">\n  <rect x=\"0\" y=\"0\" width=\"20\" height=\"10\" fill=\"#fdd\" stroke=\"#000\"/>\n  <text x=\"10\" y=\"8\" font-size=\"8\" text-anchor=\"middle\">H/S</text>\n</g>\n",
+  "properties": {
+    "height": 10,
+    "width": 20,
+    "mounting_height": "80_inches",
+    "voltage": "24V_DC",
+    "current_draw": "100_mA",
+    "sound_level": "85_dB",
+    "strobe_intensity": "15_candela",
+    "weather_resistance": "indoor_outdoor",
+    "tamper_protection": true,
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "fire_alarm_loop",
+      "description": "Connection to fire alarm control panel"
+    },
+    {
+      "type": "power",
+      "description": "24V DC power supply"
+    },
+    {
+      "type": "ground",
+      "description": "Equipment grounding"
+    }
+  ],
+  "tags": [
+    "fire_alarm",
+    "notification",
+    "horn",
+    "strobe",
+    "safety"
+  ]
+}

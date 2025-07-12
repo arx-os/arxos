@@ -1,0 +1,22 @@
+{
+  "id": "valve_prv",
+  "name": "Pressure Reducing Valve (PRV)",
+  "description": "Pressure reducing valve to control water pressure",
+  "system": "plumbing",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

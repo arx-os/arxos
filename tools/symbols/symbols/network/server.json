@@ -1,0 +1,50 @@
+{
+  "system": "network",
+  "display_name": "Server",
+  "description": "Network server for data processing and application hosting",
+  "svg": "<g id=\"server\">\n  <rect x=\"0\" y=\"0\" width=\"20\" height=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"10\" y=\"8\" font-size=\"8\" text-anchor=\"middle\">SRV</text>\n</g>\n",
+  "properties": {
+    "height": 10,
+    "width": 20,
+    "mounting_type": "rack_mounted",
+    "rack_units": "1U_2U_4U",
+    "processor": "multi_core_x86_ARM",
+    "memory": "32GB_1TB",
+    "storage": "SSD_HDD_NVMe",
+    "network_interfaces": "1G_10G_25G_100G",
+    "power_consumption": "100_1000W",
+    "redundancy": "dual_power_supply",
+    "management": "IPMI_iDRAC_iLO",
+    "virtualization": "VMware_HyperV_KVM",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "network_interfaces",
+      "description": "Network interface connections"
+    },
+    {
+      "type": "power",
+      "description": "AC power supply"
+    },
+    {
+      "type": "management_network",
+      "description": "Management network connection"
+    },
+    {
+      "type": "console",
+      "description": "Console management interface"
+    }
+  ],
+  "tags": [
+    "network",
+    "server",
+    "computing",
+    "data_processing",
+    "hosting"
+  ]
+}

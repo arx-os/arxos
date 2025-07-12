@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planarx Collaboration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .collaboration-container {
+            display: flex;
+            height: 100vh;
+            background-color: #f8f9fa;
+        }
+        
+        .main-editor {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 8px;
+            margin: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .editor-header {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .editor-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .presence-indicators {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .presence-indicator {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            position: relative;
+        }
+        
+        .presence-indicator.away {
+            background: #ffc107;
+        }
+        
+        .presence-indicator.offline {
+            background: #6c757d;
+        }
+        
+        .typing-indicator {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        .sidebar {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .sidebar-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-tab.active {
+            border-bottom-color: #007bff;
+            background: #f8f9fa;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        
+        .comment-thread {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: white;
+        }
+        
+        .comment-header {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .comment-content {
+            padding: 15px;
+        }
+        
+        .comment-reply {
+            margin-left: 20px;
+            border-left: 3px solid #e9ecef;
+            padding-left: 15px;
+            margin-top: 10px;
+        }
+        
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .notification-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .notification-item.unread {
+            background-color: #e3f2fd;
+        }
+        
+        .notification-actions {
+            margin-top: 10px;
+        }
+        
+        .notification-action {
+            display: inline-block;
+            padding: 5px 10px;
+            margin-right: 5px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .reaction-button {
+            background: none;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin-right: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .reaction-button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .annotation-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #dc3545;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+        }
+        
+        .annotation-popup {
+            position: absolute;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .cursor-indicator {
+            position: absolute;
+            width: 2px;
+            height: 20px;
+            background: #007bff;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .status-bar {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .connection-status.connected {
+            background: #28a745;
+        }
+        
+        .connection-status.disconnected {
+            background: #dc3545;
+        }
+        
+        .connection-status.connecting {
+            background: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="collaboration-container">
+        <!-- Main Editor -->
+        <div class="main-editor">
+            <div class="editor-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">Draft: <span id="draft-title">Untitled Draft</span></h5>
+                        <small class="text-muted">Collaborative editing session</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="connection-status" id="connection-status"></div>
+                        <span id="connection-text">Connecting...</span>
+                        <div class="presence-indicators" id="presence-indicators">
+                            <!-- Presence indicators will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="editor-content" id="editor-content" contenteditable="true">
+                <p>Start editing your Planarx draft here...</p>
+                <p>Multiple users can edit this document simultaneously.</p>
+                <p>Changes will be synchronized in real-time.</p>
+            </div>
+            
+            <div class="status-bar">
+                <span id="version-info">Version: 0</span>
+                <span class="mx-3">|</span>
+                <span id="active-users">Active users: 0</span>
+                <span class="mx-3">|</span>
+                <span id="typing-status"></span>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-tabs">
+                <div class="sidebar-tab active" data-tab="comments">
+                    <i class="fas fa-comments"></i> Comments
+                </div>
+                <div class="sidebar-tab" data-tab="notifications">
+                    <i class="fas fa-bell"></i> Notifications
+                    <span class="badge bg-danger" id="notification-badge" style="display: none;">0</span>
+                </div>
+                <div class="sidebar-tab" data-tab="annotations">
+                    <i class="fas fa-map-marker-alt"></i> Annotations
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- Comments Tab -->
+                <div id="comments-tab" class="tab-content active">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" id="new-thread-btn">
+                            <i class="fas fa-plus"></i> New Thread
+                        </button>
+                    </div>
+                    <div id="comment-threads">
+                        <!-- Comment threads will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Notifications Tab -->
+                <div id="notifications-tab" class="tab-content" style="display: none;">
+                    <div class="mb-3">
+                        <button class="btn btn-outline-secondary btn-sm" id="mark-all-read-btn">
+                            Mark All Read
+                        </button>
+                    </div>
+                    <div id="notifications-list">
+                        <!-- Notifications will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Annotations Tab -->
+                <div id="annotations-tab" class="tab-content" style="display: none;">
+                    <div class="mb-3">
+                        <button class="btn btn-primary btn-sm" id="add-annotation-btn">
+                            <i class="fas fa-plus"></i> Add Annotation
+                        </button>
+                    </div>
+                    <div id="annotations-list">
+                        <!-- Annotations will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="newThreadModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Comment Thread</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="new-thread-form">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" id="thread-title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="thread-description" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Priority</label>
+                            <select class="form-select" id="thread-priority">
+                                <option value="low">Low</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tags</label>
+                            <input type="text" class="form-control" id="thread-tags" placeholder="tag1, tag2, tag3">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="create-thread-btn">Create Thread</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addAnnotationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Annotation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="annotation-form">
+                        <div class="mb-3">
+                            <label class="form-label">Annotation Type</label>
+                            <select class="form-select" id="annotation-type">
+                                <option value="highlight">Highlight</option>
+                                <option value="note">Note</option>
+                                <option value="issue">Issue</option>
+                                <option value="suggestion">Suggestion</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-control" id="annotation-content" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Style</label>
+                            <div class="row">
+                                <div class="col">
+                                    <input type="color" class="form-control" id="annotation-color" value="#ff0000">
+                                </div>
+                                <div class="col">
+                                    <select class="form-select" id="annotation-style">
+                                        <option value="circle">Circle</option>
+                                        <option value="square">Square</option>
+                                        <option value="arrow">Arrow</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="create-annotation-btn">Add Annotation</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class CollaborationApp {
+            constructor() {
+                this.draftId = new URLSearchParams(window.location.search).get('draft_id') || 'demo-draft';
+                this.userId = localStorage.getItem('user_id') || 'user-' + Math.random().toString(36).substr(2, 9);
+                this.userName = localStorage.getItem('user_name') || 'Anonymous User';
+                this.websocket = null;
+                this.isConnected = false;
+                this.activeUsers = new Map();
+                this.notifications = [];
+                this.threads = [];
+                this.annotations = [];
+                this.currentVersion = 0;
+                this.isTyping = false;
+                this.typingTimeout = null;
+                
+                this.initialize();
+            }
+            
+            initialize() {
+                this.setupEventListeners();
+                this.connectWebSocket();
+                this.loadInitialData();
+                this.setupEditor();
+            }
+            
+            setupEventListeners() {
+                // Tab switching
+                document.querySelectorAll('.sidebar-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        this.switchTab(e.target.closest('.sidebar-tab').dataset.tab);
+                    });
+                });
+                
+                // New thread button
+                document.getElementById('new-thread-btn').addEventListener('click', () => {
+                    new bootstrap.Modal(document.getElementById('newThreadModal')).show();
+                });
+                
+                // Create thread
+                document.getElementById('create-thread-btn').addEventListener('click', () => {
+                    this.createThread();
+                });
+                
+                // Add annotation button
+                document.getElementById('add-annotation-btn').addEventListener('click', () => {
+                    new bootstrap.Modal(document.getElementById('addAnnotationModal')).show();
+                });
+                
+                // Create annotation
+                document.getElementById('create-annotation-btn').addEventListener('click', () => {
+                    this.createAnnotation();
+                });
+                
+                // Mark all notifications read
+                document.getElementById('mark-all-read-btn').addEventListener('click', () => {
+                    this.markAllNotificationsRead();
+                });
+                
+                // Editor events
+                const editor = document.getElementById('editor-content');
+                editor.addEventListener('input', () => {
+                    this.handleEditorInput();
+                });
+                
+                editor.addEventListener('keydown', (e) => {
+                    this.handleEditorKeydown(e);
+                });
+                
+                editor.addEventListener('click', (e) => {
+                    this.handleEditorClick(e);
+                });
+            }
+            
+            connectWebSocket() {
+                const token = localStorage.getItem('auth_token') || 'demo-token';
+                const wsUrl = `ws://localhost:8000/collab/ws/${this.draftId}?token=${token}`;
+                
+                this.websocket = new WebSocket(wsUrl);
+                
+                this.websocket.onopen = () => {
+                    this.isConnected = true;
+                    this.updateConnectionStatus('connected');
+                    
+                    // Send join message
+                    this.websocket.send(JSON.stringify({
+                        type: 'join_session',
+                        user_id: this.userId,
+                        draft_id: this.draftId,
+                        display_name: this.userName
+                    }));
+                };
+                
+                this.websocket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    this.handleWebSocketMessage(data);
+                };
+                
+                this.websocket.onclose = () => {
+                    this.isConnected = false;
+                    this.updateConnectionStatus('disconnected');
+                    
+                    // Reconnect after 5 seconds
+                    setTimeout(() => {
+                        this.connectWebSocket();
+                    }, 5000);
+                };
+                
+                this.websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.updateConnectionStatus('disconnected');
+                };
+            }
+            
+            handleWebSocketMessage(data) {
+                switch (data.type) {
+                    case 'session_joined':
+                        this.handleSessionJoined(data);
+                        break;
+                    case 'user_joined':
+                        this.handleUserJoined(data);
+                        break;
+                    case 'user_left':
+                        this.handleUserLeft(data);
+                        break;
+                    case 'edit_operation':
+                        this.handleEditOperation(data.operation);
+                        break;
+                    case 'presence_update':
+                        this.handlePresenceUpdate(data);
+                        break;
+                    case 'cursor_update':
+                        this.handleCursorUpdate(data);
+                        break;
+                    case 'typing_indicator':
+                        this.handleTypingIndicator(data);
+                        break;
+                    case 'notification':
+                        this.handleNotification(data.notification);
+                        break;
+                }
+            }
+            
+            handleSessionJoined(data) {
+                this.currentVersion = data.current_version;
+                this.updateVersionInfo();
+                this.updateActiveUsers(data.active_users);
+            }
+            
+            handleUserJoined(data) {
+                this.activeUsers.set(data.user_id, data.presence);
+                this.updatePresenceIndicators();
+                this.updateActiveUsersCount();
+            }
+            
+            handleUserLeft(data) {
+                this.activeUsers.delete(data.user_id);
+                this.updatePresenceIndicators();
+                this.updateActiveUsersCount();
+            }
+            
+            handleEditOperation(operation) {
+                // Apply edit operation to editor
+                this.applyEditOperation(operation);
+                this.currentVersion = operation.version;
+                this.updateVersionInfo();
+            }
+            
+            handlePresenceUpdate(data) {
+                if (this.activeUsers.has(data.user_id)) {
+                    this.activeUsers.get(data.user_id).status = data.presence.status;
+                    this.updatePresenceIndicators();
+                }
+            }
+            
+            handleCursorUpdate(data) {
+                // Update cursor position for other users
+                this.updateCursorIndicator(data.user_id, data.cursor);
+            }
+            
+            handleTypingIndicator(data) {
+                if (data.user_id !== this.userId) {
+                    this.showTypingIndicator(data.user_id, data.is_typing);
+                }
+            }
+            
+            handleNotification(notification) {
+                this.notifications.unshift(notification);
+                this.updateNotificationsList();
+                this.updateNotificationBadge();
+                
+                // Show toast notification
+                this.showToast(notification.title, notification.message);
+            }
+            
+            applyEditOperation(operation) {
+                const editor = document.getElementById('editor-content');
+                
+                switch (operation.edit_type) {
+                    case 'insert':
+                        // Apply insert operation
+                        break;
+                    case 'delete':
+                        // Apply delete operation
+                        break;
+                    case 'update':
+                        // Apply update operation
+                        break;
+                }
+            }
+            
+            handleEditorInput() {
+                // Send typing indicator
+                this.setTypingStatus(true);
+                
+                // Clear typing timeout
+                if (this.typingTimeout) {
+                    clearTimeout(this.typingTimeout);
+                }
+                
+                // Set timeout to stop typing indicator
+                this.typingTimeout = setTimeout(() => {
+                    this.setTypingStatus(false);
+                }, 1000);
+            }
+            
+            handleEditorKeydown(e) {
+                // Send cursor position
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    
+                    this.sendCursorUpdate({
+                        x: rect.left,
+                        y: rect.top
+                    });
+                }
+            }
+            
+            handleEditorClick(e) {
+                // Handle annotation creation
+                if (e.target.classList.contains('annotation-marker')) {
+                    this.showAnnotationPopup(e.target, e);
+                }
+            }
+            
+            setTypingStatus(isTyping) {
+                if (this.isTyping !== isTyping) {
+                    this.isTyping = isTyping;
+                    
+                    if (this.websocket && this.isConnected) {
+                        this.websocket.send(JSON.stringify({
+                            type: 'typing_indicator',
+                            is_typing: isTyping
+                        }));
+                    }
+                }
+            }
+            
+            sendCursorUpdate(cursor) {
+                if (this.websocket && this.isConnected) {
+                    this.websocket.send(JSON.stringify({
+                        type: 'cursor_update',
+                        cursor: cursor
+                    }));
+                }
+            }
+            
+            updateConnectionStatus(status) {
+                const statusElement = document.getElementById('connection-status');
+                const textElement = document.getElementById('connection-text');
+                
+                statusElement.className = `connection-status ${status}`;
+                
+                switch (status) {
+                    case 'connected':
+                        textElement.textContent = 'Connected';
+                        break;
+                    case 'disconnected':
+                        textElement.textContent = 'Disconnected';
+                        break;
+                    case 'connecting':
+                        textElement.textContent = 'Connecting...';
+                        break;
+                }
+            }
+            
+            updatePresenceIndicators() {
+                const container = document.getElementById('presence-indicators');
+                container.innerHTML = '';
+                
+                this.activeUsers.forEach((presence, userId) => {
+                    if (userId !== this.userId) {
+                        const indicator = document.createElement('div');
+                        indicator.className = `presence-indicator ${presence.status}`;
+                        indicator.title = presence.display_name;
+                        indicator.textContent = presence.display_name.charAt(0).toUpperCase();
+                        
+                        if (presence.is_typing) {
+                            const typingDot = document.createElement('div');
+                            typingDot.className = 'typing-indicator';
+                            indicator.appendChild(typingDot);
+                        }
+                        
+                        container.appendChild(indicator);
+                    }
+                });
+            }
+            
+            updateActiveUsersCount() {
+                document.getElementById('active-users').textContent = `Active users: ${this.activeUsers.size + 1}`;
+            }
+            
+            updateVersionInfo() {
+                document.getElementById('version-info').textContent = `Version: ${this.currentVersion}`;
+            }
+            
+            switchTab(tabName) {
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Remove active class from all tabs
+                document.querySelectorAll('.sidebar-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab content
+                document.getElementById(`${tabName}-tab`).style.display = 'block';
+                
+                // Add active class to selected tab
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            }
+            
+            async loadInitialData() {
+                // Load notifications
+                await this.loadNotifications();
+                
+                // Load comment threads
+                await this.loadCommentThreads();
+                
+                // Load annotations
+                await this.loadAnnotations();
+            }
+            
+            async loadNotifications() {
+                try {
+                    const response = await fetch('/collab/notifications');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.notifications = data.notifications;
+                        this.updateNotificationsList();
+                        this.updateNotificationBadge();
+                    }
+                } catch (error) {
+                    console.error('Error loading notifications:', error);
+                }
+            }
+            
+            async loadCommentThreads() {
+                try {
+                    const response = await fetch(`/collab/drafts/${this.draftId}/threads`);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.threads = data.threads;
+                        this.updateCommentThreads();
+                    }
+                } catch (error) {
+                    console.error('Error loading comment threads:', error);
+                }
+            }
+            
+            async loadAnnotations() {
+                // Load annotations for the current draft
+                // This would typically fetch from the API
+                this.annotations = [];
+                this.updateAnnotationsList();
+            }
+            
+            updateNotificationsList() {
+                const container = document.getElementById('notifications-list');
+                container.innerHTML = '';
+                
+                this.notifications.forEach(notification => {
+                    const item = document.createElement('div');
+                    item.className = `notification-item ${notification.status === 'pending' ? 'unread' : ''}`;
+                    
+                    item.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <strong>${notification.title}</strong>
+                            <small class="text-muted">${new Date(notification.created_at).toLocaleTimeString()}</small>
+                        </div>
+                        <div class="mt-1">${notification.message}</div>
+                        <div class="notification-actions">
+                            ${notification.actions.map(action => 
+                                `<a href="${action.url}" class="notification-action">${action.label}</a>`
+                            ).join('')}
+                        </div>
+                    `;
+                    
+                    item.addEventListener('click', () => {
+                        this.markNotificationRead(notification.id);
+                    });
+                    
+                    container.appendChild(item);
+                });
+            }
+            
+            updateCommentThreads() {
+                const container = document.getElementById('comment-threads');
+                container.innerHTML = '';
+                
+                this.threads.forEach(thread => {
+                    const threadElement = document.createElement('div');
+                    threadElement.className = 'comment-thread';
+                    
+                    threadElement.innerHTML = `
+                        <div class="comment-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>${thread.title}</strong>
+                                <span class="badge bg-${thread.status === 'active' ? 'success' : 'secondary'}">${thread.status}</span>
+                            </div>
+                            <small class="text-muted">${thread.description}</small>
+                        </div>
+                        <div class="comment-content">
+                            <div class="comments-list">
+                                ${thread.comments.map(comment => `
+                                    <div class="comment ${comment.parent_id ? 'comment-reply' : ''}">
+                                        <div class="d-flex justify-content-between">
+                                            <strong>${comment.author_name}</strong>
+                                            <small class="text-muted">${new Date(comment.created_at).toLocaleTimeString()}</small>
+                                        </div>
+                                        <div class="mt-1">${comment.content}</div>
+                                        <div class="mt-2">
+                                            ${Object.entries(comment.reactions).map(([type, users]) => 
+                                                `<button class="reaction-button ${users.includes(this.userId) ? 'active' : ''}" 
+                                                         onclick="app.toggleReaction('${comment.id}', '${type}')">
+                                                    ${type} (${users.length})
+                                                </button>`
+                                            ).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="mt-3">
+                                <textarea class="form-control" placeholder="Add a comment..." rows="2"></textarea>
+                                <button class="btn btn-primary btn-sm mt-2">Reply</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(threadElement);
+                });
+            }
+            
+            updateAnnotationsList() {
+                const container = document.getElementById('annotations-list');
+                container.innerHTML = '';
+                
+                this.annotations.forEach(annotation => {
+                    const item = document.createElement('div');
+                    item.className = 'annotation-item border rounded p-2 mb-2';
+                    
+                    item.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <strong>${annotation.annotation_type}</strong>
+                            <small class="text-muted">${new Date(annotation.created_at).toLocaleTimeString()}</small>
+                        </div>
+                        <div class="mt-1">${annotation.content}</div>
+                    `;
+                    
+                    container.appendChild(item);
+                });
+            }
+            
+            updateNotificationBadge() {
+                const badge = document.getElementById('notification-badge');
+                const unreadCount = this.notifications.filter(n => n.status === 'pending').length;
+                
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+            
+            async createThread() {
+                const title = document.getElementById('thread-title').value;
+                const description = document.getElementById('thread-description').value;
+                const priority = document.getElementById('thread-priority').value;
+                const tags = document.getElementById('thread-tags').value.split(',').map(t => t.trim()).filter(t => t);
+                
+                try {
+                    const response = await fetch('/collab/threads', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            draft_id: this.draftId,
+                            arx_object_id: 'demo-object',
+                            object_type: 'element',
+                            object_path: '/main',
+                            title: title,
+                            description: description,
+                            priority: priority,
+                            tags: tags
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.threads.unshift(data.thread);
+                        this.updateCommentThreads();
+                        
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('newThreadModal')).hide();
+                        
+                        // Clear form
+                        document.getElementById('new-thread-form').reset();
+                    }
+                } catch (error) {
+                    console.error('Error creating thread:', error);
+                }
+            }
+            
+            async createAnnotation() {
+                const type = document.getElementById('annotation-type').value;
+                const content = document.getElementById('annotation-content').value;
+                const color = document.getElementById('annotation-color').value;
+                const style = document.getElementById('annotation-style').value;
+                
+                try {
+                    const response = await fetch(`/collab/threads/demo-thread/annotations`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            annotation_type: type,
+                            coordinates: { x: 100, y: 100 },
+                            content: content,
+                            style: { color: color, shape: style }
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.annotations.push(data.annotation);
+                        this.updateAnnotationsList();
+                        
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('addAnnotationModal')).hide();
+                        
+                        // Clear form
+                        document.getElementById('annotation-form').reset();
+                    }
+                } catch (error) {
+                    console.error('Error creating annotation:', error);
+                }
+            }
+            
+            async markNotificationRead(notificationId) {
+                try {
+                    const response = await fetch(`/collab/notifications/${notificationId}/read`, {
+                        method: 'PUT'
+                    });
+                    
+                    if (response.ok) {
+                        const notification = this.notifications.find(n => n.id === notificationId);
+                        if (notification) {
+                            notification.status = 'read';
+                            this.updateNotificationsList();
+                            this.updateNotificationBadge();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error marking notification read:', error);
+                }
+            }
+            
+            async markAllNotificationsRead() {
+                try {
+                    const response = await fetch('/collab/notifications/read-all', {
+                        method: 'PUT'
+                    });
+                    
+                    if (response.ok) {
+                        this.notifications.forEach(n => n.status = 'read');
+                        this.updateNotificationsList();
+                        this.updateNotificationBadge();
+                    }
+                } catch (error) {
+                    console.error('Error marking all notifications read:', error);
+                }
+            }
+            
+            async toggleReaction(commentId, reactionType) {
+                try {
+                    const response = await fetch(`/collab/comments/${commentId}/reactions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            reaction_type: reactionType
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        // Update UI
+                        this.loadCommentThreads();
+                    }
+                } catch (error) {
+                    console.error('Error toggling reaction:', error);
+                }
+            }
+            
+            showToast(title, message) {
+                // Create toast notification
+                const toast = document.createElement('div');
+                toast.className = 'toast position-fixed top-0 end-0 m-3';
+                toast.style.zIndex = '9999';
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        <strong class="me-auto">${title}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                `;
+                
+                document.body.appendChild(toast);
+                
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+                
+                // Remove toast after it's hidden
+                toast.addEventListener('hidden.bs.toast', () => {
+                    document.body.removeChild(toast);
+                });
+            }
+            
+            setupEditor() {
+                // Set up collaborative editing features
+                const editor = document.getElementById('editor-content');
+                
+                // Add annotation markers
+                this.addAnnotationMarkers();
+            }
+            
+            addAnnotationMarkers() {
+                // Add sample annotation markers
+                const editor = document.getElementById('editor-content');
+                
+                const marker = document.createElement('div');
+                marker.className = 'annotation-marker';
+                marker.style.left = '50px';
+                marker.style.top = '50px';
+                marker.textContent = '1';
+                marker.title = 'Annotation 1';
+                
+                editor.appendChild(marker);
+            }
+            
+            showAnnotationPopup(marker, event) {
+                // Show annotation details popup
+                const popup = document.createElement('div');
+                popup.className = 'annotation-popup';
+                popup.style.left = event.pageX + 'px';
+                popup.style.top = event.pageY + 'px';
+                
+                popup.innerHTML = `
+                    <strong>Annotation</strong><br>
+                    <small>This is a sample annotation</small>
+                `;
+                
+                document.body.appendChild(popup);
+                
+                // Remove popup when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', function removePopup() {
+                        document.body.removeChild(popup);
+                        document.removeEventListener('click', removePopup);
+                    });
+                }, 100);
+            }
+        }
+        
+        // Initialize the collaboration app
+        const app = new CollaborationApp();
+    </script>
+</body>
+</html> 

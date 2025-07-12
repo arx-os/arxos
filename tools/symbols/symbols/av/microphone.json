@@ -1,0 +1,22 @@
+{
+  "id": "microphone",
+  "name": "Microphone",
+  "description": "Audio microphone for audiovisual systems",
+  "system": "av",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "<g id=\"microphone\">\n    <ellipse cx=\"10\" cy=\"7\" rx=\"4\" ry=\"7\" fill=\"#fff\" stroke=\"#000\"/>\n    <rect x=\"8\" y=\"14\" width=\"4\" height=\"6\" fill=\"#fff\" stroke=\"#000\"/>\n    <text x=\"10\" y=\"20\" font-size=\"7\" text-anchor=\"middle\">MIC</text>\n  </g>",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

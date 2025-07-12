@@ -1,0 +1,367 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: 'https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK'
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@arxos.com'
+  smtp_auth_username: 'alerts@arxos.com'
+  smtp_auth_password: 'YOUR_SMTP_PASSWORD'
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'slack-notifications'
+  routes:
+    # Critical alerts - immediate notification to all channels
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 30m
+      routes:
+        - match:
+            service: api
+          receiver: 'api-critical-alerts'
+        - match:
+            service: database
+          receiver: 'database-critical-alerts'
+        - match:
+            service: system
+          receiver: 'system-critical-alerts'
+
+    # High severity alerts - notify within 5 minutes
+    - match:
+        severity: high
+      receiver: 'high-alerts'
+      group_wait: 30s
+      group_interval: 5s
+      repeat_interval: 1h
+
+    # Warning alerts - notify within 15 minutes
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 2m
+      group_interval: 10s
+      repeat_interval: 2h
+
+    # Low severity alerts - notify within 30 minutes
+    - match:
+        severity: low
+      receiver: 'low-alerts'
+      group_wait: 5m
+      group_interval: 30s
+      repeat_interval: 4h
+
+    # Business metrics alerts
+    - match:
+        service: business
+      receiver: 'business-alerts'
+      group_wait: 1m
+      group_interval: 10s
+      repeat_interval: 1h
+
+    # Security alerts - immediate notification
+    - match:
+        service: security
+      receiver: 'security-alerts'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 30m
+
+    # Deployment alerts
+    - match:
+        service: deployment
+      receiver: 'deployment-alerts'
+      group_wait: 1m
+      group_interval: 10s
+      repeat_interval: 1h
+
+inhibit_rules:
+  # Inhibit critical alerts when system is down
+  - source_match:
+      severity: 'critical'
+      alertname: 'ServiceDown'
+    target_match:
+      severity: 'critical'
+    equal: ['service']
+
+  # Inhibit warning alerts when critical alerts are firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['service', 'alertname']
+
+  # Inhibit low severity alerts when high severity alerts are firing
+  - source_match:
+      severity: 'high'
+    target_match:
+      severity: 'low'
+    equal: ['service', 'alertname']
+
+receivers:
+  # Default receiver for all alerts
+  - name: 'slack-notifications'
+    slack_configs:
+      - channel: '#arxos-alerts'
+        title: '{{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+
+  # Critical alerts - notify all channels immediately
+  - name: 'critical-alerts'
+    slack_configs:
+      - channel: '#arxos-critical'
+        title: '🚨 CRITICAL: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'oncall@arxos.com'
+        subject: '🚨 CRITICAL ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+    pagerduty_configs:
+      - routing_key: 'YOUR_PAGERDUTY_ROUTING_KEY'
+        description: '{{ template "pagerduty.description" . }}'
+        severity: '{{ template "pagerduty.severity" . }}'
+        client: 'Arxos AlertManager'
+        client_url: '{{ template "pagerduty.clientURL" . }}'
+        send_resolved: true
+
+  # API critical alerts
+  - name: 'api-critical-alerts'
+    slack_configs:
+      - channel: '#arxos-api-critical'
+        title: '🚨 API CRITICAL: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'api-team@arxos.com'
+        subject: '🚨 API CRITICAL ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+    pagerduty_configs:
+      - routing_key: 'YOUR_API_PAGERDUTY_ROUTING_KEY'
+        description: '{{ template "pagerduty.description" . }}'
+        severity: '{{ template "pagerduty.severity" . }}'
+        client: 'Arxos API AlertManager'
+        client_url: '{{ template "pagerduty.clientURL" . }}'
+        send_resolved: true
+
+  # Database critical alerts
+  - name: 'database-critical-alerts'
+    slack_configs:
+      - channel: '#arxos-database-critical'
+        title: '🚨 DATABASE CRITICAL: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'database-team@arxos.com'
+        subject: '🚨 DATABASE CRITICAL ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+    pagerduty_configs:
+      - routing_key: 'YOUR_DATABASE_PAGERDUTY_ROUTING_KEY'
+        description: '{{ template "pagerduty.description" . }}'
+        severity: '{{ template "pagerduty.severity" . }}'
+        client: 'Arxos Database AlertManager'
+        client_url: '{{ template "pagerduty.clientURL" . }}'
+        send_resolved: true
+
+  # System critical alerts
+  - name: 'system-critical-alerts'
+    slack_configs:
+      - channel: '#arxos-system-critical'
+        title: '🚨 SYSTEM CRITICAL: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'platform-team@arxos.com'
+        subject: '🚨 SYSTEM CRITICAL ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+    pagerduty_configs:
+      - routing_key: 'YOUR_SYSTEM_PAGERDUTY_ROUTING_KEY'
+        description: '{{ template "pagerduty.description" . }}'
+        severity: '{{ template "pagerduty.severity" . }}'
+        client: 'Arxos System AlertManager'
+        client_url: '{{ template "pagerduty.clientURL" . }}'
+        send_resolved: true
+
+  # High severity alerts
+  - name: 'high-alerts'
+    slack_configs:
+      - channel: '#arxos-high'
+        title: '⚠️ HIGH: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'oncall@arxos.com'
+        subject: '⚠️ HIGH ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+
+  # Warning alerts
+  - name: 'warning-alerts'
+    slack_configs:
+      - channel: '#arxos-warnings'
+        title: '⚠️ WARNING: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'devops@arxos.com'
+        subject: '⚠️ WARNING ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+
+  # Low severity alerts
+  - name: 'low-alerts'
+    slack_configs:
+      - channel: '#arxos-low'
+        title: 'ℹ️ LOW: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'devops@arxos.com'
+        subject: 'ℹ️ LOW ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+
+  # Business alerts
+  - name: 'business-alerts'
+    slack_configs:
+      - channel: '#arxos-business'
+        title: '📊 BUSINESS: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'product@arxos.com'
+        subject: '📊 BUSINESS ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+
+  # Security alerts
+  - name: 'security-alerts'
+    slack_configs:
+      - channel: '#arxos-security'
+        title: '🔒 SECURITY: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'security@arxos.com'
+        subject: '🔒 SECURITY ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+    pagerduty_configs:
+      - routing_key: 'YOUR_SECURITY_PAGERDUTY_ROUTING_KEY'
+        description: '{{ template "pagerduty.description" . }}'
+        severity: '{{ template "pagerduty.severity" . }}'
+        client: 'Arxos Security AlertManager'
+        client_url: '{{ template "pagerduty.clientURL" . }}'
+        send_resolved: true
+
+  # Deployment alerts
+  - name: 'deployment-alerts'
+    slack_configs:
+      - channel: '#arxos-deployment'
+        title: '🚀 DEPLOYMENT: {{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+        actions:
+          - type: button
+            text: 'View in Grafana'
+            url: '{{ template "slack.grafana.url" . }}'
+          - type: button
+            text: 'Runbook'
+            url: '{{ template "slack.runbook.url" . }}'
+        send_resolved: true
+    email_configs:
+      - to: 'devops@arxos.com'
+        subject: '🚀 DEPLOYMENT ALERT: {{ template "email.subject" . }}'
+        html: '{{ template "email.html" . }}'
+        send_resolved: true
+
+  # Webhook receiver for custom integrations
+  - name: 'webhook-receiver'
+    webhook_configs:
+      - url: 'http://arxos-webhook:8080/alert'
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: 'webhook-user'
+            password: 'YOUR_WEBHOOK_PASSWORD'
+
+templates:
+  - '/etc/alertmanager/template/*.tmpl' 

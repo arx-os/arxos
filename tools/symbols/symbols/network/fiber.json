@@ -1,0 +1,44 @@
+{
+  "system": "network",
+  "display_name": "Fiber Optic Cable",
+  "description": "Fiber optic cable for high-speed network data transmission",
+  "svg": "<g id=\"fiber\">\n  <line x1=\"0\" y1=\"10\" x2=\"20\" y2=\"10\" stroke=\"#a0f\" stroke-width=\"2\"/>\n  <text x=\"10\" y=\"7\" font-size=\"6\" text-anchor=\"middle\">FO</text>\n</g>\n",
+  "properties": {
+    "length": "variable",
+    "fiber_count": 2122448144,
+    "core_diameter": "9_microns_50_microns_62.5_microns",
+    "cladding_diameter": "125_microns",
+    "wavelength": "850_nm_1310_nm_1550_nm",
+    "max_distance": "10_km_40_km_80_km",
+    "jacket_type": "riser_plenum_outdoor",
+    "connector_type": "LC_SC_FC_ST",
+    "attenuation": "0.3_0.5_dB_per_km",
+    "bandwidth": "10_Gbps_100_Gbps_400_Gbps",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "fiber_connector",
+      "description": "Fiber optic connector termination"
+    },
+    {
+      "type": "network_equipment",
+      "description": "Network equipment connection"
+    },
+    {
+      "type": "patch_panel",
+      "description": "Fiber patch panel connection"
+    }
+  ],
+  "tags": [
+    "network",
+    "fiber_optic",
+    "cable",
+    "high_speed",
+    "data_transmission"
+  ]
+}

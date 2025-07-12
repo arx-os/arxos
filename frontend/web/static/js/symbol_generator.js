@@ -1,0 +1,7 @@
+// Basic Symbol Generator
+if (window.arxLogger) {
+  window.arxLogger.info('Symbol Generator loaded', {
+    component: 'symbol_generator',
+    version: '1.0.0'
+  });
+}

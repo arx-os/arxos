@@ -1,0 +1,404 @@
+{
+    "$schema": "https://app.cursor.sh/cursor.schema.json",
+    "projectName": "Arxos",
+    "description": "Arxos is an end-to-end infrastructure platform for buildings. It treats each building as a version-controlled repository containing SVG-BIM files, ASCII-BIM representations, structured object metadata, and audit logs. The system integrates mobile AR, CLI tools, and a logic engine to simulate infrastructure behavior.",
+    "architecture": {
+      "backend": "Go (Chi framework)",
+      "frontend": "HTML/X + Tailwind CSS (HTMX for interactivity)",
+      "database": "PostgreSQL with PostGIS for spatial queries",
+      "logic_services": "Python microservices for SVG parsing and object behavior",
+      "cloud": "DigitalOcean + Azure (for auth, AI, compliance)",
+      "mobile": "iOS (Swift + ARKit + LiDAR); Android planned",
+      "cli": "Go-based ArxOS with `arx` command suite",
+      "sdk": "Go + Python plugin system for extensions"
+    },
+    "coreConcepts": {
+      "The Hub": "Each building is a repo with SVGs, logs, metadata, and structured data. Pull request-style workflows ensure version control and auditability.",
+      "SVG-BIM": "Each floor is an SVG layer with toggleable MEP systems and smart symbols linked to JSON objects and behavior profiles.",
+      "ASCII-BIM": "Lightweight, text-based floor representations for CLI use and scripting.",
+      "AR Layer": "iOS app aligns AR overlays to SVG coordinates. Used for markup, inspection, and annotation.",
+      "Object Schema": "Uses SystemCode_ObjectType_Instance naming with JSON structure: id, coordinates, metadata, logs, and behavior_profile."
+    },
+    "keyModules": [
+      "svg-bim/ - floorplan markups with MEP layers",
+      "ascii-bim/ - terminal-friendly geometry",
+      "logbook/ - commit and annotation history",
+      "arxfile.yaml - repo metadata and permissions",
+      "data/ - object metadata and behavior in JSON"
+    ],
+    "repositoryStructure": {
+      "description": "Complete Arxos project repository structure as of 2024",
+      "repositories": [
+        {
+          "name": "arx-ai-services",
+          "purpose": "AI and machine learning services",
+          "status": "active"
+        },
+        {
+          "name": "arx-android",
+          "purpose": "Android mobile application (planned/early stage)",
+          "status": "development"
+        },
+        {
+          "name": "arx-arxlink",
+          "purpose": "ArxLink integration and related modules",
+          "status": "active"
+        },
+        {
+          "name": "arx-backend",
+          "purpose": "Go backend services (asset management, authentication, data persistence)",
+          "status": "active"
+        },
+        {
+          "name": "arx-bas-iot",
+          "purpose": "Building Automation System & IoT platform (device registry, telemetry, RF node firmware, protocol)",
+          "status": "active",
+          "github": "https://github.com/capstanistan/arx-bas-iot.git"
+        },
+        {
+          "name": "arx-cli",
+          "purpose": "Command-line interface tools",
+          "status": "active"
+        },
+        {
+          "name": "arx-cmms",
+          "purpose": "Computerized Maintenance Management System integration",
+          "status": "active"
+        },
+        {
+          "name": "arx-database",
+          "purpose": "Database schemas, migrations, and related scripts",
+          "status": "active"
+        },
+        {
+          "name": "arx-data-vendor",
+          "purpose": "Data vendor integration modules",
+          "status": "active"
+        },
+        {
+          "name": "arx-desktop",
+          "purpose": "Desktop application components",
+          "status": "active"
+        },
+        {
+          "name": "arx-docs",
+          "purpose": "Documentation, architecture, deployment, user guides, and API docs",
+          "status": "active"
+        },
+        {
+          "name": "arx-education",
+          "purpose": "Educational modules and resources",
+          "status": "active"
+        },
+        {
+          "name": "arx-infra",
+          "purpose": "Infrastructure scripts, deployment, monitoring, and alerting",
+          "status": "active"
+        },
+        {
+          "name": "arx-ios-app",
+          "purpose": "iOS mobile application (AR, fieldwork, markup)",
+          "status": "active"
+        },
+        {
+          "name": "arx-partners",
+          "purpose": "Partner integrations and related modules",
+          "status": "active"
+        },
+        {
+          "name": "arx-planarx",
+          "purpose": "PlanarX community and funding modules",
+          "status": "active"
+        },
+        {
+          "name": "arx-svg-engine",
+          "purpose": "SVG engine and related utilities",
+          "status": "active"
+        },
+        {
+          "name": "arx_svg_parser",
+          "purpose": "Main SVG/BIM processing, logic engine, analytics, API, validators, testbench, collaboration",
+          "status": "active"
+        },
+        {
+          "name": "arx-symbol-library",
+          "purpose": "Symbol definitions, metadata, and versioning",
+          "status": "active"
+        },
+        {
+          "name": "arx-web-frontend",
+          "purpose": "Web-based user interface (interactive SVG viewer, symbol browser, etc.)",
+          "status": "active"
+        }
+      ],
+      "organization": {
+        "totalRepositories": 20,
+        "primaryLanguage": "Python, Go, JavaScript/TypeScript",
+        "architecture": "Microservices with modular components",
+        "deployment": "Distributed across multiple repositories for independent development and deployment"
+      }
+    },
+    "systemCodes": {
+      "E": "Electrical (purple)",
+      "LV": "Low Voltage (orange)",
+      "FA": "Fire Alarm (pink)",
+      "N": "Network/Data (yellow)",
+      "M": "Mechanical (green)",
+      "P": "Plumbing (blue/red)",
+      "S": "Structural (black)"
+    },
+    "usageModes": {
+      "CLI": "Used for infrastructure-as-code style interaction, including init, push, annotate, and inspect commands.",
+      "Web": "HTMX-based UI for viewing and markup, respecting user permissions.",
+      "Mobile": "Offline-capable iOS native app for AR-based fieldwork and markup.",
+      "API": "Structured data endpoints for insurers, manufacturers, and authorities."
+    },
+    "revenueModel": {
+      "Data API": "Subscription or per-query access to anonymized building object data.",
+      "Contributor Shares": "Contributors earn percentage shares in buildings based on markup and metadata quality.",
+      "Licensing": "Platform and data licensed to building owners, contractors, and municipalities."
+    },
+    "technicalArchitecture": {
+      "dataFlow": [
+        "SVG Input: Building plans in SVG format",
+        "Symbol Recognition: Automatic symbol identification",
+        "BIM Assembly: Conversion to BIM model",
+        "Rule Validation: Building code compliance checking",
+        "Output Generation: Reports and visualizations"
+      ],
+      "componentDetails": {
+        "arx_svg_parser": {
+          "language": "Python 3.8+",
+          "framework": "FastAPI",
+          "purpose": "SVG processing and BIM assembly",
+          "keyFeatures": [
+            "JSON-based symbol library",
+            "Rule engine for compliance",
+            "REST API for integration",
+            "CLI tools for automation"
+          ]
+        },
+        "arx-symbol-library": {
+          "format": "JSON symbol definitions",
+          "organization": "System-based directory structure",
+          "validation": "JSON schema validation",
+          "features": [
+            "Mechanical, electrical, security systems",
+            "Rich metadata and properties",
+            "Connection and relationship data",
+            "Version control and history"
+          ]
+        },
+        "arx-backend": {
+          "language": "Go 1.19+",
+          "framework": "Gin or Echo",
+          "purpose": "High-performance backend services",
+          "features": [
+            "Asset management",
+            "User authentication",
+            "Data persistence",
+            "Real-time updates"
+          ]
+        },
+        "arx-web-frontend": {
+          "language": "JavaScript/TypeScript",
+          "framework": "React or Vue.js",
+          "purpose": "Web-based user interface",
+          "features": [
+            "Interactive SVG viewer",
+            "Symbol library browser",
+            "Compliance reporting",
+            "User management"
+          ]
+        }
+      },
+      "securityArchitecture": {
+        "authentication": [
+          "JWT Tokens: Secure token-based authentication",
+          "Password Hashing: bcrypt for password security",
+          "Session Management: Token expiration and refresh",
+          "Role-based Access: User role management"
+        ],
+        "authorization": [
+          "Resource Protection: Endpoint security",
+          "Permission Levels: Read, write, admin permissions",
+          "API Security: Rate limiting and input validation",
+          "Data Protection: Sensitive data encryption"
+        ],
+        "networkSecurity": [
+          "HTTPS: SSL/TLS encryption",
+          "Firewall: Network access control",
+          "VPN: Secure remote access",
+          "Monitoring: Security event monitoring"
+        ]
+      },
+      "performanceArchitecture": {
+        "cachingStrategy": [
+          "Memory Cache: In-memory symbol caching",
+          "Disk Cache: Persistent cache storage"
+        ],
+        "scaling": [
+          "Horizontal scaling with load balancing",
+          "Microservices architecture for scalability",
+          "Database optimization with indexing",
+          "CDN integration for static assets"
+        ]
+      }
+    },
+    "developmentWorkflow": {
+      "versionControl": {
+        "buildingRepos": "Each building is a version-controlled repository with commit history",
+        "pullRequests": "Markup changes submitted via pull request system",
+        "branching": "Support for feature branches and experimental changes",
+        "rollback": "Ability to rollback to previous building states"
+      },
+      "testing": {
+        "unitTests": "Comprehensive unit testing for all core modules",
+        "integrationTests": "End-to-end testing of SVG processing and BIM assembly",
+        "performanceTests": "Load testing for large building models",
+        "securityTests": "Penetration testing and vulnerability scanning"
+      },
+      "deployment": {
+        "staging": "Automated staging environment for testing",
+        "production": "Blue-green deployment with rollback capabilities",
+        "monitoring": "Real-time monitoring and alerting",
+        "backup": "Automated backup and disaster recovery"
+      }
+    },
+    "businessModel": {
+      "targetMarkets": {
+        "publicSector": "School districts, county governments, municipal facilities, universities",
+        "commercialProperty": "Small to mid-sized commercial property owners (1-20 buildings)",
+        "multiRegionOperators": "Chains like warehouses, medical offices, retail branches, logistics hubs"
+      },
+      "contributors": {
+        "serviceTechnicians": "Electricians, plumbers, HVAC techs, and general trades",
+        "specialtyTrades": "Low voltage, fire alarm, access control, structured cabling",
+        "freelancers": "Building inspectors, energy auditors, insurance assessors, independent MEP drafters"
+      },
+      "monetization": {
+        "saasLicensing": "Buildings pay per-square-foot per year to unlock editable building models",
+        "userLicensing": "Owners pay for technician access, with flat per-seat pricing",
+        "dataMonetization": "Aggregated, anonymized object data offered to insurers, planners, manufacturers",
+        "contributorRewards": "Builders who input verified data receive platform payouts or ownership shares",
+        "marketplaceCommissions": "Fees on service contracts, data licensing, or addon modules via ArxMarket"
+      }
+    },
+    "dataModels": {
+      "symbolObjects": {
+        "structure": {
+          "id": "Unique symbol identifier",
+          "name": "Human-readable name",
+          "system": "MEP system category",
+          "category": "Specific category within system",
+          "description": "Detailed description",
+          "svg": "SVG content and viewBox",
+          "properties": "Physical, electrical, mechanical, operational properties",
+          "connections": "Connection points and compatibility",
+          "metadata": "Version, creation, modification, funding source"
+        }
+      },
+      "bimObjects": {
+        "structure": {
+          "id": "Unique BIM element identifier",
+          "type": "IFC element type",
+          "name": "Human-readable name",
+          "description": "Detailed description",
+          "position": "3D coordinates (x, y, z)",
+          "dimensions": "Width, height, depth",
+          "properties": "Technical specifications",
+          "relationships": "Connections to other elements",
+          "metadata": "Creation, modification, author, project"
+        }
+      },
+      "versionControl": {
+        "version": {
+          "id": "Unique version identifier",
+          "floor_id": "Associated floor ID",
+          "building_id": "Associated building ID",
+          "branch": "Branch name",
+          "version_number": "Sequential version number",
+          "message": "Commit message",
+          "version_type": "major, minor, patch",
+          "created_by": "User who created version",
+          "created_at": "Creation timestamp",
+          "data_hash": "SHA256 hash of data",
+          "object_count": "Number of objects in version"
+        },
+        "branch": {
+          "name": "Branch name",
+          "floor_id": "Associated floor ID",
+          "building_id": "Associated building ID",
+          "base_version_id": "Base version for branch",
+          "description": "Branch description",
+          "created_by": "User who created branch",
+          "created_at": "Creation timestamp",
+          "status": "active, inactive, merged"
+        },
+        "mergeRequest": {
+          "id": "Unique merge request ID",
+          "source_version_id": "Source version to merge",
+          "target_version_id": "Target version to merge into",
+          "title": "Merge request title",
+          "description": "Merge request description",
+          "status": "open, approved, rejected, merged",
+          "created_by": "User who created request",
+          "created_at": "Creation timestamp",
+          "reviewers": "List of reviewer user IDs",
+          "conflicts": "List of conflicts"
+        }
+      }
+    },
+    "apiEndpoints": {
+      "versionControl": {
+        "versions": "/api/version-control/versions",
+        "branches": "/api/version-control/branches",
+        "mergeRequests": "/api/version-control/merge-requests",
+        "history": "/api/version-control/floors/{floor_id}/buildings/{building_id}/history"
+      },
+      "routeManagement": {
+        "routes": "/api/route-management/routes",
+        "waypoints": "/api/route-management/waypoints",
+        "optimization": "/api/route-management/optimize"
+      },
+      "floorManagement": {
+        "floors": "/api/floor-management/floors",
+        "objects": "/api/floor-management/objects",
+        "metadata": "/api/floor-management/metadata"
+      },
+      "bimOperations": {
+        "assembly": "/api/bim/assembly",
+        "validation": "/api/bim/validation",
+        "export": "/api/bim/export",
+        "import": "/api/bim/import"
+      },
+      "symbolManagement": {
+        "symbols": "/api/symbols",
+        "categories": "/api/symbols/categories",
+        "search": "/api/symbols/search",
+        "validation": "/api/symbols/validate"
+      }
+    },
+    "complianceAndRegulations": {
+      "jurisdictions": "Support for multiple jurisdictions (countries, states, cities)",
+      "categories": "Regulation categories and subcategories for organizing building codes",
+      "regulations": "Main regulation records with metadata and relationships",
+      "validation": "Automated compliance checking and validation",
+      "reporting": "Comprehensive compliance reporting and audit trails"
+    },
+    "currentStatus": {
+      "mvp": "Built with SVG-based floorplan viewer and markup tools",
+      "testing": "Underway on multiple school buildings in Hillsborough County",
+      "features": "Live pull-request style markup system and contributor attribution",
+      "roadmap": "In place for building the ArxSVGX engine, CLI tooling, and AR/AI workflows",
+      "target": "v1.0 enterprise-grade stack within 12 months"
+    },
+    "futureVision": {
+      "arxSVGX": "Custom CAD-grade file format replacing traditional SVG",
+      "arxOS": "Command-line interface for building-as-code",
+      "arxIDE": "Developer interface for buildings (Figma + VSCode + Packet Tracer)",
+      "arxLink": "Protocol for offline sync via packet radio, Bluetooth, local mesh networks",
+      "arxNet": "Data grid + simulation engine for portfolio-wide analysis",
+      "arxSure": "Infrastructure underwriting engine for smart insurance policies"
+    }
+  }

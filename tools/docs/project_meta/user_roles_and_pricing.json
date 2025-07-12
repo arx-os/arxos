@@ -1,0 +1,766 @@
+{
+  "platform_overview": {
+    "platform_name": "ARXOS",
+    "feature_name": "User Roles & Pricing System",
+    "architecture_type": "Modular Tier-based Access Control",
+    "primary_languages": ["Python", "JavaScript", "TypeScript"],
+    "deployment_model": "Role-based Access Control with Feature Flags",
+    "version": "1.0",
+    "last_updated": "2024-12-19"
+  },
+  "user_roles": {
+    "contractor": {
+      "description": "External contractors with limited access to markup and upload features",
+      "permissions": {
+        "arxide": true,
+        "arxkit_export": false,
+        "arxlink": false,
+        "cmms": false,
+        "arxsure": false,
+        "private_buildings": false,
+        "markup_access": true,
+        "upload_access": true,
+        "view_only": true
+      },
+      "restrictions": [
+        "Cannot access private buildings",
+        "Cannot export ArxKit files",
+        "Cannot sync with ArxLink",
+        "Cannot access CMMS features",
+        "Cannot access ArxSure features"
+      ],
+      "default_tier": "free"
+    },
+    "school_staff": {
+      "description": "School staff members with access to their school's buildings",
+      "permissions": {
+        "arxide": true,
+        "arxkit_export": true,
+        "arxlink": false,
+        "cmms": false,
+        "arxsure": false,
+        "private_buildings": true,
+        "markup_access": true,
+        "upload_access": true,
+        "view_access": true,
+        "export_access": true
+      },
+      "restrictions": [
+        "Limited to school buildings only",
+        "Cannot access district-wide features",
+        "Cannot sync with ArxLink",
+        "Cannot access CMMS features",
+        "Cannot access ArxSure features"
+      ],
+      "default_tier": "core"
+    },
+    "district_admin": {
+      "description": "District administrators with access to all district buildings and management features",
+      "permissions": {
+        "arxide": true,
+        "arxkit_export": true,
+        "arxlink": true,
+        "cmms": true,
+        "arxsure": true,
+        "private_buildings": true,
+        "markup_access": true,
+        "upload_access": true,
+        "view_access": true,
+        "export_access": true,
+        "admin_access": true,
+        "user_management": true,
+        "building_management": true
+      },
+      "restrictions": [
+        "Limited to district buildings",
+        "Cannot access other districts",
+        "Cannot access enterprise features"
+      ],
+      "default_tier": "plus"
+    },
+    "arxos_support": {
+      "description": "Arxos support staff with full access for troubleshooting and support",
+      "permissions": {
+        "arxide": true,
+        "arxkit_export": true,
+        "arxlink": true,
+        "cmms": true,
+        "arxsure": true,
+        "private_buildings": true,
+        "markup_access": true,
+        "upload_access": true,
+        "view_access": true,
+        "export_access": true,
+        "admin_access": true,
+        "user_management": true,
+        "building_management": true,
+        "support_access": true,
+        "debug_access": true
+      },
+      "restrictions": [
+        "Limited to support-related activities",
+        "Cannot modify production data",
+        "Must follow support protocols"
+      ],
+      "default_tier": "enterprise"
+    }
+  },
+  "organization_types": {
+    "contractor": {
+      "description": "External contracting organizations",
+      "features": {
+        "multi_user": false,
+        "building_management": false,
+        "billing_integration": false,
+        "support_level": "community"
+      },
+      "pricing_model": "free",
+      "restrictions": [
+        "Limited to public buildings",
+        "No private building access",
+        "No export capabilities",
+        "Community support only"
+      ]
+    },
+    "school": {
+      "description": "Individual school organizations",
+      "features": {
+        "multi_user": true,
+        "building_management": true,
+        "billing_integration": true,
+        "support_level": "email"
+      },
+      "pricing_model": "tiered",
+      "available_tiers": ["core", "plus"],
+      "restrictions": [
+        "Limited to school buildings",
+        "No district-wide features",
+        "No enterprise features"
+      ]
+    },
+    "district": {
+      "description": "School district organizations with multiple schools",
+      "features": {
+        "multi_user": true,
+        "building_management": true,
+        "billing_integration": true,
+        "support_level": "phone",
+        "multi_school": true,
+        "district_management": true
+      },
+      "pricing_model": "tiered",
+      "available_tiers": ["plus", "enterprise"],
+      "restrictions": [
+        "Limited to district schools",
+        "No cross-district features"
+      ]
+    }
+  },
+  "pricing_tiers": {
+    "free": {
+      "description": "Free tier for contractors and basic users",
+      "price": 0,
+      "billing_cycle": "none",
+      "features": {
+        "arxide": true,
+        "arxkit_export": false,
+        "arxlink": false,
+        "cmms": false,
+        "arxsure": false,
+        "private_buildings": false,
+        "markup_access": true,
+        "upload_access": true,
+        "view_access": true,
+        "export_access": false,
+        "admin_access": false,
+        "user_management": false,
+        "building_management": false
+      },
+      "limits": {
+        "users": 1,
+        "buildings": 0,
+        "exports": 0,
+        "storage": "100MB",
+        "api_calls": "1000/month"
+      },
+      "support": {
+        "level": "community",
+        "response_time": "48 hours",
+        "channels": ["community_forum", "documentation"]
+      }
+    },
+    "core": {
+      "description": "Core tier for schools and small organizations",
+      "price": 99,
+      "billing_cycle": "monthly",
+      "features": {
+        "arxide": true,
+        "arxkit_export": 2,
+        "arxlink": false,
+        "cmms": false,
+        "arxsure": false,
+        "private_buildings": true,
+        "markup_access": true,
+        "upload_access": true,
+        "view_access": true,
+        "export_access": true,
+        "admin_access": false,
+        "user_management": false,
+        "building_management": true
+      },
+      "limits": {
+        "users": 5,
+        "buildings": 10,
+        "exports": 2,
+        "storage": "1GB",
+        "api_calls": "10000/month"
+      },
+      "support": {
+        "level": "email",
+        "response_time": "24 hours",
+        "channels": ["email", "documentation", "community_forum"]
+      }
+    },
+    "plus": {
+      "description": "Plus tier for districts and larger organizations",
+      "price": 299,
+      "billing_cycle": "monthly",
+      "features": {
+        "arxide": true,
+        "arxkit_export": "unlimited",
+        "arxlink": true,
+        "cmms": true,
+        "arxsure": true,
+        "private_buildings": true,
+        "markup_access": true,
+        "upload_access": true,
+        "view_access": true,
+        "export_access": true,
+        "admin_access": true,
+        "user_management": true,
+        "building_management": true
+      },
+      "limits": {
+        "users": 25,
+        "buildings": 100,
+        "exports": "unlimited",
+        "storage": "10GB",
+        "api_calls": "100000/month"
+      },
+      "support": {
+        "level": "phone",
+        "response_time": "4 hours",
+        "channels": ["phone", "email", "documentation", "community_forum"]
+      }
+    },
+    "enterprise": {
+      "description": "Enterprise tier for large organizations with custom needs",
+      "price": "custom",
+      "billing_cycle": "annual",
+      "features": {
+        "all": true,
+        "arxide": true,
+        "arxkit_export": "unlimited",
+        "arxlink": true,
+        "cmms": true,
+        "arxsure": true,
+        "private_buildings": true,
+        "markup_access": true,
+        "upload_access": true,
+        "view_access": true,
+        "export_access": true,
+        "admin_access": true,
+        "user_management": true,
+        "building_management": true,
+        "custom_integrations": true,
+        "dedicated_support": true,
+        "sla_guarantee": true
+      },
+      "limits": {
+        "users": "unlimited",
+        "buildings": "unlimited",
+        "exports": "unlimited",
+        "storage": "unlimited",
+        "api_calls": "unlimited"
+      },
+      "support": {
+        "level": "dedicated",
+        "response_time": "1 hour",
+        "channels": ["dedicated_manager", "phone", "email", "documentation", "community_forum"]
+      }
+    }
+  },
+  "feature_flags": {
+    "arxide": {
+      "description": "Integrated Development Environment for building models",
+      "category": "core",
+      "required_for": ["all_users"],
+      "tier_access": {
+        "free": true,
+        "core": true,
+        "plus": true,
+        "enterprise": true
+      }
+    },
+    "arxkit_export": {
+      "description": "Export building models to ArxKit format",
+      "category": "export",
+      "required_for": ["export_workflows"],
+      "tier_access": {
+        "free": false,
+        "core": 2,
+        "plus": "unlimited",
+        "enterprise": "unlimited"
+      },
+      "tracking": {
+        "method": "redis_counter",
+        "scope": "per_organization",
+        "reset_frequency": "monthly"
+      }
+    },
+    "arxlink": {
+      "description": "Real-time synchronization with external systems",
+      "category": "integration",
+      "required_for": ["real_time_sync"],
+      "tier_access": {
+        "free": false,
+        "core": false,
+        "plus": true,
+        "enterprise": true
+      }
+    },
+    "cmms": {
+      "description": "Computerized Maintenance Management System",
+      "category": "maintenance",
+      "required_for": ["maintenance_management"],
+      "tier_access": {
+        "free": false,
+        "core": false,
+        "plus": true,
+        "enterprise": true
+      }
+    },
+    "arxsure": {
+      "description": "Insurance and compliance management system",
+      "category": "compliance",
+      "required_for": ["compliance_management"],
+      "tier_access": {
+        "free": false,
+        "core": false,
+        "plus": true,
+        "enterprise": true
+      }
+    },
+    "private_buildings": {
+      "description": "Access to private building data",
+      "category": "access",
+      "required_for": ["private_data_access"],
+      "tier_access": {
+        "free": false,
+        "core": true,
+        "plus": true,
+        "enterprise": true
+      }
+    }
+  },
+  "data_models": {
+    "organization": {
+      "fields": {
+        "id": {
+          "type": "UUID",
+          "description": "Unique organization identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Organization name",
+          "max_length": 255
+        },
+        "type": {
+          "type": "OrgType",
+          "description": "Organization type (contractor, school, district)",
+          "enum": ["contractor", "school", "district"]
+        },
+        "tier": {
+          "type": "string",
+          "description": "Pricing tier",
+          "enum": ["free", "core", "plus", "enterprise"]
+        },
+        "buildings": {
+          "type": "array[UUID]",
+          "description": "List of building IDs associated with organization"
+        },
+        "settings": {
+          "type": "json",
+          "description": "Organization-specific settings and preferences"
+        },
+        "created_at": {
+          "type": "datetime",
+          "description": "Organization creation timestamp"
+        },
+        "updated_at": {
+          "type": "datetime",
+          "description": "Last update timestamp"
+        }
+      },
+      "indexes": [
+        "id",
+        "type",
+        "tier",
+        "created_at"
+      ]
+    },
+    "user": {
+      "fields": {
+        "id": {
+          "type": "UUID",
+          "description": "Unique user identifier"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "max_length": 255,
+          "unique": true
+        },
+        "role": {
+          "type": "Role",
+          "description": "User role within organization",
+          "enum": ["contractor", "school_staff", "district_admin", "arxos_support"]
+        },
+        "org_id": {
+          "type": "UUID",
+          "description": "Associated organization ID",
+          "foreign_key": "organization.id"
+        },
+        "permissions": {
+          "type": "json",
+          "description": "User-specific permissions override"
+        },
+        "last_login": {
+          "type": "datetime",
+          "description": "Last login timestamp"
+        },
+        "created_at": {
+          "type": "datetime",
+          "description": "User creation timestamp"
+        },
+        "updated_at": {
+          "type": "datetime",
+          "description": "Last update timestamp"
+        }
+      },
+      "indexes": [
+        "id",
+        "email",
+        "org_id",
+        "role",
+        "last_login"
+      ]
+    },
+    "usage_tracking": {
+      "fields": {
+        "id": {
+          "type": "UUID",
+          "description": "Unique tracking record identifier"
+        },
+        "org_id": {
+          "type": "UUID",
+          "description": "Organization ID",
+          "foreign_key": "organization.id"
+        },
+        "feature": {
+          "type": "string",
+          "description": "Feature being tracked",
+          "enum": ["arxkit_export", "api_calls", "storage_usage"]
+        },
+        "usage_count": {
+          "type": "integer",
+          "description": "Current usage count"
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Usage limit for the feature",
+          "nullable": true
+        },
+        "period_start": {
+          "type": "datetime",
+          "description": "Start of tracking period"
+        },
+        "period_end": {
+          "type": "datetime",
+          "description": "End of tracking period"
+        },
+        "created_at": {
+          "type": "datetime",
+          "description": "Record creation timestamp"
+        },
+        "updated_at": {
+          "type": "datetime",
+          "description": "Last update timestamp"
+        }
+      },
+      "indexes": [
+        "org_id",
+        "feature",
+        "period_start",
+        "period_end"
+      ]
+    }
+  },
+  "access_control": {
+    "permissions": {
+      "can_access_feature": {
+        "description": "Check if user can access a specific feature",
+        "implementation": "permissions.py",
+        "parameters": {
+          "user": "User object",
+          "feature_name": "string"
+        },
+        "logic": [
+          "Get user's organization",
+          "Check organization tier",
+          "Check tier access for feature",
+          "Check usage limits if applicable",
+          "Return boolean result"
+        ],
+        "uses": [
+          "user.org_id",
+          "org.tier",
+          "tiers.yaml or context cache"
+        ]
+      },
+      "check_quota": {
+        "description": "Check if user has remaining quota for feature",
+        "implementation": "permissions.py",
+        "parameters": {
+          "user": "User object",
+          "feature_name": "string"
+        },
+        "logic": [
+          "Get current usage for feature",
+          "Get limit from tier configuration",
+          "Compare usage vs limit",
+          "Return boolean result"
+        ]
+      },
+      "increment_usage": {
+        "description": "Increment usage counter for feature",
+        "implementation": "permissions.py",
+        "parameters": {
+          "user": "User object",
+          "feature_name": "string",
+          "amount": "integer (default: 1)"
+        },
+        "logic": [
+          "Get current usage",
+          "Add amount to usage",
+          "Update usage tracking",
+          "Return new usage count"
+        ]
+      }
+    },
+    "usage_tracking": {
+      "arxkit_export": {
+        "limits": {
+          "free": 0,
+          "core": 2,
+          "plus": "unlimited",
+          "enterprise": "unlimited"
+        },
+        "tracking_method": "Redis counter or DB field per org",
+        "reset_frequency": "monthly",
+        "scope": "per_organization"
+      },
+      "api_calls": {
+        "limits": {
+          "free": 1000,
+          "core": 10000,
+          "plus": 100000,
+          "enterprise": "unlimited"
+        },
+        "tracking_method": "Redis counter per org",
+        "reset_frequency": "monthly",
+        "scope": "per_organization"
+      },
+      "storage_usage": {
+        "limits": {
+          "free": "100MB",
+          "core": "1GB",
+          "plus": "10GB",
+          "enterprise": "unlimited"
+        },
+        "tracking_method": "Database field per org",
+        "reset_frequency": "never",
+        "scope": "per_organization"
+      }
+    }
+  },
+  "api_endpoints": {
+    "/export/arxkit": {
+      "method": "POST",
+      "middleware": [
+        "check_auth",
+        "check_feature_access('arxkit_export')",
+        "check_quota('arxkit_export')"
+      ],
+      "responses": {
+        "200": "Export successful",
+        "403": "Upgrade required or export quota exceeded",
+        "429": "Rate limit exceeded"
+      },
+      "usage_tracking": true
+    },
+    "/arxlink/sync": {
+      "method": "POST",
+      "middleware": [
+        "check_auth",
+        "check_feature_access('arxlink')"
+      ],
+      "responses": {
+        "200": "Sync successful",
+        "403": "Plan does not include ArxLink access"
+      }
+    },
+    "/buildings/private": {
+      "method": "GET",
+      "middleware": [
+        "check_auth",
+        "check_feature_access('private_buildings')"
+      ],
+      "responses": {
+        "200": "Private buildings list",
+        "403": "Plan does not include private building access"
+      }
+    },
+    "/cmms/": {
+      "method": "GET",
+      "middleware": [
+        "check_auth",
+        "check_feature_access('cmms')"
+      ],
+      "responses": {
+        "200": "CMMS dashboard",
+        "403": "Plan does not include CMMS access"
+      }
+    },
+    "/arxsure/": {
+      "method": "GET",
+      "middleware": [
+        "check_auth",
+        "check_feature_access('arxsure')"
+      ],
+      "responses": {
+        "200": "ArxSure dashboard",
+        "403": "Plan does not include ArxSure access"
+      }
+    }
+  },
+  "frontend_integration": {
+    "context_payload": {
+      "user": {
+        "id": "UUID",
+        "email": "string",
+        "role": "Role",
+        "org_id": "UUID"
+      },
+      "organization": {
+        "id": "UUID",
+        "name": "string",
+        "type": "OrgType",
+        "tier": "string"
+      },
+      "plan": {
+        "arxide": true,
+        "arxkit_export": "unlimited",
+        "arxlink": true,
+        "cmms": true,
+        "arxsure": true,
+        "private_buildings": true
+      },
+      "usage": {
+        "arxkit_export": {
+          "used": 5,
+          "limit": "unlimited"
+        },
+        "api_calls": {
+          "used": 5000,
+          "limit": 100000
+        },
+        "storage": {
+          "used": "2.5GB",
+          "limit": "10GB"
+        }
+      }
+    },
+    "ui_guidance": {
+      "feature_visibility": [
+        "Hide restricted features from navigation",
+        "Disable restricted feature buttons",
+        "Show upgrade prompts for locked features"
+      ],
+      "usage_display": [
+        "Show usage progress bars",
+        "Display remaining quota",
+        "Warn when approaching limits"
+      ],
+      "upgrade_prompts": [
+        "Show upgrade modal when accessing locked features",
+        "Display tier comparison on upgrade prompts",
+        "Highlight benefits of higher tiers"
+      ],
+      "error_messages": {
+        "403": "This feature requires a {tier} plan or higher",
+        "429": "You have reached your {feature} limit. Upgrade to continue.",
+        "quota_exceeded": "You have exceeded your {feature} quota for this period."
+      }
+    }
+  },
+  "implementation_notes": {
+    "billing": [
+      "Consider Stripe or manual admin input for billing",
+      "Billing itself not enforced in this system",
+      "Focus on access control and feature flags"
+    ],
+    "contractors": [
+      "Contractors always free with unlimited markup/upload access",
+      "No export capabilities for contractors",
+      "Community support only"
+    ],
+    "districts": [
+      "Districts manage multi-building repos with enterprise plans",
+      "District admins can manage multiple schools",
+      "Enterprise features available for districts"
+    ],
+    "modularity": [
+      "Features should be modular and declarative for easy tier updates",
+      "Use feature flags for easy enabling/disabling",
+      "Configuration-driven access control"
+    ],
+    "scalability": [
+      "Design for easy addition of new features",
+      "Support for custom tiers and pricing",
+      "Flexible permission system"
+    ]
+  },
+  "deployment_considerations": {
+    "database_migrations": [
+      "Add organization and user tables",
+      "Add usage tracking tables",
+      "Add feature flag configuration"
+    ],
+    "caching": [
+      "Cache tier configurations",
+      "Cache user permissions",
+      "Cache usage counters"
+    ],
+    "monitoring": [
+      "Track feature usage patterns",
+      "Monitor quota violations",
+      "Alert on usage spikes"
+    ],
+    "security": [
+      "Validate permissions on every request",
+      "Audit all access attempts",
+      "Secure tier configuration"
+    ]
+  }
+} 

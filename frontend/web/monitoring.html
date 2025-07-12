@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos Data Library - Monitoring Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="static/js/htmx.min.js"></script>
+    <script src="static/js/session.js"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <h1 class="text-xl font-semibold text-gray-900">Arxos Data Library</h1>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="index.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="security.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Security</a>
+                        <a href="compliance.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Compliance</a>
+                        <a href="export_analytics.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Export Analytics</a>
+                        <a href="monitoring.html" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium">Monitoring</a>
+                        <a href="audit_logs.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Audit Logs</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <button onclick="logout()" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Page Header -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Monitoring Dashboard</h2>
+                    <p class="mt-1 text-sm text-gray-600">Real-time system monitoring and metrics</p>
+                </div>
+                <div class="flex space-x-3">
+                    <select id="period-selector" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        <option value="1h">Last Hour</option>
+                        <option value="24h" selected>Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                    <button onclick="refreshData()" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Health Status -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">System Health</h3>
+                    <div id="health-status" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Health status will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- API Requests -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">API Requests</dt>
+                                    <dd id="api-requests" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Jobs -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Export Jobs</dt>
+                                    <dd id="export-jobs" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Rate -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Error Rate</dt>
+                                    <dd id="error-rate" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Users -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Active Users</dt>
+                                    <dd id="active-users" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- API Usage Chart -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">API Usage</h3>
+                        <canvas id="api-usage-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Export Jobs Chart -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Export Jobs</h3>
+                        <canvas id="export-jobs-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Error Rates Chart -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Error Rates</h3>
+                        <canvas id="error-rates-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Performance Chart -->
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Response Times</h3>
+                        <canvas id="performance-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Alerts -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">Recent System Alerts</h3>
+                        <button onclick="loadAlerts()" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View All</button>
+                    </div>
+                    <div id="system-alerts" class="space-y-3">
+                        <!-- Alerts will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Section -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">System Logs</h3>
+                        <div class="flex space-x-2">
+                            <select id="log-level-filter" class="border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                <option value="">All Levels</option>
+                                <option value="info">Info</option>
+                                <option value="warning">Warning</option>
+                                <option value="error">Error</option>
+                            </select>
+                            <button onclick="exportLogs()" class="bg-green-600 text-white px-3 py-1 rounded-md text-sm font-medium hover:bg-green-700">
+                                Export
+                            </button>
+                        </div>
+                    </div>
+                    <div id="system-logs" class="overflow-x-auto">
+                        <!-- Logs will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let charts = {};
+
+        // Initialize monitoring dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHealthStatus();
+            loadMetrics();
+            loadCharts();
+            loadAlerts();
+            loadLogs();
+
+            // Auto-refresh every 30 seconds
+            setInterval(refreshData, 30000);
+        });
+
+        // Load health status
+        async function loadHealthStatus() {
+            try {
+                const response = await fetch('/api/monitoring/health', {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const health = await response.json();
+                
+                const healthHtml = `
+                    <div class="col-span-1">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-4 h-4 ${health.status === 'healthy' ? 'bg-green-400' : 'bg-red-400'} rounded-full"></div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">System Status</p>
+                                <p class="text-sm text-gray-500">${health.status}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-span-1">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-4 h-4 ${health.services?.database?.status === 'healthy' ? 'bg-green-400' : 'bg-red-400'} rounded-full"></div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">Database</p>
+                                <p class="text-sm text-gray-500">${health.services?.database?.status || 'unknown'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-span-1">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-4 h-4 bg-blue-400 rounded-full"></div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">Last Updated</p>
+                                <p class="text-sm text-gray-500">${new Date(health.timestamp).toLocaleTimeString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('health-status').innerHTML = healthHtml;
+            } catch (error) {
+                console.error('Error loading health status:', error);
+            }
+        }
+
+        // Load metrics
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/api/monitoring/metrics', {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const metrics = await response.json();
+                
+                // Update metric cards
+                document.getElementById('api-requests').textContent = metrics.api_requests || '-';
+                document.getElementById('export-jobs').textContent = metrics.export_jobs || '-';
+                document.getElementById('error-rate').textContent = metrics.error_rate || '-';
+                document.getElementById('active-users').textContent = metrics.active_users || '-';
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        // Load charts
+        async function loadCharts() {
+            const period = document.getElementById('period-selector').value;
+            
+            // Load API usage chart
+            await loadAPIUsageChart(period);
+            
+            // Load export jobs chart
+            await loadExportJobsChart(period);
+            
+            // Load error rates chart
+            await loadErrorRatesChart(period);
+            
+            // Load performance chart
+            await loadPerformanceChart();
+        }
+
+        // Load API usage chart
+        async function loadAPIUsageChart(period) {
+            try {
+                const response = await fetch(`/api/monitoring/api-usage?period=${period}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const data = await response.json();
+                
+                const ctx = document.getElementById('api-usage-chart').getContext('2d');
+                
+                if (charts.apiUsage) {
+                    charts.apiUsage.destroy();
+                }
+                
+                charts.apiUsage = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.stats?.map(s => s.endpoint) || [],
+                        datasets: [{
+                            label: 'Requests',
+                            data: data.stats?.map(s => s.count) || [],
+                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading API usage chart:', error);
+            }
+        }
+
+        // Load export jobs chart
+        async function loadExportJobsChart(period) {
+            try {
+                const response = await fetch(`/api/monitoring/export-jobs?period=${period}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const data = await response.json();
+                
+                const ctx = document.getElementById('export-jobs-chart').getContext('2d');
+                
+                if (charts.exportJobs) {
+                    charts.exportJobs.destroy();
+                }
+                
+                charts.exportJobs = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.stats?.map(s => s.export_type) || [],
+                        datasets: [{
+                            data: data.stats?.map(s => s.count) || [],
+                            backgroundColor: [
+                                'rgba(34, 197, 94, 0.5)',
+                                'rgba(59, 130, 246, 0.5)',
+                                'rgba(168, 85, 247, 0.5)',
+                                'rgba(251, 146, 60, 0.5)'
+                            ],
+                            borderColor: [
+                                'rgba(34, 197, 94, 1)',
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(168, 85, 247, 1)',
+                                'rgba(251, 146, 60, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading export jobs chart:', error);
+            }
+        }
+
+        // Load error rates chart
+        async function loadErrorRatesChart(period) {
+            try {
+                const response = await fetch(`/api/monitoring/error-rates?period=${period}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const data = await response.json();
+                
+                const ctx = document.getElementById('error-rates-chart').getContext('2d');
+                
+                if (charts.errorRates) {
+                    charts.errorRates.destroy();
+                }
+                
+                charts.errorRates = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.stats?.map(s => s.error_type) || [],
+                        datasets: [{
+                            label: 'Error Count',
+                            data: data.stats?.map(s => s.count) || [],
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderColor: 'rgba(239, 68, 68, 1)',
+                            borderWidth: 2,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading error rates chart:', error);
+            }
+        }
+
+        // Load performance chart
+        async function loadPerformanceChart() {
+            try {
+                const response = await fetch('/api/monitoring/performance', {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const data = await response.json();
+                
+                const ctx = document.getElementById('performance-chart').getContext('2d');
+                
+                if (charts.performance) {
+                    charts.performance.destroy();
+                }
+                
+                const operations = Object.keys(data);
+                const avgTimes = operations.map(op => data[op]?.avg_time || 0);
+                
+                charts.performance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: operations,
+                        datasets: [{
+                            label: 'Average Response Time (ms)',
+                            data: avgTimes.map(t => t / 1000000), // Convert to milliseconds
+                            backgroundColor: 'rgba(168, 85, 247, 0.5)',
+                            borderColor: 'rgba(168, 85, 247, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading performance chart:', error);
+            }
+        }
+
+        // Load system alerts
+        async function loadAlerts() {
+            try {
+                const response = await fetch('/api/monitoring/alerts?limit=5', {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const alerts = await response.json();
+                
+                const alertsHtml = alerts.map(alert => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-3 h-3 ${getSeverityColor(alert.severity)} rounded-full"></div>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">${alert.alert_type}</p>
+                                <p class="text-sm text-gray-500">${alert.ip_address} - ${new Date(alert.created_at).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityBadgeColor(alert.severity)}">
+                            ${alert.severity}
+                        </span>
+                    </div>
+                `).join('');
+                
+                document.getElementById('system-alerts').innerHTML = alertsHtml || '<p class="text-gray-500">No recent alerts</p>';
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+            }
+        }
+
+        // Load system logs
+        async function loadLogs() {
+            try {
+                const levelFilter = document.getElementById('log-level-filter').value;
+                const url = levelFilter ? `/api/monitoring/logs?level=${levelFilter}&limit=50` : '/api/monitoring/logs?limit=50';
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                const data = await response.json();
+                
+                const logsHtml = data.logs?.map(log => `
+                    <div class="flex items-center justify-between py-2 border-b border-gray-200">
+                        <div class="flex items-center space-x-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getLevelBadgeColor(log.level)}">
+                                ${log.level}
+                            </span>
+                            <span class="text-sm text-gray-900">${log.event_type}</span>
+                            <span class="text-sm text-gray-500">${log.ip_address}</span>
+                        </div>
+                        <span class="text-sm text-gray-500">${new Date(log.timestamp).toLocaleString()}</span>
+                    </div>
+                `).join('');
+                
+                document.getElementById('system-logs').innerHTML = logsHtml || '<p class="text-gray-500">No logs found</p>';
+            } catch (error) {
+                console.error('Error loading logs:', error);
+            }
+        }
+
+        // Export logs
+        async function exportLogs() {
+            try {
+                const levelFilter = document.getElementById('log-level-filter').value;
+                const url = levelFilter ? `/api/monitoring/logs/export?level=${levelFilter}&format=csv` : '/api/monitoring/logs/export?format=csv';
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': 'Bearer ' + getToken()
+                    }
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `logs_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }
+            } catch (error) {
+                console.error('Error exporting logs:', error);
+            }
+        }
+
+        // Refresh all data
+        function refreshData() {
+            loadHealthStatus();
+            loadMetrics();
+            loadCharts();
+            loadAlerts();
+            loadLogs();
+        }
+
+        // Period selector change handler
+        document.getElementById('period-selector').addEventListener('change', function() {
+            loadCharts();
+        });
+
+        // Log level filter change handler
+        document.getElementById('log-level-filter').addEventListener('change', function() {
+            loadLogs();
+        });
+
+        // Utility functions
+        function getSeverityColor(severity) {
+            switch (severity) {
+                case 'critical': return 'bg-red-500';
+                case 'high': return 'bg-orange-500';
+                case 'medium': return 'bg-yellow-500';
+                case 'low': return 'bg-blue-500';
+                default: return 'bg-gray-500';
+            }
+        }
+
+        function getSeverityBadgeColor(severity) {
+            switch (severity) {
+                case 'critical': return 'bg-red-100 text-red-800';
+                case 'high': return 'bg-orange-100 text-orange-800';
+                case 'medium': return 'bg-yellow-100 text-yellow-800';
+                case 'low': return 'bg-blue-100 text-blue-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getLevelBadgeColor(level) {
+            switch (level) {
+                case 'error': return 'bg-red-100 text-red-800';
+                case 'warning': return 'bg-yellow-100 text-yellow-800';
+                case 'info': return 'bg-blue-100 text-blue-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+    </script>
+</body>
+</html> 

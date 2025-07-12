@@ -1,0 +1,51 @@
+{
+  "system": "building_controls",
+  "display_name": "Modbus Bus",
+  "description": "Modbus communication bus for building automation system",
+  "svg": "<g id=\"modbus_bus\">\n  <line x1=\"0\" y1=\"10\" x2=\"20\" y2=\"10\" stroke=\"#a50\" stroke-width=\"2\" stroke-dasharray=\"2,2\"/>\n  <text x=\"10\" y=\"7\" font-size=\"6\" text-anchor=\"middle\">Modbus</text>\n</g>\n",
+  "properties": {
+    "length": "variable",
+    "communication_protocol": "Modbus_RTU_TCP",
+    "baud_rate": 96001920038400115200,
+    "max_devices": "247_per_network",
+    "max_distance": "4000_feet",
+    "cable_type": "shielded_twisted_pair",
+    "conductor_gauge": "18_AWG_22_AWG",
+    "termination": "120_ohm_resistor",
+    "voltage": "24V_DC",
+    "current_draw": "10_mA_per_device",
+    "network_topology": "master_slave",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "building_automation_devices",
+      "description": "Connection to Modbus devices"
+    },
+    {
+      "type": "gateway_converter",
+      "description": "Connection to Modbus gateway or converter"
+    },
+    {
+      "type": "power",
+      "description": "24V DC power supply"
+    },
+    {
+      "type": "ground",
+      "description": "System grounding"
+    }
+  ],
+  "tags": [
+    "building_controls",
+    "modbus",
+    "communication",
+    "BAS",
+    "BMS",
+    "network",
+    "protocol"
+  ]
+}

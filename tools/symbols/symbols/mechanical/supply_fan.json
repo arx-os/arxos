@@ -1,0 +1,22 @@
+{
+  "id": "supply_fan",
+  "name": "Supply Fan",
+  "description": "Mechanical fan that supplies conditioned air to spaces",
+  "system": "mechanical",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "<g id=\"supply_fan\">\n    <circle cx=\"10\" cy=\"10\" r=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n    <polygon points=\"10,2 18,10 10,18 2,10\" fill=\"none\" stroke=\"#000\"/>\n    <text x=\"10\" y=\"18\" font-size=\"7\" text-anchor=\"middle\">SF</text>\n  </g>",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

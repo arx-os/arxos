@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos CDN Configuration Example</title>
+    
+    <!-- CDN Configuration -->
+    <script src="static/cdn-config.js"></script>
+    <script src="static/js/cdn-loader.js"></script>
+    
+    <!-- Critical CSS - Loaded via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Critical JavaScript - Loaded via CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    
+    <!-- Arxos-specific scripts - Loaded via CDN -->
+    <script src="static/js/session.js"></script>
+    <script src="static/js/arx-logger.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Arxos CDN Configuration Example</h1>
+        
+        <!-- CDN Status Display -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">CDN Status</h2>
+            <div id="cdn-status" class="space-y-2">
+                <div class="flex items-center">
+                    <span class="w-4 h-4 bg-green-500 rounded-full mr-2"></span>
+                    <span class="text-green-700">CDN Configuration Loaded</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-4 h-4 bg-blue-500 rounded-full mr-2"></span>
+                    <span class="text-blue-700">Environment: <span id="environment"></span></span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-4 h-4 bg-purple-500 rounded-full mr-2"></span>
+                    <span class="text-purple-700">Base URL: <span id="base-url"></span></span>
+                </div>
+                <div class="flex items-center">
+                    <span class="w-4 h-4 bg-yellow-500 rounded-full mr-2"></span>
+                    <span class="text-yellow-700">Version: <span id="version"></span></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Asset Loading Examples -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- CSS Loading Example -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">CSS Asset Loading</h3>
+                <div class="space-y-3">
+                    <button onclick="loadCSSExample()" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                        Load CSS via CDN
+                    </button>
+                    <button onclick="loadMultipleCSSExample()" class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                        Load Multiple CSS Files
+                    </button>
+                    <div id="css-status" class="text-sm text-gray-600"></div>
+                </div>
+            </div>
+            
+            <!-- JavaScript Loading Example -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">JavaScript Asset Loading</h3>
+                <div class="space-y-3">
+                    <button onclick="loadJSExample()" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                        Load JS via CDN
+                    </button>
+                    <button onclick="loadMultipleJSExample()" class="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                        Load Multiple JS Files
+                    </button>
+                    <div id="js-status" class="text-sm text-gray-600"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Asset URL Examples -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Asset URL Examples</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-2">CSS Asset</h4>
+                    <code class="text-sm bg-gray-100 p-2 rounded block" id="css-url"></code>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-2">JavaScript Asset</h4>
+                    <code class="text-sm bg-gray-100 p-2 rounded block" id="js-url"></code>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-700 mb-2">Image Asset</h4>
+                    <code class="text-sm bg-gray-100 p-2 rounded block" id="image-url"></code>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Performance Monitoring -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Performance Monitoring</h3>
+            <div class="space-y-3">
+                <button onclick="getCDNStats()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">
+                    Get CDN Statistics
+                </button>
+                <div id="cdn-stats" class="text-sm text-gray-600 bg-gray-50 p-4 rounded"></div>
+            </div>
+        </div>
+        
+        <!-- Preloading Examples -->
+        <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Asset Preloading</h3>
+            <div class="space-y-3">
+                <button onclick="preloadAssetsExample()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
+                    Preload Critical Assets
+                </button>
+                <button onclick="prefetchAssetsExample()" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">
+                    Prefetch Non-Critical Assets
+                </button>
+                <div id="preload-status" class="text-sm text-gray-600"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Initialize CDN and display configuration
+        document.addEventListener('DOMContentLoaded', function() {
+            // Display CDN configuration
+            document.getElementById('environment').textContent = window.CDN_CONFIG.environment;
+            document.getElementById('base-url').textContent = window.CDN_CONFIG.baseUrl;
+            document.getElementById('version').textContent = window.CDN_CONFIG.version;
+            
+            // Display asset URL examples
+            document.getElementById('css-url').textContent = window.CDNUtils.getAssetUrl('main.css', 'css');
+            document.getElementById('js-url').textContent = window.CDNUtils.getAssetUrl('main.js', 'js');
+            document.getElementById('image-url').textContent = window.CDNUtils.getAssetUrl('logo.png', 'images');
+            
+            console.log('✅ CDN Configuration Example loaded successfully');
+        });
+        
+        // CSS Loading Examples
+        async function loadCSSExample() {
+            const statusDiv = document.getElementById('css-status');
+            statusDiv.textContent = 'Loading CSS...';
+            
+            try {
+                await window.CDNLoader.loadCSS('example.css');
+                statusDiv.textContent = '✅ CSS loaded successfully via CDN';
+                statusDiv.className = 'text-sm text-green-600';
+            } catch (error) {
+                statusDiv.textContent = '❌ Failed to load CSS: ' + error.message;
+                statusDiv.className = 'text-sm text-red-600';
+            }
+        }
+        
+        async function loadMultipleCSSExample() {
+            const statusDiv = document.getElementById('css-status');
+            statusDiv.textContent = 'Loading multiple CSS files...';
+            
+            try {
+                await window.CDNLoader.loadMultipleCSS(['main.css', 'dashboard.css', 'components.css']);
+                statusDiv.textContent = '✅ Multiple CSS files loaded successfully via CDN';
+                statusDiv.className = 'text-sm text-green-600';
+            } catch (error) {
+                statusDiv.textContent = '❌ Failed to load CSS files: ' + error.message;
+                statusDiv.className = 'text-sm text-red-600';
+            }
+        }
+        
+        // JavaScript Loading Examples
+        async function loadJSExample() {
+            const statusDiv = document.getElementById('js-status');
+            statusDiv.textContent = 'Loading JavaScript...';
+            
+            try {
+                await window.CDNLoader.loadJS('example.js');
+                statusDiv.textContent = '✅ JavaScript loaded successfully via CDN';
+                statusDiv.className = 'text-sm text-green-600';
+            } catch (error) {
+                statusDiv.textContent = '❌ Failed to load JavaScript: ' + error.message;
+                statusDiv.className = 'text-sm text-red-600';
+            }
+        }
+        
+        async function loadMultipleJSExample() {
+            const statusDiv = document.getElementById('js-status');
+            statusDiv.textContent = 'Loading multiple JavaScript files...';
+            
+            try {
+                await window.CDNLoader.loadMultipleJS(['utils.js', 'components.js', 'analytics.js']);
+                statusDiv.textContent = '✅ Multiple JavaScript files loaded successfully via CDN';
+                statusDiv.className = 'text-sm text-green-600';
+            } catch (error) {
+                statusDiv.textContent = '❌ Failed to load JavaScript files: ' + error.message;
+                statusDiv.className = 'text-sm text-red-600';
+            }
+        }
+        
+        // Performance Monitoring
+        function getCDNStats() {
+            const statsDiv = document.getElementById('cdn-stats');
+            const stats = window.CDNLoader.getStats();
+            
+            statsDiv.innerHTML = `
+                <h4 class="font-medium text-gray-800 mb-2">CDN Loader Statistics:</h4>
+                <ul class="space-y-1">
+                    <li><strong>Loaded Assets:</strong> ${stats.loaded}</li>
+                    <li><strong>Currently Loading:</strong> ${stats.loading}</li>
+                    <li><strong>Failed Assets:</strong> ${stats.failed}</li>
+                </ul>
+                ${stats.loadedAssets.length > 0 ? `<p class="mt-2"><strong>Loaded:</strong> ${stats.loadedAssets.join(', ')}</p>` : ''}
+                ${stats.failedAssets.length > 0 ? `<p class="mt-2"><strong>Failed:</strong> ${stats.failedAssets.join(', ')}</p>` : ''}
+            `;
+        }
+        
+        // Preloading Examples
+        function preloadAssetsExample() {
+            const statusDiv = document.getElementById('preload-status');
+            statusDiv.textContent = 'Preloading critical assets...';
+            
+            try {
+                window.CDNLoader.preloadNonCriticalAssets({
+                    css: ['critical.css'],
+                    js: ['critical.js'],
+                    images: ['hero-image.jpg'],
+                    fonts: ['main-font.woff2']
+                });
+                
+                statusDiv.textContent = '✅ Critical assets preloaded successfully';
+                statusDiv.className = 'text-sm text-green-600';
+            } catch (error) {
+                statusDiv.textContent = '❌ Failed to preload assets: ' + error.message;
+                statusDiv.className = 'text-sm text-red-600';
+            }
+        }
+        
+        function prefetchAssetsExample() {
+            const statusDiv = document.getElementById('preload-status');
+            statusDiv.textContent = 'Prefetching non-critical assets...';
+            
+            try {
+                window.CDNLoader.preloadNonCriticalAssets({
+                    css: ['non-critical.css'],
+                    js: ['non-critical.js'],
+                    images: ['background.jpg', 'icon-sprite.svg']
+                });
+                
+                statusDiv.textContent = '✅ Non-critical assets prefetched successfully';
+                statusDiv.className = 'text-sm text-green-600';
+            } catch (error) {
+                statusDiv.textContent = '❌ Failed to prefetch assets: ' + error.message;
+                statusDiv.className = 'text-sm text-red-600';
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,314 @@
+# Arxos Platform Configuration File
+# Defines user permissions, edit mode settings, and system configuration
+
+# User Permissions Configuration
+permissions:
+  # Default user roles and their permissions
+  roles:
+    viewer:
+      name: "Viewer"
+      description: "Read-only access to view markup layers"
+      permissions:
+        can_view: true
+        can_edit: false
+        can_create: false
+        can_delete: false
+        can_modify: false
+        can_export: true
+        can_import: false
+        can_comment: true
+        can_annotate: false
+    
+    editor:
+      name: "Editor"
+      description: "Full editing capabilities for markup layers"
+      permissions:
+        can_view: true
+        can_edit: true
+        can_create: true
+        can_delete: true
+        can_modify: true
+        can_export: true
+        can_import: true
+        can_comment: true
+        can_annotate: true
+    
+    admin:
+      name: "Administrator"
+      description: "Administrative access with user management"
+      permissions:
+        can_view: true
+        can_edit: true
+        can_create: true
+        can_delete: true
+        can_modify: true
+        can_export: true
+        can_import: true
+        can_comment: true
+        can_annotate: true
+        can_manage_users: true
+        can_manage_permissions: true
+        can_access_audit_logs: true
+    
+    owner:
+      name: "Owner"
+      description: "Full system access and ownership"
+      permissions:
+        can_view: true
+        can_edit: true
+        can_create: true
+        can_delete: true
+        can_modify: true
+        can_export: true
+        can_import: true
+        can_comment: true
+        can_annotate: true
+        can_manage_users: true
+        can_manage_permissions: true
+        can_access_audit_logs: true
+        can_manage_system: true
+        can_access_all_data: true
+
+# Edit Mode Configuration
+edit_mode:
+  # Default edit mode settings
+  default_mode: "view"  # view, edit, review
+  
+  # Edit mode restrictions
+  restrictions:
+    # Require layer selection before editing
+    require_layer_selection: true
+    
+    # Require confirmation for destructive actions
+    require_confirmation: true
+    
+    # Auto-save interval (seconds)
+    auto_save_interval: 30
+    
+    # Maximum undo/redo steps
+    max_undo_steps: 50
+    
+    # Lock editing during save operations
+    lock_during_save: true
+    
+    # Prevent concurrent editing of same element
+    prevent_concurrent_editing: true
+
+# Layer Configuration
+layers:
+  # Default layer visibility
+  default_visibility:
+    E: true    # Electrical
+    LV: true   # Low Voltage
+    FA: true   # Fire Alarm
+    N: true    # Network
+    M: true    # Mechanical
+    P: true    # Plumbing
+    S: true    # Security
+  
+  # Layer editing permissions
+  editing_permissions:
+    E: ["editor", "admin", "owner"]
+    LV: ["editor", "admin", "owner"]
+    FA: ["editor", "admin", "owner"]
+    N: ["editor", "admin", "owner"]
+    M: ["editor", "admin", "owner"]
+    P: ["editor", "admin", "owner"]
+    S: ["editor", "admin", "owner"]
+  
+  # Layer dependencies (which layers should be visible when editing)
+  dependencies:
+    E: ["LV"]  # Electrical editing shows low voltage
+    M: ["P"]   # Mechanical editing shows plumbing
+    FA: ["S"]  # Fire alarm editing shows security
+
+# Snapping Configuration
+snapping:
+  # Default snapping settings
+  enabled: true
+  tolerance: 10  # pixels
+  
+  # Grid snapping
+  grid:
+    enabled: true
+    size: 20  # pixels
+    snap_to_grid: true
+    show_grid: true
+  
+  # Object snapping
+  objects:
+    enabled: true
+    snap_to_objects: true
+    snap_to_centers: true
+    snap_to_edges: true
+    snap_to_corners: true
+  
+  # Line snapping
+  lines:
+    enabled: true
+    snap_to_lines: true
+    snap_to_intersections: true
+    snap_to_perpendicular: true
+    snap_to_parallel: true
+
+# Performance Configuration
+performance:
+  # Maximum elements per layer
+  max_elements_per_layer: 1000
+  
+  # Cache settings
+  cache:
+    enabled: true
+    size: 100
+    ttl: 300  # seconds
+  
+  # Rendering settings
+  rendering:
+    enable_hardware_acceleration: true
+    use_webgl: true
+    enable_antialiasing: true
+  
+  # Animation settings
+  animation:
+    enabled: true
+    duration: 300  # milliseconds
+    easing: "ease-in-out"
+
+# Security Configuration
+security:
+  # Session settings
+  session:
+    timeout: 3600  # seconds
+    max_concurrent_sessions: 5
+    require_reauthentication: false
+  
+  # Access control
+  access_control:
+    # IP restrictions
+    allowed_ips: []
+    blocked_ips: []
+    
+    # Time restrictions
+    allowed_hours: []
+    blocked_hours: []
+    
+    # Geographic restrictions
+    allowed_countries: []
+    blocked_countries: []
+
+# Export/Import Configuration
+export_import:
+  # Supported formats
+  supported_formats:
+    - "svg"
+    - "dxf"
+    - "pdf"
+    - "png"
+    - "jpg"
+  
+  # Export settings
+  export:
+    include_metadata: true
+    include_layer_visibility: true
+    include_permissions: false
+    compression: true
+    resolution: 300  # DPI
+  
+  # Import settings
+  import:
+    validate_on_import: true
+    auto_assign_layers: true
+    preserve_metadata: true
+    max_file_size: 10485760  # 10MB
+
+# Audit Configuration
+audit:
+  # Enable audit logging
+  enabled: true
+  
+  # Audit events to log
+  events:
+    - "layer_toggle"
+    - "edit_mode_change"
+    - "element_create"
+    - "element_modify"
+    - "element_delete"
+    - "permission_change"
+    - "export_import"
+  
+  # Audit log retention
+  retention:
+    days: 365
+    max_size: 104857600  # 100MB
+
+# Notification Configuration
+notifications:
+  # Enable notifications
+  enabled: true
+  
+  # Notification types
+  types:
+    - "permission_denied"
+    - "edit_mode_change"
+    - "layer_visibility_change"
+    - "element_modified"
+    - "session_timeout"
+    - "error"
+  
+  # Notification delivery
+  delivery:
+    in_app: true
+    email: false
+    push: false
+
+# System Configuration
+system:
+  # Application settings
+  app:
+    name: "Arxos Platform"
+    version: "1.0.0"
+    environment: "development"
+    debug: true
+  
+  # Database settings
+  database:
+    type: "postgresql"
+    host: "localhost"
+    port: 5432
+    name: "arxos"
+    user: "arxos_user"
+    password: "arxos_password"
+  
+  # Cache settings
+  cache:
+    type: "redis"
+    host: "localhost"
+    port: 6379
+    password: ""
+    database: 0
+  
+  # File storage
+  storage:
+    type: "local"
+    path: "./data/storage"
+    max_file_size: 10485760  # 10MB
+
+# Development Configuration
+development:
+  # Debug settings
+  debug:
+    enabled: true
+    log_level: "debug"
+    show_errors: true
+  
+  # Testing settings
+  testing:
+    enabled: true
+    mock_permissions: true
+    auto_save_disabled: true
+  
+  # Development tools
+  tools:
+    hot_reload: true
+    source_maps: true
+    linting: true 

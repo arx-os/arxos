@@ -1,0 +1,22 @@
+{
+  "id": "screen",
+  "name": "Screen",
+  "description": "Projection screen for audiovisual presentations",
+  "system": "av",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "<g id=\"screen\">\n    <rect x=\"0\" y=\"0\" width=\"30\" height=\"5\" fill=\"#fff\" stroke=\"#000\"/>\n    <text x=\"15\" y=\"4\" font-size=\"7\" text-anchor=\"middle\">SCR</text>\n  </g>",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

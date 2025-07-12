@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Object Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .invalid-field { border-color: #dc2626 !important; }
+    .error-message { color: #dc2626; font-size: 0.9em; margin-top: 0.25em; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Navigation Header -->
+  <nav class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex">
+          <div class="flex-shrink-0 flex items-center">
+            <h1 class="text-xl font-semibold text-gray-900">Arxos Admin</h1>
+          </div>
+          <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <a href="admin.html" class="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Object Management
+            </a>
+            <a href="asset_inventory.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Asset Inventory
+            </a>
+            <a href="audit_logs.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Audit Logs
+            </a>
+            <a href="export_analytics.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Export Analytics
+            </a>
+            <a href="cmms_settings.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              CMMS Settings
+            </a>
+          </div>
+        </div>
+        <div class="flex items-center">
+          <a href="index.html" class="text-gray-500 hover:text-gray-700">← Back to Main</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="flex flex-col items-center p-8">
+    <h1 class="text-2xl font-bold mb-6">Admin Object Creation & Edit</h1>
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-xl mb-8">
+      <h2 class="text-lg font-semibold mb-4">Create New Device</h2>
+      <form id="admin-device-form" class="flex flex-col gap-4">
+        <div class="flex gap-2">
+          <input type="text" id="admin-building" placeholder="Building" class="border rounded p-2 w-1/3" required>
+          <input type="text" id="admin-floor" placeholder="Floor" class="border rounded p-2 w-1/3" required>
+          <input type="text" id="admin-system" placeholder="System" class="border rounded p-2 w-1/3" required>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="admin-type" placeholder="Type" class="border rounded p-2 w-1/2" required>
+          <input type="number" id="admin-instance" placeholder="Instance" class="border rounded p-2 w-1/2" required min="1">
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="admin-panel-id" placeholder="Panel ID (optional)" class="border rounded p-2 w-1/5">
+          <input type="text" id="admin-circuit-id" placeholder="Circuit ID (optional)" class="border rounded p-2 w-1/5">
+          <input type="text" id="admin-upstream-id" placeholder="Upstream ID (optional)" class="border rounded p-2 w-1/5">
+          <input type="text" id="admin-downstream-id" placeholder="Downstream ID (optional)" class="border rounded p-2 w-1/5">
+          <input type="text" id="admin-pipe-id" placeholder="Pipe ID (optional)" class="border rounded p-2 w-1/5">
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="admin-funding-source" placeholder="Funding Source (optional)" class="border rounded p-2 w-full">
+        </div>
+        <div id="admin-id-error" class="error-message"></div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Create Device</button>
+      </form>
+    </div>
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+      <h2 class="text-lg font-semibold mb-4">Existing Objects (Stub)</h2>
+      <div class="flex items-center justify-between mb-2">
+        <button onclick="document.getElementById('id-help-modal').classList.remove('hidden')" title="ID Format Help" class="text-blue-600 text-xl font-bold mr-2">?</button>
+        <input type="text" id="object-search" placeholder="Search by ID..." class="border rounded p-2 w-64">
+      </div>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-100">
+            <th class="p-2 text-left">ID</th>
+            <th class="p-2 text-left">Type</th>
+            <th class="p-2 text-left">System</th>
+            <th class="p-2 text-left">Floor</th>
+            <th class="p-2 text-left">Instance</th>
+            <th class="p-2 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="admin-object-list">
+          <!-- Example row for demo -->
+          <tr data-id="CAMPUS_L2_E_Type_001">
+            <td class="p-2" title="CAMPUS_L2_E_Type_001">CAMPUS_L2_E_Type_001</td>
+            <td class="p-2">Type</td>
+            <td class="p-2">E</td>
+            <td class="p-2">L2</td>
+            <td class="p-2">001</td>
+            <td class="p-2">Edit</td>
+          </tr>
+          <tr data-id="CAMPUS_L2_E_Type_002">
+            <td class="p-2" title="CAMPUS_L2_E_Type_002">CAMPUS_L2_E_Type_002</td>
+            <td class="p-2">Type</td>
+            <td class="p-2">E</td>
+            <td class="p-2">L2</td>
+            <td class="p-2">002</td>
+            <td class="p-2">Edit</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Add Help Popup Modal -->
+  <div id="id-help-modal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+      <button onclick="document.getElementById('id-help-modal').classList.add('hidden')" class="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+      <h3 class="font-bold text-lg mb-2">Object ID Format</h3>
+      <p class="mb-2">IDs must match the format: <code>CAMPUS_L2_E_Type_001</code></p>
+      <p class="mb-2">Regex: <code>^[A-Z0-9]{3,10}_L[0-9]{1,2}_(E|LV|FA|N|M|P)_[A-Z][a-zA-Z]+_[0-9]{3}$</code></p>
+      <ul class="list-disc pl-5 text-sm text-gray-600 mb-2">
+        <li><b>CAMPUS</b>: Building or campus code</li>
+        <li><b>L2</b>: Floor</li>
+        <li><b>E</b>: System (Electrical, etc.)</li>
+        <li><b>Type</b>: Device type</li>
+        <li><b>001</b>: Instance number (zero-padded)</li>
+      </ul>
+      <button onclick="document.getElementById('id-help-modal').classList.add('hidden')" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Close</button>
+    </div>
+  </div>
+  
+  <script type="module">
+    import { generateObjectId, isValidObjectId } from './static/js/registry.js';
+    const form = document.getElementById('admin-device-form');
+    form.onsubmit = async function(e) {
+      e.preventDefault();
+      const building = document.getElementById('admin-building').value.trim();
+      const floor = document.getElementById('admin-floor').value.trim();
+      const system = document.getElementById('admin-system').value.trim();
+      const type = document.getElementById('admin-type').value.trim();
+      const instance = parseInt(document.getElementById('admin-instance').value, 10);
+      const panel_id = document.getElementById('admin-panel-id').value.trim();
+      const circuit_id = document.getElementById('admin-circuit-id').value.trim();
+      const upstream_id = document.getElementById('admin-upstream-id').value.trim();
+      const downstream_id = document.getElementById('admin-downstream-id').value.trim();
+      const pipe_id = document.getElementById('admin-pipe-id').value.trim();
+      const funding_source = document.getElementById('admin-funding-source').value.trim();
+      const idError = document.getElementById('admin-id-error');
+      idError.textContent = '';
+      // Clear previous invalid highlights/tooltips
+      [
+        'admin-building', 'admin-floor', 'admin-system', 'admin-type', 'admin-instance',
+        'admin-panel-id', 'admin-circuit-id', 'admin-upstream-id', 'admin-downstream-id', 'admin-pipe-id', 'admin-funding-source'
+      ].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('invalid-field');
+        el.removeAttribute('title');
+      });
+      // Validate main object ID
+      const objectId = generateObjectId(building, floor, system, type, instance);
+      let hasError = false;
+      if (!isValidObjectId(objectId)) {
+        idError.textContent = 'Generated object ID is invalid: ' + objectId;
+        ['admin-building', 'admin-floor', 'admin-system', 'admin-type', 'admin-instance'].forEach(id => {
+          const el = document.getElementById(id);
+          el.classList.add('invalid-field');
+          el.setAttribute('title', 'ID must match format: CAMPUS_L2_E_Type_001');
+        });
+        hasError = true;
+      }
+      // Validate metadata links
+      [
+        [panel_id, 'admin-panel-id', 'Panel ID'],
+        [circuit_id, 'admin-circuit-id', 'Circuit ID'],
+        [upstream_id, 'admin-upstream-id', 'Upstream ID'],
+        [downstream_id, 'admin-downstream-id', 'Downstream ID'],
+        [pipe_id, 'admin-pipe-id', 'Pipe ID']
+      ].forEach(([val, id, label]) => {
+        const el = document.getElementById(id);
+        if (val && !isValidObjectId(val)) {
+          el.classList.add('invalid-field');
+          el.setAttribute('title', `Invalid ${label}: must match object ID format`);
+          idError.textContent += (idError.textContent ? '; ' : '') + `Invalid ${label}`;
+          hasError = true;
+        }
+      });
+      if (hasError) return;
+      // Stub: send to backend
+      const deviceData = {
+        building: building,
+        floor: floor,
+        system: system,
+        type: type,
+        instance: instance,
+        panel_id: panel_id,
+        circuit_id: circuit_id,
+        upstream_id: upstream_id,
+        downstream_id: downstream_id,
+        pipe_id: pipe_id,
+        funding_source: funding_source
+      };
+      alert('Device created! (stub)\nID: ' + objectId + '\nFunding Source: ' + (funding_source || 'Not specified'));
+      form.reset();
+      // Clear highlights/tooltips after reset
+      [
+        'admin-building', 'admin-floor', 'admin-system', 'admin-type', 'admin-instance',
+        'admin-panel-id', 'admin-circuit-id', 'admin-upstream-id', 'admin-downstream-id', 'admin-pipe-id', 'admin-funding-source'
+      ].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('invalid-field');
+        el.removeAttribute('title');
+      });
+    };
+    // Add search/filter logic for object table
+    const searchInput = document.getElementById('object-search');
+    const objectList = document.getElementById('admin-object-list');
+    if (searchInput && objectList) {
+      searchInput.addEventListener('input', function() {
+        const val = this.value.toLowerCase();
+        objectList.querySelectorAll('tr').forEach(row => {
+          const idCell = row.querySelector('td');
+          if (idCell && idCell.textContent.toLowerCase().includes(val)) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html> 

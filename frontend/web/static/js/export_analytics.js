@@ -1,0 +1,404 @@
+// Export Analytics Dashboard JavaScript
+
+let exportVolumeChart, formatChart, exportTypeChart;
+let currentPage = 1;
+let pageSize = 20;
+
+// Initialize dashboard on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    loadExportActivities();
+    setupEventListeners();
+});
+
+// Setup event listeners for filters and pagination
+function setupEventListeners() {
+    // Filter event listeners
+    document.getElementById('user-filter').addEventListener('change', function() {
+        currentPage = 1;
+        loadExportActivities();
+    });
+
+    document.getElementById('format-filter').addEventListener('change', function() {
+        currentPage = 1;
+        loadExportActivities();
+    });
+
+    document.getElementById('status-filter').addEventListener('change', function() {
+        currentPage = 1;
+        loadExportActivities();
+    });
+
+    document.getElementById('date-filter').addEventListener('change', function() {
+        currentPage = 1;
+        loadExportActivities();
+    });
+
+    document.getElementById('page-size').addEventListener('change', function() {
+        pageSize = parseInt(this.value);
+        currentPage = 1;
+        loadExportActivities();
+    });
+}
+
+// Load dashboard overview data
+async function loadDashboardData() {
+    try {
+        const response = await fetch('/api/export-analytics/dashboard', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load dashboard data');
+        }
+
+        const data = await response.json();
+        updateDashboardMetrics(data);
+        updateCharts(data);
+        updateTopUsers(data.top_users);
+        updateRecentExports(data.recent_exports);
+
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showNotification('Error loading dashboard data', 'error');
+    }
+}
+
+// Update dashboard metrics
+function updateDashboardMetrics(data) {
+    document.getElementById('today-exports').textContent = data.today_exports;
+    document.getElementById('today-downloads').textContent = data.today_downloads;
+    document.getElementById('avg-processing-time').textContent = formatProcessingTime(data.avg_processing_time);
+    document.getElementById('failed-exports').textContent = data.failed_exports;
+}
+
+// Update charts with dashboard data
+function updateCharts(data) {
+    // Export Volume Chart (placeholder - would need time series data)
+    const exportVolumeCtx = document.getElementById('exportVolumeChart').getContext('2d');
+    exportVolumeChart = new Chart(exportVolumeCtx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Exports',
+                data: [12, 19, 15, 25, 22, 18, 24],
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Format Distribution Chart
+    const formatCtx = document.getElementById('formatChart').getContext('2d');
+    formatChart = new Chart(formatCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(data.top_formats),
+            datasets: [{
+                data: Object.values(data.top_formats),
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(239, 68, 68, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Export Type Distribution Chart
+    const exportTypeCtx = document.getElementById('exportTypeChart').getContext('2d');
+    exportTypeChart = new Chart(exportTypeCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data.top_export_types),
+            datasets: [{
+                label: 'Exports',
+                data: Object.values(data.top_export_types),
+                backgroundColor: 'rgba(59, 130, 246, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Update top users section
+function updateTopUsers(users) {
+    const container = document.getElementById('top-users');
+    container.innerHTML = '';
+
+    users.forEach((user, index) => {
+        const userElement = document.createElement('div');
+        userElement.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+        userElement.innerHTML = `
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span class="text-sm font-medium text-blue-600">${index + 1}</span>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">${user.username}</p>
+                    <p class="text-xs text-gray-500">${user.export_count} exports</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-sm font-medium text-gray-900">${user.download_count}</p>
+                <p class="text-xs text-gray-500">downloads</p>
+            </div>
+        `;
+        container.appendChild(userElement);
+    });
+}
+
+// Update recent exports section
+function updateRecentExports(exports) {
+    const container = document.getElementById('recent-exports');
+    container.innerHTML = '';
+
+    exports.forEach(exportItem => {
+        const exportElement = document.createElement('div');
+        exportElement.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+        exportElement.innerHTML = `
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">${exportItem.export_type}</p>
+                    <p class="text-xs text-gray-500">${exportItem.format.toUpperCase()} • ${formatFileSize(exportItem.file_size)}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(exportItem.status)}">
+                    ${exportItem.status}
+                </span>
+            </div>
+        `;
+        container.appendChild(exportElement);
+    });
+}
+
+// Load export activities with filtering and pagination
+async function loadExportActivities() {
+    try {
+        const filters = buildFilters();
+        const url = `/api/export-activities?page=${currentPage}&limit=${pageSize}${filters}`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load export activities');
+        }
+
+        const data = await response.json();
+        updateExportActivitiesTable(data.activities);
+        updatePagination(data.pagination);
+
+    } catch (error) {
+        console.error('Error loading export activities:', error);
+        showNotification('Error loading export activities', 'error');
+    }
+}
+
+// Build filter query string
+function buildFilters() {
+    const filters = [];
+    
+    const userId = document.getElementById('user-filter').value;
+    if (userId) filters.push(`user_id=${userId}`);
+
+    const format = document.getElementById('format-filter').value;
+    if (format) filters.push(`format=${format}`);
+
+    const status = document.getElementById('status-filter').value;
+    if (status) filters.push(`status=${status}`);
+
+    const date = document.getElementById('date-filter').value;
+    if (date) filters.push(`start_date=${date}`);
+
+    return filters.length > 0 ? '&' + filters.join('&') : '';
+}
+
+// Update export activities table
+function updateExportActivitiesTable(activities) {
+    const tbody = document.getElementById('export-activities-table');
+    tbody.innerHTML = '';
+
+    activities.forEach(activity => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${activity.user?.username || 'Unknown'}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">${activity.export_type}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    ${activity.format.toUpperCase()}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(activity.status)}">
+                    ${activity.status}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                ${activity.download_count}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                ${formatFileSize(activity.file_size)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${formatDate(activity.created_at)}
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Update pagination controls
+function updatePagination(pagination) {
+    const container = document.getElementById('pagination');
+    container.innerHTML = '';
+
+    // Previous button
+    const prevButton = document.createElement('button');
+    prevButton.className = `px-3 py-1 rounded-md text-sm font-medium ${pagination.page > 1 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`;
+    prevButton.textContent = 'Previous';
+    prevButton.disabled = pagination.page <= 1;
+    prevButton.onclick = () => {
+        if (pagination.page > 1) {
+            currentPage = pagination.page - 1;
+            loadExportActivities();
+        }
+    };
+    container.appendChild(prevButton);
+
+    // Page numbers
+    for (let i = 1; i <= pagination.pages; i++) {
+        if (i === 1 || i === pagination.pages || (i >= pagination.page - 2 && i <= pagination.page + 2)) {
+            const pageButton = document.createElement('button');
+            pageButton.className = `px-3 py-1 mx-1 rounded-md text-sm font-medium ${i === pagination.page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+            pageButton.textContent = i;
+            pageButton.onclick = () => {
+                currentPage = i;
+                loadExportActivities();
+            };
+            container.appendChild(pageButton);
+        } else if (i === pagination.page - 3 || i === pagination.page + 3) {
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'px-3 py-1 text-sm text-gray-500';
+            ellipsis.textContent = '...';
+            container.appendChild(ellipsis);
+        }
+    }
+
+    // Next button
+    const nextButton = document.createElement('button');
+    nextButton.className = `px-3 py-1 rounded-md text-sm font-medium ${pagination.page < pagination.pages ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`;
+    nextButton.textContent = 'Next';
+    nextButton.disabled = pagination.page >= pagination.pages;
+    nextButton.onclick = () => {
+        if (pagination.page < pagination.pages) {
+            currentPage = pagination.page + 1;
+            loadExportActivities();
+        }
+    };
+    container.appendChild(nextButton);
+}
+
+// Helper functions
+function formatProcessingTime(ms) {
+    if (!ms) return 'N/A';
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return 'N/A';
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+}
+
+function getStatusColor(status) {
+    switch (status) {
+        case 'completed':
+            return 'bg-green-100 text-green-800';
+        case 'processing':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'failed':
+            return 'bg-red-100 text-red-800';
+        case 'requested':
+            return 'bg-blue-100 text-blue-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 ${
+        type === 'error' ? 'bg-red-500 text-white' : 'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem('token');
+    window.location.href = 'login.html';
+}
+
+// Auto-refresh dashboard data every 5 minutes
+setInterval(loadDashboardData, 5 * 60 * 1000); 

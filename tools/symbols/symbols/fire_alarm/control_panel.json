@@ -1,0 +1,51 @@
+{
+  "system": "fire_alarm",
+  "display_name": "Fire Alarm Control Panel (FACP)",
+  "description": "Main fire alarm control panel for system management",
+  "svg": "<g id=\"control_panel\">\n  <rect x=\"0\" y=\"0\" width=\"20\" height=\"20\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"10\" y=\"15\" font-size=\"8\" text-anchor=\"middle\">FACP</text>\n</g>\n",
+  "properties": {
+    "height": 20,
+    "width": 20,
+    "mounting_height": "60_inches",
+    "voltage": "120V_AC_24V_DC",
+    "current_draw": "2A",
+    "backup_battery": "24_hours",
+    "zone_capacity": "64_zones",
+    "loop_capacity": "2_loops",
+    "network_protocol": "NFPA_72",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "ac_power",
+      "description": "120V AC power supply"
+    },
+    {
+      "type": "dc_power",
+      "description": "24V DC backup power"
+    },
+    {
+      "type": "fire_alarm_loops",
+      "description": "Fire alarm device loops"
+    },
+    {
+      "type": "network",
+      "description": "Network communication"
+    },
+    {
+      "type": "ground",
+      "description": "Equipment grounding"
+    }
+  ],
+  "tags": [
+    "fire_alarm",
+    "control_panel",
+    "facp",
+    "system_management",
+    "safety"
+  ]
+}

@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funding Escrow Panel - Planarx Community</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .progress-ring { transform: rotate(-90deg); }
+        .progress-ring-circle { transition: stroke-dasharray 0.5s ease; }
+        .transaction-item { transition: all 0.3s ease; }
+        .transaction-item:hover { background-color: #f8fafc; }
+        .milestone-card { border-left: 4px solid #e5e7eb; }
+        .milestone-card.approved { border-left-color: #10b981; }
+        .milestone-card.pending { border-left-color: #f59e0b; }
+        .milestone-card.rejected { border-left-color: #ef4444; }
+        .milestone-card.submitted { border-left-color: #3b82f6; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Funding Escrow</h1>
+                    <p class="text-gray-600 mt-2">Transparent fund management for <span id="project-title" class="font-medium">Project Name</span></p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Escrow Status</div>
+                        <div id="escrow-status" class="text-lg font-semibold text-green-600">Active</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Escrow ID</div>
+                        <div id="escrow-id" class="text-sm font-mono text-gray-600">esc-123456</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Funding Overview -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Funding Progress -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Funding Progress</h3>
+                <div class="flex items-center justify-center mb-4">
+                    <div class="relative w-32 h-32">
+                        <svg class="progress-ring w-32 h-32" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="#10b981" stroke-width="8" 
+                                    stroke-dasharray="339.292" stroke-dashoffset="169.646" 
+                                    class="progress-ring-circle"/>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center">
+                                <div id="funding-percentage" class="text-2xl font-bold text-gray-900">50%</div>
+                                <div class="text-sm text-gray-500">Funded</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Goal:</span>
+                        <span id="funding-goal" class="font-medium">$10,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Raised:</span>
+                        <span id="funding-raised" class="font-medium">$5,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Released:</span>
+                        <span id="funding-released" class="font-medium">$2,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">In Escrow:</span>
+                        <span id="funding-escrow" class="font-medium">$3,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Milestone Overview -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Milestone Status</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Total Milestones:</span>
+                        <span id="total-milestones" class="font-medium">5</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Completed:</span>
+                        <span id="completed-milestones" class="font-medium text-green-600">2</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Pending Approval:</span>
+                        <span id="pending-milestones" class="font-medium text-yellow-600">1</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Remaining:</span>
+                        <span id="remaining-milestones" class="font-medium text-gray-600">2</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Next Milestone:</span>
+                        <span id="next-milestone" class="font-medium">Design Phase</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Due Date:</span>
+                        <span id="next-due-date" class="font-medium">Dec 15, 2024</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Governance Board -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Governance Board</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Board Members:</span>
+                        <span id="board-count" class="font-medium">5</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Required Approvals:</span>
+                        <span id="required-approvals" class="font-medium">3</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Auto Release:</span>
+                        <span id="auto-release" class="font-medium text-green-600">Enabled</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <div class="text-sm text-gray-600 mb-2">Board Members:</div>
+                    <div id="board-members" class="space-y-1">
+                        <!-- Board members will be listed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Milestones Timeline -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6">Milestone Timeline</h3>
+            <div id="milestones-timeline" class="space-y-4">
+                <!-- Milestones will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Transaction History</h3>
+                <div class="flex space-x-2">
+                    <button id="filter-all" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">All</button>
+                    <button id="filter-deposits" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">Deposits</button>
+                    <button id="filter-releases" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">Releases</button>
+                    <button id="filter-approvals" class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">Approvals</button>
+                </div>
+            </div>
+            <div id="transactions-list" class="space-y-3">
+                <!-- Transactions will be displayed here -->
+            </div>
+            <div class="mt-4 text-center">
+                <button id="load-more" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    Load More Transactions
+                </button>
+            </div>
+        </div>
+
+        <!-- Governance Activity -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-6">Governance Activity</h3>
+            <div id="governance-activity" class="space-y-4">
+                <!-- Governance activities will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data - in real implementation, this would come from API
+        const escrowData = {
+            escrowId: 'esc-123456',
+            projectTitle: 'Sustainable Office Complex',
+            status: 'active',
+            funding: {
+                goal: 10000,
+                raised: 5000,
+                released: 2000,
+                inEscrow: 3000,
+                percentage: 50
+            },
+            milestones: [
+                {
+                    id: 'mil-1',
+                    title: 'Concept Design',
+                    description: 'Initial concept and feasibility study',
+                    amount: 2000,
+                    status: 'approved',
+                    dueDate: '2024-11-15',
+                    approvedAt: '2024-11-10',
+                    approvedBy: 'board-member-1'
+                },
+                {
+                    id: 'mil-2',
+                    title: 'Detailed Design',
+                    description: 'Complete architectural and engineering design',
+                    amount: 3000,
+                    status: 'submitted',
+                    dueDate: '2024-12-15',
+                    submittedAt: '2024-12-10'
+                },
+                {
+                    id: 'mil-3',
+                    title: 'Construction Documents',
+                    description: 'Final construction drawings and specifications',
+                    amount: 2500,
+                    status: 'pending',
+                    dueDate: '2025-01-15'
+                },
+                {
+                    id: 'mil-4',
+                    title: 'Permit Acquisition',
+                    description: 'Obtain all necessary building permits',
+                    amount: 1500,
+                    status: 'pending',
+                    dueDate: '2025-02-15'
+                },
+                {
+                    id: 'mil-5',
+                    title: 'Project Completion',
+                    description: 'Final project delivery and documentation',
+                    amount: 1000,
+                    status: 'pending',
+                    dueDate: '2025-03-15'
+                }
+            ],
+            transactions: [
+                {
+                    id: 'tx-1',
+                    type: 'escrow_created',
+                    amount: null,
+                    description: 'Escrow account created',
+                    timestamp: '2024-10-01T10:00:00Z',
+                    userId: 'system'
+                },
+                {
+                    id: 'tx-2',
+                    type: 'funds_deposited',
+                    amount: 5000,
+                    description: 'Initial funding deposit',
+                    timestamp: '2024-10-01T11:00:00Z',
+                    userId: 'backer-1'
+                },
+                {
+                    id: 'tx-3',
+                    type: 'milestone_submitted',
+                    amount: 2000,
+                    description: 'Concept Design milestone submitted',
+                    timestamp: '2024-11-08T14:30:00Z',
+                    userId: 'creator-1'
+                },
+                {
+                    id: 'tx-4',
+                    type: 'milestone_approved',
+                    amount: 2000,
+                    description: 'Concept Design milestone approved',
+                    timestamp: '2024-11-10T09:15:00Z',
+                    userId: 'board-member-1'
+                },
+                {
+                    id: 'tx-5',
+                    type: 'funds_released',
+                    amount: 2000,
+                    description: 'Funds released for Concept Design',
+                    timestamp: '2024-11-10T09:16:00Z',
+                    userId: 'creator-1'
+                },
+                {
+                    id: 'tx-6',
+                    type: 'milestone_submitted',
+                    amount: 3000,
+                    description: 'Detailed Design milestone submitted',
+                    timestamp: '2024-12-10T16:45:00Z',
+                    userId: 'creator-1'
+                }
+            ],
+            governanceBoard: [
+                { id: 'board-member-1', name: 'Sarah Johnson', role: 'Lead Architect' },
+                { id: 'board-member-2', name: 'Michael Chen', role: 'Structural Engineer' },
+                { id: 'board-member-3', name: 'Emily Rodriguez', role: 'Sustainability Expert' },
+                { id: 'board-member-4', name: 'David Thompson', role: 'Project Manager' },
+                { id: 'board-member-5', name: 'Lisa Wang', role: 'Community Representative' }
+            ]
+        };
+
+        // Initialize the escrow panel
+        function initializeEscrowPanel() {
+            updateFundingProgress();
+            updateMilestoneOverview();
+            updateMilestonesTimeline();
+            updateTransactionsList();
+            updateGovernanceActivity();
+            updateBoardMembers();
+        }
+
+        // Update funding progress
+        function updateFundingProgress() {
+            const data = escrowData.funding;
+            const percentage = data.percentage;
+            const circumference = 2 * Math.PI * 54;
+            const offset = circumference - (percentage / 100) * circumference;
+            
+            document.querySelector('.progress-ring-circle').style.strokeDashoffset = offset;
+            document.getElementById('funding-percentage').textContent = percentage + '%';
+            document.getElementById('funding-goal').textContent = '$' + data.goal.toLocaleString();
+            document.getElementById('funding-raised').textContent = '$' + data.raised.toLocaleString();
+            document.getElementById('funding-released').textContent = '$' + data.released.toLocaleString();
+            document.getElementById('funding-escrow').textContent = '$' + data.inEscrow.toLocaleString();
+        }
+
+        // Update milestone overview
+        function updateMilestoneOverview() {
+            const milestones = escrowData.milestones;
+            const total = milestones.length;
+            const completed = milestones.filter(m => m.status === 'approved').length;
+            const pending = milestones.filter(m => m.status === 'submitted').length;
+            const remaining = total - completed - pending;
+
+            document.getElementById('total-milestones').textContent = total;
+            document.getElementById('completed-milestones').textContent = completed;
+            document.getElementById('pending-milestones').textContent = pending;
+            document.getElementById('remaining-milestones').textContent = remaining;
+
+            // Find next milestone
+            const nextMilestone = milestones.find(m => m.status === 'pending' || m.status === 'submitted');
+            if (nextMilestone) {
+                document.getElementById('next-milestone').textContent = nextMilestone.title;
+                document.getElementById('next-due-date').textContent = new Date(nextMilestone.dueDate).toLocaleDateString();
+            }
+        }
+
+        // Update milestones timeline
+        function updateMilestonesTimeline() {
+            const container = document.getElementById('milestones-timeline');
+            container.innerHTML = '';
+
+            escrowData.milestones.forEach((milestone, index) => {
+                const statusClass = getMilestoneStatusClass(milestone.status);
+                const statusIcon = getMilestoneStatusIcon(milestone.status);
+                const statusText = getMilestoneStatusText(milestone.status);
+
+                const milestoneHtml = `
+                    <div class="milestone-card ${statusClass} p-4 rounded-lg">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <span class="text-sm font-medium text-gray-600">${index + 1}</span>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h4 class="text-lg font-medium text-gray-900">${milestone.title}</h4>
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusClass.replace('milestone-card ', '')}">
+                                            <i class="${statusIcon} mr-1"></i>${statusText}
+                                        </span>
+                                    </div>
+                                    <p class="text-gray-600 mb-2">${milestone.description}</p>
+                                    <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                        <span><i class="fas fa-dollar-sign mr-1"></i>$${milestone.amount.toLocaleString()}</span>
+                                        <span><i class="fas fa-calendar mr-1"></i>Due: ${new Date(milestone.dueDate).toLocaleDateString()}</span>
+                                        ${milestone.approvedAt ? `<span><i class="fas fa-check mr-1"></i>Approved: ${new Date(milestone.approvedAt).toLocaleDateString()}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-semibold text-gray-900">$${milestone.amount.toLocaleString()}</div>
+                                <div class="text-sm text-gray-500">${milestone.status === 'approved' ? 'Released' : 'Pending'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', milestoneHtml);
+            });
+        }
+
+        // Update transactions list
+        function updateTransactionsList() {
+            const container = document.getElementById('transactions-list');
+            container.innerHTML = '';
+
+            escrowData.transactions.forEach(transaction => {
+                const typeIcon = getTransactionTypeIcon(transaction.type);
+                const typeColor = getTransactionTypeColor(transaction.type);
+
+                const transactionHtml = `
+                    <div class="transaction-item flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 rounded-full ${typeColor} flex items-center justify-center">
+                                <i class="${typeIcon} text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">${transaction.description}</div>
+                                <div class="text-sm text-gray-500">${new Date(transaction.timestamp).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            ${transaction.amount ? `<div class="font-semibold text-gray-900">$${transaction.amount.toLocaleString()}</div>` : ''}
+                            <div class="text-sm text-gray-500">${getTransactionTypeText(transaction.type)}</div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', transactionHtml);
+            });
+        }
+
+        // Update governance activity
+        function updateGovernanceActivity() {
+            const container = document.getElementById('governance-activity');
+            container.innerHTML = '';
+
+            // Filter governance-related transactions
+            const governanceTransactions = escrowData.transactions.filter(t => 
+                t.type === 'milestone_approved' || t.type === 'milestone_rejected'
+            );
+
+            governanceTransactions.forEach(transaction => {
+                const activityHtml = `
+                    <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <i class="fas fa-gavel text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">${transaction.description}</div>
+                            <div class="text-sm text-gray-500">${new Date(transaction.timestamp).toLocaleString()}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-500">Governance Board</div>
+                            <div class="font-medium text-gray-900">${transaction.userId}</div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', activityHtml);
+            });
+        }
+
+        // Update board members
+        function updateBoardMembers() {
+            const container = document.getElementById('board-members');
+            container.innerHTML = '';
+
+            escrowData.governanceBoard.forEach(member => {
+                const memberHtml = `
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="font-medium">${member.name}</span>
+                        <span class="text-gray-500">${member.role}</span>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', memberHtml);
+            });
+
+            document.getElementById('board-count').textContent = escrowData.governanceBoard.length;
+            document.getElementById('required-approvals').textContent = Math.ceil(escrowData.governanceBoard.length / 2);
+        }
+
+        // Helper functions
+        function getMilestoneStatusClass(status) {
+            const classes = {
+                'approved': 'milestone-card approved',
+                'submitted': 'milestone-card submitted',
+                'pending': 'milestone-card pending',
+                'rejected': 'milestone-card rejected'
+            };
+            return classes[status] || 'milestone-card';
+        }
+
+        function getMilestoneStatusIcon(status) {
+            const icons = {
+                'approved': 'fas fa-check',
+                'submitted': 'fas fa-clock',
+                'pending': 'fas fa-hourglass-half',
+                'rejected': 'fas fa-times'
+            };
+            return icons[status] || 'fas fa-question';
+        }
+
+        function getMilestoneStatusText(status) {
+            const texts = {
+                'approved': 'Approved',
+                'submitted': 'Submitted',
+                'pending': 'Pending',
+                'rejected': 'Rejected'
+            };
+            return texts[status] || 'Unknown';
+        }
+
+        function getTransactionTypeIcon(type) {
+            const icons = {
+                'escrow_created': 'fas fa-plus-circle',
+                'funds_deposited': 'fas fa-arrow-down',
+                'milestone_submitted': 'fas fa-upload',
+                'milestone_approved': 'fas fa-check-circle',
+                'milestone_rejected': 'fas fa-times-circle',
+                'funds_released': 'fas fa-arrow-up',
+                'override_approved': 'fas fa-shield-check'
+            };
+            return icons[type] || 'fas fa-info-circle';
+        }
+
+        function getTransactionTypeColor(type) {
+            const colors = {
+                'escrow_created': 'bg-blue-500',
+                'funds_deposited': 'bg-green-500',
+                'milestone_submitted': 'bg-yellow-500',
+                'milestone_approved': 'bg-green-500',
+                'milestone_rejected': 'bg-red-500',
+                'funds_released': 'bg-purple-500',
+                'override_approved': 'bg-orange-500'
+            };
+            return colors[type] || 'bg-gray-500';
+        }
+
+        function getTransactionTypeText(type) {
+            const texts = {
+                'escrow_created': 'Account Created',
+                'funds_deposited': 'Deposit',
+                'milestone_submitted': 'Milestone Submitted',
+                'milestone_approved': 'Milestone Approved',
+                'milestone_rejected': 'Milestone Rejected',
+                'funds_released': 'Funds Released',
+                'override_approved': 'Override Approved'
+            };
+            return texts[type] || 'Transaction';
+        }
+
+        // Filter transactions
+        document.getElementById('filter-all').addEventListener('click', function() {
+            updateTransactionsList();
+            updateFilterButtons(this);
+        });
+
+        document.getElementById('filter-deposits').addEventListener('click', function() {
+            filterTransactions('funds_deposited');
+            updateFilterButtons(this);
+        });
+
+        document.getElementById('filter-releases').addEventListener('click', function() {
+            filterTransactions(['funds_released', 'milestone_approved']);
+            updateFilterButtons(this);
+        });
+
+        document.getElementById('filter-approvals').addEventListener('click', function() {
+            filterTransactions(['milestone_approved', 'milestone_rejected', 'override_approved']);
+            updateFilterButtons(this);
+        });
+
+        function filterTransactions(types) {
+            const container = document.getElementById('transactions-list');
+            container.innerHTML = '';
+
+            const filteredTransactions = escrowData.transactions.filter(t => {
+                if (Array.isArray(types)) {
+                    return types.includes(t.type);
+                }
+                return t.type === types;
+            });
+
+            filteredTransactions.forEach(transaction => {
+                const typeIcon = getTransactionTypeIcon(transaction.type);
+                const typeColor = getTransactionTypeColor(transaction.type);
+
+                const transactionHtml = `
+                    <div class="transaction-item flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-10 h-10 rounded-full ${typeColor} flex items-center justify-center">
+                                <i class="${typeIcon} text-white"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900">${transaction.description}</div>
+                                <div class="text-sm text-gray-500">${new Date(transaction.timestamp).toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            ${transaction.amount ? `<div class="font-semibold text-gray-900">$${transaction.amount.toLocaleString()}</div>` : ''}
+                            <div class="text-sm text-gray-500">${getTransactionTypeText(transaction.type)}</div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', transactionHtml);
+            });
+        }
+
+        function updateFilterButtons(activeButton) {
+            // Reset all buttons
+            document.querySelectorAll('#filter-all, #filter-deposits, #filter-releases, #filter-approvals').forEach(btn => {
+                btn.className = 'px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300';
+            });
+            // Set active button
+            activeButton.className = 'px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEscrowPanel();
+        });
+    </script>
+</body>
+</html> 

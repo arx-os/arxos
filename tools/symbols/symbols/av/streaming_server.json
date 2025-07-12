@@ -1,0 +1,22 @@
+{
+  "id": "streaming_server",
+  "name": "Streaming Server",
+  "description": "Server for streaming audiovisual content",
+  "system": "av",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "<g id=\"streaming_server\">\n    <rect x=\"0\" y=\"0\" width=\"20\" height=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n    <text x=\"10\" y=\"8\" font-size=\"7\" text-anchor=\"middle\">STR</text>\n  </g>",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

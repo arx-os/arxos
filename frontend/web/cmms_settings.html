@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CMMS Settings</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <script src="static/js/cmms_settings.js" defer></script>
+</head>
+<body>
+    <div class="container mx-auto p-6">
+        <h1 class="text-2xl font-bold mb-4">CMMS Integration Settings</h1>
+        <button id="add-connection-btn" class="btn btn-primary mb-4">Add Connection</button>
+        <table class="table-auto w-full mb-6" id="cmms-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Base URL</th>
+                    <th>Auth</th>
+                    <th>Sync Interval (min)</th>
+                    <th>Last Sync</th>
+                    <th>Status</th>
+                    <th>Error</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="cmms-table-body">
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+    <!-- Modal for Add/Edit -->
+    <div id="cmms-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close" id="close-modal">&times;</span>
+            <h2 id="modal-title">Add/Edit Connection</h2>
+            <form id="cmms-form">
+                <input type="hidden" id="connection-id">
+                <label>Name <input type="text" id="name" required></label>
+                <label>Type <input type="text" id="type" required></label>
+                <label>Base URL <input type="url" id="base-url" required></label>
+                <label>Auth Method
+                    <select id="auth-method">
+                        <option value="api_key">API Key</option>
+                        <option value="basic">Basic Auth</option>
+                        <option value="oauth2">OAuth2</option>
+                    </select>
+                </label>
+                <div id="api-key-fields" class="auth-fields">
+                    <label>API Key <input type="text" id="api-key"></label>
+                </div>
+                <div id="basic-fields" class="auth-fields hidden">
+                    <label>Username <input type="text" id="username"></label>
+                    <label>Password <input type="password" id="password"></label>
+                </div>
+                <div id="oauth2-fields" class="auth-fields hidden">
+                    <label>Client ID <input type="text" id="oauth2-client-id"></label>
+                    <label>Secret <input type="password" id="oauth2-secret"></label>
+                    <label>Token URL <input type="url" id="oauth2-token-url"></label>
+                    <label>Scope <input type="text" id="oauth2-scope"></label>
+                </div>
+                <label>Sync Interval (minutes) <input type="number" id="sync-interval" min="1" value="60"></label>
+                <label>Active <input type="checkbox" id="is-active"></label>
+                <button type="submit" class="btn btn-primary mt-2">Save</button>
+            </form>
+        </div>
+    </div>
+    <div id="toast" class="toast hidden"></div>
+</body>
+</html> 

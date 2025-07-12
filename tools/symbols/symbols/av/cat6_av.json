@@ -1,0 +1,22 @@
+{
+  "id": "cat6_av",
+  "name": "Cat6 AV Cable",
+  "description": "Category 6 cable for audiovisual signal transmission",
+  "system": "av",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "<g id=\"cat6_av\">\n    <line x1=\"0\" y1=\"15\" x2=\"20\" y2=\"15\" stroke=\"#0af\" stroke-width=\"2\"/>\n    <text x=\"10\" y=\"12\" font-size=\"6\" text-anchor=\"middle\">Cat6</text>\n  </g>",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

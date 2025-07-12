@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symbol Generator - Arxos</title>
+    <link href="static/css/tailwind.css" rel="stylesheet">
+    <link href="static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">Symbol Generator</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+                    <a href="symbol_library.html" class="text-gray-500 hover:text-gray-700">Symbol Library</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="border-4 border-dashed border-gray-200 rounded-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Automated Symbol Generator</h2>
+                <p class="text-gray-600 mb-6">
+                    Generate new symbols automatically from building system product URLs. 
+                    Simply paste a URL from a supported manufacturer and our AI will create a symbol for you.
+                </p>
+                
+                <!-- Supported Manufacturers -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Supported Manufacturers</h3>
+                    <div id="supported-domains" class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- URL Input Form -->
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Generate Symbol from URL</h3>
+            
+            <form id="symbol-generator-form" class="space-y-4">
+                <div>
+                    <label for="url" class="block text-sm font-medium text-gray-700 mb-2">
+                        Product URL
+                    </label>
+                    <input 
+                        type="url" 
+                        id="url" 
+                        name="url" 
+                        required
+                        placeholder="https://www.carrier.com/commercial-hvac/air-handlers/..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                    <p class="mt-1 text-sm text-gray-500">
+                        Paste a URL from a supported manufacturer's product page
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="custom-name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Custom Name (Optional)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="custom-name" 
+                            name="custom-name"
+                            placeholder="Override auto-generated name"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        >
+                    </div>
+                    
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                            Category (Optional)
+                        </label>
+                        <select 
+                            id="category" 
+                            name="category"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">Auto-detect</option>
+                            <option value="hvac">HVAC</option>
+                            <option value="electrical">Electrical</option>
+                            <option value="plumbing">Plumbing</option>
+                            <option value="fire_safety">Fire Safety</option>
+                            <option value="security">Security</option>
+                            <option value="av">Audio/Video</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="subcategory" class="block text-sm font-medium text-gray-700 mb-2">
+                            Subcategory (Optional)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="subcategory" 
+                            name="subcategory"
+                            placeholder="Auto-detect"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        >
+                    </div>
+                </div>
+
+                <div class="flex space-x-4">
+                    <button 
+                        type="button" 
+                        id="preview-btn"
+                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        Preview
+                    </button>
+                    <button 
+                        type="submit"
+                        id="generate-btn"
+                        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        Generate Symbol
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="hidden bg-white shadow rounded-lg p-6 mb-6">
+            <div class="flex items-center justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span class="ml-3 text-gray-700">Generating symbol...</span>
+            </div>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="preview-section" class="hidden bg-white shadow rounded-lg p-6 mb-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Symbol Preview</h3>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Symbol Information -->
+                <div>
+                    <h4 class="text-md font-medium text-gray-900 mb-3">Symbol Details</h4>
+                    <div id="symbol-details" class="space-y-3">
+                        <!-- Details will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- SVG Preview -->
+                <div>
+                    <h4 class="text-md font-medium text-gray-900 mb-3">SVG Preview</h4>
+                    <div id="svg-preview" class="border border-gray-200 rounded-lg p-4 bg-gray-50 min-h-[200px] flex items-center justify-center">
+                        <!-- SVG will be rendered here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex space-x-4">
+                <button 
+                    id="save-symbol-btn"
+                    class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                    Save to Symbol Library
+                </button>
+                <button 
+                    id="regenerate-btn"
+                    class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                    Regenerate
+                </button>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Error</h3>
+                    <div id="error-message" class="mt-2 text-sm text-red-700">
+                        <!-- Error message will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success State -->
+        <div id="success-state" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-green-800">Success</h3>
+                    <div id="success-message" class="mt-2 text-sm text-green-700">
+                        <!-- Success message will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/symbol_generator.js"></script>
+</body>
+</html> 

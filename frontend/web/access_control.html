@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Control Management - Arxos</title>
+    <link rel="stylesheet" href="static/css/access_control.css">
+    <link rel="stylesheet" href="static/css/common.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="access-control-container">
+        <!-- Header -->
+        <div class="section-header">
+            <h2><i class="fas fa-shield-alt"></i> Access Control Management</h2>
+            <p>Manage role-based permissions, floor-specific access controls, audit trails, and permission inheritance</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="access-control-tabs">
+            <button class="tab-button active" data-tab="users">
+                <i class="fas fa-users"></i> Users
+            </button>
+            <button class="tab-button" data-tab="permissions">
+                <i class="fas fa-key"></i> Permissions
+            </button>
+            <button class="tab-button" data-tab="audit-logs">
+                <i class="fas fa-history"></i> Audit Logs
+            </button>
+            <button class="tab-button" data-tab="floor-access">
+                <i class="fas fa-building"></i> Floor Access
+            </button>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users-tab" class="tab-content active">
+            <div class="access-control-form">
+                <h3><i class="fas fa-user-plus"></i> Create New User</h3>
+                <form id="create-user-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="username">Username *</label>
+                            <input type="text" id="username" name="username" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email *</label>
+                            <input type="email" id="email" name="email" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="primary_role">Primary Role *</label>
+                            <select id="primary_role" name="primary_role" class="form-control" required>
+                                <option value="">Select Role</option>
+                                <option value="contractor">Contractor</option>
+                                <option value="inspector">Inspector</option>
+                                <option value="tenant">Tenant</option>
+                                <option value="team">Team</option>
+                                <option value="ownership">Ownership</option>
+                                <option value="management">Management</option>
+                                <option value="admin">Admin</option>
+                                <option value="architect">Architect</option>
+                                <option value="engineer">Engineer</option>
+                                <option value="stakeholder">Stakeholder</option>
+                                <option value="data_consumer">Data Consumer</option>
+                                <option value="construction_firm">Construction Firm</option>
+                                <option value="jurisdiction">Jurisdiction</option>
+                                <option value="bim_user">BIM User</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="organization">Organization</label>
+                            <input type="text" id="organization" name="organization" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="secondary_roles">Secondary Roles (comma-separated)</label>
+                        <input type="text" id="secondary_roles" name="secondary_roles" class="form-control" 
+                               placeholder="e.g., contractor, inspector">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create User
+                    </button>
+                </form>
+            </div>
+
+            <div class="access-control-form">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3><i class="fas fa-users"></i> User Management</h3>
+                    <div>
+                        <input type="text" id="user-search" class="form-control" placeholder="Search users..." style="width: 200px;">
+                        <button id="refresh-users" class="btn btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div id="user-list">
+                    <div class="loading">Loading users...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permissions Tab -->
+        <div id="permissions-tab" class="tab-content">
+            <div class="access-control-form">
+                <h3><i class="fas fa-key"></i> Grant Permission</h3>
+                <form id="grant-permission-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="grant_role">Role *</label>
+                            <select id="grant_role" name="role" class="form-control" required>
+                                <option value="">Select Role</option>
+                                <option value="contractor">Contractor</option>
+                                <option value="inspector">Inspector</option>
+                                <option value="tenant">Tenant</option>
+                                <option value="team">Team</option>
+                                <option value="ownership">Ownership</option>
+                                <option value="management">Management</option>
+                                <option value="admin">Admin</option>
+                                <option value="architect">Architect</option>
+                                <option value="engineer">Engineer</option>
+                                <option value="stakeholder">Stakeholder</option>
+                                <option value="data_consumer">Data Consumer</option>
+                                <option value="construction_firm">Construction Firm</option>
+                                <option value="jurisdiction">Jurisdiction</option>
+                                <option value="bim_user">BIM User</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="resource_type">Resource Type *</label>
+                            <select id="resource_type" name="resource_type" class="form-control" required>
+                                <option value="">Select Resource Type</option>
+                                <option value="floor">Floor</option>
+                                <option value="building">Building</option>
+                                <option value="version">Version</option>
+                                <option value="branch">Branch</option>
+                                <option value="annotation">Annotation</option>
+                                <option value="comment">Comment</option>
+                                <option value="asset">Asset</option>
+                                <option value="cmms">CMMS</option>
+                                <option value="export">Export</option>
+                                <option value="import">Import</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="permission_level">Permission Level *</label>
+                            <select id="permission_level" name="permission_level" class="form-control" required>
+                                <option value="">Select Level</option>
+                                <option value="1">Read</option>
+                                <option value="2">Write</option>
+                                <option value="3">Admin</option>
+                                <option value="4">Owner</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="resource_id">Resource ID (optional)</label>
+                            <input type="text" id="resource_id" name="resource_id" class="form-control" 
+                                   placeholder="Specific resource ID">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="building_id">Building ID (optional)</label>
+                            <input type="text" id="building_id" name="building_id" class="form-control" 
+                                   placeholder="Building identifier">
+                        </div>
+                        <div class="form-group">
+                            <label for="floor_id">Floor ID (optional)</label>
+                            <input type="text" id="floor_id" name="floor_id" class="form-control" 
+                                   placeholder="Floor identifier">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="expires_at">Expires At (optional)</label>
+                        <input type="datetime-local" id="expires_at" name="expires_at" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-key"></i> Grant Permission
+                    </button>
+                </form>
+            </div>
+
+            <div class="access-control-form">
+                <h3><i class="fas fa-search"></i> Check Permission</h3>
+                <form id="check-permission-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="check_user_id">User ID *</label>
+                            <input type="text" id="check_user_id" name="user_id" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="check_action">Action *</label>
+                            <select id="check_action" name="action" class="form-control" required>
+                                <option value="">Select Action</option>
+                                <option value="read">Read</option>
+                                <option value="create">Create</option>
+                                <option value="update">Update</option>
+                                <option value="delete">Delete</option>
+                                <option value="export">Export</option>
+                                <option value="import">Import</option>
+                                <option value="merge">Merge</option>
+                                <option value="branch">Branch</option>
+                                <option value="annotate">Annotate</option>
+                                <option value="comment">Comment</option>
+                                <option value="approve">Approve</option>
+                                <option value="reject">Reject</option>
+                                <option value="assign">Assign</option>
+                                <option value="transfer">Transfer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="check_resource_type">Resource Type *</label>
+                            <select id="check_resource_type" name="resource_type" class="form-control" required>
+                                <option value="">Select Resource Type</option>
+                                <option value="floor">Floor</option>
+                                <option value="building">Building</option>
+                                <option value="version">Version</option>
+                                <option value="branch">Branch</option>
+                                <option value="annotation">Annotation</option>
+                                <option value="comment">Comment</option>
+                                <option value="asset">Asset</option>
+                                <option value="cmms">CMMS</option>
+                                <option value="export">Export</option>
+                                <option value="import">Import</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="check_resource_id">Resource ID (optional)</label>
+                            <input type="text" id="check_resource_id" name="resource_id" class="form-control" 
+                                   placeholder="Specific resource ID">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="check_building_id">Building ID (optional)</label>
+                            <input type="text" id="check_building_id" name="building_id" class="form-control" 
+                                   placeholder="Building identifier">
+                        </div>
+                        <div class="form-group">
+                            <label for="check_floor_id">Floor ID (optional)</label>
+                            <input type="text" id="check_floor_id" name="floor_id" class="form-control" 
+                                   placeholder="Floor identifier">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="fas fa-search"></i> Check Permission
+                    </button>
+                </form>
+                <div id="permission-check-result" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="access-control-form">
+                <h3><i class="fas fa-list"></i> Current Permissions</h3>
+                <div id="permission-list">
+                    <div class="loading">Loading permissions...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Logs Tab -->
+        <div id="audit-logs-tab" class="tab-content">
+            <div class="filters-container">
+                <h3><i class="fas fa-filter"></i> Audit Log Filters</h3>
+                <form id="audit-log-filters">
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label for="filter_user_id">User ID</label>
+                            <input type="text" id="filter_user_id" name="user_id" class="filter-control" 
+                                   placeholder="Filter by user">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter_resource_type">Resource Type</label>
+                            <select id="filter_resource_type" name="resource_type" class="filter-control">
+                                <option value="">All Types</option>
+                                <option value="floor">Floor</option>
+                                <option value="building">Building</option>
+                                <option value="version">Version</option>
+                                <option value="branch">Branch</option>
+                                <option value="annotation">Annotation</option>
+                                <option value="comment">Comment</option>
+                                <option value="asset">Asset</option>
+                                <option value="cmms">CMMS</option>
+                                <option value="export">Export</option>
+                                <option value="import">Import</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter_resource_id">Resource ID</label>
+                            <input type="text" id="filter_resource_id" name="resource_id" class="filter-control" 
+                                   placeholder="Filter by resource">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter_start_date">Start Date</label>
+                            <input type="datetime-local" id="filter_start_date" name="start_date" class="filter-control">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter_end_date">End Date</label>
+                            <input type="datetime-local" id="filter_end_date" name="end_date" class="filter-control">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter_limit">Limit</label>
+                            <select id="filter_limit" name="limit" class="filter-control">
+                                <option value="50">50</option>
+                                <option value="100" selected>100</option>
+                                <option value="200">200</option>
+                                <option value="500">500</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+                <div style="margin-top: 16px;">
+                    <button id="export-audit-logs" class="btn btn-success">
+                        <i class="fas fa-download"></i> Export Audit Logs
+                    </button>
+                </div>
+            </div>
+
+            <div class="access-control-form">
+                <h3><i class="fas fa-history"></i> Audit Logs</h3>
+                <div id="audit-logs">
+                    <div class="loading">Loading audit logs...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floor Access Tab -->
+        <div id="floor-access-tab" class="tab-content">
+            <div class="access-control-form">
+                <h3><i class="fas fa-building"></i> Floor Access Summary</h3>
+                <form id="floor-access-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="summary_building_id">Building ID *</label>
+                            <input type="text" id="summary_building_id" name="building_id" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="summary_floor_id">Floor ID *</label>
+                            <input type="text" id="summary_floor_id" name="floor_id" class="form-control" required>
+                        </div>
+                    </div>
+                    <button type="button" id="floor-access-summary" class="btn btn-primary">
+                        <i class="fas fa-chart-bar"></i> Load Access Summary
+                    </button>
+                </form>
+                <div id="floor-access-summary-result" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="access-control-form">
+                <h3><i class="fas fa-key"></i> Bulk Permission Management</h3>
+                <form id="bulk-permission-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bulk_building_id">Building ID *</label>
+                            <input type="text" id="bulk_building_id" name="building_id" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="bulk_floor_id">Floor ID *</label>
+                            <input type="text" id="bulk_floor_id" name="floor_id" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="bulk_permissions">Permissions (JSON) *</label>
+                        <textarea id="bulk_permissions" name="permissions" class="form-control" rows="10" required 
+                                  placeholder='[
+  {
+    "role": "contractor",
+    "resource_type": "floor",
+    "permission_level": 2
+  },
+  {
+    "role": "inspector",
+    "resource_type": "annotation",
+    "permission_level": 2
+  }
+]'></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-key"></i> Grant Bulk Permissions
+                    </button>
+                </form>
+            </div>
+
+            <div class="access-control-form">
+                <h3><i class="fas fa-list"></i> Floor Permissions</h3>
+                <div id="floor-permissions">
+                    <div class="loading">Select a floor to view permissions...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="static/js/access_control_manager.js"></script>
+    <script>
+        // Tab functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    // Remove active class from all buttons and contents
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked button and corresponding content
+                    button.classList.add('active');
+                    document.getElementById(`${targetTab}-tab`).classList.add('active');
+                });
+            });
+
+            // Initialize access control manager
+            if (window.accessControlManager) {
+                // Load initial data
+                accessControlManager.loadUsers();
+                accessControlManager.loadPermissions();
+                accessControlManager.loadAuditLogs();
+            }
+        });
+    </script>
+</body>
+</html> 

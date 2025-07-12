@@ -1,0 +1,22 @@
+{
+  "id": "fire_damper",
+  "name": "Fire Damper",
+  "description": "Fire-rated damper that closes automatically in case of fire",
+  "system": "mechanical",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

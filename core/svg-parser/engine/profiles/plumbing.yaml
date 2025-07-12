@@ -1,0 +1,986 @@
+# Plumbing System Behavior Profiles
+# Comprehensive behavior profiles for plumbing systems including water supply,
+# drainage, fixtures, and piping systems with variable inputs, calculations,
+# and simulation rules.
+
+# Water Supply System Profiles
+water_supply:
+  water_main:
+    description: "Water main behavior profile"
+    system_type: "plumbing"
+    category: "water_supply"
+    
+    variables:
+      diameter:
+        type: "scalar"
+        value: 8
+        unit: "inches"
+        description: "Pipe diameter"
+        min_value: 2
+        max_value: 48
+        is_required: true
+        
+      length:
+        type: "scalar"
+        value: 500
+        unit: "ft"
+        description: "Pipe length"
+        min_value: 10
+        max_value: 10000
+        is_required: true
+        
+      flow_rate:
+        type: "scalar"
+        value: 1000
+        unit: "GPM"
+        description: "Flow rate"
+        min_value: 10
+        max_value: 10000
+        is_required: true
+        
+      pressure:
+        type: "scalar"
+        value: 60
+        unit: "PSI"
+        description: "Operating pressure"
+        min_value: 20
+        max_value: 150
+        is_required: true
+        
+      roughness:
+        type: "scalar"
+        value: 0.00085
+        unit: "ft"
+        description: "Pipe roughness factor"
+        min_value: 0.0001
+        max_value: 0.01
+        is_required: true
+        
+      material:
+        type: "enum"
+        value: "ductile_iron"
+        options: ["ductile_iron", "pvc", "steel", "copper", "hdp"]
+        description: "Pipe material"
+        is_required: true
+    
+    calculations:
+      cross_sectional_area:
+        type: "arithmetic"
+        expression: "3.14159 * (diameter / 2)^2 / 144"
+        input_variables: ["diameter"]
+        output_variable: "cross_sectional_area"
+        description: "Calculate cross-sectional area in sq ft"
+        
+      velocity:
+        type: "arithmetic"
+        expression: "flow_rate / (cross_sectional_area * 7.48)"
+        input_variables: ["flow_rate", "cross_sectional_area"]
+        output_variable: "velocity"
+        description: "Calculate flow velocity in ft/s"
+        
+      reynolds_number:
+        type: "physics"
+        expression: "velocity * diameter / (12 * kinematic_viscosity)"
+        input_variables: ["velocity", "diameter", "kinematic_viscosity"]
+        output_variable: "reynolds_number"
+        description: "Calculate Reynolds number"
+        
+      friction_factor:
+        type: "physics"
+        expression: "0.25 / (log10(roughness / (3.7 * diameter) + 5.74 / reynolds_number^0.9))^2"
+        input_variables: ["roughness", "diameter", "reynolds_number"]
+        output_variable: "friction_factor"
+        description: "Calculate friction factor"
+        
+      head_loss:
+        type: "physics"
+        expression: "friction_factor * length * velocity^2 / (2 * g * diameter / 12)"
+        input_variables: ["friction_factor", "length", "velocity", "diameter"]
+        output_variable: "head_loss"
+        description: "Calculate head loss in ft"
+        
+      pressure_drop:
+        type: "arithmetic"
+        expression: "head_loss * 0.433"
+        input_variables: ["head_loss"]
+        output_variable: "pressure_drop"
+        description: "Convert head loss to pressure drop in PSI"
+        
+      capacity_factor:
+        type: "arithmetic"
+        expression: "flow_rate / (diameter^2.5)"
+        input_variables: ["flow_rate", "diameter"]
+        output_variable: "capacity_factor"
+        description: "Calculate capacity factor"
+    
+    validation_rules:
+      diameter_check:
+        condition: "diameter >= 2 and diameter <= 48"
+        message: "Diameter must be between 2 and 48 inches"
+        severity: "error"
+        
+      length_check:
+        condition: "length >= 10 and length <= 10000"
+        message: "Length must be between 10 and 10,000 ft"
+        severity: "error"
+        
+      flow_check:
+        condition: "flow_rate >= 10 and flow_rate <= 10000"
+        message: "Flow rate must be between 10 and 10,000 GPM"
+        severity: "error"
+        
+      pressure_check:
+        condition: "pressure >= 20 and pressure <= 150"
+        message: "Pressure must be between 20 and 150 PSI"
+        severity: "error"
+        
+      velocity_warning:
+        condition: "velocity > 10"
+        message: "Velocity is high - consider larger pipe"
+        severity: "warning"
+        
+      pressure_drop_warning:
+        condition: "pressure_drop > 5"
+        message: "Pressure drop is high - consider larger pipe"
+        severity: "warning"
+    
+    simulation_rules:
+      flow_simulation:
+        description: "Simulate water flow through main"
+        inputs: ["flow_requirements", "pressure_conditions", "temperature"]
+        outputs: ["velocity", "pressure_drop", "head_loss"]
+        
+      sizing_simulation:
+        description: "Simulate pipe sizing optimization"
+        inputs: ["flow_requirements", "pressure_constraints", "cost_factors"]
+        outputs: ["optimal_diameter", "pressure_drop", "cost"]
+
+  water_service:
+    description: "Water service line behavior profile"
+    system_type: "plumbing"
+    category: "water_supply"
+    
+    variables:
+      diameter:
+        type: "scalar"
+        value: 1
+        unit: "inches"
+        description: "Service line diameter"
+        min_value: 0.5
+        max_value: 6
+        is_required: true
+        
+      length:
+        type: "scalar"
+        value: 100
+        unit: "ft"
+        description: "Service line length"
+        min_value: 10
+        max_value: 1000
+        is_required: true
+        
+      flow_rate:
+        type: "scalar"
+        value: 50
+        unit: "GPM"
+        description: "Peak flow rate"
+        min_value: 5
+        max_value: 500
+        is_required: true
+        
+      pressure_available:
+        type: "scalar"
+        value: 80
+        unit: "PSI"
+        description: "Available pressure at main"
+        min_value: 20
+        max_value: 150
+        is_required: true
+        
+      material:
+        type: "enum"
+        value: "copper"
+        options: ["copper", "pvc", "polyethylene", "galvanized"]
+        description: "Service line material"
+        is_required: true
+        
+      depth:
+        type: "scalar"
+        value: 4
+        unit: "ft"
+        description: "Burial depth"
+        min_value: 2
+        max_value: 10
+        is_required: true
+    
+    calculations:
+      velocity:
+        type: "arithmetic"
+        expression: "flow_rate / (0.785 * diameter^2)"
+        input_variables: ["flow_rate", "diameter"]
+        output_variable: "velocity"
+        description: "Calculate flow velocity in ft/s"
+        
+      head_loss:
+        type: "physics"
+        expression: "friction_factor * length * velocity^2 / (2 * g * diameter / 12)"
+        input_variables: ["friction_factor", "length", "velocity", "diameter"]
+        output_variable: "head_loss"
+        description: "Calculate head loss in ft"
+        
+      pressure_drop:
+        type: "arithmetic"
+        expression: "head_loss * 0.433"
+        input_variables: ["head_loss"]
+        output_variable: "pressure_drop"
+        description: "Convert head loss to pressure drop in PSI"
+        
+      pressure_delivered:
+        type: "arithmetic"
+        expression: "pressure_available - pressure_drop"
+        input_variables: ["pressure_available", "pressure_drop"]
+        output_variable: "pressure_delivered"
+        description: "Calculate delivered pressure"
+        
+      capacity_factor:
+        type: "arithmetic"
+        expression: "flow_rate / diameter^2"
+        input_variables: ["flow_rate", "diameter"]
+        output_variable: "capacity_factor"
+        description: "Calculate capacity factor"
+        
+      frost_protection:
+        type: "conditional"
+        expression: "if depth >= 4 then 'protected' else 'at_risk'"
+        input_variables: ["depth"]
+        output_variable: "frost_protection"
+        description: "Determine frost protection status"
+    
+    validation_rules:
+      diameter_check:
+        condition: "diameter >= 0.5 and diameter <= 6"
+        message: "Diameter must be between 0.5 and 6 inches"
+        severity: "error"
+        
+      length_check:
+        condition: "length >= 10 and length <= 1000"
+        message: "Length must be between 10 and 1000 ft"
+        severity: "error"
+        
+      flow_check:
+        condition: "flow_rate >= 5 and flow_rate <= 500"
+        message: "Flow rate must be between 5 and 500 GPM"
+        severity: "error"
+        
+      pressure_check:
+        condition: "pressure_available >= 20 and pressure_available <= 150"
+        message: "Available pressure must be between 20 and 150 PSI"
+        severity: "error"
+        
+      velocity_warning:
+        condition: "velocity > 8"
+        message: "Velocity is high - consider larger service line"
+        severity: "warning"
+        
+      pressure_drop_warning:
+        condition: "pressure_drop > 10"
+        message: "Pressure drop is high - consider larger service line"
+        severity: "warning"
+        
+      depth_warning:
+        condition: "depth < 4"
+        message: "Burial depth may be insufficient for frost protection"
+        severity: "warning"
+    
+    simulation_rules:
+      pressure_simulation:
+        description: "Simulate pressure delivery under various flows"
+        inputs: ["flow_requirements", "main_pressure", "temperature"]
+        outputs: ["delivered_pressure", "pressure_drop", "velocity"]
+        
+      sizing_simulation:
+        description: "Simulate service line sizing"
+        inputs: ["peak_flow", "pressure_requirements", "distance"]
+        outputs: ["optimal_diameter", "pressure_drop", "cost"]
+
+# Drainage System Profiles
+drainage:
+  drain_pipe:
+    description: "Drain pipe behavior profile"
+    system_type: "plumbing"
+    category: "drainage"
+    
+    variables:
+      diameter:
+        type: "scalar"
+        value: 4
+        unit: "inches"
+        description: "Pipe diameter"
+        min_value: 2
+        max_value: 12
+        is_required: true
+        
+      length:
+        type: "scalar"
+        value: 50
+        unit: "ft"
+        description: "Pipe length"
+        min_value: 5
+        max_value: 500
+        is_required: true
+        
+      slope:
+        type: "scalar"
+        value: 0.02
+        unit: "ft/ft"
+        description: "Pipe slope"
+        min_value: 0.01
+        max_value: 0.05
+        is_required: true
+        
+      flow_rate:
+        type: "scalar"
+        value: 100
+        unit: "GPM"
+        description: "Peak flow rate"
+        min_value: 5
+        max_value: 1000
+        is_required: true
+        
+      roughness:
+        type: "scalar"
+        value: 0.013
+        unit: "dimensionless"
+        description: "Manning roughness coefficient"
+        min_value: 0.008
+        max_value: 0.02
+        is_required: true
+        
+      material:
+        type: "enum"
+        value: "pvc"
+        options: ["pvc", "cast_iron", "vitrified_clay", "concrete"]
+        description: "Pipe material"
+        is_required: true
+    
+    calculations:
+      cross_sectional_area:
+        type: "arithmetic"
+        expression: "3.14159 * (diameter / 2)^2 / 144"
+        input_variables: ["diameter"]
+        output_variable: "cross_sectional_area"
+        description: "Calculate cross-sectional area in sq ft"
+        
+      hydraulic_radius:
+        type: "arithmetic"
+        expression: "cross_sectional_area / (3.14159 * diameter / 12)"
+        input_variables: ["cross_sectional_area", "diameter"]
+        output_variable: "hydraulic_radius"
+        description: "Calculate hydraulic radius in ft"
+        
+      velocity:
+        type: "physics"
+        expression: "(1.486 / roughness) * hydraulic_radius^(2/3) * sqrt(slope)"
+        input_variables: ["roughness", "hydraulic_radius", "slope"]
+        output_variable: "velocity"
+        description: "Calculate flow velocity using Manning equation"
+        
+      capacity:
+        type: "arithmetic"
+        expression: "velocity * cross_sectional_area * 7.48"
+        input_variables: ["velocity", "cross_sectional_area"]
+        output_variable: "capacity"
+        description: "Calculate pipe capacity in GPM"
+        
+      depth_ratio:
+        type: "arithmetic"
+        expression: "flow_depth / diameter"
+        input_variables: ["flow_depth", "diameter"]
+        output_variable: "depth_ratio"
+        description: "Calculate depth ratio"
+        
+      self_cleaning_velocity:
+        type: "physics"
+        expression: "3 * sqrt(32.2 * diameter / 12)"
+        input_variables: ["diameter"]
+        output_variable: "self_cleaning_velocity"
+        description: "Calculate self-cleaning velocity"
+    
+    validation_rules:
+      diameter_check:
+        condition: "diameter >= 2 and diameter <= 12"
+        message: "Diameter must be between 2 and 12 inches"
+        severity: "error"
+        
+      length_check:
+        condition: "length >= 5 and length <= 500"
+        message: "Length must be between 5 and 500 ft"
+        severity: "error"
+        
+      slope_check:
+        condition: "slope >= 0.01 and slope <= 0.05"
+        message: "Slope must be between 1% and 5%"
+        severity: "error"
+        
+      flow_check:
+        condition: "flow_rate >= 5 and flow_rate <= 1000"
+        message: "Flow rate must be between 5 and 1000 GPM"
+        severity: "error"
+        
+      capacity_check:
+        condition: "flow_rate <= capacity"
+        message: "Flow rate exceeds pipe capacity"
+        severity: "error"
+        
+      velocity_warning:
+        condition: "velocity < self_cleaning_velocity"
+        message: "Velocity is below self-cleaning threshold"
+        severity: "warning"
+        
+      slope_warning:
+        condition: "slope < 0.02"
+        message: "Slope is below recommended minimum"
+        severity: "warning"
+    
+    simulation_rules:
+      flow_simulation:
+        description: "Simulate drainage flow under various conditions"
+        inputs: ["flow_requirements", "slope_conditions", "pipe_condition"]
+        outputs: ["velocity", "capacity", "depth_ratio"]
+        
+      sizing_simulation:
+        description: "Simulate drain pipe sizing"
+        inputs: ["peak_flow", "slope_constraints", "material_options"]
+        outputs: ["optimal_diameter", "velocity", "capacity"]
+
+  vent_pipe:
+    description: "Vent pipe behavior profile"
+    system_type: "plumbing"
+    category: "drainage"
+    
+    variables:
+      diameter:
+        type: "scalar"
+        value: 3
+        unit: "inches"
+        description: "Vent pipe diameter"
+        min_value: 1.25
+        max_value: 8
+        is_required: true
+        
+      length:
+        type: "scalar"
+        value: 20
+        unit: "ft"
+        description: "Vent pipe length"
+        min_value: 5
+        max_value: 100
+        is_required: true
+        
+      height:
+        type: "scalar"
+        value: 15
+        unit: "ft"
+        description: "Vent height above roof"
+        min_value: 6
+        max_value: 50
+        is_required: true
+        
+      wind_speed:
+        type: "scalar"
+        value: 20
+        unit: "mph"
+        description: "Design wind speed"
+        min_value: 5
+        max_value: 100
+        is_required: true
+        
+      temperature:
+        type: "scalar"
+        value: 70
+        unit: "°F"
+        description: "Ambient temperature"
+        min_value: -20
+        max_value: 120
+        is_required: true
+    
+    calculations:
+      cross_sectional_area:
+        type: "arithmetic"
+        expression: "3.14159 * (diameter / 2)^2 / 144"
+        input_variables: ["diameter"]
+        output_variable: "cross_sectional_area"
+        description: "Calculate cross-sectional area in sq ft"
+        
+      vent_capacity:
+        type: "physics"
+        expression: "cross_sectional_area * sqrt(2 * g * height) * 7.48"
+        input_variables: ["cross_sectional_area", "height"]
+        output_variable: "vent_capacity"
+        description: "Calculate vent capacity in GPM"
+        
+      wind_effect:
+        type: "physics"
+        expression: "wind_speed * cross_sectional_area * 0.002"
+        input_variables: ["wind_speed", "cross_sectional_area"]
+        output_variable: "wind_effect"
+        description: "Calculate wind effect on venting"
+        
+      temperature_factor:
+        type: "physics"
+        expression: "sqrt((460 + temperature) / 530)"
+        input_variables: ["temperature"]
+        output_variable: "temperature_factor"
+        description: "Calculate temperature correction factor"
+        
+      effective_capacity:
+        type: "arithmetic"
+        expression: "vent_capacity * temperature_factor - wind_effect"
+        input_variables: ["vent_capacity", "temperature_factor", "wind_effect"]
+        output_variable: "effective_capacity"
+        description: "Calculate effective vent capacity"
+    
+    validation_rules:
+      diameter_check:
+        condition: "diameter >= 1.25 and diameter <= 8"
+        message: "Diameter must be between 1.25 and 8 inches"
+        severity: "error"
+        
+      length_check:
+        condition: "length >= 5 and length <= 100"
+        message: "Length must be between 5 and 100 ft"
+        severity: "error"
+        
+      height_check:
+        condition: "height >= 6 and height <= 50"
+        message: "Height must be between 6 and 50 ft"
+        severity: "error"
+        
+      wind_check:
+        condition: "wind_speed >= 5 and wind_speed <= 100"
+        message: "Wind speed must be between 5 and 100 mph"
+        severity: "error"
+        
+      capacity_warning:
+        condition: "effective_capacity < required_vent_capacity"
+        message: "Vent capacity is insufficient"
+        severity: "warning"
+        
+      height_warning:
+        condition: "height < 12"
+        message: "Vent height may be insufficient for proper venting"
+        severity: "warning"
+    
+    simulation_rules:
+      venting_simulation:
+        description: "Simulate vent performance under various conditions"
+        inputs: ["drain_flow", "wind_conditions", "temperature"]
+        outputs: ["vent_capacity", "backpressure", "venting_efficiency"]
+        
+      sizing_simulation:
+        description: "Simulate vent pipe sizing"
+        inputs: ["drain_capacity", "height_constraints", "wind_conditions"]
+        outputs: ["optimal_diameter", "capacity", "safety_factor"]
+
+# Fixture Profiles
+fixtures:
+  water_closet:
+    description: "Water closet behavior profile"
+    system_type: "plumbing"
+    category: "fixtures"
+    
+    variables:
+      flush_volume:
+        type: "scalar"
+        value: 1.6
+        unit: "GPF"
+        description: "Flush volume"
+        min_value: 0.8
+        max_value: 3.5
+        is_required: true
+        
+      flush_type:
+        type: "enum"
+        value: "gravity"
+        options: ["gravity", "pressure_assist", "dual_flush"]
+        description: "Flush mechanism type"
+        is_required: true
+        
+      water_pressure:
+        type: "scalar"
+        value: 60
+        unit: "PSI"
+        description: "Water pressure"
+        min_value: 20
+        max_value: 150
+        is_required: true
+        
+      temperature:
+        type: "scalar"
+        value: 120
+        unit: "°F"
+        description: "Water temperature"
+        min_value: 100
+        max_value: 140
+        is_required: true
+        
+      usage_frequency:
+        type: "scalar"
+        value: 5
+        unit: "flushes/day"
+        description: "Average daily usage"
+        min_value: 1
+        max_value: 20
+        is_required: true
+    
+    calculations:
+      daily_water_use:
+        type: "arithmetic"
+        expression: "flush_volume * usage_frequency"
+        input_variables: ["flush_volume", "usage_frequency"]
+        output_variable: "daily_water_use"
+        description: "Calculate daily water consumption in gallons"
+        
+      annual_water_use:
+        type: "arithmetic"
+        expression: "daily_water_use * 365"
+        input_variables: ["daily_water_use"]
+        output_variable: "annual_water_use"
+        description: "Calculate annual water consumption in gallons"
+        
+      water_cost:
+        type: "arithmetic"
+        expression: "annual_water_use * water_rate"
+        input_variables: ["annual_water_use", "water_rate"]
+        output_variable: "water_cost"
+        description: "Calculate annual water cost"
+        
+      efficiency_rating:
+        type: "conditional"
+        expression: "if flush_volume <= 1.28 then 'high' else if flush_volume <= 1.6 then 'medium' else 'low'"
+        input_variables: ["flush_volume"]
+        output_variable: "efficiency_rating"
+        description: "Calculate efficiency rating"
+        
+      flush_pressure:
+        type: "physics"
+        expression: "water_pressure * flush_efficiency_factor"
+        input_variables: ["water_pressure", "flush_efficiency_factor"]
+        output_variable: "flush_pressure"
+        description: "Calculate effective flush pressure"
+    
+    validation_rules:
+      flush_volume_check:
+        condition: "flush_volume >= 0.8 and flush_volume <= 3.5"
+        message: "Flush volume must be between 0.8 and 3.5 GPF"
+        severity: "error"
+        
+      pressure_check:
+        condition: "water_pressure >= 20 and water_pressure <= 150"
+        message: "Water pressure must be between 20 and 150 PSI"
+        severity: "error"
+        
+      temperature_check:
+        condition: "temperature >= 100 and temperature <= 140"
+        message: "Water temperature must be between 100°F and 140°F"
+        severity: "error"
+        
+      usage_check:
+        condition: "usage_frequency >= 1 and usage_frequency <= 20"
+        message: "Usage frequency must be between 1 and 20 flushes per day"
+        severity: "error"
+        
+      efficiency_warning:
+        condition: "flush_volume > 1.6"
+        message: "Consider high-efficiency model to reduce water use"
+        severity: "warning"
+        
+      pressure_warning:
+        condition: "water_pressure < 30"
+        message: "Water pressure may be insufficient for proper operation"
+        severity: "warning"
+    
+    simulation_rules:
+      performance_simulation:
+        description: "Simulate toilet performance under various conditions"
+        inputs: ["water_pressure", "temperature", "usage_pattern"]
+        outputs: ["flush_efficiency", "water_consumption", "maintenance_needs"]
+        
+      efficiency_simulation:
+        description: "Simulate water efficiency improvements"
+        inputs: ["current_usage", "efficiency_upgrades", "cost_factors"]
+        outputs: ["water_savings", "cost_savings", "payback_period"]
+
+  lavatory:
+    description: "Lavatory behavior profile"
+    system_type: "plumbing"
+    category: "fixtures"
+    
+    variables:
+      flow_rate:
+        type: "scalar"
+        value: 2.2
+        unit: "GPM"
+        description: "Faucet flow rate"
+        min_value: 0.5
+        max_value: 5.0
+        is_required: true
+        
+      usage_duration:
+        type: "scalar"
+        value: 30
+        unit: "seconds"
+        description: "Average usage duration"
+        min_value: 5
+        max_value: 300
+        is_required: true
+        
+      usage_frequency:
+        type: "scalar"
+        value: 10
+        unit: "uses/day"
+        description: "Average daily usage"
+        min_value: 1
+        max_value: 50
+        is_required: true
+        
+      water_temperature:
+        type: "scalar"
+        value: 110
+        unit: "°F"
+        description: "Water temperature"
+        min_value: 80
+        max_value: 140
+        is_required: true
+        
+      aerator_type:
+        type: "enum"
+        value: "standard"
+        options: ["standard", "low_flow", "touchless", "sensor"]
+        description: "Faucet aerator type"
+        is_required: true
+    
+    calculations:
+      daily_water_use:
+        type: "arithmetic"
+        expression: "flow_rate * usage_duration / 60 * usage_frequency"
+        input_variables: ["flow_rate", "usage_duration", "usage_frequency"]
+        output_variable: "daily_water_use"
+        description: "Calculate daily water consumption in gallons"
+        
+      annual_water_use:
+        type: "arithmetic"
+        expression: "daily_water_use * 365"
+        input_variables: ["daily_water_use"]
+        output_variable: "annual_water_use"
+        description: "Calculate annual water consumption in gallons"
+        
+      energy_consumption:
+        type: "arithmetic"
+        expression: "daily_water_use * 8.33 * (water_temperature - 50) * 0.001"
+        input_variables: ["daily_water_use", "water_temperature"]
+        output_variable: "energy_consumption"
+        description: "Calculate energy consumption for water heating in kWh"
+        
+      efficiency_rating:
+        type: "conditional"
+        expression: "if flow_rate <= 1.5 then 'high' else if flow_rate <= 2.2 then 'medium' else 'low'"
+        input_variables: ["flow_rate"]
+        output_variable: "efficiency_rating"
+        description: "Calculate efficiency rating"
+        
+      cost_savings:
+        type: "arithmetic"
+        expression: "water_savings * water_rate + energy_savings * energy_rate"
+        input_variables: ["water_savings", "water_rate", "energy_savings", "energy_rate"]
+        output_variable: "cost_savings"
+        description: "Calculate total cost savings"
+    
+    validation_rules:
+      flow_rate_check:
+        condition: "flow_rate >= 0.5 and flow_rate <= 5.0"
+        message: "Flow rate must be between 0.5 and 5.0 GPM"
+        severity: "error"
+        
+      duration_check:
+        condition: "usage_duration >= 5 and usage_duration <= 300"
+        message: "Usage duration must be between 5 and 300 seconds"
+        severity: "error"
+        
+      frequency_check:
+        condition: "usage_frequency >= 1 and usage_frequency <= 50"
+        message: "Usage frequency must be between 1 and 50 uses per day"
+        severity: "error"
+        
+      temperature_check:
+        condition: "water_temperature >= 80 and water_temperature <= 140"
+        message: "Water temperature must be between 80°F and 140°F"
+        severity: "error"
+        
+      efficiency_warning:
+        condition: "flow_rate > 2.2"
+        message: "Consider low-flow aerator to reduce water use"
+        severity: "warning"
+        
+      usage_warning:
+        condition: "usage_duration > 60"
+        message: "Usage duration is high - consider automatic shutoff"
+        severity: "warning"
+    
+    simulation_rules:
+      usage_simulation:
+        description: "Simulate lavatory usage patterns"
+        inputs: ["usage_pattern", "occupancy", "efficiency_features"]
+        outputs: ["water_consumption", "energy_use", "cost"]
+        
+      efficiency_simulation:
+        description: "Simulate efficiency improvements"
+        inputs: ["current_usage", "efficiency_upgrades", "behavior_changes"]
+        outputs: ["water_savings", "energy_savings", "payback_period"]
+
+# Piping System Profiles
+piping:
+  hot_water_recirculation:
+    description: "Hot water recirculation system behavior profile"
+    system_type: "plumbing"
+    category: "piping"
+    
+    variables:
+      pipe_diameter:
+        type: "scalar"
+        value: 1
+        unit: "inches"
+        description: "Recirculation pipe diameter"
+        min_value: 0.5
+        max_value: 4
+        is_required: true
+        
+      loop_length:
+        type: "scalar"
+        value: 200
+        unit: "ft"
+        description: "Total loop length"
+        min_value: 50
+        max_value: 1000
+        is_required: true
+        
+      flow_rate:
+        type: "scalar"
+        value: 10
+        unit: "GPM"
+        description: "Recirculation flow rate"
+        min_value: 2
+        max_value: 50
+        is_required: true
+        
+      temperature_drop:
+        type: "scalar"
+        value: 5
+        unit: "°F"
+        description: "Temperature drop in loop"
+        min_value: 1
+        max_value: 15
+        is_required: true
+        
+      pump_power:
+        type: "scalar"
+        value: 0.25
+        unit: "HP"
+        description: "Pump power"
+        min_value: 0.1
+        max_value: 5
+        is_required: true
+        
+      operating_hours:
+        type: "scalar"
+        value: 8760
+        unit: "hours/year"
+        description: "Annual operating hours"
+        min_value: 0
+        max_value: 8760
+        is_required: true
+    
+    calculations:
+      velocity:
+        type: "arithmetic"
+        expression: "flow_rate / (0.785 * pipe_diameter^2)"
+        input_variables: ["flow_rate", "pipe_diameter"]
+        output_variable: "velocity"
+        description: "Calculate flow velocity in ft/s"
+        
+      head_loss:
+        type: "physics"
+        expression: "friction_factor * loop_length * velocity^2 / (2 * g * pipe_diameter / 12)"
+        input_variables: ["friction_factor", "loop_length", "velocity", "pipe_diameter"]
+        output_variable: "head_loss"
+        description: "Calculate head loss in ft"
+        
+      pump_energy:
+        type: "arithmetic"
+        expression: "pump_power * 0.746 * operating_hours"
+        input_variables: ["pump_power", "operating_hours"]
+        output_variable: "pump_energy"
+        description: "Calculate pump energy consumption in kWh"
+        
+      heat_loss:
+        type: "physics"
+        expression: "flow_rate * 8.33 * temperature_drop * 1.0"
+        input_variables: ["flow_rate", "temperature_drop"]
+        output_variable: "heat_loss"
+        description: "Calculate heat loss in BTU/hr"
+        
+      energy_loss:
+        type: "arithmetic"
+        expression: "heat_loss * operating_hours / 3412"
+        input_variables: ["heat_loss", "operating_hours"]
+        output_variable: "energy_loss"
+        description: "Calculate energy loss in kWh"
+        
+      total_energy:
+        type: "arithmetic"
+        expression: "pump_energy + energy_loss"
+        input_variables: ["pump_energy", "energy_loss"]
+        output_variable: "total_energy"
+        description: "Calculate total energy consumption"
+    
+    validation_rules:
+      diameter_check:
+        condition: "pipe_diameter >= 0.5 and pipe_diameter <= 4"
+        message: "Pipe diameter must be between 0.5 and 4 inches"
+        severity: "error"
+        
+      length_check:
+        condition: "loop_length >= 50 and loop_length <= 1000"
+        message: "Loop length must be between 50 and 1000 ft"
+        severity: "error"
+        
+      flow_check:
+        condition: "flow_rate >= 2 and flow_rate <= 50"
+        message: "Flow rate must be between 2 and 50 GPM"
+        severity: "error"
+        
+      temperature_check:
+        condition: "temperature_drop >= 1 and temperature_drop <= 15"
+        message: "Temperature drop must be between 1°F and 15°F"
+        severity: "error"
+        
+      velocity_warning:
+        condition: "velocity > 5"
+        message: "Velocity is high - consider larger pipe"
+        severity: "warning"
+        
+      energy_warning:
+        condition: "total_energy > 5000"
+        message: "Energy consumption is high - consider optimization"
+        severity: "warning"
+    
+    simulation_rules:
+      performance_simulation:
+        description: "Simulate recirculation system performance"
+        inputs: ["load_profile", "temperature_requirements", "pump_efficiency"]
+        outputs: ["energy_consumption", "temperature_delivery", "cost"]
+        
+      optimization_simulation:
+        description: "Simulate system optimization"
+        inputs: ["current_performance", "optimization_options", "cost_factors"]
+        outputs: ["energy_savings", "cost_savings", "payback_period"] 

@@ -1,0 +1,22 @@
+{
+  "id": "return_duct",
+  "name": "Return Duct",
+  "description": "Duct that returns air from spaces back to HVAC equipment",
+  "system": "mechanical",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

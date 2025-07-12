@@ -1,0 +1,402 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://arxos.io/schemas/logging-schema.json",
+  "title": "Arxos Platform Logging Schema",
+  "description": "Standardized JSON schema for logging across all Arxos platform components",
+  "version": "1.0.0",
+  "type": "object",
+  "required": ["timestamp", "level", "service", "component", "message"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the log entry was created",
+      "examples": ["2024-01-15T10:30:00.000Z", "2024-01-15T10:30:00.123+00:00"]
+    },
+    "level": {
+      "type": "string",
+      "enum": ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
+      "description": "Log level indicating the severity of the event",
+      "default": "INFO"
+    },
+    "service": {
+      "type": "string",
+      "description": "Name of the service generating the log entry",
+      "enum": [
+        "arx-backend",
+        "arx-svg-parser", 
+        "arx-frontend",
+        "arx-cmms",
+        "arx-data-vendor",
+        "arx-cli",
+        "arx-desktop",
+        "arx-mobile"
+      ],
+      "examples": ["arx-backend", "arx-svg-parser"]
+    },
+    "component": {
+      "type": "string",
+      "description": "Specific component or module within the service",
+      "pattern": "^[a-z0-9-_]+$",
+      "examples": ["asset-inventory", "user-auth", "export-service", "bim-extraction"]
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable description of the event",
+      "minLength": 1,
+      "maxLength": 1000,
+      "examples": [
+        "Asset inventory exported successfully",
+        "User authentication failed",
+        "Database connection established",
+        "Export job completed"
+      ]
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Unique identifier for the request that generated this log entry",
+      "pattern": "^[a-zA-Z0-9-_]+$",
+      "examples": ["req-12345", "req-abc-def-456"]
+    },
+    "correlation_id": {
+      "type": "string", 
+      "description": "Correlation ID for tracing related log entries across services",
+      "pattern": "^[a-zA-Z0-9-_]+$",
+      "examples": ["corr-def456", "corr-xyz-789"]
+    },
+    "user_id": {
+      "oneOf": [
+        {"type": "string", "pattern": "^[a-zA-Z0-9-_]+$"},
+        {"type": "integer", "minimum": 1}
+      ],
+      "description": "ID of the user associated with this event",
+      "examples": ["user-67890", 67890]
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session identifier for the user",
+      "pattern": "^[a-zA-Z0-9-_]+$",
+      "examples": ["sess-abc123", "session-xyz-456"]
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Distributed tracing ID for tracking requests across services",
+      "pattern": "^[a-f0-9]{32}$",
+      "examples": ["1234567890abcdef1234567890abcdef"]
+    },
+    "span_id": {
+      "type": "string", 
+      "description": "Span ID for distributed tracing",
+      "pattern": "^[a-f0-9]{16}$",
+      "examples": ["1234567890abcdef"]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional structured data about the event",
+      "additionalProperties": true,
+      "properties": {
+        "operation": {
+          "type": "string",
+          "description": "Name of the operation being performed",
+          "examples": ["export_assets", "user_login", "database_query", "file_upload"]
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Duration of the operation in milliseconds",
+          "examples": [1250, 45.5, 3000]
+        },
+        "records_processed": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of records processed in the operation",
+          "examples": [1500, 0, 10000]
+        },
+        "file_size_bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Size of files in bytes",
+          "examples": [1048576, 2048, 52428800]
+        },
+        "status_code": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599,
+          "description": "HTTP status code for API operations",
+          "examples": [200, 404, 500, 201]
+        },
+        "error_code": {
+          "type": "string",
+          "description": "Application-specific error code",
+          "examples": ["VALIDATION_ERROR", "DATABASE_TIMEOUT", "AUTHENTICATION_FAILED"]
+        },
+        "retry_attempt": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of retry attempts for the operation",
+          "examples": [0, 1, 3]
+        },
+        "cache_hit": {
+          "type": "boolean",
+          "description": "Whether the operation resulted in a cache hit"
+        },
+        "rows_affected": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of database rows affected",
+          "examples": [1, 0, 150]
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Contextual information about the environment and request",
+      "additionalProperties": true,
+      "properties": {
+        "building_id": {
+          "type": "string",
+          "description": "ID of the building associated with the operation",
+          "examples": ["bldg-001", "building-123"]
+        },
+        "floor_id": {
+          "type": "string",
+          "description": "ID of the floor associated with the operation",
+          "examples": ["floor-02", "level-3"]
+        },
+        "asset_id": {
+          "type": "string",
+          "description": "ID of the asset associated with the operation",
+          "examples": ["asset-456", "equipment-789"]
+        },
+        "ip_address": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "IP address of the client making the request",
+          "examples": ["192.168.1.100", "10.0.0.1"]
+        },
+        "user_agent": {
+          "type": "string",
+          "description": "User agent string from the client",
+          "maxLength": 500,
+          "examples": [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Arxos-Desktop-App/1.0.0"
+          ]
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "API endpoint being accessed",
+          "examples": ["/api/assets", "/v1/parse/recognize-symbols"]
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+          "description": "HTTP method used for the request"
+        },
+        "user_role": {
+          "type": "string",
+          "description": "Role of the user performing the operation",
+          "examples": ["admin", "user", "viewer", "data_vendor"]
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["development", "staging", "production", "testing"],
+          "description": "Environment where the service is running"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the service generating the log",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "examples": ["1.0.0", "2.1.3"]
+        }
+      }
+    },
+    "exception": {
+      "type": "object",
+      "description": "Exception information when an error occurs",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type/class of the exception",
+          "examples": ["ValueError", "DatabaseConnectionError", "ValidationError"]
+        },
+        "message": {
+          "type": "string",
+          "description": "Exception message",
+          "maxLength": 1000
+        },
+        "traceback": {
+          "type": "string",
+          "description": "Full stack trace of the exception"
+        },
+        "code": {
+          "type": "string",
+          "description": "Error code associated with the exception",
+          "examples": ["E001", "DB_CONNECTION_FAILED", "VALIDATION_ERROR"]
+        }
+      },
+      "required": ["type", "message"]
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags for categorizing and filtering log entries",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9-_]+$"
+      },
+      "examples": [["security", "authentication"], ["performance", "database"], ["business", "export"]]
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "normal", "high", "critical"],
+      "description": "Priority level for the log entry",
+      "default": "normal"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "level": {"enum": ["ERROR", "FATAL"]}
+        }
+      },
+      "then": {
+        "required": ["exception"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "service": {"const": "arx-backend"}
+        }
+      },
+      "then": {
+        "required": ["request_id"]
+      }
+    }
+  ],
+  "examples": [
+    {
+      "timestamp": "2024-01-15T10:30:00.000Z",
+      "level": "INFO",
+      "service": "arx-backend",
+      "component": "asset-inventory",
+      "message": "Asset inventory exported successfully",
+      "request_id": "req-12345",
+      "correlation_id": "corr-def456",
+      "user_id": "user-67890",
+      "session_id": "sess-abc123",
+      "metadata": {
+        "operation": "export_assets",
+        "duration_ms": 1250,
+        "records_processed": 1500,
+        "file_size_bytes": 1048576,
+        "status_code": 200
+      },
+      "context": {
+        "building_id": "bldg-001",
+        "floor_id": "floor-02",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "endpoint": "/api/assets/export",
+        "method": "POST",
+        "user_role": "admin",
+        "environment": "production",
+        "version": "1.0.0"
+      },
+      "tags": ["business", "export", "performance"]
+    },
+    {
+      "timestamp": "2024-01-15T10:30:01.500Z",
+      "level": "ERROR",
+      "service": "arx-svg-parser",
+      "component": "symbol-recognition",
+      "message": "Failed to recognize symbol in SVG file",
+      "correlation_id": "corr-def456",
+      "metadata": {
+        "operation": "recognize_symbols",
+        "duration_ms": 5000,
+        "error_code": "SYMBOL_NOT_FOUND"
+      },
+      "context": {
+        "building_id": "bldg-001",
+        "floor_id": "floor-02",
+        "environment": "production",
+        "version": "1.0.0"
+      },
+      "exception": {
+        "type": "SymbolRecognitionError",
+        "message": "No matching symbol found in library",
+        "code": "SYMBOL_NOT_FOUND"
+      },
+      "tags": ["error", "symbol-recognition"]
+    },
+    {
+      "timestamp": "2024-01-15T10:30:02.000Z",
+      "level": "WARN",
+      "service": "arx-frontend",
+      "component": "asset-manager",
+      "message": "Rate limit approaching for API calls",
+      "correlation_id": "corr-def456",
+      "user_id": "user-67890",
+      "metadata": {
+        "operation": "api_call",
+        "endpoint": "/api/assets",
+        "current_usage": 95,
+        "limit": 100
+      },
+      "context": {
+        "ip_address": "192.168.1.100",
+        "user_agent": "Arxos-Desktop-App/1.0.0",
+        "environment": "production"
+      },
+      "tags": ["performance", "rate-limit"]
+    },
+    {
+      "timestamp": "2024-01-15T10:30:03.000Z",
+      "level": "DEBUG",
+      "service": "arx-backend",
+      "component": "database",
+      "message": "Database query executed",
+      "request_id": "req-12345",
+      "metadata": {
+        "operation": "SELECT",
+        "duration_ms": 45,
+        "rows_affected": 10,
+        "cache_hit": false
+      },
+      "context": {
+        "endpoint": "/api/assets",
+        "method": "GET",
+        "environment": "production"
+      },
+      "tags": ["database", "performance"]
+    }
+  ],
+  "definitions": {
+    "LogLevel": {
+      "type": "string",
+      "enum": ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"],
+      "description": "Standard log levels"
+    },
+    "ServiceName": {
+      "type": "string",
+      "enum": [
+        "arx-backend",
+        "arx-svg-parser", 
+        "arx-frontend",
+        "arx-cmms",
+        "arx-data-vendor",
+        "arx-cli",
+        "arx-desktop",
+        "arx-mobile"
+      ],
+      "description": "Valid service names in the Arxos platform"
+    },
+    "ComponentName": {
+      "type": "string",
+      "pattern": "^[a-z0-9-_]+$",
+      "description": "Component name pattern"
+    }
+  }
+} 

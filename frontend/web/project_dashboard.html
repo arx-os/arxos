@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARXOS Project Management Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/index.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar-transition { transition: all 0.3s ease; }
+        .card-hover { transition: transform 0.2s ease; }
+        .card-hover:hover { transform: translateY(-2px); }
+        .progress-bar { transition: width 0.5s ease; }
+        .status-indicator { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Header -->
+    <nav class="bg-white shadow-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-xl font-bold text-gray-900">ARXOS Project Management</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>New Project
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <button class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-bell text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <button class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-user-circle text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex h-screen bg-gray-50">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white shadow-lg sidebar-transition">
+            <div class="p-4">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Project Navigation</h2>
+                <nav class="space-y-2">
+                    <a href="#overview" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-tachometer-alt mr-3"></i>
+                        Overview
+                    </a>
+                    <a href="#projects" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-project-diagram mr-3"></i>
+                        Projects
+                    </a>
+                    <a href="#bidding" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-gavel mr-3"></i>
+                        Bidding
+                    </a>
+                    <a href="#reviews" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-eye mr-3"></i>
+                        Reviews
+                    </a>
+                    <a href="#scheduling" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-calendar-alt mr-3"></i>
+                        Scheduling
+                    </a>
+                    <a href="#resources" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-users mr-3"></i>
+                        Resources
+                    </a>
+                    <a href="#progress" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-chart-line mr-3"></i>
+                        Progress
+                    </a>
+                    <a href="#costs" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-dollar-sign mr-3"></i>
+                        Costs
+                    </a>
+                    <a href="#risks" class="flex items-center px-3 py-2 text-gray-700 rounded-md hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-exclamation-triangle mr-3"></i>
+                        Risks
+                    </a>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 overflow-auto">
+            <!-- Overview Dashboard -->
+            <div id="overview" class="p-6">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Project Overview</h2>
+                    <p class="text-gray-600">Comprehensive view of all project activities and metrics</p>
+                </div>
+
+                <!-- Key Metrics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <i class="fas fa-project-diagram text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Active Projects</p>
+                                <p class="text-2xl font-bold text-gray-900" id="active-projects-count">12</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <i class="fas fa-tasks text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Tasks Completed</p>
+                                <p class="text-2xl font-bold text-gray-900" id="tasks-completed-count">156</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                <i class="fas fa-clock text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Overdue Tasks</p>
+                                <p class="text-2xl font-bold text-gray-900" id="overdue-tasks-count">3</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-red-100 text-red-600">
+                                <i class="fas fa-exclamation-triangle text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">High Risks</p>
+                                <p class="text-2xl font-bold text-gray-900" id="high-risks-count">2</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Project Progress</h3>
+                        <canvas id="progressChart" width="400" height="200"></canvas>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Budget vs Actual</h3>
+                        <canvas id="budgetChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                    <div class="space-y-4" id="recent-activity">
+                        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span class="text-sm text-gray-600">Task "Foundation Work" completed</span>
+                            <span class="text-xs text-gray-400 ml-auto">2 hours ago</span>
+                        </div>
+                        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span class="text-sm text-gray-600">New bid submitted for "Electrical Systems"</span>
+                            <span class="text-xs text-gray-400 ml-auto">4 hours ago</span>
+                        </div>
+                        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                            <span class="text-sm text-gray-600">Review requested for "HVAC Design"</span>
+                            <span class="text-xs text-gray-400 ml-auto">6 hours ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Section -->
+            <div id="projects" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Project Management</h2>
+                    <p class="text-gray-600">Manage construction projects from initiation to completion</p>
+                </div>
+
+                <!-- Project Filters -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="flex flex-wrap gap-4">
+                        <div class="flex-1 min-w-48">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                            <select class="w-full border border-gray-300 rounded-md px-3 py-2">
+                                <option value="">All Statuses</option>
+                                <option value="planning">Planning</option>
+                                <option value="bidding">Bidding</option>
+                                <option value="awarded">Awarded</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-48">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Project Type</label>
+                            <select class="w-full border border-gray-300 rounded-md px-3 py-2">
+                                <option value="">All Types</option>
+                                <option value="residential">Residential</option>
+                                <option value="commercial">Commercial</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="infrastructure">Infrastructure</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-48">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                            <input type="text" placeholder="Search projects..." class="w-full border border-gray-300 rounded-md px-3 py-2">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="projects-grid">
+                    <!-- Project Card Template -->
+                    <div class="bg-white rounded-lg shadow-md p-6 card-hover">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Office Building Complex</h3>
+                            <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">In Progress</span>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">Modern office complex with sustainable design features</p>
+                        <div class="space-y-2 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Progress</span>
+                                <span class="font-medium">65%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full progress-bar" style="width: 65%"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-500">
+                            <span>Budget: $2.5M</span>
+                            <span>Due: Dec 2024</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bidding Section -->
+            <div id="bidding" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Contractor Bidding</h2>
+                    <p class="text-gray-600">Manage bid submissions and contractor selection</p>
+                </div>
+
+                <!-- Bidding Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Active Bids</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center p-3 bg-blue-50 rounded-md">
+                                <span class="text-sm font-medium">Electrical Systems</span>
+                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">5 bids</span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-green-50 rounded-md">
+                                <span class="text-sm font-medium">HVAC Installation</span>
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">3 bids</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Bid Evaluation</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Average Score</span>
+                                <span class="text-lg font-bold text-blue-600">8.2/10</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Total Bids</span>
+                                <span class="text-lg font-bold text-gray-900">24</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                        <div class="space-y-2">
+                            <button class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-plus mr-2"></i>Create New Bid
+                            </button>
+                            <button class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors">
+                                <i class="fas fa-check mr-2"></i>Evaluate Bids
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bid Submissions Table -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Bid Submissions</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contractor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bid Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">ABC Contractors</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Electrical Systems</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$125,000</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Under Review</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">8.5/10</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <button class="text-blue-600 hover:text-blue-900 mr-3">View</button>
+                                        <button class="text-green-600 hover:text-green-900">Award</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews Section -->
+            <div id="reviews" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Architect Reviews</h2>
+                    <p class="text-gray-600">Manage design reviews and approval workflows</p>
+                </div>
+
+                <!-- Review Status Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-blue-600 mb-2">8</div>
+                        <div class="text-sm text-gray-600">Pending Reviews</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-yellow-600 mb-2">3</div>
+                        <div class="text-sm text-gray-600">In Review</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-green-600 mb-2">12</div>
+                        <div class="text-sm text-gray-600">Approved</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-red-600 mb-2">2</div>
+                        <div class="text-sm text-gray-600">Rejected</div>
+                    </div>
+                </div>
+
+                <!-- Review Requests -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Review Requests</h3>
+                    <div class="space-y-4">
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <h4 class="text-lg font-medium text-gray-900">HVAC System Design</h4>
+                                    <p class="text-sm text-gray-600">Project: Office Building Complex</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">In Review</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="text-sm text-gray-500">
+                                    <span>Reviewer: John Smith</span>
+                                    <span class="mx-2">•</span>
+                                    <span>Due: Dec 15, 2024</span>
+                                </div>
+                                <div class="space-x-2">
+                                    <button class="text-blue-600 hover:text-blue-900 text-sm">View Details</button>
+                                    <button class="text-green-600 hover:text-green-900 text-sm">Approve</button>
+                                    <button class="text-red-600 hover:text-red-900 text-sm">Reject</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scheduling Section -->
+            <div id="scheduling" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Project Scheduling</h2>
+                    <p class="text-gray-600">Gantt chart timeline and task scheduling</p>
+                </div>
+
+                <!-- Timeline Controls -->
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <div class="flex space-x-2">
+                            <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Today</button>
+                            <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Week</button>
+                            <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Month</button>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+                                <i class="fas fa-plus mr-2"></i>Add Task
+                            </button>
+                            <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
+                                <i class="fas fa-download mr-2"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gantt Chart Container -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Project Timeline</h3>
+                    <div class="border border-gray-200 rounded-lg p-4" style="height: 400px;">
+                        <div class="text-center text-gray-500 py-20">
+                            <i class="fas fa-chart-bar text-4xl mb-4"></i>
+                            <p>Interactive Gantt chart will be displayed here</p>
+                            <p class="text-sm">Drag and drop to adjust timelines</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resources Section -->
+            <div id="resources" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Resource Management</h2>
+                    <p class="text-gray-600">Track labor, equipment, and material resources</p>
+                </div>
+
+                <!-- Resource Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Labor Resources</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Available</span>
+                                <span class="font-medium">45 workers</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Assigned</span>
+                                <span class="font-medium">38 workers</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Utilization</span>
+                                <span class="font-medium text-green-600">84%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Equipment</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Available</span>
+                                <span class="font-medium">12 units</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">In Use</span>
+                                <span class="font-medium">10 units</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Utilization</span>
+                                <span class="font-medium text-yellow-600">83%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Materials</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Ordered</span>
+                                <span class="font-medium">$450K</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Delivered</span>
+                                <span class="font-medium">$380K</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Pending</span>
+                                <span class="font-medium text-red-600">$70K</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resource Analytics -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Resource Analytics</h3>
+                    <canvas id="resourceChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progress" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Progress Monitoring</h2>
+                    <p class="text-gray-600">Real-time progress tracking and reporting</p>
+                </div>
+
+                <!-- Progress Metrics -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Overall Progress</h3>
+                        <div class="text-center">
+                            <div class="text-4xl font-bold text-blue-600 mb-2">65%</div>
+                            <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+                                <div class="bg-blue-600 h-4 rounded-full progress-bar" style="width: 65%"></div>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                <span class="font-medium">Ahead of Schedule</span> by 3 days
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Budget Status</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Budget</span>
+                                    <span>$2,500,000</span>
+                                </div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Spent</span>
+                                    <span>$1,625,000</span>
+                                </div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Remaining</span>
+                                    <span class="text-green-600">$875,000</span>
+                                </div>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 65%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Chart -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Progress Trends</h3>
+                    <canvas id="progressTrendChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Costs Section -->
+            <div id="costs" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Cost Estimation & Budget</h2>
+                    <p class="text-gray-600">Track costs and manage budget allocations</p>
+                </div>
+
+                <!-- Cost Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-blue-600 mb-2">$2.5M</div>
+                        <div class="text-sm text-gray-600">Total Budget</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-green-600 mb-2">$1.6M</div>
+                        <div class="text-sm text-gray-600">Spent</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-yellow-600 mb-2">$0.9M</div>
+                        <div class="text-sm text-gray-600">Remaining</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center">
+                        <div class="text-2xl font-bold text-green-600 mb-2">65%</div>
+                        <div class="text-sm text-gray-600">Budget Used</div>
+                    </div>
+                </div>
+
+                <!-- Cost Breakdown -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
+                    <canvas id="costBreakdownChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Risks Section -->
+            <div id="risks" class="p-6 hidden">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Risk Management</h2>
+                    <p class="text-gray-600">Identify, assess, and mitigate project risks</p>
+                </div>
+
+                <!-- Risk Matrix -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Risk Matrix</h3>
+                        <div class="grid grid-cols-4 gap-2">
+                            <div class="text-center text-xs text-gray-500">Critical</div>
+                            <div class="text-center text-xs text-gray-500">High</div>
+                            <div class="text-center text-xs text-gray-500">Medium</div>
+                            <div class="text-center text-xs text-gray-500">Low</div>
+                            <div class="bg-red-100 text-red-800 text-center text-xs py-2 rounded">2</div>
+                            <div class="bg-yellow-100 text-yellow-800 text-center text-xs py-2 rounded">3</div>
+                            <div class="bg-blue-100 text-blue-800 text-center text-xs py-2 rounded">5</div>
+                            <div class="bg-green-100 text-green-800 text-center text-xs py-2 rounded">8</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Risk Summary</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Critical Risks</span>
+                                <span class="text-sm font-medium text-red-600">2</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">High Risks</span>
+                                <span class="text-sm font-medium text-yellow-600">3</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Medium Risks</span>
+                                <span class="text-sm font-medium text-blue-600">5</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">Low Risks</span>
+                                <span class="text-sm font-medium text-green-600">8</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk List -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Active Risks</h3>
+                    <div class="space-y-4">
+                        <div class="border border-red-200 rounded-lg p-4 bg-red-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="text-lg font-medium text-gray-900">Material Shortage</h4>
+                                <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Critical</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-3">Steel delivery delayed by 2 weeks due to supply chain issues</p>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Assigned to: Procurement Team</span>
+                                <span class="text-gray-500">Due: Dec 20, 2024</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('nav a');
+            const sections = document.querySelectorAll('#overview, #projects, #bidding, #reviews, #scheduling, #resources, #progress, #costs, #risks');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    
+                    // Hide all sections
+                    sections.forEach(section => section.classList.add('hidden'));
+                    
+                    // Show target section
+                    document.getElementById(targetId).classList.remove('hidden');
+                    
+                    // Update active nav link
+                    navLinks.forEach(l => l.classList.remove('bg-gray-100'));
+                    this.classList.add('bg-gray-100');
+                });
+            });
+
+            // Initialize charts
+            initializeCharts();
+        });
+
+        function initializeCharts() {
+            // Progress Chart
+            const progressCtx = document.getElementById('progressChart').getContext('2d');
+            new Chart(progressCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'In Progress', 'Not Started'],
+                    datasets: [{
+                        data: [65, 25, 10],
+                        backgroundColor: ['#10B981', '#3B82F6', '#E5E7EB']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Budget Chart
+            const budgetCtx = document.getElementById('budgetChart').getContext('2d');
+            new Chart(budgetCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Budget',
+                        data: [400, 600, 800, 1000, 1200, 1400],
+                        backgroundColor: '#3B82F6'
+                    }, {
+                        label: 'Actual',
+                        data: [380, 580, 750, 950, 1150, 1300],
+                        backgroundColor: '#10B981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Resource Chart
+            const resourceCtx = document.getElementById('resourceChart').getContext('2d');
+            new Chart(resourceCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
+                    datasets: [{
+                        label: 'Labor Utilization',
+                        data: [75, 80, 85, 82, 88, 84],
+                        borderColor: '#3B82F6',
+                        tension: 0.4
+                    }, {
+                        label: 'Equipment Utilization',
+                        data: [70, 75, 80, 78, 85, 83],
+                        borderColor: '#10B981',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Progress Trend Chart
+            const progressTrendCtx = document.getElementById('progressTrendChart').getContext('2d');
+            new Chart(progressTrendCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
+                    datasets: [{
+                        label: 'Planned Progress',
+                        data: [10, 20, 35, 50, 65, 80],
+                        borderColor: '#E5E7EB',
+                        borderDash: [5, 5],
+                        tension: 0.4
+                    }, {
+                        label: 'Actual Progress',
+                        data: [12, 22, 38, 55, 65, 75],
+                        borderColor: '#3B82F6',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Cost Breakdown Chart
+            const costBreakdownCtx = document.getElementById('costBreakdownChart').getContext('2d');
+            new Chart(costBreakdownCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Labor', 'Materials', 'Equipment', 'Overhead', 'Contingency'],
+                    datasets: [{
+                        data: [40, 30, 15, 10, 5],
+                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // HTMX integration for real-time updates
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.xhr.status === 200) {
+                // Update dashboard metrics
+                updateDashboardMetrics();
+            }
+        });
+
+        function updateDashboardMetrics() {
+            // Simulate real-time updates
+            setTimeout(() => {
+                const activeProjects = document.getElementById('active-projects-count');
+                const tasksCompleted = document.getElementById('tasks-completed-count');
+                const overdueTasks = document.getElementById('overdue-tasks-count');
+                const highRisks = document.getElementById('high-risks-count');
+
+                // Update with new data (simulated)
+                activeProjects.textContent = Math.floor(Math.random() * 5) + 10;
+                tasksCompleted.textContent = Math.floor(Math.random() * 20) + 150;
+                overdueTasks.textContent = Math.floor(Math.random() * 5);
+                highRisks.textContent = Math.floor(Math.random() * 3) + 1;
+            }, 1000);
+        }
+    </script>
+</body>
+</html> 

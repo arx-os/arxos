@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+  # Core Services
+  svg-parser:
+    build:
+      context: ./core/svg-parser
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+  backend:
+    build:
+      context: ./core/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - postgres
+    volumes:
+      - ./data:/app/data
+
+  # Frontend Services
+  web-frontend:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    depends_on:
+      - backend
+
+  # Specialized Services
+  ai-service:
+    build:
+      context: ./services/ai
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+    depends_on:
+      - postgres
+
+  iot-service:
+    build:
+      context: ./services/iot
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+    depends_on:
+      - postgres
+
+  cmms-service:
+    build:
+      context: ./services/cmms
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+    depends_on:
+      - postgres
+
+  data-vendor-service:
+    build:
+      context: ./services/data-vendor
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+    depends_on:
+      - postgres
+
+  # Infrastructure Services
+  postgres:
+    image: postgis/postgis:15-3.3
+    environment:
+      - POSTGRES_DB=arxos
+      - POSTGRES_USER=arxos
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/database/init:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # Monitoring and Observability
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+
+  # Development Tools
+  cli:
+    build:
+      context: ./tools/cli
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    name: arxos-network 

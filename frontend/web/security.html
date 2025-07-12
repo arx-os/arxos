@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Management - Arxos</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-semibold text-gray-900">Arxos Security</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="index.html" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+                        <a href="compliance.html" class="text-gray-500 hover:text-gray-700">Compliance</a>
+                        <a href="admin.html" class="text-gray-500 hover:text-gray-700">Admin</a>
+                        <button onclick="logout()" class="text-gray-500 hover:text-gray-700">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Security Dashboard Overview -->
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Security Dashboard</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Active Alerts</dt>
+                                        <dd class="text-lg font-medium text-gray-900" id="active-alerts">-</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">API Requests</dt>
+                                        <dd class="text-lg font-medium text-gray-900" id="api-requests">-</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Success Rate</dt>
+                                        <dd class="text-lg font-medium text-gray-900" id="success-rate">-</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                        <div class="p-5">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate">Active API Keys</dt>
+                                        <dd class="text-lg font-medium text-gray-900" id="active-keys">-</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                        <button onclick="showTab('api-keys')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm active" data-tab="api-keys">
+                            API Keys
+                        </button>
+                        <button onclick="showTab('alerts')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="alerts">
+                            Security Alerts
+                        </button>
+                        <button onclick="showTab('monitoring')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm" data-tab="monitoring">
+                            Monitoring
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- API Keys Tab -->
+                <div id="api-keys" class="tab-content p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-medium text-gray-900">API Key Management</h3>
+                        <button onclick="showGenerateKeyModal()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                            Generate New Key
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Access Level</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate Limit</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Used</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="api-keys-table">
+                                <!-- API keys will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Security Alerts Tab -->
+                <div id="alerts" class="tab-content p-6 hidden">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-medium text-gray-900">Security Alerts</h3>
+                        <div class="flex space-x-2">
+                            <select id="alert-filter" class="border border-gray-300 rounded-md px-3 py-2">
+                                <option value="">All Types</option>
+                                <option value="authentication_failure">Authentication Failure</option>
+                                <option value="rate_limit_exceeded">Rate Limit Exceeded</option>
+                                <option value="suspicious_activity">Suspicious Activity</option>
+                            </select>
+                            <select id="severity-filter" class="border border-gray-300 rounded-md px-3 py-2">
+                                <option value="">All Severities</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="alerts-table">
+                                <!-- Alerts will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Monitoring Tab -->
+                <div id="monitoring" class="tab-content p-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-lg border">
+                            <h4 class="text-lg font-medium text-gray-900 mb-4">Recent Security Events</h4>
+                            <div id="recent-events" class="space-y-3">
+                                <!-- Recent events will be loaded here -->
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg border">
+                            <h4 class="text-lg font-medium text-gray-900 mb-4">Top IP Addresses</h4>
+                            <div id="top-ips" class="space-y-3">
+                                <!-- Top IPs will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate API Key Modal -->
+    <div id="generate-key-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Generate New API Key</h3>
+                <form id="generate-key-form">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Vendor Name</label>
+                        <input type="text" name="vendor_name" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" name="email" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Access Level</label>
+                        <select name="access_level" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="basic">Basic</option>
+                            <option value="premium">Premium</option>
+                            <option value="enterprise">Enterprise</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Rate Limit (requests/hour)</label>
+                        <input type="number" name="rate_limit" value="1000" min="1" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Security Level</label>
+                        <select name="security_level" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="standard">Standard</option>
+                            <option value="enhanced">Enhanced</option>
+                            <option value="strict">Strict</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideGenerateKeyModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                            Generate
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resolve Alert Modal -->
+    <div id="resolve-alert-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Resolve Security Alert</h3>
+                <form id="resolve-alert-form">
+                    <input type="hidden" id="alert-id" name="alert_id">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Resolution Notes</label>
+                        <textarea name="notes" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" onclick="hideResolveAlertModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                            Resolve
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/session.js"></script>
+    <script>
+        // Check authentication
+        if (!isAuthenticated()) {
+            window.location.href = 'login.html';
+        }
+
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                button.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            // Add active class to selected tab button
+            event.target.classList.add('active', 'border-blue-500', 'text-blue-600');
+            event.target.classList.remove('border-transparent', 'text-gray-500');
+            
+            // Load tab-specific data
+            if (tabName === 'api-keys') {
+                loadAPIKeys();
+            } else if (tabName === 'alerts') {
+                loadSecurityAlerts();
+            } else if (tabName === 'monitoring') {
+                loadSecurityDashboard();
+            }
+        }
+
+        // Load security dashboard data
+        function loadSecurityDashboard() {
+            fetch('/api/security/dashboard')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('active-alerts').textContent = data.alerts.unresolved;
+                    document.getElementById('api-requests').textContent = data.api_usage.total_requests.toLocaleString();
+                    document.getElementById('success-rate').textContent = data.api_usage.success_rate.toFixed(1) + '%';
+                    document.getElementById('active-keys').textContent = data.active_keys || '-';
+                    
+                    // Load recent events
+                    const recentEvents = document.getElementById('recent-events');
+                    recentEvents.innerHTML = '';
+                    data.recent_alerts.forEach(alert => {
+                        const eventDiv = document.createElement('div');
+                        eventDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded';
+                        eventDiv.innerHTML = `
+                            <div>
+                                <div class="font-medium text-sm">${alert.alert_type}</div>
+                                <div class="text-xs text-gray-500">${alert.ip_address}</div>
+                            </div>
+                            <span class="px-2 py-1 text-xs rounded ${getSeverityColor(alert.severity)}">${alert.severity}</span>
+                        `;
+                        recentEvents.appendChild(eventDiv);
+                    });
+                    
+                    // Load top IPs
+                    const topIPs = document.getElementById('top-ips');
+                    topIPs.innerHTML = '';
+                    data.top_ips.forEach(ip => {
+                        const ipDiv = document.createElement('div');
+                        ipDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded';
+                        ipDiv.innerHTML = `
+                            <div class="font-medium text-sm">${ip.ip_address}</div>
+                            <span class="text-sm text-gray-500">${ip.count} alerts</span>
+                        `;
+                        topIPs.appendChild(ipDiv);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading security dashboard:', error);
+                });
+        }
+
+        // Load API keys
+        function loadAPIKeys() {
+            fetch('/api/security/api-keys')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('api-keys-table');
+                    tableBody.innerHTML = '';
+                    
+                    data.forEach(key => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${key.vendor_name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${key.email}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${key.access_level}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${key.rate_limit}/hour</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded ${key.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${key.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button onclick="viewAPIKeyUsage(${key.id})" class="text-blue-600 hover:text-blue-900 mr-3">Usage</button>
+                                <button onclick="revokeAPIKey(${key.id})" class="text-red-600 hover:text-red-900">Revoke</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading API keys:', error);
+                });
+        }
+
+        // Load security alerts
+        function loadSecurityAlerts() {
+            const typeFilter = document.getElementById('alert-filter').value;
+            const severityFilter = document.getElementById('severity-filter').value;
+            
+            let url = '/api/security/alerts';
+            const params = new URLSearchParams();
+            if (typeFilter) params.append('type', typeFilter);
+            if (severityFilter) params.append('severity', severityFilter);
+            if (params.toString()) url += '?' + params.toString();
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('alerts-table');
+                    tableBody.innerHTML = '';
+                    
+                    data.forEach(alert => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${alert.alert_type}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded ${getSeverityColor(alert.severity)}">${alert.severity}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${alert.ip_address}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${alert.path}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs rounded ${alert.is_resolved ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${alert.is_resolved ? 'Resolved' : 'Active'}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${new Date(alert.created_at).toLocaleDateString()}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                ${!alert.is_resolved ? `<button onclick="showResolveAlertModal(${alert.id})" class="text-green-600 hover:text-green-900">Resolve</button>` : ''}
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading security alerts:', error);
+                });
+        }
+
+        // Modal management
+        function showGenerateKeyModal() {
+            document.getElementById('generate-key-modal').classList.remove('hidden');
+        }
+
+        function hideGenerateKeyModal() {
+            document.getElementById('generate-key-modal').classList.add('hidden');
+            document.getElementById('generate-key-form').reset();
+        }
+
+        function showResolveAlertModal(alertId) {
+            document.getElementById('alert-id').value = alertId;
+            document.getElementById('resolve-alert-modal').classList.remove('hidden');
+        }
+
+        function hideResolveAlertModal() {
+            document.getElementById('resolve-alert-modal').classList.add('hidden');
+            document.getElementById('resolve-alert-form').reset();
+        }
+
+        // Form submissions
+        document.getElementById('generate-key-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            fetch('/api/security/api-keys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                alert(`API Key generated successfully!\nKey: ${result.api_key}`);
+                hideGenerateKeyModal();
+                loadAPIKeys();
+            })
+            .catch(error => {
+                console.error('Error generating API key:', error);
+                alert('Error generating API key');
+            });
+        });
+
+        document.getElementById('resolve-alert-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const alertId = formData.get('alert_id');
+            const notes = formData.get('notes');
+            
+            fetch(`/api/security/alerts/${alertId}/resolve`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ notes: notes })
+            })
+            .then(response => response.json())
+            .then(result => {
+                hideResolveAlertModal();
+                loadSecurityAlerts();
+                loadSecurityDashboard();
+            })
+            .catch(error => {
+                console.error('Error resolving alert:', error);
+                alert('Error resolving alert');
+            });
+        });
+
+        // Filter event listeners
+        document.getElementById('alert-filter').addEventListener('change', loadSecurityAlerts);
+        document.getElementById('severity-filter').addEventListener('change', loadSecurityAlerts);
+
+        // Utility functions
+        function getSeverityColor(severity) {
+            switch (severity) {
+                case 'critical': return 'bg-red-100 text-red-800';
+                case 'high': return 'bg-orange-100 text-orange-800';
+                case 'medium': return 'bg-yellow-100 text-yellow-800';
+                case 'low': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function viewAPIKeyUsage(keyId) {
+            // Implement API key usage view
+            alert('API key usage view not implemented yet');
+        }
+
+        function revokeAPIKey(keyId) {
+            if (confirm('Are you sure you want to revoke this API key?')) {
+                fetch(`/api/security/api-keys/${keyId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    loadAPIKeys();
+                    loadSecurityDashboard();
+                })
+                .catch(error => {
+                    console.error('Error revoking API key:', error);
+                    alert('Error revoking API key');
+                });
+            }
+        }
+
+        // Load initial data
+        loadSecurityDashboard();
+        loadAPIKeys();
+    </script>
+</body>
+</html> 

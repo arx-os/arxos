@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arx Dashboard</title>
+  
+  <!-- CDN Configuration -->
+  <script src="static/cdn-config.js"></script>
+  <script src="static/js/cdn-loader.js"></script>
+  
+  <!-- Critical CSS - Loaded via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
+  <!-- Critical JavaScript - Loaded via CDN -->
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  
+  <!-- Arxos-specific scripts - Loaded via CDN with fallback -->
+  <script src="static/js/session.js" data-fallback="static/js/session.js"></script>
+  <script src="static/js/arx-logger.js" data-fallback="static/js/arx-logger.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex">
+          <div class="flex-shrink-0 flex items-center">
+            <h1 class="text-xl font-semibold text-gray-900">Arxos</h1>
+          </div>
+          <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <a href="index.html" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+            <a href="asset_inventory.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Asset Inventory</a>
+            <a href="audit_logs.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Audit Logs</a>
+            <a href="export_analytics.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Export Analytics</a>
+            <a href="compliance.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Compliance</a>
+            <a href="security.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Security</a>
+            <a href="symbol_generator.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Symbol Generator</a>
+            <a href="admin.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Admin</a>
+            <a href="monitoring.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Monitoring</a>
+          </div>
+        </div>
+        <div class="flex items-center">
+          <div x-data="{ open: false }" class="relative">
+            <button @click="open = !open" class="flex items-center px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 transition">
+              <span id="user-info" class="mr-2 text-gray-700"></span>
+              <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+            <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-50">
+              <div class="px-4 py-2 text-gray-700 border-b">Profile</div>
+              <button onclick="logout()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">Logout</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="flex flex-1">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r shadow-sm p-4 flex flex-col gap-6 min-h-screen">
+      <div>
+        <h3 class="font-bold text-lg mb-2">Admin/Owner Properties</h3>
+        <ul id="owner-properties" class="space-y-1" hx-get="/api/properties?role=owner" hx-trigger="load" hx-target="#owner-properties" hx-swap="outerHTML"></ul>
+      </div>
+      <div>
+        <h3 class="font-bold text-lg mb-2">Shared Properties</h3>
+        <ul id="shared-properties" class="space-y-1" hx-get="/api/properties?role=shared" hx-trigger="load" hx-target="#shared-properties" hx-swap="outerHTML"></ul>
+      </div>
+    </aside>
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1 p-4 flex flex-col items-center gap-6">
+      <div id="feedback" class="mb-2 text-center text-sm"></div>
+      <div class="w-full max-w-md">
+        <!-- SVG Upload Form -->
+        <form id="svg-upload-form" class="mb-6 bg-white p-4 rounded shadow flex flex-col gap-2" enctype="multipart/form-data" onsubmit="uploadSVG(event)">
+          <h3 class="font-bold mb-2">Upload SVG Floorplan</h3>
+          <label for="upload-building-select" class="block text-gray-700">Property</label>
+          <select id="upload-building-select" name="building_id" class="w-full border rounded p-2 mb-2">
+            <option value="">-- Choose a property --</option>
+          </select>
+          <label for="svg-file" class="block text-gray-700">SVG or PDF File</label>
+          <input type="file" id="svg-file" name="file" accept=".svg,.pdf" class="w-full border rounded p-2 mb-2" required>
+          <input type="text" name="name" placeholder="Floor Name" class="w-full border rounded p-2 mb-2" required>
+          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Upload</button>
+        </form>
+        <!-- End SVG Upload Form -->
+        <label for="building-select" class="block text-gray-700 mb-2">Select Property</label>
+        <select id="building-select" name="building" class="w-full border rounded p-2 mb-4"
+          hx-get="/api/buildings" hx-target="#building-select" hx-trigger="load"
+          onchange="loadFloors()">
+          <option value="">-- Choose a property --</option>
+        </select>
+        <div id="floor-section">
+          <label for="floor-select" class="block text-gray-700 mb-2">Select Floor</label>
+          <select id="floor-select" name="floor" class="w-full border rounded p-2 mb-4">
+            <option value="">-- Choose a floor --</option>
+          </select>
+        </div>
+        <button id="view-svg-btn" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          onclick="viewSVG()">View SVG BIM</button>
+      </div>
+    </main>
+  </div>
+  <script>
+    // Initialize CDN and load critical assets
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // Load critical assets via CDN with fallback
+        await window.CDNLoader.loadCriticalAssets({
+          css: ['main.css', 'dashboard.css'],
+          js: ['performance_monitor.js', 'shared-utilities.js']
+        });
+        
+        // Load Arxos-specific scripts via CDN with fallback
+        await window.CDNLoader.loadMultipleJS(['session.js', 'arx-logger.js']);
+        
+        // Preload non-critical assets
+        window.CDNLoader.preloadNonCriticalAssets({
+          images: ['logo.png', 'icons/sprite.svg'],
+          fonts: ['fonts/arxos-font.woff2'],
+          js: ['asset_inventory.js', 'audit_logs.js', 'export_analytics.js', 'compliance.js']
+        });
+        
+        console.log('✅ CDN assets loaded successfully');
+      } catch (error) {
+        console.warn('⚠️ Some CDN assets failed to load, using fallbacks:', error);
+        // Load fallback assets
+        loadFallbackAssets();
+      }
+    });
+    
+    // Fallback asset loading function
+    function loadFallbackAssets() {
+      console.log('🔄 Loading fallback assets...');
+      
+      // Load fallback CSS
+      const fallbackCSS = [
+        'static/css/main.css',
+        'static/css/dashboard.css'
+      ];
+      
+      fallbackCSS.forEach(cssPath => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = cssPath;
+        document.head.appendChild(link);
+      });
+      
+      // Load fallback JavaScript
+      const fallbackJS = [
+        'static/js/session.js',
+        'static/js/arx-logger.js',
+        'static/js/performance_monitor.js',
+        'static/js/shared-utilities.js'
+      ];
+      
+      fallbackJS.forEach(jsPath => {
+        const script = document.createElement('script');
+        script.src = jsPath;
+        document.head.appendChild(script);
+      });
+      
+      console.log('✅ Fallback assets loaded');
+    }
+    
+    // Attach JWT to all HTMX requests
+    document.body.addEventListener('htmx:configRequest', function(evt) {
+      const token = localStorage.getItem('arx_jwt');
+      if (token) {
+        evt.detail.headers['Authorization'] = 'Bearer ' + token;
+      }
+    });
+    // Logout button logic
+    document.querySelector('button[onclick*="login.html"]').onclick = function() {
+      localStorage.removeItem('arx_jwt');
+      window.location = 'login.html';
+    };
+    // Redirect to login if not authenticated
+    if (!localStorage.getItem('arx_jwt')) {
+      window.location = 'login.html';
+    }
+    // Feedback helpers
+    function showFeedback(msg, type) {
+      const el = document.getElementById('feedback');
+      el.textContent = msg;
+      el.className = 'mb-2 text-center text-sm ' + (type === 'error' ? 'text-red-600' : 'text-green-600');
+      setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+    document.body.addEventListener('htmx:responseError', function(evt) {
+      if (evt.detail.xhr.status === 401 || evt.detail.xhr.status === 403) {
+        localStorage.removeItem('arx_jwt');
+        window.location = 'login.html';
+      }
+    });
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+      if (evt.detail.xhr.status === 200) {
+        showFeedback('Loaded successfully.', 'success');
+      }
+    });
+    function viewSVG() {
+      const floorId = document.getElementById('floor-select').value;
+      if (floorId) {
+        window.location = `svg_view.html?floor=${floorId}`;
+      } else {
+        alert('Please select a floor.');
+      }
+    }
+    function loadFloors() {
+      const buildingId = document.getElementById('building-select').value;
+      const floorSelect = document.getElementById('floor-select');
+      floorSelect.innerHTML = '<option value="">-- Choose a floor --</option>';
+      if (buildingId) {
+        fetch(`/api/buildings/${buildingId}/floors`, {
+          headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {}
+        })
+          .then(res => res.text())
+          .then(options => {
+            floorSelect.innerHTML = '<option value="">-- Choose a floor --</option>' + options;
+          })
+          .catch(() => showFeedback('Failed to load floors.', 'error'));
+      }
+    }
+    // Populate upload-building-select with properties
+    function populateUploadBuildingSelect() {
+      const select = document.getElementById('upload-building-select');
+      fetch('/api/buildings', {
+        headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {}
+      })
+        .then(res => res.text())
+        .then(options => { select.innerHTML = '<option value="">-- Choose a property --</option>' + options; });
+    }
+    populateUploadBuildingSelect();
+    // SVG upload handler (now supports PDF)
+    function uploadSVG(e) {
+      e.preventDefault();
+      const form = document.getElementById('svg-upload-form');
+      const formData = new FormData(form);
+      const token = localStorage.getItem('arx_jwt');
+      fetch('http://localhost:8080/api/drawings', {
+        method: 'POST',
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+        body: formData
+      })
+        .then(res => {
+          if (res.ok) {
+            showFeedback('File uploaded successfully!', 'success');
+            form.reset();
+          } else {
+            showFeedback('Failed to upload file.', 'error');
+          }
+        })
+        .catch(() => showFeedback('Failed to upload file.', 'error'));
+    }
+    // Delegate property click to load SVG BIM viewer
+    document.addEventListener('click', function(e) {
+      const li = e.target.closest('li[data-building-id]');
+      if (li) {
+        const id = li.getAttribute('data-building-id');
+        window.location = `svg_view.html?building=${id}`;
+      }
+    });
+  </script>
+</body>
+</html> 

@@ -1,0 +1,39 @@
+{
+  "system": "telecommunications",
+  "display_name": "Rack",
+  "description": "Equipment rack for mounting telecommunications and network equipment",
+  "svg": "<g id=\"rack\">\n  <rect x=\"0\" y=\"0\" width=\"10\" height=\"30\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"5\" y=\"20\" font-size=\"8\" text-anchor=\"middle\">R</text>\n</g>\n",
+  "properties": {
+    "height": 30,
+    "width": 10,
+    "equipment_capacity": "42U",
+    "mounting_depth": "24_inch",
+    "load_capacity": "1000_lbs",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "power",
+      "description": "Power connection for rack equipment"
+    },
+    {
+      "type": "network",
+      "description": "Network cabling connections"
+    },
+    {
+      "type": "grounding",
+      "description": "Equipment grounding connection"
+    }
+  ],
+  "tags": [
+    "telecommunications",
+    "network",
+    "equipment",
+    "mounting",
+    "infrastructure"
+  ]
+}

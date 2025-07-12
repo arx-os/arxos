@@ -1,0 +1,41 @@
+{
+  "system": "telecommunications",
+  "display_name": "Coaxial Cable",
+  "description": "Coaxial cable for video and data transmission",
+  "svg": "<g id=\"coax\">\n  <line x1=\"0\" y1=\"20\" x2=\"20\" y2=\"20\" stroke=\"#fa0\" stroke-width=\"2\"/>\n  <text x=\"10\" y=\"17\" font-size=\"6\" text-anchor=\"middle\">Coax</text>\n</g>\n",
+  "properties": {
+    "length": "variable",
+    "impedance": "75_ohms",
+    "shield_type": "braided_foil",
+    "conductor_gauge": "18_AWG",
+    "jacket_type": "PVC",
+    "frequency_range": "5_1000_MHz",
+    "attenuation": "3.5_dB_per_100ft",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "f_connector",
+      "description": "F-type connector termination"
+    },
+    {
+      "type": "bnc_connector",
+      "description": "BNC connector termination"
+    },
+    {
+      "type": "equipment",
+      "description": "Video/data equipment connection"
+    }
+  ],
+  "tags": [
+    "telecommunications",
+    "cable",
+    "coaxial",
+    "video",
+    "data"
+  ]
+}

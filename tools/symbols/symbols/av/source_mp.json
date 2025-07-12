@@ -1,0 +1,22 @@
+{
+  "id": "source_mp",
+  "name": "Source Media Player",
+  "description": "Media player device for audiovisual content playback",
+  "system": "av",
+  "category": "",
+  "subcategory": "",
+  "svg": {
+    "content": "<g id=\"source_mp\">\n    <rect x=\"0\" y=\"0\" width=\"15\" height=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n    <text x=\"7\" y=\"8\" font-size=\"7\" text-anchor=\"middle\">MP</text>\n  </g>",
+    "width": 20,
+    "height": 20,
+    "scale": 1.0
+  },
+  "properties": {},
+  "connections": [],
+  "tags": [],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arx-symbol-library"
+  }
+}

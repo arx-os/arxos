@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance & Reporting - Arxos</title>
+    <link rel="stylesheet" href="static/css/tailwind.css">
+    <link rel="stylesheet" href="static/css/style.css">
+    <script src="static/js/htmx.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <h1 class="text-xl font-semibold text-gray-900">Arxos</h1>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="index.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="asset_inventory.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Asset Inventory</a>
+                        <a href="audit_logs.html" class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Audit Logs</a>
+                        <a href="compliance.html" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-md text-sm font-medium">Compliance</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span id="user-info" class="text-sm text-gray-700"></span>
+                    <button onclick="logout()" class="ml-4 text-sm text-gray-500 hover:text-gray-700">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Page Header -->
+        <div class="px-4 py-6 sm:px-0">
+            <div class="border-4 border-dashed border-gray-200 rounded-lg p-6">
+                <h1 class="text-3xl font-bold text-gray-900 mb-4">Compliance & Reporting</h1>
+                <p class="text-gray-600 mb-6">Manage data retention policies, generate compliance reports, and monitor data access for auditors.</p>
+                
+                <!-- Tab Navigation -->
+                <div class="border-b border-gray-200 mb-6">
+                    <nav class="-mb-px flex space-x-8">
+                        <button onclick="showTab('data-access')" class="tab-button active border-blue-500 text-blue-600 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                            Data Access Logs
+                        </button>
+                        <button onclick="showTab('change-history')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                            Change History
+                        </button>
+                        <button onclick="showTab('export-summary')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                            Export Activity
+                        </button>
+                        <button onclick="showTab('retention')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                            Data Retention
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="tab-content">
+                    <!-- Data Access Logs Tab -->
+                    <div id="data-access" class="tab-content active">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Access Logs</h2>
+                            <p class="text-gray-600 mb-6">Track all data access events for auditor review and compliance reporting.</p>
+                            
+                            <!-- Filters -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">User ID</label>
+                                    <input type="text" id="user-id-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Action</label>
+                                    <select id="action-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">All Actions</option>
+                                        <option value="view">View</option>
+                                        <option value="export">Export</option>
+                                        <option value="modify">Modify</option>
+                                        <option value="delete">Delete</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Date Range</label>
+                                    <div class="mt-1 flex space-x-2">
+                                        <input type="date" id="date-from" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <input type="date" id="date-to" class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Search Button -->
+                            <div class="flex justify-between items-center mb-4">
+                                <button onclick="searchDataAccessLogs()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                    Search Logs
+                                </button>
+                                <button onclick="exportDataAccessLogs()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                                    Export CSV
+                                </button>
+                            </div>
+                            
+                            <!-- Results Table -->
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Object</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Access Level</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="data-access-results" class="bg-white divide-y divide-gray-200">
+                                        <!-- Results will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Pagination -->
+                            <div id="data-access-pagination" class="mt-4 flex items-center justify-between">
+                                <!-- Pagination controls will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Change History Tab -->
+                    <div id="change-history" class="tab-content hidden">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Change History</h2>
+                            <p class="text-gray-600 mb-6">Track detailed changes to objects for compliance and audit purposes.</p>
+                            
+                            <!-- Object Selection -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Object Type</label>
+                                    <select id="object-type-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">All Types</option>
+                                        <option value="asset">Asset</option>
+                                        <option value="building">Building</option>
+                                        <option value="export">Export</option>
+                                        <option value="user">User</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Object ID</label>
+                                    <input type="text" id="object-id-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., asset_001">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Change Type</label>
+                                    <select id="change-type-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="">All Changes</option>
+                                        <option value="created">Created</option>
+                                        <option value="updated">Updated</option>
+                                        <option value="deleted">Deleted</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Search Button -->
+                            <div class="flex justify-between items-center mb-4">
+                                <button onclick="searchChangeHistory()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                    Search Changes
+                                </button>
+                                <button onclick="exportChangeHistory()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                                    Export CSV
+                                </button>
+                            </div>
+                            
+                            <!-- Results Table -->
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Object</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Change Type</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Field Changes</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="change-history-results" class="bg-white divide-y divide-gray-200">
+                                        <!-- Results will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Activity Summary Tab -->
+                    <div id="export-summary" class="tab-content hidden">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Export Activity Summary</h2>
+                            <p class="text-gray-600 mb-6">Monitor export activities and generate compliance summaries.</p>
+                            
+                            <!-- Period Selection -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Period</label>
+                                    <select id="period-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="daily">Daily</option>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly" selected>Monthly</option>
+                                        <option value="yearly">Yearly</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
+                                    <input type="date" id="summary-date-from" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">End Date</label>
+                                    <input type="date" id="summary-date-to" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            
+                            <!-- Generate Summary Button -->
+                            <div class="flex justify-between items-center mb-4">
+                                <button onclick="generateExportSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                    Generate Summary
+                                </button>
+                                <button onclick="exportSummary()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                                    Export Report
+                                </button>
+                            </div>
+                            
+                            <!-- Summary Results -->
+                            <div id="export-summary-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <!-- Summary cards will be loaded here -->
+                            </div>
+                            
+                            <!-- Detailed Statistics -->
+                            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">Top Formats</h3>
+                                    <div id="top-formats" class="space-y-2">
+                                        <!-- Top formats will be loaded here -->
+                                    </div>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <h3 class="text-lg font-medium text-gray-900 mb-2">Top Export Types</h3>
+                                    <div id="top-export-types" class="space-y-2">
+                                        <!-- Top export types will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Retention Tab -->
+                    <div id="retention" class="tab-content hidden">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Retention Management</h2>
+                            <p class="text-gray-600 mb-6">Configure and manage data retention policies for compliance requirements.</p>
+                            
+                            <!-- Retention Policies -->
+                            <div class="mb-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Retention Policies</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Object Type</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Retention Period</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archive After</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delete After</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="retention-policies" class="bg-white divide-y divide-gray-200">
+                                            <!-- Policies will be loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Retention Statistics -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <h4 class="text-sm font-medium text-blue-900">Audit Logs</h4>
+                                    <div id="audit-logs-stats" class="mt-2 text-2xl font-bold text-blue-600">
+                                        <!-- Stats will be loaded here -->
+                                    </div>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <h4 class="text-sm font-medium text-green-900">Export Activities</h4>
+                                    <div id="export-activities-stats" class="mt-2 text-2xl font-bold text-green-600">
+                                        <!-- Stats will be loaded here -->
+                                    </div>
+                                </div>
+                                <div class="bg-yellow-50 p-4 rounded-lg">
+                                    <h4 class="text-sm font-medium text-yellow-900">Asset History</h4>
+                                    <div id="asset-history-stats" class="mt-2 text-2xl font-bold text-yellow-600">
+                                        <!-- Stats will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Manual Operations -->
+                            <div class="border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-4">Manual Operations</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Object Type</label>
+                                        <select id="manual-object-type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                            <option value="audit_log">Audit Logs</option>
+                                            <option value="export_activity">Export Activities</option>
+                                            <option value="asset_history">Asset History</option>
+                                            <option value="maintenance_task">Maintenance Tasks</option>
+                                            <option value="data_vendor_request">Data Vendor Requests</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Older Than (Days)</label>
+                                        <input type="number" id="older-than-days" value="365" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                </div>
+                                <div class="mt-4 flex space-x-4">
+                                    <button onclick="archiveOldLogs()" class="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700">
+                                        Archive Old Logs
+                                    </button>
+                                    <button onclick="processRetentionPolicies()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                        Process All Policies
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/session.js"></script>
+    <script>
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                button.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.remove('hidden');
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to selected tab button
+            event.target.classList.add('active', 'border-blue-500', 'text-blue-600');
+            event.target.classList.remove('border-transparent', 'text-gray-500');
+            
+            // Load data for the selected tab
+            loadTabData(tabName);
+        }
+        
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'data-access':
+                    loadDataAccessLogs();
+                    break;
+                case 'change-history':
+                    loadChangeHistory();
+                    break;
+                case 'export-summary':
+                    loadExportSummary();
+                    break;
+                case 'retention':
+                    loadRetentionData();
+                    break;
+            }
+        }
+        
+        // Data Access Logs functions
+        function loadDataAccessLogs() {
+            const userId = document.getElementById('user-id-filter').value;
+            const action = document.getElementById('action-filter').value;
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            
+            const params = new URLSearchParams();
+            if (userId) params.append('user_id', userId);
+            if (action) params.append('action', action);
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            
+            fetch(`/api/compliance/data-access-logs?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayDataAccessLogs(data.results);
+                    displayPagination(data, 'data-access-pagination');
+                })
+                .catch(error => console.error('Error loading data access logs:', error));
+        }
+        
+        function searchDataAccessLogs() {
+            loadDataAccessLogs();
+        }
+        
+        function exportDataAccessLogs() {
+            const params = new URLSearchParams();
+            params.append('export', 'csv');
+            
+            // Add current filters
+            const userId = document.getElementById('user-id-filter').value;
+            const action = document.getElementById('action-filter').value;
+            const dateFrom = document.getElementById('date-from').value;
+            const dateTo = document.getElementById('date-to').value;
+            
+            if (userId) params.append('user_id', userId);
+            if (action) params.append('action', action);
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            
+            window.open(`/api/compliance/data-access-logs?${params}`, '_blank');
+        }
+        
+        function displayDataAccessLogs(logs) {
+            const tbody = document.getElementById('data-access-results');
+            tbody.innerHTML = '';
+            
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.username || log.user_id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.action}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.object_type}: ${log.object_id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.ip_address || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.access_level || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${new Date(log.created_at).toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Change History functions
+        function loadChangeHistory() {
+            const objectType = document.getElementById('object-type-filter').value;
+            const objectId = document.getElementById('object-id-filter').value;
+            const changeType = document.getElementById('change-type-filter').value;
+            
+            if (!objectId) {
+                document.getElementById('change-history-results').innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Enter an Object ID to view change history</td></tr>';
+                return;
+            }
+            
+            const params = new URLSearchParams();
+            if (objectType) params.append('object_type', objectType);
+            if (changeType) params.append('change_type', changeType);
+            
+            fetch(`/api/compliance/change-history/${objectType || 'asset'}/${objectId}?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayChangeHistory(data.changes);
+                })
+                .catch(error => console.error('Error loading change history:', error));
+        }
+        
+        function searchChangeHistory() {
+            loadChangeHistory();
+        }
+        
+        function exportChangeHistory() {
+            const objectType = document.getElementById('object-type-filter').value;
+            const objectId = document.getElementById('object-id-filter').value;
+            
+            if (!objectId) {
+                alert('Please enter an Object ID to export change history');
+                return;
+            }
+            
+            const params = new URLSearchParams();
+            params.append('export', 'csv');
+            
+            window.open(`/api/compliance/change-history/${objectType || 'asset'}/${objectId}?${params}`, '_blank');
+        }
+        
+        function displayChangeHistory(changes) {
+            const tbody = document.getElementById('change-history-results');
+            tbody.innerHTML = '';
+            
+            if (changes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No changes found</td></tr>';
+                return;
+            }
+            
+            changes.forEach(change => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${change.object_type}: ${change.object_id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${change.change_type}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${change.username || change.user_id}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${formatFieldChanges(change.field_changes)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${change.ip_address || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${new Date(change.created_at).toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function formatFieldChanges(fieldChanges) {
+            if (!fieldChanges) return '-';
+            try {
+                const changes = typeof fieldChanges === 'string' ? JSON.parse(fieldChanges) : fieldChanges;
+                return Object.keys(changes).join(', ');
+            } catch (e) {
+                return '-';
+            }
+        }
+        
+        // Export Summary functions
+        function loadExportSummary() {
+            const period = document.getElementById('period-filter').value;
+            const dateFrom = document.getElementById('summary-date-from').value;
+            const dateTo = document.getElementById('summary-date-to').value;
+            
+            const params = new URLSearchParams();
+            params.append('period', period);
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            
+            fetch(`/api/compliance/export-activity-summary?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayExportSummary(data.summary);
+                })
+                .catch(error => console.error('Error loading export summary:', error));
+        }
+        
+        function generateExportSummary() {
+            loadExportSummary();
+        }
+        
+        function exportSummary() {
+            const period = document.getElementById('period-filter').value;
+            const dateFrom = document.getElementById('summary-date-from').value;
+            const dateTo = document.getElementById('summary-date-to').value;
+            
+            const params = new URLSearchParams();
+            params.append('period', period);
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            params.append('export', 'csv');
+            
+            window.open(`/api/compliance/export-activity-summary?${params}`, '_blank');
+        }
+        
+        function displayExportSummary(summary) {
+            const resultsDiv = document.getElementById('export-summary-results');
+            resultsDiv.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="text-sm font-medium text-blue-900">Total Exports</h4>
+                    <div class="mt-2 text-2xl font-bold text-blue-600">${summary.total_exports}</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h4 class="text-sm font-medium text-green-900">Total Downloads</h4>
+                    <div class="mt-2 text-2xl font-bold text-green-600">${summary.total_downloads}</div>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <h4 class="text-sm font-medium text-yellow-900">Unique Users</h4>
+                    <div class="mt-2 text-2xl font-bold text-yellow-600">${summary.unique_users}</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <h4 class="text-sm font-medium text-red-900">Failed Exports</h4>
+                    <div class="mt-2 text-2xl font-bold text-red-600">${summary.failed_exports}</div>
+                </div>
+            `;
+            
+            // Display top formats
+            const topFormatsDiv = document.getElementById('top-formats');
+            topFormatsDiv.innerHTML = '';
+            Object.entries(summary.top_formats || {}).forEach(([format, count]) => {
+                topFormatsDiv.innerHTML += `
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">${format}</span>
+                        <span class="text-sm font-medium text-gray-900">${count}</span>
+                    </div>
+                `;
+            });
+            
+            // Display top export types
+            const topExportTypesDiv = document.getElementById('top-export-types');
+            topExportTypesDiv.innerHTML = '';
+            Object.entries(summary.top_export_types || {}).forEach(([type, count]) => {
+                topExportTypesDiv.innerHTML += `
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">${type}</span>
+                        <span class="text-sm font-medium text-gray-900">${count}</span>
+                    </div>
+                `;
+            });
+        }
+        
+        // Retention functions
+        function loadRetentionData() {
+            // Load retention policies
+            fetch('/api/compliance/data-retention-policies')
+                .then(response => response.json())
+                .then(data => {
+                    displayRetentionPolicies(data.policies);
+                })
+                .catch(error => console.error('Error loading retention policies:', error));
+            
+            // Load retention statistics
+            fetch('/api/compliance/retention-stats')
+                .then(response => response.json())
+                .then(data => {
+                    displayRetentionStats(data);
+                })
+                .catch(error => console.error('Error loading retention stats:', error));
+        }
+        
+        function displayRetentionPolicies(policies) {
+            const tbody = document.getElementById('retention-policies');
+            tbody.innerHTML = '';
+            
+            policies.forEach(policy => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${policy.object_type}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${policy.retention_period} days</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${policy.archive_after} days</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${policy.delete_after} days</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${policy.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${policy.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <button onclick="editPolicy(${policy.id})" class="text-blue-600 hover:text-blue-900">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        function displayRetentionStats(stats) {
+            // Display stats for each object type
+            Object.entries(stats).forEach(([objectType, objectStats]) => {
+                const statsDiv = document.getElementById(`${objectType.replace('_', '-')}-stats`);
+                if (statsDiv && typeof objectStats === 'object') {
+                    statsDiv.innerHTML = `
+                        <div class="text-sm text-gray-600">Total: ${objectStats.total || 0}</div>
+                        <div class="text-sm text-gray-600">Archived: ${objectStats.archived || 0}</div>
+                        <div class="text-sm text-gray-600">Active: ${objectStats.active || 0}</div>
+                    `;
+                }
+            });
+        }
+        
+        function archiveOldLogs() {
+            const objectType = document.getElementById('manual-object-type').value;
+            const olderThan = document.getElementById('older-than-days').value;
+            
+            fetch('/api/compliance/archive-old-logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    object_type: objectType,
+                    older_than_days: parseInt(olderThan),
+                    dry_run: false
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(`Archived ${data.archived_logs} logs for ${data.object_type}`);
+                loadRetentionData(); // Refresh stats
+            })
+            .catch(error => {
+                console.error('Error archiving logs:', error);
+                alert('Error archiving logs');
+            });
+        }
+        
+        function processRetentionPolicies() {
+            fetch('/api/compliance/process-retention-policies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Retention policies processed successfully');
+                loadRetentionData(); // Refresh stats
+            })
+            .catch(error => {
+                console.error('Error processing retention policies:', error);
+                alert('Error processing retention policies');
+            });
+        }
+        
+        function editPolicy(policyId) {
+            // Implement policy editing functionality
+            alert('Policy editing functionality to be implemented');
+        }
+        
+        // Pagination helper
+        function displayPagination(data, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const { page, total_pages, total } = data;
+            
+            container.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                        Showing page ${page} of ${total_pages} (${total} total results)
+                    </div>
+                    <div class="flex space-x-2">
+                        ${page > 1 ? `<button onclick="changePage(${page - 1})" class="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">Previous</button>` : ''}
+                        ${page < total_pages ? `<button onclick="changePage(${page + 1})" class="px-3 py-1 border border-gray-300 rounded-md text-sm hover:bg-gray-50">Next</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function changePage(page) {
+            // Implement page changing functionality
+            console.log('Change to page:', page);
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data for the active tab
+            loadTabData('data-access');
+        });
+    </script>
+</body>
+</html> 

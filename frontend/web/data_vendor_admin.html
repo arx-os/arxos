@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Vendor API Management - Arxos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">Data Vendor API Management</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="admin.html" class="text-gray-500 hover:text-gray-700">Admin Dashboard</a>
+                    <a href="index.html" class="text-gray-500 hover:text-gray-700">Main App</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Active API Keys</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="active-keys-count">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Today's Requests</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="today-requests">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-yellow-100 rounded-lg">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Monthly Revenue</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="monthly-revenue">$0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-2 bg-red-100 rounded-lg">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-500">Rate Limit Hits</p>
+                        <p class="text-2xl font-semibold text-gray-900" id="rate-limit-hits">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8 px-6">
+                    <button class="tab-button border-b-2 border-blue-500 text-blue-600 py-4 px-1 text-sm font-medium" 
+                            onclick="showTab('dashboard')">
+                        Dashboard
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" 
+                            onclick="showTab('api-keys')">
+                        API Keys
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" 
+                            onclick="showTab('usage')">
+                        Usage Tracking
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 text-sm font-medium" 
+                            onclick="showTab('billing')">
+                        Billing
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Usage Chart -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">API Usage Trends</h3>
+                        <canvas id="usageChart" width="400" height="200"></canvas>
+                    </div>
+
+                    <!-- Top Vendors -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Top Data Vendors</h3>
+                        <div id="top-vendors" class="space-y-3">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Recent API Activity</h3>
+                    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+                        <ul id="recent-activity" class="divide-y divide-gray-200">
+                            <!-- Will be populated by JavaScript -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Keys Tab -->
+            <div id="api-keys-tab" class="tab-content hidden p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-medium text-gray-900">API Key Management</h3>
+                    <button onclick="showCreateKeyModal()" 
+                            class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                        Create New API Key
+                    </button>
+                </div>
+
+                <!-- API Keys Table -->
+                <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Access Level</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate Limit</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Used</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="api-keys-table" class="bg-white divide-y divide-gray-200">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Usage Tracking Tab -->
+            <div id="usage-tab" class="tab-content hidden p-6">
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">API Usage Analytics</h3>
+                    
+                    <!-- Filters -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Date Range</label>
+                            <select id="date-range" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="7">Last 7 days</option>
+                                <option value="30" selected>Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                                <option value="365">Last year</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Vendor</label>
+                            <select id="vendor-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">All Vendors</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Endpoint</label>
+                            <select id="endpoint-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">All Endpoints</option>
+                                <option value="/api/vendor/buildings">Buildings</option>
+                                <option value="/api/vendor/buildings/{id}/inventory">Building Inventory</option>
+                                <option value="/api/vendor/buildings/{id}/summary">Building Summary</option>
+                                <option value="/api/vendor/industry-benchmarks">Industry Benchmarks</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Status</label>
+                            <select id="status-filter" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="">All Statuses</option>
+                                <option value="200">Success (200)</option>
+                                <option value="400">Bad Request (400)</option>
+                                <option value="401">Unauthorized (401)</option>
+                                <option value="403">Forbidden (403)</option>
+                                <option value="429">Rate Limited (429)</option>
+                                <option value="500">Server Error (500)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Usage Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-500">Total Requests</h4>
+                            <p class="text-2xl font-semibold text-gray-900" id="total-requests">0</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-500">Success Rate</h4>
+                            <p class="text-2xl font-semibold text-gray-900" id="success-rate">0%</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-500">Avg Response Time</h4>
+                            <p class="text-2xl font-semibold text-gray-900" id="avg-response-time">0ms</p>
+                        </div>
+                    </div>
+
+                    <!-- Usage Table -->
+                    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Endpoint</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usage-table" class="bg-white divide-y divide-gray-200">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing Tab -->
+            <div id="billing-tab" class="tab-content hidden p-6">
+                <div class="mb-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Billing & Revenue</h3>
+                    
+                    <!-- Billing Overview -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-500">This Month Revenue</h4>
+                            <p class="text-2xl font-semibold text-gray-900" id="month-revenue">$0</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-500">Total Vendors</h4>
+                            <p class="text-2xl font-semibold text-gray-900" id="total-vendors">0</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-500">Avg Revenue per Vendor</h4>
+                            <p class="text-2xl font-semibold text-gray-900" id="avg-revenue-per-vendor">$0</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="text-sm font-medium text-gray-500">Active Subscriptions</h4>
+                            <p class="text-2xl font-semibold text-gray-900" id="active-subscriptions">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Revenue Chart -->
+                    <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                        <h4 class="text-lg font-medium text-gray-900 mb-4">Revenue Trends</h4>
+                        <canvas id="revenueChart" width="400" height="200"></canvas>
+                    </div>
+
+                    <!-- Billing Table -->
+                    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Rate</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage This Month</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overage Charges</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Due</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billing-table" class="bg-white divide-y divide-gray-200">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create API Key Modal -->
+    <div id="create-key-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Create New API Key</h3>
+                </div>
+                <form id="create-key-form" class="px-6 py-4">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Vendor Name</label>
+                            <input type="text" id="vendor-name" required
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="vendor-email" required
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Access Level</label>
+                            <select id="access-level" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                                <option value="basic">Basic</option>
+                                <option value="premium">Premium</option>
+                                <option value="enterprise">Enterprise</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Rate Limit (requests/hour)</label>
+                            <input type="number" id="rate-limit" value="1000" min="100" max="10000"
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Expiration Date</label>
+                            <input type="date" id="expiration-date" required
+                                   class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="hideCreateKeyModal()"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Create Key
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Details Modal -->
+    <div id="key-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">API Key Details</h3>
+                </div>
+                <div class="px-6 py-4">
+                    <div id="key-details-content">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+                    <button onclick="hideKeyDetailsModal()"
+                            class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/data_vendor_admin.js"></script>
+</body>
+</html> 

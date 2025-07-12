@@ -1,0 +1,49 @@
+{
+  "system": "security",
+  "display_name": "PTZ Camera",
+  "description": "Pan-tilt-zoom camera for surveillance with remote control",
+  "svg": "<g id=\"ptz_camera\">\n  <rect x=\"0\" y=\"5\" width=\"20\" height=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n  <circle cx=\"10\" cy=\"10\" r=\"3\" fill=\"#000\"/>\n  <text x=\"10\" y=\"18\" font-size=\"7\" text-anchor=\"middle\">PTZ</text>\n</g>\n",
+  "properties": {
+    "height": 15,
+    "width": 20,
+    "mounting_height": "84_inches",
+    "resolution": "1080p_4K",
+    "lens_type": "varifocal_fixed",
+    "night_vision": "IR_LED",
+    "pan_tilt": true,
+    "voltage": "12V_DC_24V_AC",
+    "current_draw": "200_mA",
+    "communication": "IP_analog",
+    "weather_resistance": "indoor_outdoor",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "video_network",
+      "description": "Video transmission network"
+    },
+    {
+      "type": "control_network",
+      "description": "PTZ control network"
+    },
+    {
+      "type": "power",
+      "description": "24V AC power supply"
+    },
+    {
+      "type": "ground",
+      "description": "Equipment grounding"
+    }
+  ],
+  "tags": [
+    "security",
+    "ptz_camera",
+    "camera",
+    "surveillance",
+    "pan_tilt_zoom"
+  ]
+}

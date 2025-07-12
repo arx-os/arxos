@@ -1,0 +1,55 @@
+{
+  "system": "building_controls",
+  "display_name": "Controller",
+  "description": "Programmable controller for building automation system",
+  "svg": "<g id=\"controller\">\n  <rect x=\"0\" y=\"0\" width=\"15\" height=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"7\" y=\"8\" font-size=\"7\" text-anchor=\"middle\">CTRL</text>\n</g>\n",
+  "properties": {
+    "height": 10,
+    "width": 15,
+    "mounting_type": "wall_rack",
+    "processor": "32_bit_ARM",
+    "memory": "64_MB_Flash_16_MB_RAM",
+    "input_output": "16_AI_8_AO_16_DI_8_DO",
+    "voltage": "24V_DC",
+    "current_draw": "100_mA",
+    "communication": "BACnet_IP_MS_TP",
+    "programming": "IEC_61131_3",
+    "backup_battery": "7_days",
+    "operating_temperature": "-40_to_70_degrees_C",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "building_automation_network",
+      "description": "Connection to building automation system"
+    },
+    {
+      "type": "power",
+      "description": "24V DC power supply"
+    },
+    {
+      "type": "ground",
+      "description": "Equipment grounding"
+    },
+    {
+      "type": "input_output",
+      "description": "Sensor and actuator connections"
+    },
+    {
+      "type": "programming",
+      "description": "Programming and configuration interface"
+    }
+  ],
+  "tags": [
+    "building_controls",
+    "controller",
+    "BAS",
+    "BMS",
+    "automation",
+    "programmable"
+  ]
+}

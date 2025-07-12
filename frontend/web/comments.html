@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comments - Arx</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="static/js/session.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+  <header class="bg-white shadow p-4 flex items-center justify-between">
+    <h1 class="text-xl font-bold">Comments</h1>
+    <div class="flex gap-4 items-center">
+      <a href="svg_view.html" class="text-blue-600 font-semibold">Back to SVG</a>
+      <div x-data="{ open: false }" class="relative">
+        <button @click="open = !open" class="flex items-center px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 transition">
+          <span id="user-info" class="mr-2 text-gray-700"></span>
+          <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg z-50">
+          <div class="px-4 py-2 text-gray-700 border-b">Profile</div>
+          <button onclick="logout()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main id="comments-main" class="flex-1 p-4">
+    <div id="feedback" class="mb-2 text-center text-sm"></div>
+    <!-- Comments will be loaded here via HTMX -->
+    <div class="mb-4 text-gray-500">No comments yet. Select an object to view or add comments.</div>
+    <div id="comments-list"></div>
+    <div id="comments-spinner" class="flex justify-center my-4 hidden">
+      <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+      </svg>
+    </div>
+    <form class="bg-white p-4 rounded shadow flex flex-col gap-2" hx-post="/comments" hx-target="#comments-main" hx-swap="outerHTML" hx-indicator="#comments-spinner">
+      <textarea class="w-full border rounded p-2" name="comment" rows="3" placeholder="Add a comment (Markdown supported)..." required></textarea>
+      <button class="self-end bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">Post</button>
+    </form>
+  </main>
+  <script>
+    if (!localStorage.getItem('arx_jwt')) {
+      window.location = 'login.html';
+    }
+    // Fetch current user ID for comment ownership
+    function fetchCurrentUserId() {
+      const token = localStorage.getItem('arx_jwt');
+      if (!token) return;
+      fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } })
+        .then(res => res.json())
+        .then(user => { window.currentUserId = user.id; });
+    }
+    fetchCurrentUserId();
+    // Render comments with edit/delete for own comments
+    function renderComments(comments) {
+      const listDiv = document.getElementById('comments-list');
+      if (!comments.length) {
+        listDiv.innerHTML = '<div class="text-gray-400">No comments yet.</div>';
+        return;
+      }
+      listDiv.innerHTML = comments.map(c =>
+        `<div class="mb-2 p-2 rounded border bg-gray-50">
+          <div class="text-sm text-gray-700" id="comment-content-${c.id}">${escapeHTML(c.content)}</div>
+          <div class="text-xs text-gray-400">User: ${c.user_id || ''} | ${c.created_at ? new Date(c.created_at).toLocaleString() : ''}</div>
+          ${window.currentUserId == c.user_id ? `
+            <button onclick="editComment(${c.id}, '${escapeHTML(c.content)}')" class="text-blue-600 text-xs mr-2">Edit</button>
+            <button onclick="deleteComment(${c.id})" class="text-red-600 text-xs">Delete</button>
+          ` : ''}
+        </div>`
+      ).join('');
+    }
+    // Escape HTML for safe rendering
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, function(tag) {
+        const charsToReplace = {
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+        };
+        return charsToReplace[tag] || tag;
+      });
+    }
+    // Edit comment in place
+    function editComment(id, content) {
+      const div = document.getElementById(`comment-content-${id}`);
+      div.innerHTML = `<textarea id="edit-comment-text-${id}" class="w-full border rounded p-1 mb-1">${content}</textarea>
+        <button onclick="saveComment(${id})" class="bg-green-600 text-white px-2 py-1 rounded text-xs">Save</button>
+        <button onclick="cancelEditComment(${id}, '${content}')" class="bg-gray-400 text-white px-2 py-1 rounded text-xs">Cancel</button>`;
+    }
+    function cancelEditComment(id, content) {
+      document.getElementById(`comment-content-${id}`).textContent = content;
+    }
+    // Fetch and render comments for the current object
+    function fetchAndRenderComments(objectId) {
+      fetch(`/api/object/${objectId}/comments`, {
+        headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {}
+      })
+        .then(res => res.json())
+        .then(renderComments);
+    }
+    // Feedback helpers
+    function showFeedback(msg, type) {
+      const el = document.getElementById('feedback');
+      el.textContent = msg;
+      el.className = 'mb-2 text-center text-sm ' + (type === 'error' ? 'text-red-600' : 'text-green-600');
+      setTimeout(() => { el.textContent = ''; }, 3000);
+    }
+    // Show feedback for comment post
+    document.querySelector('form[hx-post="/comments"]').addEventListener('htmx:afterRequest', function(evt) {
+      if (evt.detail.xhr.status === 200 || evt.detail.xhr.status === 201) {
+        showFeedback('Comment posted!', 'success');
+      } else {
+        showFeedback('Failed to post comment.', 'error');
+      }
+    });
+    // Show feedback for edit
+    function saveComment(id) {
+      const text = document.getElementById(`edit-comment-text-${id}`).value;
+      const token = localStorage.getItem('arx_jwt');
+      fetch(`/api/comment/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `content=${encodeURIComponent(text)}`
+      })
+        .then(res => {
+          if (res.ok) {
+            showFeedback('Comment updated!', 'success');
+            return res.json();
+          } else {
+            showFeedback('Failed to update comment.', 'error');
+          }
+        })
+        .then(updated => {
+          if (updated) fetchAndRenderComments(updated.svg_object_id);
+        });
+    }
+    // Show feedback for delete
+    function deleteComment(id) {
+      if (!confirm('Delete this comment?')) return;
+      const token = localStorage.getItem('arx_jwt');
+      fetch(`/api/comment/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+        .then(res => {
+          if (res.ok) {
+            showFeedback('Comment deleted!', 'success');
+            fetchAndRenderComments(window.currentObjectId);
+          } else {
+            showFeedback('Failed to delete comment.', 'error');
+          }
+        });
+    }
+    // Live update: refresh comments after posting a new comment
+    document.querySelector('form[hx-post="/comments"]').addEventListener('htmx:afterRequest', function() {
+      if (window.currentObjectId) {
+        fetchAndRenderComments(window.currentObjectId);
+      }
+    });
+    // Logout button logic
+    function logout() {
+      localStorage.removeItem('arx_jwt');
+      window.location = 'login.html';
+    }
+    document.body.addEventListener('htmx:responseError', function(evt) {
+      if (evt.detail.xhr.status === 401 || evt.detail.xhr.status === 403) {
+        localStorage.removeItem('arx_jwt');
+        window.location = 'login.html';
+      }
+    });
+  </script>
+</body>
+</html> 

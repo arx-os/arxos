@@ -1,0 +1,352 @@
+---
+# Production Environment Configuration
+# This file contains environment-specific overrides for the production environment
+
+# Production Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arxos-production
+  labels:
+    name: arxos-production
+    environment: production
+    purpose: production
+
+---
+# Production ConfigMap Overrides
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arxos-export-config-production
+  namespace: arxos-production
+  labels:
+    app: arxos-export-service
+    component: export
+    environment: production
+data:
+  export-service.yaml: |
+    environment: production
+    debug: false
+    strict_validation: true
+    
+    limits:
+      max_file_size_mb: 1000
+      max_concurrent_exports: 10
+      max_export_duration_minutes: 60
+      max_objects_per_export: 100000
+    
+    formats:
+      allowed_formats:
+        - ifc-lite
+        - gltf
+        - ascii-bim
+        - excel
+        - parquet
+        - geojson
+      default_format: ifc-lite
+      allowed_qualities:
+        - low
+        - medium
+        - high
+      default_quality: medium
+    
+    performance:
+      max_memory_usage_mb: 2048
+      cpu_throttling: true
+      enable_caching: true
+      cache_ttl_seconds: 3600
+    
+    validation:
+      enable_data_validation: true
+      enable_quality_checks: true
+      strict_mode: true
+    
+    security:
+      enable_authentication: true
+      enable_encryption: true
+      audit_logging: true
+
+---
+# Production Deployment Overrides
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arxos-export-service-production
+  namespace: arxos-production
+  labels:
+    app: arxos-export-service
+    version: v1.0.0
+    component: export
+    environment: production
+spec:
+  replicas: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: arxos-export-service
+      environment: production
+  template:
+    metadata:
+      labels:
+        app: arxos-export-service
+        version: v1.0.0
+        component: export
+        environment: production
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: arxos-export-service-account-production
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: export-service
+        image: arxos/export-service:production
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: ARXOS_ENVIRONMENT
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: arxos-database-secret-production
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: arxos-redis-secret-production
+              key: redis-url
+        - name: LOG_LEVEL
+          value: "info"
+        - name: WORKERS
+          value: "4"
+        - name: TIMEOUT
+          value: "120"
+        - name: RUN_MIGRATIONS
+          value: "false"
+        - name: EXPORT_MAX_FILE_SIZE_MB
+          value: "1000"
+        - name: EXPORT_MAX_CONCURRENT_EXPORTS
+          value: "10"
+        - name: EXPORT_ALLOWED_FORMATS
+          value: "ifc-lite,gltf,ascii-bim,excel,parquet,geojson"
+        - name: EXPORT_DEFAULT_FORMAT
+          value: "ifc-lite"
+        - name: EXPORT_DEFAULT_QUALITY
+          value: "medium"
+        - name: FEATURE_FLAG_ADVANCED_MONITORING
+          value: "true"
+        - name: FEATURE_FLAG_EXPORT_COMPRESSION
+          value: "true"
+        - name: FEATURE_FLAG_STRICT_VALIDATION
+          value: "true"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: export-storage-production
+          mountPath: /app/exports
+        - name: config-volume-production
+          mountPath: /app/config
+          readOnly: true
+        - name: logs-volume
+          mountPath: /app/logs
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: export-storage-production
+        persistentVolumeClaim:
+          claimName: arxos-export-pvc-production
+      - name: config-volume-production
+        configMap:
+          name: arxos-export-config-production
+      - name: logs-volume
+        emptyDir: {}
+      nodeSelector:
+        node-role: worker
+      tolerations:
+      - key: "node-role"
+        operator: "Equal"
+        value: "worker"
+        effect: "NoSchedule"
+
+---
+# Production Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: arxos-export-service-production
+  namespace: arxos-production
+  labels:
+    app: arxos-export-service
+    component: export
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: arxos-export-service
+    environment: production
+
+---
+# Production HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: arxos-export-service-hpa-production
+  namespace: arxos-production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: arxos-export-service-production
+  minReplicas: 5
+  maxReplicas: 15
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+
+---
+# Production PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arxos-export-pvc-production
+  namespace: arxos-production
+  labels:
+    app: arxos-export-service
+    component: export
+    environment: production
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd
+
+---
+# Production ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arxos-export-service-account-production
+  namespace: arxos-production
+  labels:
+    app: arxos-export-service
+    component: export
+    environment: production
+
+---
+# Production NetworkPolicy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: arxos-export-service-network-policy-production
+  namespace: arxos-production
+  labels:
+    app: arxos-export-service
+    component: export
+    environment: production
+spec:
+  podSelector:
+    matchLabels:
+      app: arxos-export-service
+      environment: production
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: arxos-production
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: arxos-production
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 6379
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53 

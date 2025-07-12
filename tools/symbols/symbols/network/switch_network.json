@@ -1,0 +1,50 @@
+{
+  "system": "network",
+  "display_name": "Network Switch",
+  "description": "Network switch for data packet switching and local area network connectivity",
+  "svg": "<g id=\"switch_network\">\n  <rect x=\"0\" y=\"0\" width=\"20\" height=\"10\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"10\" y=\"8\" font-size=\"8\" text-anchor=\"middle\">SW</text>\n</g>\n",
+  "properties": {
+    "height": 10,
+    "width": 20,
+    "mounting_type": "rack_mounted",
+    "ports": 816244896,
+    "port_speed": "100M_1G_10G_25G_100G",
+    "switching_capacity": "1_10_100_Tbps",
+    "packet_forwarding_rate": "1_10_100_Mpps",
+    "power_consumption": "30_300W",
+    "redundancy": "dual_power_supply",
+    "management": "SNMP_SSH_Web",
+    "features": "VLAN_QoS_PoE",
+    "stacking": true,
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "network_interfaces",
+      "description": "Network interface connections"
+    },
+    {
+      "type": "power",
+      "description": "AC power supply"
+    },
+    {
+      "type": "console",
+      "description": "Console management interface"
+    },
+    {
+      "type": "management_network",
+      "description": "Management network connection"
+    }
+  ],
+  "tags": [
+    "network",
+    "switch",
+    "switching",
+    "LAN",
+    "data_communication"
+  ]
+}

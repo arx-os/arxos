@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connector Management - Arx</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-semibold text-gray-900">Connector Management</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="text-gray-500 hover:text-gray-700">Home</a>
+                    <a href="svg_view.html" class="text-gray-500 hover:text-gray-700">SVG Viewer</a>
+                    <a href="asset_inventory.html" class="text-gray-500 hover:text-gray-700">Asset Inventory</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">Connectors</h2>
+                    <p class="text-gray-600">Manage building connectors with floor-based organization</p>
+                </div>
+                <button id="create-connector-btn" 
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Create Connector
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div id="connector-stats" class="mb-8">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-sm border p-6 mb-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Filters</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label for="connector-floor-filter" class="block text-sm font-medium text-gray-700 mb-1">Floor</label>
+                    <select id="connector-floor-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Floors</option>
+                        <option value="1">Ground Floor</option>
+                        <option value="2">First Floor</option>
+                        <option value="3">Second Floor</option>
+                        <option value="4">Third Floor</option>
+                        <option value="5">Basement</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="connector-system-filter" class="block text-sm font-medium text-gray-700 mb-1">System</label>
+                    <select id="connector-system-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Systems</option>
+                        <option value="electrical">Electrical</option>
+                        <option value="hvac">HVAC</option>
+                        <option value="plumbing">Plumbing</option>
+                        <option value="fire">Fire Alarm</option>
+                        <option value="security">Security</option>
+                        <option value="av">Audio/Video</option>
+                        <option value="network">Network</option>
+                        <option value="lighting">Lighting</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="connector-type-filter" class="block text-sm font-medium text-gray-700 mb-1">Connector Type</label>
+                    <select id="connector-type-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Types</option>
+                        <option value="electrical">Electrical</option>
+                        <option value="plumbing">Plumbing</option>
+                        <option value="hvac">HVAC</option>
+                        <option value="data">Data</option>
+                        <option value="av">Audio/Video</option>
+                        <option value="fire">Fire Alarm</option>
+                        <option value="security">Security</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="connector-status-filter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="connector-status-filter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="retired">Retired</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="connector-search-filter" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                    <input type="text" id="connector-search-filter" 
+                           placeholder="Search connectors..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Operations -->
+        <div class="bg-white rounded-lg shadow-sm border p-6 mb-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Bulk Operations</h3>
+            <div class="flex space-x-4">
+                <button id="bulk-floor-assign-btn" 
+                        class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Assign to Floor
+                </button>
+                <button id="bulk-status-update-btn" 
+                        class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">
+                    Update Status
+                </button>
+                <button id="bulk-delete-btn" 
+                        class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                    Delete Selected
+                </button>
+            </div>
+        </div>
+
+        <!-- Connector List -->
+        <div id="connector-list" class="space-y-4">
+            <!-- Connectors will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Create Connector Modal -->
+    <div id="create-connector-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="flex justify-between items-center p-6 border-b">
+                    <h3 class="text-lg font-medium text-gray-900">Create New Connector</h3>
+                    <button onclick="connectorManager.hideCreateConnectorModal()" 
+                            class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="create-connector-form" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="new-connector-name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                            <input type="text" id="new-connector-name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="new-connector-floor" class="block text-sm font-medium text-gray-700 mb-1">Floor</label>
+                            <select id="new-connector-floor" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Floor --</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="new-connector-type" class="block text-sm font-medium text-gray-700 mb-1">Connector Type</label>
+                            <select id="new-connector-type" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Type --</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="plumbing">Plumbing</option>
+                                <option value="hvac">HVAC</option>
+                                <option value="data">Data</option>
+                                <option value="av">Audio/Video</option>
+                                <option value="fire">Fire Alarm</option>
+                                <option value="security">Security</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="new-connection-type" class="block text-sm font-medium text-gray-700 mb-1">Connection Type</label>
+                            <select id="new-connection-type" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Connection --</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="new-max-capacity" class="block text-sm font-medium text-gray-700 mb-1">Max Capacity</label>
+                            <input type="number" id="new-max-capacity" step="0.1" min="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="new-current-load" class="block text-sm font-medium text-gray-700 mb-1">Current Load</label>
+                            <input type="number" id="new-current-load" step="0.1" min="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="new-connector-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="new-connector-description" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="connectorManager.hideCreateConnectorModal()"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            Create Connector
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Connector Modal -->
+    <div id="edit-connector-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+                <div class="flex justify-between items-center p-6 border-b">
+                    <h3 class="text-lg font-medium text-gray-900">Edit Connector</h3>
+                    <button onclick="connectorManager.hideEditConnectorModal()" 
+                            class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="edit-connector-form" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="edit-connector-name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                            <input type="text" id="edit-connector-name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="edit-connector-floor" class="block text-sm font-medium text-gray-700 mb-1">Floor</label>
+                            <select id="edit-connector-floor" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Floor --</option>
+                                <option value="1">Ground Floor</option>
+                                <option value="2">First Floor</option>
+                                <option value="3">Second Floor</option>
+                                <option value="4">Third Floor</option>
+                                <option value="5">Basement</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="edit-connector-type" class="block text-sm font-medium text-gray-700 mb-1">Connector Type</label>
+                            <select id="edit-connector-type" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Type --</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="plumbing">Plumbing</option>
+                                <option value="hvac">HVAC</option>
+                                <option value="data">Data</option>
+                                <option value="av">Audio/Video</option>
+                                <option value="fire">Fire Alarm</option>
+                                <option value="security">Security</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="edit-connection-type" class="block text-sm font-medium text-gray-700 mb-1">Connection Type</label>
+                            <select id="edit-connection-type" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Connection --</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="edit-connection-status" class="block text-sm font-medium text-gray-700 mb-1">Connection Status</label>
+                            <select id="edit-connection-status" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Select Status --</option>
+                                <option value="connected">Connected</option>
+                                <option value="disconnected">Disconnected</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="edit-max-capacity" class="block text-sm font-medium text-gray-700 mb-1">Max Capacity</label>
+                            <input type="number" id="edit-max-capacity" step="0.1" min="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="edit-current-load" class="block text-sm font-medium text-gray-700 mb-1">Current Load</label>
+                        <input type="number" id="edit-current-load" step="0.1" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label for="edit-connector-description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="edit-connector-description" rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="connectorManager.hideEditConnectorModal()"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            Update Connector
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Floor Assignment Modal -->
+    <div id="bulk-floor-assignment-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="flex justify-between items-center p-6 border-b">
+                    <h3 class="text-lg font-medium text-gray-900">Assign Connectors to Floor</h3>
+                    <button onclick="document.getElementById('bulk-floor-assignment-modal').classList.add('hidden')" 
+                            class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="bulk-floor-assignment-form" class="p-6 space-y-4">
+                    <div>
+                        <label for="bulk-assignment-floor" class="block text-sm font-medium text-gray-700 mb-1">Select Floor</label>
+                        <select id="bulk-assignment-floor" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Select Floor --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="text-sm text-gray-600">
+                        <p>This will assign all selected connectors to the chosen floor.</p>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="document.getElementById('bulk-floor-assignment-modal').classList.add('hidden')"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                            Assign to Floor
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="static/js/connector_manager.js"></script>
+    <script>
+        // Form submission handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create connector form
+            const createForm = document.getElementById('create-connector-form');
+            if (createForm) {
+                createForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const formData = {
+                        name: document.getElementById('new-connector-name').value,
+                        floor_id: parseInt(document.getElementById('new-connector-floor').value),
+                        connector_type: document.getElementById('new-connector-type').value,
+                        connection_type: document.getElementById('new-connection-type').value,
+                        max_capacity: parseFloat(document.getElementById('new-max-capacity').value) || null,
+                        current_load: parseFloat(document.getElementById('new-current-load').value) || 0,
+                        description: document.getElementById('new-connector-description').value,
+                        status: 'active',
+                        system: document.getElementById('new-connector-type').value
+                    };
+                    
+                    await connectorManager.createConnector(formData);
+                });
+            }
+            
+            // Edit connector form
+            const editForm = document.getElementById('edit-connector-form');
+            if (editForm) {
+                editForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const connectorId = document.getElementById('edit-connector-modal').getAttribute('data-connector-id');
+                    const formData = {
+                        name: document.getElementById('edit-connector-name').value,
+                        floor_id: parseInt(document.getElementById('edit-connector-floor').value),
+                        connector_type: document.getElementById('edit-connector-type').value,
+                        connection_type: document.getElementById('edit-connection-type').value,
+                        connection_status: document.getElementById('edit-connection-status').value,
+                        max_capacity: parseFloat(document.getElementById('edit-max-capacity').value) || null,
+                        current_load: parseFloat(document.getElementById('edit-current-load').value) || 0,
+                        description: document.getElementById('edit-connector-description').value
+                    };
+                    
+                    await connectorManager.updateConnector(connectorId, formData);
+                });
+            }
+            
+            // Bulk floor assignment form
+            const bulkForm = document.getElementById('bulk-floor-assignment-form');
+            if (bulkForm) {
+                bulkForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const floorId = document.getElementById('bulk-assignment-floor').value;
+                    const selectedConnectors = Array.from(document.querySelectorAll('.connector-checkbox:checked'))
+                        .map(cb => cb.value);
+                    
+                    if (selectedConnectors.length === 0) {
+                        alert('Please select at least one connector');
+                        return;
+                    }
+                    
+                    await connectorManager.assignConnectorsToFloor(selectedConnectors, floorId);
+                    document.getElementById('bulk-floor-assignment-modal').classList.add('hidden');
+                });
+            }
+        });
+    </script>
+</body>
+</html> 

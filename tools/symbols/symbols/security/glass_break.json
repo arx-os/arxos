@@ -1,0 +1,44 @@
+{
+  "system": "security",
+  "display_name": "Glass Break Sensor",
+  "description": "Acoustic glass break detection sensor for security system",
+  "svg": "<g id=\"glass_break\">\n  <polygon points=\"10,2 18,10 10,18 2,10\" fill=\"#fff\" stroke=\"#000\"/>\n  <text x=\"10\" y=\"14\" font-size=\"8\" text-anchor=\"middle\">GB</text>\n</g>\n",
+  "properties": {
+    "height": 16,
+    "width": 16,
+    "mounting_height": "84_inches",
+    "detection_type": "acoustic",
+    "detection_range": "20_feet",
+    "frequency_range": "3_5_kHz",
+    "voltage": "12V_DC",
+    "current_draw": "25_mA",
+    "tamper_protection": true,
+    "weather_resistance": "indoor",
+    "funding_source": {
+      "name": "funding_source",
+      "type": "string",
+      "description": "Source of funding for this asset"
+    }
+  },
+  "connections": [
+    {
+      "type": "security_loop",
+      "description": "Connection to security control panel"
+    },
+    {
+      "type": "power",
+      "description": "12V DC power supply"
+    },
+    {
+      "type": "ground",
+      "description": "Equipment grounding"
+    }
+  ],
+  "tags": [
+    "security",
+    "glass_break",
+    "detection",
+    "acoustic",
+    "surveillance"
+  ]
+}

@@ -22,7 +22,6 @@ import json
 import os
 import sys
 import time
-import logging
 import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Union
@@ -41,9 +40,9 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 import schedule
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class ServiceStatus(Enum):

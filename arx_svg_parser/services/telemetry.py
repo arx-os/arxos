@@ -13,9 +13,10 @@ import json
 from typing import List, Dict, Any, Callable, Optional
 from dataclasses import dataclass, field
 from queue import Queue, Empty
-import logging
 
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 @dataclass
 class TelemetryRecord:

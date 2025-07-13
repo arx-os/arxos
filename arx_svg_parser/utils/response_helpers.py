@@ -7,9 +7,11 @@ from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from fastapi import status
-import logging
+import structlog
 
-logger = logging.getLogger(__name__)
+from arx_common.date_utils import get_current_timestamp_iso
+
+logger = structlog.get_logger(__name__)
 
 class ResponseHelper:
     """Centralized response helper for consistent API responses"""
@@ -39,7 +41,7 @@ class ResponseHelper:
             "success": True,
             "message": message,
             "data": data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": get_current_timestamp_iso(),
             "status_code": status_code
         }
         
@@ -48,6 +50,13 @@ class ResponseHelper:
             
         if pagination:
             response_data["pagination"] = pagination
+        
+        logger.debug("success_response_created",
+                    status_code=status_code,
+                    message=message,
+                    has_data=data is not None,
+                    has_metadata=metadata is not None,
+                    has_pagination=pagination is not None)
             
         return JSONResponse(
             status_code=status_code,
@@ -79,7 +88,7 @@ class ResponseHelper:
             "success": False,
             "message": message,
             "error_code": error_code,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": get_current_timestamp_iso(),
             "status_code": status_code
         }
         
@@ -88,6 +97,13 @@ class ResponseHelper:
             
         if validation_errors:
             response_data["validation_errors"] = validation_errors
+        
+        logger.warning("error_response_created",
+                      status_code=status_code,
+                      error_code=error_code,
+                      message=message,
+                      has_details=details is not None,
+                      validation_errors_count=len(validation_errors) if validation_errors else 0)
             
         return JSONResponse(
             status_code=status_code,
@@ -133,6 +149,14 @@ class ResponseHelper:
             "filters": filters or {}
         }
         
+        logger.info("list_response_created",
+                   total_count=total_count,
+                   items_count=len(items),
+                   page=page,
+                   page_size=page_size,
+                   total_pages=total_pages,
+                   has_filters=filters is not None)
+        
         return ResponseHelper.success_response(
             data=items,
             message=message,
@@ -158,6 +182,11 @@ class ResponseHelper:
             JSONResponse with 201 status
         """
         metadata = {"resource_id": resource_id} if resource_id else None
+        
+        logger.info("created_response_created",
+                   resource_id=resource_id,
+                   message=message,
+                   has_data=data is not None)
         
         return ResponseHelper.success_response(
             data=data,
@@ -185,6 +214,12 @@ class ResponseHelper:
         """
         metadata = {"changes": changes} if changes else None
         
+        logger.info("updated_response_created",
+                   message=message,
+                   has_data=data is not None,
+                   has_changes=changes is not None,
+                   changes_count=len(changes) if changes else 0)
+        
         return ResponseHelper.success_response(
             data=data,
             message=message,
@@ -208,6 +243,10 @@ class ResponseHelper:
         """
         metadata = {"resource_id": resource_id} if resource_id else None
         
+        logger.info("deleted_response_created",
+                   resource_id=resource_id,
+                   message=message)
+        
         return ResponseHelper.success_response(
             data=None,
             message=message,
@@ -222,10 +261,10 @@ class ResponseHelper:
         metadata: Optional[Dict[str, Any]] = None
     ) -> JSONResponse:
         """
-        Create a standardized partial response (206)
+        Create a standardized partial response
         
         Args:
-            data: Partial data
+            data: Partial response data
             message: Response message
             warnings: List of warnings
             metadata: Additional metadata
@@ -237,7 +276,7 @@ class ResponseHelper:
             "success": True,
             "message": message,
             "data": data,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": get_current_timestamp_iso(),
             "status_code": status.HTTP_206_PARTIAL_CONTENT
         }
         
@@ -246,7 +285,13 @@ class ResponseHelper:
             
         if metadata:
             response_data["metadata"] = metadata
-            
+        
+        logger.warning("partial_response_created",
+                      message=message,
+                      has_data=data is not None,
+                      warnings_count=len(warnings) if warnings else 0,
+                      has_metadata=metadata is not None)
+        
         return JSONResponse(
             status_code=status.HTTP_206_PARTIAL_CONTENT,
             content=response_data

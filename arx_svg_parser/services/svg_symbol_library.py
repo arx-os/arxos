@@ -1,12 +1,9 @@
 import os
 import json
-import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
-# Setup basic logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from structlog import get_logger
 
 # Import the new JSON symbol library
 from services.json_symbol_library import JSONSymbolLibrary
@@ -20,6 +17,8 @@ def _get_json_library() -> JSONSymbolLibrary:
     if _json_library is None:
         _json_library = JSONSymbolLibrary()
     return _json_library
+
+logger = get_logger()
 
 def load_symbol_library(search=None, category=None):
     """

@@ -19,14 +19,14 @@ import asyncio
 import threading
 from datetime import datetime, timedelta
 from pathlib import Path
-import logging
 import re
 from contextlib import contextmanager
 import csv
 import io
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class TagType(Enum):

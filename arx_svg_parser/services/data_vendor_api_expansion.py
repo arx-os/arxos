@@ -10,7 +10,6 @@ import hashlib
 import hmac
 import base64
 import time
-import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict
@@ -27,12 +26,14 @@ import redis
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from structlog import get_logger
+
 from .base_manager import BaseManager
 from models.database import get_db
 from utils.auth import get_current_user
 from utils.logging_config import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 class DataMaskingLevel(Enum):

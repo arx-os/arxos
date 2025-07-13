@@ -16,6 +16,9 @@ from enum import Enum
 
 from models.bim import BIMModel, BIMElement, Room, Wall, Device, Geometry, GeometryType
 from services.robust_error_handling import create_error_handler
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class ImportFormat(Enum):

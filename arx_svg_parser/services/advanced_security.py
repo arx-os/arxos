@@ -10,7 +10,6 @@ This module provides enterprise-grade security features including:
 - AHJ API integration
 """
 
-import logging
 import time
 import hashlib
 import json
@@ -28,9 +27,9 @@ from cryptography.hazmat.primitives import serialization
 import base64
 import secrets
 
-from utils.logger import get_logger
+from structlog import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 class DataClassification(Enum):

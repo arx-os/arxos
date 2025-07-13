@@ -3,7 +3,6 @@ Advanced Floor Management Service
 Comprehensive floor management with grid calibration, analytics, comparison, and route management
 """
 
-import logging
 import asyncio
 from typing import Dict, List, Optional, Any, Tuple, Union
 from datetime import datetime, timedelta
@@ -26,9 +25,12 @@ from models.route import (
     RouteListResponse, RouteAnalytics, RouteOptimizationRequest,
     RouteConflict, RouteValidationResult
 )
-from utils.logger import logger
 from utils.auth import get_current_user
 from services.cache_service import cache_service
+
+from structlog import get_logger
+
+logger = get_logger()
 
 class FloorStatus:
     """Floor status constants"""
@@ -60,7 +62,7 @@ class FloorManager:
     """
     
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger()
         self.floors: Dict[str, EnhancedFloor] = {}
         self.grid_calibrations: Dict[str, GridCalibration] = {}
         self.floor_analytics: Dict[str, FloorAnalytics] = {}

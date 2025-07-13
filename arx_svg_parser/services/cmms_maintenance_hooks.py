@@ -22,7 +22,6 @@ import asyncio
 import hashlib
 import hmac
 import json
-import logging
 import time
 import uuid
 from datetime import datetime, timedelta
@@ -41,10 +40,11 @@ from sqlalchemy.orm import Session
 
 from services.database_service import get_database_session
 from utils.auth import get_current_user
-from utils.logging import get_logger
+
+from structlog import get_logger
 
 # Configure logging
-logger = get_logger(__name__)
+logger = get_logger()
 
 # Database models
 Base = declarative_base()

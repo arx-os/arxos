@@ -12,7 +12,6 @@ import json
 import csv
 import xml.etree.ElementTree as ET
 import sqlite3
-import logging
 from typing import Any, Dict, List, Optional, Union, Tuple
 from pathlib import Path
 from datetime import datetime, timezone
@@ -22,6 +21,8 @@ import uuid
 import pickle
 from abc import ABC, abstractmethod
 
+from structlog import get_logger
+
 from models.bim import (
     BIMModel, Room, Wall, Door, Window, Device, HVACZone, AirHandler, VAVBox,
     ElectricalCircuit, ElectricalPanel, ElectricalOutlet, PlumbingSystem,
@@ -30,7 +31,7 @@ from models.bim import (
 )
 from utils.errors import ExportError, ValidationError, PersistenceError
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 class ExportFormat(Enum):

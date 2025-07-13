@@ -32,7 +32,6 @@ import gzip
 import lz4
 import pickle
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-import logging
 from contextlib import contextmanager
 import redis
 import asyncio
@@ -40,9 +39,9 @@ from collections import defaultdict, OrderedDict
 import math
 import lz4.frame
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class CacheStrategy(Enum):

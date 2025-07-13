@@ -9,8 +9,9 @@ from services.svg_symbol_library import SVG_SYMBOLS, load_symbol_library
 import os
 from difflib import SequenceMatcher
 from collections import defaultdict
+import structlog
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 class SymbolRecognitionEngine:
     """Enhanced engine for recognizing building system symbols with fuzzy matching and context awareness."""

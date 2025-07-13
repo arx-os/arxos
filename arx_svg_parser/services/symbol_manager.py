@@ -11,7 +11,6 @@ Date: 2024
 
 import os
 import json
-import logging
 import uuid
 import re
 from typing import Dict, List, Optional, Any, Union
@@ -19,6 +18,8 @@ from pathlib import Path
 from datetime import datetime
 import shutil
 import importlib
+
+from structlog import get_logger
 
 from services.json_symbol_library import JSONSymbolLibrary
 from services.symbol_schema_validator import SymbolSchemaValidator
@@ -31,7 +32,7 @@ else:
     _use_jsonschema = False
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 class SymbolManager:
@@ -60,7 +61,9 @@ class SymbolManager:
         # Ensure symbols directory exists
         self.symbols_dir.mkdir(parents=True, exist_ok=True)
         
-        logger.info(f"Initialized Symbol Manager at: {self.library_path}")
+        logger.info("symbol_manager_initialized",
+                   library_path=str(self.library_path),
+                   symbols_dir=str(self.symbols_dir))
     
     def create_symbol(self, symbol_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -76,44 +79,64 @@ class SymbolManager:
             ValueError: If symbol data is invalid
             FileExistsError: If symbol with same ID already exists
         """
-        # Validate symbol data
-        if not self._validate_symbol_data(symbol_data):
-            raise ValueError("Invalid symbol data provided")
-        
-        # Generate symbol ID if not provided
-        if "id" not in symbol_data or not symbol_data["id"]:
-            symbol_data["id"] = self._generate_symbol_id(symbol_data)
-        
-        symbol_id = symbol_data["id"]
-        
-        # Check if symbol already exists
-        if self._symbol_exists(symbol_id):
-            raise FileExistsError(f"Symbol with ID '{symbol_id}' already exists")
-        
-        # Determine file path
-        file_path = self._determine_symbol_file_path(symbol_data)
-        
-        # Ensure system directory exists
-        system_dir = file_path.parent
-        system_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Add metadata
-        symbol_data = self._add_creation_metadata(symbol_data)
-        
-        # Write symbol file
         try:
+            logger.info("symbol_creation_attempt",
+                       symbol_name=symbol_data.get("name"),
+                       system=symbol_data.get("system"))
+            
+            # Validate symbol data
+            if not self._validate_symbol_data(symbol_data):
+                logger.warning("symbol_creation_failed_validation",
+                             symbol_name=symbol_data.get("name"),
+                             system=symbol_data.get("system"))
+                raise ValueError("Invalid symbol data provided")
+            
+            # Generate symbol ID if not provided
+            if "id" not in symbol_data or not symbol_data["id"]:
+                symbol_data["id"] = self._generate_symbol_id(symbol_data)
+            
+            symbol_id = symbol_data["id"]
+            
+            # Check if symbol already exists
+            if self._symbol_exists(symbol_id):
+                logger.warning("symbol_creation_failed_exists",
+                             symbol_id=symbol_id,
+                             symbol_name=symbol_data.get("name"))
+                raise FileExistsError(f"Symbol with ID '{symbol_id}' already exists")
+            
+            # Determine file path
+            file_path = self._determine_symbol_file_path(symbol_data)
+            
+            # Ensure system directory exists
+            system_dir = file_path.parent
+            system_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Add metadata
+            symbol_data = self._add_creation_metadata(symbol_data)
+            
+            # Write symbol file
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(symbol_data, f, indent=2, ensure_ascii=False)
             
-            logger.info(f"Created symbol '{symbol_id}' at {file_path}")
+            logger.info("symbol_created_successfully",
+                       symbol_id=symbol_id,
+                       symbol_name=symbol_data.get("name"),
+                       system=symbol_data.get("system"),
+                       file_path=str(file_path))
             
             # Clear library cache to reflect changes
             self.library.clear_cache()
             
             return symbol_data
             
+        except (ValueError, FileExistsError):
+            raise
         except Exception as e:
-            logger.error(f"Failed to create symbol '{symbol_id}': {e}")
+            logger.error("symbol_creation_failed",
+                        symbol_name=symbol_data.get("name"),
+                        system=symbol_data.get("system"),
+                        error=str(e),
+                        error_type=type(e).__name__)
             raise
     
     def _validate_symbol_data(self, symbol_data: Dict[str, Any]) -> bool:
@@ -130,13 +153,17 @@ class SymbolManager:
             is_valid, errors = self.schema_validator.validate_symbol(symbol_data)
             
             if not is_valid:
-                for error in errors:
-                    logger.error(f"Validation error: {error['field_path']} - {error['message']}")
+                logger.warning("symbol_validation_failed",
+                             symbol_name=symbol_data.get("name"),
+                             validation_errors=errors)
             
             return is_valid
             
         except Exception as e:
-            logger.error(f"Validation failed with exception: {e}")
+            logger.error("symbol_validation_exception",
+                        symbol_name=symbol_data.get("name"),
+                        error=str(e),
+                        error_type=type(e).__name__)
             return False
     
     def _generate_symbol_id(self, symbol_data: Dict[str, Any]) -> str:
@@ -167,7 +194,10 @@ class SymbolManager:
             symbol_id = f"{base_id}_{counter}"
             counter += 1
         
-        logger.debug(f"Generated symbol ID: {symbol_id}")
+        logger.debug("symbol_id_generated",
+                    original_name=name,
+                    generated_id=symbol_id,
+                    counter=counter - 1)
         return symbol_id
     
     def _normalize_name_to_id(self, name: str) -> str:
@@ -209,20 +239,24 @@ class SymbolManager:
         Returns:
             Path: File path for the symbol
         """
-        system = symbol_data["system"].lower()
-        symbol_id = symbol_data["id"]
+        system = symbol_data.get("system", "unknown")
+        
+        # Validate system
+        if not self._is_valid_system(system):
+            system = "unknown"
         
         # Create system directory path
         system_dir = self.symbols_dir / system
         
-        # Create file path
-        file_path = system_dir / f"{symbol_id}.json"
+        # Generate filename
+        symbol_id = symbol_data.get("id", "unknown")
+        filename = f"{symbol_id}.json"
         
-        return file_path
+        return system_dir / filename
     
     def _is_valid_system(self, system: str) -> bool:
         """
-        Check if a system is valid.
+        Check if a system name is valid.
         
         Args:
             system (str): System name to validate
@@ -233,14 +267,19 @@ class SymbolManager:
         if not system or not isinstance(system, str):
             return False
         
-        # Get known systems from library
-        known_systems = self.library._get_known_systems()
+        # Check for valid characters
+        if not re.match(r'^[a-zA-Z0-9_-]+$', system):
+            return False
         
-        return system.lower() in [s.lower() for s in known_systems]
+        # Check length
+        if len(system) > 50:
+            return False
+        
+        return True
     
     def _symbol_exists(self, symbol_id: str) -> bool:
         """
-        Check if a symbol with the given ID already exists.
+        Check if a symbol with the given ID exists.
         
         Args:
             symbol_id (str): Symbol ID to check
@@ -248,35 +287,34 @@ class SymbolManager:
         Returns:
             bool: True if exists, False otherwise
         """
-        # Check if symbol exists in library
-        existing_symbol = self.library.get_symbol(symbol_id)
-        return existing_symbol is not None
+        try:
+            # Try to get the symbol
+            symbol = self.library.get_symbol(symbol_id)
+            return symbol is not None
+        except Exception:
+            return False
     
     def _add_creation_metadata(self, symbol_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Add creation metadata to symbol data.
         
         Args:
-            symbol_data (Dict[str, Any]): Original symbol data
+            symbol_data (Dict[str, Any]): Symbol data to add metadata to
             
         Returns:
-            Dict[str, Any]: Symbol data with added metadata
+            Dict[str, Any]: Symbol data with metadata added
         """
-        # Create a copy to avoid modifying original
-        symbol_data = symbol_data.copy()
+        now = datetime.utcnow().isoformat()
         
-        # Add creation timestamp
-        symbol_data["created_at"] = datetime.now().isoformat()
-        
-        # Add version
-        symbol_data["version"] = "1.0"
-        
-        # Add metadata section if not present
-        if "metadata" not in symbol_data:
-            symbol_data["metadata"] = {}
-        
+        # Add metadata
+        symbol_data["metadata"] = symbol_data.get("metadata", {})
+        symbol_data["metadata"]["created_at"] = now
         symbol_data["metadata"]["created_by"] = "symbol_manager"
-        symbol_data["metadata"]["created_date"] = datetime.now().isoformat()
+        symbol_data["metadata"]["version"] = "1.0"
+        
+        # Add file path info
+        file_path = self._determine_symbol_file_path(symbol_data)
+        symbol_data["metadata"]["file_path"] = str(file_path)
         
         return symbol_data
     
@@ -290,11 +328,30 @@ class SymbolManager:
         Returns:
             Optional[Dict[str, Any]]: Symbol data or None if not found
         """
-        return self.library.get_symbol(symbol_id)
+        try:
+            logger.debug("symbol_retrieval_attempt", symbol_id=symbol_id)
+            
+            symbol = self.library.get_symbol(symbol_id)
+            
+            if symbol:
+                logger.debug("symbol_retrieved_successfully",
+                           symbol_id=symbol_id,
+                           symbol_name=symbol.get("name"))
+            else:
+                logger.debug("symbol_not_found", symbol_id=symbol_id)
+            
+            return symbol
+            
+        except Exception as e:
+            logger.error("symbol_retrieval_failed",
+                        symbol_id=symbol_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return None
     
     def update_symbol(self, symbol_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Update an existing symbol.
+        Update a symbol with new data.
         
         Args:
             symbol_id (str): Symbol ID to update
@@ -303,32 +360,49 @@ class SymbolManager:
         Returns:
             Optional[Dict[str, Any]]: Updated symbol data or None if not found
         """
-        # Get existing symbol
-        existing_symbol = self.get_symbol(symbol_id)
-        if not existing_symbol:
-            logger.warning(f"Symbol '{symbol_id}' not found for update")
-            return None
-        
-        # Merge updates with existing data
-        updated_symbol = existing_symbol.copy()
-        updated_symbol.update(updates)
-        
-        # Validate updated symbol
-        if not self._validate_symbol_data(updated_symbol):
-            raise ValueError("Updated symbol data is invalid")
-        
-        # Determine file path
-        file_path = self._determine_symbol_file_path(updated_symbol)
-        
-        # Add update metadata
-        updated_symbol = self._add_update_metadata(updated_symbol)
-        
-        # Write updated symbol
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            logger.info("symbol_update_attempt",
+                       symbol_id=symbol_id,
+                       update_fields=list(updates.keys()))
+            
+            # Get current symbol
+            current_symbol = self.get_symbol(symbol_id)
+            if not current_symbol:
+                logger.warning("symbol_update_failed_not_found", symbol_id=symbol_id)
+                return None
+            
+            # Merge updates
+            updated_symbol = {**current_symbol, **updates}
+            
+            # Validate updated symbol
+            if not self._validate_symbol_data(updated_symbol):
+                logger.warning("symbol_update_failed_validation",
+                             symbol_id=symbol_id,
+                             symbol_name=updated_symbol.get("name"))
+                raise ValueError("Updated symbol data is invalid")
+            
+            # Add update metadata
+            updated_symbol = self._add_update_metadata(updated_symbol)
+            
+            # Determine new file path (in case system changed)
+            new_file_path = self._determine_symbol_file_path(updated_symbol)
+            old_file_path = Path(current_symbol.get("metadata", {}).get("file_path", ""))
+            
+            # Write updated symbol
+            with open(new_file_path, 'w', encoding='utf-8') as f:
                 json.dump(updated_symbol, f, indent=2, ensure_ascii=False)
             
-            logger.info(f"Updated symbol '{symbol_id}'")
+            # Remove old file if path changed
+            if old_file_path.exists() and old_file_path != new_file_path:
+                old_file_path.unlink()
+                logger.debug("old_symbol_file_removed",
+                           old_path=str(old_file_path),
+                           new_path=str(new_file_path))
+            
+            logger.info("symbol_updated_successfully",
+                       symbol_id=symbol_id,
+                       symbol_name=updated_symbol.get("name"),
+                       file_path=str(new_file_path))
             
             # Clear library cache
             self.library.clear_cache()
@@ -336,7 +410,10 @@ class SymbolManager:
             return updated_symbol
             
         except Exception as e:
-            logger.error(f"Failed to update symbol '{symbol_id}': {e}")
+            logger.error("symbol_update_failed",
+                        symbol_id=symbol_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
             raise
     
     def _add_update_metadata(self, symbol_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -344,32 +421,24 @@ class SymbolManager:
         Add update metadata to symbol data.
         
         Args:
-            symbol_data (Dict[str, Any]): Symbol data to update
+            symbol_data (Dict[str, Any]): Symbol data to add metadata to
             
         Returns:
-            Dict[str, Any]: Symbol data with update metadata
+            Dict[str, Any]: Symbol data with metadata added
         """
-        symbol_data = symbol_data.copy()
+        now = datetime.utcnow().isoformat()
         
-        # Add update timestamp
-        symbol_data["updated_at"] = datetime.now().isoformat()
-        
-        # Update version
-        if "version" in symbol_data:
-            try:
-                major, minor = symbol_data["version"].split(".")
-                symbol_data["version"] = f"{major}.{int(minor) + 1}"
-            except:
-                symbol_data["version"] = "1.1"
-        else:
-            symbol_data["version"] = "1.1"
-        
-        # Update metadata
+        # Ensure metadata exists
         if "metadata" not in symbol_data:
             symbol_data["metadata"] = {}
         
+        # Add update metadata
+        symbol_data["metadata"]["updated_at"] = now
         symbol_data["metadata"]["updated_by"] = "symbol_manager"
-        symbol_data["metadata"]["updated_date"] = datetime.now().isoformat()
+        
+        # Update file path
+        file_path = self._determine_symbol_file_path(symbol_data)
+        symbol_data["metadata"]["file_path"] = str(file_path)
         
         return symbol_data
     
@@ -383,36 +452,45 @@ class SymbolManager:
         Returns:
             bool: True if deleted, False if not found
         """
-        # Get symbol to determine file path
-        symbol_data = self.get_symbol(symbol_id)
-        if not symbol_data:
-            logger.warning(f"Symbol '{symbol_id}' not found for deletion")
-            return False
-        
-        # Determine file path
-        file_path = self._determine_symbol_file_path(symbol_data)
-        
         try:
-            # Delete the file
+            logger.info("symbol_deletion_attempt", symbol_id=symbol_id)
+            
+            # Get symbol to find file path
+            symbol = self.get_symbol(symbol_id)
+            if not symbol:
+                logger.warning("symbol_deletion_failed_not_found", symbol_id=symbol_id)
+                return False
+            
+            # Get file path
+            file_path = Path(symbol.get("metadata", {}).get("file_path", ""))
+            
+            # Delete file
             if file_path.exists():
                 file_path.unlink()
-                logger.info(f"Deleted symbol '{symbol_id}' at {file_path}")
-                
-                # Clear library cache
-                self.library.clear_cache()
-                
-                return True
+                logger.info("symbol_deleted_successfully",
+                           symbol_id=symbol_id,
+                           symbol_name=symbol.get("name"),
+                           file_path=str(file_path))
             else:
-                logger.warning(f"Symbol file not found: {file_path}")
-                return False
-                
+                logger.warning("symbol_file_not_found",
+                             symbol_id=symbol_id,
+                             file_path=str(file_path))
+            
+            # Clear library cache
+            self.library.clear_cache()
+            
+            return True
+            
         except Exception as e:
-            logger.error(f"Failed to delete symbol '{symbol_id}': {e}")
+            logger.error("symbol_deletion_failed",
+                        symbol_id=symbol_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
             return False
     
     def list_symbols(self, system: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        List all symbols or symbols for a specific system.
+        List all symbols, optionally filtered by system.
         
         Args:
             system (Optional[str]): System to filter by
@@ -420,16 +498,27 @@ class SymbolManager:
         Returns:
             List[Dict[str, Any]]: List of symbol data
         """
-        if system:
-            symbols = self.library.load_symbols_by_system(system)
-        else:
-            symbols = self.library.load_all_symbols()
-        
-        return list(symbols.values())
+        try:
+            logger.debug("symbol_list_request", system=system)
+            
+            symbols = self.library.list_symbols(system=system)
+            
+            logger.debug("symbol_list_retrieved",
+                        system=system,
+                        symbol_count=len(symbols))
+            
+            return symbols
+            
+        except Exception as e:
+            logger.error("symbol_list_failed",
+                        system=system,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return []
     
     def search_symbols(self, query: str, system: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Search for symbols.
+        Search symbols by query string.
         
         Args:
             query (str): Search query
@@ -438,279 +527,412 @@ class SymbolManager:
         Returns:
             List[Dict[str, Any]]: List of matching symbols
         """
-        return self.library.search_symbols(query, system=system)
+        try:
+            logger.debug("symbol_search_request",
+                        query=query,
+                        system=system)
+            
+            symbols = self.library.search_symbols(query, system=system)
+            
+            logger.debug("symbol_search_completed",
+                        query=query,
+                        system=system,
+                        result_count=len(symbols))
+            
+            return symbols
+            
+        except Exception as e:
+            logger.error("symbol_search_failed",
+                        query=query,
+                        system=system,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return []
     
     def get_symbol_statistics(self) -> Dict[str, Any]:
         """
-        Get statistics about symbols in the library.
+        Get statistics about the symbol library.
         
         Returns:
-            Dict[str, Any]: Symbol statistics
+            Dict[str, Any]: Statistics data
         """
-        all_symbols = self.library.load_all_symbols()
-        
-        stats = {
-            "total_symbols": len(all_symbols),
-            "systems": {},
-            "recent_symbols": [],
-            "symbol_sizes": {}
-        }
-        
-        # Count by system
-        for symbol_id, symbol_data in all_symbols.items():
-            system = symbol_data.get("system", "unknown")
-            if system not in stats["systems"]:
-                stats["systems"][system] = 0
-            stats["systems"][system] += 1
-        
-        # Get recent symbols (last 10 created)
-        symbols_with_dates = []
-        for symbol_id, symbol_data in all_symbols.items():
-            created_at = symbol_data.get("created_at")
-            if created_at:
-                symbols_with_dates.append((created_at, symbol_data))
-        
-        symbols_with_dates.sort(key=lambda x: x[0], reverse=True)
-        stats["recent_symbols"] = [s[1] for s in symbols_with_dates[:10]]
-        
-        # Calculate symbol sizes
-        for symbol_id, symbol_data in all_symbols.items():
-            svg_content = symbol_data.get("svg", {}).get("content", "")
-            stats["symbol_sizes"][symbol_id] = len(svg_content)
-        
-        return stats 
-
+        try:
+            logger.debug("symbol_statistics_request")
+            
+            all_symbols = self.list_symbols()
+            
+            # Calculate statistics
+            total_symbols = len(all_symbols)
+            systems = {}
+            recent_symbols = []
+            
+            for symbol in all_symbols:
+                # Count by system
+                system = symbol.get("system", "unknown")
+                systems[system] = systems.get(system, 0) + 1
+                
+                # Get recent symbols (last 10)
+                created_at = symbol.get("metadata", {}).get("created_at")
+                if created_at:
+                    recent_symbols.append((created_at, symbol))
+            
+            # Sort recent symbols by creation date
+            recent_symbols.sort(key=lambda x: x[0], reverse=True)
+            recent_symbols = [symbol for _, symbol in recent_symbols[:10]]
+            
+            statistics = {
+                "total_symbols": total_symbols,
+                "systems": systems,
+                "recent_symbols": recent_symbols,
+                "symbol_sizes": {
+                    "small": len([s for s in all_symbols if len(str(s.get("svg", {}))) < 1000]),
+                    "medium": len([s for s in all_symbols if 1000 <= len(str(s.get("svg", {}))) < 5000]),
+                    "large": len([s for s in all_symbols if len(str(s.get("svg", {}))) >= 5000])
+                }
+            }
+            
+            logger.info("symbol_statistics_retrieved",
+                       total_symbols=total_symbols,
+                       system_count=len(systems),
+                       recent_count=len(recent_symbols))
+            
+            return statistics
+            
+        except Exception as e:
+            logger.error("symbol_statistics_failed",
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return {
+                "total_symbols": 0,
+                "systems": {},
+                "recent_symbols": [],
+                "symbol_sizes": {"small": 0, "medium": 0, "large": 0}
+            }
+    
     def advanced_validate_symbol(self, symbol_data: Dict[str, Any]) -> bool:
         """
-        Advanced validation for symbol data using JSON Schema if available.
+        Perform advanced validation on symbol data.
+        
         Args:
             symbol_data (Dict[str, Any]): Symbol data to validate
+            
         Returns:
             bool: True if valid, False otherwise
         """
-        schema = {
-            "type": "object",
-            "required": ["name", "system", "svg"],
-            "properties": {
-                "id": {"type": "string"},
-                "name": {"type": "string", "minLength": 1},
-                "system": {"type": "string", "minLength": 1},
-                "category": {"type": "string"},
-                "svg": {
-                    "type": "object",
-                    "required": ["content"],
-                    "properties": {
-                        "content": {"type": "string", "minLength": 1},
-                        "width": {"type": "number"},
-                        "height": {"type": "number"},
-                        "scale": {"type": "number"}
-                    }
-                },
-                "properties": {"type": "object"},
-                "connections": {"type": "array"},
-                "tags": {"type": "array", "items": {"type": "string"}},
-                "metadata": {"type": "object"}
-            }
-        }
-        if _use_jsonschema:
-            try:
-                jsonschema_validate(instance=symbol_data, schema=schema)
-                return True
-            except JsonSchemaValidationError as e:
-                logger.error(f"JSON Schema validation error: {e}")
+        try:
+            logger.debug("advanced_symbol_validation_attempt",
+                        symbol_name=symbol_data.get("name"),
+                        system=symbol_data.get("system"))
+            
+            # Basic validation
+            if not self._validate_symbol_data(symbol_data):
                 return False
-        else:
-            # Fallback to manual validation
-            return self._validate_symbol_data(symbol_data)
-
+            
+            # Advanced validation with jsonschema if available
+            if _use_jsonschema:
+                try:
+                    # Get schema from validator
+                    schema = self.schema_validator.get_schema()
+                    jsonschema_validate(symbol_data, schema)
+                    logger.debug("advanced_validation_passed",
+                               symbol_name=symbol_data.get("name"))
+                    return True
+                except JsonSchemaValidationError as e:
+                    logger.warning("advanced_validation_failed",
+                                 symbol_name=symbol_data.get("name"),
+                                 jsonschema_error=str(e))
+                    return False
+            
+            # Fallback to basic validation
+            logger.debug("advanced_validation_skipped_no_jsonschema",
+                        symbol_name=symbol_data.get("name"))
+            return True
+            
+        except Exception as e:
+            logger.error("advanced_validation_exception",
+                        symbol_name=symbol_data.get("name"),
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return False
+    
     def bulk_create_symbols(self, symbols: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Bulk create symbols with comprehensive validation.
+        Create multiple symbols in bulk.
         
         Args:
-            symbols (List[Dict[str, Any]]): List of symbol data dicts
+            symbols (List[Dict[str, Any]]): List of symbol data to create
             
         Returns:
-            List[Dict[str, Any]]: List of created symbol data
+            List[Dict[str, Any]]: List of created symbols
         """
-        created = []
-        validation_errors = []
-        
-        for i, symbol in enumerate(symbols):
-            try:
-                # Validate symbol using comprehensive schema validation
-                is_valid, errors = self.schema_validator.validate_symbol(symbol)
-                
-                if not is_valid:
-                    error_msg = f"Symbol {i+1} validation failed: {errors}"
-                    logger.error(error_msg)
-                    validation_errors.append({
+        try:
+            logger.info("bulk_symbol_creation_attempt",
+                       symbol_count=len(symbols))
+            
+            created_symbols = []
+            failed_symbols = []
+            
+            for i, symbol_data in enumerate(symbols):
+                try:
+                    created_symbol = self.create_symbol(symbol_data)
+                    created_symbols.append(created_symbol)
+                    
+                    logger.debug("bulk_symbol_created",
+                               index=i,
+                               symbol_id=created_symbol["id"],
+                               symbol_name=created_symbol.get("name"))
+                    
+                except Exception as e:
+                    failed_symbols.append({
                         "index": i,
-                        "symbol_name": symbol.get("name", "unknown"),
-                        "errors": errors
+                        "symbol_name": symbol_data.get("name"),
+                        "error": str(e)
                     })
-                    continue
-                
-                created_symbol = self.create_symbol(symbol)
-                created.append(created_symbol)
-                
-            except Exception as e:
-                error_msg = f"Bulk create failed for symbol {i+1} ({symbol.get('name', 'unknown')}): {e}"
-                logger.error(error_msg)
-                validation_errors.append({
-                    "index": i,
-                    "symbol_name": symbol.get("name", "unknown"),
-                    "error": str(e)
-                })
-        
-        if validation_errors:
-            logger.warning(f"Bulk create completed with {len(validation_errors)} validation errors")
-        
-        return created
-
+                    
+                    logger.warning("bulk_symbol_creation_failed",
+                                 index=i,
+                                 symbol_name=symbol_data.get("name"),
+                                 error=str(e))
+            
+            logger.info("bulk_symbol_creation_completed",
+                       total_symbols=len(symbols),
+                       successful=len(created_symbols),
+                       failed=len(failed_symbols))
+            
+            return created_symbols
+            
+        except Exception as e:
+            logger.error("bulk_symbol_creation_exception",
+                        symbol_count=len(symbols),
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return []
+    
     def bulk_update_symbols(self, updates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Bulk update symbols with comprehensive validation.
+        Update multiple symbols in bulk.
         
         Args:
-            updates (List[Dict[str, Any]]): List of update dicts
+            updates (List[Dict[str, Any]]): List of symbol updates with IDs
             
         Returns:
-            List[Dict[str, Any]]: List of updated symbol data
+            List[Dict[str, Any]]: List of updated symbols
         """
-        updated = []
-        validation_errors = []
-        
-        for i, update in enumerate(updates):
-            symbol_id = update.get('id')
-            if not symbol_id:
-                error_msg = f"Bulk update: Missing symbol ID in update {i+1}"
-                logger.error(error_msg)
-                validation_errors.append({
-                    "index": i,
-                    "error": "Missing symbol ID"
-                })
-                continue
+        try:
+            logger.info("bulk_symbol_update_attempt",
+                       update_count=len(updates))
             
-            try:
-                # Get existing symbol to merge with updates
-                existing_symbol = self.get_symbol(symbol_id)
-                if not existing_symbol:
-                    error_msg = f"Bulk update: Symbol '{symbol_id}' not found"
-                    logger.error(error_msg)
-                    validation_errors.append({
-                        "index": i,
-                        "symbol_id": symbol_id,
-                        "error": "Symbol not found"
-                    })
-                    continue
-                
-                # Merge updates with existing data
-                merged_symbol = existing_symbol.copy()
-                merged_symbol.update(update)
-                
-                # Validate merged symbol using comprehensive schema validation
-                is_valid, errors = self.schema_validator.validate_symbol(merged_symbol)
-                
-                if not is_valid:
-                    error_msg = f"Bulk update: Symbol '{symbol_id}' validation failed: {errors}"
-                    logger.error(error_msg)
-                    validation_errors.append({
-                        "index": i,
-                        "symbol_id": symbol_id,
-                        "errors": errors
-                    })
-                    continue
-                
-                result = self.update_symbol(symbol_id, update)
-                if result:
-                    updated.append(result)
+            updated_symbols = []
+            failed_updates = []
+            
+            for i, update_data in enumerate(updates):
+                try:
+                    symbol_id = update_data.get("id")
+                    if not symbol_id:
+                        raise ValueError("Symbol ID is required for updates")
                     
-            except Exception as e:
-                error_msg = f"Bulk update failed for symbol ID {symbol_id}: {e}"
-                logger.error(error_msg)
-                validation_errors.append({
-                    "index": i,
-                    "symbol_id": symbol_id,
-                    "error": str(e)
-                })
-        
-        if validation_errors:
-            logger.warning(f"Bulk update completed with {len(validation_errors)} validation errors")
-        
-        return updated
-
+                    # Remove ID from update data
+                    update_fields = {k: v for k, v in update_data.items() if k != "id"}
+                    
+                    updated_symbol = self.update_symbol(symbol_id, update_fields)
+                    if updated_symbol:
+                        updated_symbols.append(updated_symbol)
+                        
+                        logger.debug("bulk_symbol_updated",
+                                   index=i,
+                                   symbol_id=symbol_id,
+                                   symbol_name=updated_symbol.get("name"))
+                    else:
+                        failed_updates.append({
+                            "index": i,
+                            "symbol_id": symbol_id,
+                            "error": "Symbol not found"
+                        })
+                        
+                        logger.warning("bulk_symbol_update_failed_not_found",
+                                     index=i,
+                                     symbol_id=symbol_id)
+                    
+                except Exception as e:
+                    failed_updates.append({
+                        "index": i,
+                        "symbol_id": update_data.get("id"),
+                        "error": str(e)
+                    })
+                    
+                    logger.warning("bulk_symbol_update_failed",
+                                 index=i,
+                                 symbol_id=update_data.get("id"),
+                                 error=str(e))
+            
+            logger.info("bulk_symbol_update_completed",
+                       total_updates=len(updates),
+                       successful=len(updated_symbols),
+                       failed=len(failed_updates))
+            
+            return updated_symbols
+            
+        except Exception as e:
+            logger.error("bulk_symbol_update_exception",
+                        update_count=len(updates),
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return []
+    
     def bulk_delete_symbols(self, symbol_ids: List[str]) -> Dict[str, bool]:
         """
-        Bulk delete symbols by ID.
+        Delete multiple symbols in bulk.
+        
         Args:
             symbol_ids (List[str]): List of symbol IDs to delete
+            
         Returns:
-            Dict[str, bool]: Dict of symbol_id -> deletion success
+            Dict[str, bool]: Mapping of symbol ID to deletion success
         """
-        results = {}
-        for symbol_id in symbol_ids:
-            try:
-                results[symbol_id] = self.delete_symbol(symbol_id)
-            except Exception as e:
-                logger.error(f"Bulk delete failed for symbol ID {symbol_id}: {e}")
-                results[symbol_id] = False
-        return results
+        try:
+            logger.info("bulk_symbol_deletion_attempt",
+                       symbol_count=len(symbol_ids))
+            
+            results = {}
+            
+            for symbol_id in symbol_ids:
+                try:
+                    success = self.delete_symbol(symbol_id)
+                    results[symbol_id] = success
+                    
+                    if success:
+                        logger.debug("bulk_symbol_deleted", symbol_id=symbol_id)
+                    else:
+                        logger.warning("bulk_symbol_deletion_failed", symbol_id=symbol_id)
+                    
+                except Exception as e:
+                    results[symbol_id] = False
+                    logger.error("bulk_symbol_deletion_exception",
+                               symbol_id=symbol_id,
+                               error=str(e))
+            
+            successful = sum(1 for success in results.values() if success)
+            failed = len(results) - successful
+            
+            logger.info("bulk_symbol_deletion_completed",
+                       total_symbols=len(symbol_ids),
+                       successful=successful,
+                       failed=failed)
+            
+            return results
+            
+        except Exception as e:
+            logger.error("bulk_symbol_deletion_exception",
+                        symbol_count=len(symbol_ids),
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return {symbol_id: False for symbol_id in symbol_ids}
     
     def validate_symbol_with_details(self, symbol_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate symbol data and return detailed validation results.
+        Validate symbol with detailed results.
         
         Args:
             symbol_data (Dict[str, Any]): Symbol data to validate
             
         Returns:
-            Dict[str, Any]: Validation results with details
+            Dict[str, Any]: Detailed validation results
         """
         try:
-            is_valid, errors = self.schema_validator.validate_symbol(symbol_data)
+            logger.debug("detailed_symbol_validation_attempt",
+                        symbol_name=symbol_data.get("name"))
             
-            return {
-                "is_valid": is_valid,
-                "errors": errors,
-                "symbol_name": symbol_data.get("name", "unknown"),
-                "symbol_id": symbol_data.get("id", "unknown")
+            # Basic validation
+            basic_valid, basic_errors = self.schema_validator.validate_symbol(symbol_data)
+            
+            # Advanced validation
+            advanced_valid = self.advanced_validate_symbol(symbol_data)
+            
+            result = {
+                "symbol_name": symbol_data.get("name"),
+                "symbol_id": symbol_data.get("id"),
+                "basic_validation": {
+                    "valid": basic_valid,
+                    "errors": basic_errors
+                },
+                "advanced_validation": {
+                    "valid": advanced_valid,
+                    "available": _use_jsonschema
+                },
+                "overall_valid": basic_valid and advanced_valid
             }
             
+            logger.debug("detailed_symbol_validation_completed",
+                        symbol_name=symbol_data.get("name"),
+                        overall_valid=result["overall_valid"])
+            
+            return result
+            
         except Exception as e:
+            logger.error("detailed_symbol_validation_failed",
+                        symbol_name=symbol_data.get("name"),
+                        error=str(e),
+                        error_type=type(e).__name__)
             return {
-                "is_valid": False,
-                "errors": [{"field_path": "validation", "message": f"Validation exception: {str(e)}"}],
-                "symbol_name": symbol_data.get("name", "unknown"),
-                "symbol_id": symbol_data.get("id", "unknown")
+                "symbol_name": symbol_data.get("name"),
+                "symbol_id": symbol_data.get("id"),
+                "basic_validation": {"valid": False, "errors": [str(e)]},
+                "advanced_validation": {"valid": False, "available": _use_jsonschema},
+                "overall_valid": False
             }
     
     def validate_batch_with_details(self, symbols: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Validate a batch of symbols and return detailed validation results.
+        Validate a batch of symbols with detailed results.
         
         Args:
             symbols (List[Dict[str, Any]]): List of symbol data to validate
             
         Returns:
-            Dict[str, Any]: Batch validation results with details
+            Dict[str, Any]: Batch validation results
         """
-        results = {
-            "total_symbols": len(symbols),
-            "valid_symbols": 0,
-            "invalid_symbols": 0,
-            "validation_details": []
-        }
-        
-        for i, symbol in enumerate(symbols):
-            validation_result = self.validate_symbol_with_details(symbol)
-            validation_result["index"] = i
+        try:
+            logger.info("batch_symbol_validation_attempt",
+                       symbol_count=len(symbols))
             
-            if validation_result["is_valid"]:
-                results["valid_symbols"] += 1
-            else:
-                results["invalid_symbols"] += 1
+            results = []
+            valid_count = 0
+            invalid_count = 0
             
-            results["validation_details"].append(validation_result)
-        
-        return results 
+            for i, symbol_data in enumerate(symbols):
+                result = self.validate_symbol_with_details(symbol_data)
+                results.append(result)
+                
+                if result["overall_valid"]:
+                    valid_count += 1
+                else:
+                    invalid_count += 1
+            
+            batch_result = {
+                "total_symbols": len(symbols),
+                "valid_symbols": valid_count,
+                "invalid_symbols": invalid_count,
+                "validation_rate": valid_count / len(symbols) if symbols else 0,
+                "results": results
+            }
+            
+            logger.info("batch_symbol_validation_completed",
+                       total_symbols=len(symbols),
+                       valid_count=valid_count,
+                       invalid_count=invalid_count,
+                       validation_rate=batch_result["validation_rate"])
+            
+            return batch_result
+            
+        except Exception as e:
+            logger.error("batch_symbol_validation_failed",
+                        symbol_count=len(symbols),
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return {
+                "total_symbols": len(symbols),
+                "valid_symbols": 0,
+                "invalid_symbols": len(symbols),
+                "validation_rate": 0,
+                "results": []
+            } 

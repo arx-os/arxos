@@ -10,11 +10,12 @@ This module provides an enhanced rule engine that supports:
 
 import json
 import os
-import logging
 from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
+
+from structlog import get_logger
 
 try:
     from ..models.building_regulations import ValidationRule, ViolationSeverity
@@ -22,7 +23,7 @@ except ImportError:
     # Fallback for direct execution
     from models.building_regulations import ValidationRule, ViolationSeverity
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 @dataclass

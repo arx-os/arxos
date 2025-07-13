@@ -1,14 +1,29 @@
 import os
 import tempfile
-import logging
-from typing import Dict, Any, Optional, List
+import json
+import time
+import hashlib
+import uuid
+import threading
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Union, Tuple
+from dataclasses import dataclass, asdict
+from enum import Enum
+from pathlib import Path
+import sqlite3
+from contextlib import contextmanager
+import math
+import re
+
 import xml.etree.ElementTree as ET
 from io import BytesIO
 import base64
 from services.symbol_recognition import SymbolRecognitionEngine
 from services.symbol_renderer import SymbolRenderer
 
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 class PDFProcessor:
     """Enhanced PDF processing with symbol recognition and rendering."""

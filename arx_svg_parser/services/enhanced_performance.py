@@ -21,7 +21,6 @@ from typing import Dict, List, Any, Callable, Optional, Union, Tuple
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from functools import wraps, lru_cache
 from collections import defaultdict, deque
-import logging
 from dataclasses import dataclass, field
 from enum import Enum
 import weakref
@@ -33,7 +32,9 @@ from pathlib import Path
 # Import OptimizationLevel from existing performance optimizer
 from services.performance_optimizer import OptimizationLevel
 
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class BatchStrategy(Enum):

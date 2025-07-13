@@ -16,11 +16,11 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 from pathlib import Path
 import hashlib
-import logging
 from contextlib import contextmanager
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class LogEntryType(Enum):

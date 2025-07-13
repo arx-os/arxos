@@ -26,16 +26,15 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any, Union
 from dataclasses import dataclass, asdict
 from enum import Enum
-import logging
 from pathlib import Path
 import sqlite3
 from contextlib import contextmanager
 import math
 import re
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class ValidationStatus(Enum):

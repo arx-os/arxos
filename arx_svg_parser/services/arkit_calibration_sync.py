@@ -17,15 +17,15 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import sqlite3
 from contextlib import contextmanager
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class CalibrationStatus(Enum):

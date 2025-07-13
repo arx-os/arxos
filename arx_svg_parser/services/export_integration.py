@@ -12,21 +12,25 @@ Phase 7.3: Export Integration
 """
 
 import json
-import logging
-import math
-import base64
-from typing import Dict, List, Tuple, Optional, Any, Union
+import time
+import hashlib
+import uuid
+import threading
+import asyncio
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass, asdict
+from enum import Enum
 from pathlib import Path
-from datetime import datetime
-import xml.etree.ElementTree as ET
-from lxml import etree
-import yaml
+import sqlite3
+from contextlib import contextmanager
+import math
+import re
 
-from utils.errors import ExportError, ValidationError
-from services.persistence import PersistenceService
+from structlog import get_logger
+from utils.cache import redis_cache, generate_export_cache_key
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 @dataclass
@@ -824,4 +828,131 @@ class ExportIntegration:
                 report.append(f"- {rec}")
             report.append("")
         
-        return "\n".join(report) 
+        return "\n".join(report)
+    
+    async def get_export_result(self, export_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get export result with Redis caching.
+        
+        Args:
+            export_id: Export identifier
+            
+        Returns:
+            Export result or None if not found
+        """
+        cache_key = generate_export_cache_key(export_id)
+        
+        try:
+            # Try cache first
+            cached_result = await redis_cache.get(cache_key)
+            
+            if cached_result:
+                logger.info("export_cache_hit",
+                           export_id=export_id,
+                           cache_key=cache_key)
+                
+                return cached_result
+            
+            # Cache miss - query database
+            logger.info("export_cache_miss",
+                       export_id=export_id,
+                       cache_key=cache_key)
+            
+            result = await self._query_export_from_db(export_id)
+            
+            if result:
+                # Cache the result with longer TTL for export data
+                await redis_cache.set(cache_key, result, ttl=300)  # 5 minutes
+                
+                logger.info("export_cached",
+                           export_id=export_id,
+                           cache_key=cache_key,
+                           ttl=300)
+            
+            return result
+            
+        except Exception as e:
+            logger.error("export_retrieval_failed",
+                        export_id=export_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            
+            # Fallback to database only
+            return await self._query_export_from_db(export_id)
+    
+    async def _query_export_from_db(self, export_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Query export result from database.
+        
+        Args:
+            export_id: Export identifier
+            
+        Returns:
+            Export result or None if not found
+        """
+        try:
+            # Implementation depends on your database
+            # This is a placeholder implementation
+            await asyncio.sleep(0.01)  # Simulate DB latency
+            
+            # Return mock data for demonstration
+            return {
+                "export_id": export_id,
+                "status": "completed",
+                "created_at": datetime.utcnow().isoformat(),
+                "completed_at": datetime.utcnow().isoformat(),
+                "file_path": f"/exports/{export_id}.svg",
+                "file_size": 1024,
+                "format": "svg",
+                "metadata": {
+                    "title": f"Export {export_id}",
+                    "description": f"Export result for {export_id}",
+                    "symbol_count": 25,
+                    "element_count": 150
+                },
+                "scale_metadata": {
+                    "original_scale": 1.0,
+                    "current_scale": 1.0,
+                    "zoom_level": 1.0,
+                    "units": "mm"
+                }
+            }
+            
+        except Exception as e:
+            logger.error("export_database_query_failed",
+                        export_id=export_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return None
+    
+    async def invalidate_export_cache(self, export_id: str) -> bool:
+        """
+        Invalidate export cache for an export.
+        
+        Args:
+            export_id: Export identifier
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            cache_key = generate_export_cache_key(export_id)
+            success = await redis_cache.delete(cache_key)
+            
+            if success:
+                logger.info("export_cache_invalidated",
+                           export_id=export_id,
+                           cache_key=cache_key)
+            else:
+                logger.warning("export_cache_invalidation_failed",
+                             export_id=export_id,
+                             cache_key=cache_key)
+            
+            return success
+            
+        except Exception as e:
+            logger.error("export_cache_invalidation_error",
+                        export_id=export_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return False 

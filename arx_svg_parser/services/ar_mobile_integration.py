@@ -10,7 +10,6 @@ Implements augmented reality and mobile capabilities for on-site building manage
 - Mobile BIM viewer with AR capabilities
 """
 
-import logging
 import json
 import time
 import uuid
@@ -28,7 +27,9 @@ import pickle
 import zlib
 import base64
 
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 @dataclass

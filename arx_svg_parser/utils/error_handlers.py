@@ -12,10 +12,11 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 import uuid
+import structlog
 
 from .response_helpers import ResponseHelper
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 class ErrorHandler:
     """Centralized error handler for consistent error processing"""
@@ -239,32 +240,122 @@ def log_error(
         logger.debug(message, extra=log_data)
 
 # FastAPI exception handlers
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """Handle FastAPI HTTPException"""
-    return ResponseHelper.error_response(
-        message=exc.detail,
-        error_code="HTTP_ERROR",
-        status_code=exc.status_code
-    )
-
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    """Handle FastAPI RequestValidationError"""
-    errors = []
-    for error in exc.errors():
-        field = " -> ".join(str(loc) for loc in error["loc"])
-        message = error["msg"]
-        errors.append(f"{field}: {message}")
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTP exceptions with structured logging."""
+    user_id = getattr(request.state, 'user_id', None) if hasattr(request.state, 'user_id') else None
+    user_roles = getattr(request.state, 'user_roles', []) if hasattr(request.state, 'user_roles') else []
     
-    return ResponseHelper.error_response(
-        message="Request validation failed",
-        error_code="VALIDATION_ERROR",
-        status_code=422,
-        validation_errors=errors
+    logger.warning("http_exception",
+                  path=request.url.path,
+                  method=request.method,
+                  status_code=exc.status_code,
+                  detail=exc.detail,
+                  user_id=user_id,
+                  user_roles=user_roles,
+                  client_ip=request.client.host if request.client else "unknown")
+    
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail}
     )
 
-async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Handle general exceptions"""
-    return handle_exception(exc, request)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Handle validation exceptions with structured logging."""
+    user_id = getattr(request.state, 'user_id', None) if hasattr(request.state, 'user_id') else None
+    
+    # Extract validation errors
+    validation_errors = []
+    for error in exc.errors():
+        validation_errors.append({
+            "field": " -> ".join(str(loc) for loc in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"]
+        })
+    
+    logger.warning("validation_error",
+                  path=request.url.path,
+                  method=request.method,
+                  status_code=422,
+                  validation_errors=validation_errors,
+                  user_id=user_id,
+                  client_ip=request.client.host if request.client else "unknown")
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "Validation error",
+            "details": validation_errors
+        }
+    )
+
+async def generic_exception_handler(request: Request, exc: Exception):
+    """Handle unhandled exceptions with structured logging."""
+    user_id = getattr(request.state, 'user_id', None) if hasattr(request.state, 'user_id') else None
+    user_roles = getattr(request.state, 'user_roles', []) if hasattr(request.state, 'user_roles') else []
+    
+    logger.error("unhandled_exception",
+                path=request.url.path,
+                method=request.method,
+                error=str(exc),
+                error_type=type(exc).__name__,
+                user_id=user_id,
+                user_roles=user_roles,
+                client_ip=request.client.host if request.client else "unknown",
+                exc_info=True)
+    
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal server error"}
+    )
+
+def log_error_with_context(error: Exception, context: Optional[Dict[str, Any]] = None):
+    """Log error with additional context."""
+    log_data = {
+        "error_type": type(error).__name__,
+        "error_message": str(error),
+        "error_module": error.__class__.__module__,
+    }
+    
+    if context:
+        log_data.update(context)
+    
+    logger.error("application_error", **log_data, exc_info=True)
+
+def log_security_event(event_type: str, user_id: Optional[str] = None, 
+                      details: Optional[Dict[str, Any]] = None):
+    """Log security-related events with structured context."""
+    log_data = {
+        "event_type": event_type,
+        "security_event": True
+    }
+    
+    if user_id:
+        log_data["user_id"] = user_id
+    
+    if details:
+        log_data.update(details)
+    
+    logger.warning("security_event", **log_data)
+
+def log_api_request(method: str, path: str, user_id: Optional[str] = None, 
+                   status_code: Optional[int] = None, duration: Optional[float] = None):
+    """Log API request details with structured context."""
+    log_data = {
+        "method": method,
+        "path": path,
+        "api_request": True
+    }
+    
+    if user_id:
+        log_data["user_id"] = user_id
+    
+    if status_code:
+        log_data["status_code"] = status_code
+    
+    if duration:
+        log_data["duration"] = duration
+    
+    logger.info("api_request", **log_data)
 
 # Error response convenience functions
 def validation_error_response(

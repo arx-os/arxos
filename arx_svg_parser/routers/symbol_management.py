@@ -18,7 +18,7 @@ from utils.auth import (
     get_current_user, check_permission, require_role, Permission, UserRole, User,
     UserCreate, UserLogin, Token, login_user, create_user, list_users, update_user_role, deactivate_user
 )
-import logging
+import structlog
 import json
 import csv
 # Remove all YAML imports and logic
@@ -30,7 +30,7 @@ from datetime import datetime
 from enum import Enum
 
 # Setup logging
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Initialize router
 router = APIRouter(prefix="/api/v1", tags=["symbol-management"])
@@ -55,11 +55,20 @@ class JobTracker:
             "result": None,
             "created_at": datetime.now().isoformat()
         }
+        
+        logger.info("job_created",
+                   job_id=job_id,
+                   job_type=job_type)
+        
         return job_id
     
     def update_job(self, job_id: str, **kwargs):
         if job_id in self.jobs:
             self.jobs[job_id].update(kwargs)
+            
+            logger.debug("job_updated",
+                        job_id=job_id,
+                        updates=kwargs)
     
     def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         return self.jobs.get(job_id)
@@ -161,6 +170,7 @@ async def login(user_data: UserLogin):
     
     Returns a JWT token that can be used for authenticated requests.
     """
+    logger.info("user_login_attempt", username=user_data.username)
     return login_user(user_data)
 
 @router.post("/auth/register", response_model=User, summary="Register new user")
@@ -174,6 +184,10 @@ async def register_user(
     
     Only administrators can create new user accounts.
     """
+    logger.info("user_registration_attempt",
+               admin_user_id=current_user.id,
+               new_username=user_data.username,
+               new_email=user_data.email)
     return create_user(user_data)
 
 # Symbol CRUD endpoints
@@ -189,29 +203,50 @@ async def create_symbol(
     Requires CREATE_SYMBOL permission.
     """
     try:
+        logger.info("symbol_creation_attempt",
+                   user_id=current_user.id,
+                   symbol_name=symbol_data.name,
+                   system=symbol_data.system)
+        
         # Validate symbol data against schema
         symbol_dict = symbol_data.dict(exclude_unset=True)
         valid, errors = schema_validator.validate_symbol(symbol_dict)
         
         if not valid:
+            logger.warning("symbol_validation_failed",
+                          user_id=current_user.id,
+                          symbol_name=symbol_data.name,
+                          validation_errors=errors)
+            
             error_details = {"validation_errors": errors}
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
                 detail=error_details
             )
         
-        created_symbol = symbol_manager.create_symbol(symbol_dict)
-        logger.info(f"User {current_user.username} created symbol: {created_symbol.get('id')}")
-        return SymbolResponse(**created_symbol)
+        # Create symbol
+        symbol = symbol_manager.create_symbol(symbol_dict)
+        
+        logger.info("symbol_created_successfully",
+                   user_id=current_user.id,
+                   symbol_id=symbol["id"],
+                   symbol_name=symbol["name"],
+                   system=symbol["system"])
+        
+        return SymbolResponse(**symbol)
+        
     except HTTPException:
         raise
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except FileExistsError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except Exception as e:
-        logger.error(f"Create symbol failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        logger.error("symbol_creation_failed",
+                    user_id=current_user.id,
+                    symbol_name=symbol_data.name,
+                    error=str(e),
+                    error_type=type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create symbol"
+        )
 
 @router.get("/symbols/{symbol_id}", response_model=SymbolResponse, summary="Get symbol by ID")
 async def get_symbol(
@@ -224,13 +259,40 @@ async def get_symbol(
     
     Requires READ_SYMBOL permission.
     """
-    symbol = symbol_manager.get_symbol(symbol_id)
-    if not symbol:
+    try:
+        logger.debug("symbol_retrieval_attempt",
+                    user_id=current_user.id,
+                    symbol_id=symbol_id)
+        
+        symbol = symbol_manager.get_symbol(symbol_id)
+        if not symbol:
+            logger.warning("symbol_not_found",
+                          user_id=current_user.id,
+                          symbol_id=symbol_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Symbol not found"
+            )
+        
+        logger.debug("symbol_retrieved_successfully",
+                    user_id=current_user.id,
+                    symbol_id=symbol_id,
+                    symbol_name=symbol["name"])
+        
+        return SymbolResponse(**symbol)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("symbol_retrieval_failed",
+                    user_id=current_user.id,
+                    symbol_id=symbol_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail=f"Symbol with ID '{symbol_id}' not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve symbol"
         )
-    return SymbolResponse(**symbol)
 
 @router.put("/symbols/{symbol_id}", response_model=SymbolResponse, summary="Update symbol")
 async def update_symbol(
@@ -240,48 +302,62 @@ async def update_symbol(
     _: bool = Depends(lambda u: check_permission_dependency(u, Permission.UPDATE_SYMBOL))
 ):
     """
-    Update a symbol by ID.
+    Update a symbol.
     
     Requires UPDATE_SYMBOL permission.
     """
     try:
-        # Get current symbol data
-        current_symbol = symbol_manager.get_symbol(symbol_id)
-        if not current_symbol:
+        logger.info("symbol_update_attempt",
+                   user_id=current_user.id,
+                   symbol_id=symbol_id,
+                   update_fields=list(updates.dict(exclude_unset=True).keys()))
+        
+        # Check if symbol exists
+        existing_symbol = symbol_manager.get_symbol(symbol_id)
+        if not existing_symbol:
+            logger.warning("symbol_update_failed_not_found",
+                          user_id=current_user.id,
+                          symbol_id=symbol_id)
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail=f"Symbol with ID '{symbol_id}' not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Symbol not found"
             )
         
-        # Merge updates with current data for validation
-        update_dict = updates.dict(exclude_unset=True)
-        merged_data = {**current_symbol, **update_dict}
+        # Validate updates if provided
+        if updates.svg:
+            valid, errors = schema_validator.validate_symbol(updates.dict())
+            if not valid:
+                logger.warning("symbol_update_validation_failed",
+                              user_id=current_user.id,
+                              symbol_id=symbol_id,
+                              validation_errors=errors)
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail={"validation_errors": errors}
+                )
         
-        # Validate merged data against schema
-        valid, errors = schema_validator.validate_symbol(merged_data)
+        # Update symbol
+        updated_symbol = symbol_manager.update_symbol(symbol_id, updates.dict(exclude_unset=True))
         
-        if not valid:
-            error_details = {"validation_errors": errors}
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
-                detail=error_details
-            )
+        logger.info("symbol_updated_successfully",
+                   user_id=current_user.id,
+                   symbol_id=symbol_id,
+                   symbol_name=updated_symbol["name"])
         
-        updated_symbol = symbol_manager.update_symbol(symbol_id, update_dict)
-        if not updated_symbol:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail=f"Symbol with ID '{symbol_id}' not found"
-            )
-        logger.info(f"User {current_user.username} updated symbol: {symbol_id}")
         return SymbolResponse(**updated_symbol)
+        
     except HTTPException:
         raise
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        logger.error(f"Update symbol failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        logger.error("symbol_update_failed",
+                    user_id=current_user.id,
+                    symbol_id=symbol_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update symbol"
+        )
 
 @router.delete("/symbols/{symbol_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete symbol")
 async def delete_symbol(
@@ -290,18 +366,43 @@ async def delete_symbol(
     _: bool = Depends(lambda u: check_permission_dependency(u, Permission.DELETE_SYMBOL))
 ):
     """
-    Delete a symbol by ID.
+    Delete a symbol.
     
     Requires DELETE_SYMBOL permission.
     """
-    deleted = symbol_manager.delete_symbol(symbol_id)
-    if not deleted:
+    try:
+        logger.info("symbol_deletion_attempt",
+                   user_id=current_user.id,
+                   symbol_id=symbol_id)
+        
+        success = symbol_manager.delete_symbol(symbol_id)
+        if not success:
+            logger.warning("symbol_deletion_failed_not_found",
+                          user_id=current_user.id,
+                          symbol_id=symbol_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Symbol not found"
+            )
+        
+        logger.info("symbol_deleted_successfully",
+                   user_id=current_user.id,
+                   symbol_id=symbol_id)
+        
+        return None
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("symbol_deletion_failed",
+                    user_id=current_user.id,
+                    symbol_id=symbol_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail=f"Symbol with ID '{symbol_id}' not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete symbol"
         )
-    logger.info(f"User {current_user.username} deleted symbol: {symbol_id}")
-    return None
 
 @router.get("/symbols", response_model=SymbolListResponse, summary="List and search symbols")
 async def list_symbols(
@@ -313,37 +414,52 @@ async def list_symbols(
     _: bool = Depends(lambda u: check_permission_dependency(u, Permission.LIST_SYMBOLS))
 ):
     """
-    List or search symbols with pagination and filtering.
+    List and search symbols with pagination.
     
     Requires LIST_SYMBOLS permission.
     """
     try:
-        # Get symbols based on filters
-        if query:
-            symbols = symbol_manager.search_symbols(query, system=system)
-        else:
-            symbols = symbol_manager.list_symbols(system=system)
+        logger.debug("symbol_list_request",
+                    user_id=current_user.id,
+                    system=system,
+                    query=query,
+                    page=page,
+                    page_size=page_size)
         
-        # Apply pagination
-        total_count = len(symbols)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        paginated_symbols = symbols[start_idx:end_idx]
+        symbols, total_count = symbol_manager.list_symbols(
+            system=system,
+            query=query,
+            page=page,
+            page_size=page_size
+        )
         
-        # Convert to response models
-        symbol_responses = [SymbolResponse(**symbol) for symbol in paginated_symbols]
+        has_next = (page * page_size) < total_count
+        has_prev = page > 1
+        
+        logger.debug("symbol_list_retrieved",
+                    user_id=current_user.id,
+                    symbols_count=len(symbols),
+                    total_count=total_count,
+                    page=page)
         
         return SymbolListResponse(
-            symbols=symbol_responses,
+            symbols=[SymbolResponse(**symbol) for symbol in symbols],
             total_count=total_count,
             page=page,
             page_size=page_size,
-            has_next=end_idx < total_count,
-            has_prev=page > 1
+            has_next=has_next,
+            has_prev=has_prev
         )
+        
     except Exception as e:
-        logger.error(f"List symbols failed: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        logger.error("symbol_list_failed",
+                    user_id=current_user.id,
+                    error=str(e),
+                    error_type=type(e).__name__)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve symbols"
+        )
 
 # Bulk operation endpoints
 @router.post("/symbols/bulk", response_model=List[SymbolResponse], status_code=status.HTTP_201_CREATED, summary="Bulk create symbols")
@@ -869,11 +985,14 @@ async def health_check():
 
 # Background task functions
 async def process_bulk_import(job_id: str, symbols_data: List[Dict[str, Any]], username: str):
-    """
-    Background task to process bulk import.
-    """
+    """Background task for processing bulk symbol import."""
     try:
-        job_tracker.update_job(job_id, status="processing")
+        logger.info("bulk_import_started",
+                   job_id=job_id,
+                   username=username,
+                   total_symbols=len(symbols_data))
+        
+        job_tracker.update_job(job_id, status="processing", total_items=len(symbols_data))
         
         successful = 0
         failed = 0
@@ -881,104 +1000,100 @@ async def process_bulk_import(job_id: str, symbols_data: List[Dict[str, Any]], u
         
         for i, symbol_data in enumerate(symbols_data):
             try:
-                # Validate symbol against schema
+                # Validate symbol
                 valid, validation_errors = schema_validator.validate_symbol(symbol_data)
                 if not valid:
-                    failed += 1
                     errors.append({
                         "index": i,
-                        "symbol_id": symbol_data.get("id", "unknown"),
-                        "error": "Validation failed",
-                        "validation_errors": validation_errors
+                        "symbol_name": symbol_data.get("name", "unknown"),
+                        "errors": validation_errors
                     })
+                    failed += 1
                     continue
                 
-                # Create symbol if validation passes
+                # Create symbol
                 symbol_manager.create_symbol(symbol_data)
                 successful += 1
                 
+                # Update progress
+                progress = int((i + 1) / len(symbols_data) * 100)
+                job_tracker.update_job(job_id, progress=progress, processed_items=i + 1)
+                
             except Exception as e:
-                failed += 1
                 errors.append({
                     "index": i,
-                    "symbol_id": symbol_data.get("id", "unknown"),
+                    "symbol_name": symbol_data.get("name", "unknown"),
                     "error": str(e)
                 })
-            
-            # Update progress
-            progress = int((i + 1) / len(symbols_data) * 100)
-            job_tracker.update_job(
-                job_id,
-                processed_items=i + 1,
-                progress=progress,
-                errors=errors
-            )
-            
-            # Small delay to prevent overwhelming the system
-            await asyncio.sleep(0.1)
+                failed += 1
         
-        # Final update
         job_tracker.update_job(
             job_id,
             status="completed",
-            processed_items=len(symbols_data),
             progress=100,
-            result={
-                "successful": successful,
-                "failed": failed,
-                "total": len(symbols_data)
-            }
+            successful=successful,
+            failed=failed,
+            errors=errors
         )
         
-        logger.info(f"Bulk import job {job_id} completed: {successful} successful, {failed} failed")
+        logger.info("bulk_import_completed",
+                   job_id=job_id,
+                   username=username,
+                   successful=successful,
+                   failed=failed)
         
     except Exception as e:
-        job_tracker.update_job(job_id, status="failed", result={"error": str(e)})
-        logger.error(f"Bulk import job {job_id} failed: {e}")
+        logger.error("bulk_import_failed",
+                    job_id=job_id,
+                    username=username,
+                    error=str(e),
+                    error_type=type(e).__name__)
+        
+        job_tracker.update_job(job_id, status="failed", errors=[{"error": str(e)}])
 
 async def process_bulk_export(job_id: str, symbols: List[Dict[str, Any]], format: ExportFormat, username: str):
-    """
-    Background task to process bulk export.
-    """
+    """Background task for processing bulk symbol export."""
     try:
-        job_tracker.update_job(job_id, status="processing")
+        logger.info("bulk_export_started",
+                   job_id=job_id,
+                   username=username,
+                   total_symbols=len(symbols),
+                   format=format.value)
         
-        # Convert symbols to export format
+        job_tracker.update_job(job_id, status="processing", total_items=len(symbols))
+        
+        # Process export based on format
         if format == ExportFormat.JSON:
-            content = json.dumps(symbols, indent=2, default=str)
-            filename = f"symbols_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            content_type = "application/json"
-            
+            result = json.dumps(symbols, indent=2)
         elif format == ExportFormat.CSV:
             # Convert to CSV format
+            output = io.StringIO()
             if symbols:
-                fieldnames = list(symbols[0].keys())
-                output = io.StringIO()
-                writer = csv.DictWriter(output, fieldnames=fieldnames)
+                writer = csv.DictWriter(output, fieldnames=symbols[0].keys())
                 writer.writeheader()
                 writer.writerows(symbols)
-                content = output.getvalue()
-            else:
-                content = ""
-            filename = f"symbols_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            content_type = "text/csv"
-            
-        # Update job with result
+            result = output.getvalue()
+        else:
+            raise ValueError(f"Unsupported export format: {format}")
+        
         job_tracker.update_job(
             job_id,
             status="completed",
-            processed_items=len(symbols),
             progress=100,
-            result={
-                "content": content,
-                "filename": filename,
-                "content_type": content_type,
-                "total_symbols": len(symbols)
-            }
+            result={"export_data": result}
         )
         
-        logger.info(f"Export job {job_id} completed: {len(symbols)} symbols exported to {format}")
+        logger.info("bulk_export_completed",
+                   job_id=job_id,
+                   username=username,
+                   format=format.value)
         
     except Exception as e:
-        job_tracker.update_job(job_id, status="failed", result={"error": str(e)})
-        logger.error(f"Export job {job_id} failed: {e}") 
+        logger.error("bulk_export_failed",
+                    job_id=job_id,
+                    username=username,
+                    format=format.value,
+                    error=str(e),
+                    error_type=type(e).__name__)
+        
+        job_tracker.update_job(job_id, status="failed", errors=[{"error": str(e)}]) 

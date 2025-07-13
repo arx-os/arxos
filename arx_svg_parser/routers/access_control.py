@@ -7,14 +7,14 @@ from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pydantic import BaseModel
-import logging
+import structlog
 
 from services.access_control import (
     access_control_service, UserRole, ResourceType, ActionType, 
     PermissionLevel, User, Permission, AuditLog
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/access-control", tags=["Access Control"])
 
@@ -99,6 +99,12 @@ class AuditLogRequest(BaseModel):
 @router.post("/users", response_model=Dict[str, Any])
 async def create_user(request: UserCreateRequest):
     """Create a new user"""
+    logger.info("user_creation_attempt",
+               username=request.username,
+               email=request.email,
+               primary_role=request.primary_role,
+               organization=request.organization)
+    
     try:
         primary_role = UserRole(request.primary_role)
         secondary_roles = [UserRole(role) for role in request.secondary_roles]
@@ -112,29 +118,51 @@ async def create_user(request: UserCreateRequest):
         )
         
         if not result["success"]:
+            logger.warning("user_creation_failed",
+                          username=request.username,
+                          error=result["message"])
             raise HTTPException(status_code=400, detail=result["message"])
+        
+        logger.info("user_creation_successful",
+                   username=request.username,
+                   user_id=result.get("user_id"))
         
         return result
         
     except ValueError as e:
+        logger.error("user_creation_invalid_role",
+                    username=request.username,
+                    error=str(e))
         raise HTTPException(status_code=400, detail=f"Invalid role: {str(e)}")
     except Exception as e:
-        logger.error(f"Failed to create user: {e}")
+        logger.error("user_creation_failed",
+                    username=request.username,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/users/{user_id}", response_model=Dict[str, Any])
 async def get_user(user_id: str):
     """Get user information"""
+    logger.debug("user_retrieval_attempt", user_id=user_id)
+    
     try:
         result = access_control_service.get_user(user_id)
         
         if not result["success"]:
+            logger.warning("user_retrieval_failed",
+                          user_id=user_id,
+                          error=result["message"])
             raise HTTPException(status_code=404, detail=result["message"])
         
+        logger.debug("user_retrieval_successful", user_id=user_id)
         return result
         
     except Exception as e:
-        logger.error(f"Failed to get user: {e}")
+        logger.error("user_retrieval_failed",
+                    user_id=user_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/users", response_model=Dict[str, Any])
@@ -144,24 +172,44 @@ async def list_users(
     active_only: bool = Query(True, description="Show only active users")
 ):
     """List users with optional filters"""
+    logger.info("user_listing_attempt",
+               role_filter=role,
+               organization_filter=organization,
+               active_only=active_only)
+    
     try:
         # This would need to be implemented in the service
         # For now, return a placeholder
-        return {
+        result = {
             "success": True,
             "users": [],
             "total": 0,
             "message": "User listing not yet implemented"
         }
         
+        logger.info("user_listing_completed",
+                   total_users=result["total"])
+        
+        return result
+        
     except Exception as e:
-        logger.error(f"Failed to list users: {e}")
+        logger.error("user_listing_failed",
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 # Permission Management Endpoints
 @router.post("/permissions", response_model=Dict[str, Any])
 async def grant_permission(request: PermissionGrantRequest):
     """Grant permission to a role"""
+    logger.info("permission_grant_attempt",
+               role=request.role,
+               resource_type=request.resource_type,
+               resource_id=request.resource_id,
+               floor_id=request.floor_id,
+               building_id=request.building_id,
+               permission_level=request.permission_level)
+    
     try:
         role = UserRole(request.role)
         resource_type = ResourceType(request.resource_type)
@@ -179,98 +227,159 @@ async def grant_permission(request: PermissionGrantRequest):
         )
         
         if not result["success"]:
+            logger.warning("permission_grant_failed",
+                          role=request.role,
+                          resource_type=request.resource_type,
+                          error=result["message"])
             raise HTTPException(status_code=400, detail=result["message"])
+        
+        logger.info("permission_grant_successful",
+                   role=request.role,
+                   resource_type=request.resource_type,
+                   permission_id=result.get("permission_id"))
         
         return result
         
     except ValueError as e:
+        logger.error("permission_grant_invalid_parameter",
+                    role=request.role,
+                    resource_type=request.resource_type,
+                    error=str(e))
         raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
     except Exception as e:
-        logger.error(f"Failed to grant permission: {e}")
+        logger.error("permission_grant_failed",
+                    role=request.role,
+                    resource_type=request.resource_type,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.delete("/permissions/{permission_id}", response_model=Dict[str, Any])
 async def revoke_permission(permission_id: str):
     """Revoke a permission"""
+    logger.info("permission_revoke_attempt", permission_id=permission_id)
+    
     try:
         result = access_control_service.revoke_permission(permission_id)
         
         if not result["success"]:
+            logger.warning("permission_revoke_failed",
+                          permission_id=permission_id,
+                          error=result["message"])
             raise HTTPException(status_code=404, detail=result["message"])
         
+        logger.info("permission_revoke_successful", permission_id=permission_id)
         return result
         
     except Exception as e:
-        logger.error(f"Failed to revoke permission: {e}")
+        logger.error("permission_revoke_failed",
+                    permission_id=permission_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/permissions/check", response_model=Dict[str, Any])
 async def check_permission(request: PermissionCheckRequest):
-    """Check if user has permission for an action"""
+    """Check if a user has permission for a specific action"""
+    logger.debug("permission_check_attempt",
+                user_id=request.user_id,
+                resource_type=request.resource_type,
+                action=request.action,
+                resource_id=request.resource_id,
+                floor_id=request.floor_id,
+                building_id=request.building_id)
+    
     try:
-        resource_type = ResourceType(request.resource_type)
-        action = ActionType(request.action)
-        
         result = access_control_service.check_permission(
             user_id=request.user_id,
-            resource_type=resource_type,
-            action=action,
+            resource_type=request.resource_type,
+            action=request.action,
             resource_id=request.resource_id,
             floor_id=request.floor_id,
             building_id=request.building_id
         )
         
+        logger.debug("permission_check_completed",
+                    user_id=request.user_id,
+                    resource_type=request.resource_type,
+                    action=request.action,
+                    has_permission=result.get("has_permission", False))
+        
         return result
         
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
     except Exception as e:
-        logger.error(f"Failed to check permission: {e}")
+        logger.error("permission_check_failed",
+                    user_id=request.user_id,
+                    resource_type=request.resource_type,
+                    action=request.action,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/permissions/floor/{building_id}/{floor_id}", response_model=Dict[str, Any])
 async def get_floor_permissions(building_id: str, floor_id: str):
     """Get all permissions for a specific floor"""
+    logger.info("floor_permissions_retrieval_attempt",
+               building_id=building_id,
+               floor_id=floor_id)
+    
     try:
-        result = access_control_service.get_floor_permissions(floor_id, building_id)
+        result = access_control_service.get_floor_permissions(building_id, floor_id)
         
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["message"])
+        logger.info("floor_permissions_retrieval_completed",
+                   building_id=building_id,
+                   floor_id=floor_id,
+                   permissions_count=len(result.get("permissions", [])))
         
         return result
         
     except Exception as e:
-        logger.error(f"Failed to get floor permissions: {e}")
+        logger.error("floor_permissions_retrieval_failed",
+                    building_id=building_id,
+                    floor_id=floor_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/permissions/role/{role}", response_model=Dict[str, Any])
 async def get_role_permissions(role: str):
     """Get all permissions for a specific role"""
+    logger.info("role_permissions_retrieval_attempt", role=role)
+    
     try:
-        # This would need to be implemented in the service
-        return {
-            "success": True,
-            "permissions": [],
-            "total": 0,
-            "message": "Role permissions listing not yet implemented"
-        }
+        result = access_control_service.get_role_permissions(role)
+        
+        logger.info("role_permissions_retrieval_completed",
+                   role=role,
+                   permissions_count=len(result.get("permissions", [])))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get role permissions: {e}")
+        logger.error("role_permissions_retrieval_failed",
+                    role=role,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-# Audit Trail Endpoints
+# Audit Logging Endpoints
 @router.post("/audit-logs", response_model=Dict[str, Any])
 async def log_audit_event(request: AuditLogRequest):
     """Log an audit event"""
+    logger.info("audit_event_logging",
+               user_id=request.user_id,
+               action=request.action,
+               resource_type=request.resource_type,
+               resource_id=request.resource_id,
+               floor_id=request.floor_id,
+               building_id=request.building_id,
+               success=request.success)
+    
     try:
-        action = ActionType(request.action)
-        resource_type = ResourceType(request.resource_type)
-        
         result = access_control_service.log_audit_event(
             user_id=request.user_id,
-            action=action,
-            resource_type=resource_type,
+            action=request.action,
+            resource_type=request.resource_type,
             resource_id=request.resource_id,
             floor_id=request.floor_id,
             building_id=request.building_id,
@@ -281,15 +390,19 @@ async def log_audit_event(request: AuditLogRequest):
             error_message=request.error_message
         )
         
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["message"])
+        logger.info("audit_event_logged",
+                   user_id=request.user_id,
+                   action=request.action,
+                   log_id=result.get("log_id"))
         
         return result
         
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
     except Exception as e:
-        logger.error(f"Failed to log audit event: {e}")
+        logger.error("audit_event_logging_failed",
+                    user_id=request.user_id,
+                    action=request.action,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/audit-logs", response_model=Dict[str, Any])
@@ -302,29 +415,34 @@ async def get_audit_logs(
     limit: int = Query(100, description="Maximum number of logs to return")
 ):
     """Get audit logs with optional filters"""
+    logger.info("audit_logs_retrieval_attempt",
+               user_id_filter=user_id,
+               resource_type_filter=resource_type,
+               resource_id_filter=resource_id,
+               start_date=start_date,
+               end_date=end_date,
+               limit=limit)
+    
     try:
-        resource_type_enum = ResourceType(resource_type) if resource_type else None
-        start_datetime = datetime.fromisoformat(start_date) if start_date else None
-        end_datetime = datetime.fromisoformat(end_date) if end_date else None
-        
         result = access_control_service.get_audit_logs(
             user_id=user_id,
-            resource_type=resource_type_enum,
+            resource_type=resource_type,
             resource_id=resource_id,
-            start_date=start_datetime,
-            end_date=end_datetime,
+            start_date=start_date,
+            end_date=end_date,
             limit=limit
         )
         
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["message"])
+        logger.info("audit_logs_retrieval_completed",
+                   logs_count=len(result.get("logs", [])),
+                   total_count=result.get("total_count", 0))
         
         return result
         
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
     except Exception as e:
-        logger.error(f"Failed to get audit logs: {e}")
+        logger.error("audit_logs_retrieval_failed",
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/audit-logs/user/{user_id}", response_model=Dict[str, Any])
@@ -333,19 +451,24 @@ async def get_user_audit_logs(
     limit: int = Query(100, description="Maximum number of logs to return")
 ):
     """Get audit logs for a specific user"""
+    logger.info("user_audit_logs_retrieval_attempt",
+               user_id=user_id,
+               limit=limit)
+    
     try:
-        result = access_control_service.get_audit_logs(
-            user_id=user_id,
-            limit=limit
-        )
+        result = access_control_service.get_user_audit_logs(user_id, limit)
         
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["message"])
+        logger.info("user_audit_logs_retrieval_completed",
+                   user_id=user_id,
+                   logs_count=len(result.get("logs", [])))
         
         return result
         
     except Exception as e:
-        logger.error(f"Failed to get user audit logs: {e}")
+        logger.error("user_audit_logs_retrieval_failed",
+                    user_id=user_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/audit-logs/floor/{building_id}/{floor_id}", response_model=Dict[str, Any])
@@ -355,199 +478,231 @@ async def get_floor_audit_logs(
     limit: int = Query(100, description="Maximum number of logs to return")
 ):
     """Get audit logs for a specific floor"""
+    logger.info("floor_audit_logs_retrieval_attempt",
+               building_id=building_id,
+               floor_id=floor_id,
+               limit=limit)
+    
     try:
-        # This would need to be implemented in the service
-        return {
-            "success": True,
-            "logs": [],
-            "total": 0,
-            "message": "Floor audit logs not yet implemented"
-        }
+        result = access_control_service.get_floor_audit_logs(building_id, floor_id, limit)
+        
+        logger.info("floor_audit_logs_retrieval_completed",
+                   building_id=building_id,
+                   floor_id=floor_id,
+                   logs_count=len(result.get("logs", [])))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get floor audit logs: {e}")
+        logger.error("floor_audit_logs_retrieval_failed",
+                    building_id=building_id,
+                    floor_id=floor_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-# Role Management Endpoints
+# System Information Endpoints
 @router.get("/roles", response_model=Dict[str, Any])
 async def get_roles():
     """Get all available roles"""
+    logger.debug("roles_retrieval_attempt")
+    
     try:
-        roles = [role.value for role in UserRole]
-        return {
-            "success": True,
-            "roles": roles,
-            "total": len(roles)
-        }
+        result = access_control_service.get_roles()
+        
+        logger.debug("roles_retrieval_completed",
+                    roles_count=len(result.get("roles", [])))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get roles: {e}")
+        logger.error("roles_retrieval_failed",
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/roles/{role}/hierarchy", response_model=Dict[str, Any])
 async def get_role_hierarchy(role: str):
-    """Get role hierarchy and inherited permissions"""
+    """Get the hierarchy for a specific role"""
+    logger.debug("role_hierarchy_retrieval_attempt", role=role)
+    
     try:
-        # This would need to be implemented in the service
-        return {
-            "success": True,
-            "role": role,
-            "inherits_from": [],
-            "permissions": [],
-            "message": "Role hierarchy not yet implemented"
-        }
+        result = access_control_service.get_role_hierarchy(role)
+        
+        logger.debug("role_hierarchy_retrieval_completed",
+                    role=role,
+                    hierarchy_levels=len(result.get("hierarchy", [])))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get role hierarchy: {e}")
+        logger.error("role_hierarchy_retrieval_failed",
+                    role=role,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/resource-types", response_model=Dict[str, Any])
 async def get_resource_types():
     """Get all available resource types"""
+    logger.debug("resource_types_retrieval_attempt")
+    
     try:
-        resource_types = [rt.value for rt in ResourceType]
-        return {
-            "success": True,
-            "resource_types": resource_types,
-            "total": len(resource_types)
-        }
+        result = access_control_service.get_resource_types()
+        
+        logger.debug("resource_types_retrieval_completed",
+                    resource_types_count=len(result.get("resource_types", [])))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get resource types: {e}")
+        logger.error("resource_types_retrieval_failed",
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/permission-levels", response_model=Dict[str, Any])
 async def get_permission_levels():
     """Get all available permission levels"""
+    logger.debug("permission_levels_retrieval_attempt")
+    
     try:
-        permission_levels = [
-            {"value": pl.value, "name": pl.name} 
-            for pl in PermissionLevel
-        ]
-        return {
-            "success": True,
-            "permission_levels": permission_levels,
-            "total": len(permission_levels)
-        }
+        result = access_control_service.get_permission_levels()
+        
+        logger.debug("permission_levels_retrieval_completed",
+                    permission_levels_count=len(result.get("permission_levels", [])))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get permission levels: {e}")
+        logger.error("permission_levels_retrieval_failed",
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/action-types", response_model=Dict[str, Any])
 async def get_action_types():
     """Get all available action types"""
+    logger.debug("action_types_retrieval_attempt")
+    
     try:
-        action_types = [at.value for at in ActionType]
-        return {
-            "success": True,
-            "action_types": action_types,
-            "total": len(action_types)
-        }
+        result = access_control_service.get_action_types()
+        
+        logger.debug("action_types_retrieval_completed",
+                    action_types_count=len(result.get("action_types", [])))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get action types: {e}")
+        logger.error("action_types_retrieval_failed",
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-# Floor-specific Access Control Endpoints
+# Floor-specific Permission Management
 @router.post("/floors/{building_id}/{floor_id}/permissions/bulk", response_model=Dict[str, Any])
 async def grant_floor_permissions_bulk(
     building_id: str,
     floor_id: str,
     permissions: List[PermissionGrantRequest]
 ):
-    """Grant multiple permissions for a floor"""
+    """Grant multiple permissions for a specific floor"""
+    logger.info("floor_permissions_bulk_grant_attempt",
+               building_id=building_id,
+               floor_id=floor_id,
+               permissions_count=len(permissions))
+    
     try:
-        results = []
-        for permission in permissions:
-            role = UserRole(permission.role)
-            resource_type = ResourceType(permission.resource_type)
-            permission_level = PermissionLevel(permission.permission_level)
-            expires_at = datetime.fromisoformat(permission.expires_at) if permission.expires_at else None
-            
-            result = access_control_service.grant_permission(
-                role=role,
-                resource_type=resource_type,
-                permission_level=permission_level,
-                resource_id=permission.resource_id,
-                floor_id=floor_id,
-                building_id=building_id,
-                expires_at=expires_at
-            )
-            results.append(result)
+        result = access_control_service.grant_floor_permissions_bulk(
+            building_id=building_id,
+            floor_id=floor_id,
+            permissions=permissions
+        )
         
-        return {
-            "success": True,
-            "results": results,
-            "total": len(results)
-        }
+        logger.info("floor_permissions_bulk_grant_completed",
+                   building_id=building_id,
+                   floor_id=floor_id,
+                   successful_count=result.get("successful_count", 0),
+                   failed_count=result.get("failed_count", 0))
         
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid parameter: {str(e)}")
+        return result
+        
     except Exception as e:
-        logger.error(f"Failed to grant floor permissions bulk: {e}")
+        logger.error("floor_permissions_bulk_grant_failed",
+                    building_id=building_id,
+                    floor_id=floor_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.delete("/floors/{building_id}/{floor_id}/permissions", response_model=Dict[str, Any])
 async def revoke_floor_permissions(building_id: str, floor_id: str, role: Optional[str] = None):
-    """Revoke all permissions for a floor (optionally filtered by role)"""
+    """Revoke all permissions for a specific floor"""
+    logger.info("floor_permissions_revoke_attempt",
+               building_id=building_id,
+               floor_id=floor_id,
+               role_filter=role)
+    
     try:
-        # This would need to be implemented in the service
-        return {
-            "success": True,
-            "message": f"Revoked permissions for floor {floor_id} in building {building_id}",
-            "role_filter": role
-        }
+        result = access_control_service.revoke_floor_permissions(building_id, floor_id, role)
+        
+        logger.info("floor_permissions_revoke_completed",
+                   building_id=building_id,
+                   floor_id=floor_id,
+                   revoked_count=result.get("revoked_count", 0))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to revoke floor permissions: {e}")
+        logger.error("floor_permissions_revoke_failed",
+                    building_id=building_id,
+                    floor_id=floor_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/floors/{building_id}/{floor_id}/access-summary", response_model=Dict[str, Any])
 async def get_floor_access_summary(building_id: str, floor_id: str):
-    """Get access summary for a floor"""
+    """Get an access summary for a specific floor"""
+    logger.info("floor_access_summary_retrieval_attempt",
+               building_id=building_id,
+               floor_id=floor_id)
+    
     try:
-        # Get floor permissions
-        permissions_result = access_control_service.get_floor_permissions(floor_id, building_id)
+        result = access_control_service.get_floor_access_summary(building_id, floor_id)
         
-        if not permissions_result["success"]:
-            raise HTTPException(status_code=400, detail=permissions_result["message"])
+        logger.info("floor_access_summary_retrieval_completed",
+                   building_id=building_id,
+                   floor_id=floor_id,
+                   total_users=result.get("total_users", 0),
+                   total_permissions=result.get("total_permissions", 0))
         
-        # Get recent audit logs
-        logs_result = access_control_service.get_audit_logs(
-            resource_id=floor_id,
-            limit=50
-        )
-        
-        if not logs_result["success"]:
-            raise HTTPException(status_code=400, detail=logs_result["message"])
-        
-        return {
-            "success": True,
-            "floor_id": floor_id,
-            "building_id": building_id,
-            "permissions": permissions_result["permissions"],
-            "recent_activity": logs_result["logs"],
-            "permission_count": len(permissions_result["permissions"]),
-            "activity_count": len(logs_result["logs"])
-        }
+        return result
         
     except Exception as e:
-        logger.error(f"Failed to get floor access summary: {e}")
+        logger.error("floor_access_summary_retrieval_failed",
+                    building_id=building_id,
+                    floor_id=floor_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-# Health Check Endpoint
+# Health Check
 @router.get("/health", response_model=Dict[str, Any])
 async def health_check():
-    """Health check for access control service"""
+    """Health check endpoint"""
+    logger.debug("access_control_health_check")
+    
     try:
-        return {
-            "success": True,
-            "service": "access_control",
-            "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        result = access_control_service.health_check()
+        
+        logger.debug("access_control_health_check_completed",
+                    status=result.get("status"))
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=500, detail="Service unhealthy") 
+        logger.error("access_control_health_check_failed",
+                    error=str(e),
+                    error_type=type(e).__name__)
+        raise HTTPException(status_code=500, detail="Internal server error") 

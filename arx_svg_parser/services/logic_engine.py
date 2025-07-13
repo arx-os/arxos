@@ -33,15 +33,14 @@ import hashlib
 import re
 import operator
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import logging
 from contextlib import contextmanager
 import yaml
 import ast
 from functools import lru_cache
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class RuleType(Enum):

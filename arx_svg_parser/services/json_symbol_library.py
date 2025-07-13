@@ -11,7 +11,6 @@ Date: 2024
 
 import os
 import json
-import logging
 from typing import Dict, List, Optional, Any, Union
 from pathlib import Path
 import time
@@ -35,7 +34,9 @@ except ImportError:
 from services.symbol_schema_validator import SymbolSchemaValidator
 
 # Setup logging
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class JSONSymbolLibrary:

@@ -1,35 +1,32 @@
 """
-Advanced Caching System for AHJ API Integration
+Advanced Caching System for Arxos Platform
 
-Provides intelligent caching mechanisms for AHJ API operations including:
-- Multi-level caching (memory, Redis, database)
+This module provides:
+- Multi-level caching (memory, disk, distributed)
 - Cache invalidation strategies
-- Performance optimization
 - Cache warming and preloading
+- Cache statistics and monitoring
+- Cache compression and optimization
+- Cache security and access control
+- Cache backup and recovery
+- Cache performance analytics
 """
 
-import json
 import time
+import json
 import hashlib
-import threading
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Union, Tuple, Callable
+import pickle
+import gzip
+from typing import Dict, List, Any, Optional, Union, Callable
 from dataclasses import dataclass, field
 from enum import Enum
+from datetime import datetime, timedelta
+import threading
 import asyncio
-import uuid
-import logging
-from functools import wraps
-import pickle
-import zlib
-from collections import OrderedDict, defaultdict
-from pathlib import Path
-import sqlite3
-import gzip
+from collections import defaultdict, OrderedDict
+import structlog
 
-from utils.logger import get_logger
-
-logger = get_logger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class CacheLevel(Enum):
@@ -85,7 +82,7 @@ class MemoryCache:
         self.cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self.metrics = CacheMetrics(CacheLevel.L1, max_size_bytes=self.max_size_bytes)
         self.lock = threading.RLock()
-        self.logger = get_logger(__name__)
+        self.logger = structlog.get_logger(__name__)
     
     def get(self, key: str) -> Optional[Any]:
         """Get value from cache"""
@@ -218,7 +215,7 @@ class DiskCache:
         self.max_size_bytes = max_size_mb * 1024 * 1024
         self.metrics = CacheMetrics(CacheLevel.L3, max_size_bytes=self.max_size_bytes)
         self.lock = threading.RLock()
-        self.logger = get_logger(__name__)
+        self.logger = structlog.get_logger(__name__)
         
         # Create index file
         self.index_file = self.cache_dir / "index.json"
@@ -386,7 +383,7 @@ class DatabaseCache:
         self.db_path = db_path
         self.metrics = CacheMetrics(CacheLevel.L4)
         self.lock = threading.RLock()
-        self.logger = get_logger(__name__)
+        self.logger = structlog.get_logger(__name__)
         
         self._init_database()
     
@@ -537,7 +534,7 @@ class AdvancedCachingSystem:
     """
     
     def __init__(self, memory_cache_size_mb: int = 100, disk_cache_size_mb: int = 1000):
-        self.logger = get_logger(__name__)
+        self.logger = structlog.get_logger(__name__)
         
         # Initialize cache layers
         self.layers = {

@@ -7,10 +7,24 @@ NLP & CLI Integration Service (Skeleton)
 - AI-assisted layout, NL→SVG, and voice command hooks (stubs)
 """
 
+import json
+import time
+import hashlib
+import uuid
+import threading
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Union, Tuple
+from dataclasses import dataclass, asdict
+from enum import Enum
+from pathlib import Path
+import sqlite3
+from contextlib import contextmanager
+import math
 import re
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
-from datetime import datetime
+
+from structlog import get_logger
+
+logger = get_logger()
 
 @dataclass
 class NLPCommand:

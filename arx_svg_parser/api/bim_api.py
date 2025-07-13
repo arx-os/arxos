@@ -96,7 +96,7 @@ def assemble_bim(request: BIMAssemblyRequest, background_tasks: BackgroundTasks)
         return {"model_id": model_id, "result": bim_models[model_id]}
     except Exception as e:
         handler.handle_exception(e, "BIM assembly API")
-        return JSONResponse(status_code=500, content={"error": str(e), "report": handler.get_report_dict(success=False)})
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/bim/query", summary="Query BIM model", response_model=Dict[str, Any])
 def query_bim(request: BIMQueryRequest):

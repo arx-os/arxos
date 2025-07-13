@@ -1,40 +1,36 @@
+#!/usr/bin/env python3
 """
-Core Platform CLI Commands
+Core Platform CLI Tool
 
-This module provides comprehensive command-line interface for core platform
-functionality including service management, health monitoring, configuration,
-caching, and system metrics.
-
-Usage Examples:
-    arx platform health
-    arx platform services list
-    arx platform services register --service-id test_service --name "Test Service"
-    arx platform services status
-    arx platform metrics
-    arx platform cache set --key test_key --value test_value --ttl 3600
-    arx platform cache get --key test_key
-    arx platform config get
-    arx platform config update --log-level DEBUG --cache-ttl 7200
+Command-line interface for core platform operations including:
+- System initialization and configuration
+- Service management and monitoring
+- Performance optimization
+- Health checks and diagnostics
+- Backup and recovery operations
+- Security auditing and compliance
+- Integration testing and validation
 """
 
-import click
+import argparse
 import json
 import sys
+import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from datetime import datetime
-import logging
+from typing import Dict, List, Optional, Any
+import asyncio
+import structlog
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
 
 from services.core_platform import (
-    CorePlatformService,
-    ServiceType,
-    ServiceStatus,
-    HealthStatus
+    CorePlatformService, SystemStatus, ServiceHealth, PerformanceMetrics,
+    SecurityAudit, BackupStatus, IntegrationTest
 )
+from utils.logger import get_logger
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @click.group()

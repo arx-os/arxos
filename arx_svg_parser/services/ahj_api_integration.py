@@ -22,10 +22,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa, padding
 import jwt
 import yaml
 from pathlib import Path
-import logging
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class AnnotationType(Enum):

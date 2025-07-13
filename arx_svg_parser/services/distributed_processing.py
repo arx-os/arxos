@@ -5,7 +5,6 @@ This module provides distributed processing capabilities for complex operations
 with linear scaling, fault tolerance, and performance optimization.
 """
 
-import logging
 import time
 import threading
 import queue
@@ -20,9 +19,9 @@ import pickle
 from pathlib import Path
 import uuid
 
-from utils.logger import get_logger
+from structlog import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 class TaskPriority(Enum):
@@ -151,7 +150,7 @@ class Worker:
         self.running = True
         self.thread = threading.Thread(target=self._worker_loop)
         self.thread.daemon = True
-        self.logger = get_logger(__name__)
+        self.logger = get_logger()
     
     def start(self):
         """Start worker thread"""
@@ -274,7 +273,7 @@ class DistributedProcessingService:
         self.running = False
         self.lock = threading.RLock()
         
-        self.logger = get_logger(__name__)
+        self.logger = get_logger()
     
     def start(self):
         """Start the distributed processing service"""

@@ -6,7 +6,6 @@ including spatial relationships, system connections, functional dependencies, an
 performance optimization with full bidirectional support and reference integrity.
 """
 
-import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set, Tuple, Any, Union
 from enum import Enum
@@ -14,6 +13,8 @@ from dataclasses import dataclass
 from collections import defaultdict, deque
 import json
 import uuid
+
+from structlog import get_logger
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -25,8 +26,7 @@ from ..models.bim import (
     FireAlarmSystem, SmokeDetector, SecuritySystem, Camera, Device
 )
 
-# Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 class RelationshipType(str, Enum):
     """Types of relationships between BIM elements."""

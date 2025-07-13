@@ -19,14 +19,15 @@ from typing import Dict, List, Any, Callable, Optional, Union
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from functools import wraps, lru_cache
 from collections import defaultdict, deque
-import logging
 from dataclasses import dataclass, field
 from enum import Enum
 import weakref
 import asyncio
 from contextlib import contextmanager
 
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class OptimizationLevel(Enum):

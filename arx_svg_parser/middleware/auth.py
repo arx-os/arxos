@@ -16,12 +16,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 import jwt
-import logging
+import structlog
 
 from utils.auth import decode_token, get_current_user, TokenUser, revoke_token
 from services.access_control import access_control_service
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Security scheme
 security = HTTPBearer()
@@ -56,6 +56,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         token = self._extract_token(request)
         if not token:
             if self.require_auth:
+                logger.warning("authentication_required",
+                             path=request.url.path,
+                             method=request.method,
+                             client_ip=self._get_client_ip(request))
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Authentication required"
@@ -67,6 +71,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         try:
             user = self._validate_token(token)
             if not user:
+                logger.warning("invalid_token",
+                             path=request.url.path,
+                             method=request.method,
+                             client_ip=self._get_client_ip(request))
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token"
@@ -75,8 +83,14 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             # Add user to request state
             request.state.user = user
             
-            # Log authentication
-            self._log_authentication(request, user, success=True)
+            # Log successful authentication
+            logger.info("authentication_successful",
+                       user_id=user.id,
+                       username=user.username,
+                       roles=user.roles,
+                       path=request.url.path,
+                       method=request.method,
+                       client_ip=self._get_client_ip(request))
             
             # Process request
             response = await call_next(request)
@@ -88,19 +102,31 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             return response
             
         except jwt.ExpiredSignatureError:
-            self._log_authentication(request, None, success=False, error="Token expired")
+            logger.warning("token_expired",
+                          path=request.url.path,
+                          method=request.method,
+                          client_ip=self._get_client_ip(request))
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token expired"
             )
         except jwt.InvalidTokenError as e:
-            self._log_authentication(request, None, success=False, error=f"Invalid token: {str(e)}")
+            logger.warning("invalid_token_error",
+                          path=request.url.path,
+                          method=request.method,
+                          error=str(e),
+                          client_ip=self._get_client_ip(request))
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
         except Exception as e:
-            self._log_authentication(request, None, success=False, error=str(e))
+            logger.error("authentication_error",
+                        path=request.url.path,
+                        method=request.method,
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        client_ip=self._get_client_ip(request))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Authentication failed"
@@ -143,26 +169,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             return user
             
         except Exception as e:
-            logger.error(f"Token validation failed: {e}")
+            logger.error("token_validation_failed",
+                        error=str(e),
+                        error_type=type(e).__name__)
             return None
-    
-    def _log_authentication(self, request: Request, user: Optional[TokenUser], 
-                          success: bool, error: str = None):
-        """Log authentication events."""
-        log_data = {
-            "method": request.method,
-            "url": str(request.url),
-            "client_ip": self._get_client_ip(request),
-            "user_agent": request.headers.get("User-Agent", ""),
-            "success": success,
-            "user_id": user.id if user else None,
-            "error": error
-        }
-        
-        if success:
-            logger.info(f"Authentication successful: {log_data}")
-        else:
-            logger.warning(f"Authentication failed: {log_data}")
     
     def _get_client_ip(self, request: Request) -> str:
         """Get client IP address."""
@@ -194,6 +204,10 @@ class RoleBasedAccessMiddleware(BaseHTTPMiddleware):
         # Get user from request state
         user = getattr(request.state, 'user', None)
         if not user:
+            logger.warning("access_denied_no_user",
+                          path=request.url.path,
+                          method=request.method,
+                          client_ip=self._get_client_ip(request))
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication required"
@@ -219,16 +233,13 @@ class RoleBasedAccessMiddleware(BaseHTTPMiddleware):
     
     def _log_access_denied(self, request: Request, user: TokenUser):
         """Log access denied events."""
-        log_data = {
-            "method": request.method,
-            "url": str(request.url),
-            "user_id": user.id,
-            "user_roles": user.roles,
-            "required_roles": self.required_roles,
-            "client_ip": self._get_client_ip(request)
-        }
-        
-        logger.warning(f"Access denied: {log_data}")
+        logger.warning("access_denied",
+                      user_id=user.id,
+                      user_roles=user.roles,
+                      required_roles=self.required_roles,
+                      path=request.url.path,
+                      method=request.method,
+                      client_ip=self._get_client_ip(request))
         
         # Log to audit system
         access_control_service.log_audit_event(
@@ -244,15 +255,12 @@ class RoleBasedAccessMiddleware(BaseHTTPMiddleware):
     
     def _log_access_granted(self, request: Request, user: TokenUser):
         """Log access granted events."""
-        log_data = {
-            "method": request.method,
-            "url": str(request.url),
-            "user_id": user.id,
-            "user_roles": user.roles,
-            "client_ip": self._get_client_ip(request)
-        }
-        
-        logger.info(f"Access granted: {log_data}")
+        logger.info("access_granted",
+                   user_id=user.id,
+                   user_roles=user.roles,
+                   path=request.url.path,
+                   method=request.method,
+                   client_ip=self._get_client_ip(request))
         
         # Log to audit system
         access_control_service.log_audit_event(
@@ -299,8 +307,16 @@ class TokenRefreshMiddleware(BaseHTTPMiddleware):
                         response.headers["X-New-Access-Token"] = new_tokens["access_token"]
                         response.headers["X-New-Refresh-Token"] = new_tokens["refresh_token"]
                         response.headers["X-Token-Refreshed"] = "true"
+                        
+                        logger.info("token_refreshed",
+                                  path=request.url.path,
+                                  method=request.method)
                 except Exception as e:
-                    logger.error(f"Token refresh failed: {e}")
+                    logger.error("token_refresh_failed",
+                               error=str(e),
+                               error_type=type(e).__name__,
+                               path=request.url.path,
+                               method=request.method)
         
         return response
     
@@ -320,7 +336,9 @@ class TokenRefreshMiddleware(BaseHTTPMiddleware):
             # For now, return None to indicate no refresh
             return None
         except Exception as e:
-            logger.error(f"Token refresh failed: {e}")
+            logger.error("token_refresh_error",
+                        error=str(e),
+                        error_type=type(e).__name__)
             return None
 
 # FastAPI dependencies for role-based access
@@ -329,12 +347,22 @@ def require_roles(*roles: str):
     def role_checker(request: Request):
         user = getattr(request.state, 'user', None)
         if not user:
+            logger.warning("role_check_failed_no_user",
+                          path=request.url.path,
+                          method=request.method,
+                          required_roles=list(roles))
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication required"
             )
         
         if not any(role in user.roles for role in roles):
+            logger.warning("role_check_failed_insufficient_roles",
+                          user_id=user.id,
+                          user_roles=user.roles,
+                          required_roles=list(roles),
+                          path=request.url.path,
+                          method=request.method)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions"
@@ -349,12 +377,22 @@ def require_role(role: str):
     def role_checker(request: Request):
         user = getattr(request.state, 'user', None)
         if not user:
+            logger.warning("role_check_failed_no_user",
+                          path=request.url.path,
+                          method=request.method,
+                          required_role=role)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication required"
             )
         
         if role not in user.roles:
+            logger.warning("role_check_failed_insufficient_roles",
+                          user_id=user.id,
+                          user_roles=user.roles,
+                          required_role=role,
+                          path=request.url.path,
+                          method=request.method)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Role '{role}' required"
@@ -368,6 +406,9 @@ def get_current_user_dependency(request: Request) -> TokenUser:
     """Dependency to get current user from request state."""
     user = getattr(request.state, 'user', None)
     if not user:
+        logger.warning("get_current_user_failed",
+                      path=request.url.path,
+                      method=request.method)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required"

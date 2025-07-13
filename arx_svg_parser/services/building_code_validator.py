@@ -6,11 +6,12 @@ against building codes and regulations stored in the database.
 """
 
 import json
-import logging
 from datetime import datetime, date
 from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass
 from enum import Enum
+
+from structlog import get_logger
 
 from ..models.building_regulations import (
     BuildingRegulationsDB, Regulation, ValidationRule, 
@@ -18,7 +19,7 @@ from ..models.building_regulations import (
     ViolationSeverity, RegulationType
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 class ValidationResult:

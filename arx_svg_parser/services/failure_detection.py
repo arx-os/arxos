@@ -14,12 +14,13 @@ import numpy as np
 from typing import Dict, List, Any, Optional, Tuple, Union
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-import logging
 import json
 import pickle
 from collections import defaultdict, deque
 from enum import Enum
 import warnings
+
+from structlog import get_logger
 
 # Check for optional dependencies
 try:
@@ -27,7 +28,8 @@ try:
     PANDAS_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
-    logging.warning("pandas not available. Some features will be disabled.")
+    logger = get_logger()
+    logger.warning("pandas not available. Some features will be disabled.")
 
 # Suppress sklearn warnings
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -43,9 +45,10 @@ try:
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
-    logging.warning("scikit-learn not available. ML features will be disabled.")
+    logger = get_logger()
+    logger.warning("scikit-learn not available. ML features will be disabled.")
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 class FailureType(Enum):

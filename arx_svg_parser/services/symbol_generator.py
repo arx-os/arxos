@@ -15,6 +15,10 @@ import io
 import os
 from pathlib import Path
 
+from structlog import get_logger
+
+logger = get_logger()
+
 class SymbolGenerator:
     """Automated symbol generator from product URLs"""
     

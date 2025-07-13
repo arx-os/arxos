@@ -7,11 +7,12 @@ with robust error handling and user-friendly API.
 import json
 import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, Optional
-import logging
 from pathlib import Path
 from utils.errors import ExportError, ValidationError
 
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 class PersistenceService:
     """

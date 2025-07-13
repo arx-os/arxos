@@ -31,6 +31,24 @@ from services.robust_error_handling import create_error_handler
 from services.bim_validator import BIMValidator, ValidationLevel
 from utils.errors import ExportError, ImportError, ValidationError
 
+import time
+import hashlib
+import uuid
+import threading
+from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional, Union, Tuple
+from dataclasses import dataclass, asdict
+from enum import Enum
+from pathlib import Path
+import sqlite3
+from contextlib import contextmanager
+import math
+import re
+
+from structlog import get_logger
+
+logger = get_logger()
+
 
 class ExportFormat(Enum):
     """Supported export formats."""

@@ -1,44 +1,28 @@
 """
-Core Platform API Router
+Core Platform Router
 
-This router provides RESTful API endpoints for core platform functionality
-including service management, health monitoring, configuration, caching,
-and system metrics.
-
-Endpoints:
-- GET /platform/health - System health check
-- GET /platform/services - List all services
-- POST /platform/services - Register new service
-- GET /platform/services/{service_id} - Get service information
-- DELETE /platform/services/{service_id} - Unregister service
-- GET /platform/metrics - Get system metrics
-- GET /platform/cache/stats - Get cache statistics
-- POST /platform/cache/{key} - Set cache value
-- GET /platform/cache/{key} - Get cache value
-- DELETE /platform/cache/{key} - Delete cache value
-- GET /platform/config - Get configuration
-- PUT /platform/config - Update configuration
+FastAPI endpoints for core platform operations including:
+- System initialization and configuration
+- Service management and monitoring
+- Performance optimization
+- Health checks and diagnostics
+- Backup and recovery operations
+- Security auditing and compliance
+- Integration testing and validation
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Depends, Query, Body
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-import logging
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+import structlog
 
 from services.core_platform import (
-    CorePlatformService,
-    ServiceInfo,
-    ServiceType,
-    ServiceStatus,
-    HealthStatus,
-    SystemMetrics,
-    Configuration
+    CorePlatformService, SystemStatus, ServiceHealth, PerformanceMetrics,
+    SecurityAudit, BackupStatus, IntegrationTest
 )
 
-# Configure logging
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Initialize router
 router = APIRouter(prefix="/platform", tags=["Core Platform"])
@@ -50,98 +34,98 @@ platform_service = CorePlatformService()
 # Pydantic models for request/response
 class ServiceRegistrationRequest(BaseModel):
     """Request model for service registration."""
-    service_id: str = Field(..., description="Unique service identifier")
-    name: str = Field(..., description="Service name")
-    service_type: str = Field(..., description="Service type")
-    version: str = Field(..., description="Service version")
-    host: str = Field(..., description="Service host")
-    port: int = Field(..., description="Service port")
-    health_endpoint: Optional[str] = Field(None, description="Health check endpoint")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    service_id: str = BaseModel.Field(..., description="Unique service identifier")
+    name: str = BaseModel.Field(..., description="Service name")
+    service_type: str = BaseModel.Field(..., description="Service type")
+    version: str = BaseModel.Field(..., description="Service version")
+    host: str = BaseModel.Field(..., description="Service host")
+    port: int = BaseModel.Field(..., description="Service port")
+    health_endpoint: Optional[str] = BaseModel.Field(None, description="Health check endpoint")
+    metadata: Optional[Dict[str, Any]] = BaseModel.Field(None, description="Additional metadata")
 
 
 class ServiceInfoResponse(BaseModel):
     """Response model for service information."""
-    service_id: str = Field(..., description="Service identifier")
-    name: str = Field(..., description="Service name")
-    service_type: str = Field(..., description="Service type")
-    status: str = Field(..., description="Service status")
-    version: str = Field(..., description="Service version")
-    host: str = Field(..., description="Service host")
-    port: int = Field(..., description="Service port")
-    health_endpoint: Optional[str] = Field(None, description="Health check endpoint")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
-    last_heartbeat: Optional[str] = Field(None, description="Last heartbeat timestamp")
-    created_at: str = Field(..., description="Creation timestamp")
+    service_id: str = BaseModel.Field(..., description="Service identifier")
+    name: str = BaseModel.Field(..., description="Service name")
+    service_type: str = BaseModel.Field(..., description="Service type")
+    status: str = BaseModel.Field(..., description="Service status")
+    version: str = BaseModel.Field(..., description="Service version")
+    host: str = BaseModel.Field(..., description="Service host")
+    port: int = BaseModel.Field(..., description="Service port")
+    health_endpoint: Optional[str] = BaseModel.Field(None, description="Health check endpoint")
+    metadata: Optional[Dict[str, Any]] = BaseModel.Field(None, description="Additional metadata")
+    last_heartbeat: Optional[str] = BaseModel.Field(None, description="Last heartbeat timestamp")
+    created_at: str = BaseModel.Field(..., description="Creation timestamp")
 
 
 class HealthStatusResponse(BaseModel):
     """Response model for health status."""
-    status: str = Field(..., description="Overall health status")
-    healthy_services: int = Field(..., description="Number of healthy services")
-    total_services: int = Field(..., description="Total number of services")
-    health_percentage: float = Field(..., description="Health percentage")
-    last_check: str = Field(..., description="Last health check timestamp")
-    uptime: float = Field(..., description="System uptime in seconds")
+    status: str = BaseModel.Field(..., description="Overall health status")
+    healthy_services: int = BaseModel.Field(..., description="Number of healthy services")
+    total_services: int = BaseModel.Field(..., description="Total number of services")
+    health_percentage: float = BaseModel.Field(..., description="Health percentage")
+    last_check: str = BaseModel.Field(..., description="Last health check timestamp")
+    uptime: float = BaseModel.Field(..., description="System uptime in seconds")
 
 
 class SystemMetricsResponse(BaseModel):
     """Response model for system metrics."""
-    cpu_usage: float = Field(..., description="CPU usage percentage")
-    memory_usage: float = Field(..., description="Memory usage percentage")
-    disk_usage: float = Field(..., description="Disk usage percentage")
-    network_io: Dict[str, float] = Field(..., description="Network I/O statistics")
-    active_connections: int = Field(..., description="Active connections")
-    response_time: float = Field(..., description="Average response time")
-    error_rate: float = Field(..., description="Error rate percentage")
-    timestamp: str = Field(..., description="Metrics timestamp")
+    cpu_usage: float = BaseModel.Field(..., description="CPU usage percentage")
+    memory_usage: float = BaseModel.Field(..., description="Memory usage percentage")
+    disk_usage: float = BaseModel.Field(..., description="Disk usage percentage")
+    network_io: Dict[str, float] = BaseModel.Field(..., description="Network I/O statistics")
+    active_connections: int = BaseModel.Field(..., description="Active connections")
+    response_time: float = BaseModel.Field(..., description="Average response time")
+    error_rate: float = BaseModel.Field(..., description="Error rate percentage")
+    timestamp: str = BaseModel.Field(..., description="Metrics timestamp")
 
 
 class CacheStatsResponse(BaseModel):
     """Response model for cache statistics."""
-    hits: int = Field(..., description="Cache hits")
-    misses: int = Field(..., description="Cache misses")
-    sets: int = Field(..., description="Cache sets")
-    deletes: int = Field(..., description="Cache deletes")
-    hit_rate: float = Field(..., description="Cache hit rate percentage")
-    memory_cache_size: int = Field(..., description="Memory cache size")
-    redis_available: bool = Field(..., description="Redis availability")
+    hits: int = BaseModel.Field(..., description="Cache hits")
+    misses: int = BaseModel.Field(..., description="Cache misses")
+    sets: int = BaseModel.Field(..., description="Cache sets")
+    deletes: int = BaseModel.Field(..., description="Cache deletes")
+    hit_rate: float = BaseModel.Field(..., description="Cache hit rate percentage")
+    memory_cache_size: int = BaseModel.Field(..., description="Memory cache size")
+    redis_available: bool = BaseModel.Field(..., description="Redis availability")
 
 
 class ConfigurationResponse(BaseModel):
     """Response model for configuration."""
-    environment: str = Field(..., description="Environment name")
-    debug_mode: bool = Field(..., description="Debug mode flag")
-    log_level: str = Field(..., description="Log level")
-    database_url: str = Field(..., description="Database URL")
-    redis_url: str = Field(..., description="Redis URL")
-    api_host: str = Field(..., description="API host")
-    api_port: int = Field(..., description="API port")
-    max_workers: int = Field(..., description="Maximum workers")
-    cache_ttl: int = Field(..., description="Cache TTL in seconds")
-    health_check_interval: int = Field(..., description="Health check interval")
-    backup_interval: int = Field(..., description="Backup interval")
-    security_settings: Dict[str, Any] = Field(..., description="Security settings")
-    feature_flags: Dict[str, bool] = Field(..., description="Feature flags")
+    environment: str = BaseModel.Field(..., description="Environment name")
+    debug_mode: bool = BaseModel.Field(..., description="Debug mode flag")
+    log_level: str = BaseModel.Field(..., description="Log level")
+    database_url: str = BaseModel.Field(..., description="Database URL")
+    redis_url: str = BaseModel.Field(..., description="Redis URL")
+    api_host: str = BaseModel.Field(..., description="API host")
+    api_port: int = BaseModel.Field(..., description="API port")
+    max_workers: int = BaseModel.Field(..., description="Maximum workers")
+    cache_ttl: int = BaseModel.Field(..., description="Cache TTL in seconds")
+    health_check_interval: int = BaseModel.Field(..., description="Health check interval")
+    backup_interval: int = BaseModel.Field(..., description="Backup interval")
+    security_settings: Dict[str, Any] = BaseModel.Field(..., description="Security settings")
+    feature_flags: Dict[str, bool] = BaseModel.Field(..., description="Feature flags")
 
 
 class ConfigurationUpdateRequest(BaseModel):
     """Request model for configuration updates."""
-    updates: Dict[str, Any] = Field(..., description="Configuration updates")
+    updates: Dict[str, Any] = BaseModel.Field(..., description="Configuration updates")
 
 
 class PerformanceMetricsResponse(BaseModel):
     """Response model for performance metrics."""
-    uptime_seconds: float = Field(..., description="System uptime in seconds")
-    total_requests: int = Field(..., description="Total requests")
-    successful_requests: int = Field(..., description="Successful requests")
-    failed_requests: int = Field(..., description="Failed requests")
-    success_rate: float = Field(..., description="Success rate percentage")
-    average_response_time: float = Field(..., description="Average response time")
-    registered_services: int = Field(..., description="Number of registered services")
-    health_status: str = Field(..., description="Health status")
-    cache_stats: Dict[str, Any] = Field(..., description="Cache statistics")
-    system_metrics: Dict[str, Any] = Field(..., description="System metrics")
+    uptime_seconds: float = BaseModel.Field(..., description="System uptime in seconds")
+    total_requests: int = BaseModel.Field(..., description="Total requests")
+    successful_requests: int = BaseModel.Field(..., description="Successful requests")
+    failed_requests: int = BaseModel.Field(..., description="Failed requests")
+    success_rate: float = BaseModel.Field(..., description="Success rate percentage")
+    average_response_time: float = BaseModel.Field(..., description="Average response time")
+    registered_services: int = BaseModel.Field(..., description="Number of registered services")
+    health_status: str = BaseModel.Field(..., description="Health status")
+    cache_stats: Dict[str, Any] = BaseModel.Field(..., description="Cache statistics")
+    system_metrics: Dict[str, Any] = BaseModel.Field(..., description="System metrics")
 
 
 @router.get("/health", response_model=HealthStatusResponse)

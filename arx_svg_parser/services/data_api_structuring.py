@@ -13,14 +13,14 @@ from typing import Dict, List, Optional, Any, Tuple, Union
 from dataclasses import dataclass, asdict
 from enum import Enum
 from datetime import datetime, timedelta
-import logging
 from pathlib import Path
 import hashlib
 import re
 from contextlib import contextmanager
 
-# Initialize logger
-logger = logging.getLogger(__name__)
+from structlog import get_logger
+
+logger = get_logger()
 
 
 class ObjectType(Enum):

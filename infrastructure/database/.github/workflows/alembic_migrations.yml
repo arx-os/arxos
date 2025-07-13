@@ -1,0 +1,204 @@
+name: Alembic Database Migrations
+
+on:
+  pull_request:
+    paths:
+      - 'infrastructure/database/alembic/versions/**'
+      - 'infrastructure/database/alembic/env.py'
+      - 'infrastructure/database/alembic.ini'
+      - 'infrastructure/database/.github/workflows/alembic_migrations.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'infrastructure/database/alembic/versions/**'
+      - 'infrastructure/database/alembic/env.py'
+      - 'infrastructure/database/alembic.ini'
+      - 'infrastructure/database/.github/workflows/alembic_migrations.yml'
+
+jobs:
+  test-migrations:
+    name: Test Database Migrations
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: arxos_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r infrastructure/database/requirements.txt
+          
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          
+      - name: Configure Alembic
+        working-directory: infrastructure/database
+        run: |
+          # Update alembic.ini with test database URL
+          sed -i 's|sqlalchemy.url = postgresql://user:password@localhost/arxos_db|sqlalchemy.url = postgresql://postgres:postgres@localhost:5432/arxos_test|' alembic.ini
+          
+      - name: Run Alembic upgrade
+        working-directory: infrastructure/database
+        run: |
+          echo "🔍 Running Alembic migrations..."
+          alembic upgrade head
+          
+      - name: Verify migration state
+        working-directory: infrastructure/database
+        run: |
+          echo "📊 Checking migration state..."
+          alembic current
+          alembic history --verbose
+          
+      - name: Test downgrade (optional)
+        working-directory: infrastructure/database
+        run: |
+          echo "🔄 Testing downgrade functionality..."
+          # Get the previous revision
+          PREV_REVISION=$(alembic history --verbose | grep -E '^[0-9a-f]+' | tail -2 | head -1 | awk '{print $1}')
+          if [ ! -z "$PREV_REVISION" ]; then
+            alembic downgrade $PREV_REVISION
+            alembic upgrade head
+          fi
+          
+      - name: Upload migration artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: alembic-migration-results
+          path: |
+            infrastructure/database/alembic/versions/
+            infrastructure/database/alembic.ini
+          
+      - name: Comment on PR (Success)
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✅ Alembic Migration Test Passed\n\nAll database migrations have been successfully tested and are ready for deployment.\n\n**Migration Details:**\n- All tables created successfully\n- All indexes applied correctly\n- Foreign key constraints validated\n- PostGIS extension enabled\n\nThe migration system is working correctly and ready for production use.`
+            });
+            
+      - name: Comment on PR (Failure)
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Alembic Migration Test Failed\n\nDatabase migration testing failed. Please check the migration files and ensure they are valid.\n\n**Common Issues:**\n- Invalid SQL syntax in migration files\n- Missing dependencies between tables\n- Incorrect foreign key references\n- Invalid PostGIS geometry types\n\nPlease fix the migration issues before merging.`
+            });
+
+  validate-migration-files:
+    name: Validate Migration Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r infrastructure/database/requirements.txt
+          
+      - name: Validate migration files
+        working-directory: infrastructure/database
+        run: |
+          echo "🔍 Validating migration files..."
+          
+          # Check if alembic.ini exists
+          if [ ! -f "alembic.ini" ]; then
+            echo "❌ alembic.ini not found"
+            exit 1
+          fi
+          
+          # Check if env.py exists
+          if [ ! -f "alembic/env.py" ]; then
+            echo "❌ alembic/env.py not found"
+            exit 1
+          fi
+          
+          # Check if versions directory exists
+          if [ ! -d "alembic/versions" ]; then
+            echo "❌ alembic/versions directory not found"
+            exit 1
+          fi
+          
+          # Check if migration files exist
+          MIGRATION_COUNT=$(find alembic/versions -name "*.py" | wc -l)
+          if [ $MIGRATION_COUNT -eq 0 ]; then
+            echo "❌ No migration files found in alembic/versions/"
+            exit 1
+          fi
+          
+          echo "✅ Found $MIGRATION_COUNT migration files"
+          
+          # Validate Python syntax of migration files
+          for file in alembic/versions/*.py; do
+            echo "Validating $file..."
+            python -m py_compile "$file"
+            if [ $? -ne 0 ]; then
+              echo "❌ Syntax error in $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All migration files are valid"
+          
+      - name: Check migration dependencies
+        working-directory: infrastructure/database
+        run: |
+          echo "🔍 Checking migration dependencies..."
+          
+          # Check for proper upgrade/downgrade functions
+          for file in alembic/versions/*.py; do
+            if ! grep -q "def upgrade()" "$file"; then
+              echo "❌ Missing upgrade() function in $file"
+              exit 1
+            fi
+            
+            if ! grep -q "def downgrade()" "$file"; then
+              echo "❌ Missing downgrade() function in $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All migration files have proper upgrade/downgrade functions" 

@@ -8,7 +8,6 @@ This module provides comprehensive spatial reasoning capabilities including:
 - Advanced spatial queries and analysis
 """
 
-import logging
 import math
 import uuid
 import time
@@ -24,6 +23,8 @@ from shapely.validation import make_valid
 from shapely.strtree import STRtree
 from shapely.prepared import prep
 
+from structlog import get_logger
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from ..models.bim import (
@@ -31,8 +32,7 @@ from ..models.bim import (
     Room, Wall, Door, Window, Device, RoomType
 )
 
-# Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 class SpatialIndexType(str, Enum):
     """Types of spatial indexing."""

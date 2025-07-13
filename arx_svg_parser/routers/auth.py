@@ -17,6 +17,7 @@ from typing import Optional, List
 from datetime import datetime, timedelta
 import uuid
 import re
+import structlog
 
 from utils.auth import (
     create_access_token, create_refresh_token, get_current_user,
@@ -27,6 +28,8 @@ from models.database import User, get_db_manager
 from services.database_service import DatabaseService
 from services.access_control import access_control_service, UserRole
 from utils.errors import AuthenticationError, ValidationError
+
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -112,6 +115,8 @@ db_service = DatabaseService()
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """Authenticate user and return access/refresh tokens."""
     try:
+        logger.info("user_login_attempt", username=form_data.username)
+        
         # Get user from database
         session = db_service.get_session()
         user = session.query(User).filter(User.username == form_data.username).first()
@@ -128,12 +133,20 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 user_agent="unknown",
                 success=False
             )
+            
+            logger.warning("user_login_failed_invalid_credentials",
+                          username=form_data.username)
+            
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password"
             )
         
         if not user.is_active:
+            logger.warning("user_login_failed_account_disabled",
+                          username=form_data.username,
+                          user_id=user.id)
+            
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Account is disabled"
@@ -141,6 +154,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         
         # Check if account is locked
         if user.locked_until and user.locked_until > datetime.utcnow():
+            logger.warning("user_login_failed_account_locked",
+                          username=form_data.username,
+                          user_id=user.id,
+                          locked_until=user.locked_until.isoformat())
+            
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Account is temporarily locked"
@@ -175,6 +193,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             success=True
         )
         
+        logger.info("user_login_successful",
+                   username=form_data.username,
+                   user_id=user.id,
+                   roles=user.roles)
+        
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
@@ -185,6 +208,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_login_exception",
+                    username=form_data.username,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed"
@@ -196,25 +223,31 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def refresh_token(refresh_token: str):
     """Refresh access token using refresh token."""
     try:
+        logger.debug("token_refresh_attempt")
+        
         # Validate refresh token
         token_user = get_user_from_refresh_token(refresh_token)
         
-        # Get user from database to ensure they still exist and are active
-        session = db_service.get_session()
-        user = session.query(User).filter(User.id == token_user.id).first()
-        
-        if not user or not user.is_active:
+        if not token_user:
+            logger.warning("token_refresh_failed_invalid_token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token"
             )
         
         # Generate new tokens
-        access_token = create_access_token(token_user)
+        new_access_token = create_access_token(token_user)
         new_refresh_token = create_refresh_token(token_user)
         
+        # Revoke old refresh token
+        revoke_token(refresh_token)
+        
+        logger.info("token_refresh_successful",
+                   user_id=token_user.id,
+                   username=token_user.username)
+        
         return TokenResponse(
-            access_token=access_token,
+            access_token=new_access_token,
             refresh_token=new_refresh_token,
             expires_in=30 * 60,  # 30 minutes
             refresh_expires_in=7 * 24 * 60 * 60  # 7 days
@@ -223,74 +256,102 @@ async def refresh_token(refresh_token: str):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("token_refresh_exception",
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Token refresh failed"
         )
-    finally:
-        session.close()
 
 @router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate):
     """Register a new user."""
     try:
-        session = db_service.get_session()
+        logger.info("user_registration_attempt",
+                   username=user_data.username,
+                   email=user_data.email)
         
-        # Check if username or email already exists
-        existing_user = session.query(User).filter(
-            (User.username == user_data.username) | (User.email == user_data.email)
-        ).first()
+        # Check if username already exists
+        session = db_service.get_session()
+        existing_user = session.query(User).filter(User.username == user_data.username).first()
         
         if existing_user:
+            logger.warning("user_registration_failed_username_exists",
+                          username=user_data.username)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username or email already registered"
+                detail="Username already exists"
             )
         
+        # Check if email already exists
+        existing_email = session.query(User).filter(User.email == user_data.email).first()
+        
+        if existing_email:
+            logger.warning("user_registration_failed_email_exists",
+                          email=user_data.email)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already exists"
+            )
+        
+        # Hash password
+        hashed_password = hash_password(user_data.password)
+        
         # Create new user
-        user = User(
+        new_user = User(
             id=str(uuid.uuid4()),
             username=user_data.username,
             email=user_data.email,
-            hashed_password=hash_password(user_data.password),
+            hashed_password=hashed_password,
             full_name=user_data.full_name,
             roles=user_data.roles,
             is_active=True,
-            is_superuser=False
+            is_superuser=False,
+            created_at=datetime.utcnow()
         )
         
-        session.add(user)
+        session.add(new_user)
         session.commit()
-        session.refresh(user)
         
         # Log user creation
         access_control_service.log_audit_event(
-            user_id=user.id,
+            user_id="system",
             action="user_created",
             resource_type="user",
-            resource_id=user.username,
-            details={"roles": user_data.roles},
+            resource_id=new_user.username,
+            details={"created_by": "registration"},
             ip_address="unknown",
             user_agent="unknown",
             success=True
         )
         
+        logger.info("user_registration_successful",
+                   username=user_data.username,
+                   user_id=new_user.id,
+                   email=user_data.email)
+        
         return UserResponse(
-            id=user.id,
-            username=user.username,
-            email=user.email,
-            full_name=user.full_name,
-            roles=user.roles or [],
-            is_active=user.is_active,
-            is_superuser=user.is_superuser,
-            created_at=user.created_at,
-            updated_at=user.updated_at,
-            last_login=user.last_login
+            id=new_user.id,
+            username=new_user.username,
+            email=new_user.email,
+            full_name=new_user.full_name,
+            roles=new_user.roles or [],
+            is_active=new_user.is_active,
+            is_superuser=new_user.is_superuser,
+            created_at=new_user.created_at,
+            updated_at=new_user.updated_at,
+            last_login=new_user.last_login
         )
         
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_registration_exception",
+                    username=user_data.username,
+                    email=user_data.email,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed"
@@ -300,16 +361,26 @@ async def register_user(user_data: UserCreate):
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user: TokenUser = Depends(get_current_user)):
-    """Get current user's profile."""
+    """Get current user profile."""
     try:
+        logger.debug("user_profile_request",
+                    user_id=current_user.id,
+                    username=current_user.username)
+        
         session = db_service.get_session()
         user = session.query(User).filter(User.id == current_user.id).first()
         
         if not user:
+            logger.warning("user_profile_not_found",
+                          user_id=current_user.id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
+        
+        logger.debug("user_profile_retrieved",
+                    user_id=current_user.id,
+                    username=current_user.username)
         
         return UserResponse(
             id=user.id,
@@ -327,9 +398,13 @@ async def get_current_user_profile(current_user: TokenUser = Depends(get_current
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_profile_exception",
+                    user_id=current_user.id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get user profile"
+            detail="Failed to retrieve user profile"
         )
     finally:
         session.close()
@@ -339,48 +414,48 @@ async def update_current_user_profile(
     user_update: UserUpdate,
     current_user: TokenUser = Depends(get_current_user)
 ):
-    """Update current user's profile."""
+    """Update current user profile."""
     try:
+        logger.info("user_profile_update_attempt",
+                   user_id=current_user.id,
+                   username=current_user.username,
+                   update_fields=list(user_update.dict(exclude_unset=True).keys()))
+        
         session = db_service.get_session()
         user = session.query(User).filter(User.id == current_user.id).first()
         
         if not user:
+            logger.warning("user_profile_update_failed_not_found",
+                          user_id=current_user.id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
         
-        # Update allowed fields
-        if user_update.full_name is not None:
-            user.full_name = user_update.full_name
-        if user_update.email is not None:
-            # Check if email is already taken
-            existing_user = session.query(User).filter(
-                User.email == user_update.email,
-                User.id != user.id
-            ).first()
-            if existing_user:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already in use"
-                )
-            user.email = user_update.email
+        # Update fields
+        update_data = user_update.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(user, field, value)
         
         user.updated_at = datetime.utcnow()
         session.commit()
-        session.refresh(user)
         
         # Log profile update
         access_control_service.log_audit_event(
-            user_id=user.id,
+            user_id=current_user.id,
             action="profile_updated",
             resource_type="user",
             resource_id=user.username,
-            details={"updated_fields": list(user_update.dict(exclude_unset=True).keys())},
+            details={"updated_fields": list(update_data.keys())},
             ip_address="unknown",
             user_agent="unknown",
             success=True
         )
+        
+        logger.info("user_profile_update_successful",
+                   user_id=current_user.id,
+                   username=current_user.username,
+                   updated_fields=list(update_data.keys()))
         
         return UserResponse(
             id=user.id,
@@ -398,9 +473,13 @@ async def update_current_user_profile(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_profile_update_exception",
+                    user_id=current_user.id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update profile"
+            detail="Failed to update user profile"
         )
     finally:
         session.close()
@@ -410,12 +489,18 @@ async def change_password(
     password_change: PasswordChange,
     current_user: TokenUser = Depends(get_current_user)
 ):
-    """Change current user's password."""
+    """Change current user password."""
     try:
+        logger.info("password_change_attempt",
+                   user_id=current_user.id,
+                   username=current_user.username)
+        
         session = db_service.get_session()
         user = session.query(User).filter(User.id == current_user.id).first()
         
         if not user:
+            logger.warning("password_change_failed_user_not_found",
+                          user_id=current_user.id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
@@ -423,33 +508,45 @@ async def change_password(
         
         # Verify current password
         if not verify_password(password_change.current_password, user.hashed_password):
+            logger.warning("password_change_failed_current_password_incorrect",
+                          user_id=current_user.id,
+                          username=current_user.username)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Current password is incorrect"
             )
         
-        # Update password
-        user.hashed_password = hash_password(password_change.new_password)
+        # Hash new password
+        new_hashed_password = hash_password(password_change.new_password)
+        user.hashed_password = new_hashed_password
         user.updated_at = datetime.utcnow()
         session.commit()
         
         # Log password change
         access_control_service.log_audit_event(
-            user_id=user.id,
+            user_id=current_user.id,
             action="password_changed",
             resource_type="user",
             resource_id=user.username,
-            details={"password_changed": True},
+            details={"changed_by": "user"},
             ip_address="unknown",
             user_agent="unknown",
             success=True
         )
+        
+        logger.info("password_change_successful",
+                   user_id=current_user.id,
+                   username=current_user.username)
         
         return {"message": "Password changed successfully"}
         
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("password_change_exception",
+                    user_id=current_user.id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to change password"
@@ -459,10 +556,13 @@ async def change_password(
 
 @router.post("/logout")
 async def logout(current_user: TokenUser = Depends(get_current_user)):
-    """Logout current user and revoke tokens."""
+    """Logout current user."""
     try:
-        # In a real implementation, you would add the token to a blacklist
-        # For now, we'll just return success
+        logger.info("user_logout_attempt",
+                   user_id=current_user.id,
+                   username=current_user.username)
+        
+        # Log logout event
         access_control_service.log_audit_event(
             user_id=current_user.id,
             action="logout",
@@ -474,15 +574,22 @@ async def logout(current_user: TokenUser = Depends(get_current_user)):
             success=True
         )
         
+        logger.info("user_logout_successful",
+                   user_id=current_user.id,
+                   username=current_user.username)
+        
         return {"message": "Logged out successfully"}
         
     except Exception as e:
+        logger.error("user_logout_exception",
+                    user_id=current_user.id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Logout failed"
         )
 
-# Admin endpoints (require admin role)
 @router.get("/users", response_model=List[UserResponse])
 async def list_users(
     current_user: TokenUser = Depends(get_current_user),
@@ -492,23 +599,35 @@ async def list_users(
     role: Optional[str] = Query(None),
     is_active: Optional[bool] = Query(None)
 ):
-    """List all users with pagination and filtering (admin only)."""
-    if "admin" not in current_user.roles and "superuser" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
+    """List users (admin only)."""
     try:
+        logger.info("user_list_request",
+                   admin_user_id=current_user.id,
+                   admin_username=current_user.username,
+                   skip=skip,
+                   limit=limit,
+                   search=search,
+                   role=role,
+                   is_active=is_active)
+        
+        # Check admin permissions
+        if "admin" not in current_user.roles and "superuser" not in current_user.roles:
+            logger.warning("user_list_unauthorized",
+                          user_id=current_user.id,
+                          username=current_user.username,
+                          roles=current_user.roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        
         session = db_service.get_session()
         query = session.query(User)
         
         # Apply filters
         if search:
             query = query.filter(
-                (User.username.contains(search)) |
-                (User.email.contains(search)) |
-                (User.full_name.contains(search))
+                User.username.contains(search) | User.email.contains(search)
             )
         
         if role:
@@ -517,9 +636,18 @@ async def list_users(
         if is_active is not None:
             query = query.filter(User.is_active == is_active)
         
+        # Get total count
+        total_count = query.count()
+        
         # Apply pagination
-        total = query.count()
         users = query.offset(skip).limit(limit).all()
+        
+        logger.info("user_list_retrieved",
+                   admin_user_id=current_user.id,
+                   total_count=total_count,
+                   returned_count=len(users),
+                   skip=skip,
+                   limit=limit)
         
         return [
             UserResponse(
@@ -537,10 +665,16 @@ async def list_users(
             for user in users
         ]
         
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error("user_list_exception",
+                    admin_user_id=current_user.id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to list users"
+            detail="Failed to retrieve users"
         )
     finally:
         session.close()
@@ -550,22 +684,39 @@ async def get_user(
     user_id: str,
     current_user: TokenUser = Depends(get_current_user)
 ):
-    """Get specific user details (admin only)."""
-    if "admin" not in current_user.roles and "superuser" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
+    """Get user by ID (admin only)."""
     try:
+        logger.debug("user_retrieval_request",
+                    admin_user_id=current_user.id,
+                    target_user_id=user_id)
+        
+        # Check admin permissions
+        if "admin" not in current_user.roles and "superuser" not in current_user.roles:
+            logger.warning("user_retrieval_unauthorized",
+                          user_id=current_user.id,
+                          target_user_id=user_id,
+                          roles=current_user.roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        
         session = db_service.get_session()
         user = session.query(User).filter(User.id == user_id).first()
         
         if not user:
+            logger.warning("user_retrieval_failed_not_found",
+                          admin_user_id=current_user.id,
+                          target_user_id=user_id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
+        
+        logger.debug("user_retrieval_successful",
+                    admin_user_id=current_user.id,
+                    target_user_id=user_id,
+                    target_username=user.username)
         
         return UserResponse(
             id=user.id,
@@ -583,9 +734,14 @@ async def get_user(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_retrieval_exception",
+                    admin_user_id=current_user.id,
+                    target_user_id=user_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get user"
+            detail="Failed to retrieve user"
         )
     finally:
         session.close()
@@ -596,46 +752,43 @@ async def update_user(
     user_update: UserUpdate,
     current_user: TokenUser = Depends(get_current_user)
 ):
-    """Update user (admin only)."""
-    if "admin" not in current_user.roles and "superuser" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
+    """Update user by ID (admin only)."""
     try:
+        logger.info("user_update_attempt",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id,
+                   update_fields=list(user_update.dict(exclude_unset=True).keys()))
+        
+        # Check admin permissions
+        if "admin" not in current_user.roles and "superuser" not in current_user.roles:
+            logger.warning("user_update_unauthorized",
+                          user_id=current_user.id,
+                          target_user_id=user_id,
+                          roles=current_user.roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        
         session = db_service.get_session()
         user = session.query(User).filter(User.id == user_id).first()
         
         if not user:
+            logger.warning("user_update_failed_not_found",
+                          admin_user_id=current_user.id,
+                          target_user_id=user_id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
             )
         
         # Update fields
-        if user_update.full_name is not None:
-            user.full_name = user_update.full_name
-        if user_update.email is not None:
-            # Check if email is already taken
-            existing_user = session.query(User).filter(
-                User.email == user_update.email,
-                User.id != user.id
-            ).first()
-            if existing_user:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already in use"
-                )
-            user.email = user_update.email
-        if user_update.roles is not None:
-            user.roles = user_update.roles
-        if user_update.is_active is not None:
-            user.is_active = user_update.is_active
+        update_data = user_update.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(user, field, value)
         
         user.updated_at = datetime.utcnow()
         session.commit()
-        session.refresh(user)
         
         # Log user update
         access_control_service.log_audit_event(
@@ -643,11 +796,17 @@ async def update_user(
             action="user_updated",
             resource_type="user",
             resource_id=user.username,
-            details={"updated_fields": list(user_update.dict(exclude_unset=True).keys())},
+            details={"updated_by": current_user.username, "updated_fields": list(update_data.keys())},
             ip_address="unknown",
             user_agent="unknown",
             success=True
         )
+        
+        logger.info("user_update_successful",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id,
+                   target_username=user.username,
+                   updated_fields=list(update_data.keys()))
         
         return UserResponse(
             id=user.id,
@@ -665,6 +824,11 @@ async def update_user(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_update_exception",
+                    admin_user_id=current_user.id,
+                    target_user_id=user_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update user"
@@ -677,34 +841,43 @@ async def delete_user(
     user_id: str,
     current_user: TokenUser = Depends(get_current_user)
 ):
-    """Delete user (admin only)."""
-    if "admin" not in current_user.roles and "superuser" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
+    """Delete user by ID (admin only)."""
     try:
-        session = db_service.get_session()
-        user = session.query(User).filter(User.id == user_id).first()
+        logger.info("user_deletion_attempt",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id)
         
-        if not user:
+        # Check admin permissions
+        if "admin" not in current_user.roles and "superuser" not in current_user.roles:
+            logger.warning("user_deletion_unauthorized",
+                          user_id=current_user.id,
+                          target_user_id=user_id,
+                          roles=current_user.roles)
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
             )
         
         # Prevent self-deletion
-        if user.id == current_user.id:
+        if user_id == current_user.id:
+            logger.warning("user_deletion_failed_self_deletion",
+                          user_id=current_user.id)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot delete your own account"
             )
         
-        # Soft delete by setting is_active to False
-        user.is_active = False
-        user.updated_at = datetime.utcnow()
-        session.commit()
+        session = db_service.get_session()
+        user = session.query(User).filter(User.id == user_id).first()
+        
+        if not user:
+            logger.warning("user_deletion_failed_not_found",
+                          admin_user_id=current_user.id,
+                          target_user_id=user_id)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
         
         # Log user deletion
         access_control_service.log_audit_event(
@@ -712,17 +885,30 @@ async def delete_user(
             action="user_deleted",
             resource_type="user",
             resource_id=user.username,
-            details={"deleted_user_id": user_id},
+            details={"deleted_by": current_user.username},
             ip_address="unknown",
             user_agent="unknown",
             success=True
         )
+        
+        session.delete(user)
+        session.commit()
+        
+        logger.info("user_deletion_successful",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id,
+                   target_username=user.username)
         
         return {"message": "User deleted successfully"}
         
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_deletion_exception",
+                    admin_user_id=current_user.id,
+                    target_user_id=user_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete user"
@@ -735,18 +921,30 @@ async def activate_user(
     user_id: str,
     current_user: TokenUser = Depends(get_current_user)
 ):
-    """Activate a user account (admin only)."""
-    if "admin" not in current_user.roles and "superuser" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
+    """Activate user account (admin only)."""
     try:
+        logger.info("user_activation_attempt",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id)
+        
+        # Check admin permissions
+        if "admin" not in current_user.roles and "superuser" not in current_user.roles:
+            logger.warning("user_activation_unauthorized",
+                          user_id=current_user.id,
+                          target_user_id=user_id,
+                          roles=current_user.roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        
         session = db_service.get_session()
         user = session.query(User).filter(User.id == user_id).first()
         
         if not user:
+            logger.warning("user_activation_failed_not_found",
+                          admin_user_id=current_user.id,
+                          target_user_id=user_id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
@@ -762,17 +960,27 @@ async def activate_user(
             action="user_activated",
             resource_type="user",
             resource_id=user.username,
-            details={"activated_user_id": user_id},
+            details={"activated_by": current_user.username},
             ip_address="unknown",
             user_agent="unknown",
             success=True
         )
+        
+        logger.info("user_activation_successful",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id,
+                   target_username=user.username)
         
         return {"message": "User activated successfully"}
         
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_activation_exception",
+                    admin_user_id=current_user.id,
+                    target_user_id=user_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to activate user"
@@ -785,28 +993,42 @@ async def deactivate_user(
     user_id: str,
     current_user: TokenUser = Depends(get_current_user)
 ):
-    """Deactivate a user account (admin only)."""
-    if "admin" not in current_user.roles and "superuser" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
+    """Deactivate user account (admin only)."""
     try:
+        logger.info("user_deactivation_attempt",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id)
+        
+        # Check admin permissions
+        if "admin" not in current_user.roles and "superuser" not in current_user.roles:
+            logger.warning("user_deactivation_unauthorized",
+                          user_id=current_user.id,
+                          target_user_id=user_id,
+                          roles=current_user.roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        
+        # Prevent self-deactivation
+        if user_id == current_user.id:
+            logger.warning("user_deactivation_failed_self_deactivation",
+                          user_id=current_user.id)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot deactivate your own account"
+            )
+        
         session = db_service.get_session()
         user = session.query(User).filter(User.id == user_id).first()
         
         if not user:
+            logger.warning("user_deactivation_failed_not_found",
+                          admin_user_id=current_user.id,
+                          target_user_id=user_id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found"
-            )
-        
-        # Prevent self-deactivation
-        if user.id == current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot deactivate your own account"
             )
         
         user.is_active = False
@@ -819,17 +1041,27 @@ async def deactivate_user(
             action="user_deactivated",
             resource_type="user",
             resource_id=user.username,
-            details={"deactivated_user_id": user_id},
+            details={"deactivated_by": current_user.username},
             ip_address="unknown",
             user_agent="unknown",
             success=True
         )
+        
+        logger.info("user_deactivation_successful",
+                   admin_user_id=current_user.id,
+                   target_user_id=user_id,
+                   target_username=user.username)
         
         return {"message": "User deactivated successfully"}
         
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("user_deactivation_exception",
+                    admin_user_id=current_user.id,
+                    target_user_id=user_id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to deactivate user"
@@ -848,14 +1080,31 @@ async def get_audit_logs(
     limit: int = Query(100, ge=1, le=1000)
 ):
     """Get audit logs (admin only)."""
-    if "admin" not in current_user.roles and "superuser" not in current_user.roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    
     try:
-        logs = access_control_service.get_audit_logs(
+        logger.info("audit_logs_request",
+                   admin_user_id=current_user.id,
+                   admin_username=current_user.username,
+                   filters={
+                       "user_id": user_id,
+                       "action": action,
+                       "resource_type": resource_type,
+                       "start_date": start_date.isoformat() if start_date else None,
+                       "end_date": end_date.isoformat() if end_date else None,
+                       "limit": limit
+                   })
+        
+        # Check admin permissions
+        if "admin" not in current_user.roles and "superuser" not in current_user.roles:
+            logger.warning("audit_logs_unauthorized",
+                          user_id=current_user.id,
+                          roles=current_user.roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions"
+            )
+        
+        # Get audit logs from access control service
+        audit_logs = access_control_service.get_audit_logs(
             user_id=user_id,
             action=action,
             resource_type=resource_type,
@@ -864,10 +1113,20 @@ async def get_audit_logs(
             limit=limit
         )
         
-        return {"audit_logs": logs, "total": len(logs)}
+        logger.info("audit_logs_retrieved",
+                   admin_user_id=current_user.id,
+                   log_count=len(audit_logs))
         
+        return audit_logs
+        
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error("audit_logs_exception",
+                    admin_user_id=current_user.id,
+                    error=str(e),
+                    error_type=type(e).__name__)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get audit logs"
+            detail="Failed to retrieve audit logs"
         ) 

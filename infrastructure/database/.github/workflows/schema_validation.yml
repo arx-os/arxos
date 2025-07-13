@@ -1,0 +1,85 @@
+name: Schema Validation
+
+on:
+  pull_request:
+    paths:
+      - 'infrastructure/database/migrations/**'
+      - 'infrastructure/database/tools/**'
+      - 'infrastructure/database/.github/workflows/schema_validation.yml'
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'infrastructure/database/migrations/**'
+      - 'infrastructure/database/tools/**'
+      - 'infrastructure/database/.github/workflows/schema_validation.yml'
+
+jobs:
+  validate-schema:
+    name: Validate Database Schema
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install structlog
+          
+      - name: Run schema validation
+        working-directory: infrastructure/database
+        run: |
+          echo "🔍 Running schema validation..."
+          python tools/schema_validator.py migrations/
+          
+      - name: Upload validation results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: schema-validation-results
+          path: |
+            infrastructure/database/validation-results.json
+            infrastructure/database/validation-report.txt
+          
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            let report = 'Schema validation failed. Please check the migration files.';
+            
+            try {
+              if (fs.existsSync('infrastructure/database/validation-report.txt')) {
+                report = fs.readFileSync('infrastructure/database/validation-report.txt', 'utf8');
+              }
+            } catch (error) {
+              console.log('Could not read validation report:', error);
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Schema Validation Failed\n\n${report}\n\nPlease fix the schema issues before merging.`
+            });
+            
+      - name: Comment on PR (Success)
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✅ Schema Validation Passed\n\nAll migration files are valid and follow proper schema conventions.`
+            }); 

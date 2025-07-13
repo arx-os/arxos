@@ -94,7 +94,7 @@ class RouteManager:
                     analytics_data = json.load(f)
                     return [RouteAnalytics(**analytics) for analytics in analytics_data]
         except Exception as e:
-            print(f"Error loading analytics: {e}")
+            logger.error("error_loading_analytics", error=str(e))
         return []
     
     def save_analytics(self, analytics: List[RouteAnalytics]) -> bool:
@@ -104,7 +104,7 @@ class RouteManager:
                 json.dump([a.dict() for a in analytics], f, default=str, indent=2)
             return True
         except Exception as e:
-            print(f"Error saving analytics: {e}")
+            logger.error("error_saving_analytics", error=str(e))
             return False
     
     def load_conflicts(self) -> List[RouteConflict]:
@@ -115,7 +115,7 @@ class RouteManager:
                     conflicts_data = json.load(f)
                     return [RouteConflict(**conflict) for conflict in conflicts_data]
         except Exception as e:
-            print(f"Error loading conflicts: {e}")
+            logger.error("error_loading_conflicts", error=str(e))
         return []
     
     def save_conflicts(self, conflicts: List[RouteConflict]) -> bool:
@@ -125,7 +125,7 @@ class RouteManager:
                 json.dump([c.dict() for c in conflicts], f, default=str, indent=2)
             return True
         except Exception as e:
-            print(f"Error saving conflicts: {e}")
+            logger.error("error_saving_conflicts", error=str(e))
             return False
     
     # Route Validation Methods

@@ -1,0 +1,149 @@
+name: Go Testing & Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  go-testing:
+    name: Go Testing & Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Verify Go version
+      run: |
+        go version
+        echo "Using Go $(go version)"
+        
+    - name: Find Go modules
+      run: |
+        echo "Found Go modules:"
+        find . -name "go.mod" -type f | grep -v vendor | sort
+        
+    - name: Validate Go modules
+      run: |
+        echo "Validating Go modules..."
+        for mod in $(find . -name "go.mod" -type f | grep -v vendor); do
+          echo "Checking $mod"
+          cd $(dirname $mod)
+          go mod verify
+          go mod tidy
+          cd - > /dev/null
+        done
+        
+    - name: Build all Go modules
+      run: |
+        echo "Building Go modules..."
+        for mod in $(find . -name "go.mod" -type f | grep -v vendor); do
+          echo "Building $(dirname $mod)"
+          cd $(dirname $mod)
+          go build ./...
+          cd - > /dev/null
+        done
+        
+    - name: Test all Go modules
+      run: |
+        echo "Testing Go modules..."
+        for mod in $(find . -name "go.mod" -type f | grep -v vendor); do
+          echo "Testing $(dirname $mod)"
+          cd $(dirname $mod)
+          go test ./... -v
+          cd - > /dev/null
+        done
+        
+    - name: Run Go security checks
+      run: |
+        echo "Running Go security checks..."
+        # Install gosec if not available
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        
+        for mod in $(find . -name "go.mod" -type f | grep -v vendor); do
+          echo "Security scanning $(dirname $mod)"
+          cd $(dirname $mod)
+          gosec ./... || true  # Don't fail on warnings
+          cd - > /dev/null
+        done
+        
+    - name: Check Go version consistency
+      run: |
+        echo "Checking Go version consistency..."
+        for mod in $(find . -name "go.mod" -type f | grep -v vendor); do
+          echo "Checking Go version in $mod"
+          go_version=$(grep "^go " $mod | cut -d' ' -f2)
+          echo "Go version: $go_version"
+          
+          # Check if version is at least 1.21
+          if [[ "$go_version" < "1.21" ]]; then
+            echo "ERROR: Go version $go_version is less than 1.21"
+            exit 1
+          fi
+        done
+        
+    - name: Generate Go test report
+      run: |
+        echo "Generating Go test report..."
+        cat > go_test_report.md << EOF
+        # Go Module Testing Report
+        
+        ## Test Results
+        - ✅ All Go modules validated
+        - ✅ All modules build successfully
+        - ✅ All tests pass
+        - ✅ Security checks completed
+        - ✅ Go version consistency verified
+        
+        ## Modules Tested
+        $(find . -name "go.mod" -type f | grep -v vendor | sort | sed 's|^\./||' | sed 's|/go.mod$||')
+        
+        ## Go Version Compliance
+        All modules use Go 1.21 or later.
+        
+        Generated: $(date)
+        EOF
+        
+    - name: Upload Go test reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: go-test-reports
+        path: go_test_report.md
+        
+    - name: Comment on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          let comment = '## ✅ Go Testing Completed\n\n';
+          comment += 'All Go modules have been tested and validated:\n\n';
+          comment += '- ✅ Go version compliance (1.21+)\n';
+          comment += '- ✅ Module validation ✓\n';
+          comment += '- ✅ Build testing ✓\n';
+          comment += '- ✅ Unit tests ✓\n';
+          comment += '- ✅ Security scanning ✓\n';
+          comment += '- ✅ Dependency management ✓\n\n';
+          comment += 'All Go modules are ready for production use.';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          }); 

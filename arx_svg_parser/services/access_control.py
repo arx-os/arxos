@@ -11,7 +11,7 @@ Provides comprehensive role-based access control (RBAC) with:
 
 import sqlite3
 import json
-import logging
+import structlog
 import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Set
@@ -20,7 +20,7 @@ from enum import Enum
 from utils.base_manager import BaseManager
 from utils.base_service import BaseService
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 class UserRole(str, Enum):
     """User roles with hierarchical permissions."""
@@ -120,9 +120,15 @@ class AccessControlService(BaseManager, BaseService):
         self.user_sessions: Dict[str, Dict[str, Any]] = {}
         self._initialize_roles()
         self._initialize_database()
+        
+        logger.info("access_control_service_initialized",
+                   db_path=db_path,
+                   roles_count=len(self.roles))
     
     def _initialize_roles(self):
         """Initialize default roles with permissions."""
+        logger.debug("initializing_default_roles")
+        
         # Viewer role - read-only access
         viewer_role = Role(
             name="viewer",
@@ -199,168 +205,165 @@ class AccessControlService(BaseManager, BaseService):
             ]
         )
         
+        # Store roles
         self.roles = {
             "viewer": viewer_role,
             "editor": editor_role,
             "admin": admin_role,
             "superuser": superuser_role,
             "maintenance": maintenance_role,
-            "auditor": auditor_role,
+            "auditor": auditor_role
         }
+        
+        logger.info("default_roles_initialized",
+                   roles_count=len(self.roles),
+                   role_names=list(self.roles.keys()))
     
     def _initialize_database(self):
-        """Initialize database tables for access control."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # Users table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                user_id TEXT PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                primary_role TEXT NOT NULL,
-                secondary_roles TEXT,
-                organization TEXT,
-                created_at TEXT NOT NULL,
-                last_login TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                metadata TEXT
-            )
-        ''')
-        
-        # Roles table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS roles (
-                name TEXT PRIMARY KEY,
-                description TEXT NOT NULL,
-                permissions TEXT NOT NULL,
-                inherits_from TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TEXT NOT NULL
-            )
-        ''')
-        
-        # Permissions table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS permissions (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                resource_type TEXT NOT NULL,
-                action TEXT NOT NULL,
-                level TEXT NOT NULL,
-                conditions TEXT,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
-            )
-        ''')
-        
-        # Audit logs table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS audit_logs (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                action TEXT NOT NULL,
-                resource_type TEXT NOT NULL,
-                resource_id TEXT NOT NULL,
-                details TEXT NOT NULL,
-                ip_address TEXT NOT NULL,
-                user_agent TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                success BOOLEAN NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
-            )
-        ''')
-        
-        # User sessions table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_sessions (
-                session_id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                token TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                expires_at TEXT NOT NULL,
-                ip_address TEXT,
-                user_agent TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
-            )
-        ''')
-        
-        # Insert default roles
-        for role_name, role in self.roles.items():
-            cursor.execute('''
-                INSERT OR REPLACE INTO roles 
-                (name, description, permissions, inherits_from, created_at)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                role.name,
-                role.description,
-                json.dumps([p.__dict__ for p in role.permissions]),
-                json.dumps(role.inherits_from),
-                role.created_at.isoformat()
-            ))
-        
-        conn.commit()
-        conn.close()
-    
-    def create_user(self, username: str, email: str, primary_role: UserRole,
-                   secondary_roles: List[UserRole] = None, organization: str = "") -> Dict[str, Any]:
-        """Create a new user with role assignment."""
+        """Initialize the access control database."""
         try:
-            user_id = str(uuid.uuid4())
-            user = User(
-                user_id=user_id,
-                username=username,
-                email=email,
-                primary_role=primary_role,
-                secondary_roles=secondary_roles or [],
-                organization=organization
-            )
+            import os
+            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
             
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            cursor.execute('''
-                INSERT INTO users (
-                    user_id, username, email, primary_role, secondary_roles,
-                    organization, created_at, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                user.user_id, user.username, user.email, user.primary_role.value,
-                json.dumps([r.value for r in user.secondary_roles]),
-                user.organization, user.created_at.isoformat(),
-                json.dumps(user.metadata)
+            # Create users table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id TEXT PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    primary_role TEXT NOT NULL,
+                    secondary_roles TEXT,
+                    organization TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_login TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    metadata TEXT
+                )
+            """)
+            
+            # Create audit_logs table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS audit_logs (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    resource_type TEXT NOT NULL,
+                    resource_id TEXT,
+                    details TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    success BOOLEAN DEFAULT TRUE
+                )
+            """)
+            
+            # Create sessions table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    session_id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    token TEXT UNIQUE NOT NULL,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE
+                )
+            """)
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info("access_control_database_initialized",
+                       db_path=self.db_path)
+            
+        except Exception as e:
+            logger.error("database_initialization_failed",
+                        db_path=self.db_path,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            raise
+    
+    def create_user(self, username: str, email: str, primary_role: UserRole,
+                   secondary_roles: List[UserRole] = None, organization: str = "") -> Dict[str, Any]:
+        """Create a new user with specified roles."""
+        try:
+            user_id = str(uuid.uuid4())
+            secondary_roles = secondary_roles or []
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO users (user_id, username, email, primary_role, secondary_roles, organization)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                user_id,
+                username,
+                email,
+                primary_role.value,
+                json.dumps([role.value for role in secondary_roles]),
+                organization
             ))
             
             conn.commit()
             conn.close()
             
-            self.log_info(f"Created user {username} with role {primary_role.value}")
+            logger.info("user_created",
+                       user_id=user_id,
+                       username=username,
+                       email=email,
+                       primary_role=primary_role.value,
+                       secondary_roles=[role.value for role in secondary_roles],
+                       organization=organization)
             
-            # Record metrics
-            self.metrics['user_creations'] += 1
-            self.record_metric('user_creation', 1, {'role': primary_role.value})
+            return {
+                "user_id": user_id,
+                "username": username,
+                "email": email,
+                "primary_role": primary_role.value,
+                "secondary_roles": [role.value for role in secondary_roles],
+                "organization": organization,
+                "created_at": datetime.utcnow().isoformat()
+            }
             
-            return {"success": True, "user_id": user_id}
-            
+        except sqlite3.IntegrityError as e:
+            logger.warning("user_creation_failed_duplicate",
+                          username=username,
+                          email=email,
+                          error=str(e))
+            raise ValueError(f"User with username '{username}' or email '{email}' already exists")
         except Exception as e:
-            self.log_error(f"Failed to create user: {e}")
-            return {"success": False, "message": str(e)}
+            logger.error("user_creation_failed",
+                        username=username,
+                        email=email,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            raise
     
     def get_user(self, user_id: str) -> Dict[str, Any]:
-        """Get user information with roles and permissions."""
+        """Get user information by user ID."""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
+            cursor.execute("""
+                SELECT user_id, username, email, primary_role, secondary_roles, 
+                       organization, created_at, last_login, is_active, metadata
+                FROM users WHERE user_id = ?
+            """, (user_id,))
+            
             row = cursor.fetchone()
+            conn.close()
             
             if not row:
-                return {"success": False, "message": "User not found"}
+                logger.warning("user_not_found", user_id=user_id)
+                return None
             
-            user = {
+            user_data = {
                 "user_id": row[0],
                 "username": row[1],
                 "email": row[2],
@@ -373,134 +376,163 @@ class AccessControlService(BaseManager, BaseService):
                 "metadata": json.loads(row[9]) if row[9] else {}
             }
             
-            # Get user permissions
-            user["permissions"] = self._get_user_permissions(user_id)
-            
-            conn.close()
-            return {"success": True, "user": user}
+            logger.debug("user_retrieved", user_id=user_id, username=user_data["username"])
+            return user_data
             
         except Exception as e:
-            logger.error(f"Failed to get user: {e}")
-            return {"success": False, "message": str(e)}
+            logger.error("user_retrieval_failed",
+                        user_id=user_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            raise
     
     def _get_user_permissions(self, user_id: str) -> List[Dict[str, Any]]:
-        """Get all permissions for a user including inherited ones."""
+        """Get all permissions for a user including inherited roles."""
         try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Get user roles
-            cursor.execute('SELECT primary_role, secondary_roles FROM users WHERE user_id = ?', (user_id,))
-            row = cursor.fetchone()
-            if not row:
+            user = self.get_user(user_id)
+            if not user:
+                logger.warning("user_permissions_failed_user_not_found", user_id=user_id)
                 return []
             
-            primary_role = row[0]
-            secondary_roles = json.loads(row[1]) if row[1] else []
-            
-            # Get all roles including inherited ones
-            all_roles = [primary_role] + secondary_roles
+            all_roles = [user["primary_role"]] + user["secondary_roles"]
             all_permissions = []
             
             for role_name in all_roles:
                 role_permissions = self._get_role_permissions(role_name)
                 all_permissions.extend(role_permissions)
             
-            # Remove duplicates
-            unique_permissions = []
-            seen = set()
-            for perm in all_permissions:
-                key = f"{perm['resource_type']}:{perm['action']}:{perm['level']}"
-                if key not in seen:
-                    seen.add(key)
-                    unique_permissions.append(perm)
+            logger.debug("user_permissions_retrieved",
+                        user_id=user_id,
+                        roles=all_roles,
+                        permissions_count=len(all_permissions))
             
-            conn.close()
-            return unique_permissions
-            
-        except Exception as e:
-            logger.error(f"Failed to get user permissions: {e}")
-            return []
-    
-    def _get_role_permissions(self, role_name: str) -> List[Dict[str, Any]]:
-        """Get permissions for a specific role including inherited ones."""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            cursor.execute('SELECT permissions, inherits_from FROM roles WHERE name = ?', (role_name,))
-            row = cursor.fetchone()
-            if not row:
-                return []
-            
-            permissions = json.loads(row[0]) if row[0] else []
-            inherits_from = json.loads(row[1]) if row[1] else []
-            
-            # Get inherited permissions
-            inherited_permissions = []
-            for inherited_role in inherits_from:
-                inherited_perms = self._get_role_permissions(inherited_role)
-                inherited_permissions.extend(inherited_perms)
-            
-            # Combine permissions
-            all_permissions = permissions + inherited_permissions
-            
-            conn.close()
             return all_permissions
             
         except Exception as e:
-            logger.error(f"Failed to get role permissions: {e}")
+            logger.error("user_permissions_retrieval_failed",
+                        user_id=user_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return []
+    
+    def _get_role_permissions(self, role_name: str) -> List[Dict[str, Any]]:
+        """Get permissions for a specific role including inherited permissions."""
+        try:
+            if role_name not in self.roles:
+                logger.warning("role_not_found", role_name=role_name)
+                return []
+            
+            role = self.roles[role_name]
+            permissions = []
+            
+            # Add direct permissions
+            for permission in role.permissions:
+                permissions.append({
+                    "resource_type": permission.resource_type.value,
+                    "action": permission.action.value,
+                    "level": permission.level.value,
+                    "conditions": permission.conditions
+                })
+            
+            # Add inherited permissions
+            for inherited_role_name in role.inherits_from:
+                inherited_permissions = self._get_role_permissions(inherited_role_name)
+                permissions.extend(inherited_permissions)
+            
+            logger.debug("role_permissions_retrieved",
+                        role_name=role_name,
+                        permissions_count=len(permissions))
+            
+            return permissions
+            
+        except Exception as e:
+            logger.error("role_permissions_retrieval_failed",
+                        role_name=role_name,
+                        error=str(e),
+                        error_type=type(e).__name__)
             return []
     
     def check_permission(self, user_id: str, resource_type: str, action: str, 
                         resource_id: str = None, context: Dict[str, Any] = None) -> bool:
         """Check if user has permission for specific action on resource."""
         try:
-            user_permissions = self._get_user_permissions(user_id)
+            permissions = self._get_user_permissions(user_id)
+            context = context or {}
             
-            for permission in user_permissions:
-                if (permission['resource_type'] == resource_type and 
-                    permission['action'] == action):
+            for permission in permissions:
+                if (permission["resource_type"] == resource_type and 
+                    permission["action"] == action):
                     
                     # Check permission level
-                    level = permission['level']
-                    if level == PermissionLevel.GLOBAL:
+                    level = permission["level"]
+                    
+                    if level == PermissionLevel.GLOBAL.value:
+                        logger.debug("permission_granted_global",
+                                   user_id=user_id,
+                                   resource_type=resource_type,
+                                   action=action,
+                                   level=level)
                         return True
-                    elif level == PermissionLevel.OWN:
-                        # Check if user owns the resource
-                        if self._user_owns_resource(user_id, resource_type, resource_id):
-                            return True
-                    elif level == PermissionLevel.PROJECT:
-                        # Check if user has project access
-                        if self._user_has_project_access(user_id, resource_type, resource_id):
-                            return True
-                    elif level == PermissionLevel.ORGANIZATION:
-                        # Check if user has organization access
+                    
+                    elif level == PermissionLevel.ORGANIZATION.value:
                         if self._user_has_organization_access(user_id, resource_type, resource_id):
+                            logger.debug("permission_granted_organization",
+                                       user_id=user_id,
+                                       resource_type=resource_type,
+                                       action=action,
+                                       level=level)
+                            return True
+                    
+                    elif level == PermissionLevel.PROJECT.value:
+                        if self._user_has_project_access(user_id, resource_type, resource_id):
+                            logger.debug("permission_granted_project",
+                                       user_id=user_id,
+                                       resource_type=resource_type,
+                                       action=action,
+                                       level=level)
+                            return True
+                    
+                    elif level == PermissionLevel.OWN.value:
+                        if self._user_owns_resource(user_id, resource_type, resource_id):
+                            logger.debug("permission_granted_own",
+                                       user_id=user_id,
+                                       resource_type=resource_type,
+                                       action=action,
+                                       level=level)
                             return True
             
+            logger.warning("permission_denied",
+                          user_id=user_id,
+                          resource_type=resource_type,
+                          action=action,
+                          resource_id=resource_id)
             return False
             
         except Exception as e:
-            logger.error(f"Failed to check permission: {e}")
+            logger.error("permission_check_failed",
+                        user_id=user_id,
+                        resource_type=resource_type,
+                        action=action,
+                        error=str(e),
+                        error_type=type(e).__name__)
             return False
     
     def _user_owns_resource(self, user_id: str, resource_type: str, resource_id: str) -> bool:
         """Check if user owns the resource."""
-        # This would need to be implemented based on your data model
-        # For now, return True as a placeholder
-        return True
+        # Implementation would check ownership in database
+        # For now, return False as placeholder
+        return False
     
     def _user_has_project_access(self, user_id: str, resource_type: str, resource_id: str) -> bool:
         """Check if user has project-level access to resource."""
-        # This would need to be implemented based on your data model
-        # For now, return True as a placeholder
+        # Implementation would check project membership
+        # For now, return True as placeholder
         return True
     
     def _user_has_organization_access(self, user_id: str, resource_type: str, resource_id: str) -> bool:
         """Check if user has organization-level access to resource."""
-        # This would need to be implemented based on your data model
-        # For now, return True as a placeholder
+        # Implementation would check organization membership
+        # For now, return True as placeholder
         return True
     
     def log_audit_event(self, user_id: str, action: str, resource_type: str, 
@@ -509,47 +541,51 @@ class AccessControlService(BaseManager, BaseService):
         """Log an audit event."""
         try:
             audit_id = str(uuid.uuid4())
-            audit_log = AuditLog(
-                id=audit_id,
-                user_id=user_id,
-                action=action,
-                resource_type=resource_type,
-                resource_id=resource_id,
-                details=details,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                timestamp=datetime.utcnow(),
-                success=success
-            )
             
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            cursor.execute('''
-                INSERT INTO audit_logs (
-                    id, user_id, action, resource_type, resource_id,
-                    details, ip_address, user_agent, timestamp, success
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                audit_log.id, audit_log.user_id, audit_log.action,
-                audit_log.resource_type, audit_log.resource_id,
-                json.dumps(audit_log.details), audit_log.ip_address,
-                audit_log.user_agent, audit_log.timestamp.isoformat(),
-                audit_log.success
+            cursor.execute("""
+                INSERT INTO audit_logs (id, user_id, action, resource_type, resource_id, 
+                                      details, ip_address, user_agent, success)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                audit_id,
+                user_id,
+                action,
+                resource_type,
+                resource_id,
+                json.dumps(details),
+                ip_address,
+                user_agent,
+                success
             ))
             
             conn.commit()
             conn.close()
             
-            self.log_info(f"Audit event logged: {action} on {resource_type}:{resource_id}")
+            logger.info("audit_event_logged",
+                       audit_id=audit_id,
+                       user_id=user_id,
+                       action=action,
+                       resource_type=resource_type,
+                       resource_id=resource_id,
+                       success=success,
+                       ip_address=ip_address)
             
         except Exception as e:
-            logger.error(f"Failed to log audit event: {e}")
+            logger.error("audit_event_logging_failed",
+                        user_id=user_id,
+                        action=action,
+                        resource_type=resource_type,
+                        resource_id=resource_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
     
     def get_audit_logs(self, user_id: str = None, action: str = None, 
                       resource_type: str = None, start_date: datetime = None,
                       end_date: datetime = None, limit: int = 100) -> List[Dict[str, Any]]:
-        """Get audit logs with optional filters."""
+        """Get audit logs with optional filtering."""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -582,28 +618,39 @@ class AccessControlService(BaseManager, BaseService):
             
             cursor.execute(query, params)
             rows = cursor.fetchall()
+            conn.close()
             
             audit_logs = []
             for row in rows:
-                audit_log = {
+                audit_logs.append({
                     "id": row[0],
                     "user_id": row[1],
                     "action": row[2],
                     "resource_type": row[3],
                     "resource_id": row[4],
-                    "details": json.loads(row[5]),
+                    "details": json.loads(row[5]) if row[5] else {},
                     "ip_address": row[6],
                     "user_agent": row[7],
                     "timestamp": row[8],
                     "success": bool(row[9])
-                }
-                audit_logs.append(audit_log)
+                })
             
-            conn.close()
+            logger.info("audit_logs_retrieved",
+                       filters={
+                           "user_id": user_id,
+                           "action": action,
+                           "resource_type": resource_type,
+                           "start_date": start_date.isoformat() if start_date else None,
+                           "end_date": end_date.isoformat() if end_date else None
+                       },
+                       results_count=len(audit_logs))
+            
             return audit_logs
             
         except Exception as e:
-            logger.error(f"Failed to get audit logs: {e}")
+            logger.error("audit_logs_retrieval_failed",
+                        error=str(e),
+                        error_type=type(e).__name__)
             return []
     
     def create_session(self, user_id: str, token: str, ip_address: str = None, 
@@ -611,31 +658,33 @@ class AccessControlService(BaseManager, BaseService):
         """Create a new user session."""
         try:
             session_id = str(uuid.uuid4())
-            created_at = datetime.utcnow()
-            expires_at = created_at + timedelta(hours=24)  # 24-hour session
+            expires_at = datetime.utcnow() + timedelta(hours=24)
             
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            cursor.execute('''
-                INSERT INTO user_sessions (
-                    session_id, user_id, token, created_at, expires_at,
-                    ip_address, user_agent, is_active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                session_id, user_id, token, created_at.isoformat(),
-                expires_at.isoformat(), ip_address, user_agent, True
-            ))
+            cursor.execute("""
+                INSERT INTO sessions (session_id, user_id, token, ip_address, user_agent, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (session_id, user_id, token, ip_address, user_agent, expires_at.isoformat()))
             
             conn.commit()
             conn.close()
             
-            self.log_info(f"Created session for user {user_id}")
+            logger.info("session_created",
+                       session_id=session_id,
+                       user_id=user_id,
+                       ip_address=ip_address,
+                       expires_at=expires_at.isoformat())
+            
             return session_id
             
         except Exception as e:
-            logger.error(f"Failed to create session: {e}")
-            return None
+            logger.error("session_creation_failed",
+                        user_id=user_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            raise
     
     def validate_session(self, session_id: str) -> Dict[str, Any]:
         """Validate a user session."""
@@ -643,30 +692,55 @@ class AccessControlService(BaseManager, BaseService):
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            cursor.execute('''
-                SELECT * FROM user_sessions 
-                WHERE session_id = ? AND is_active = TRUE AND expires_at > ?
-            ''', (session_id, datetime.utcnow().isoformat()))
+            cursor.execute("""
+                SELECT session_id, user_id, token, ip_address, user_agent, 
+                       created_at, expires_at, is_active
+                FROM sessions WHERE session_id = ?
+            """, (session_id,))
             
             row = cursor.fetchone()
             conn.close()
             
             if not row:
-                return {"valid": False, "message": "Session not found or expired"}
+                logger.warning("session_not_found", session_id=session_id)
+                return None
             
-            return {
-                "valid": True,
+            session_data = {
+                "session_id": row[0],
                 "user_id": row[1],
                 "token": row[2],
-                "created_at": row[3],
-                "expires_at": row[4],
-                "ip_address": row[5],
-                "user_agent": row[6]
+                "ip_address": row[3],
+                "user_agent": row[4],
+                "created_at": row[5],
+                "expires_at": row[6],
+                "is_active": bool(row[7])
             }
             
+            # Check if session is expired
+            expires_at = datetime.fromisoformat(session_data["expires_at"])
+            if datetime.utcnow() > expires_at:
+                logger.warning("session_expired",
+                              session_id=session_id,
+                              expires_at=expires_at.isoformat())
+                return None
+            
+            # Check if session is active
+            if not session_data["is_active"]:
+                logger.warning("session_inactive", session_id=session_id)
+                return None
+            
+            logger.debug("session_validated",
+                        session_id=session_id,
+                        user_id=session_data["user_id"])
+            
+            return session_data
+            
         except Exception as e:
-            logger.error(f"Failed to validate session: {e}")
-            return {"valid": False, "message": "Session validation failed"}
+            logger.error("session_validation_failed",
+                        session_id=session_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            return None
     
     def revoke_session(self, session_id: str) -> bool:
         """Revoke a user session."""
@@ -674,21 +748,27 @@ class AccessControlService(BaseManager, BaseService):
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            cursor.execute('''
-                UPDATE user_sessions 
-                SET is_active = FALSE 
-                WHERE session_id = ?
-            ''', (session_id,))
+            cursor.execute("""
+                UPDATE sessions SET is_active = FALSE WHERE session_id = ?
+            """, (session_id,))
             
+            affected_rows = cursor.rowcount
             conn.commit()
             conn.close()
             
-            self.log_info(f"Revoked session {session_id}")
-            return True
+            if affected_rows > 0:
+                logger.info("session_revoked", session_id=session_id)
+                return True
+            else:
+                logger.warning("session_revoke_failed_not_found", session_id=session_id)
+                return False
             
         except Exception as e:
-            logger.error(f"Failed to revoke session: {e}")
+            logger.error("session_revoke_failed",
+                        session_id=session_id,
+                        error=str(e),
+                        error_type=type(e).__name__)
             return False
 
-# Global access control service instance
+# Global service instance
 access_control_service = AccessControlService() 

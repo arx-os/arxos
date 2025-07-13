@@ -11,7 +11,6 @@ This module provides comprehensive error handling including:
 
 import time
 import json
-import logging
 from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
@@ -19,12 +18,14 @@ from collections import defaultdict
 import traceback
 import uuid
 
+from structlog import get_logger
+
 from utils.errors import (
     SVGParseError, BIMAssemblyError, GeometryError, RelationshipError,
     EnrichmentError, ValidationError, ExportError, APIError, UnknownBIMTypeError
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger()
 
 
 class WarningLevel(Enum):

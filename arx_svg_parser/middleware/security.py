@@ -1,91 +1,74 @@
 """
 Security middleware for Arxos SVG-BIM Integration System.
 
-Provides comprehensive security features:
+Provides security features including:
 - Rate limiting
+- CORS handling
 - Security headers
-- Request validation
-- IP filtering
+- Request sanitization
 - Audit logging
 """
 
 import time
 import hashlib
-import secrets
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
+import structlog
+from typing import Dict, List, Optional, Tuple
 from fastapi import Request, Response, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
-import logging
+from collections import defaultdict
+import asyncio
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
-class SecurityMiddleware(BaseHTTPMiddleware):
-    """Comprehensive security middleware."""
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Rate limiting middleware with structured logging."""
     
-    def __init__(self, app, rate_limit_per_minute: int = 60, 
-                 blocked_ips: List[str] = None, allowed_ips: List[str] = None):
+    def __init__(self, app, requests_per_minute: int = 60, 
+                 burst_limit: int = 100):
         super().__init__(app)
-        self.rate_limit_per_minute = rate_limit_per_minute
-        self.blocked_ips = set(blocked_ips or [])
-        self.allowed_ips = set(allowed_ips or [])
-        self.request_counts: Dict[str, List[float]] = {}
-        self.suspicious_ips: Dict[str, int] = {}
+        self.requests_per_minute = requests_per_minute
+        self.burst_limit = burst_limit
+        self.requests = defaultdict(list)
+        self.lock = asyncio.Lock()
     
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """Process request through security checks."""
-        start_time = time.time()
-        
-        # Get client IP
+        """Apply rate limiting with structured logging."""
         client_ip = self._get_client_ip(request)
+        current_time = time.time()
         
-        # Check IP filtering
-        if not self._check_ip_access(client_ip):
-            self._log_security_event(request, "IP_BLOCKED", client_ip)
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
+        async with self.lock:
+            # Clean old requests
+            self._clean_old_requests(client_ip, current_time)
+            
+            # Check rate limit
+            if not self._is_allowed(client_ip, current_time):
+                logger.warning("rate_limit_exceeded",
+                             client_ip=client_ip,
+                             path=request.url.path,
+                             method=request.method,
+                             limit=self.requests_per_minute,
+                             current=len(self.requests[client_ip]))
+                
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Rate limit exceeded"
+                )
+            
+            # Add current request
+            self.requests[client_ip].append(current_time)
         
-        # Check rate limiting
-        if not self._check_rate_limit(client_ip):
-            self._log_security_event(request, "RATE_LIMIT_EXCEEDED", client_ip)
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded"
-            )
+        logger.debug("rate_limit_check_passed",
+                    client_ip=client_ip,
+                    path=request.url.path,
+                    method=request.method,
+                    current_requests=len(self.requests[client_ip]))
         
-        # Validate request
-        if not self._validate_request(request):
-            self._log_security_event(request, "INVALID_REQUEST", client_ip)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid request"
-            )
-        
-        # Process request
-        try:
-            response = await call_next(request)
-            
-            # Add security headers
-            self._add_security_headers(response)
-            
-            # Log successful request
-            duration = time.time() - start_time
-            self._log_request(request, response, client_ip, duration, success=True)
-            
-            return response
-            
-        except Exception as e:
-            # Log failed request
-            duration = time.time() - start_time
-            self._log_request(request, None, client_ip, duration, success=False, error=str(e))
-            raise
+        response = await call_next(request)
+        return response
     
     def _get_client_ip(self, request: Request) -> str:
-        """Extract real client IP address."""
-        # Check for forwarded headers
+        """Get client IP address."""
         if ip := request.headers.get("X-Forwarded-For"):
             return ip.split(",")[0].strip()
         if ip := request.headers.get("X-Real-IP"):
@@ -95,262 +78,219 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         
         return request.client.host if request.client else "unknown"
     
-    def _check_ip_access(self, client_ip: str) -> bool:
-        """Check if IP is allowed/blocked."""
-        # Check blocked IPs
-        if client_ip in self.blocked_ips:
-            return False
-        
-        # Check allowed IPs (if specified, only allow listed IPs)
-        if self.allowed_ips and client_ip not in self.allowed_ips:
-            return False
-        
-        return True
-    
-    def _check_rate_limit(self, client_ip: str) -> bool:
-        """Check rate limiting for client IP."""
-        now = time.time()
-        minute_ago = now - 60
-        
-        # Clean old requests
-        if client_ip in self.request_counts:
-            self.request_counts[client_ip] = [
-                req_time for req_time in self.request_counts[client_ip]
-                if req_time > minute_ago
-            ]
-        
-        # Check current request count
-        current_requests = len(self.request_counts.get(client_ip, []))
-        if current_requests >= self.rate_limit_per_minute:
-            return False
-        
-        # Add current request
-        if client_ip not in self.request_counts:
-            self.request_counts[client_ip] = []
-        self.request_counts[client_ip].append(now)
-        
-        return True
-    
-    def _validate_request(self, request: Request) -> bool:
-        """Validate request for security issues."""
-        # Check for suspicious patterns
-        user_agent = request.headers.get("User-Agent", "")
-        if self._is_suspicious_user_agent(user_agent):
-            return False
-        
-        # Check request size
-        content_length = request.headers.get("Content-Length")
-        if content_length and int(content_length) > 10 * 1024 * 1024:  # 10MB limit
-            return False
-        
-        return True
-    
-    def _is_suspicious_user_agent(self, user_agent: str) -> bool:
-        """Check if user agent is suspicious."""
-        suspicious_patterns = [
-            "bot", "crawler", "spider", "scraper", "curl", "wget",
-            "python-requests", "go-http-client", "java-http-client"
+    def _clean_old_requests(self, client_ip: str, current_time: float):
+        """Remove requests older than 1 minute."""
+        cutoff_time = current_time - 60
+        self.requests[client_ip] = [
+            req_time for req_time in self.requests[client_ip]
+            if req_time > cutoff_time
         ]
-        
-        user_agent_lower = user_agent.lower()
-        return any(pattern in user_agent_lower for pattern in suspicious_patterns)
     
-    def _add_security_headers(self, response: Response):
+    def _is_allowed(self, client_ip: str, current_time: float) -> bool:
+        """Check if request is allowed under rate limit."""
+        recent_requests = len(self.requests[client_ip])
+        return recent_requests < self.requests_per_minute
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to responses."""
+    
+    def __init__(self, app):
+        super().__init__(app)
+        self.security_headers = {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "X-XSS-Protection": "1; mode=block",
+            "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+            "Referrer-Policy": "strict-origin-when-cross-origin",
+            "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+        }
+    
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Add security headers to response."""
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-    
-    def _log_request(self, request: Request, response: Optional[Response], 
-                    client_ip: str, duration: float, success: bool, error: str = None):
-        """Log request details."""
-        log_data = {
-            "method": request.method,
-            "url": str(request.url),
-            "client_ip": client_ip,
-            "user_agent": request.headers.get("User-Agent", ""),
-            "duration": duration,
-            "success": success,
-            "status_code": response.status_code if response else None,
-            "error": error
-        }
+        response = await call_next(request)
         
-        if success:
-            logger.info(f"Request processed: {log_data}")
-        else:
-            logger.warning(f"Request failed: {log_data}")
-    
-    def _log_security_event(self, request: Request, event_type: str, client_ip: str):
-        """Log security events."""
-        log_data = {
-            "event_type": event_type,
-            "method": request.method,
-            "url": str(request.url),
-            "client_ip": client_ip,
-            "user_agent": request.headers.get("User-Agent", ""),
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        # Add security headers
+        for header, value in self.security_headers.items():
+            response.headers[header] = value
         
-        logger.warning(f"Security event: {log_data}")
+        logger.debug("security_headers_added",
+                    path=request.url.path,
+                    method=request.method,
+                    headers_count=len(self.security_headers))
+        
+        return response
 
-class PasswordSecurity:
-    """Password security utilities."""
+class RequestSanitizationMiddleware(BaseHTTPMiddleware):
+    """Sanitize incoming requests for security."""
     
-    @staticmethod
-    def hash_password(password: str, salt: Optional[str] = None) -> tuple[str, str]:
-        """Hash password with salt."""
-        if not salt:
-            salt = secrets.token_hex(16)
-        
-        # Combine password with salt
-        salted_password = password + salt
-        hashed = hashlib.sha256(salted_password.encode()).hexdigest()
-        
-        return hashed, salt
-    
-    @staticmethod
-    def verify_password(password: str, hashed_password: str, salt: str) -> bool:
-        """Verify password against hash."""
-        salted_password = password + salt
-        computed_hash = hashlib.sha256(salted_password.encode()).hexdigest()
-        return computed_hash == hashed_password
-    
-    @staticmethod
-    def validate_password_strength(password: str) -> tuple[bool, str]:
-        """Validate password strength."""
-        if len(password) < 8:
-            return False, "Password must be at least 8 characters long"
-        
-        if not any(c.isupper() for c in password):
-            return False, "Password must contain at least one uppercase letter"
-        
-        if not any(c.islower() for c in password):
-            return False, "Password must contain at least one lowercase letter"
-        
-        if not any(c.isdigit() for c in password):
-            return False, "Password must contain at least one digit"
-        
-        if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
-            return False, "Password must contain at least one special character"
-        
-        return True, "Password meets strength requirements"
-    
-    @staticmethod
-    def generate_secure_password(length: int = 16) -> str:
-        """Generate a secure random password."""
-        import string
-        characters = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?"
-        return ''.join(secrets.choice(characters) for _ in range(length))
-
-class SessionSecurity:
-    """Session security utilities."""
-    
-    def __init__(self):
-        self.active_sessions: Dict[str, Dict[str, Any]] = {}
-        self.session_timeout = timedelta(hours=24)
-    
-    def create_session(self, user_id: str, ip_address: str = None, 
-                     user_agent: str = None) -> str:
-        """Create a new secure session."""
-        session_id = secrets.token_urlsafe(32)
-        created_at = datetime.utcnow()
-        expires_at = created_at + self.session_timeout
-        
-        session_data = {
-            "user_id": user_id,
-            "ip_address": ip_address,
-            "user_agent": user_agent,
-            "created_at": created_at,
-            "expires_at": expires_at,
-            "is_active": True
-        }
-        
-        self.active_sessions[session_id] = session_data
-        return session_id
-    
-    def validate_session(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """Validate session and return session data if valid."""
-        if session_id not in self.active_sessions:
-            return None
-        
-        session_data = self.active_sessions[session_id]
-        
-        # Check if session is active and not expired
-        if not session_data["is_active"] or datetime.utcnow() > session_data["expires_at"]:
-            del self.active_sessions[session_id]
-            return None
-        
-        return session_data
-    
-    def revoke_session(self, session_id: str) -> bool:
-        """Revoke a session."""
-        if session_id in self.active_sessions:
-            self.active_sessions[session_id]["is_active"] = False
-            return True
-        return False
-    
-    def cleanup_expired_sessions(self):
-        """Remove expired sessions."""
-        now = datetime.utcnow()
-        expired_sessions = [
-            session_id for session_id, session_data in self.active_sessions.items()
-            if now > session_data["expires_at"]
+    def __init__(self, app):
+        super().__init__(app)
+        self.suspicious_patterns = [
+            r"<script",
+            r"javascript:",
+            r"onload=",
+            r"onerror=",
+            r"onclick=",
+            r"sqlmap",
+            r"union select",
+            r"drop table",
+            r"delete from",
+            r"insert into"
         ]
+    
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Sanitize request for suspicious content."""
+        client_ip = self._get_client_ip(request)
         
-        for session_id in expired_sessions:
-            del self.active_sessions[session_id]
+        # Check URL for suspicious patterns
+        if self._contains_suspicious_patterns(str(request.url)):
+            logger.warning("suspicious_request_detected",
+                          client_ip=client_ip,
+                          path=request.url.path,
+                          method=request.method,
+                          suspicious_url=str(request.url))
+            
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Suspicious request detected"
+            )
+        
+        # Check headers for suspicious content
+        suspicious_headers = self._check_suspicious_headers(request.headers)
+        if suspicious_headers:
+            logger.warning("suspicious_headers_detected",
+                          client_ip=client_ip,
+                          path=request.url.path,
+                          method=request.method,
+                          suspicious_headers=suspicious_headers)
+            
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Suspicious headers detected"
+            )
+        
+        response = await call_next(request)
+        return response
+    
+    def _get_client_ip(self, request: Request) -> str:
+        """Get client IP address."""
+        if ip := request.headers.get("X-Forwarded-For"):
+            return ip.split(",")[0].strip()
+        if ip := request.headers.get("X-Real-IP"):
+            return ip
+        if ip := request.headers.get("X-Client-IP"):
+            return ip
+        
+        return request.client.host if request.client else "unknown"
+    
+    def _contains_suspicious_patterns(self, text: str) -> bool:
+        """Check if text contains suspicious patterns."""
+        import re
+        text_lower = text.lower()
+        return any(re.search(pattern, text_lower) for pattern in self.suspicious_patterns)
+    
+    def _check_suspicious_headers(self, headers) -> List[str]:
+        """Check headers for suspicious content."""
+        suspicious = []
+        for name, value in headers.items():
+            if self._contains_suspicious_patterns(f"{name}: {value}"):
+                suspicious.append(f"{name}: {value}")
+        return suspicious
 
-class RateLimiter:
-    """Rate limiting utility."""
+class AuditLoggingMiddleware(BaseHTTPMiddleware):
+    """Audit logging middleware for security events."""
     
-    def __init__(self, requests_per_minute: int = 60):
-        self.requests_per_minute = requests_per_minute
-        self.request_times: Dict[str, List[float]] = {}
+    def __init__(self, app):
+        super().__init__(app)
     
-    def is_allowed(self, identifier: str) -> bool:
-        """Check if request is allowed for identifier."""
-        now = time.time()
-        minute_ago = now - 60
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Log security-relevant events."""
+        client_ip = self._get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "unknown")
         
-        # Clean old requests
-        if identifier in self.request_times:
-            self.request_times[identifier] = [
-                req_time for req_time in self.request_times[identifier]
-                if req_time > minute_ago
-            ]
+        # Log request details for audit
+        logger.info("audit_request",
+                   client_ip=client_ip,
+                   user_agent=user_agent,
+                   path=request.url.path,
+                   method=request.method,
+                   content_length=request.headers.get("Content-Length", "0"),
+                   referer=request.headers.get("Referer", "unknown"))
         
-        # Check current request count
-        current_requests = len(self.request_times.get(identifier, []))
-        if current_requests >= self.requests_per_minute:
-            return False
-        
-        # Add current request
-        if identifier not in self.request_times:
-            self.request_times[identifier] = []
-        self.request_times[identifier].append(now)
-        
-        return True
+        try:
+            response = await call_next(request)
+            
+            # Log response details
+            logger.info("audit_response",
+                       client_ip=client_ip,
+                       path=request.url.path,
+                       method=request.method,
+                       status_code=response.status_code,
+                       response_size=response.headers.get("Content-Length", "0"))
+            
+            return response
+            
+        except Exception as e:
+            # Log security-relevant exceptions
+            logger.error("audit_exception",
+                        client_ip=client_ip,
+                        path=request.url.path,
+                        method=request.method,
+                        error=str(e),
+                        error_type=type(e).__name__)
+            raise
     
-    def get_remaining_requests(self, identifier: str) -> int:
-        """Get remaining requests for identifier."""
-        now = time.time()
-        minute_ago = now - 60
+    def _get_client_ip(self, request: Request) -> str:
+        """Get client IP address."""
+        if ip := request.headers.get("X-Forwarded-For"):
+            return ip.split(",")[0].strip()
+        if ip := request.headers.get("X-Real-IP"):
+            return ip
+        if ip := request.headers.get("X-Client-IP"):
+            return ip
         
-        if identifier in self.request_times:
-            recent_requests = [
-                req_time for req_time in self.request_times[identifier]
-                if req_time > minute_ago
-            ]
-            return max(0, self.requests_per_minute - len(recent_requests))
-        
-        return self.requests_per_minute
+        return request.client.host if request.client else "unknown"
 
-# Global instances
-security_middleware = SecurityMiddleware(None)
-password_security = PasswordSecurity()
-session_security = SessionSecurity()
-rate_limiter = RateLimiter() 
+class CORSMiddleware(BaseHTTPMiddleware):
+    """CORS handling middleware."""
+    
+    def __init__(self, app, allowed_origins: List[str] = None):
+        super().__init__(app)
+        self.allowed_origins = allowed_origins or ["*"]
+    
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Handle CORS preflight and add CORS headers."""
+        origin = request.headers.get("Origin")
+        
+        # Handle preflight requests
+        if request.method == "OPTIONS":
+            response = Response()
+            self._add_cors_headers(response, origin)
+            return response
+        
+        # Process normal request
+        response = await call_next(request)
+        self._add_cors_headers(response, origin)
+        
+        logger.debug("cors_headers_added",
+                    origin=origin,
+                    path=request.url.path,
+                    method=request.method)
+        
+        return response
+    
+    def _add_cors_headers(self, response: Response, origin: Optional[str]):
+        """Add CORS headers to response."""
+        if "*" in self.allowed_origins or (origin and origin in self.allowed_origins):
+            response.headers["Access-Control-Allow-Origin"] = origin or "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+
+# Global middleware instances
+rate_limit_middleware = RateLimitMiddleware(None)
+security_headers_middleware = SecurityHeadersMiddleware(None)
+request_sanitization_middleware = RequestSanitizationMiddleware(None)
+audit_logging_middleware = AuditLoggingMiddleware(None)
+cors_middleware = CORSMiddleware(None) 

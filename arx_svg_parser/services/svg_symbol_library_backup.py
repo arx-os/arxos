@@ -1,10 +1,7 @@
 import os
 import json
-import logging
 
-# Setup basic logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from structlog import get_logger
 
 SYMBOL_LIBRARY_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../arx-symbol-library'))
 
@@ -33,7 +30,7 @@ def load_symbol_library(search=None, category=None):
                     symbols.append(data)
             except Exception as e:
                 # Skip files with JSON errors for now
-                logger.warning(f"Failed to load symbol {fname}: {e}")
+                logger.warning("failed_to_load_symbol", filename=fname, error=str(e))
                 continue
     # Filtering
     if search:
@@ -42,6 +39,8 @@ def load_symbol_library(search=None, category=None):
     if category:
         symbols = [s for s in symbols if s.get('category','').lower() == category.lower()]
     return symbols
+
+logger = get_logger()
 
 SVG_SYMBOLS = {
     # ========================

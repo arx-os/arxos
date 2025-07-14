@@ -1,0 +1,1744 @@
+openapi: 3.0.3
+info:
+  title: Arx CMMS Service API
+  description: |
+    Comprehensive API for the Arx CMMS service providing CMMS integration, 
+    synchronization, and maintenance workflow management.
+    
+    ## Authentication
+    The API uses JWT Bearer token authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## Rate Limiting
+    - Public endpoints: 100 requests/second, burst of 200
+    - Authenticated endpoints: 50 requests/second, burst of 100
+    
+    ## Error Handling
+    All endpoints return standard HTTP status codes with detailed error messages in JSON format.
+  version: 1.0.0
+  contact:
+    name: Arx Development Team
+    email: dev@arxos.com
+  license:
+    name: Proprietary
+    url: https://arxos.com/license
+
+servers:
+  - url: http://localhost:8080/api
+    description: Development server
+  - url: https://api.arxos.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User registration, login, and authentication
+  - name: Health
+    description: Health check and monitoring endpoints
+  - name: CMMS Connections
+    description: CMMS connection management
+  - name: CMMS Mappings
+    description: Field mapping configuration
+  - name: CMMS Sync
+    description: Data synchronization operations
+  - name: Maintenance Schedules
+    description: Maintenance schedule management
+  - name: Work Orders
+    description: Work order management
+  - name: Equipment Specifications
+    description: Equipment specification management
+  - name: Sync Logs
+    description: Synchronization logs and monitoring
+  - name: Admin
+    description: Administrative operations
+
+paths:
+  /register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with the provided credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  description: Unique username for the account
+                email:
+                  type: string
+                  format: email
+                  description: Valid email address
+                password:
+                  type: string
+                  minLength: 8
+                  description: Secure password
+                role:
+                  type: string
+                  enum: [viewer, editor, admin, maintenance]
+                  default: viewer
+                  description: User role for access control
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: User ID
+                  username:
+                    type: string
+                  email:
+                    type: string
+                  role:
+                    type: string
+                  token:
+                    type: string
+                    description: JWT authentication token
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user
+      description: Login with username/email and password to receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  description: Username or email address
+                password:
+                  type: string
+                  description: User password
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT authentication token
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user information
+      description: Retrieve information about the currently authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check the health status of the CMMS service and its dependencies
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  database:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      response_time:
+                        type: number
+                  cmms_connections:
+                    type: object
+                    properties:
+                      active:
+                        type: integer
+                      total:
+                        type: integer
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # CMMS Connection Management
+  /cmms/connections:
+    get:
+      tags:
+        - CMMS Connections
+      summary: List CMMS connections
+      description: Retrieve all CMMS connections
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Filter to show only active connections
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [upkeep, fiix, custom]
+          description: Filter by CMMS type
+      responses:
+        '200':
+          description: List of CMMS connections
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connections:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CMMSConnection'
+                  total:
+                    type: integer
+
+    post:
+      tags:
+        - CMMS Connections
+      summary: Create CMMS connection
+      description: Create a new CMMS connection
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - type
+                - base_url
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: Connection name
+                type:
+                  type: string
+                  enum: [upkeep, fiix, custom]
+                  description: CMMS system type
+                base_url:
+                  type: string
+                  format: uri
+                  description: Base URL of the CMMS system
+                api_key:
+                  type: string
+                  description: API key for authentication
+                username:
+                  type: string
+                  description: Username for basic auth
+                password:
+                  type: string
+                  description: Password for basic auth
+                oauth2_client_id:
+                  type: string
+                  description: OAuth2 client ID
+                oauth2_secret:
+                  type: string
+                  description: OAuth2 client secret
+                oauth2_token_url:
+                  type: string
+                  format: uri
+                  description: OAuth2 token URL
+                oauth2_scope:
+                  type: string
+                  description: OAuth2 scope
+                sync_interval_min:
+                  type: integer
+                  minimum: 1
+                  default: 60
+                  description: Sync interval in minutes
+                is_active:
+                  type: boolean
+                  default: true
+                  description: Whether the connection is active
+      responses:
+        '201':
+          description: CMMS connection created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CMMSConnection'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cmms/connections/{id}:
+    get:
+      tags:
+        - CMMS Connections
+      summary: Get CMMS connection
+      description: Retrieve a specific CMMS connection by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: CMMS connection details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CMMSConnection'
+        '404':
+          description: CMMS connection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - CMMS Connections
+      summary: Update CMMS connection
+      description: Update an existing CMMS connection
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                type:
+                  type: string
+                  enum: [upkeep, fiix, custom]
+                base_url:
+                  type: string
+                  format: uri
+                api_key:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                oauth2_client_id:
+                  type: string
+                oauth2_secret:
+                  type: string
+                oauth2_token_url:
+                  type: string
+                  format: uri
+                oauth2_scope:
+                  type: string
+                sync_interval_min:
+                  type: integer
+                  minimum: 1
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: CMMS connection updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CMMSConnection'
+        '404':
+          description: CMMS connection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - CMMS Connections
+      summary: Delete CMMS connection
+      description: Delete a CMMS connection by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: CMMS connection deleted successfully
+        '404':
+          description: CMMS connection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cmms/connections/{id}/test:
+    post:
+      tags:
+        - CMMS Connections
+      summary: Test CMMS connection
+      description: Test the connectivity and authentication of a CMMS connection
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Connection test successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, failed]
+                  message:
+                    type: string
+                  response_time:
+                    type: number
+                  details:
+                    type: object
+                    additionalProperties: true
+        '404':
+          description: CMMS connection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Connection test failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cmms/connections/{id}/sync:
+    post:
+      tags:
+        - CMMS Sync
+      summary: Manual CMMS sync
+      description: Perform a manual synchronization for a CMMS connection
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sync_type:
+                  type: string
+                  enum: [schedules, work_orders, specs, all]
+                  default: all
+                  description: Type of data to sync
+                force_full_sync:
+                  type: boolean
+                  default: false
+                  description: Force a full sync instead of incremental
+      responses:
+        '200':
+          description: Sync operation started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sync_id:
+                    type: integer
+                  status:
+                    type: string
+                    enum: [started, in_progress, completed, failed]
+                  message:
+                    type: string
+                  estimated_duration:
+                    type: number
+        '404':
+          description: CMMS connection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Sync operation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # CMMS Field Mappings
+  /cmms/connections/{connectionId}/mappings:
+    get:
+      tags:
+        - CMMS Mappings
+      summary: Get CMMS mappings
+      description: Retrieve field mappings for a CMMS connection
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of CMMS mappings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mappings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CMMSMapping'
+                  total:
+                    type: integer
+
+    post:
+      tags:
+        - CMMS Mappings
+      summary: Create CMMS mapping
+      description: Create a new field mapping for a CMMS connection
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - arxos_field
+                - cmms_field
+                - data_type
+              properties:
+                arxos_field:
+                  type: string
+                  description: Arxos field name
+                cmms_field:
+                  type: string
+                  description: CMMS field name
+                data_type:
+                  type: string
+                  enum: [string, number, date, boolean]
+                  description: Data type for the field
+                is_required:
+                  type: boolean
+                  default: false
+                  description: Whether the field is required
+                default_value:
+                  type: string
+                  description: Default value for the field
+                transform_rule:
+                  type: string
+                  description: JSON transformation rules
+      responses:
+        '201':
+          description: CMMS mapping created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CMMSMapping'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cmms/mappings/{id}:
+    put:
+      tags:
+        - CMMS Mappings
+      summary: Update CMMS mapping
+      description: Update an existing CMMS field mapping
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                arxos_field:
+                  type: string
+                cmms_field:
+                  type: string
+                data_type:
+                  type: string
+                  enum: [string, number, date, boolean]
+                is_required:
+                  type: boolean
+                default_value:
+                  type: string
+                transform_rule:
+                  type: string
+      responses:
+        '200':
+          description: CMMS mapping updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CMMSMapping'
+        '404':
+          description: CMMS mapping not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - CMMS Mappings
+      summary: Delete CMMS mapping
+      description: Delete a CMMS field mapping
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: CMMS mapping deleted successfully
+        '404':
+          description: CMMS mapping not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Maintenance Schedules
+  /cmms/maintenance-schedules:
+    get:
+      tags:
+        - Maintenance Schedules
+      summary: List maintenance schedules
+      description: Retrieve maintenance schedules from CMMS systems
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: connection_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by CMMS connection ID
+        - name: asset_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by asset ID
+        - name: schedule_type
+          in: query
+          schema:
+            type: string
+            enum: [preventive, predictive, corrective]
+          description: Filter by schedule type
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of maintenance schedules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schedules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MaintenanceSchedule'
+                  total:
+                    type: integer
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /cmms/maintenance-schedules/{id}:
+    get:
+      tags:
+        - Maintenance Schedules
+      summary: Get maintenance schedule
+      description: Retrieve a specific maintenance schedule by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Maintenance schedule details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceSchedule'
+        '404':
+          description: Maintenance schedule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Maintenance Schedules
+      summary: Update maintenance schedule
+      description: Update an existing maintenance schedule
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule_type:
+                  type: string
+                  enum: [preventive, predictive, corrective]
+                frequency:
+                  type: string
+                  enum: [daily, weekly, monthly, quarterly, yearly]
+                interval:
+                  type: integer
+                  minimum: 1
+                description:
+                  type: string
+                instructions:
+                  type: string
+                estimated_hours:
+                  type: number
+                  minimum: 0
+                priority:
+                  type: string
+                  enum: [low, medium, high, critical]
+                is_active:
+                  type: boolean
+                next_due_date:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Maintenance schedule updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceSchedule'
+        '404':
+          description: Maintenance schedule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Work Orders
+  /cmms/work-orders:
+    get:
+      tags:
+        - Work Orders
+      summary: List work orders
+      description: Retrieve work orders from CMMS systems
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: connection_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by CMMS connection ID
+        - name: asset_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by asset ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, completed, cancelled]
+          description: Filter by work order status
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+          description: Filter by priority
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [corrective, preventive, emergency]
+          description: Filter by work order type
+        - name: assigned_to
+          in: query
+          schema:
+            type: string
+          description: Filter by assigned person
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by start date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by end date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of work orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  work_orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkOrder'
+                  total:
+                    type: integer
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /cmms/work-orders/{id}:
+    get:
+      tags:
+        - Work Orders
+      summary: Get work order
+      description: Retrieve a specific work order by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Work order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+        '404':
+          description: Work order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Work Orders
+      summary: Update work order
+      description: Update an existing work order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [corrective, preventive, emergency]
+                status:
+                  type: string
+                  enum: [open, in_progress, completed, cancelled]
+                priority:
+                  type: string
+                  enum: [low, medium, high, critical]
+                description:
+                  type: string
+                instructions:
+                  type: string
+                assigned_to:
+                  type: string
+                estimated_hours:
+                  type: number
+                  minimum: 0
+                actual_hours:
+                  type: number
+                  minimum: 0
+                cost:
+                  type: number
+                  minimum: 0
+                parts_used:
+                  type: string
+                scheduled_date:
+                  type: string
+                  format: date-time
+                started_date:
+                  type: string
+                  format: date-time
+                completed_date:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Work order updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+        '404':
+          description: Work order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Equipment Specifications
+  /cmms/equipment-specifications:
+    get:
+      tags:
+        - Equipment Specifications
+      summary: List equipment specifications
+      description: Retrieve equipment specifications from CMMS systems
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: connection_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by CMMS connection ID
+        - name: asset_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by asset ID
+        - name: spec_type
+          in: query
+          schema:
+            type: string
+            enum: [technical, operational, maintenance]
+          description: Filter by specification type
+        - name: is_critical
+          in: query
+          schema:
+            type: boolean
+          description: Filter by critical status
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of equipment specifications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  specifications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EquipmentSpecification'
+                  total:
+                    type: integer
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /cmms/equipment-specifications/{id}:
+    get:
+      tags:
+        - Equipment Specifications
+      summary: Get equipment specification
+      description: Retrieve a specific equipment specification by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Equipment specification details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentSpecification'
+        '404':
+          description: Equipment specification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Equipment Specifications
+      summary: Update equipment specification
+      description: Update an existing equipment specification
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                spec_type:
+                  type: string
+                  enum: [technical, operational, maintenance]
+                spec_name:
+                  type: string
+                spec_value:
+                  type: string
+                unit:
+                  type: string
+                min_value:
+                  type: number
+                max_value:
+                  type: number
+                is_critical:
+                  type: boolean
+      responses:
+        '200':
+          description: Equipment specification updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EquipmentSpecification'
+        '404':
+          description: Equipment specification not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 
+
+  # Sync Logs
+  /cmms/connections/{connectionId}/sync-logs:
+    get:
+      tags:
+        - Sync Logs
+      summary: Get sync logs
+      description: Retrieve synchronization logs for a CMMS connection
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sync_type
+          in: query
+          schema:
+            type: string
+            enum: [schedules, work_orders, specs]
+          description: Filter by sync type
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [success, partial, failed]
+          description: Filter by sync status
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by start date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter by end date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of sync logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sync_logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CMMSSyncLog'
+                  total:
+                    type: integer
+
+  /cmms/sync-logs/{id}:
+    get:
+      tags:
+        - Sync Logs
+      summary: Get sync log details
+      description: Retrieve detailed information about a specific sync operation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sync log details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CMMSSyncLog'
+        '404':
+          description: Sync log not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Admin endpoints
+  /admin/sync-status:
+    get:
+      tags:
+        - Admin
+      summary: Get sync status
+      description: Get overall synchronization status across all CMMS connections
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sync status overview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_connections:
+                    type: integer
+                  active_connections:
+                    type: integer
+                  last_sync_time:
+                    type: string
+                    format: date-time
+                  sync_errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        connection_id:
+                          type: integer
+                        error_message:
+                          type: string
+                        last_error_time:
+                          type: string
+                          format: date-time
+                  sync_statistics:
+                    type: object
+                    properties:
+                      total_syncs_today:
+                        type: integer
+                      successful_syncs_today:
+                        type: integer
+                      failed_syncs_today:
+                        type: integer
+                      average_sync_duration:
+                        type: number
+
+  /admin/sync-scheduler:
+    post:
+      tags:
+        - Admin
+      summary: Start sync scheduler
+      description: Start the background CMMS sync scheduler
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sync scheduler started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [started, already_running]
+                  message:
+                    type: string
+
+  /admin/sync-scheduler/stop:
+    post:
+      tags:
+        - Admin
+      summary: Stop sync scheduler
+      description: Stop the background CMMS sync scheduler
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sync scheduler stopped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [stopped, not_running]
+                  message:
+                    type: string
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [viewer, editor, admin, maintenance]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CMMSConnection:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          enum: [upkeep, fiix, custom]
+          description: CMMS system type
+        base_url:
+          type: string
+          format: uri
+          description: Base URL of the CMMS system
+        api_key:
+          type: string
+          description: API key for authentication
+        username:
+          type: string
+          description: Username for basic auth
+        password:
+          type: string
+          description: Password for basic auth (hidden in responses)
+        oauth2_client_id:
+          type: string
+          description: OAuth2 client ID
+        oauth2_secret:
+          type: string
+          description: OAuth2 client secret (hidden in responses)
+        oauth2_token_url:
+          type: string
+          format: uri
+          description: OAuth2 token URL
+        oauth2_scope:
+          type: string
+          description: OAuth2 scope
+        sync_interval_min:
+          type: integer
+          minimum: 1
+          description: Sync interval in minutes
+        is_active:
+          type: boolean
+          description: Whether the connection is active
+        last_sync:
+          type: string
+          format: date-time
+          description: Last synchronization time
+        last_sync_status:
+          type: string
+          enum: [success, partial, failed]
+          description: Status of last sync operation
+        last_sync_error:
+          type: string
+          description: Error message from last sync
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CMMSMapping:
+      type: object
+      properties:
+        id:
+          type: integer
+        cmms_connection_id:
+          type: integer
+          description: ID of the CMMS connection
+        arxos_field:
+          type: string
+          description: Arxos field name
+        cmms_field:
+          type: string
+          description: CMMS field name
+        data_type:
+          type: string
+          enum: [string, number, date, boolean]
+          description: Data type for the field
+        is_required:
+          type: boolean
+          description: Whether the field is required
+        default_value:
+          type: string
+          description: Default value for the field
+        transform_rule:
+          type: string
+          description: JSON transformation rules
+
+    MaintenanceSchedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        asset_id:
+          type: integer
+          description: Associated asset ID
+        cmms_connection_id:
+          type: integer
+          description: CMMS connection ID
+        cmms_asset_id:
+          type: string
+          description: CMMS asset identifier
+        schedule_type:
+          type: string
+          enum: [preventive, predictive, corrective]
+          description: Type of maintenance schedule
+        frequency:
+          type: string
+          enum: [daily, weekly, monthly, quarterly, yearly]
+          description: Frequency of maintenance
+        interval:
+          type: integer
+          minimum: 1
+          description: Interval between maintenance tasks
+        description:
+          type: string
+          description: Schedule description
+        instructions:
+          type: string
+          description: Maintenance instructions
+        estimated_hours:
+          type: number
+          minimum: 0
+          description: Estimated hours for maintenance
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          description: Priority level
+        is_active:
+          type: boolean
+          description: Whether the schedule is active
+        next_due_date:
+          type: string
+          format: date-time
+          description: Next due date for maintenance
+        last_completed:
+          type: string
+          format: date-time
+          description: Last completion date
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkOrder:
+      type: object
+      properties:
+        id:
+          type: integer
+        asset_id:
+          type: integer
+          description: Associated asset ID
+        cmms_connection_id:
+          type: integer
+          description: CMMS connection ID
+        cmms_work_order_id:
+          type: string
+          description: CMMS work order identifier
+        work_order_number:
+          type: string
+          description: Work order number
+        type:
+          type: string
+          enum: [corrective, preventive, emergency]
+          description: Type of work order
+        status:
+          type: string
+          enum: [open, in_progress, completed, cancelled]
+          description: Current status
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          description: Priority level
+        description:
+          type: string
+          description: Work order description
+        instructions:
+          type: string
+          description: Work instructions
+        assigned_to:
+          type: string
+          description: Assigned person or team
+        estimated_hours:
+          type: number
+          minimum: 0
+          description: Estimated hours
+        actual_hours:
+          type: number
+          minimum: 0
+          description: Actual hours worked
+        cost:
+          type: number
+          minimum: 0
+          description: Total cost
+        parts_used:
+          type: string
+          description: Parts used in the work
+        created_date:
+          type: string
+          format: date-time
+          description: Creation date
+        scheduled_date:
+          type: string
+          format: date-time
+          description: Scheduled date
+        started_date:
+          type: string
+          format: date-time
+          description: Actual start date
+        completed_date:
+          type: string
+          format: date-time
+          description: Completion date
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EquipmentSpecification:
+      type: object
+      properties:
+        id:
+          type: integer
+        asset_id:
+          type: integer
+          description: Associated asset ID
+        cmms_connection_id:
+          type: integer
+          description: CMMS connection ID
+        cmms_asset_id:
+          type: string
+          description: CMMS asset identifier
+        spec_type:
+          type: string
+          enum: [technical, operational, maintenance]
+          description: Type of specification
+        spec_name:
+          type: string
+          description: Specification name
+        spec_value:
+          type: string
+          description: Specification value
+        unit:
+          type: string
+          description: Unit of measurement
+        min_value:
+          type: number
+          description: Minimum acceptable value
+        max_value:
+          type: number
+          description: Maximum acceptable value
+        is_critical:
+          type: boolean
+          description: Whether this is a critical specification
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CMMSSyncLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        cmms_connection_id:
+          type: integer
+          description: CMMS connection ID
+        sync_type:
+          type: string
+          enum: [schedules, work_orders, specs]
+          description: Type of synchronization
+        status:
+          type: string
+          enum: [success, partial, failed]
+          description: Sync operation status
+        records_processed:
+          type: integer
+          minimum: 0
+          description: Total records processed
+        records_created:
+          type: integer
+          minimum: 0
+          description: Records created
+        records_updated:
+          type: integer
+          minimum: 0
+          description: Records updated
+        records_failed:
+          type: integer
+          minimum: 0
+          description: Records that failed to process
+        error_details:
+          type: string
+          description: Detailed error information
+        started_at:
+          type: string
+          format: date-time
+          description: Sync start time
+        completed_at:
+          type: string
+          format: date-time
+          description: Sync completion time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+        limit:
+          type: integer
+          description: Number of items per page
+        total:
+          type: integer
+          description: Total number of items
+        total_pages:
+          type: integer
+          description: Total number of pages
+        has_next:
+          type: boolean
+          description: Whether there is a next page
+        has_prev:
+          type: boolean
+          description: Whether there is a previous page 

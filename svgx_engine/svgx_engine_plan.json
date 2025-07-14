@@ -1,0 +1,537 @@
+{
+  "specification":
+// ... full project_svgx.json content here ...
+,
+  "development_plan": """
+# SVGX Engine Development Plan
+
+## Overview
+This plan outlines the development strategy to achieve 100% alignment with `arx_svg_parser` production features and 100% coverage of `project_svgx.json` specifications, plus comprehensive CAD-like functionality.
+
+## Current Status Analysis
+
+### ✅ Completed (Phase 1-3)
+- Basic SVGX parser with arx: namespace support
+- Runtime evaluator and behavior engine
+- Multi-format compilers (SVG, IFC, JSON, GLTF)
+- Basic symbol manager
+- Web IDE and linter tools
+- Test suite and documentation
+
+### 🔄 In Progress (Phase 4)
+- Advanced simulation features
+- Interactive capabilities
+- VS Code plugin development
+
+### ❌ Missing (Critical Gaps)
+- Production services from `arx_svg_parser`
+- Advanced BIM integration
+- Database and persistence layer
+- Authentication and access control
+- Real-time telemetry
+- Advanced caching and performance
+- Export interoperability
+- CMMS integration
+- Floor management
+- Advanced security features
+- **CAD-like functionality for full operability**
+
+## Phase 4: Production Alignment (Week 7-8)
+
+### 4.1 Core Service Migration
+**Priority: CRITICAL**
+
+Migrate essential production services from `arx_svg_parser`:
+
+#### 4.1.1 Database and Persistence
+- [ ] Migrate `database_service.py` → `svgx_engine/services/database.py`
+- [ ] Migrate `persistence.py` → `svgx_engine/services/persistence.py`
+- [ ] Migrate `data_retention.py` → `svgx_engine/services/data_retention.py`
+- [ ] Migrate `data_partitioning.py` → `svgx_engine/services/data_partitioning.py`
+
+#### 4.1.2 Authentication and Security
+- [ ] Migrate `access_control.py` → `svgx_engine/services/access_control.py`
+- [ ] Migrate `advanced_security.py` → `svgx_engine/services/security.py`
+- [ ] Migrate `auth.py` → `svgx_engine/services/auth.py`
+
+#### 4.1.3 Performance and Caching
+- [ ] Migrate `advanced_caching.py` → `svgx_engine/services/caching.py`
+- [ ] Migrate `performance_optimizer.py` → `svgx_engine/services/performance.py`
+- [ ] Migrate `enhanced_performance.py` → `svgx_engine/services/optimization.py`
+
+#### 4.1.4 Telemetry and Monitoring
+- [ ] Migrate `telemetry.py` → `svgx_engine/services/telemetry.py`
+- [ ] Migrate `realtime_telemetry.py` → `svgx_engine/services/realtime.py`
+- [ ] Migrate `analytics.py` → `svgx_engine/services/analytics.py`
+
+### 4.2 Advanced BIM Integration
+**Priority: HIGH**
+
+#### 4.2.1 BIM Services
+- [ ] Migrate `bim_extractor.py` → `svgx_engine/services/bim_extractor.py`
+- [ ] Migrate `bim_builder.py` → `svgx_engine/services/bim_builder.py`
+- [ ] Migrate `bim_import.py` → `svgx_engine/services/bim_import.py`
+- [ ] Migrate `bim_export.py` → `svgx_engine/services/bim_export.py`
+- [ ] Migrate `bim_health_checker.py` → `svgx_engine/services/bim_health.py`
+- [ ] Migrate `bim_visualization.py` → `svgx_engine/services/bim_viz.py`
+
+#### 4.2.2 Enhanced Symbol Management
+- [ ] Migrate `enhanced_symbol_recognition.py` → `svgx_engine/services/symbol_recognition.py`
+- [ ] Migrate `advanced_symbol_management.py` → `svgx_engine/services/advanced_symbols.py`
+- [ ] Migrate `symbol_generator.py` → `svgx_engine/services/symbol_generator.py`
+- [ ] Migrate `symbol_renderer.py` → `svgx_engine/services/symbol_renderer.py`
+
+### 4.3 Export and Interoperability
+**Priority: HIGH**
+
+#### 4.3.1 Export Services
+- [ ] Migrate `export_integration.py` → `svgx_engine/services/export_integration.py`
+- [ ] Migrate `export_interoperability.py` → `svgx_engine/services/interoperability.py`
+- [ ] Migrate `persistence_export_interoperability.py` → `svgx_engine/services/persistence_export.py`
+
+#### 4.3.2 Advanced Export Features
+- [ ] Migrate `advanced_export_interoperability.py` → `svgx_engine/services/advanced_export.py`
+- [ ] Migrate `enhanced_bim_assembly.py` → `svgx_engine/services/bim_assembly.py`
+
+### 4.4 Infrastructure and Management
+**Priority: MEDIUM**
+
+#### 4.4.1 Floor and Space Management
+- [ ] Migrate `floor_manager.py` → `svgx_engine/services/floor_manager.py`
+- [ ] Migrate `route_manager.py` → `svgx_engine/services/route_manager.py`
+- [ ] Migrate `enhanced_spatial_reasoning.py` → `svgx_engine/services/spatial_reasoning.py`
+
+#### 4.4.2 System Integration
+- [ ] Migrate `multi_system_integration.py` → `svgx_engine/services/system_integration.py`
+- [ ] Migrate `cmms_integration.py` → `svgx_engine/services/cmms_integration.py`
+- [ ] Migrate `cmms_maintenance_hooks.py` → `svgx_engine/services/maintenance_hooks.py`
+
+## Phase 5: Advanced Features (Week 9-10)
+
+### 5.1 Enhanced Simulation Engine
+**Priority: HIGH**
+
+#### 5.1.1 Physics Simulation
+- [ ] Extend `physics_engine.py` with advanced features:
+  - [ ] Structural analysis
+  - [ ] Fluid dynamics (water pressure/flow)
+  - [ ] Heat transfer modeling
+  - [ ] Electrical circuit simulation
+  - [ ] Signal propagation (RF)
+
+#### 5.1.2 Behavior Profiles
+- [ ] Enhance `behavior_engine.py`:
+  - [ ] Complex rule engines
+  - [ ] Conditional logic
+  - [ ] Event-driven behaviors
+  - [ ] State machines
+  - [ ] Time-based triggers
+
+### 5.2 Interactive Features
+**Priority: MEDIUM**
+
+#### 5.2.1 User Interaction
+- [ ] Implement click/drag handlers
+- [ ] Add hover effects and tooltips
+- [ ] Create snap-to constraint system
+- [ ] Add selection and multi-select
+- [ ] Implement undo/redo functionality
+
+#### 5.2.2 Real-time Collaboration
+- [ ] WebSocket-based live updates
+- [ ] Multi-user editing
+- [ ] Conflict resolution
+- [ ] Version control integration
+
+### 5.3 Advanced Tooling
+**Priority: MEDIUM**
+
+#### 5.3.1 VS Code Plugin
+- [ ] Syntax highlighting for SVGX
+- [ ] IntelliSense and autocompletion
+- [ ] Live preview integration
+- [ ] Error reporting and validation
+- [ ] Debugging support
+
+#### 5.3.2 Advanced Visualization
+- [ ] 3D rendering capabilities
+- [ ] VR/AR integration
+- [ ] Real-time performance monitoring
+- [ ] Advanced filtering and search
+
+## Phase 6: Production Readiness (Week 11-12)
+
+### 6.1 Testing and Quality Assurance
+**Priority: CRITICAL**
+
+#### 6.1.1 Comprehensive Testing
+- [ ] Unit tests for all migrated services
+- [ ] Integration tests for BIM workflows
+- [ ] Performance benchmarks
+- [ ] Security testing
+- [ ] End-to-end workflow testing
+
+#### 6.1.2 Code Quality
+- [ ] Achieve 95%+ test coverage
+- [ ] Implement comprehensive logging
+- [ ] Add error handling and recovery
+- [ ] Performance optimization
+- [ ] Memory usage optimization
+
+### 6.2 Documentation and Deployment
+**Priority: HIGH**
+
+#### 6.2.1 Documentation
+- [ ] API documentation
+- [ ] User guides and tutorials
+- [ ] Developer documentation
+- [ ] Migration guides
+- [ ] Best practices
+
+#### 6.2.2 Deployment
+- [ ] Docker containerization
+- [ ] CI/CD pipeline setup
+- [ ] Monitoring and alerting
+- [ ] Backup and recovery procedures
+- [ ] Performance monitoring
+
+## Phase 7: CAD Components Integration (Week 13-16)
+
+### 7.1 Core CAD Features (Week 13-14)
+**Priority: CRITICAL**
+
+#### 7.1.1 Dimensioning and Measurement System
+- [ ] Implement `svgx_engine/services/dimensioning/` architecture
+- [ ] Linear, angular, radius, and diameter dimensions
+- [ ] Area and perimeter measurements
+- [ ] Auto-dimensioning capabilities
+- [ ] Dimension style management
+- [ ] Real-time dimension updates
+
+#### 7.1.2 Constraint System
+- [ ] Implement `svgx_engine/services/constraints/` architecture
+- [ ] Distance, angle, parallel, perpendicular constraints
+- [ ] Horizontal, vertical, coincident constraints
+- [ ] Tangent and symmetric constraints
+- [ ] Constraint solver and validation
+- [ ] Visual constraint indicators
+
+#### 7.1.3 Grid and Snap System
+- [ ] Implement `svgx_engine/services/grid/` architecture
+- [ ] Configurable grid spacing and origin
+- [ ] Grid snapping with tolerance settings
+- [ ] Object snapping (endpoints, midpoints, intersections)
+- [ ] Angle snapping for precise alignment
+- [ ] Visual grid and snap feedback
+
+#### 7.1.4 Selection and Editing Tools
+- [ ] Implement `svgx_engine/services/selection/` architecture
+- [ ] Window, crossing, and polygon selection
+- [ ] Similar object selection
+- [ ] Layer and type-based selection
+- [ ] Multi-selection with modifiers
+- [ ] Selection history and filtering
+
+### 7.2 Advanced CAD Tools (Week 15-16)
+**Priority: HIGH**
+
+#### 7.2.1 Modify and Transform Tools
+- [ ] Implement `svgx_engine/services/modify/` architecture
+- [ ] Move, copy, rotate, and scale operations
+- [ ] Mirror and array transformations
+- [ ] Offset, trim, and extend operations
+- [ ] Fillet and chamfer operations
+- [ ] Transform preview and validation
+
+#### 7.2.2 Layer Management System
+- [ ] Implement `svgx_engine/services/layers/` architecture
+- [ ] Layer creation with properties (color, linetype, lineweight)
+- [ ] Layer visibility and lock controls
+- [ ] Layer groups and hierarchies
+- [ ] Object-to-layer assignment
+- [ ] Layer-based filtering and selection
+
+#### 7.2.3 Property Panel and Inspector
+- [ ] Implement `svgx_engine/services/properties/` architecture
+- [ ] Object property inspection and editing
+- [ ] Common property management for selections
+- [ ] Property groups and categories
+- [ ] Property search and filtering
+- [ ] Property validation and constraints
+
+#### 7.2.4 Annotation and Callout System
+- [ ] Implement `svgx_engine/services/annotations/` architecture
+- [ ] Text annotations with leaders
+- [ ] Balloon callouts and numbered references
+- [ ] Arrow annotations and notes
+- [ ] Revision clouds and change tracking
+- [ ] Annotation search and management
+
+### 7.3 Professional CAD Features (Week 17-18)
+**Priority: MEDIUM**
+
+#### 7.3.1 Command Line Interface
+- [ ] Implement `svgx_engine/services/command_line/` architecture
+- [ ] Command parsing and execution
+- [ ] Command history and autocomplete
+- [ ] Help system and documentation
+- [ ] Command aliases and shortcuts
+- [ ] Scripting and automation support
+
+#### 7.3.2 File Format Support
+- [ ] Implement `svgx_engine/services/file_formats/` architecture
+- [ ] DXF import/export with full compatibility
+- [ ] PDF export with options and quality settings
+- [ ] STEP file import/export for 3D models
+- [ ] DWG support via conversion layers
+- [ ] Format validation and error handling
+
+#### 7.3.3 Advanced Rendering and Visualization
+- [ ] Implement `svgx_engine/services/rendering/` architecture
+- [ ] Multiple view modes (wireframe, hidden, shaded)
+- [ ] Lighting and material systems
+- [ ] Cross-section and exploded views
+- [ ] Walkthrough and animation capabilities
+- [ ] High-quality rendering export
+
+#### 7.3.4 Collaboration and Version Control
+- [ ] Implement `svgx_engine/services/collaboration/` architecture
+- [ ] Real-time collaboration sessions
+- [ ] Multi-user editing with conflict resolution
+- [ ] Change tracking and history
+- [ ] Permission-based access control
+- [ ] Session management and persistence
+
+## Phase 8: CAD Production Features (Week 19-20)
+**Priority: HIGH**
+
+### 8.1 Advanced Constraint Solving
+- [ ] Complex geometric constraint networks
+- [ ] Over-constrained system detection
+- [ ] Constraint optimization algorithms
+- [ ] Real-time constraint feedback
+- [ ] Constraint-driven design workflows
+
+### 8.2 Advanced Dimensioning
+- [ ] Smart dimension placement
+- [ ] Dimension style libraries
+- [ ] Tolerance and precision controls
+- [ ] Multi-view dimensioning
+- [ ] Dimension annotation management
+
+### 8.3 Advanced Annotation Features
+- [ ] Rich text annotations with formatting
+- [ ] Image and file attachments
+- [ ] Revision tracking and approval workflows
+- [ ] Annotation templates and libraries
+- [ ] Multi-language annotation support
+
+### 8.4 Advanced File Format Support
+- [ ] Full AutoCAD compatibility
+- [ ] Revit integration capabilities
+- [ ] Industry-standard format support
+- [ ] Custom format plugin architecture
+- [ ] Format conversion quality assurance
+
+## Phase 9: Community & Adoption (Week 21-22)
+
+### 9.1 Community & Standardization
+**Priority: HIGH**
+
+#### 9.1.1 Public Specification
+- [ ] Publish SVGX specification as open standard
+- [ ] Create reference implementation
+- [ ] Establish governance and contribution guidelines
+- [ ] Build community documentation and examples
+
+#### 9.1.2 Open Source Ecosystem
+- [ ] Release core libraries under open source license
+- [ ] Create plugin architecture for extensions
+- [ ] Build community-contributed symbol libraries
+- [ ] Establish contribution guidelines and review process
+
+#### 9.1.3 Adoption Strategy
+- [ ] Create migration guides for existing SVG/BIM users
+- [ ] Develop training materials and workshops
+- [ ] Partner with industry organizations
+- [ ] Build showcase projects and case studies
+
+### 9.2 Backward/Forward Compatibility
+**Priority: CRITICAL**
+
+#### 9.2.1 SVG Compatibility
+- [ ] Implement SVG → SVGX converter with semantic inference
+- [ ] Create SVGX → SVG downgrader preserving visual elements
+- [ ] Build compatibility test suite for round-trip conversions
+- [ ] Document compatibility rules and limitations
+
+#### 9.2.2 Version Management
+- [ ] Define SVGX versioning scheme
+- [ ] Implement automatic migration between versions
+- [ ] Create deprecation policies and migration tools
+- [ ] Build version compatibility matrix
+
+### 9.3 Extensibility & Plugin System
+**Priority: HIGH**
+
+#### 9.3.1 Plugin Architecture
+- [ ] Design plugin API for custom namespaces
+- [ ] Create plugin development kit (PDK)
+- [ ] Build plugin marketplace and registry
+- [ ] Implement plugin validation and security
+
+#### 9.3.2 Custom Extensions
+- [ ] Support for user-defined XML namespaces
+- [ ] Custom behavior and physics engines
+- [ ] Extensible symbol libraries
+- [ ] Custom export formats
+
+## Phase 10: Performance & Security (Week 23-24)
+
+### 10.1 Performance Benchmarks
+**Priority: HIGH**
+
+#### 10.1.1 Performance Targets
+- [ ] Parser: < 50ms for 10MB SVGX files
+- [ ] Runtime: < 100ms for complex simulations
+- [ ] Export: < 200ms for IFC/GLTF conversion
+- [ ] Memory: < 100MB for typical floor plans
+- [ ] CAD Operations: < 50ms for dimension updates
+- [ ] Constraint Solving: < 100ms for complex constraints
+
+#### 10.1.2 Benchmark Suite
+- [ ] Create standardized benchmark files
+- [ ] Implement automated performance testing
+- [ ] Build performance regression detection
+- [ ] Document performance optimization guidelines
+
+#### 10.1.3 Scalability
+- [ ] Test with large-scale building models
+- [ ] Implement progressive loading for large files
+- [ ] Optimize for browser and mobile environments
+- [ ] Build distributed processing capabilities
+
+### 10.2 Security & Validation
+**Priority: CRITICAL**
+
+#### 10.2.1 Security Framework
+- [ ] Implement sandboxed execution for behaviors
+- [ ] Add digital signature validation
+- [ ] Create security audit tools
+- [ ] Build malicious code detection
+
+#### 10.2.2 Validation & Verification
+- [ ] Comprehensive schema validation
+- [ ] Logic verification for behaviors
+- [ ] Physics constraint validation
+- [ ] Cross-reference integrity checks
+
+#### 10.2.3 Access Control
+- [ ] Role-based access control (RBAC)
+- [ ] File-level permissions
+- [ ] Audit logging and monitoring
+- [ ] Secure key management
+
+## Phase 11: User Experience & Interoperability (Week 25-26)
+
+### 11.1 Enhanced User Experience
+**Priority: HIGH**
+
+#### 11.1.1 Web IDE Improvements
+- [ ] Real-time collaboration features
+- [ ] Advanced debugging tools
+- [ ] Performance profiling
+- [ ] Accessibility improvements
+- [ ] CAD-style interface with toolbars and panels
+
+#### 11.1.2 VS Code Plugin Enhancement
+- [ ] Advanced IntelliSense with AI suggestions
+- [ ] Integrated debugging and simulation
+- [ ] Custom themes and syntax highlighting
+- [ ] Extension marketplace integration
+
+#### 11.1.3 Mobile & Touch Support
+- [ ] Touch-optimized editing interface
+- [ ] Mobile preview and validation
+- [ ] Offline editing capabilities
+- [ ] Cross-platform synchronization
+
+### 11.2 Interoperability Testing
+**Priority: CRITICAL**
+
+#### 11.2.1 Round-trip Testing
+- [ ] SVG ↔ SVGX ↔ IFC round-trip validation
+- [ ] SVGX ↔ GLTF ↔ JSON round-trip validation
+- [ ] Cross-platform compatibility testing
+- [ ] Version migration testing
+- [ ] CAD format round-trip testing
+
+#### 11.2.2 Industry Standard Compliance
+- [ ] IFC 4.x compliance testing
+- [ ] BIM Level 2/3 compliance
+- [ ] Industry Foundation Classes validation
+- [ ] COBie data exchange testing
+- [ ] AutoCAD compatibility testing
+
+#### 11.2.3 Tool Integration
+- [ ] AutoCAD integration testing
+- [ ] Revit interoperability
+- [ ] SketchUp plugin development
+- [ ] FreeCAD integration
+
+## Implementation Strategy
+
+### Migration Approach
+1. **Gradual Migration**: Migrate services one by one, maintaining compatibility
+2. **Feature Parity**: Ensure all `arx_svg_parser` features are available in `svgx_engine`
+3. **Enhanced Capabilities**: Add SVGX-specific features on top of migrated services
+4. **CAD Integration**: Integrate CAD components progressively
+5. **Testing**: Comprehensive testing at each migration step
+
+### Quality Standards
+- **Code Coverage**: Minimum 95%
+- **Performance**: Sub-100ms for core operations
+- **Compatibility**: Backward compatible with existing SVG workflows
+- **Security**: Production-grade security measures
+- **Documentation**: Comprehensive and up-to-date
+- **CAD Standards**: Professional CAD software compatibility
+
+### Success Metrics
+- [ ] 100% feature parity with `arx_svg_parser`
+- [ ] 100% coverage of `project_svgx.json` specifications
+- [ ] 100% CAD functionality implementation
+- [ ] 95%+ test coverage
+- [ ] Performance benchmarks met
+- [ ] Security audit passed
+- [ ] Documentation complete
+- [ ] Community adoption and contributions
+- [ ] Industry standard compliance
+- [ ] Professional CAD software interoperability
+
+## Next Steps
+
+1. **Immediate**: Start with Phase 4.1 (Core Service Migration)
+2. **Week 7**: Complete database and persistence migration
+3. **Week 8**: Complete authentication and BIM integration
+4. **Week 9**: Implement advanced simulation features
+5. **Week 10**: Add interactive capabilities
+6. **Week 11**: Comprehensive testing and quality assurance
+7. **Week 12**: Production deployment and documentation
+8. **Week 13**: Begin CAD components integration (Dimensioning, Constraints)
+9. **Week 14**: Continue CAD components (Grid/Snap, Selection)
+10. **Week 15**: Advanced CAD tools (Modify, Layers)
+11. **Week 16**: Professional CAD features (Properties, Annotations)
+12. **Week 17**: Command line and file formats
+13. **Week 18**: Advanced rendering and collaboration
+14. **Week 19**: Advanced constraint solving and dimensioning
+15. **Week 20**: Advanced annotations and file format support
+16. **Week 21**: Community building and standardization
+17. **Week 22**: Backward compatibility and extensibility
+18. **Week 23**: Performance optimization and security hardening
+19. **Week 24**: User experience enhancement
+20. **Week 25**: Interoperability testing and industry compliance
+21. **Week 26**: Final integration and launch preparation
+
+This enhanced plan ensures we achieve both 100% alignment with `arx_svg_parser`, 100% coverage of `project_svgx.json` specifications, and full CAD operability while maintaining high engineering standards, security, performance, and community adoption.
+"""
+} 

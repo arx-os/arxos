@@ -1,10 +1,21 @@
-# Arxos Database Schema Validator
+# Arxos Database Infrastructure
 
 ## Overview
 
-The Arxos Database Schema Validator is an automated tool that validates SQL migration files to ensure proper database schema structure and prevent common issues that can cause deployment failures.
+The Arxos Database Infrastructure provides comprehensive tools for database schema management, validation, and data integrity enforcement. This includes schema validation, constraint management, and performance monitoring tools.
 
-## Purpose
+## Components
+
+### 1. Schema Validator
+Validates SQL migration files to ensure proper database schema structure and prevent common issues that can cause deployment failures.
+
+### 2. Constraint Management
+Enforces data integrity through NOT NULL and CHECK constraints with comprehensive audit tools and safe migration strategies.
+
+### 3. Performance Monitoring
+Includes slow query logging and performance analysis tools for database optimization.
+
+## Schema Validator Purpose
 
 The schema validator prevents invalid migrations by checking:
 
@@ -164,6 +175,126 @@ The CI pipeline will fail if any of the following conditions are met:
 - **CI Action**: Fail pull request with missing table details
 - **Example**: Foreign key references `users` table that doesn't exist
 
+## Data Integrity Constraints
+
+### NOT NULL and CHECK Constraints
+
+The database enforces comprehensive data integrity through NOT NULL and CHECK constraints:
+
+#### Key Constraint Categories
+
+1. **Required Fields**: Email, username, password_hash, names, content fields
+2. **Status Fields**: Role, status, type with finite domain values
+3. **Timestamp Fields**: Created_at, updated_at with future date validation
+4. **Format Validation**: Email format, username format, password hash format
+5. **Domain Validation**: Material types, system types, severity levels
+
+#### Constraint Migration Process
+
+1. **Audit Phase**: Run `tools/audit_constraints.py` to identify candidates
+2. **Backfill Phase**: Execute `scripts/backfill_nulls.sql` to safely update NULL data
+3. **Migration Phase**: Apply `migrations/006_add_constraints.sql` to add constraints
+4. **Validation Phase**: Run `tests/test_constraints.py` to verify enforcement
+
+#### Example Constraint Enforcement
+
+## Table Partitioning
+
+### Performance Optimization for Large Tables
+
+The database implements table partitioning to improve performance and manageability of large audit/log/history tables:
+
+#### Partitioning Strategy
+
+1. **Range Partitioning by Date**: Monthly partitions for time-series data
+2. **Target Tables**: audit_logs, object_history, slow_query_log, chat_messages
+3. **Partition Keys**: created_at, changed_at, timestamp
+4. **Retention Policy**: 6-12 months based on table type
+
+#### Partitioning Benefits
+
+- **Query Performance**: 60-90% improvement for time-based queries
+- **Maintenance**: Easier cleanup of old data
+- **Parallel Processing**: Better query execution across partitions
+- **Index Efficiency**: Reduced index maintenance overhead
+
+#### Partitioning Tools
+
+1. **Analysis Tool**: `tools/analyze_partitioning.py` - Identifies partitioning candidates
+2. **Migration**: `migrations/007_add_partitioning.sql` - Implements partitioning
+3. **Benchmarking**: `tools/benchmark_partitioning.py` - Measures performance improvements
+4. **Maintenance**: `tools/maintain_partitions.py` - Automated partition management
+
+#### Quick Start
+
+```bash
+# 1. Analyze tables for partitioning
+python tools/analyze_partitioning.py --database-url postgresql://localhost/arxos_db
+
+# 2. Apply partitioning migration
+psql -d arxos_db -f migrations/007_add_partitioning.sql
+
+# 3. Benchmark performance improvements
+python tools/benchmark_partitioning.py --database-url postgresql://localhost/arxos_db
+
+# 4. Set up automated maintenance
+python tools/maintain_partitions.py --database-url postgresql://localhost/arxos_db
+```
+
+#### Partition Maintenance
+
+- **Monthly Creation**: New partitions created 3 months ahead
+- **Retention Cleanup**: Old partitions dropped after retention period
+- **Automated Validation**: Partition integrity checks
+- **Performance Monitoring**: Query performance tracking
+
+#### Example Partitioned Query
+
+```sql
+-- Query automatically uses appropriate partition
+SELECT * FROM audit_logs_partitioned 
+WHERE created_at >= NOW() - INTERVAL '7 days'
+ORDER BY created_at DESC;
+```
+
+#### Migration Safety
+
+- **Rollback Function**: `rollback_partitioning_migration()` for safe reversal
+- **Data Preservation**: Existing data migrated to partitioned structure
+- **Index Optimization**: Performance indexes on partitioned tables
+- **Foreign Key Support**: Maintains referential integrity
+
+```sql
+-- NOT NULL constraint
+ALTER TABLE users ALTER COLUMN email SET NOT NULL;
+
+-- CHECK constraint for finite domain
+ALTER TABLE users ADD CONSTRAINT chk_users_role 
+CHECK (role IN ('user', 'admin', 'manager', 'viewer'));
+
+-- Format validation
+ALTER TABLE users ADD CONSTRAINT chk_users_email_format 
+CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+```
+
+### Performance Monitoring
+
+The database includes comprehensive performance monitoring:
+
+#### Slow Query Logging
+
+- **Configuration**: `postgresql.conf` with 500ms threshold
+- **Parsing**: `tools/parse_slow_queries.py` for analysis
+- **Storage**: `slow_query_log` table with metrics
+- **Review**: `tools/weekly_slow_query_review.py` for automated analysis
+
+#### Performance Tools
+
+- **Query Analysis**: Parse and rank slow queries by execution time
+- **Trend Analysis**: Track query performance over time
+- **Automated Reviews**: Weekly analysis with email notifications
+- **Database Integration**: Store metrics for historical analysis
+
 ## Migration Best Practices
 
 ### 1. File Naming Convention
@@ -175,7 +306,9 @@ migrations/
 ├── 001_create_users.sql
 ├── 002_create_posts.sql
 ├── 003_create_comments.sql
-└── 004_add_indexes.sql
+├── 004_add_indexes.sql
+├── 005_create_slow_query_log.sql
+└── 006_add_constraints.sql
 ```
 
 ### 2. Table Creation Order
@@ -185,6 +318,7 @@ Create tables in dependency order:
 1. **Independent tables first** (users, categories)
 2. **Dependent tables second** (posts, comments)
 3. **Junction tables last** (user_roles, post_tags)
+4. **Monitoring tables** (audit_logs, slow_query_log)
 
 ### 3. Index Strategy
 
@@ -194,6 +328,7 @@ Always add indexes for:
 - **Foreign key columns** (required by validator)
 - **Frequently queried columns**
 - **Unique constraints**
+- **Constraint columns** (for CHECK constraint performance)
 
 ### 4. Foreign Key Naming
 
@@ -351,8 +486,53 @@ For issues with the schema validator:
 3. **Review Rules**: Ensure migrations follow validation rules
 4. **Open Issue**: Create GitHub issue for bugs or feature requests
 
+## Performance Monitoring
+
+### Slow Query Logging System
+
+The Arxos database infrastructure includes a comprehensive slow query logging system for performance monitoring and optimization:
+
+#### Components
+
+- **PostgreSQL Configuration** (`postgresql.conf`): Enables structured slow query logging
+- **Slow Query Parser** (`tools/parse_slow_queries.py`): Analyzes query patterns and performance
+- **Database Storage** (`migrations/003_create_slow_query_log.sql`): Stores metrics for trend analysis
+- **Weekly Review** (`tools/weekly_slow_query_review.py`): Automated performance analysis
+- **CI/CD Integration** (`.github/workflows/weekly_slow_query_review.yml`): Automated weekly execution
+
+#### Quick Start
+
+```bash
+# Enable slow query logging
+sudo cp postgresql.conf /etc/postgresql/15/main/postgresql.conf
+sudo systemctl restart postgresql
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run database migration
+psql -d your_database -f migrations/003_create_slow_query_log.sql
+
+# Test parser
+python tools/parse_slow_queries.py pg_log --output-format json
+
+# Run weekly review
+python tools/weekly_slow_query_review.py --verbose
+```
+
+#### Features
+
+- **Structured Logging**: Follows Arxos logging standards with `structlog`
+- **Performance Analysis**: Identifies critical and warning performance issues
+- **Automated Alerts**: Email notifications for critical queries
+- **Trend Tracking**: Historical performance data for trend analysis
+- **Dashboard Integration**: Provides metrics for monitoring dashboards
+
+For detailed documentation, see [SLOW_QUERY_LOGGING_GUIDE.md](SLOW_QUERY_LOGGING_GUIDE.md).
+
 ## Version History
 
 - **v1.0.0**: Initial release with foreign key ordering and index validation
 - **v1.1.0**: Added SQL syntax validation and improved error reporting
 - **v1.2.0**: Enhanced CI integration with PR comments and artifacts
+- **v1.3.0**: Added comprehensive slow query logging system for performance monitoring

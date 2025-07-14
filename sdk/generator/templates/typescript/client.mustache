@@ -1,0 +1,629 @@
+{{#operations}}
+{{#operation}}
+/**
+ * {{summary}}
+ * {{notes}}
+ * 
+ * @param {{#parameters}}{{paramName}}{{^required}}?{{/required}} - {{description}}{{#defaultValue}} (default: {{{defaultValue}}}){{/defaultValue}}{{^last}}, {{/last}}{{/parameters}}
+ * @param config - Request configuration
+ * @returns Promise<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}>
+ * 
+ * @example
+ * ```typescript
+ * const result = await {{operationId}}({{#parameters}}{{paramName}}{{^last}}, {{/last}}{{/parameters}});
+ * ```
+ */
+export const {{operationId}} = async (
+    {{#parameters}}
+    {{paramName}}{{^required}}?{{/required}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}},
+    {{/parameters}}
+    config?: RequestConfig
+): Promise<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> => {
+    const url = `{{{path}}}`{{#pathParams}}.replace(/\{([^}]+)\}/g, (match, param) => {
+        switch(param) {
+            {{#pathParams}}
+            case '{{paramName}}':
+                return String({{paramName}});
+            {{/pathParams}}
+            default:
+                throw new Error(`Unknown path parameter: ${{param}}`);
+        }
+    }){{/pathParams}};
+    
+    const requestConfig: RequestConfig = {
+        method: '{{httpMethod}}',
+        url,
+        {{#hasQueryParams}}
+        params: {
+            {{#queryParams}}
+            {{paramName}}{{^required}}?{{/required}}: {{paramName}},
+            {{/queryParams}}
+        },
+        {{/hasQueryParams}}
+        {{#hasBodyParam}}
+        data: {{bodyParam.paramName}},
+        {{/hasBodyParam}}
+        ...config
+    };
+    
+    try {
+        const response = await makeRequest(requestConfig);
+        return response.data;
+    } catch (error) {
+        if (error instanceof ArxosError) {
+            throw error;
+        }
+        throw new ArxosError(
+            `{{operationId}} failed: ${error.message}`,
+            error.status || 500,
+            '{{operationId}}_ERROR'
+        );
+    }
+};
+
+{{/operation}}
+{{/operations}}
+
+/**
+ * {{classname}} API Client
+ * 
+ * Provides type-safe access to {{classname}} API endpoints
+ */
+export class {{classname}}Client {
+    private baseUrl: string;
+    private authToken?: string;
+    private defaultHeaders: Record<string, string>;
+
+    constructor(baseUrl: string, config?: ClientConfig) {
+        this.baseUrl = baseUrl.replace(/\/$/, '');
+        this.defaultHeaders = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'Arxos-SDK-TypeScript/1.0.0',
+            ...config?.defaultHeaders
+        };
+    }
+
+    /**
+     * Set authentication token for API requests
+     */
+    setAuthToken(token: string): void {
+        this.authToken = token;
+    }
+
+    /**
+     * Clear authentication token
+     */
+    clearAuthToken(): void {
+        this.authToken = undefined;
+    }
+
+    /**
+     * Get current authentication token
+     */
+    getAuthToken(): string | undefined {
+        return this.authToken;
+    }
+
+    /**
+     * Make authenticated request
+     */
+    private async makeAuthenticatedRequest<T>(config: RequestConfig): Promise<T> {
+        const headers = {
+            ...this.defaultHeaders,
+            ...config.headers
+        };
+
+        if (this.authToken) {
+            headers['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const requestConfig: RequestConfig = {
+            ...config,
+            headers,
+            url: `${this.baseUrl}${config.url}`
+        };
+
+        return makeRequest(requestConfig);
+    }
+
+    {{#operations}}
+    {{#operation}}
+    /**
+     * {{summary}}
+     * {{notes}}
+     * 
+     * @param {{#parameters}}{{paramName}}{{^required}}?{{/required}} - {{description}}{{#defaultValue}} (default: {{{defaultValue}}}){{/defaultValue}}{{^last}}, {{/last}}{{/parameters}}
+     * @param config - Request configuration
+     * @returns Promise<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}>
+     */
+    async {{operationId}}(
+        {{#parameters}}
+        {{paramName}}{{^required}}?{{/required}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}},
+        {{/parameters}}
+        config?: RequestConfig
+    ): Promise<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> {
+        const url = `{{{path}}}`{{#pathParams}}.replace(/\{([^}]+)\}/g, (match, param) => {
+            switch(param) {
+                {{#pathParams}}
+                case '{{paramName}}':
+                    return String({{paramName}});
+                {{/pathParams}}
+                default:
+                    throw new Error(`Unknown path parameter: ${{param}}`);
+            }
+        }){{/pathParams}};
+        
+        const requestConfig: RequestConfig = {
+            method: '{{httpMethod}}',
+            url,
+            {{#hasQueryParams}}
+            params: {
+                {{#queryParams}}
+                {{paramName}}{{^required}}?{{/required}}: {{paramName}},
+                {{/queryParams}}
+            },
+            {{/hasQueryParams}}
+            {{#hasBodyParam}}
+            data: {{bodyParam.paramName}},
+            {{/hasBodyParam}}
+            ...config
+        };
+        
+        try {
+            const response = await this.makeAuthenticatedRequest(requestConfig);
+            return response.data;
+        } catch (error) {
+            if (error instanceof ArxosError) {
+                throw error;
+            }
+            throw new ArxosError(
+                `{{operationId}} failed: ${error.message}`,
+                error.status || 500,
+                '{{operationId}}_ERROR'
+            );
+        }
+    }
+
+    {{/operation}}
+    {{/operations}}
+}
+
+/**
+ * Request configuration interface
+ */
+export interface RequestConfig {
+    method: string;
+    url: string;
+    params?: Record<string, any>;
+    data?: any;
+    headers?: Record<string, string>;
+    timeout?: number;
+    retries?: number;
+}
+
+/**
+ * Client configuration interface
+ */
+export interface ClientConfig {
+    defaultHeaders?: Record<string, string>;
+    timeout?: number;
+    retries?: number;
+}
+
+/**
+ * Authentication configuration
+ */
+export interface AuthConfig {
+    apiKey?: string;
+    accessToken?: string;
+    username?: string;
+    password?: string;
+}
+
+/**
+ * Authentication manager for handling different auth methods
+ */
+export class AuthManager {
+    private config: AuthConfig;
+    private client: {{classname}}Client;
+
+    constructor(client: {{classname}}Client, config: AuthConfig) {
+        this.client = client;
+        this.config = config;
+    }
+
+    /**
+     * Get authentication headers
+     */
+    getHeaders(): Record<string, string> {
+        const headers: Record<string, string> = {};
+        
+        if (this.config.apiKey) {
+            headers['X-API-Key'] = this.config.apiKey;
+        }
+        
+        if (this.config.accessToken) {
+            headers['Authorization'] = `Bearer ${this.config.accessToken}`;
+        }
+        
+        return headers;
+    }
+
+    /**
+     * Authenticate with username and password
+     */
+    async authenticate(username: string, password: string): Promise<string> {
+        try {
+            const response = await this.client.makeRequest('POST', '/auth/login', {
+                username,
+                password
+            });
+            
+            if (response.data?.access_token) {
+                this.config.accessToken = response.data.access_token;
+                this.client.setAuthToken(response.data.access_token);
+                return response.data.access_token;
+            }
+            
+            throw new AuthenticationError('Invalid response format');
+        } catch (error) {
+            throw new AuthenticationError(`Authentication failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Refresh authentication token
+     */
+    async refreshToken(): Promise<string> {
+        if (!this.config.accessToken) {
+            throw new AuthenticationError('No token to refresh');
+        }
+
+        try {
+            const response = await this.client.makeRequest('POST', '/auth/refresh', {
+                token: this.config.accessToken
+            });
+            
+            if (response.data?.access_token) {
+                this.config.accessToken = response.data.access_token;
+                this.client.setAuthToken(response.data.access_token);
+                return response.data.access_token;
+            }
+            
+            throw new AuthenticationError('Invalid refresh response');
+        } catch (error) {
+            throw new AuthenticationError(`Token refresh failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Logout and clear authentication
+     */
+    async logout(): Promise<void> {
+        if (this.config.accessToken) {
+            try {
+                await this.client.makeRequest('POST', '/auth/logout');
+            } catch (error) {
+                // Log error but don't throw - logout should always succeed
+                console.warn('Logout request failed:', error);
+            }
+        }
+        
+        this.config.accessToken = undefined;
+        this.client.clearAuthToken();
+    }
+}
+
+/**
+ * Rate limiting configuration
+ */
+export interface RateLimitConfig {
+    maxRequests: number;
+    windowMs: number;
+    retryAfterMs?: number;
+}
+
+/**
+ * Rate limiter for API requests
+ */
+export class RateLimiter {
+    private config: RateLimitConfig;
+    private requests: number[] = [];
+
+    constructor(config: RateLimitConfig) {
+        this.config = config;
+    }
+
+    /**
+     * Check if request is allowed
+     */
+    async checkLimit(): Promise<boolean> {
+        const now = Date.now();
+        const windowStart = now - this.config.windowMs;
+        
+        // Remove old requests outside the window
+        this.requests = this.requests.filter(time => time > windowStart);
+        
+        if (this.requests.length >= this.config.maxRequests) {
+            return false;
+        }
+        
+        this.requests.push(now);
+        return true;
+    }
+
+    /**
+     * Wait for rate limit to reset
+     */
+    async waitForReset(): Promise<void> {
+        const waitTime = this.config.retryAfterMs || 1000;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+}
+
+/**
+ * Retry configuration
+ */
+export interface RetryConfig {
+    maxRetries: number;
+    retryDelay: number;
+    backoffMultiplier: number;
+    retryableStatusCodes: number[];
+}
+
+/**
+ * Retry handler for failed requests
+ */
+export class RetryHandler {
+    private config: RetryConfig;
+
+    constructor(config: RetryConfig) {
+        this.config = config;
+    }
+
+    /**
+     * Execute request with retry logic
+     */
+    async execute<T>(
+        requestFn: () => Promise<T>,
+        retryCount = 0
+    ): Promise<T> {
+        try {
+            return await requestFn();
+        } catch (error) {
+            if (this.shouldRetry(error, retryCount)) {
+                const delay = this.calculateDelay(retryCount);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this.execute(requestFn, retryCount + 1);
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Check if request should be retried
+     */
+    private shouldRetry(error: any, retryCount: number): boolean {
+        if (retryCount >= this.config.maxRetries) {
+            return false;
+        }
+
+        if (error instanceof ArxosError) {
+            return this.config.retryableStatusCodes.includes(error.statusCode);
+        }
+
+        return false;
+    }
+
+    /**
+     * Calculate retry delay with exponential backoff
+     */
+    private calculateDelay(retryCount: number): number {
+        return this.config.retryDelay * Math.pow(this.config.backoffMultiplier, retryCount);
+    }
+}
+
+/**
+ * Cache configuration
+ */
+export interface CacheConfig {
+    ttl: number;
+    maxSize: number;
+}
+
+/**
+ * Simple in-memory cache for API responses
+ */
+export class ResponseCache {
+    private cache = new Map<string, { data: any; timestamp: number }>();
+    private config: CacheConfig;
+
+    constructor(config: CacheConfig) {
+        this.config = config;
+    }
+
+    /**
+     * Get cached response
+     */
+    get(key: string): any | null {
+        const cached = this.cache.get(key);
+        if (!cached) {
+            return null;
+        }
+
+        if (Date.now() - cached.timestamp > this.config.ttl) {
+            this.cache.delete(key);
+            return null;
+        }
+
+        return cached.data;
+    }
+
+    /**
+     * Set cached response
+     */
+    set(key: string, data: any): void {
+        // Evict oldest entries if cache is full
+        if (this.cache.size >= this.config.maxSize) {
+            const oldestKey = this.cache.keys().next().value;
+            this.cache.delete(oldestKey);
+        }
+
+        this.cache.set(key, {
+            data,
+            timestamp: Date.now()
+        });
+    }
+
+    /**
+     * Clear cache
+     */
+    clear(): void {
+        this.cache.clear();
+    }
+
+    /**
+     * Get cache statistics
+     */
+    getStats(): { size: number; maxSize: number } {
+        return {
+            size: this.cache.size,
+            maxSize: this.config.maxSize
+        };
+    }
+}
+
+/**
+ * Logger interface
+ */
+export interface Logger {
+    debug(message: string, ...args: any[]): void;
+    info(message: string, ...args: any[]): void;
+    warn(message: string, ...args: any[]): void;
+    error(message: string, ...args: any[]): void;
+}
+
+/**
+ * Console logger implementation
+ */
+export class ConsoleLogger implements Logger {
+    debug(message: string, ...args: any[]): void {
+        console.debug(`[DEBUG] ${message}`, ...args);
+    }
+
+    info(message: string, ...args: any[]): void {
+        console.info(`[INFO] ${message}`, ...args);
+    }
+
+    warn(message: string, ...args: any[]): void {
+        console.warn(`[WARN] ${message}`, ...args);
+    }
+
+    error(message: string, ...args: any[]): void {
+        console.error(`[ERROR] ${message}`, ...args);
+    }
+}
+
+/**
+ * Enhanced client with advanced features
+ */
+export class Enhanced{{classname}}Client extends {{classname}}Client {
+    private authManager: AuthManager;
+    private rateLimiter: RateLimiter;
+    private retryHandler: RetryHandler;
+    private cache: ResponseCache;
+    private logger: Logger;
+
+    constructor(
+        baseUrl: string,
+        config?: ClientConfig & {
+            auth?: AuthConfig;
+            rateLimit?: RateLimitConfig;
+            retry?: RetryConfig;
+            cache?: CacheConfig;
+            logger?: Logger;
+        }
+    ) {
+        super(baseUrl, config);
+
+        this.authManager = new AuthManager(this, config?.auth || {});
+        this.rateLimiter = new RateLimiter(config?.rateLimit || {
+            maxRequests: 100,
+            windowMs: 60000,
+            retryAfterMs: 1000
+        });
+        this.retryHandler = new RetryHandler(config?.retry || {
+            maxRetries: 3,
+            retryDelay: 1000,
+            backoffMultiplier: 2,
+            retryableStatusCodes: [429, 500, 502, 503, 504]
+        });
+        this.cache = new ResponseCache(config?.cache || {
+            ttl: 300000, // 5 minutes
+            maxSize: 100
+        });
+        this.logger = config?.logger || new ConsoleLogger();
+    }
+
+    /**
+     * Get authentication manager
+     */
+    getAuthManager(): AuthManager {
+        return this.authManager;
+    }
+
+    /**
+     * Get rate limiter
+     */
+    getRateLimiter(): RateLimiter {
+        return this.rateLimiter;
+    }
+
+    /**
+     * Get cache
+     */
+    getCache(): ResponseCache {
+        return this.cache;
+    }
+
+    /**
+     * Get logger
+     */
+    getLogger(): Logger {
+        return this.logger;
+    }
+
+    /**
+     * Make cached request
+     */
+    async makeCachedRequest<T>(
+        key: string,
+        requestFn: () => Promise<T>
+    ): Promise<T> {
+        const cached = this.cache.get(key);
+        if (cached) {
+            this.logger.debug(`Cache hit for key: ${key}`);
+            return cached;
+        }
+
+        this.logger.debug(`Cache miss for key: ${key}`);
+        const result = await requestFn();
+        this.cache.set(key, result);
+        return result;
+    }
+
+    /**
+     * Make rate-limited request
+     */
+    async makeRateLimitedRequest<T>(
+        requestFn: () => Promise<T>
+    ): Promise<T> {
+        while (!(await this.rateLimiter.checkLimit())) {
+            this.logger.debug('Rate limit reached, waiting...');
+            await this.rateLimiter.waitForReset();
+        }
+
+        return this.retryHandler.execute(requestFn);
+    }
+} 

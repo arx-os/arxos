@@ -1,0 +1,1687 @@
+openapi: 3.0.3
+info:
+  title: SVG-BIM Parser API
+  description: |
+    API for SVG to BIM conversion and management. This service provides comprehensive functionality for:
+    
+    - SVG parsing and symbol recognition
+    - BIM model assembly and management
+    - Export interoperability (IFC, DXF, SVG)
+    - Advanced infrastructure features
+    - Security and access control
+    - AHJ (Authorities Having Jurisdiction) integration
+    - Smart tagging and data structuring
+    - Multi-system integration
+    
+    ## Authentication
+    
+    This API uses JWT Bearer token authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## Rate Limiting
+    
+    - Unauthenticated requests: 100 requests per minute
+    - Authenticated requests: 1000 requests per minute
+    - Admin requests: 2000 requests per minute
+    
+    ## Error Handling
+    
+    All errors follow a consistent format:
+    ```json
+    {
+      "status": "error",
+      "error": {
+        "code": "ERROR_CODE",
+        "message": "Human readable message",
+        "details": {}
+      }
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: Arxos Development Team
+    email: dev@arxos.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8082
+    description: Development server
+  - url: https://api.arxos.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check the health status of the SVG-BIM API service
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and return JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: User registration
+      description: Register a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/symbols:
+    get:
+      tags:
+        - Symbols
+      summary: List symbols
+      description: Get all available symbols with optional filtering
+      parameters:
+        - name: category
+          in: query
+          description: Filter by symbol category
+          schema:
+            type: string
+        - name: system
+          in: query
+          description: Filter by system type
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: List of symbols
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/symbols/{symbol_id}:
+    get:
+      tags:
+        - Symbols
+      summary: Get symbol details
+      description: Get detailed information about a specific symbol
+      parameters:
+        - name: symbol_id
+          in: path
+          required: true
+          description: Symbol identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Symbol details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolResponse'
+        '404':
+          description: Symbol not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/symbols/search:
+    post:
+      tags:
+        - Symbols
+      summary: Search symbols
+      description: Advanced symbol search with multiple criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SymbolSearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolSearchResponse'
+        '400':
+          description: Invalid search criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/symbols/categories:
+    get:
+      tags:
+        - Symbols
+      summary: Get symbol categories
+      description: Get all available symbol categories
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryListResponse'
+
+  /api/v1/symbols/cache:
+    delete:
+      tags:
+        - Symbols
+      summary: Clear symbol cache
+      description: Clear the symbol library cache (admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Cache cleared successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/parse/recognize-symbols:
+    post:
+      tags:
+        - Parsing
+      summary: Recognize symbols in content
+      description: Analyze content and identify building system symbols
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SymbolRecognitionRequest'
+      responses:
+        '200':
+          description: Symbol recognition results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SymbolRecognitionResponse'
+        '400':
+          description: Invalid content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/bim/assemble:
+    post:
+      tags:
+        - BIM
+      summary: Assemble BIM model
+      description: Create a BIM model from SVG data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BIMAssemblyRequest'
+      responses:
+        '200':
+          description: BIM model assembled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BIMAssemblyResponse'
+        '400':
+          description: Invalid SVG data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/bim/export/{format}:
+    get:
+      tags:
+        - BIM
+      summary: Export BIM model
+      description: Export BIM model in various formats (IFC, DXF, SVG, JSON)
+      parameters:
+        - name: format
+          in: path
+          required: true
+          description: Export format
+          schema:
+            type: string
+            enum: [ifc, dxf, svg, json]
+        - name: model_id
+          in: query
+          required: true
+          description: BIM model identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Export successful
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Model not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/infrastructure/svg-groups:
+    post:
+      tags:
+        - Infrastructure
+      summary: Create SVG group
+      description: Create a new SVG group for collaborative editing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SVGGroupRequest'
+      responses:
+        '201':
+          description: SVG group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SVGGroupResponse'
+        '400':
+          description: Invalid group data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/infrastructure/svg-groups/{group_id}:
+    get:
+      tags:
+        - Infrastructure
+      summary: Get SVG group
+      description: Get details of an SVG group
+      parameters:
+        - name: group_id
+          in: path
+          required: true
+          description: Group identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SVG group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SVGGroupResponse'
+        '404':
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/infrastructure/cache/{key}:
+    get:
+      tags:
+        - Infrastructure
+      summary: Get cache entry
+      description: Retrieve a cached value
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Cache key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cached value
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Cache entry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Infrastructure
+      summary: Set cache entry
+      description: Store a value in cache
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Cache key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Value cached successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+    delete:
+      tags:
+        - Infrastructure
+      summary: Delete cache entry
+      description: Remove a cached value
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Cache key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cache entry deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/v1/security/privacy-controls:
+    get:
+      tags:
+        - Security
+      summary: Get privacy controls
+      description: Get current privacy control settings
+      responses:
+        '200':
+          description: Privacy control settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrivacyControlsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/security/audit-trail:
+    get:
+      tags:
+        - Security
+      summary: Get audit trail
+      description: Retrieve audit trail entries
+      parameters:
+        - name: start_date
+          in: query
+          description: Start date for audit trail
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: End date for audit trail
+          schema:
+            type: string
+            format: date-time
+        - name: user_id
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+        - name: event_type
+          in: query
+          description: Filter by event type
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit trail entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditTrailResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/ahj/inspections:
+    post:
+      tags:
+        - AHJ
+      summary: Create inspection
+      description: Create a new AHJ inspection record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionRequest'
+      responses:
+        '201':
+          description: Inspection created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionResponse'
+        '400':
+          description: Invalid inspection data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - AHJ
+      summary: List inspections
+      description: Get list of AHJ inspections
+      parameters:
+        - name: status
+          in: query
+          description: Filter by inspection status
+          schema:
+            type: string
+        - name: inspector_id
+          in: query
+          description: Filter by inspector ID
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of inspections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/ahj/inspections/{inspection_id}:
+    get:
+      tags:
+        - AHJ
+      summary: Get inspection details
+      description: Get detailed information about an inspection
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          description: Inspection identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inspection details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionResponse'
+        '404':
+          description: Inspection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/ahj/inspections/{inspection_id}/annotations:
+    post:
+      tags:
+        - AHJ
+      summary: Add annotation
+      description: Add an annotation to an inspection
+      parameters:
+        - name: inspection_id
+          in: path
+          required: true
+          description: Inspection identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnotationRequest'
+      responses:
+        '201':
+          description: Annotation added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnotationResponse'
+        '400':
+          description: Invalid annotation data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/smart-tagging/tags/assign:
+    post:
+      tags:
+        - Smart Tagging
+      summary: Assign tag
+      description: Assign QR or BLE tag to maintainable object
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagAssignmentRequest'
+      responses:
+        '200':
+          description: Tag assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagAssignmentResponse'
+        '400':
+          description: Invalid tag assignment data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/smart-tagging/tags/scan:
+    post:
+      tags:
+        - Smart Tagging
+      summary: Scan tag
+      description: Scan a QR or BLE tag and return object information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagScanRequest'
+      responses:
+        '200':
+          description: Tag scan results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagScanResponse'
+        '404':
+          description: Tag not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/data/objects:
+    get:
+      tags:
+        - Data Structuring
+      summary: Get structured objects
+      description: Get structured JSON responses with system object lists
+      parameters:
+        - name: object_type
+          in: query
+          description: Filter by object type
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by object status
+          schema:
+            type: string
+        - name: contributor_id
+          in: query
+          description: Filter by contributor ID
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Structured object list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StructuredObjectResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/integration/systems:
+    get:
+      tags:
+        - Multi-System Integration
+      summary: List connected systems
+      description: Get list of connected external systems
+      responses:
+        '200':
+          description: List of connected systems
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/integration/systems/{system_id}/sync:
+    post:
+      tags:
+        - Multi-System Integration
+      summary: Sync system data
+      description: Trigger data synchronization with external system
+      parameters:
+        - name: system_id
+          in: path
+          required: true
+          description: System identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequest'
+      responses:
+        '200':
+          description: Sync initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResponse'
+        '400':
+          description: Invalid sync request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "healthy"
+        message:
+          type: string
+          example: "SVG-BIM API is running"
+        version:
+          type: string
+          example: "1.0.0"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Invalid input data"
+            details:
+              type: object
+              additionalProperties: true
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        password:
+          type: string
+          example: "password123"
+
+    LoginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            refresh_token:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            token_type:
+              type: string
+              example: "bearer"
+            expires_in:
+              type: integer
+              example: 3600
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    UserCreate:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 20
+          pattern: '^[a-zA-Z0-9_]+$'
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        password:
+          type: string
+          minLength: 8
+          example: "securePassword123"
+        full_name:
+          type: string
+          example: "John Doe"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["viewer"]
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: "john_doe"
+        email:
+          type: string
+          example: "john@example.com"
+        full_name:
+          type: string
+          example: "John Doe"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["viewer"]
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    SymbolListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Symbol'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Symbol:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "symbol_001"
+        name:
+          type: string
+          example: "HVAC Vent"
+        category:
+          type: string
+          example: "HVAC"
+        system:
+          type: string
+          example: "HVAC"
+        svg_data:
+          type: string
+          example: "<svg>...</svg>"
+        metadata:
+          type: object
+          additionalProperties: true
+
+    SymbolResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          $ref: '#/components/schemas/Symbol'
+
+    SymbolSearchRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          example: "HVAC vent"
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["HVAC", "Electrical"]
+        systems:
+          type: array
+          items:
+            type: string
+          example: ["HVAC", "Electrical"]
+        confidence_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.8
+
+    SymbolSearchResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SymbolMatch'
+        total_results:
+          type: integer
+          example: 25
+
+    SymbolMatch:
+      type: object
+      properties:
+        symbol:
+          $ref: '#/components/schemas/Symbol'
+        confidence:
+          type: number
+          example: 0.95
+        match_reason:
+          type: string
+          example: "Exact name match"
+
+    CategoryListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            type: string
+          example: ["HVAC", "Electrical", "Plumbing", "Fire Safety"]
+
+    SymbolRecognitionRequest:
+      type: object
+      required:
+        - content
+        - content_type
+      properties:
+        content:
+          type: string
+          example: "<svg>...</svg>"
+        content_type:
+          type: string
+          enum: [svg, text, image]
+          example: "svg"
+        confidence_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.8
+
+    SymbolRecognitionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            recognized_symbols:
+              type: array
+              items:
+                $ref: '#/components/schemas/SymbolMatch'
+            total_recognized:
+              type: integer
+              example: 5
+            symbol_library_info:
+              type: object
+              properties:
+                total_symbols:
+                  type: integer
+                  example: 1000
+                categories:
+                  type: array
+                  items:
+                    type: string
+                  example: ["HVAC", "Electrical"]
+
+    BIMAssemblyRequest:
+      type: object
+      required:
+        - svg_data
+        - user_id
+        - project_id
+      properties:
+        svg_data:
+          type: string
+          example: "<svg>...</svg>"
+        user_id:
+          type: string
+          example: "user_123"
+        project_id:
+          type: string
+          example: "project_456"
+        metadata:
+          type: object
+          additionalProperties: true
+
+    BIMAssemblyResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            model_id:
+              type: string
+              example: "bim_model_789"
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/BIMElement'
+            statistics:
+              type: object
+              properties:
+                total_elements:
+                  type: integer
+                  example: 150
+                rooms:
+                  type: integer
+                  example: 25
+                devices:
+                  type: integer
+                  example: 75
+
+    BIMElement:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "element_001"
+        type:
+          type: string
+          example: "room"
+        name:
+          type: string
+          example: "Conference Room A"
+        geometry:
+          type: object
+          properties:
+            type:
+              type: string
+              example: "Polygon"
+            coordinates:
+              type: array
+              items:
+                type: array
+                items:
+                  type: number
+        properties:
+          type: object
+          additionalProperties: true
+
+    SVGGroupRequest:
+      type: object
+      required:
+        - name
+        - svg_data
+      properties:
+        name:
+          type: string
+          example: "Floor Plan Group"
+        svg_data:
+          type: string
+          example: "<svg>...</svg>"
+        description:
+          type: string
+          example: "Collaborative floor plan editing"
+
+    SVGGroupResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            group_id:
+              type: string
+              example: "group_123"
+            name:
+              type: string
+              example: "Floor Plan Group"
+            created_at:
+              type: string
+              format: date-time
+              example: "2024-01-01T00:00:00Z"
+            participants:
+              type: array
+              items:
+                type: string
+              example: ["user_1", "user_2"]
+
+    PrivacyControlsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            data_classification:
+              type: string
+              example: "confidential"
+            encryption_enabled:
+              type: boolean
+              example: true
+            audit_logging:
+              type: boolean
+              example: true
+            retention_policy:
+              type: object
+              properties:
+                duration_days:
+                  type: integer
+                  example: 365
+                auto_delete:
+                  type: boolean
+                  example: true
+
+    AuditTrailResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "audit_001"
+        event_type:
+          type: string
+          example: "user_login"
+        user_id:
+          type: string
+          example: "user_123"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        details:
+          type: object
+          additionalProperties: true
+
+    InspectionRequest:
+      type: object
+      required:
+        - building_id
+        - inspector_id
+        - inspection_type
+      properties:
+        building_id:
+          type: string
+          example: "building_123"
+        inspector_id:
+          type: string
+          example: "inspector_456"
+        inspection_type:
+          type: string
+          enum: [routine, compliance, emergency]
+          example: "routine"
+        scheduled_date:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:00:00Z"
+        notes:
+          type: string
+          example: "Annual safety inspection"
+
+    InspectionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "inspection_789"
+            building_id:
+              type: string
+              example: "building_123"
+            inspector_id:
+              type: string
+              example: "inspector_456"
+            status:
+              type: string
+              enum: [scheduled, in_progress, completed, failed]
+              example: "scheduled"
+            created_at:
+              type: string
+              format: date-time
+              example: "2024-01-01T00:00:00Z"
+
+    InspectionListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InspectionResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    AnnotationRequest:
+      type: object
+      required:
+        - annotation_type
+        - coordinates
+        - description
+      properties:
+        annotation_type:
+          type: string
+          enum: [violation, note, recommendation]
+          example: "violation"
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        description:
+          type: string
+          example: "Missing fire extinguisher"
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+          example: "high"
+
+    AnnotationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "annotation_001"
+            inspection_id:
+              type: string
+              example: "inspection_789"
+            annotation_type:
+              type: string
+              example: "violation"
+            coordinates:
+              $ref: '#/components/schemas/Coordinates'
+            description:
+              type: string
+              example: "Missing fire extinguisher"
+            created_at:
+              type: string
+              format: date-time
+              example: "2024-01-01T00:00:00Z"
+
+    Coordinates:
+      type: object
+      properties:
+        x:
+          type: number
+          example: 100.5
+        y:
+          type: number
+          example: 200.3
+        floor:
+          type: string
+          example: "floor_1"
+
+    TagAssignmentRequest:
+      type: object
+      required:
+        - object_id
+        - tag_type
+        - tag_data
+        - user_id
+        - device_id
+      properties:
+        object_id:
+          type: string
+          example: "device_123"
+        tag_type:
+          type: string
+          enum: [qr, ble, hybrid]
+          example: "qr"
+        tag_data:
+          type: string
+          example: "ARX_DEVICE_123"
+        user_id:
+          type: string
+          example: "user_456"
+        device_id:
+          type: string
+          example: "device_789"
+        metadata:
+          type: object
+          additionalProperties: true
+
+    TagAssignmentResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            assignment_id:
+              type: string
+              example: "assignment_001"
+            object_id:
+              type: string
+              example: "device_123"
+            tag_id:
+              type: string
+              example: "tag_456"
+            assigned_at:
+              type: string
+              format: date-time
+              example: "2024-01-01T00:00:00Z"
+
+    TagScanRequest:
+      type: object
+      required:
+        - tag_data
+        - device_id
+      properties:
+        tag_data:
+          type: string
+          example: "ARX_DEVICE_123"
+        device_id:
+          type: string
+          example: "device_789"
+        scan_location:
+          $ref: '#/components/schemas/Coordinates'
+
+    TagScanResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            object_id:
+              type: string
+              example: "device_123"
+            object_type:
+              type: string
+              example: "HVAC Vent"
+            object_info:
+              type: object
+              additionalProperties: true
+            last_maintenance:
+              type: string
+              format: date-time
+              example: "2024-01-01T00:00:00Z"
+
+    StructuredObjectResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructuredObject'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    StructuredObject:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "object_123"
+        type:
+          type: string
+          example: "device"
+        name:
+          type: string
+          example: "HVAC Vent A1"
+        status:
+          type: string
+          example: "active"
+        contributor:
+          $ref: '#/components/schemas/Contributor'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Contributor:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "contributor_456"
+        name:
+          type: string
+          example: "John Doe"
+        role:
+          type: string
+          example: "maintenance_technician"
+        reputation_score:
+          type: number
+          example: 4.8
+
+    SystemListResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/System'
+
+    System:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "system_123"
+        name:
+          type: string
+          example: "CMMS System"
+        type:
+          type: string
+          enum: [cmms, erp, scada, bms, iot]
+          example: "cmms"
+        status:
+          type: string
+          enum: [connected, disconnected, error]
+          example: "connected"
+        last_sync:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    SyncRequest:
+      type: object
+      required:
+        - sync_type
+      properties:
+        sync_type:
+          type: string
+          enum: [full, incremental, specific]
+          example: "incremental"
+        data_types:
+          type: array
+          items:
+            type: string
+          example: ["work_orders", "maintenance_schedules"]
+        since:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    SyncResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            sync_id:
+              type: string
+              example: "sync_789"
+            status:
+              type: string
+              enum: [initiated, in_progress, completed, failed]
+              example: "initiated"
+            estimated_duration:
+              type: integer
+              example: 300
+            progress:
+              type: number
+              minimum: 0
+              maximum: 100
+              example: 0
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 100
+        total_pages:
+          type: integer
+          example: 5
+        has_next:
+          type: boolean
+          example: true
+        has_prev:
+          type: boolean
+          example: false
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Symbols
+    description: Symbol library management
+  - name: Parsing
+    description: SVG parsing and symbol recognition
+  - name: BIM
+    description: BIM model assembly and export
+  - name: Infrastructure
+    description: Advanced infrastructure features
+  - name: Security
+    description: Security and privacy controls
+  - name: AHJ
+    description: Authorities Having Jurisdiction integration
+  - name: Smart Tagging
+    description: QR and BLE tag management
+  - name: Data Structuring
+    description: Structured data responses
+  - name: Multi-System Integration
+    description: External system integration 

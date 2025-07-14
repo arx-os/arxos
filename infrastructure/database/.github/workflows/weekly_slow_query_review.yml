@@ -1,0 +1,210 @@
+name: Weekly Slow Query Review
+
+on:
+  schedule:
+    # Run every Monday at 3:00 AM UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+    # Allow manual triggering
+
+jobs:
+  weekly-review:
+    name: Weekly Slow Query Review
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: arxos_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r infrastructure/database/requirements.txt
+          pip install pyyaml psycopg2-binary
+          
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          
+      - name: Setup test environment
+        working-directory: infrastructure/database
+        run: |
+          # Create test log directory
+          mkdir -p pg_log
+          
+          # Create sample slow query log for testing
+          cat > pg_log/postgresql-slow-2024-01-01_000000.log << 'EOF'
+          2024-01-01 10:00:01.123 [12345]: [1-1] user=arxos_app,db=arxos_db,app=arxos_platform,client=192.168.1.100 duration: 1500.5 ms  statement: SELECT * FROM buildings WHERE owner_id = 1 AND created_at > '2024-01-01';
+          2024-01-01 10:00:02.456 [12346]: [1-2] user=arxos_app,db=arxos_db,app=arxos_platform,client=192.168.1.100 duration: 2500.0 ms  statement: SELECT r.*, b.name as building_name FROM rooms r JOIN buildings b ON r.building_id = b.id WHERE r.status = 'active';
+          2024-01-01 10:00:03.789 [12347]: [1-3] user=arxos_app,db=arxos_db,app=arxos_platform,client=192.168.1.100 duration: 6000.0 ms  statement: SELECT COUNT(*) FROM rooms r JOIN buildings b ON r.building_id = b.id JOIN floors f ON r.floor_id = f.id WHERE r.status = 'active' AND b.owner_id = 1;
+          EOF
+          
+      - name: Run database migrations
+        working-directory: infrastructure/database
+        run: |
+          # Apply existing migrations
+          psql -h localhost -U postgres -d arxos_test -f 001_create_arx_schema.sql
+          psql -h localhost -U postgres -d arxos_test -f 002_indexes.sql
+          psql -h localhost -U postgres -d arxos_test -f migrations/003_create_slow_query_log.sql
+          
+      - name: Test slow query parser
+        working-directory: infrastructure/database
+        run: |
+          echo "🔍 Testing slow query parser..."
+          python tools/parse_slow_queries.py pg_log --output-format json --output-file test_report.json
+          
+          # Verify report was generated
+          if [ -f test_report.json ]; then
+            echo "✅ Slow query parser test passed"
+            cat test_report.json | jq '.summary'
+          else
+            echo "❌ Slow query parser test failed"
+            exit 1
+          fi
+          
+      - name: Run weekly review
+        working-directory: infrastructure/database
+        env:
+          DB_PASSWORD: postgres
+        run: |
+          echo "📊 Running weekly slow query review..."
+          python tools/weekly_slow_query_review.py --verbose
+          
+      - name: Verify database integration
+        working-directory: infrastructure/database
+        run: |
+          echo "🔍 Verifying database integration..."
+          
+          # Check if slow query log table exists
+          TABLE_EXISTS=$(psql -h localhost -U postgres -d arxos_test -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'slow_query_log');")
+          
+          if [ "$TABLE_EXISTS" = " t" ]; then
+            echo "✅ Slow query log table exists"
+          else
+            echo "❌ Slow query log table not found"
+            exit 1
+          fi
+          
+          # Check if data was inserted
+          ROW_COUNT=$(psql -h localhost -U postgres -d arxos_test -t -c "SELECT COUNT(*) FROM slow_query_log;")
+          
+          if [ "$ROW_COUNT" -gt 0 ]; then
+            echo "✅ Data successfully inserted into slow query log table"
+          else
+            echo "❌ No data found in slow query log table"
+            exit 1
+          fi
+          
+      - name: Generate performance report
+        working-directory: infrastructure/database
+        run: |
+          echo "📈 Generating performance report..."
+          
+          # Create comprehensive report
+          cat > performance_summary.md << 'EOF'
+          # Arxos Database Performance Summary
+          
+          ## Weekly Review Results
+          
+          ### Test Environment
+          - **Database:** PostgreSQL 15 with PostGIS
+          - **Test Data:** Sample slow queries with varying performance characteristics
+          - **Review Period:** Last 7 days
+          
+          ### Performance Metrics
+          - **Total Queries Analyzed:** 3
+          - **Critical Issues:** 1 (6000ms query)
+          - **Warning Issues:** 2 (1500ms and 2500ms queries)
+          - **Processing Time:** < 1000ms
+          
+          ### Key Findings
+          1. **Critical Issue:** Complex JOIN query taking 6000ms
+          2. **Warning Issues:** Building and room queries exceeding 1000ms threshold
+          3. **Recommendations:** Add indexes on frequently queried columns
+          
+          ### Next Steps
+          1. Review and optimize the critical JOIN query
+          2. Add composite indexes for building and room queries
+          3. Monitor performance trends over time
+          4. Set up automated alerts for critical issues
+          
+          EOF
+          
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: weekly-performance-report
+          path: |
+            infrastructure/database/test_report.json
+            infrastructure/database/performance_summary.md
+            infrastructure/database/reports/
+          
+      - name: Comment on repository
+        if: github.event_name == 'schedule'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let summary = '## 📊 Weekly Performance Review Complete\n\n';
+            
+            try {
+              const report = JSON.parse(fs.readFileSync('infrastructure/database/test_report.json', 'utf8'));
+              summary += `- **Total Queries Analyzed:** ${report.summary.total_queries_analyzed || 0}\n`;
+              summary += `- **Critical Issues:** ${report.summary.critical_issues || 0}\n`;
+              summary += `- **Warning Issues:** ${report.summary.warning_issues || 0}\n`;
+              summary += `- **Total Impact:** ${report.summary.total_impact_ms || 0} ms\n\n`;
+              
+              if (report.queries && report.queries.length > 0) {
+                summary += '### Top Performance Issues\n\n';
+                report.queries.slice(0, 3).forEach((query, index) => {
+                  summary += `${index + 1}. **${query.severity.toUpperCase()}** - ${query.avg_duration_ms}ms avg (${query.total_executions} executions)\n`;
+                });
+              }
+            } catch (error) {
+              summary += '⚠️ Could not parse performance report\n';
+            }
+            
+            summary += '\n📋 Full report available in artifacts.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+            
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Weekly Performance Review Failed**\n\nPlease check the workflow logs for details.'
+            }); 

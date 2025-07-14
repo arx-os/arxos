@@ -735,6 +735,374 @@
           "Integration testing covers 95%+ of use cases",
           "Security testing passes with no critical vulnerabilities"
         ]
+      },
+      {
+        "id": "contract_testing_pipeline",
+        "title": "Contract Testing Pipeline",
+        "goal": "Implement a robust contract testing pipeline to ensure all services conform to OpenAPI specifications and maintain compatibility across service boundaries.",
+        "key_tasks": [
+          "Set up contracts/ directory and collect all OpenAPI specs",
+          "Integrate OpenAPI validation tools (swagger-cli, spectral)",
+          "Implement provider contract tests for each service (Dredd, Schemathesis)",
+          "Implement consumer-driven contract tests (Pact)",
+          "Automate contract validation and test runs in CI/CD (GitHub Actions)",
+          "Add backward compatibility checks for OpenAPI changes",
+          "Automate SDK contract tests (generated clients)",
+          "Integrate monitoring/alerting for contract failures"
+        ],
+        "owner": "QA lead + DevOps, supported by backend and SDK teams",
+        "success_criteria": [
+          "100% endpoint coverage in contract tests",
+          "0 breaking changes deployed to production",
+          "<1% contract test failures in CI",
+          "Contract test results published as build artifacts"
+        ],
+        "implementation_details": {
+          "phases": [
+            "Phase 1: Foundation (Week 1-2) - Directory, OpenAPI validation",
+            "Phase 2: Provider contract tests (Week 3-4)",
+            "Phase 3: Consumer contract tests (Week 5-6)",
+            "Phase 4: CI/CD integration (Week 7-8)",
+            "Phase 5: Advanced features, monitoring (Week 9-10)"
+          ],
+          "tools": [
+            "swagger-cli",
+            "spectral",
+            "Dredd",
+            "Schemathesis",
+            "Pact",
+            "GitHub Actions"
+          ],
+          "directory_structure": "contracts/ with openapi/, provider_tests/, consumer_tests/, pact/",
+          "ci_cd": ".github/workflows/contract-testing.yml for automated validation and reporting"
+        }
+      },
+      {
+        "id": "swagger_ui_websockets_monitoring",
+        "title": "Swagger UI Deployment, WebSocket Real-time Features & Comprehensive Monitoring",
+        "goal": "Deploy interactive Swagger UI for each service, implement real-time features with WebSockets, and establish comprehensive monitoring and analytics across the Arxos platform.",
+        "key_tasks": [
+          "Deploy Swagger UI for all services (Backend, SVG Parser, CMMS, Database)",
+          "Implement WebSocket connections for real-time updates and notifications",
+          "Set up comprehensive monitoring with Prometheus, Grafana, and alerting",
+          "Add real-time analytics dashboards and performance metrics",
+          "Implement distributed tracing with OpenTelemetry",
+          "Create custom Swagger UI themes and branding",
+          "Add WebSocket authentication and rate limiting",
+          "Set up log aggregation and analysis (ELK stack)",
+          "Implement health checks and service discovery",
+          "Add business metrics and KPI tracking"
+        ],
+        "owner": "DevOps lead + Backend engineers, supported by frontend and monitoring teams",
+        "success_criteria": [
+          "All services have interactive Swagger UI accessible at /docs",
+          "Real-time updates work across all services with <100ms latency",
+          "99.9% uptime with comprehensive monitoring coverage",
+          "Alert response time <5 minutes for critical issues",
+          "Performance metrics visible in real-time dashboards"
+        ],
+        "implementation_details": {
+          "phases": [
+            "Phase 1: Swagger UI Deployment (Week 1-2) - Setup, customization, branding",
+            "Phase 2: WebSocket Infrastructure (Week 3-4) - Connection management, authentication",
+            "Phase 3: Real-time Features (Week 5-6) - Live updates, notifications, collaboration",
+            "Phase 4: Monitoring Foundation (Week 7-8) - Prometheus, Grafana, alerting",
+            "Phase 5: Analytics & Observability (Week 9-10) - Tracing, logging, dashboards"
+          ],
+          "tools": [
+            "Swagger UI",
+            "WebSocket (gorilla/websocket)",
+            "Prometheus",
+            "Grafana",
+            "OpenTelemetry",
+            "ELK Stack (Elasticsearch, Logstash, Kibana)",
+            "AlertManager",
+            "Service Mesh (optional)"
+          ],
+          "services_coverage": [
+            "arx-backend:8080/docs",
+            "svg-parser:8082/docs", 
+            "cmms-service:8081/docs",
+            "database-infra:8083/docs"
+          ],
+          "real_time_features": [
+            "Live building updates",
+            "Real-time collaboration",
+            "Instant notifications",
+            "Live performance metrics",
+            "Real-time error tracking"
+          ],
+          "monitoring_metrics": [
+            "Application metrics (response time, throughput, error rates)",
+            "Infrastructure metrics (CPU, memory, disk, network)",
+            "Business metrics (user activity, feature usage, conversions)",
+            "Custom metrics (building operations, CMMS sync status)"
+          ]
+        }
+      },
+      {
+        "id": "api_gateway_100pct_coverage",
+        "title": "API Gateway 100% Coverage - Remaining/Optional Items",
+        "goal": "Ensure the API Gateway implementation is fully covered, robust, and production-ready.",
+        "key_tasks": [
+          "Ensure all test functions in the gateway test suite are fully implemented and run regularly (CI/CD).",
+          "Confirm security/penetration tests are run and results are reviewed.",
+          "Document and test backup and recovery procedures for the gateway.",
+          "Review and update all gateway documentation (features, configuration, deployment).",
+          "Regularly review and update monitoring/alerting configuration and documentation.",
+          "Maintain up-to-date onboarding and operational runbooks for the gateway.",
+          "Periodically review and update production deployment configuration (docker, env, CI/CD).",
+          "Ensure all new features are covered by tests and documentation.",
+          "Track and address any technical debt or TODOs in the gateway codebase.",
+          "Review and update fallback and error handling policies as the system evolves."
+        ],
+        "owner": "Gateway engineering team (Go, DevOps, QA)",
+        "success_criteria": [
+          "All gateway features are covered by automated tests and documentation.",
+          "Security and backup procedures are tested and documented.",
+          "Monitoring, alerting, and deployment configs are current and effective.",
+          "Technical debt and TODOs are tracked and resolved in a timely manner."
+        ]
+      },
+      {
+        "id": "sdk_comprehensive_implementation_plan",
+        "title": "SDK Comprehensive Implementation Plan (From CLIENT_SDK_GENERATION_PLAN.md)",
+        "goal": "Implement comprehensive client SDK generation framework for all Arxos services with multi-language support, automated testing, and production deployment.",
+        "key_tasks": [
+          "Phase 1: Foundation (Week 1-2) - SDK generation infrastructure and basic SDKs",
+          "Phase 2: Multi-Language Support (Week 3-4) - TypeScript, Python, Go, Java, C#, PHP",
+          "Phase 3: Testing & Quality (Week 5-6) - Unit tests, integration tests, code quality",
+          "Phase 4: Documentation & Examples (Week 7-8) - Auto-generated docs, examples, tutorials",
+          "Phase 5: CI/CD & Automation (Week 9-10) - GitHub Actions, package publishing, monitoring",
+          "Phase 6: Advanced Features (Week 11-12) - Retry, caching, interceptors, performance optimization"
+        ],
+        "owner": "SDK engineering team (TypeScript, Python, Go, Java, C#, PHP specialists)",
+        "success_criteria": [
+          "SDKs generated for all 4 core services (Backend, SVG Parser, CMMS, Database)",
+          "Support for 6+ programming languages with comprehensive test coverage (>90%)",
+          "Auto-generated documentation with examples and interactive playground",
+          "CI/CD pipeline for automated releases and package publishing",
+          "Advanced features: retry, caching, interceptors, performance monitoring"
+        ],
+        "implementation_details": {
+          "service_coverage": [
+            "Arx Backend API (Go/Chi) - 150+ endpoints, 50+ schemas",
+            "SVG Parser API (Python/FastAPI) - 20+ endpoints, 15+ schemas", 
+            "CMMS Service API (Go) - 30+ endpoints, 10+ schemas",
+            "Database Infrastructure API (Python/Alembic) - 15+ endpoints, 8+ schemas"
+          ],
+          "language_support": [
+            "TypeScript/JavaScript (npm package)",
+            "Python (PyPI package)", 
+            "Go (Go modules)",
+            "Java (Maven Central)",
+            "C# (NuGet package)",
+            "PHP (Composer package)"
+          ],
+          "generation_framework": {
+            "main_generator": "sdk/generator/generator.py",
+            "openapi_tools": "OpenAPI Generator CLI",
+            "custom_templates": "sdk/generator/templates/",
+            "configuration": "sdk/generator/config/generator.yaml",
+            "service_definitions": "sdk/generator/config/services.yaml"
+          },
+          "testing_strategy": {
+            "unit_tests": "sdk/tests/unit/",
+            "integration_tests": "sdk/tests/integration/",
+            "performance_tests": "sdk/tests/performance/",
+            "mock_servers": "sdk/tests/mocks/",
+            "coverage_target": ">90%"
+          },
+          "documentation_generation": {
+            "auto_generated_docs": "sdk/docs/api/",
+            "sdk_documentation": "sdk/docs/sdk/",
+            "examples": "sdk/docs/examples/",
+            "tutorials": "sdk/docs/tutorials/",
+            "interactive_playground": "sdk/docs/playground/"
+          },
+          "ci_cd_pipeline": {
+            "github_actions": "sdk/scripts/ci/",
+            "automated_testing": "Unit, integration, performance tests",
+            "quality_gates": "Code coverage, linting, security scanning",
+            "package_publishing": "npm, PyPI, Maven Central, NuGet, Composer",
+            "monitoring": "Build status, performance metrics, usage analytics"
+          },
+          "advanced_features": {
+            "retry_mechanisms": "Exponential backoff, circuit breaker patterns",
+            "caching": "TTL, cache invalidation, distributed caching",
+            "interceptors": "Request/response logging, authentication, transformation",
+            "middleware": "Custom authentication, rate limiting, error handling",
+            "performance": "Connection pooling, compression, monitoring",
+            "developer_experience": "IDE support, debugging tools, hot reloading"
+          }
+        }
+      },
+      {
+        "id": "sdk_phase6_advanced_features",
+        "title": "SDK Phase 6: Advanced Features & Optimizations",
+        "goal": "Implement advanced SDK features, performance optimizations, and enhanced developer experience tools to complete the SDK generation framework.",
+        "key_tasks": [
+          "Implement retry mechanisms with exponential backoff and circuit breaker patterns",
+          "Add intelligent caching with TTL, cache invalidation, and distributed caching support",
+          "Create request/response interceptors for logging, authentication, and transformation",
+          "Implement middleware support for custom authentication, rate limiting, and error handling",
+          "Optimize HTTP clients with connection pooling, keep-alive, and compression",
+          "Add performance monitoring with metrics collection and real-time dashboards",
+          "Implement request/response compression (gzip, deflate) for bandwidth optimization",
+          "Create advanced error handling with detailed error messages and recovery suggestions",
+          "Add IDE support with IntelliSense, auto-completion, and debugging tools",
+          "Implement hot reloading for development with live code updates",
+          "Create development utilities for local testing, mocking, and debugging",
+          "Add advanced logging with structured logging and log levels",
+          "Implement rate limiting with token bucket and sliding window algorithms",
+          "Add request batching and bulk operations for improved performance",
+          "Create SDK health checks and self-diagnostic tools",
+          "Implement advanced authentication with OAuth2, JWT, and API key rotation",
+          "Add request signing and HMAC validation for enhanced security",
+          "Create SDK telemetry and usage analytics for insights",
+          "Implement feature flags and A/B testing capabilities",
+          "Add backward compatibility layers for API versioning"
+        ],
+        "owner": "SDK engineering team (TypeScript, Python, Go specialists)",
+        "success_criteria": [
+          "SDK performance improved by 50% with optimizations",
+          "Developer experience score > 4.8/5 based on feedback",
+          "Advanced features work across all 6 supported languages",
+          "Performance monitoring provides real-time insights",
+          "IDE support available for major IDEs (VS Code, IntelliJ, etc.)"
+        ],
+        "implementation_details": {
+          "phases": [
+            "Phase 6.1: Advanced Features (Week 1-2) - Retry, caching, interceptors",
+            "Phase 6.2: Performance Optimization (Week 3-4) - HTTP optimization, compression",
+            "Phase 6.3: Developer Experience (Week 5-6) - IDE support, debugging tools",
+            "Phase 6.4: Advanced Security (Week 7-8) - Authentication, signing, telemetry",
+            "Phase 6.5: Production Readiness (Week 9-10) - Monitoring, health checks, compatibility"
+          ],
+          "advanced_features": [
+            "Retry mechanisms with exponential backoff",
+            "Intelligent caching with TTL and invalidation",
+            "Request/response interceptors",
+            "Middleware support for custom logic",
+            "Connection pooling and keep-alive",
+            "Request/response compression",
+            "Advanced error handling and recovery",
+            "IDE support and debugging tools",
+            "Hot reloading for development",
+            "Rate limiting and request batching",
+            "Advanced authentication and security",
+            "SDK telemetry and analytics"
+          ],
+          "performance_optimizations": [
+            "HTTP client optimization",
+            "Connection pooling",
+            "Request compression",
+            "Response caching",
+            "Bulk operations",
+            "Parallel request handling",
+            "Memory usage optimization",
+            "Network latency reduction"
+          ],
+          "developer_experience": [
+            "IntelliSense and auto-completion",
+            "Debugging tools and utilities",
+            "Local testing and mocking",
+            "Hot reloading capabilities",
+            "Comprehensive documentation",
+            "Interactive examples",
+            "Error recovery suggestions",
+            "Development utilities"
+          ]
+        }
+      },
+      {
+        "id": "sdk_remaining_tasks",
+        "title": "SDK Generation - Remaining/Optional Tasks",
+        "goal": "Complete any remaining SDK generation tasks and ensure comprehensive coverage of all features and optimizations.",
+        "key_tasks": [
+          "Implement advanced language-specific optimizations for each supported language",
+          "Add comprehensive benchmarking and performance testing for all SDKs",
+          "Create advanced documentation generators with interactive examples",
+          "Implement SDK versioning and migration tools for breaking changes",
+          "Add comprehensive error handling and recovery mechanisms",
+          "Create SDK testing frameworks with mock servers and test data",
+          "Implement advanced security features (encryption, signing, audit logging)",
+          "Add comprehensive monitoring and observability for SDK usage",
+          "Create SDK deployment automation for all package registries",
+          "Implement SDK analytics and usage tracking for insights",
+          "Add comprehensive CI/CD pipelines for SDK testing and deployment",
+          "Create SDK maintenance and update automation",
+          "Implement SDK compatibility testing across different environments",
+          "Add comprehensive SDK documentation with tutorials and guides",
+          "Create SDK community tools and contribution guidelines",
+          "Implement SDK performance profiling and optimization tools",
+          "Add comprehensive SDK security scanning and vulnerability detection",
+          "Create SDK backup and recovery procedures",
+          "Implement SDK disaster recovery and business continuity",
+          "Add comprehensive SDK compliance and regulatory features"
+        ],
+        "owner": "SDK engineering team + DevOps + Security",
+        "success_criteria": [
+          "All SDK features are fully implemented and tested",
+          "Performance benchmarks show optimal results across all languages",
+          "Security scanning passes with no critical vulnerabilities",
+          "Documentation coverage is 100% with interactive examples",
+          "CI/CD pipelines are fully automated and reliable"
+        ],
+        "implementation_details": {
+          "completed_from_plan": [
+            "SDK generation framework structure (sdk/generator/)",
+            "OpenAPI specification coverage for all 4 services",
+            "Multi-language support planning (TypeScript, Python, Go, Java, C#, PHP)",
+            "Testing strategy definition (unit, integration, performance)",
+            "Documentation generation framework",
+            "CI/CD pipeline planning (GitHub Actions)",
+            "Advanced features specification (retry, caching, interceptors)"
+          ],
+          "remaining_features": [
+            "Phase 1: Foundation implementation (SDK generation infrastructure)",
+            "Phase 2: Multi-language SDK generation (TypeScript, Python, Go, Java, C#, PHP)",
+            "Phase 3: Testing implementation (unit, integration, performance tests)",
+            "Phase 4: Documentation generation (auto-generated docs, examples)",
+            "Phase 5: CI/CD implementation (GitHub Actions, package publishing)",
+            "Phase 6: Advanced features (retry, caching, interceptors, performance optimization)",
+            "Advanced language-specific optimizations",
+            "Comprehensive benchmarking and performance testing",
+            "SDK versioning and migration tools",
+            "Advanced security features (encryption, signing, audit logging)",
+            "Comprehensive monitoring and observability",
+            "SDK deployment automation for all package registries",
+            "SDK analytics and usage tracking",
+            "SDK maintenance and update automation",
+            "SDK compatibility testing across environments",
+            "SDK community tools and contribution guidelines",
+            "SDK performance profiling and optimization tools",
+            "SDK security scanning and vulnerability detection",
+            "SDK backup and recovery procedures",
+            "SDK disaster recovery and business continuity",
+            "SDK compliance and regulatory features"
+          ],
+          "quality_assurance": [
+            "Comprehensive testing implementation",
+            "Performance benchmarking execution",
+            "Security scanning integration",
+            "Documentation review process",
+            "Code quality checks automation",
+            "Compatibility testing framework",
+            "Deployment verification procedures",
+            "Monitoring validation setup"
+          ],
+          "maintenance": [
+            "Regular updates automation",
+            "Security patches workflow",
+            "Performance monitoring implementation",
+            "Usage analytics collection",
+            "Community support system",
+            "Documentation updates automation",
+            "Compatibility maintenance procedures",
+            "Disaster recovery implementation"
+          ]
+        }
       }
     ]
   }

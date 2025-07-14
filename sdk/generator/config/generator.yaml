@@ -1,0 +1,113 @@
+# SDK Generator Configuration
+generator:
+  version: "1.0.0"
+  output_dir: "../generated"
+  template_dir: "./templates"
+  validate_specs: true
+  format_code: true
+  add_examples: true
+
+# Supported Languages
+languages:
+  - typescript
+  - python
+  - go
+  - java
+  - csharp
+  - php
+
+# Language-specific configurations
+language_configs:
+  typescript:
+    generator: "typescript-fetch"
+    additional_properties:
+      supportsES6: true
+      npmName: "@arxos/api-client"
+      npmVersion: "1.0.0"
+      npmRepository: "https://registry.npmjs.org/"
+      withInterfaces: true
+      nullSafe: true
+      stringEnums: true
+    template_dir: "./templates/typescript"
+    
+  python:
+    generator: "python"
+    additional_properties:
+      packageName: "arxos_api_client"
+      packageVersion: "1.0.0"
+      packageUrl: "https://pypi.org/project/arxos-api-client/"
+      packageAuthor: "Arxos Team"
+      packageAuthorEmail: "support@arxos.com"
+      packageDescription: "Arxos API Client for Python"
+      pythonVersion: "3.8"
+      withInterfaces: true
+    template_dir: "./templates/python"
+    
+  go:
+    generator: "go"
+    additional_properties:
+      moduleName: "github.com/arxos/api-client"
+      moduleVersion: "v1.0.0"
+      moduleUrl: "https://github.com/arxos/api-client"
+      withInterfaces: true
+      withGoModules: true
+      withSeparateModelsAndApi: true
+    template_dir: "./templates/go"
+    
+  java:
+    generator: "java"
+    additional_properties:
+      groupId: "com.arxos"
+      artifactId: "api-client"
+      artifactVersion: "1.0.0"
+      artifactUrl: "https://maven.org/"
+      artifactDescription: "Arxos API Client for Java"
+      withInterfaces: true
+      useBeanValidation: true
+      useOptional: true
+    template_dir: "./templates/java"
+    
+  csharp:
+    generator: "csharp"
+    additional_properties:
+      packageName: "Arxos.ApiClient"
+      packageVersion: "1.0.0"
+      packageUrl: "https://nuget.org/packages/Arxos.ApiClient/"
+      packageTitle: "Arxos API Client"
+      packageDescription: "Arxos API Client for .NET"
+      withInterfaces: true
+      useDateTimeOffset: true
+      useCollection: true
+    template_dir: "./templates/csharp"
+    
+  php:
+    generator: "php"
+    additional_properties:
+      packageName: "arxos/api-client"
+      packageVersion: "1.0.0"
+      packageUrl: "https://packagist.org/packages/arxos/api-client"
+      packageDescription: "Arxos API Client for PHP"
+      withInterfaces: true
+      useDateTimeType: true
+    template_dir: "./templates/php"
+
+# Testing configuration
+testing:
+  unit_tests: true
+  integration_tests: true
+  examples: true
+  coverage_threshold: 90
+
+# Documentation configuration
+documentation:
+  generate_docs: true
+  include_examples: true
+  interactive_docs: true
+  api_explorer: true
+
+# CI/CD configuration
+ci_cd:
+  auto_generate: true
+  auto_test: true
+  auto_publish: true
+  version_management: true 

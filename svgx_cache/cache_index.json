@@ -1,0 +1,24 @@
+{
+  "expensive_key": {
+    "created_at": 1752529865.8581529,
+    "accessed_at": 1752530029.3335457,
+    "access_count": 5,
+    "size_bytes": 73,
+    "ttl_seconds": null,
+    "compressed": true,
+    "svgx_type": "svgx_compiled",
+    "svgx_namespace": "default",
+    "svgx_user_id": null
+  },
+  "svgx:svgx_symbol:test_namespace:cfe5d472796cb7c9": {
+    "created_at": 1752530029.3432932,
+    "accessed_at": 1752530029.3432949,
+    "access_count": 0,
+    "size_bytes": 82,
+    "ttl_seconds": null,
+    "compressed": true,
+    "svgx_type": "svgx_symbol",
+    "svgx_namespace": "test_namespace",
+    "svgx_user_id": null
+  }
+}

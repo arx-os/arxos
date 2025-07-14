@@ -1,0 +1,37 @@
+{{#operations}}
+{{#operation}}
+/**
+ * {{summary}}
+ * {{notes}}
+ */
+export const {{operationId}} = async (
+    {{#parameters}}
+    {{paramName}}{{^required}}?{{/required}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}},
+    {{/parameters}}
+    config?: RequestConfig
+): Promise<{{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}void{{/returnType}}> => {
+    const url = `{{{path}}}`{{#pathParams}}.replace(/\{([^}]+)\}/g, (match, param) => {
+        return String({{paramName}});
+    }){{/pathParams}};
+    
+    const requestConfig: RequestConfig = {
+        method: '{{httpMethod}}',
+        url,
+        {{#hasQueryParams}}
+        params: {
+            {{#queryParams}}
+            {{paramName}},
+            {{/queryParams}}
+        },
+        {{/hasQueryParams}}
+        {{#hasBodyParam}}
+        data: {{bodyParam.paramName}},
+        {{/hasBodyParam}}
+        ...config
+    };
+    
+    return makeRequest(requestConfig);
+};
+
+{{/operation}}
+{{/operations}} 

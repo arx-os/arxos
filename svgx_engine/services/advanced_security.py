@@ -30,8 +30,15 @@ import re
 
 from structlog import get_logger
 
-from ..utils.errors import SecurityError, ValidationError
-from .access_control import AccessControlService
+try:
+    from ..utils.errors import SecurityError, ValidationError
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.errors import SecurityError, ValidationError
+from .access_control import SVGXAccessControlService
 
 logger = get_logger()
 
@@ -1208,7 +1215,7 @@ class RBACService:
             }
 
 
-class AdvancedSecurityService:
+class SVGXAdvancedSecurityService:
     """Main advanced security service for SVGX engine"""
     
     def __init__(self):
@@ -1219,7 +1226,7 @@ class AdvancedSecurityService:
         self.encryption_service = EncryptionService()
         self.audit_trail = AuditTrailService()
         self.rbac_service = RBACService()
-        self.access_control = AccessControlService()
+        self.access_control = SVGXAccessControlService()
         
         # Metrics tracking
         self.metrics = SecurityMetrics()

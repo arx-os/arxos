@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 import structlog
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = structlog.get_logger(__name__)
 
@@ -204,7 +204,7 @@ def create_request_context(request: Request) -> Dict[str, Any]:
         "user_agent": get_user_agent(request),
         "headers": get_request_headers(request),
         "params": get_request_params(request),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 def log_request(request: Request, response: Optional[JSONResponse] = None, 
@@ -319,8 +319,10 @@ def extract_api_version(request: Request) -> str:
     
     # Check URL path
     path_parts = request.url.path.split("/")
-    if len(path_parts) > 1 and path_parts[1].startswith("v"):
-        return path_parts[1]
+    # Look for version pattern like /api/v2/...
+    for i, part in enumerate(path_parts):
+        if part == "api" and i + 1 < len(path_parts) and path_parts[i + 1].startswith("v"):
+            return path_parts[i + 1]
     
     # Default version
     return "v1"
@@ -396,5 +398,5 @@ def create_request_summary(request: Request) -> Dict[str, Any]:
         "user_agent": get_user_agent(request),
         "content_type": request.headers.get("content-type"),
         "content_length": request.headers.get("content-length"),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     } 

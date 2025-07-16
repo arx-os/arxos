@@ -1,0 +1,73 @@
+{
+    "document": "svgx_cad_parity_spec.json",
+    "version": "1.0",
+    "description": "Outlines the parity goals for SVGX Engine to operate at or beyond traditional CAD system behavior for infrastructure modeling and simulation",
+    "comparison_targets": ["AutoCAD", "Revit", "MicroStation", "FreeCAD", "DraftSight"],
+    "scope": {
+      "integration": {
+        "CAD_API_Integration": false,
+        "CAD_File_Conversion": true
+      },
+      "core_behavior": true,
+      "symbol_logic": true,
+      "geometry_engine": true
+    },
+    "parity_matrix": {
+      "geometry_engine": {
+        "precision_modeling": "✅ sub-millimeter float precision (SVG-compatible)",
+        "object_snapping": "✅ point/edge/midpoint/grid snapping",
+        "layer_management": "✅ full support with visibility toggles, colors, filters",
+        "dimensioning": "✅ linear, radial, angular, aligned",
+        "geometry_editing": "✅ boolean ops, trim, extend, fillet, offset, scale, rotate"
+      },
+      "symbol_management": {
+        "parametric_symbols": "✅ supports rules-based and state-based symbol logic",
+        "symbol_library": "✅ customizable, reusable, SVGX-native symbol format",
+        "versioning": "✅ versioned symbols with mutation audit trail",
+        "dependency_chains": "✅ detects upstream/downstream symbol relationships"
+      },
+      "user_interface_behavior": {
+        "viewcube_navigation": "✅ ViewCube analog with XY/XZ/YZ orientation planes",
+        "zoom_pan_orbit": "✅ mouse & gesture support for viewport control",
+        "snap_to_grid": "✅ grid-based drawing constraints",
+        "guides_and_rulers": "✅ screen guides, measurement rulers, and snap lines"
+      },
+      "data_binding": {
+        "metadata_tags": "✅ object-level and system-level tags, attributes",
+        "behavior_profiles": "✅ simulation-ready variable sets for logic modeling",
+        "external_bindings": "✅ supports dynamic values (IoT or CMMS linked)"
+      },
+      "file_conversion": {
+        "import_svg": "✅ native",
+        "export_svgx": "✅ native",
+        "import_dxf": "🚧 roadmap Q4 2025",
+        "export_dxf": "🚧 roadmap Q4 2025",
+        "import_ifc": "🚧 limited early access",
+        "export_ifc": "🚧 roadmap Q1 2026"
+      },
+      "simulation_layer": {
+        "logical_simulation": "✅ supports electrical, mechanical, network behavior profiles",
+        "visual_overlays": "✅ real-time state coloring, labels, animations",
+        "layer_interactions": "✅ vertical and horizontal system mapping"
+      },
+      "extensibility": {
+        "plugin_support": "✅ via ArxIDE and CLI-based modules",
+        "open_file_format": "✅ SVGX is human-readable and spec-driven",
+        "third_party_embedding": "✅ lightweight SVGX runtime embeddable in other apps"
+      },
+      "not_supported": {
+        "3D_Mesh_Modeling": "❌ (2.5D object stacking only — not full 3D mesh surfaces)",
+        "BIM_Revit_Parametrics": "❌ (No proprietary family support)",
+        "Live_CAD_APIs": "❌ No AutoCAD, Revit, or BIM360 API integration",
+        "Raytrace_Rendering": "❌ Not intended for photorealistic output"
+      }
+    },
+    "strategic_advantage": [
+      "No vendor lock-in (open spec)",
+      "Built-in symbolic logic and simulations",
+      "CLI and offline-mode friendly",
+      "Supports construction, maintenance, and system diagnostics",
+      "Lightweight engine embeddable in web and mobile apps"
+    ]
+  }
+  

@@ -3,7 +3,7 @@ Tests for arx_common.date_utils module.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from arx_common.date_utils import (
     get_current_timestamp,
     get_current_timestamp_iso,
@@ -122,11 +122,11 @@ class TestDateUtils:
     def test_is_timestamp_recent(self):
         """Test checking if timestamp is recent."""
         # Recent timestamp
-        recent = datetime.utcnow() - timedelta(minutes=2)
+        recent = datetime.now(timezone.utc) - timedelta(minutes=2)
         assert is_timestamp_recent(recent, max_age_minutes=5) is True
         
         # Old timestamp
-        old = datetime.utcnow() - timedelta(minutes=10)
+        old = datetime.now(timezone.utc) - timedelta(minutes=10)
         assert is_timestamp_recent(old, max_age_minutes=5) is False
     
     def test_is_timestamp_recent_none(self):
@@ -135,7 +135,7 @@ class TestDateUtils:
     
     def test_get_relative_time_description(self):
         """Test getting relative time description."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Just now
         just_now = now - timedelta(seconds=30)

@@ -20,8 +20,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 # Import SVGX-specific utilities
-from ..utils.errors import AccessControlError, ValidationError
-from ..utils import errors
+try:
+    from ..utils.errors import AccessControlError, ValidationError
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.errors import AccessControlError, ValidationError
 
 logger = structlog.get_logger(__name__)
 
@@ -147,7 +153,7 @@ class AuditLog:
     success: bool
     svgx_context: Dict[str, Any] = field(default_factory=dict)  # SVGX-specific context
 
-class AccessControlService:
+class SVGXAccessControlService:
     """Comprehensive access control service with RBAC and SVGX support."""
     
     def __init__(self, db_path: str = "data/access_control.db"):

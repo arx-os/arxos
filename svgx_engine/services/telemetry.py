@@ -23,7 +23,14 @@ from datetime import datetime, timedelta
 
 from structlog import get_logger
 
-from ..utils.errors import TelemetryError, ValidationError
+try:
+    from ..utils.errors import TelemetryError, ValidationError
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.errors import TelemetryError, ValidationError
 
 logger = get_logger(__name__)
 

@@ -32,7 +32,14 @@ from pathlib import Path
 
 from structlog import get_logger
 
-from ..utils.errors import CacheError, ValidationError
+try:
+    from ..utils.errors import CacheError, ValidationError
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.errors import CacheError, ValidationError
 
 logger = get_logger(__name__)
 
@@ -860,7 +867,7 @@ class DatabaseCache:
             pass
 
 
-class AdvancedCachingSystem:
+class SVGXAdvancedCachingService:
     """Multi-level caching system optimized for SVGX operations"""
     
     def __init__(self, memory_cache_size_mb: int = 100, disk_cache_size_mb: int = 1000,

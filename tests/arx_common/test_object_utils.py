@@ -29,7 +29,7 @@ from arx_common.object_utils import (
 
 
 @dataclass
-class TestObject:
+class ObjectTestData:
     """Test dataclass for object utilities."""
     id: str
     name: str
@@ -147,7 +147,7 @@ class TestObjectUtils:
     
     def test_object_to_dict_dataclass(self):
         """Test converting dataclass to dictionary."""
-        obj = TestObject(id="1", name="test", value=42)
+        obj = ObjectTestData(id="1", name="test", value=42)
         result = object_to_dict(obj)
         
         assert result["id"] == "1"
@@ -175,9 +175,9 @@ class TestObjectUtils:
     def test_dict_to_object_dataclass(self):
         """Test converting dictionary to dataclass."""
         data = {"id": "1", "name": "test", "value": 42}
-        result = dict_to_object(data, TestObject)
+        result = dict_to_object(data, ObjectTestData)
         
-        assert isinstance(result, TestObject)
+        assert isinstance(result, ObjectTestData)
         assert result.id == "1"
         assert result.name == "test"
         assert result.value == 42
@@ -233,8 +233,8 @@ class TestObjectUtils:
     
     def test_compare_objects(self):
         """Test comparing objects."""
-        obj1 = TestObject(id="1", name="John", value=30)
-        obj2 = TestObject(id="1", name="Jane", value=30)
+        obj1 = ObjectTestData(id="1", name="John", value=30)
+        obj2 = ObjectTestData(id="1", name="Jane", value=30)
         
         differences = compare_objects(obj1, obj2)
         
@@ -245,8 +245,8 @@ class TestObjectUtils:
     
     def test_compare_objects_with_ignore(self):
         """Test comparing objects with ignored fields."""
-        obj1 = TestObject(id="1", name="John", value=30)
-        obj2 = TestObject(id="2", name="Jane", value=30)
+        obj1 = ObjectTestData(id="1", name="John", value=30)
+        obj2 = ObjectTestData(id="2", name="Jane", value=30)
         
         differences = compare_objects(obj1, obj2, ignore_keys={"id"})
         
@@ -255,7 +255,7 @@ class TestObjectUtils:
     
     def test_serialize_object_dataclass(self):
         """Test serializing dataclass object."""
-        obj = TestObject(id="1", name="test", value=42)
+        obj = ObjectTestData(id="1", name="test", value=42)
         result = serialize_object(obj)
         
         data = json.loads(result)
@@ -275,9 +275,9 @@ class TestObjectUtils:
         data = {"id": "1", "name": "test", "value": 42}
         json_str = json.dumps(data)
         
-        result = deserialize_object(json_str, TestObject)
+        result = deserialize_object(json_str, ObjectTestData)
         
-        assert isinstance(result, TestObject)
+        assert isinstance(result, ObjectTestData)
         assert result.id == "1"
         assert result.name == "test"
         assert result.value == 42
@@ -307,9 +307,9 @@ class TestObjectUtils:
         
         errors = validate_object_structure(data, schema)
         
-        assert "email" in errors  # Missing required field
-        assert "name" not in errors  # Correct type
-        assert "age" not in errors  # Correct type
+        assert any("Missing required field: email" in error for error in errors)  # Missing required field
+        assert not any("name" in error for error in errors)  # Correct type
+        assert not any("age" in error for error in errors)  # Correct type
     
     def test_validate_object_structure_type_error(self):
         """Test validating object structure with type error."""
@@ -318,7 +318,7 @@ class TestObjectUtils:
         
         errors = validate_object_structure(data, schema)
         
-        assert "age" in errors  # Wrong type
+        assert any("Field age must be int, got str" in error for error in errors)  # Wrong type
 
 
 if __name__ == "__main__":

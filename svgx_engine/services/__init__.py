@@ -1,116 +1,55 @@
 """
-SVGX Engine Services Package
+SVGX Engine Services Module
 
-This package contains all the core services for the SVGX Engine.
+Provides comprehensive services for SVGX symbol management, processing, and enhancement.
 """
 
-from .access_control import AccessControlService
-from .advanced_security import (
-    AdvancedSecurityService,
-    PrivacyControlsService,
-    EncryptionService,
-    AuditTrailService,
-    RBACService,
-    DataClassification,
-    PermissionLevel,
-    AuditEventType,
-    SecurityMetrics
-)
-from .advanced_caching import (
-    AdvancedCachingSystem,
-    MemoryCache,
-    DiskCache,
-    DatabaseCache,
-    SVGXCacheKeyGenerator,
-    CacheLevel,
-    CachePolicy,
-    SVGXCacheType,
-    CacheMetrics,
-    CacheEntry
-)
-
-from .telemetry import (
-    SVGXTelemetryBuffer,
-    SVGXTelemetryIngestor,
-    SVGXTelemetryHook,
-    SVGXTelemetryRecord,
-    SVGXTelemetryType,
-    SVGXTelemetrySeverity,
-    generate_svgx_simulated_telemetry,
-    create_svgx_telemetry_buffer,
-    create_svgx_telemetry_ingestor,
-    create_svgx_telemetry_hook
-)
-
-from .performance import (
-    SVGXPerformanceOptimizer,
-    SVGXAdaptiveCache,
-    SVGXMemoryManager,
-    SVGXParallelProcessor,
-    SVGXPerformanceProfiler,
-    SVGXPerformanceMetrics,
-    SVGXResourceLimits,
-    OptimizationLevel,
-    CacheStrategy,
-    optimize_operation,
-    parallel_process,
-    get_performance_report
-)
-
-from .bim_extractor import (
-    SVGXBIMExtractor,
-    SVGXElementType,
-    SVGXGeometryType,
-    SVGXElementMetadata,
-    extract_bim_from_svg
-)
+from .access_control import SVGXAccessControlService
+from .advanced_caching import SVGXAdvancedCachingService
+from .advanced_security import SVGXAdvancedSecurityService
+from .advanced_symbols import SVGXAdvancedSymbolManagementService
+from .bim_export import SVGXBIMExportService
+from .bim_validator import SVGXBIMValidatorService
+from .error_handler import SVGXErrorHandler as SVGXErrorHandlerService
+from .export_interoperability import SVGXExportInteroperabilityService
+from .performance import SVGXPerformanceProfiler as SVGXPerformanceMonitorService
+from .performance import SVGXPerformanceOptimizer as SVGXPerformanceOptimizationService
+from .performance import SVGXPerformanceProfiler as SVGXPerformanceUtilsService
+from .persistence_export import SVGXPersistenceExportService
+from .telemetry import SVGXTelemetryIngestor as SVGXTelemetryService
+from .telemetry import SVGXTelemetryIngestor as SVGXRealtimeTelemetryService
+from .symbol_generator import SVGXSymbolGenerator, symbol_generator_service
+from .symbol_manager import SVGXSymbolManagerService
+from .symbol_recognition import SVGXSymbolRecognitionService
+from .symbol_renderer import SVGXSymbolRendererService
+from .symbol_schema_validation import SVGXSymbolSchemaValidationService
 
 __all__ = [
-    'AccessControlService',
-    'AdvancedSecurityService',
-    'PrivacyControlsService',
-    'EncryptionService',
-    'AuditTrailService',
-    'RBACService',
-    'DataClassification',
-    'PermissionLevel',
-    'AuditEventType',
-    'SecurityMetrics',
-    'AdvancedCachingSystem',
-    'MemoryCache',
-    'DiskCache',
-    'DatabaseCache',
-    'SVGXCacheKeyGenerator',
-    'CacheLevel',
-    'CachePolicy',
-    'SVGXCacheType',
-    'CacheMetrics',
-    'CacheEntry',
-    'SVGXTelemetryBuffer',
-    'SVGXTelemetryIngestor',
-    'SVGXTelemetryHook',
-    'SVGXTelemetryRecord',
-    'SVGXTelemetryType',
-    'SVGXTelemetrySeverity',
-    'generate_svgx_simulated_telemetry',
-    'create_svgx_telemetry_buffer',
-    'create_svgx_telemetry_ingestor',
-    'create_svgx_telemetry_hook',
-    'SVGXPerformanceOptimizer',
-    'SVGXAdaptiveCache',
-    'SVGXMemoryManager',
-    'SVGXParallelProcessor',
-    'SVGXPerformanceProfiler',
-    'SVGXPerformanceMetrics',
-    'SVGXResourceLimits',
-    'OptimizationLevel',
-    'CacheStrategy',
-    'optimize_operation',
-    'parallel_process',
-    'get_performance_report',
-    'SVGXBIMExtractor',
-    'SVGXElementType',
-    'SVGXGeometryType',
-    'SVGXElementMetadata',
-    'extract_bim_from_svg'
+    # Core Services
+    "SVGXErrorHandlerService",
+    "SVGXPerformanceMonitorService",
+    "SVGXAccessControlService",
+    "SVGXAdvancedSecurityService",
+    "SVGXTelemetryService",
+    "SVGXRealtimeTelemetryService",
+    "SVGXPerformanceOptimizationService",
+    "SVGXPerformanceUtilsService",
+    
+    # BIM Services
+    "SVGXBIMExportService",
+    "SVGXBIMValidatorService",
+    
+    # Symbol Management Services
+    "SVGXSymbolManagerService",
+    "SVGXExportInteroperabilityService",
+    "SVGXSymbolRecognitionService",
+    "SVGXAdvancedSymbolManagementService",
+    "SVGXSymbolSchemaValidationService",
+    "SVGXSymbolRendererService",
+    "SVGXSymbolGenerator",
+    "symbol_generator_service",
+    
+    # Advanced Services
+    "SVGXAdvancedCachingService",
+    "SVGXPersistenceExportService",
 ] 

@@ -1,0 +1,82 @@
+{
+    "file": "svgx_rules.json",
+    "description": "Rules for ensuring SVGX files remain valid SVG and are fully compatible with browser rendering engines",
+    "version": "1.0",
+    "rules": {
+      "general": {
+        "doctype": "MUST use standard SVG doctype and namespaces",
+        "root_element": "MUST be <svg> with valid version and xmlns",
+        "namespaces": {
+          "svg": "http://www.w3.org/2000/svg",
+          "xlink": "http://www.w3.org/1999/xlink",
+          "arx": "http://arxos.dev/svgx",
+          "bim": "http://arxos.dev/bim"
+        },
+        "encoding": "UTF-8 only",
+        "viewport": "MUST define width and height or viewBox"
+      },
+      "structure": {
+        "allowed_elements": [
+          "svg", "g", "path", "rect", "circle", "line", "polyline", "polygon",
+          "text", "tspan", "foreignObject", "image", "use", "defs", "style", "metadata", "title", "desc"
+        ],
+        "disallowed_elements": [
+          "script", "canvas", "iframe", "audio", "video", "html", "marquee"
+        ],
+        "nesting_depth_limit": 12,
+        "max_symbol_size_kb": 100
+      },
+      "attributes": {
+        "custom_attributes": {
+          "prefixes": ["arx:", "bim:", "sim:"],
+          "rule": "MUST NOT conflict with reserved SVG attributes"
+        },
+        "id": "MUST be unique within document",
+        "style": "SHOULD use <style> blocks or CSS class references (avoid inline style where possible)",
+        "event_handlers": "SHOULD NOT use onclick/onhover/etc. inline events (use JS listeners externally)"
+      },
+      "metadata": {
+        "placement": "MUST be inside <metadata> or <desc> block",
+        "formats": [
+          "YAML in CDATA",
+          "JSON in CDATA",
+          "RDF",
+          "XML fragments"
+        ],
+        "max_size_kb": 200
+      },
+      "compatibility": {
+        "browsers": ["Chrome", "Firefox", "Edge", "Safari"],
+        "mobile_compatibility": "MUST render without crashing or blocking touch interactions",
+        "fallbacks": "SHOULD provide simplified geometry when using complex symbols (e.g., fallback <path> in <use>)"
+      },
+      "interactivity": {
+        "animation": {
+          "allowed": ["SMIL", "CSS", "requestAnimationFrame"],
+          "disallowed": ["WebGL shaders", "canvas"]
+        },
+        "scripts": {
+          "inline_script": "DISCOURAGED unless CSP-safe",
+          "external_script": "MUST use defer or async and be sandbox-safe",
+          "namespace_safe": "MUST NOT override window/global scope variables"
+        }
+      },
+      "validation_tools": {
+        "xmllint": "Use to check for structural validity",
+        "svgvalidator": "Check browser compatibility and tag safety",
+        "svgx_schema": "Use internal schema to validate SVGX-specific extensions"
+      }
+    },
+    "enforcement": {
+      "strict_mode": true,
+      "warnings_as_errors": true,
+      "auto_strip_unknown_tags": true,
+      "reject_file_on_error": true
+    },
+    "notes": [
+      "SVGX must always be renderable in <img>, <object>, <embed>, or inline <svg> HTML elements",
+      "All geometry must degrade gracefully (avoid JS-dependent geometry rendering)",
+      "Use clear versioning in arx:metadata or svgx:version attributes to assist long-term compatibility"
+    ]
+  }
+  

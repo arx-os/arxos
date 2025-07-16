@@ -17,18 +17,18 @@ def get_current_timestamp() -> datetime:
     Get current UTC timestamp.
     
     Returns:
-        Current UTC datetime
+        Current UTC datetime (naive)
     """
-    return datetime.utcnow()
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 def get_current_timestamp_iso() -> str:
     """
     Get current UTC timestamp as ISO format string.
     
     Returns:
-        Current UTC datetime as ISO format string
+        Current UTC datetime as ISO format string with timezone
     """
-    return datetime.utcnow().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 def parse_timestamp(timestamp: Union[str, datetime, None]) -> Optional[datetime]:
     """
@@ -94,7 +94,8 @@ def format_timestamp(dt: datetime, format_type: str = "iso") -> str:
     elif format_type == "sql":
         return dt.strftime('%Y-%m-%d %H:%M:%S')
     elif format_type == "human":
-        return dt.strftime('%B %d, %Y at %I:%M %p')
+        day = str(dt.day)
+        return dt.strftime(f'%B {day}, %Y at %I:%M %p')
     else:
         logger.warning("unknown_timestamp_format",
                       format_type=format_type)
@@ -129,6 +130,12 @@ def calculate_time_difference(start_time: datetime, end_time: Optional[datetime]
     if end_time is None:
         end_time = get_current_timestamp()
     
+    # Convert timezone-aware datetimes to naive for compatibility
+    if start_time.tzinfo is not None:
+        start_time = start_time.replace(tzinfo=None)
+    if end_time.tzinfo is not None:
+        end_time = end_time.replace(tzinfo=None)
+    
     return end_time - start_time
 
 def is_timestamp_recent(timestamp: datetime, max_age_minutes: int = 5) -> bool:
@@ -162,6 +169,13 @@ def get_relative_time_description(timestamp: datetime) -> str:
         return "unknown time"
     
     now = get_current_timestamp()
+    
+    # Convert timezone-aware datetimes to naive for compatibility
+    if timestamp.tzinfo is not None:
+        timestamp = timestamp.replace(tzinfo=None)
+    if now.tzinfo is not None:
+        now = now.replace(tzinfo=None)
+    
     diff = now - timestamp
     
     if diff.total_seconds() < 60:

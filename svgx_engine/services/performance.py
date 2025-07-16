@@ -30,7 +30,14 @@ from contextlib import contextmanager
 
 from structlog import get_logger
 
-from ..utils.errors import PerformanceError
+try:
+    from ..utils.errors import PerformanceError
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.errors import PerformanceError
 
 logger = get_logger()
 

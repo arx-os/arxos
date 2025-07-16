@@ -17,7 +17,21 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
-from ..utils.errors import ParserError, ValidationError
+try:
+    try:
+    from ..utils.errors import ParserError, ValidationError
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.errors import ParserError, ValidationError
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from utils.errors import ParserError, ValidationError
 from ..models.system_elements import (
     ExtractionResponse, SystemElement, ElectricalElement, 
     FireAlarmElement, PlumbingElement

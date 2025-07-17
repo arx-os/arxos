@@ -16,21 +16,14 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 from sqlalchemy import and_, or_, desc, asc
 
 # Import SVGX-specific models
-from ..models.database import (
+from svgx_engine.models.database import (
     DatabaseManager, DatabaseConfig, get_db_manager,
     SVGXModel, SVGXElement, SVGXObject, SVGXBehavior, SVGXPhysics,
     SymbolLibrary, ValidationJob, ExportJob, User
 )
-from ..models.svgx import SVGXDocument, SVGXObject as SVGXDataObject
+from svgx_engine.models.svgx import SVGXDocument, SVGXObject as SVGXDataObject
 try:
-    try:
-    from ..utils.errors import PersistenceError, ValidationError, DatabaseError
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.errors import PersistenceError, ValidationError, DatabaseError
+    from svgx_engine.utils.errors import PersistenceError, ValidationError, DatabaseError
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -876,7 +869,7 @@ class SVGXDatabaseService:
     
     def _deserialize_svgx_element(self, element_data: Dict[str, Any]):
         """Deserialize SVGX element from dictionary."""
-        from ..parser.parser import SVGXElement, ArxObject, ArxBehavior, ArxPhysics
+        from svgx_engine.parser.parser import SVGXElement, ArxObject, ArxBehavior, ArxPhysics
         
         element = SVGXElement(
             tag=element_data['tag'],
@@ -916,7 +909,7 @@ class SVGXDatabaseService:
     
     def _deserialize_arx_object(self, object_data: Dict[str, Any]):
         """Deserialize ArxObject from dictionary."""
-        from ..parser.parser import ArxObject
+        from svgx_engine.parser.parser import ArxObject
         
         if not object_data:
             return None
@@ -945,7 +938,7 @@ class SVGXDatabaseService:
     
     def _deserialize_arx_behavior(self, behavior_data: Dict[str, Any]):
         """Deserialize ArxBehavior from dictionary."""
-        from ..parser.parser import ArxBehavior
+        from svgx_engine.parser.parser import ArxBehavior
         
         if not behavior_data:
             return None
@@ -976,7 +969,7 @@ class SVGXDatabaseService:
     
     def _deserialize_arx_physics(self, physics_data: Dict[str, Any]):
         """Deserialize ArxPhysics from dictionary."""
-        from ..parser.parser import ArxPhysics
+        from svgx_engine.parser.parser import ArxPhysics
         
         if not physics_data:
             return None

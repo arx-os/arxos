@@ -5,10 +5,10 @@ Handles compilation and export of SVGX files to various formats
 including SVG, IFC, JSON, and GLTF.
 """
 
-from .svgx_to_svg import SVGXToSVGCompiler
-from .svgx_to_ifc import SVGXToIFCCompiler
-from .svgx_to_json import SVGXToJSONCompiler
-from .svgx_to_gltf import SVGXToGLTFCompiler
+from svgx_engine.compiler.svgx_to_svg import SVGXToSVGCompiler
+from svgx_engine.compiler.svgx_to_ifc import SVGXToIFCCompiler
+from svgx_engine.compiler.svgx_to_json import SVGXToJSONCompiler
+from svgx_engine.compiler.svgx_to_gltf import SVGXToGLTFCompiler
 
 __all__ = [
     "SVGXCompiler",

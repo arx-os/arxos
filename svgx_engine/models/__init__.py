@@ -1,104 +1,50 @@
 """
-SVGX Engine Models Package
+SVGX Engine - Models Package
 
-This package contains all the data models for the SVGX Engine.
+Provides data models for SVGX Engine including:
+- SVGX document models
+- BIM models
+- Database models
+- System element models
 """
 
-from .svgx import (
-    SVGXDocument,
-    SVGXElement,
-    SVGXObject,
-    ArxObject,
-    ArxBehavior,
-    ArxPhysics
+from svgx_engine.models.svgx import (
+    SVGXDocument, SVGXElement, SVGXObject, ArxObject, ArxBehavior, ArxPhysics, SVGXSymbol
 )
-
-from .database import (
-    Base,
-    DatabaseConfig,
-    DatabaseManager,
-    get_db_manager,
-    SVGXModel,
-    SVGXElement as SVGXElementDB,
-    SVGXObject as SVGXObjectDB,
-    SVGXBehavior as SVGXBehaviorDB,
-    SVGXPhysics as SVGXPhysicsDB,
-    SymbolLibrary,
-    ValidationJob,
-    ExportJob,
-    User as UserDB
+from svgx_engine.models.database import (
+    DatabaseManager, DatabaseConfig, get_db_manager,
+    SVGXModel, SVGXElement as SVGXDBElement, SVGXObject as SVGXDBObject, 
+    SVGXBehavior as SVGXDBBehavior, SVGXPhysics as SVGXDBPhysics,
+    SymbolLibrary, ValidationJob, ExportJob, User
 )
-
-from .system_elements import (
-    SystemElement,
-    ElectricalElement,
-    PlumbingElement,
-    FireAlarmElement,
-    SVGXElement as SVGXSystemElement,
-    ExtractedElement,
-    ExtractionResponse,
-    User
+from svgx_engine.models.system_elements import (
+    SystemElement, ElectricalElement, PlumbingElement, FireAlarmElement,
+    SVGXElement, ExtractionResponse, User as SystemUser
 )
-
-from .bim import (
-    BIMModel,
-    BIMElement,
-    BIMElementBase,
-    BIMSystem,
-    BIMRelationship,
-    Room,
-    Wall,
-    Door,
-    Window,
-    Device,
-    Geometry,
-    GeometryType,
-    SystemType as BIMSystemType,
-    RoomType,
-    DeviceCategory
+from svgx_engine.models.bim import (
+    BIMModel, BIMElement, BIMSystem, BIMSpace, BIMRelationship,
+    Room, Wall, Door, Window, HVACZone, Device,
+    SystemType, ElementCategory,
+    Geometry, GeometryType
 )
 
 __all__ = [
-    'SVGXDocument',
-    'SVGXElement',
-    'SVGXObject',
-    'ArxObject',
-    'ArxBehavior',
-    'ArxPhysics',
-    'Base',
-    'DatabaseConfig',
-    'DatabaseManager',
-    'get_db_manager',
-    'SVGXModel',
-    'SVGXElementDB',
-    'SVGXObjectDB',
-    'SVGXBehaviorDB',
-    'SVGXPhysicsDB',
-    'SymbolLibrary',
-    'ValidationJob',
-    'ExportJob',
-    'UserDB',
-    'SystemElement',
-    'ElectricalElement',
-    'PlumbingElement',
-    'FireAlarmElement',
-    'SVGXSystemElement',
-    'ExtractedElement',
-    'ExtractionResponse',
-    'User',
-    'BIMModel',
-    'BIMElement',
-    'BIMElementBase',
-    'BIMSystem',
-    'BIMRelationship',
-    'Room',
-    'Wall',
-    'Door',
-    'Window',
-    'Device',
-    'Geometry',
-    'GeometryType',
-    'BIMSystemType',
-    'RoomType',
-    'DeviceCategory'
+    # SVGX Models
+    'SVGXDocument', 'SVGXElement', 'SVGXObject', 'ArxObject', 'ArxBehavior', 'ArxPhysics',
+    'SVGXSymbol',
+    
+    # Database Models
+    'DatabaseManager', 'DatabaseConfig', 'get_db_manager',
+    'SVGXModel', 'SVGXDBElement', 'SVGXDBObject', 'SVGXDBBehavior', 'SVGXDBPhysics',
+    'SymbolLibrary', 'ValidationJob', 'ExportJob', 'User',
+    
+    # System Element Models
+    'SystemElement', 'ElectricalElement', 'PlumbingElement', 'FireAlarmElement',
+    'SVGXElement', 'ExtractionResponse', 'SystemUser',
+    
+    # BIM Models
+    'BIMModel', 'BIMElement', 'BIMSystem', 'BIMSpace', 'BIMRelationship',
+    'Room', 'Wall', 'Door', 'Window', 'HVACZone', 'Device',
+    'SystemType', 'ElementCategory',
+    'Geometry', 'GeometryType'
 ] 

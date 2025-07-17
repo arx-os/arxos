@@ -14,7 +14,7 @@ import logging
 
 try:
     try:
-    from ..utils.errors import PersistenceError, ValidationError
+    from svgx_engine.utils.errors import PersistenceError, ValidationError
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -27,7 +27,7 @@ except ImportError:
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.errors import PersistenceError, ValidationError
-from ..models.svgx import SVGXDocument, SVGXElement, ArxObject, ArxBehavior, ArxPhysics
+from svgx_engine.models.svgx import SVGXDocument, SVGXElement, ArxObject, ArxBehavior, ArxPhysics
 
 logger = logging.getLogger(__name__)
 

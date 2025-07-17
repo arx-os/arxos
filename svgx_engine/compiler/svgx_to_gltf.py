@@ -34,7 +34,7 @@ class SVGXToGLTFCompiler:
         """
         try:
             # Parse SVGX content using the parser
-            from ..parser import SVGXParser
+            from svgx_engine.parser import SVGXParser
             parser = SVGXParser()
             elements = parser.parse(svgx_content)
             

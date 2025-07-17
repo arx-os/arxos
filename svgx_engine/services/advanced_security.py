@@ -31,14 +31,14 @@ import re
 from structlog import get_logger
 
 try:
-    from ..utils.errors import SecurityError, ValidationError
+    from svgx_engine.utils.errors import SecurityError, ValidationError
 except ImportError:
     # Fallback for direct execution
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.errors import SecurityError, ValidationError
-from .access_control import SVGXAccessControlService
+from svgx_engine.services.access_control import SVGXAccessControlService
 
 logger = get_logger()
 
@@ -939,7 +939,7 @@ class AuditTrailService:
                 (self.metrics.average_audit_time_ms * 
                  (self.metrics.audit_events_logged - 1) + operation_time) /
                 self.metrics.audit_events_logged
-            ) 
+            )
 
 
 class RBACService:

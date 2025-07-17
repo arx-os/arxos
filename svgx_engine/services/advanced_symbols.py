@@ -30,11 +30,11 @@ from collections import defaultdict, deque
 import pickle
 import zlib
 
-from .symbol_manager import SVGXSymbolManager
-from .symbol_recognition import SVGXSymbolRecognitionService
+from svgx_engine.symbol_manager import SVGXSymbolManager
+from svgx_engine.symbol_recognition import SVGXSymbolRecognitionService
 
 try:
-    from ..utils.performance import PerformanceMonitor
+    from svgx_engine.utils.performance import PerformanceMonitor
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -42,10 +42,10 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.performance import PerformanceMonitor
 
-from ..models.svgx import SVGXElement, SVGXDocument
+from svgx_engine.models.svgx import SVGXElement, SVGXDocument
 
 try:
-    from ..utils.errors import (
+    from svgx_engine.utils.errors import (
         AdvancedSymbolError, VersionControlError, CollaborationError,
         SearchError, DependencyError, AnalyticsError, MarketplaceError
     )

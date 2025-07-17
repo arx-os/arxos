@@ -28,10 +28,10 @@ import pickle
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .export_interoperability import SVGXExportInteroperabilityService
+from svgx_engine.services.export_interoperability import SVGXExportInteroperabilityService
 
 try:
-    from ..utils.performance import PerformanceMonitor
+    from svgx_engine.utils.performance import PerformanceMonitor
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -39,11 +39,11 @@ except ImportError:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.performance import PerformanceMonitor
 
-from ..models.svgx import SVGXDocument, SVGXElement
-from ..models.bim import BIMElement, BIMSystem, BIMSpace
+from svgx_engine.models.svgx import SVGXDocument, SVGXElement
+from svgx_engine.models.bim import BIMElement, BIMSystem, BIMSpace
 
 try:
-    from ..utils.errors import (
+    from svgx_engine.utils.errors import (
         PersistenceExportError, ExportError, ValidationError, 
         DatabaseError, JobError
     )
@@ -958,6 +958,9 @@ class SVGXPersistenceExportService:
             self.logger.error(f"Failed to cleanup: {e}")
             raise PersistenceExportError(f"Cleanup failed: {e}")
 
+
+SVGXPersistenceExportService = SVGXPersistenceExportService
+PersistenceExportService = SVGXPersistenceExportService
 
 def create_persistence_export_service(options: Optional[Dict[str, Any]] = None) -> SVGXPersistenceExportService:
     """

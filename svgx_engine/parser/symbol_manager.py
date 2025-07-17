@@ -19,7 +19,7 @@ class SVGXSymbolManager:
     def load_symbol(self, symbol_id: str, symbol_content: str):
         """Load a symbol from content."""
         try:
-            from .parser import SVGXParser
+            from svgx_engine.parser import SVGXParser
             parser = SVGXParser()
             elements = parser.parse(symbol_content)
             

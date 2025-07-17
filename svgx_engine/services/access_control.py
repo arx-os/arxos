@@ -21,13 +21,13 @@ from enum import Enum
 
 # Import SVGX-specific utilities
 try:
-    from ..utils.errors import AccessControlError, ValidationError
+    from svgx_engine.utils.errors import SecurityError, ValidationError
 except ImportError:
     # Fallback for direct execution
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.errors import AccessControlError, ValidationError
+    from utils.errors import SecurityError, ValidationError
 
 logger = structlog.get_logger(__name__)
 
@@ -390,7 +390,7 @@ class SVGXAccessControlService:
                         db_path=self.db_path,
                         error=str(e),
                         error_type=type(e).__name__)
-            raise errors.AccessControlError(f"Failed to initialize database: {str(e)}")
+            raise SecurityError(f"Failed to initialize database: {str(e)}")
     
     def create_user(self, username: str, email: str, primary_role: UserRole,
                    secondary_roles: List[UserRole] = None, organization: str = "",
@@ -399,10 +399,10 @@ class SVGXAccessControlService:
         try:
             # Validate input parameters
             if not username or not email:
-                raise errors.ValidationError("Username and email are required")
+                raise ValidationError("Username and email are required")
             
             if not isinstance(primary_role, UserRole):
-                raise errors.ValidationError("Invalid primary role")
+                raise ValidationError("Invalid primary role")
             
             user_id = str(uuid.uuid4())
             secondary_roles = secondary_roles or []
@@ -453,20 +453,20 @@ class SVGXAccessControlService:
                           username=username,
                           email=email,
                           error=str(e))
-            raise errors.ValidationError(f"User with username '{username}' or email '{email}' already exists")
+            raise ValidationError(f"User with username '{username}' or email '{email}' already exists")
         except Exception as e:
             logger.error("user_creation_failed",
                         username=username,
                         email=email,
                         error=str(e),
                         error_type=type(e).__name__)
-            raise errors.AccessControlError(f"Failed to create user: {str(e)}")
+            raise SecurityError(f"Failed to create user: {str(e)}")
     
     def get_user(self, user_id: str) -> Dict[str, Any]:
         """Get user information by user ID with SVGX preferences."""
         try:
             if not user_id:
-                raise errors.ValidationError("User ID is required")
+                raise ValidationError("User ID is required")
             
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -506,7 +506,7 @@ class SVGXAccessControlService:
                         user_id=user_id,
                         error=str(e),
                         error_type=type(e).__name__)
-            raise errors.AccessControlError(f"Failed to retrieve user: {str(e)}")
+            raise SecurityError(f"Failed to retrieve user: {str(e)}")
     
     def _get_user_permissions(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all permissions for a user including inherited roles and SVGX capabilities."""
@@ -878,7 +878,7 @@ class SVGXAccessControlService:
                         user_id=user_id,
                         error=str(e),
                         error_type=type(e).__name__)
-            raise errors.AccessControlError(f"Failed to create session: {str(e)}")
+            raise SecurityError(f"Failed to create session: {str(e)}")
     
     def validate_session(self, session_id: str) -> Dict[str, Any]:
         """Validate user session with SVGX context."""

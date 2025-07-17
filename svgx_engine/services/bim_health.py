@@ -33,42 +33,30 @@ import math
 import re
 import logging
 
-from .bim_validator import BIMValidatorService
-from .symbol_recognition import SymbolRecognitionService
+from svgx_engine.services.bim_validator import SVGXBIMValidatorService
+from svgx_engine.services.symbol_recognition import SVGXSymbolRecognitionService
 try:
-    try:
-    from ..utils.performance import PerformanceMonitor
+    from svgx_engine.utils.performance import PerformanceMonitor
 except ImportError:
     # Fallback for direct execution
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.performance import PerformanceMonitor
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.performance import PerformanceMonitor
-from ..models.bim import BIMElement, BIMSystem, BIMSpace, Geometry
-from ..models.svgx import SVGXDocument, SVGXElement
+from svgx_engine.models.bim import BIMElement, BIMSystem, BIMSpace, Geometry
+from svgx_engine.models.svgx import SVGXDocument, SVGXElement
 try:
-    try:
-    from ..utils.errors import (
+    from svgx_engine.utils.errors import (
+        BIMError, ValidationError, SymbolError
+    )
 except ImportError:
     # Fallback for direct execution
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.errors import (
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.errors import (
-    BIMHealthError, ValidationError, GeometryError, SymbolError
-)
+        BIMError, ValidationError, SymbolError
+    )
 
 
 class ValidationStatus(Enum):
@@ -169,8 +157,8 @@ class SVGXBIMHealthCheckerService:
         self.performance_monitor = PerformanceMonitor()
         
         # Initialize dependent services
-        self.bim_validator = BIMValidatorService()
-        self.symbol_recognition = SymbolRecognitionService()
+        self.bim_validator = SVGXBIMValidatorService()
+        self.symbol_recognition = SVGXSymbolRecognitionService()
         
         self._init_database()
         self.behavior_profiles: Dict[str, BehaviorProfile] = {}

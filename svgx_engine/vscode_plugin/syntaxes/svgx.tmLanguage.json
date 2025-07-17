@@ -1,0 +1,109 @@
+{
+  "name": "SVGX",
+  "scopeName": "source.svgx",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#elements"
+    },
+    {
+      "include": "#simulations"
+    },
+    {
+      "include": "#properties"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.svgx",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.svgx",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "elements": {
+      "patterns": [
+        {
+          "name": "keyword.control.element.svgx",
+          "match": "\\belement\\b"
+        },
+        {
+          "name": "entity.name.type.element.svgx",
+          "match": "\\b(rectangle|circle|line|polygon|text|beam|column|wall|floor|roof|pipe|valve|pump|tank|wire|resistor|capacitor|inductor|voltage_source|current_source)\\b"
+        }
+      ]
+    },
+    "simulations": {
+      "patterns": [
+        {
+          "name": "keyword.control.simulation.svgx",
+          "match": "\\bsimulate\\b"
+        },
+        {
+          "name": "entity.name.type.simulation.svgx",
+          "match": "\\b(structural|fluid_dynamics|heat_transfer|electrical|rf_propagation)\\b"
+        }
+      ]
+    },
+    "properties": {
+      "patterns": [
+        {
+          "name": "variable.other.property.svgx",
+          "match": "\\b(id|x|y|z|width|height|radius|length|thickness|material|color|position|rotation|scale|elastic_modulus|poisson_ratio|density|thermal_conductivity|specific_heat|resistance|capacitance|inductance|voltage|current|frequency|power)\\b"
+        },
+        {
+          "name": "keyword.operator.assignment.svgx",
+          "match": "="
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.svgx",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.svgx",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.svgx",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.svgx",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.svgx",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    }
+  }
+} 

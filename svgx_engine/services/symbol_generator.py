@@ -1,574 +1,604 @@
 """
-SVGX Symbol Generator Service
+SVGX Engine - Symbol Generator Service
 
-Provides automated symbol generation, templating, and AI-powered symbol creation
-with SVGX-specific enhancements and advanced features.
+Provides automated symbol generation capabilities with:
+- Template-based generation
+- Quality assurance
+- Custom generation rules
+- Performance optimization
 """
 
 import json
 import logging
-import time
+from typing import Dict, Any, List, Optional, Tuple, Union, Callable
+from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-from uuid import uuid4
+from enum import Enum
+import uuid
+import re
 
-import numpy as np
-from pydantic import BaseModel, Field, validator
+from svgx_engine.utils.errors import GenerationError, ValidationError
+from svgx_engine.logging.structured_logger import get_logger
 
-from ..models.svgx_symbol import SVGXSymbol, SVGXSymbolMetadata
-from ..utils.errors import (
-    SymbolGenerationError,
-    TemplateNotFoundError,
-    ValidationError,
-)
-from ..utils.performance_monitor import PerformanceMonitor
-from ..utils.telemetry import TelemetryLogger
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
-class GenerationTemplate(BaseModel):
-    """Template for symbol generation with parameters and constraints."""
-    
-    template_id: str = Field(..., description="Unique template identifier")
-    name: str = Field(..., description="Template name")
-    description: str = Field(..., description="Template description")
-    category: str = Field(..., description="Symbol category")
-    parameters: Dict[str, Any] = Field(default_factory=dict, description="Template parameters")
-    constraints: Dict[str, Any] = Field(default_factory=dict, description="Generation constraints")
-    svgx_metadata: Dict[str, Any] = Field(default_factory=dict, description="SVGX-specific metadata")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+class GenerationType(Enum):
+    """Symbol generation types."""
+    TEMPLATE_BASED = "template_based"
+    RULE_BASED = "rule_based"
+    AI_GENERATED = "ai_generated"
+    MANUAL = "manual"
 
 
-class GenerationRequest(BaseModel):
-    """Request for symbol generation with parameters and options."""
-    
-    template_id: Optional[str] = Field(None, description="Template to use for generation")
-    category: str = Field(..., description="Symbol category")
-    parameters: Dict[str, Any] = Field(default_factory=dict, description="Generation parameters")
-    style_preferences: Dict[str, Any] = Field(default_factory=dict, description="Style preferences")
-    constraints: Dict[str, Any] = Field(default_factory=dict, description="Generation constraints")
-    output_format: str = Field(default="svgx", description="Output format")
-    quality_level: str = Field(default="standard", description="Generation quality level")
-    batch_size: int = Field(default=1, ge=1, le=100, description="Number of symbols to generate")
-    
-    @validator('output_format')
-    def validate_output_format(cls, v):
-        valid_formats = ['svgx', 'svg', 'png', 'pdf']
-        if v not in valid_formats:
-            raise ValueError(f"Invalid output format. Must be one of: {valid_formats}")
-        return v
-    
-    @validator('quality_level')
-    def validate_quality_level(cls, v):
-        valid_levels = ['low', 'standard', 'high', 'ultra']
-        if v not in valid_levels:
-            raise ValueError(f"Invalid quality level. Must be one of: {valid_levels}")
-        return v
+class SymbolCategory(Enum):
+    """Symbol categories."""
+    ELECTRICAL = "electrical"
+    MECHANICAL = "mechanical"
+    PLUMBING = "plumbing"
+    FIRE_ALARM = "fire_alarm"
+    SECURITY = "security"
+    HVAC = "hvac"
+    GENERAL = "general"
 
 
-class GenerationResult(BaseModel):
-    """Result of symbol generation with metadata and performance metrics."""
-    
-    symbol_id: str = Field(..., description="Generated symbol ID")
-    symbol: SVGXSymbol = Field(..., description="Generated symbol")
-    generation_time: float = Field(..., description="Generation time in seconds")
-    quality_score: float = Field(..., description="Generated symbol quality score")
-    template_used: Optional[str] = Field(None, description="Template used for generation")
-    parameters: Dict[str, Any] = Field(..., description="Parameters used for generation")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+@dataclass
+class GenerationOptions:
+    """Options for symbol generation."""
+    generation_type: GenerationType = GenerationType.TEMPLATE_BASED
+    category: SymbolCategory = SymbolCategory.GENERAL
+    template_name: Optional[str] = None
+    quality_level: str = "standard"
+    include_metadata: bool = True
+    validate_output: bool = True
+    optimize_generated: bool = True
+    custom_attributes: Dict[str, Any] = field(default_factory=dict)
+    generation_rules: List[str] = field(default_factory=list)
 
 
-class BatchGenerationResult(BaseModel):
-    """Result of batch symbol generation."""
-    
-    batch_id: str = Field(..., description="Batch generation ID")
-    results: List[GenerationResult] = Field(..., description="Generation results")
-    total_time: float = Field(..., description="Total generation time")
-    success_count: int = Field(..., description="Number of successful generations")
-    failure_count: int = Field(..., description="Number of failed generations")
-    average_quality: float = Field(..., description="Average quality score")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Batch metadata")
+@dataclass
+class GenerationResult:
+    """Result of symbol generation."""
+    symbol_data: Dict[str, Any]
+    generation_type: GenerationType
+    category: SymbolCategory
+    template_used: Optional[str] = None
+    generation_time_ms: float = 0.0
+    validation_passed: bool = False
+    quality_score: float = 0.0
+    generated_at: datetime = field(default_factory=datetime.utcnow)
 
 
 class SVGXSymbolGenerator:
     """
-    Advanced symbol generator with AI-powered generation, templating, and SVGX enhancements.
+    Comprehensive symbol generator for SVGX Engine.
     
     Features:
-    - Template-based generation
-    - AI-powered symbol creation
-    - Batch processing
-    - Quality optimization
-    - SVGX-specific enhancements
-    - Performance monitoring
+    - Template-based generation with customizable templates
+    - Rule-based generation with configurable rules
+    - Quality assurance and validation
+    - Performance optimization
+    - Custom generation pipelines
+    - SVGX-specific optimizations
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the symbol generator with configuration."""
-        self.config = config or {}
-        self.templates: Dict[str, GenerationTemplate] = {}
-        self.performance_monitor = PerformanceMonitor()
-        self.telemetry = TelemetryLogger()
-        self.generation_cache: Dict[str, Any] = {}
+    def __init__(self, default_options: Optional[GenerationOptions] = None):
+        """Initialize the symbol generator."""
+        self.default_options = default_options or GenerationOptions()
+        self.templates: Dict[str, Dict[str, Any]] = {}
+        self.generation_rules: Dict[str, Callable] = {}
+        self.quality_validators: List[Callable] = []
+        self.generated_cache: Dict[str, GenerationResult] = {}
+        self.stats = {
+            'total_generations': 0,
+            'successful_generations': 0,
+            'failed_generations': 0,
+            'average_generation_time_ms': 0.0,
+            'cache_hits': 0,
+            'cache_misses': 0
+        }
         
-        # Initialize with default templates
         self._initialize_default_templates()
+        self._setup_generation_rules()
+        self._setup_quality_validators()
         
-        logger.info("SVGX Symbol Generator initialized")
+        logger.info("Symbol generator initialized")
     
-    def _initialize_default_templates(self) -> None:
-        """Initialize default generation templates."""
-        default_templates = [
-            {
-                "template_id": "basic_geometric",
-                "name": "Basic Geometric Shapes",
-                "description": "Generate basic geometric shapes (circle, square, triangle)",
-                "category": "geometric",
-                "parameters": {
-                    "shape_type": "circle",
-                    "size": 100,
-                    "color": "#000000",
-                    "stroke_width": 2
-                },
-                "constraints": {
-                    "min_size": 10,
-                    "max_size": 500,
-                    "allowed_shapes": ["circle", "square", "triangle", "rectangle"]
-                },
-                "svgx_metadata": {
-                    "namespace": "geometric",
-                    "version": "1.0",
-                    "tags": ["basic", "geometric"]
-                }
+    def _initialize_default_templates(self):
+        """Initialize default symbol templates."""
+        # Electrical symbol templates
+        self.templates['electrical_switch'] = {
+            'type': 'rect',
+            'attributes': {
+                'x': 0, 'y': 0, 'width': 20, 'height': 30,
+                'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
             },
-            {
-                "template_id": "technical_symbol",
-                "name": "Technical Symbols",
-                "description": "Generate technical and engineering symbols",
-                "category": "technical",
-                "parameters": {
-                    "symbol_type": "valve",
-                    "size": 80,
-                    "style": "iso",
-                    "color": "#333333"
-                },
-                "constraints": {
-                    "min_size": 20,
-                    "max_size": 200,
-                    "allowed_types": ["valve", "pump", "sensor", "controller"]
-                },
-                "svgx_metadata": {
-                    "namespace": "technical",
-                    "version": "1.0",
-                    "tags": ["technical", "engineering"]
-                }
-            },
-            {
-                "template_id": "abstract_pattern",
-                "name": "Abstract Patterns",
-                "description": "Generate abstract patterns and designs",
-                "category": "abstract",
-                "parameters": {
-                    "pattern_type": "geometric",
-                    "complexity": "medium",
-                    "colors": ["#ff0000", "#00ff00", "#0000ff"],
-                    "size": 120
-                },
-                "constraints": {
-                    "min_size": 50,
-                    "max_size": 300,
-                    "max_colors": 5
-                },
-                "svgx_metadata": {
-                    "namespace": "abstract",
-                    "version": "1.0",
-                    "tags": ["abstract", "pattern", "design"]
-                }
+            'content': '',
+            'metadata': {
+                'category': 'electrical',
+                'subcategory': 'switch',
+                'description': 'Electrical switch symbol'
             }
-        ]
+        }
         
-        for template_data in default_templates:
-            template = GenerationTemplate(**template_data)
-            self.templates[template.template_id] = template
+        self.templates['electrical_outlet'] = {
+            'type': 'circle',
+            'attributes': {
+                'cx': 15, 'cy': 15, 'r': 8,
+                'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+            },
+            'content': '',
+            'metadata': {
+                'category': 'electrical',
+                'subcategory': 'outlet',
+                'description': 'Electrical outlet symbol'
+            }
+        }
+        
+        # Mechanical symbol templates
+        self.templates['mechanical_pump'] = {
+            'type': 'circle',
+            'attributes': {
+                'cx': 20, 'cy': 20, 'r': 15,
+                'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+            },
+            'content': '<text x="20" y="25" text-anchor="middle" font-size="12">P</text>',
+            'metadata': {
+                'category': 'mechanical',
+                'subcategory': 'pump',
+                'description': 'Mechanical pump symbol'
+            }
+        }
+        
+        # Plumbing symbol templates
+        self.templates['plumbing_valve'] = {
+            'type': 'rect',
+            'attributes': {
+                'x': 5, 'y': 5, 'width': 30, 'height': 20,
+                'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+            },
+            'content': '<text x="20" y="18" text-anchor="middle" font-size="10">V</text>',
+            'metadata': {
+                'category': 'plumbing',
+                'subcategory': 'valve',
+                'description': 'Plumbing valve symbol'
+            }
+        }
+        
+        # Fire alarm symbol templates
+        self.templates['fire_alarm_pull'] = {
+            'type': 'rect',
+            'attributes': {
+                'x': 0, 'y': 0, 'width': 25, 'height': 35,
+                'fill': '#ff0000', 'stroke': '#000000', 'stroke-width': '2'
+            },
+            'content': '<text x="12.5" y="22" text-anchor="middle" font-size="10" fill="#ffffff">P</text>',
+            'metadata': {
+                'category': 'fire_alarm',
+                'subcategory': 'pull_station',
+                'description': 'Fire alarm pull station symbol'
+            }
+        }
+        
+        # HVAC symbol templates
+        self.templates['hvac_thermostat'] = {
+            'type': 'rect',
+            'attributes': {
+                'x': 0, 'y': 0, 'width': 30, 'height': 25,
+                'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+            },
+            'content': '<text x="15" y="17" text-anchor="middle" font-size="12">T</text>',
+            'metadata': {
+                'category': 'hvac',
+                'subcategory': 'thermostat',
+                'description': 'HVAC thermostat symbol'
+            }
+        }
     
-    def register_template(self, template: GenerationTemplate) -> None:
-        """Register a new generation template."""
-        self.templates[template.template_id] = template
-        logger.info(f"Registered template: {template.template_id}")
+    def _setup_generation_rules(self):
+        """Setup generation rules."""
+        self.generation_rules['electrical_rule'] = self._apply_electrical_rules
+        self.generation_rules['mechanical_rule'] = self._apply_mechanical_rules
+        self.generation_rules['plumbing_rule'] = self._apply_plumbing_rules
+        self.generation_rules['fire_alarm_rule'] = self._apply_fire_alarm_rules
+        self.generation_rules['hvac_rule'] = self._apply_hvac_rules
     
-    def get_template(self, template_id: str) -> GenerationTemplate:
-        """Get a template by ID."""
-        if template_id not in self.templates:
-            raise TemplateNotFoundError(f"Template not found: {template_id}")
-        return self.templates[template_id]
+    def _setup_quality_validators(self):
+        """Setup quality validation functions."""
+        self.quality_validators.append(self._validate_symbol_structure)
+        self.quality_validators.append(self._validate_symbol_attributes)
+        self.quality_validators.append(self._validate_symbol_content)
+        self.quality_validators.append(self._validate_symbol_metadata)
     
-    def list_templates(self, category: Optional[str] = None) -> List[GenerationTemplate]:
-        """List available templates, optionally filtered by category."""
-        templates = list(self.templates.values())
-        if category:
-            templates = [t for t in templates if t.category == category]
-        return templates
-    
-    def generate_symbol(self, request: GenerationRequest) -> GenerationResult:
-        """Generate a single symbol based on the request."""
-        start_time = time.time()
+    def generate_symbol(self, options: Optional[GenerationOptions] = None,
+                       cache_result: bool = True) -> GenerationResult:
+        """
+        Generate a symbol with the specified options.
+        
+        Args:
+            options: Generation options
+            cache_result: Whether to cache the generation result
+            
+        Returns:
+            GenerationResult: The generated symbol
+        """
+        start_time = datetime.utcnow()
+        
+        # Merge options with defaults
+        generation_options = self._merge_options(options)
+        
+        # Check cache first
+        cache_key = self._generate_cache_key(generation_options)
+        if cache_result and cache_key in self.generated_cache:
+            self.stats['cache_hits'] += 1
+            logger.debug("Using cached generation result", cache_key=cache_key)
+            return self.generated_cache[cache_key]
+        
+        self.stats['cache_misses'] += 1
         
         try:
-            # Validate request
-            self._validate_generation_request(request)
+            # Generate symbol based on type
+            if generation_options.generation_type == GenerationType.TEMPLATE_BASED:
+                symbol_data = self._generate_from_template(generation_options)
+            elif generation_options.generation_type == GenerationType.RULE_BASED:
+                symbol_data = self._generate_from_rules(generation_options)
+            elif generation_options.generation_type == GenerationType.AI_GENERATED:
+                symbol_data = self._generate_ai_symbol(generation_options)
+            else:
+                raise GenerationError(f"Unsupported generation type: {generation_options.generation_type.value}")
             
-            # Get template if specified
-            template = None
-            if request.template_id:
-                template = self.get_template(request.template_id)
+            # Apply custom attributes
+            if generation_options.custom_attributes:
+                symbol_data['attributes'].update(generation_options.custom_attributes)
             
-            # Generate symbol
-            symbol = self._generate_symbol_internal(request, template)
-            
-            # Calculate quality score
-            quality_score = self._calculate_quality_score(symbol, request)
+            # Validate if requested
+            validation_passed = True
+            quality_score = 1.0
+            if generation_options.validate_output:
+                validation_passed, quality_score = self._validate_generated_symbol(symbol_data)
             
             # Create result
             result = GenerationResult(
-                symbol_id=str(uuid4()),
-                symbol=symbol,
-                generation_time=time.time() - start_time,
+                symbol_data=symbol_data,
+                generation_type=generation_options.generation_type,
+                category=generation_options.category,
+                template_used=generation_options.template_name,
+                validation_passed=validation_passed,
                 quality_score=quality_score,
-                template_used=request.template_id,
-                parameters=request.parameters,
-                metadata={
-                    "category": request.category,
-                    "output_format": request.output_format,
-                    "quality_level": request.quality_level
-                }
+                generated_at=datetime.utcnow()
             )
             
-            # Log telemetry
-            self.telemetry.log_event("symbol_generated", {
-                "template_id": request.template_id,
-                "category": request.category,
-                "quality_score": quality_score,
-                "generation_time": result.generation_time
-            })
+            # Calculate generation time
+            generation_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            result.generation_time_ms = generation_time
             
-            logger.info(f"Generated symbol: {result.symbol_id}")
+            # Update statistics
+            self._update_stats(result)
+            
+            # Cache result if requested
+            if cache_result:
+                self.generated_cache[cache_key] = result
+            
+            logger.info("Symbol generation completed",
+                       generation_type=generation_options.generation_type.value,
+                       category=generation_options.category.value,
+                       validation_passed=validation_passed,
+                       quality_score=quality_score,
+                       generation_time_ms=generation_time)
+            
             return result
             
         except Exception as e:
-            logger.error(f"Symbol generation failed: {e}")
-            raise SymbolGenerationError(f"Symbol generation failed: {e}")
+            logger.error("Symbol generation failed", error=str(e))
+            raise GenerationError(f"Generation failed: {str(e)}")
     
-    def generate_batch(self, requests: List[GenerationRequest]) -> BatchGenerationResult:
-        """Generate multiple symbols in batch."""
-        batch_id = str(uuid4())
-        start_time = time.time()
-        results = []
-        success_count = 0
-        failure_count = 0
-        quality_scores = []
+    def _generate_from_template(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Generate symbol from template."""
+        template_name = options.template_name
+        if not template_name:
+            # Select template based on category
+            template_name = self._select_template_for_category(options.category)
         
-        logger.info(f"Starting batch generation: {batch_id} with {len(requests)} requests")
+        if template_name not in self.templates:
+            raise GenerationError(f"Template not found: {template_name}")
         
-        for i, request in enumerate(requests):
-            try:
-                result = self.generate_symbol(request)
-                results.append(result)
-                success_count += 1
-                quality_scores.append(result.quality_score)
-                
-                # Log progress
-                if (i + 1) % 10 == 0:
-                    logger.info(f"Batch progress: {i + 1}/{len(requests)} completed")
-                    
-            except Exception as e:
-                failure_count += 1
-                logger.error(f"Batch generation failed for request {i}: {e}")
-                
-                # Create failed result
-                failed_result = GenerationResult(
-                    symbol_id=str(uuid4()),
-                    symbol=SVGXSymbol(
-                        id=str(uuid4()),
-                        name=f"failed_symbol_{i}",
-                        content="",
-                        metadata=SVGXSymbolMetadata(
-                            namespace="error",
-                            version="1.0",
-                            tags=["failed"]
-                        )
-                    ),
-                    generation_time=0.0,
-                    quality_score=0.0,
-                    template_used=request.template_id,
-                    parameters=request.parameters,
-                    metadata={"error": str(e)}
-                )
-                results.append(failed_result)
+        template = self.templates[template_name].copy()
         
-        total_time = time.time() - start_time
-        average_quality = np.mean(quality_scores) if quality_scores else 0.0
+        # Generate unique ID
+        symbol_id = f"{options.category.value}_{str(uuid.uuid4())[:8]}"
         
-        batch_result = BatchGenerationResult(
-            batch_id=batch_id,
-            results=results,
-            total_time=total_time,
-            success_count=success_count,
-            failure_count=failure_count,
-            average_quality=average_quality,
-            metadata={
-                "total_requests": len(requests),
-                "success_rate": success_count / len(requests) if requests else 0.0
-            }
-        )
-        
-        # Log batch completion
-        self.telemetry.log_event("batch_generation_completed", {
-            "batch_id": batch_id,
-            "total_requests": len(requests),
-            "success_count": success_count,
-            "failure_count": failure_count,
-            "total_time": total_time,
-            "average_quality": average_quality
-        })
-        
-        logger.info(f"Batch generation completed: {batch_id}")
-        return batch_result
-    
-    def _validate_generation_request(self, request: GenerationRequest) -> None:
-        """Validate generation request parameters."""
-        if request.template_id and request.template_id not in self.templates:
-            raise TemplateNotFoundError(f"Template not found: {request.template_id}")
-        
-        # Validate parameters based on template constraints
-        if request.template_id:
-            template = self.get_template(request.template_id)
-            self._validate_parameters_against_constraints(request.parameters, template.constraints)
-    
-    def _validate_parameters_against_constraints(self, parameters: Dict[str, Any], constraints: Dict[str, Any]) -> None:
-        """Validate parameters against template constraints."""
-        for param_name, param_value in parameters.items():
-            if param_name in constraints:
-                constraint = constraints[param_name]
-                
-                if isinstance(constraint, dict):
-                    if "min" in constraint and param_value < constraint["min"]:
-                        raise ValidationError(f"Parameter {param_name} below minimum: {param_value} < {constraint['min']}")
-                    if "max" in constraint and param_value > constraint["max"]:
-                        raise ValidationError(f"Parameter {param_name} above maximum: {param_value} > {constraint['max']}")
-                    if "allowed_values" in constraint and param_value not in constraint["allowed_values"]:
-                        raise ValidationError(f"Parameter {param_name} not in allowed values: {param_value}")
-    
-    def _generate_symbol_internal(self, request: GenerationRequest, template: Optional[GenerationTemplate]) -> SVGXSymbol:
-        """Internal symbol generation logic."""
-        # Merge template parameters with request parameters
-        base_parameters = template.parameters if template else {}
-        merged_parameters = {**base_parameters, **request.parameters}
-        
-        # Generate SVG content based on category and parameters
-        svg_content = self._generate_svg_content(request.category, merged_parameters, request.style_preferences)
-        
-        # Create SVGX symbol with metadata
-        symbol_id = str(uuid4())
-        metadata = SVGXSymbolMetadata(
-            namespace=template.svgx_metadata.get("namespace", "generated") if template else "generated",
-            version=template.svgx_metadata.get("version", "1.0") if template else "1.0",
-            tags=template.svgx_metadata.get("tags", []) if template else ["generated"],
-            properties={
-                "generation_template": template.template_id if template else None,
-                "generation_parameters": merged_parameters,
-                "generation_timestamp": datetime.now().isoformat(),
-                "quality_level": request.quality_level,
-                "output_format": request.output_format
-            }
-        )
-        
-        return SVGXSymbol(
-            id=symbol_id,
-            name=f"generated_symbol_{symbol_id[:8]}",
-            content=svg_content,
-            metadata=metadata
-        )
-    
-    def _generate_svg_content(self, category: str, parameters: Dict[str, Any], style_preferences: Dict[str, Any]) -> str:
-        """Generate SVG content based on category and parameters."""
-        if category == "geometric":
-            return self._generate_geometric_svg(parameters, style_preferences)
-        elif category == "technical":
-            return self._generate_technical_svg(parameters, style_preferences)
-        elif category == "abstract":
-            return self._generate_abstract_svg(parameters, style_preferences)
-        else:
-            # Default to basic geometric shape
-            return self._generate_geometric_svg(parameters, style_preferences)
-    
-    def _generate_geometric_svg(self, parameters: Dict[str, Any], style_preferences: Dict[str, Any]) -> str:
-        """Generate geometric shape SVG content."""
-        shape_type = parameters.get("shape_type", "circle")
-        size = parameters.get("size", 100)
-        color = parameters.get("color", "#000000")
-        stroke_width = parameters.get("stroke_width", 2)
-        
-        # Apply style preferences
-        fill_color = style_preferences.get("fill_color", "none")
-        stroke_color = style_preferences.get("stroke_color", color)
-        
-        if shape_type == "circle":
-            radius = size // 2
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="{size//2}" cy="{size//2}" r="{radius}" 
-                        fill="{fill_color}" stroke="{stroke_color}" stroke-width="{stroke_width}"/>
-            </svg>'''
-        elif shape_type == "square":
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <rect x="0" y="0" width="{size}" height="{size}" 
-                      fill="{fill_color}" stroke="{stroke_color}" stroke-width="{stroke_width}"/>
-            </svg>'''
-        elif shape_type == "triangle":
-            points = f"{size//2},0 {size},{size} 0,{size}"
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="{points}" 
-                         fill="{fill_color}" stroke="{stroke_color}" stroke-width="{stroke_width}"/>
-            </svg>'''
-        else:
-            # Default to circle
-            radius = size // 2
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="{size//2}" cy="{size//2}" r="{radius}" 
-                        fill="{fill_color}" stroke="{stroke_color}" stroke-width="{stroke_width}"/>
-            </svg>'''
-    
-    def _generate_technical_svg(self, parameters: Dict[str, Any], style_preferences: Dict[str, Any]) -> str:
-        """Generate technical symbol SVG content."""
-        symbol_type = parameters.get("symbol_type", "valve")
-        size = parameters.get("size", 80)
-        style = parameters.get("style", "iso")
-        color = parameters.get("color", "#333333")
-        
-        if symbol_type == "valve":
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <rect x="{size*0.1}" y="{size*0.3}" width="{size*0.8}" height="{size*0.4}" 
-                      fill="none" stroke="{color}" stroke-width="2"/>
-                <line x1="{size*0.2}" y1="{size*0.5}" x2="{size*0.8}" y2="{size*0.5}" 
-                      stroke="{color}" stroke-width="2"/>
-                <circle cx="{size*0.5}" cy="{size*0.5}" r="{size*0.1}" 
-                        fill="none" stroke="{color}" stroke-width="2"/>
-            </svg>'''
-        elif symbol_type == "pump":
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="{size*0.5}" cy="{size*0.5}" r="{size*0.4}" 
-                        fill="none" stroke="{color}" stroke-width="2"/>
-                <circle cx="{size*0.5}" cy="{size*0.5}" r="{size*0.2}" 
-                        fill="none" stroke="{color}" stroke-width="2"/>
-                <line x1="{size*0.5}" y1="{size*0.1}" x2="{size*0.5}" y2="{size*0.9}" 
-                      stroke="{color}" stroke-width="2"/>
-            </svg>'''
-        else:
-            # Default to valve
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <rect x="{size*0.1}" y="{size*0.3}" width="{size*0.8}" height="{size*0.4}" 
-                      fill="none" stroke="{color}" stroke-width="2"/>
-                <line x1="{size*0.2}" y1="{size*0.5}" x2="{size*0.8}" y2="{size*0.5}" 
-                      stroke="{color}" stroke-width="2"/>
-                <circle cx="{size*0.5}" cy="{size*0.5}" r="{size*0.1}" 
-                        fill="none" stroke="{color}" stroke-width="2"/>
-            </svg>'''
-    
-    def _generate_abstract_svg(self, parameters: Dict[str, Any], style_preferences: Dict[str, Any]) -> str:
-        """Generate abstract pattern SVG content."""
-        pattern_type = parameters.get("pattern_type", "geometric")
-        complexity = parameters.get("complexity", "medium")
-        colors = parameters.get("colors", ["#ff0000", "#00ff00", "#0000ff"])
-        size = parameters.get("size", 120)
-        
-        if pattern_type == "geometric":
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <pattern id="geometric-pattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <rect x="0" y="0" width="10" height="10" fill="{colors[0] if colors else '#ff0000'}"/>
-                        <rect x="10" y="10" width="10" height="10" fill="{colors[1] if len(colors) > 1 else '#00ff00'}"/>
-                    </pattern>
-                </defs>
-                <rect x="0" y="0" width="{size}" height="{size}" fill="url(#geometric-pattern)"/>
-            </svg>'''
-        else:
-            # Default to simple pattern
-            return f'''<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="{size//4}" cy="{size//4}" r="{size//8}" fill="{colors[0] if colors else '#ff0000'}"/>
-                <circle cx="{size*3//4}" cy="{size//4}" r="{size//8}" fill="{colors[1] if len(colors) > 1 else '#00ff00'}"/>
-                <circle cx="{size//4}" cy="{size*3//4}" r="{size//8}" fill="{colors[2] if len(colors) > 2 else '#0000ff'}"/>
-                <circle cx="{size*3//4}" cy="{size*3//4}" r="{size//8}" fill="{colors[0] if colors else '#ff0000'}"/>
-            </svg>'''
-    
-    def _calculate_quality_score(self, symbol: SVGXSymbol, request: GenerationRequest) -> float:
-        """Calculate quality score for generated symbol."""
-        score = 0.0
-        
-        # Base score for successful generation
-        score += 0.5
-        
-        # Quality level bonus
-        quality_bonus = {
-            "low": 0.1,
-            "standard": 0.2,
-            "high": 0.3,
-            "ultra": 0.4
+        # Create symbol data
+        symbol_data = {
+            'id': symbol_id,
+            'type': template['type'],
+            'attributes': template['attributes'].copy(),
+            'content': template['content'],
+            'metadata': template['metadata'].copy(),
+            'namespace': f"arx:{options.category.value}",
+            'generated_at': datetime.utcnow().isoformat()
         }
-        score += quality_bonus.get(request.quality_level, 0.2)
         
-        # Template usage bonus
-        if request.template_id:
-            score += 0.1
-        
-        # Parameter completeness bonus
-        if len(request.parameters) > 0:
-            score += 0.1
-        
-        # Style preferences bonus
-        if len(request.style_preferences) > 0:
-            score += 0.1
-        
-        # Ensure score is between 0 and 1
-        return min(max(score, 0.0), 1.0)
+        return symbol_data
     
-    def get_performance_metrics(self) -> Dict[str, Any]:
-        """Get performance metrics for the generator."""
+    def _generate_from_rules(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Generate symbol using rules."""
+        # Get rule function for category
+        rule_name = f"{options.category.value}_rule"
+        rule_func = self.generation_rules.get(rule_name)
+        
+        if not rule_func:
+            raise GenerationError(f"No generation rule found for category: {options.category.value}")
+        
+        # Generate symbol using rule
+        symbol_data = rule_func(options)
+        
+        # Generate unique ID
+        symbol_id = f"{options.category.value}_{str(uuid.uuid4())[:8]}"
+        symbol_data['id'] = symbol_id
+        symbol_data['namespace'] = f"arx:{options.category.value}"
+        symbol_data['generated_at'] = datetime.utcnow().isoformat()
+        
+        return symbol_data
+    
+    def _generate_ai_symbol(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Generate symbol using AI (placeholder for future implementation)."""
+        # For now, fall back to template-based generation
+        logger.warning("AI generation not implemented, falling back to template-based generation")
+        return self._generate_from_template(options)
+    
+    def _apply_electrical_rules(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Apply electrical generation rules."""
+        # Generate electrical symbol based on rules
+        symbol_type = 'rect'  # Default electrical symbol type
+        attributes = {
+            'x': 0, 'y': 0, 'width': 25, 'height': 25,
+            'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+        }
+        
+        # Apply electrical-specific rules
+        if 'outlet' in options.generation_rules:
+            symbol_type = 'circle'
+            attributes = {
+                'cx': 12.5, 'cy': 12.5, 'r': 8,
+                'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+            }
+        elif 'switch' in options.generation_rules:
+            attributes['height'] = 35
+            attributes['width'] = 20
+        
         return {
-            "templates_count": len(self.templates),
-            "cache_size": len(self.generation_cache),
-            "performance_metrics": self.performance_monitor.get_metrics()
+            'type': symbol_type,
+            'attributes': attributes,
+            'content': '',
+            'metadata': {
+                'category': 'electrical',
+                'description': 'Generated electrical symbol'
+            }
         }
     
-    def clear_cache(self) -> None:
+    def _apply_mechanical_rules(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Apply mechanical generation rules."""
+        symbol_type = 'circle'
+        attributes = {
+            'cx': 20, 'cy': 20, 'r': 15,
+            'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+        }
+        
+        content = '<text x="20" y="25" text-anchor="middle" font-size="12">M</text>'
+        
+        return {
+            'type': symbol_type,
+            'attributes': attributes,
+            'content': content,
+            'metadata': {
+                'category': 'mechanical',
+                'description': 'Generated mechanical symbol'
+            }
+        }
+    
+    def _apply_plumbing_rules(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Apply plumbing generation rules."""
+        symbol_type = 'rect'
+        attributes = {
+            'x': 5, 'y': 5, 'width': 30, 'height': 20,
+            'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+        }
+        
+        content = '<text x="20" y="18" text-anchor="middle" font-size="10">P</text>'
+        
+        return {
+            'type': symbol_type,
+            'attributes': attributes,
+            'content': content,
+            'metadata': {
+                'category': 'plumbing',
+                'description': 'Generated plumbing symbol'
+            }
+        }
+    
+    def _apply_fire_alarm_rules(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Apply fire alarm generation rules."""
+        symbol_type = 'rect'
+        attributes = {
+            'x': 0, 'y': 0, 'width': 25, 'height': 35,
+            'fill': '#ff0000', 'stroke': '#000000', 'stroke-width': '2'
+        }
+        
+        content = '<text x="12.5" y="22" text-anchor="middle" font-size="10" fill="#ffffff">F</text>'
+        
+        return {
+            'type': symbol_type,
+            'attributes': attributes,
+            'content': content,
+            'metadata': {
+                'category': 'fire_alarm',
+                'description': 'Generated fire alarm symbol'
+            }
+        }
+    
+    def _apply_hvac_rules(self, options: GenerationOptions) -> Dict[str, Any]:
+        """Apply HVAC generation rules."""
+        symbol_type = 'rect'
+        attributes = {
+            'x': 0, 'y': 0, 'width': 30, 'height': 25,
+            'fill': '#ffffff', 'stroke': '#000000', 'stroke-width': '2'
+        }
+        
+        content = '<text x="15" y="17" text-anchor="middle" font-size="12">H</text>'
+        
+        return {
+            'type': symbol_type,
+            'attributes': attributes,
+            'content': content,
+            'metadata': {
+                'category': 'hvac',
+                'description': 'Generated HVAC symbol'
+            }
+        }
+    
+    def _select_template_for_category(self, category: SymbolCategory) -> str:
+        """Select appropriate template for category."""
+        category_templates = {
+            SymbolCategory.ELECTRICAL: 'electrical_switch',
+            SymbolCategory.MECHANICAL: 'mechanical_pump',
+            SymbolCategory.PLUMBING: 'plumbing_valve',
+            SymbolCategory.FIRE_ALARM: 'fire_alarm_pull',
+            SymbolCategory.HVAC: 'hvac_thermostat',
+            SymbolCategory.GENERAL: 'electrical_switch'  # Default fallback
+        }
+        
+        return category_templates.get(category, 'electrical_switch')
+    
+    def _validate_generated_symbol(self, symbol_data: Dict[str, Any]) -> Tuple[bool, float]:
+        """Validate generated symbol and return quality score."""
+        passed_checks = 0
+        total_checks = len(self.quality_validators)
+        
+        for validator in self.quality_validators:
+            try:
+                if validator(symbol_data):
+                    passed_checks += 1
+            except Exception as e:
+                logger.warning(f"Validation check failed: {e}")
+        
+        validation_passed = passed_checks == total_checks
+        quality_score = passed_checks / total_checks if total_checks > 0 else 0.0
+        
+        return validation_passed, quality_score
+    
+    def _validate_symbol_structure(self, symbol_data: Dict[str, Any]) -> bool:
+        """Validate symbol structure."""
+        required_fields = ['id', 'type', 'attributes']
+        return all(field in symbol_data for field in required_fields)
+    
+    def _validate_symbol_attributes(self, symbol_data: Dict[str, Any]) -> bool:
+        """Validate symbol attributes."""
+        attributes = symbol_data.get('attributes', {})
+        return isinstance(attributes, dict) and len(attributes) > 0
+    
+    def _validate_symbol_content(self, symbol_data: Dict[str, Any]) -> bool:
+        """Validate symbol content."""
+        # Content is optional, so this always passes
+        return True
+    
+    def _validate_symbol_metadata(self, symbol_data: Dict[str, Any]) -> bool:
+        """Validate symbol metadata."""
+        metadata = symbol_data.get('metadata', {})
+        return isinstance(metadata, dict)
+    
+    def _merge_options(self, options: Optional[GenerationOptions]) -> GenerationOptions:
+        """Merge options with defaults."""
+        if options is None:
+            return self.default_options
+        
+        # Create a new options object with merged values
+        merged = GenerationOptions()
+        for field in merged.__dataclass_fields__:
+            user_value = getattr(options, field)
+            default_value = getattr(self.default_options, field)
+            setattr(merged, field, user_value if user_value is not None else default_value)
+        
+        return merged
+    
+    def _generate_cache_key(self, options: GenerationOptions) -> str:
+        """Generate cache key for generation result."""
+        import hashlib
+        options_str = json.dumps({
+            'generation_type': options.generation_type.value,
+            'category': options.category.value,
+            'template_name': options.template_name,
+            'quality_level': options.quality_level,
+            'include_metadata': options.include_metadata,
+            'validate_output': options.validate_output,
+            'optimize_generated': options.optimize_generated,
+            'custom_attributes': options.custom_attributes,
+            'generation_rules': options.generation_rules
+        }, sort_keys=True)
+        
+        return hashlib.md5(options_str.encode()).hexdigest()
+    
+    def _update_stats(self, result: GenerationResult):
+        """Update generation statistics."""
+        self.stats['total_generations'] += 1
+        if result.validation_passed:
+            self.stats['successful_generations'] += 1
+        else:
+            self.stats['failed_generations'] += 1
+        
+        # Update average generation time
+        total_time = self.stats['average_generation_time_ms'] * (self.stats['total_generations'] - 1)
+        total_time += result.generation_time_ms
+        self.stats['average_generation_time_ms'] = total_time / self.stats['total_generations']
+    
+    def add_template(self, name: str, template: Dict[str, Any]):
+        """Add a custom template."""
+        self.templates[name] = template
+        logger.info("Custom template added", template_name=name)
+    
+    def add_generation_rule(self, name: str, rule_func: Callable):
+        """Add a custom generation rule."""
+        self.generation_rules[name] = rule_func
+        logger.info("Custom generation rule added", rule_name=name)
+    
+    def add_quality_validator(self, validator_func: Callable):
+        """Add a custom quality validator."""
+        self.quality_validators.append(validator_func)
+        logger.info("Custom quality validator added")
+    
+    def get_generation_statistics(self) -> Dict[str, Any]:
+        """Get generation statistics."""
+        return {
+            'stats': self.stats,
+            'templates_count': len(self.templates),
+            'rules_count': len(self.generation_rules),
+            'validators_count': len(self.quality_validators),
+            'cache_size': len(self.generated_cache)
+        }
+    
+    def clear_cache(self):
         """Clear the generation cache."""
-        self.generation_cache.clear()
+        self.generated_cache.clear()
         logger.info("Generation cache cleared")
     
-    def export_templates(self, file_path: str) -> None:
-        """Export templates to JSON file."""
-        templates_data = [template.dict() for template in self.templates.values()]
-        
-        with open(file_path, 'w') as f:
-            json.dump(templates_data, f, indent=2, default=str)
-        
-        logger.info(f"Templates exported to: {file_path}")
-    
-    def import_templates(self, file_path: str) -> None:
-        """Import templates from JSON file."""
-        with open(file_path, 'r') as f:
-            templates_data = json.load(f)
-        
-        for template_data in templates_data:
-            template = GenerationTemplate(**template_data)
-            self.register_template(template)
-        
-        logger.info(f"Templates imported from: {file_path}")
+    def set_default_options(self, options: GenerationOptions):
+        """Set default generation options."""
+        self.default_options = options
+        logger.info("Default generation options updated")
 
 
-# Service instance for dependency injection
-symbol_generator_service = SVGXSymbolGenerator() 
+# Factory function for creating generator instances
+def create_symbol_generator(default_options: Optional[GenerationOptions] = None) -> SVGXSymbolGenerator:
+    """Create a new symbol generator instance."""
+    return SVGXSymbolGenerator(default_options)
+
+
+# Global generator instance
+_symbol_generator = None
+
+
+def get_symbol_generator() -> SVGXSymbolGenerator:
+    """Get the global symbol generator instance."""
+    global _symbol_generator
+    if _symbol_generator is None:
+        _symbol_generator = create_symbol_generator()
+    return _symbol_generator 

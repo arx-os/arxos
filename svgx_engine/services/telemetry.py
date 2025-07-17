@@ -24,7 +24,7 @@ from datetime import datetime, timedelta
 from structlog import get_logger
 
 try:
-    from ..utils.errors import TelemetryError, ValidationError
+    from svgx_engine.utils.errors import TelemetryError, ValidationError
 except ImportError:
     # Fallback for direct execution
     import sys

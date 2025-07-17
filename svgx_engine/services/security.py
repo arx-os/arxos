@@ -12,8 +12,8 @@ import logging
 
 from structlog import get_logger
 
-from .advanced_security import (
-    AdvancedSecurityService,
+from svgx_engine.services.advanced_security import (
+    SVGXAdvancedSecurityService as AdvancedSecurityService,
     PrivacyControlsService,
     EncryptionService,
     AuditTrailService,

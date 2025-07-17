@@ -129,6 +129,38 @@ make deploy-staging
 make deploy-production
 ```
 
+## Development Setup for svgx_engine
+
+To ensure robust imports and a stable development environment, follow these steps:
+
+1. **Install in Editable Mode:**
+   ```sh
+   pip install -e ./arxos/svgx_engine
+   ```
+   This allows you to make changes to the code and have them reflected immediately.
+
+2. **Run Tests from Project Root:**
+   Always run tests and scripts from the project root (where `pyproject.toml` is located) to ensure `svgx_engine` is recognized as a top-level package.
+   ```sh
+   cd /path/to/arxos
+   python -m svgx_engine.test_simple_imports
+   python -m svgx_engine.test_migrated_services
+   ```
+
+3. **Import Policy:**
+   - All imports within `svgx_engine` should use absolute imports (e.g., `from svgx_engine.models...`).
+   - Avoid relative imports to ensure compatibility with both development and production environments.
+   - If you encounter import errors, check your working directory and ensure you are running from the project root.
+
+4. **Troubleshooting:**
+   - If you see `ModuleNotFoundError: No module named 'svgx_engine'`, ensure you are running from the project root and have installed the package in editable mode.
+   - For further help, see `DEVELOPMENT.md` (if available) or contact the maintainers.
+
+## Directory Structure Notes
+
+- `svgx_engine/cache/`: Internal cache for SVGX Engine (temporary, not versioned)
+- `svgx_symbols/`: Shared symbol library for all Arxos modules (versioned, shared resource)
+
 ## 🏛️ System Architecture
 
 ### Core Concepts

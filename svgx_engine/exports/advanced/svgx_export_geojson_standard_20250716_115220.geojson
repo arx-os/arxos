@@ -1,0 +1,48 @@
+{
+  "type": "FeatureCollection",
+  "metadata": {
+    "export_job_id": "f5473083-6fe8-457f-a2ef-353aa55b8f64",
+    "export_quality": "standard",
+    "export_format": "geojson",
+    "created_at": "2025-07-16T11:52:20.878282"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "element_1",
+      "properties": {
+        "name": "SVGX Element",
+        "type": "building_component",
+        "precision": "0.1mm",
+        "export_quality": "standard"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              100,
+              0
+            ],
+            [
+              100,
+              100
+            ],
+            [
+              0,
+              100
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

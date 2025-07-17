@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import sqlite3
 import xml.etree.ElementTree as ET
-from xml.schema import XMLSchema
+from xmlschema import XMLSchema
 import jsonschema
 from concurrent.futures import ThreadPoolExecutor
 import threading
@@ -31,7 +31,7 @@ import pickle
 import zlib
 
 try:
-    from ..utils.performance import PerformanceMonitor
+    from svgx_engine.utils.performance import PerformanceMonitor
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -40,7 +40,7 @@ except ImportError:
     from utils.performance import PerformanceMonitor
 
 try:
-    from ..utils.errors import (
+    from svgx_engine.utils.errors import (
         ValidationError, SchemaError, SVGXError, PerformanceError
     )
 except ImportError:
@@ -52,7 +52,7 @@ except ImportError:
         ValidationError, SchemaError, SVGXError, PerformanceError
     )
 
-from ..models.svgx import SVGXElement, SVGXDocument
+from svgx_engine.models.svgx import SVGXElement, SVGXDocument
 
 
 @dataclass

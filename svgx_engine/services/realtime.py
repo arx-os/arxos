@@ -27,7 +27,7 @@ import numpy as np
 
 from structlog import get_logger
 
-from .telemetry import (
+from svgx_engine.services.telemetry import (
     SVGXTelemetryBuffer, SVGXTelemetryRecord, SVGXTelemetryIngestor,
     SVGXTelemetryType, SVGXTelemetrySeverity
 )

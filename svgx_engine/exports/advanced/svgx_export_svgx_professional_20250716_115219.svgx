@@ -1,0 +1,57 @@
+{
+  "svgx_version": "1.0.0",
+  "metadata": {
+    "export_job_id": "778b2848-17f4-4f51-ba8a-904bd3fd2c06",
+    "export_quality": "professional",
+    "export_format": "svgx",
+    "created_at": "2025-07-16T11:52:19.965245",
+    "svgx_engine_version": "1.0.0"
+  },
+  "elements": [
+    {
+      "id": "element_1",
+      "type": "arx:object",
+      "attributes": {
+        "arx:name": "SVGX Element",
+        "arx:type": "building_component",
+        "arx:precision": "0.1mm"
+      },
+      "geometry": {
+        "type": "rectangle",
+        "x": 0,
+        "y": 0,
+        "width": 100,
+        "height": 100
+      },
+      "behaviors": [
+        {
+          "id": "behavior_1",
+          "type": "arx:behavior",
+          "attributes": {
+            "arx:name": "SVGX Behavior",
+            "arx:type": "interactive"
+          }
+        }
+      ]
+    }
+  ],
+  "behaviors": [
+    {
+      "id": "behavior_1",
+      "type": "interactive",
+      "triggers": [
+        "click",
+        "hover"
+      ],
+      "actions": [
+        "highlight",
+        "animate"
+      ]
+    }
+  ],
+  "physics": {
+    "gravity": 9.81,
+    "collision_detection": true,
+    "simulation_enabled": true
+  }
+}

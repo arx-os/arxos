@@ -33,7 +33,7 @@ from pathlib import Path
 from structlog import get_logger
 
 try:
-    from ..utils.errors import CacheError, ValidationError
+    from svgx_engine.utils.errors import CacheError, ValidationError
 except ImportError:
     # Fallback for direct execution
     import sys

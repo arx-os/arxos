@@ -11,7 +11,7 @@ from datetime import datetime
 from structlog import get_logger
 
 try:
-    from ..utils.errors import SVGXError, ExportError, ImportError, ValidationError
+    from svgx_engine.utils.errors import SVGXError, ExportError, ImportError, ValidationError
 except ImportError:
     # Fallback for direct execution
     import sys

@@ -1,0 +1,398 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svgx-engine
+  namespace: svgx-engine
+  labels:
+    app: svgx-engine
+    version: v1.0.0
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: svgx-engine
+  template:
+    metadata:
+      labels:
+        app: svgx-engine
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: svgx-engine-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: svgx-engine
+        image: svgx-engine:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: svgx-engine-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: svgx-engine-secrets
+              key: redis-url
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: svgx-engine-secrets
+              key: api-key
+        - name: TELEMETRY_ENABLED
+          value: "true"
+        - name: CACHE_ENABLED
+          value: "true"
+        - name: PERFORMANCE_MONITORING
+          value: "true"
+        - name: SECURITY_AUDITING
+          value: "true"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        volumeMounts:
+        - name: svgx-cache
+          mountPath: /app/svgx_cache
+        - name: svgx-logs
+          mountPath: /app/logs
+        - name: svgx-config
+          mountPath: /app/config
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: svgx-cache
+        persistentVolumeClaim:
+          claimName: svgx-cache-pvc
+      - name: svgx-logs
+        persistentVolumeClaim:
+          claimName: svgx-logs-pvc
+      - name: svgx-config
+        configMap:
+          name: svgx-engine-config
+      nodeSelector:
+        node-role.kubernetes.io/worker: "true"
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - svgx-engine
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svgx-engine-service
+  namespace: svgx-engine
+  labels:
+    app: svgx-engine
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: svgx-engine
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: svgx-engine-ingress
+  namespace: svgx-engine
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - svgx-engine.example.com
+    secretName: svgx-engine-tls
+  rules:
+  - host: svgx-engine.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: svgx-engine-service
+            port:
+              number: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: svgx-engine-hpa
+  namespace: svgx-engine
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: svgx-engine
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: svgx-engine-config
+  namespace: svgx-engine
+data:
+  app.yaml: |
+    # SVGX Engine Configuration
+    app:
+      name: "SVGX Engine"
+      version: "1.0.0"
+      environment: "production"
+    
+    # Performance Configuration
+    performance:
+      ui_response_time_target_ms: 16
+      redraw_time_target_ms: 32
+      physics_simulation_target_ms: 100
+      batch_processing_enabled: true
+      cache_enabled: true
+      cache_ttl_seconds: 3600
+    
+    # Security Configuration
+    security:
+      input_validation_enabled: true
+      rate_limiting_enabled: true
+      rate_limit_requests_per_minute: 1000
+      audit_logging_enabled: true
+      cors_enabled: true
+      allowed_origins:
+        - "https://svgx-engine.example.com"
+        - "https://app.example.com"
+    
+    # Database Configuration
+    database:
+      type: "sqlite"
+      connection_pool_size: 10
+      connection_timeout_seconds: 30
+      query_timeout_seconds: 60
+      enable_logging: true
+    
+    # Logging Configuration
+    logging:
+      level: "INFO"
+      format: "json"
+      output: "stdout"
+      file_enabled: false
+      performance_logging: true
+      security_logging: true
+    
+    # Telemetry Configuration
+    telemetry:
+      enabled: true
+      endpoint: "https://telemetry.example.com"
+      batch_size: 100
+      flush_interval_seconds: 30
+    
+    # Cache Configuration
+    cache:
+      backend: "memory"
+      max_size: 1000
+      policy: "lru"
+      ttl_seconds: 3600
+    
+    # API Configuration
+    api:
+      docs_enabled: true
+      metrics_enabled: true
+      health_check_enabled: true
+      cors_enabled: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: svgx-engine-secrets
+  namespace: svgx-engine
+type: Opaque
+data:
+  # Base64 encoded values (replace with actual values)
+  database-url: c3FsaXRlOi8vL2FwcC9kYXRhL3N2Z3hfZW5naW5lLmRi
+  redis-url: cmVkaXM6Ly9yZWRpcy1zZXJ2aWNlOjYzNzk=
+  api-key: c2VjcmV0LWFwaS1rZXk=
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: svgx-cache-pvc
+  namespace: svgx-engine
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: svgx-logs-pvc
+  namespace: svgx-engine
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: svgx-engine-sa
+  namespace: svgx-engine
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: svgx-engine-role
+  namespace: svgx-engine
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: svgx-engine-rolebinding
+  namespace: svgx-engine
+subjects:
+- kind: ServiceAccount
+  name: svgx-engine-sa
+  namespace: svgx-engine
+roleRef:
+  kind: Role
+  name: svgx-engine-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: svgx-engine-monitor
+  namespace: svgx-engine
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: svgx-engine
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - svgx-engine 

@@ -31,7 +31,7 @@ from contextlib import contextmanager
 from structlog import get_logger
 
 try:
-    from ..utils.errors import PerformanceError
+    from svgx_engine.utils.errors import PerformanceError
 except ImportError:
     # Fallback for direct execution
     import sys

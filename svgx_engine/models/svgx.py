@@ -193,3 +193,79 @@ class SVGXObject:
             behavior=behavior,
             physics=physics
         ) 
+
+
+@dataclass
+class SVGXSymbol:
+    """SVGX symbol model for symbol management."""
+    
+    symbol_id: str
+    symbol_name: str
+    symbol_type: str
+    content: str = ""
+    properties: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    version: str = "1.0"
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    
+    def __post_init__(self):
+        if self.created_at is None:
+            self.created_at = datetime.utcnow()
+        if self.updated_at is None:
+            self.updated_at = datetime.utcnow()
+    
+    def add_property(self, key: str, value: Any):
+        """Add a property to the symbol."""
+        self.properties[key] = value
+        self.updated_at = datetime.utcnow()
+    
+    def get_property(self, key: str, default: Any = None) -> Any:
+        """Get a property from the symbol."""
+        return self.properties.get(key, default)
+    
+    def add_metadata(self, key: str, value: Any):
+        """Add metadata to the symbol."""
+        self.metadata[key] = value
+        self.updated_at = datetime.utcnow()
+    
+    def get_metadata(self, key: str, default: Any = None) -> Any:
+        """Get metadata from the symbol."""
+        return self.metadata.get(key, default)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'symbol_id': self.symbol_id,
+            'symbol_name': self.symbol_name,
+            'symbol_type': self.symbol_type,
+            'content': self.content,
+            'properties': self.properties,
+            'metadata': self.metadata,
+            'version': self.version,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'SVGXSymbol':
+        """Create from dictionary."""
+        created_at = None
+        if data.get('created_at'):
+            created_at = datetime.fromisoformat(data['created_at'])
+        
+        updated_at = None
+        if data.get('updated_at'):
+            updated_at = datetime.fromisoformat(data['updated_at'])
+        
+        return cls(
+            symbol_id=data['symbol_id'],
+            symbol_name=data['symbol_name'],
+            symbol_type=data['symbol_type'],
+            content=data.get('content', ''),
+            properties=data.get('properties', {}),
+            metadata=data.get('metadata', {}),
+            version=data.get('version', '1.0'),
+            created_at=created_at,
+            updated_at=updated_at
+        ) 

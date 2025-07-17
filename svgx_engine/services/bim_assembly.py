@@ -26,56 +26,36 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
-from .symbol_recognition import SymbolRecognitionService
-from .bim_builder import BIMBuilderService
-from .bim_validator import BIMValidatorService
+from svgx_engine.services.symbol_recognition import SVGXSymbolRecognitionService
+from svgx_engine.services.bim_builder import BIMBuilder
+from svgx_engine.services.bim_validator import SVGXBIMValidatorService
 try:
-    try:
-    from ..utils.performance import PerformanceMonitor
+    from svgx_engine.utils.performance import PerformanceMonitor
 except ImportError:
     # Fallback for direct execution
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.performance import PerformanceMonitor
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.performance import PerformanceMonitor
-from ..models.bim import (
+from svgx_engine.models.bim import (
     BIMElement, BIMSystem, BIMRelationship, BIMSpace,
     Geometry, GeometryType, SystemType, ElementCategory
 )
-from ..models.svgx import SVGXElement, SVGXDocument
+from svgx_engine.models.svgx import SVGXElement, SVGXDocument
 try:
-    try:
-    from ..utils.errors import (
+    from svgx_engine.utils.errors import (
+        BIMError, ValidationError, PerformanceError
+    )
 except ImportError:
     # Fallback for direct execution
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.errors import (
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.errors import (
-    BIMAssemblyError, GeometryError, RelationshipError, 
-    ValidationError, PerformanceError
-)
+        BIMError, ValidationError, PerformanceError
+    )
 try:
-    try:
-    from ..utils.performance import get_performance_report
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    import os
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from utils.performance import get_performance_report
+    from svgx_engine.utils.performance import get_performance_report
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -181,9 +161,9 @@ class SVGXBIMAssemblyService:
         self.performance_monitor = PerformanceMonitor()
         
         # Initialize dependent services
-        self.symbol_recognition = SymbolRecognitionService()
-        self.bim_builder = BIMBuilderService()
-        self.bim_validator = BIMValidatorService()
+        self.symbol_recognition = SVGXSymbolRecognitionService()
+        self.bim_builder = BIMBuilder()
+        self.bim_validator = SVGXBIMValidatorService()
         
         # Assembly state
         self.assembly_id = None
@@ -244,7 +224,7 @@ class SVGXBIMAssemblyService:
             
         except Exception as e:
             self.logger.error(f"BIM assembly failed: {str(e)}")
-            raise BIMAssemblyError(f"Assembly failed: {str(e)}")
+            raise BIMError(f"Assembly failed: {str(e)}")
     
     def _reset_assembly_state(self):
         """Reset assembly state for new assembly."""

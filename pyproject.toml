@@ -32,6 +32,9 @@ dependencies = [
     "alembic~=1.12.0",
     "psycopg2-binary~=2.9.0",
     "redis~=5.0.0",
+    "aiohttp~=3.9.0",
+    "websockets~=12.0",
+    "setuptools~=69.0.0",
     
     # SVG and BIM processing
     "svgpathtools~=1.6.0",
@@ -51,6 +54,10 @@ dependencies = [
     "httpx~=0.25.0",
     "aiofiles~=23.2.0",
     "python-multipart~=0.0.6",
+    "structlog~=23.2.0",
+    "cryptography~=41.0.0",
+    "bcrypt~=4.1.0",
+    "passlib~=1.7.4",
     
     # Testing
     "pytest~=7.4.0",

@@ -10,10 +10,10 @@ from datetime import datetime
 
 from structlog import get_logger
 
-from ..models.bim import BIMModel, BIMElement, BIMSystem, BIMRelationship
+from svgx_engine.models.bim import BIMModel, BIMElement, BIMSystem, BIMRelationship
 
 try:
-    from ..utils.errors import ValidationError
+    from svgx_engine.utils.errors import ValidationError
 except ImportError:
     # Fallback for direct execution
     import sys

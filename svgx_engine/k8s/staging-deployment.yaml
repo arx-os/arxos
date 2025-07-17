@@ -1,0 +1,292 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svgx-engine-staging
+  namespace: svgx-engine-staging
+  labels:
+    app: svgx-engine-staging
+    version: v1.0.0-staging
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: svgx-engine-staging
+  template:
+    metadata:
+      labels:
+        app: svgx-engine-staging
+        version: v1.0.0-staging
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: svgx-engine-staging-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: svgx-engine-staging
+        image: svgx-engine:staging
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        - name: metrics
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "staging"
+        - name: LOG_LEVEL
+          value: "DEBUG"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: svgx-engine-staging-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: svgx-engine-staging-secrets
+              key: redis-url
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: svgx-engine-staging-secrets
+              key: api-key
+        - name: TELEMETRY_ENABLED
+          value: "true"
+        - name: CACHE_ENABLED
+          value: "true"
+        - name: PERFORMANCE_MONITORING
+          value: "true"
+        - name: SECURITY_AUDITING
+          value: "true"
+        - name: LOAD_TESTING_MODE
+          value: "true"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        volumeMounts:
+        - name: svgx-cache-staging
+          mountPath: /app/svgx_cache
+        - name: svgx-logs-staging
+          mountPath: /app/logs
+        - name: svgx-config-staging
+          mountPath: /app/config
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: svgx-cache-staging
+        persistentVolumeClaim:
+          claimName: svgx-cache-staging-pvc
+      - name: svgx-logs-staging
+        persistentVolumeClaim:
+          claimName: svgx-logs-staging-pvc
+      - name: svgx-config-staging
+        configMap:
+          name: svgx-engine-staging-config
+      nodeSelector:
+        node-role.kubernetes.io/worker: "true"
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - svgx-engine-staging
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svgx-engine-staging-service
+  namespace: svgx-engine-staging
+  labels:
+    app: svgx-engine-staging
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: svgx-engine-staging
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: svgx-engine-staging-ingress
+  namespace: svgx-engine-staging
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+spec:
+  tls:
+  - hosts:
+    - staging.svgx-engine.example.com
+    secretName: svgx-engine-staging-tls
+  rules:
+  - host: staging.svgx-engine.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: svgx-engine-staging-service
+            port:
+              number: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: svgx-engine-staging-hpa
+  namespace: svgx-engine-staging
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: svgx-engine-staging
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: svgx-cache-staging-pvc
+  namespace: svgx-engine-staging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: svgx-logs-staging-pvc
+  namespace: svgx-engine-staging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: svgx-engine-staging-config
+  namespace: svgx-engine-staging
+data:
+  app.yaml: |
+    environment: staging
+    debug: true
+    performance_monitoring: true
+    security_auditing: true
+    load_testing: true
+    cache_ttl: 300
+    max_request_size: 10MB
+    rate_limit_requests: 1000
+    rate_limit_window: 60
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: svgx-engine-staging-secrets
+  namespace: svgx-engine-staging
+type: Opaque
+data:
+  database-url: c3FsaXRlOi8vL2FwcC9zdmdfZW5naW5lX3N0YWdpbmcuZGIK
+  redis-url: cmVkaXM6Ly9sb2NhbGhvc3Q6NjM3OQo=
+  api-key: c3RhZ2luZy1hcGkta2V5LXRlc3QK 

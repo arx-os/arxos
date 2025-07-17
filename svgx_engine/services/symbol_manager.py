@@ -26,10 +26,10 @@ from enum import Enum
 
 from structlog import get_logger
 
-from .error_handler import SVGXErrorHandler
-from ..utils.performance import PerformanceMonitor
-from ..utils.errors import ValidationError, SymbolError
-from ..models.svgx import SVGXElement, SVGXDocument
+from svgx_engine.services.error_handler import SVGXErrorHandler
+from svgx_engine.utils.performance import PerformanceMonitor
+from svgx_engine.utils.errors import ValidationError, SymbolError
+from svgx_engine.models.svgx import SVGXElement, SVGXDocument
 
 logger = get_logger()
 
@@ -686,4 +686,8 @@ class SVGXSymbolManager:
 # Convenience function for creating symbol manager
 def create_svgx_symbol_manager(library_path: Optional[str] = None) -> SVGXSymbolManager:
     """Create and return a configured SVGX Symbol Manager."""
-    return SVGXSymbolManager(library_path) 
+    return SVGXSymbolManager(library_path)
+
+
+# Alias for backward compatibility
+SVGXSymbolManagerService = SVGXSymbolManager 

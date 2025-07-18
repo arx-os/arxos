@@ -20,13 +20,18 @@ import asyncio
 import json
 import time
 import uuid
+import sys
+import os
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 import websockets
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-from svgx_engine.services.realtime_collaboration import (
+# Add the parent directory to the path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from services.realtime_collaboration import (
     RealtimeCollaboration,
     OperationType,
     ConflictResolution,

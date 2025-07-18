@@ -737,6 +737,173 @@ async def get_cad_performance_stats():
         raise HTTPException(status_code=400, detail=f"Failed to get stats: {str(e)}")
 
 
+# Logic Engine Endpoints
+
+class LogicRuleRequest(BaseModel):
+    """Request model for logic rule operations."""
+    name: str = Field(..., description="Rule name")
+    description: str = Field(..., description="Rule description")
+    rule_type: str = Field(..., description="Rule type: conditional, transformation, validation, workflow, analysis")
+    conditions: List[Dict[str, Any]] = Field(..., description="Rule conditions")
+    actions: List[Dict[str, Any]] = Field(..., description="Rule actions")
+    priority: int = Field(default=1, description="Rule priority")
+    tags: Optional[List[str]] = Field(default=[], description="Rule tags")
+
+
+class LogicExecutionRequest(BaseModel):
+    """Request model for logic rule execution."""
+    element_id: str = Field(..., description="Element ID")
+    data: Dict[str, Any] = Field(..., description="Data for rule execution")
+    rule_ids: Optional[List[str]] = Field(default=None, description="Specific rule IDs to execute")
+
+
+@app.post("/logic/create_rule")
+async def create_logic_rule(request: LogicRuleRequest):
+    """Create a new logic rule."""
+    try:
+        start_time = time.time()
+        
+        rule_id = runtime.create_logic_rule(
+            name=request.name,
+            description=request.description,
+            rule_type=request.rule_type,
+            conditions=request.conditions,
+            actions=request.actions,
+            priority=request.priority,
+            tags=request.tags
+        )
+        
+        duration = (time.time() - start_time) * 1000
+        
+        if rule_id:
+            return {
+                "status": "success",
+                "rule_id": rule_id,
+                "duration_ms": duration
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Failed to create logic rule")
+            
+    except Exception as e:
+        logger.error(f"Failed to create logic rule: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to create rule: {str(e)}")
+
+
+@app.post("/logic/execute")
+async def execute_logic_rules(request: LogicExecutionRequest):
+    """Execute logic rules for an element."""
+    try:
+        start_time = time.time()
+        
+        results = runtime.execute_logic_rules(
+            element_id=request.element_id,
+            data=request.data,
+            rule_ids=request.rule_ids
+        )
+        
+        duration = (time.time() - start_time) * 1000
+        
+        return {
+            "status": "success",
+            "results": results,
+            "execution_count": len(results),
+            "duration_ms": duration
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to execute logic rules: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to execute rules: {str(e)}")
+
+
+@app.get("/logic/stats")
+async def get_logic_engine_stats():
+    """Get logic engine performance statistics."""
+    try:
+        stats = runtime.get_logic_engine_stats()
+        return {
+            "status": "success",
+            "stats": stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get logic engine stats: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to get stats: {str(e)}")
+
+
+@app.get("/logic/rules")
+async def list_logic_rules():
+    """List all available logic rules."""
+    try:
+        if not runtime.logic_engine:
+            raise HTTPException(status_code=503, detail="Logic engine not available")
+        
+        rules = runtime.logic_engine.list_rules()
+        return {
+            "status": "success",
+            "rules": [{"rule_id": rule.rule_id, "name": rule.name, "rule_type": rule.rule_type.value} for rule in rules],
+            "total_rules": len(rules)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list logic rules: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to list rules: {str(e)}")
+
+
+@app.get("/logic/rules/{rule_id}")
+async def get_logic_rule(rule_id: str):
+    """Get a specific logic rule."""
+    try:
+        if not runtime.logic_engine:
+            raise HTTPException(status_code=503, detail="Logic engine not available")
+        
+        rule = runtime.logic_engine.get_rule(rule_id)
+        if not rule:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        return {
+            "status": "success",
+            "rule": {
+                "rule_id": rule.rule_id,
+                "name": rule.name,
+                "description": rule.description,
+                "rule_type": rule.rule_type.value,
+                "status": rule.status.value,
+                "priority": rule.priority,
+                "tags": rule.tags,
+                "execution_count": rule.execution_count,
+                "success_count": rule.success_count,
+                "error_count": rule.error_count,
+                "avg_execution_time": rule.avg_execution_time
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get logic rule: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to get rule: {str(e)}")
+
+
+@app.delete("/logic/rules/{rule_id}")
+async def delete_logic_rule(rule_id: str):
+    """Delete a logic rule."""
+    try:
+        if not runtime.logic_engine:
+            raise HTTPException(status_code=503, detail="Logic engine not available")
+        
+        success = runtime.logic_engine.delete_rule(rule_id)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": f"Rule {rule_id} deleted successfully"
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+    except Exception as e:
+        logger.error(f"Failed to delete logic rule: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to delete rule: {str(e)}")
+
+
 # Real-time Collaboration Endpoints
 
 @app.post("/collaboration/join")

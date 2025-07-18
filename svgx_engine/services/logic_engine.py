@@ -40,10 +40,9 @@ from functools import lru_cache, reduce
 import base64
 import urllib.parse
 import random
+import logging
 
-from structlog import get_logger
-
-logger = get_logger()
+logger = logging.getLogger(__name__)
 
 
 class RuleType(Enum):

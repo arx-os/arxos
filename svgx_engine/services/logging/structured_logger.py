@@ -6,7 +6,6 @@ proper formatting, levels, and context management.
 """
 
 import logging
-import structlog
 from typing import Dict, Any, Optional
 from datetime import datetime
 import json
@@ -20,27 +19,27 @@ class SVGXLogger:
     def __init__(self, name: str = "svgx_engine"):
         """Initialize SVGX logger."""
         self.name = name
-        self.logger = structlog.get_logger(name)
+        self.logger = logging.getLogger(name)
     
     def info(self, message: str, **kwargs):
         """Log info message."""
-        self.logger.info(message, **kwargs)
+        self.logger.info(message, extra=kwargs)
     
     def warning(self, message: str, **kwargs):
         """Log warning message."""
-        self.logger.warning(message, **kwargs)
+        self.logger.warning(message, extra=kwargs)
     
     def error(self, message: str, **kwargs):
         """Log error message."""
-        self.logger.error(message, **kwargs)
+        self.logger.error(message, extra=kwargs)
     
     def debug(self, message: str, **kwargs):
         """Log debug message."""
-        self.logger.debug(message, **kwargs)
+        self.logger.debug(message, extra=kwargs)
     
     def critical(self, message: str, **kwargs):
         """Log critical message."""
-        self.logger.critical(message, **kwargs)
+        self.logger.critical(message, extra=kwargs)
 
 
 def get_logger(name: str = "svgx_engine") -> SVGXLogger:
@@ -58,4 +57,12 @@ def setup_logging(level: str = "INFO", format: str = "json"):
 
 def logging_context(**kwargs):
     """Context manager for logging with additional context."""
-    return structlog.contextvars.bind_contextvars(**kwargs) 
+    # Simple context manager that does nothing for now
+    class ContextManager:
+        def __enter__(self):
+            return self
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+    
+    return ContextManager() 

@@ -12,7 +12,7 @@ Provides all services for SVGX Engine including:
 
 # Database and Infrastructure Services
 try:
-    from .database import SVGXDatabaseService as DatabaseService
+    from svgx_engine.services.database import SVGXDatabaseService as DatabaseService
 except ImportError:
     DatabaseService = None
 
@@ -33,7 +33,7 @@ except ImportError:
     logging_context = None
 
 try:
-    from .metadata_service import SVGXMetadataService, SVGXObjectMetadata, SVGXSymbolMetadata, SVGXUserMetadata, SVGXExportMetadata
+    from svgx_engine.services.metadata_service import SVGXMetadataService, SVGXObjectMetadata, SVGXSymbolMetadata, SVGXUserMetadata, SVGXExportMetadata
 except ImportError:
     SVGXMetadataService = None
     SVGXObjectMetadata = None
@@ -43,17 +43,17 @@ except ImportError:
 
 # Symbol Management Services
 try:
-    from .symbol_manager import SVGXSymbolManager as SymbolManagerService
+    from svgx_engine.services.symbol_manager import SVGXSymbolManager as SymbolManagerService
 except ImportError:
     SymbolManagerService = None
 
 try:
-    from .symbol_recognition import SVGXSymbolRecognitionService as SymbolRecognitionService
+    from svgx_engine.services.symbol_recognition import SVGXSymbolRecognitionService as SymbolRecognitionService
 except ImportError:
     SymbolRecognitionService = None
 
 try:
-    from .symbol_schema_validator import SVGXSchemaValidator, ValidationRule, ValidationResult, get_schema_validator, validate_symbol_schema, add_validation_rule, get_validation_statistics
+    from svgx_engine.services.symbol_schema_validator import SVGXSchemaValidator, ValidationRule, ValidationResult, get_schema_validator, validate_symbol_schema, add_validation_rule, get_validation_statistics
 except ImportError:
     SVGXSchemaValidator = None
     ValidationRule = None
@@ -64,7 +64,7 @@ except ImportError:
     get_validation_statistics = None
 
 try:
-    from .symbol_renderer import SVGXSymbolRenderer, RenderOptions, RenderResult, get_symbol_renderer, render_symbol, render_batch, get_rendering_capabilities
+    from svgx_engine.services.symbol_renderer import SVGXSymbolRenderer, RenderOptions, RenderResult, get_symbol_renderer, render_symbol, render_batch, get_rendering_capabilities
 except ImportError:
     SVGXSymbolRenderer = None
     RenderOptions = None
@@ -75,7 +75,7 @@ except ImportError:
     get_rendering_capabilities = None
 
 try:
-    from .symbol_generator import SVGXSymbolGenerator, GenerationTemplate, GenerationOptions, GenerationResult, get_symbol_generator, generate_symbol, generate_batch, get_generation_statistics
+    from svgx_engine.services.symbol_generator import SVGXSymbolGenerator, GenerationTemplate, GenerationOptions, GenerationResult, get_symbol_generator, generate_symbol, generate_batch, get_generation_statistics
 except ImportError:
     SVGXSymbolGenerator = None
     GenerationTemplate = None
@@ -88,22 +88,22 @@ except ImportError:
 
 # Export and Interoperability Services
 try:
-    from .advanced_export import SVGXAdvancedExportService as AdvancedExportService
+    from svgx_engine.services.advanced_export import SVGXAdvancedExportService as AdvancedExportService
 except ImportError:
     AdvancedExportService = None
 
 try:
-    from .export_interoperability import SVGXExportInteroperabilityService as ExportInteroperabilityService
+    from svgx_engine.services.export_interoperability import SVGXExportInteroperabilityService as ExportInteroperabilityService
 except ImportError:
     ExportInteroperabilityService = None
 
 try:
-    from .persistence_export import SVGXPersistenceExportService as PersistenceExportService
+    from svgx_engine.services.persistence_export import SVGXPersistenceExportService as PersistenceExportService
 except ImportError:
     PersistenceExportService = None
 
 try:
-    from .export_integration import SVGXExportIntegrationService, ScaleMetadata, ExportMetadata, ExportOptions
+    from svgx_engine.services.export_integration import SVGXExportIntegrationService, ScaleMetadata, ExportMetadata, ExportOptions
 except ImportError:
     SVGXExportIntegrationService = None
     ScaleMetadata = None
@@ -112,107 +112,107 @@ except ImportError:
 
 # BIM Integration Services
 try:
-    from .bim_builder import BIMBuilder as BIMBuilderService
+    from svgx_engine.services.bim_builder import BIMBuilder as BIMBuilderService
 except ImportError:
     BIMBuilderService = None
 
 try:
-    from .bim_export import SVGXBIMExportService as BIMExportService
+    from svgx_engine.services.bim_export import SVGXBIMExportService as BIMExportService
 except ImportError:
     BIMExportService = None
 
 try:
-    from .bim_validator import SVGXBIMValidatorService as BIMValidatorService
+    from svgx_engine.services.bim_validator import SVGXBIMValidatorService as BIMValidatorService
 except ImportError:
     BIMValidatorService = None
 
 try:
-    from .bim_assembly import SVGXBIMAssemblyService as BIMAssemblyService
+    from svgx_engine.services.bim_assembly import SVGXBIMAssemblyService as BIMAssemblyService
 except ImportError:
     BIMAssemblyService = None
 
 try:
-    from .bim_health import SVGXBIMHealthCheckerService as BIMHealthService
+    from svgx_engine.services.bim_health import SVGXBIMHealthCheckerService as BIMHealthService
 except ImportError:
     BIMHealthService = None
 
 try:
-    from .bim_extractor import SVGXBIMExtractor as BIMExtractorService
+    from svgx_engine.services.bim_extractor import SVGXBIMExtractor as BIMExtractorService
 except ImportError:
     BIMExtractorService = None
 
 # Performance and Caching Services
 try:
-    from .advanced_caching import SVGXAdvancedCachingService as AdvancedCachingService
+    from svgx_engine.services.advanced_caching import SVGXAdvancedCachingService as AdvancedCachingService
 except ImportError:
     AdvancedCachingService = None
 
 try:
-    from .performance import SVGXPerformanceProfiler as PerformanceService
+    from svgx_engine.utils.performance import SVGXPerformanceProfiler as PerformanceService
 except ImportError:
     PerformanceService = None
 
 try:
-    from .performance_optimizer import SVGXPerformanceOptimizer as PerformanceOptimizerService
+    from svgx_engine.services.performance_optimizer import SVGXPerformanceOptimizer as PerformanceOptimizerService
 except ImportError:
     PerformanceOptimizerService = None
 
 # Security and Authentication Services
 try:
-    from .access_control import SVGXAccessControlService as AccessControlService
+    from svgx_engine.services.access_control import SVGXAccessControlService as AccessControlService
 except ImportError:
     AccessControlService = None
 
 try:
-    from .advanced_security import SVGXAdvancedSecurityService as AdvancedSecurityService
+    from svgx_engine.services.advanced_security import SVGXAdvancedSecurityService as AdvancedSecurityService
 except ImportError:
     AdvancedSecurityService = None
 
 try:
-    from .security import SVGXSecurityService as SecurityService
+    from svgx_engine.services.security import SVGXSecurityService as SecurityService
 except ImportError:
     SecurityService = None
 
 try:
-    from .security_hardener import SVGXSecurityHardener as SecurityHardenerService
+    from svgx_engine.services.security_hardener import SVGXSecurityHardener as SecurityHardenerService
 except ImportError:
     SecurityHardenerService = None
 
 # Telemetry and Monitoring Services
 try:
-    from .telemetry import SVGXTelemetryIngestor as TelemetryService
+    from svgx_engine.utils.telemetry import SVGXTelemetryIngestor as TelemetryService
 except ImportError:
     TelemetryService = None
 
 try:
-    from .realtime import SVGXRealtimeTelemetryServer as RealtimeService
+    from svgx_engine.services.realtime import SVGXRealtimeTelemetryServer as RealtimeService
 except ImportError:
     RealtimeService = None
 
 # Advanced Features Services
 try:
-    from .enhanced_simulation_engine import EnhancedSimulationEngine as EnhancedSimulationEngineService
+    from svgx_engine.services.enhanced_simulation_engine import EnhancedSimulationEngine as EnhancedSimulationEngineService
 except ImportError:
     EnhancedSimulationEngineService = None
 
 try:
-    from .interactive_capabilities import InteractiveCapabilitiesService
+    from svgx_engine.services.interactive_capabilities import InteractiveCapabilitiesService
 except ImportError:
     InteractiveCapabilitiesService = None
 
 try:
-    from .advanced_cad_features import AdvancedCADFeatures as AdvancedCADFeaturesService
+    from svgx_engine.services.advanced_cad_features import AdvancedCADFeatures as AdvancedCADFeaturesService
 except ImportError:
     AdvancedCADFeaturesService = None
 
 try:
-    from .realtime_collaboration import RealtimeCollaboration as RealtimeCollaborationService
+    from svgx_engine.services.realtime_collaboration import RealtimeCollaboration as RealtimeCollaborationService
 except ImportError:
     RealtimeCollaborationService = None
 
 # Error Handling Services
 try:
-    from .error_handler import SVGXErrorHandler as ErrorHandlerService, create_error_handler
+    from svgx_engine.services.error_handler import SVGXErrorHandler as ErrorHandlerService, create_error_handler
 except ImportError:
     ErrorHandlerService = None
     create_error_handler = None

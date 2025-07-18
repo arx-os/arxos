@@ -13,10 +13,15 @@ This module tests the advanced behavior engine features including:
 import pytest
 import asyncio
 import logging
+import sys
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 
-from svgx_engine.runtime.advanced_behavior_engine import (
+# Add the parent directory to the path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from runtime.advanced_behavior_engine import (
     AdvancedBehaviorEngine,
     BehaviorRule,
     BehaviorState,

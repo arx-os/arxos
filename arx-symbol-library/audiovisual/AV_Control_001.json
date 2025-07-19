@@ -1,0 +1,40 @@
+{
+  "id": "AV_Control_001",
+  "name": "AV Control System",
+  "system": "audiovisual",
+  "category": "control_system",
+  "description": "Central control system for audiovisual equipment",
+  "svg": "<svg width='80' height='60' viewBox='0 0 80 60' xmlns='http://www.w3.org/2000/svg'><rect width='80' height='60' fill='#059669' stroke='#047857' stroke-width='2' rx='4'/><rect x='4' y='4' width='72' height='52' fill='#10b981' stroke='#34d399' stroke-width='1'/><text x='40' y='25' text-anchor='middle' fill='white' font-family='Arial' font-size='8' font-weight='bold'>CONTROL</text><text x='40' y='37' text-anchor='middle' fill='white' font-family='Arial' font-size='6'>SYSTEM</text><text x='40' y='49' text-anchor='middle' fill='white' font-family='Arial' font-size='6'>AV</text><circle cx='12' cy='12' r='2' fill='#ef4444'/><circle cx='68' cy='12' r='2' fill='#10b981'/><circle cx='12' cy='48' r='2' fill='#f59e0b'/><circle cx='68' cy='48' r='2' fill='#8b5cf6'/><circle cx='40' cy='30' r='3' fill='#fbbf24'/></svg>",
+  "properties": {
+    "type": "control_system",
+    "processor": "ARM Cortex-A72",
+    "memory": "4GB RAM",
+    "storage": "32GB eMMC",
+    "operating_system": "Linux",
+    "network_connectivity": ["WiFi", "Ethernet", "Bluetooth"],
+    "protocols": ["IP", "RS232", "RS485", "IR", "CEC"],
+    "user_interface": ["touch_screen", "web_interface", "mobile_app"],
+    "programming_language": "Python",
+    "api_support": true,
+    "power_consumption": "25W",
+    "mount_type": "rack_mount",
+    "redundancy": "hot_standby"
+  },
+  "connections": {
+    "power": {"x": 12, "y": 12, "type": "power", "voltage": "12V"},
+    "network": {"x": 68, "y": 12, "type": "network", "protocol": "Ethernet"},
+    "control": {"x": 12, "y": 48, "type": "control", "protocol": "RS232"},
+    "interface": {"x": 68, "y": 48, "type": "interface", "protocol": "IP"}
+  },
+  "behavior_profile": "control_system_behavior",
+  "metadata": {
+    "version": "1.0.0",
+    "created_by": "Arxos System",
+    "created_at": "2024-12-19",
+    "manufacturer": "generic",
+    "model": "standard",
+    "warranty_period": "36 months",
+    "maintenance_interval": "12 months",
+    "lifecycle_stage": "operational"
+  }
+} 

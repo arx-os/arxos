@@ -1,13 +1,17 @@
 """
-SVGX Advanced Behavior Engine for complex behavior management.
+SVGX Advanced Behavior Engine for complex event-driven behavior management.
 
-This module implements advanced behavior features including:
+Implements:
+- Event-driven architecture with modular event dispatcher
 - Rule engines with complex logic evaluation
 - State machines with transition management
 - Time-based triggers and scheduling
 - Advanced condition evaluation
-- CAD-parity behaviors
-- Infrastructure simulation behaviors
+- CAD-parity and infrastructure simulation behaviors
+- Extensible event handler and plugin system
+- (TODO) UI Behavior System integration for interactive behaviors
+
+See architecture.md and reference/behavior.md for design details.
 """
 
 import asyncio
@@ -20,6 +24,11 @@ from enum import Enum
 from datetime import datetime, timedelta
 import re
 import json
+from svgx_engine.runtime.behavior.ui_event_dispatcher import UIEventDispatcher
+from svgx_engine.runtime.behavior.ui_event_schemas import SelectionEvent
+from svgx_engine.runtime.behavior.ui_event_schemas import EditingEvent
+from svgx_engine.services.telemetry_logger import telemetry_instrumentation
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -109,9 +118,10 @@ class Condition:
 
 
 class AdvancedBehaviorEngine:
-    """Advanced behavior engine with rule engines, state machines, and complex triggers."""
+    """Advanced behavior engine with event-driven dispatcher, rule engines, state machines, and extensibility."""
     
     def __init__(self):
+        # Core registries
         self.rules: Dict[str, BehaviorRule] = {}
         self.state_machines: Dict[str, Dict[str, BehaviorState]] = {}
         self.time_triggers: Dict[str, TimeTrigger] = {}
@@ -119,11 +129,27 @@ class AdvancedBehaviorEngine:
         self.active_states: Dict[str, str] = {}  # element_id -> current_state
         self.rule_cache: Dict[str, Any] = {}
         self.running = False
+        # Event handler registry: event_type -> handler
         self.event_handlers: Dict[str, Callable] = {}
         self._setup_default_handlers()
+        self.ui_event_dispatcher = UIEventDispatcher()
+        self.selection_state: Dict[str, list] = {}  # canvas_id -> list of selected object IDs
+        self.edit_history: Dict[str, list] = {}  # canvas_id -> list of edit actions
+        self.runtime_shadow_model: Dict[str, dict] = {}  # canvas_id -> {object_id: properties}
+        self.undo_stack: Dict[str, list] = {}  # canvas_id -> list of undo actions
+        self.redo_stack: Dict[str, list] = {}  # canvas_id -> list of redo actions
+        self.locks: Dict[str, Dict[str, dict]] = {}  # canvas_id -> object_id -> {session_id, user_id, timestamp, timeout}
+        self.lock_timeout_seconds = 300  # 5 minutes default timeout
+        self.cleanup_interval_seconds = 60  # 1 minute cleanup interval
+        self._start_lock_cleanup_task()
+        # Register dispatcher handlers for UI events
+        self.ui_event_dispatcher.register_handler("selection", self._handle_selection_event)
+        self.ui_event_dispatcher.register_handler("editing", self._handle_editing_event)
+        # TODO: Integrate UI Behavior System for interactive behaviors
+        # TODO: Add plugin manager for external event handlers and extensions
     
     def _setup_default_handlers(self):
-        """Setup default event handlers for different behavior types."""
+        """Setup default event handlers for different behavior types. Extendable via register_event_handler."""
         self.event_handlers = {
             'user_interaction': self._handle_user_interaction,
             'system_event': self._handle_system_event,
@@ -131,8 +157,39 @@ class AdvancedBehaviorEngine:
             'environmental_event': self._handle_environmental_event,
             'operational_event': self._handle_operational_event,
             'cad_parity': self._handle_cad_parity,
-            'infrastructure': self._handle_infrastructure
+            'infrastructure': self._handle_infrastructure,
+            # UI Behavior System handlers
+            'selection': self._handle_selection_event,
+            'editing': self._handle_editing_event,
+            'navigation': self._handle_navigation_event,
+            'annotation': self._handle_annotation_event
         }
+
+    def register_event_handler(self, event_type: str, handler: Callable):
+        """Register a custom event handler for a new event type (plugin/extensibility point)."""
+        self.event_handlers[event_type] = handler
+
+    async def dispatch_event(self, element_id: str, event_type: str, event_data: Dict[str, Any]):
+        """Main event dispatcher: routes events to registered handlers and processes rules."""
+        try:
+            context = {
+                'element_id': element_id,
+                'event_type': event_type,
+                'event_data': event_data,
+                'timestamp': datetime.now(),
+                **event_data
+            }
+            # Evaluate rules for this event
+            applicable_rules = await self.evaluate_rules(element_id, context)
+            for rule in applicable_rules:
+                await self._execute_actions(rule['actions'], element_id, context)
+            # Dispatch to event handler if registered
+            if event_type in self.event_handlers:
+                await self.event_handlers[event_type](element_id, event_data)
+            else:
+                logger.info(f"No handler registered for event type '{event_type}' on {element_id}")
+        except Exception as e:
+            logger.error(f"Failed to dispatch event {event_type} for {element_id}: {e}")
     
     def register_rule(self, rule: BehaviorRule):
         """Register a behavior rule."""
@@ -804,6 +861,113 @@ class AdvancedBehaviorEngine:
         infra_type = event_data.get('type', 'system')
         logger.info(f"Handling infrastructure event {infra_type} for {element_id}")
     
+    @telemetry_instrumentation
+    async def _handle_selection_event(self, event: SelectionEvent) -> dict:
+        """
+        Handle selection events: validate, update selection state, and return feedback.
+        """
+        payload = event.payload
+        canvas_id = event.canvas_id
+        mode = payload.selection_mode
+        selected_ids = payload.selected_ids or []
+        prev_selection = self.selection_state.get(canvas_id, [])
+        # Simple logic: replace, add, or remove based on mode
+        if mode == "single":
+            new_selection = selected_ids[:1]
+        elif mode == "multi":
+            # Union of previous and new
+            new_selection = list(set(prev_selection) | set(selected_ids))
+        elif mode == "lasso" or mode == "bbox":
+            # Replace with lasso/bbox selection
+            new_selection = selected_ids
+        else:
+            new_selection = selected_ids
+        self._update_selection_state(canvas_id, new_selection)
+        # Log and return feedback
+        logger.info(f"[UI] Selection updated for canvas {canvas_id}: {new_selection}")
+        return {
+            "status": "updated",
+            "canvas_id": canvas_id,
+            "selected_ids": new_selection
+        }
+
+    @telemetry_instrumentation
+    async def _handle_editing_event(self, event: EditingEvent) -> dict:
+        """
+        Handle editing events: apply mutation, update shadow model, record history, return mutation report.
+        """
+        payload = event.payload
+        canvas_id = event.canvas_id
+        target_id = payload.target_id
+        edit_type = payload.edit_type
+        before = payload.before or {}
+        after = payload.after or {}
+        property_changed = payload.property_changed or {}
+        # Initialize shadow model and history if needed
+        if canvas_id not in self.runtime_shadow_model:
+            self.runtime_shadow_model[canvas_id] = {}
+        if canvas_id not in self.edit_history:
+            self.edit_history[canvas_id] = []
+        # Apply mutation (mock logic)
+        obj_state = self.runtime_shadow_model[canvas_id].get(target_id, {})
+        mutation = {}
+        if edit_type == "move":
+            # Apply delta to position
+            pos_before = before.get("position", {})
+            pos_after = after.get("position", {})
+            mutation = {"position": pos_after}
+            obj_state["position"] = pos_after
+        elif edit_type == "rotate":
+            angle = after.get("angle")
+            if angle is not None:
+                mutation = {"angle": angle}
+                obj_state["angle"] = angle
+        elif edit_type == "scale":
+            scale = after.get("scale")
+            if scale is not None:
+                mutation = {"scale": scale}
+                obj_state["scale"] = scale
+        elif edit_type == "update_property":
+            for k, v in property_changed.items():
+                mutation[k] = v
+                obj_state[k] = v
+        # Update shadow model
+        self.runtime_shadow_model[canvas_id][target_id] = obj_state
+        # Record edit history
+        edit_record = {
+            "timestamp": event.timestamp.isoformat(),
+            "user_id": event.user_id,
+            "target_id": target_id,
+            "edit_type": edit_type,
+            "before": before,
+            "after": after,
+            "property_changed": property_changed,
+            "mutation": mutation
+        }
+        self.edit_history[canvas_id].append(edit_record)
+        logger.info(f"[UI] Edit applied on canvas {canvas_id}, object {target_id}: {mutation}")
+        # Return mutation report
+        return {
+            "status": "edited",
+            "canvas_id": canvas_id,
+            "target_id": target_id,
+            "edit_type": edit_type,
+            "mutation": mutation,
+            "history_length": len(self.edit_history[canvas_id])
+        }
+
+    @telemetry_instrumentation
+    async def _handle_navigation_event(self, element_id: str, event_data: Dict[str, Any]):
+        """Handle navigation events (UI Behavior System stub)."""
+        logger.info(f"[UI] Navigation event for {element_id} with data: {event_data}")
+        # TODO: Implement navigation logic (zoom, pan, viewport control, etc.)
+
+    @telemetry_instrumentation
+    async def _handle_annotation_event(self, element_id: str, event_data: Dict[str, Any]):
+        """Handle annotation events (UI Behavior System stub)."""
+        logger.info(f"[UI] Annotation event for {element_id} with data: {event_data}")
+        # TODO: Implement annotation logic (text, markup, etc.)
+    
     async def _handle_event(self, element_id: str, event_type: str, event_data: Dict[str, Any]):
         """Handle events for elements."""
         try:
@@ -895,3 +1059,276 @@ class AdvancedBehaviorEngine:
     def get_registered_time_triggers(self) -> List[str]:
         """Get list of registered time trigger IDs."""
         return list(self.time_triggers.keys()) 
+
+    def handle_ui_event(self, event: dict) -> dict:
+        """
+        Unified entrypoint for UI events. Validates and routes events using the dispatcher.
+        Returns feedback/acknowledgement.
+        """
+        feedback = self.ui_event_dispatcher.dispatch(event)
+        return feedback or {"status": "ok"}
+
+    def get_selection_state(self, canvas_id: str) -> list:
+        """Get the current selection for a canvas."""
+        return self.selection_state.get(canvas_id, [])
+
+    def _update_selection_state(self, canvas_id: str, selected_ids: list):
+        self.selection_state[canvas_id] = selected_ids 
+
+    def perform_undo(self, canvas_id: str) -> dict:
+        """Undo the last edit for a canvas."""
+        if canvas_id not in self.edit_history or not self.edit_history[canvas_id]:
+            return {"status": "nothing_to_undo", "canvas_id": canvas_id}
+        last_edit = self.edit_history[canvas_id].pop()
+        if canvas_id not in self.undo_stack:
+            self.undo_stack[canvas_id] = []
+        self.undo_stack[canvas_id].append(last_edit)
+        # Revert runtime shadow model
+        target_id = last_edit["target_id"]
+        before = last_edit.get("before", {})
+        obj_state = self.runtime_shadow_model[canvas_id].get(target_id, {})
+        if "position" in before:
+            obj_state["position"] = before["position"]
+        if "angle" in before:
+            obj_state["angle"] = before["angle"]
+        if "scale" in before:
+            obj_state["scale"] = before["scale"]
+        for k, v in (last_edit.get("property_changed", {}) or {}).items():
+            if k in before:
+                obj_state[k] = before[k]
+        self.runtime_shadow_model[canvas_id][target_id] = obj_state
+        return {
+            "status": "undo_success",
+            "canvas_id": canvas_id,
+            "edit_history": self.edit_history[canvas_id],
+            "undo_stack": self.undo_stack[canvas_id]
+        }
+
+    def perform_redo(self, canvas_id: str) -> dict:
+        """Redo the last undone edit for a canvas."""
+        if canvas_id not in self.undo_stack or not self.undo_stack[canvas_id]:
+            return {"status": "nothing_to_redo", "canvas_id": canvas_id}
+        redo_edit = self.undo_stack[canvas_id].pop()
+        if canvas_id not in self.edit_history:
+            self.edit_history[canvas_id] = []
+        self.edit_history[canvas_id].append(redo_edit)
+        # Apply redo to runtime shadow model
+        target_id = redo_edit["target_id"]
+        after = redo_edit.get("after", {})
+        obj_state = self.runtime_shadow_model[canvas_id].get(target_id, {})
+        if "position" in after:
+            obj_state["position"] = after["position"]
+        if "angle" in after:
+            obj_state["angle"] = after["angle"]
+        if "scale" in after:
+            obj_state["scale"] = after["scale"]
+        for k, v in (redo_edit.get("property_changed", {}) or {}).items():
+            if k in after:
+                obj_state[k] = after[k]
+        self.runtime_shadow_model[canvas_id][target_id] = obj_state
+        return {
+            "status": "redo_success",
+            "canvas_id": canvas_id,
+            "edit_history": self.edit_history[canvas_id],
+            "undo_stack": self.undo_stack[canvas_id]
+        } 
+
+    def update_annotation(self, canvas_id: str, target_id: str, annotation_index: int, new_data: dict) -> dict:
+        """Update an annotation by index for a given object and canvas."""
+        if canvas_id not in self.annotations or target_id not in self.annotations[canvas_id]:
+            return {"status": "not_found", "canvas_id": canvas_id, "target_id": target_id}
+        try:
+            annotation = self.annotations[canvas_id][target_id][annotation_index]
+            annotation.update(new_data)
+            return {
+                "status": "annotation_updated",
+                "canvas_id": canvas_id,
+                "target_id": target_id,
+                "annotation": annotation,
+                "annotations": self.annotations[canvas_id][target_id]
+            }
+        except IndexError:
+            return {"status": "not_found", "canvas_id": canvas_id, "target_id": target_id}
+
+    def delete_annotation(self, canvas_id: str, target_id: str, annotation_index: int) -> dict:
+        """Delete an annotation by index for a given object and canvas."""
+        if canvas_id not in self.annotations or target_id not in self.annotations[canvas_id]:
+            return {"status": "not_found", "canvas_id": canvas_id, "target_id": target_id}
+        try:
+            removed = self.annotations[canvas_id][target_id].pop(annotation_index)
+            return {
+                "status": "annotation_deleted",
+                "canvas_id": canvas_id,
+                "target_id": target_id,
+                "removed": removed,
+                "annotations": self.annotations[canvas_id][target_id]
+            }
+        except IndexError:
+            return {"status": "not_found", "canvas_id": canvas_id, "target_id": target_id} 
+
+    def _start_lock_cleanup_task(self):
+        """Start background task for cleaning up expired locks."""
+        def cleanup_expired_locks():
+            while True:
+                try:
+                    self._cleanup_expired_locks()
+                    time.sleep(self.cleanup_interval_seconds)
+                except Exception as e:
+                    logger.error(f"Lock cleanup task error: {e}")
+                    time.sleep(60)  # Wait longer on error
+        
+        cleanup_thread = threading.Thread(target=cleanup_expired_locks, daemon=True)
+        cleanup_thread.start()
+        logger.info("Lock cleanup task started")
+
+    def _cleanup_expired_locks(self):
+        """Remove expired locks from all canvases."""
+        current_time = datetime.utcnow()
+        expired_locks = []
+        
+        for canvas_id, canvas_locks in self.locks.items():
+            for object_id, lock_info in list(canvas_locks.items()):
+                lock_timestamp = datetime.fromisoformat(lock_info["timestamp"])
+                if (current_time - lock_timestamp).total_seconds() > self.lock_timeout_seconds:
+                    expired_locks.append((canvas_id, object_id, lock_info))
+                    del canvas_locks[object_id]
+        
+        if expired_locks:
+            logger.info(f"Cleaned up {len(expired_locks)} expired locks")
+            for canvas_id, object_id, lock_info in expired_locks:
+                logger.debug(f"Expired lock: {canvas_id}/{object_id} by {lock_info['user_id']}")
+
+    def set_lock_timeout(self, timeout_seconds: int):
+        """Set the lock timeout duration in seconds."""
+        self.lock_timeout_seconds = timeout_seconds
+        logger.info(f"Lock timeout set to {timeout_seconds} seconds")
+
+    def get_lock_timeout(self) -> int:
+        """Get the current lock timeout duration in seconds."""
+        return self.lock_timeout_seconds
+
+    def lock_object(self, canvas_id: str, object_id: str, session_id: str, user_id: str) -> dict:
+        """Attempt to acquire a lock on an object for a session/user."""
+        if canvas_id not in self.locks:
+            self.locks[canvas_id] = {}
+        
+        # Check for existing lock
+        lock_info = self.locks[canvas_id].get(object_id)
+        if lock_info:
+            # Check if lock is expired
+            lock_timestamp = datetime.fromisoformat(lock_info["timestamp"])
+            if (datetime.utcnow() - lock_timestamp).total_seconds() > self.lock_timeout_seconds:
+                # Lock is expired, remove it
+                del self.locks[canvas_id][object_id]
+                lock_info = None
+            elif lock_info["session_id"] != session_id:
+                # Lock is held by different session
+                return {
+                    "status": "lock_conflict",
+                    "canvas_id": canvas_id,
+                    "object_id": object_id,
+                    "locked_by": lock_info,
+                    "expires_at": (lock_timestamp + timedelta(seconds=self.lock_timeout_seconds)).isoformat()
+                }
+        
+        # Acquire lock
+        self.locks[canvas_id][object_id] = {
+            "session_id": session_id,
+            "user_id": user_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "timeout_seconds": self.lock_timeout_seconds
+        }
+        
+        return {
+            "status": "lock_acquired",
+            "canvas_id": canvas_id,
+            "object_id": object_id,
+            "lock_info": self.locks[canvas_id][object_id],
+            "expires_at": (datetime.utcnow() + timedelta(seconds=self.lock_timeout_seconds)).isoformat()
+        }
+
+    def unlock_object(self, canvas_id: str, object_id: str, session_id: str) -> dict:
+        """Release a lock on an object if held by the session."""
+        if canvas_id not in self.locks or object_id not in self.locks[canvas_id]:
+            return {"status": "not_locked", "canvas_id": canvas_id, "object_id": object_id}
+        
+        lock_info = self.locks[canvas_id][object_id]
+        
+        # Check if lock is expired
+        lock_timestamp = datetime.fromisoformat(lock_info["timestamp"])
+        if (datetime.utcnow() - lock_timestamp).total_seconds() > self.lock_timeout_seconds:
+            # Lock is expired, remove it
+            del self.locks[canvas_id][object_id]
+            return {"status": "lock_expired", "canvas_id": canvas_id, "object_id": object_id}
+        
+        if lock_info["session_id"] != session_id:
+            return {
+                "status": "unlock_denied", 
+                "canvas_id": canvas_id, 
+                "object_id": object_id, 
+                "locked_by": lock_info
+            }
+        
+        del self.locks[canvas_id][object_id]
+        return {"status": "lock_released", "canvas_id": canvas_id, "object_id": object_id}
+
+    def get_lock_status(self, canvas_id: str, object_id: str) -> dict:
+        """Get the lock status for an object."""
+        if canvas_id in self.locks and object_id in self.locks[canvas_id]:
+            lock_info = self.locks[canvas_id][object_id]
+            
+            # Check if lock is expired
+            lock_timestamp = datetime.fromisoformat(lock_info["timestamp"])
+            if (datetime.utcnow() - lock_timestamp).total_seconds() > self.lock_timeout_seconds:
+                # Lock is expired, remove it
+                del self.locks[canvas_id][object_id]
+                return {"status": "unlocked"}
+            
+            return {
+                "status": "locked", 
+                "lock_info": lock_info,
+                "expires_at": (lock_timestamp + timedelta(seconds=self.lock_timeout_seconds)).isoformat()
+            }
+        return {"status": "unlocked"}
+
+    def release_session_locks(self, session_id: str) -> dict:
+        """Release all locks held by a session (e.g., on disconnect)."""
+        released_locks = []
+        
+        for canvas_id, canvas_locks in self.locks.items():
+            for object_id, lock_info in list(canvas_locks.items()):
+                if lock_info["session_id"] == session_id:
+                    del canvas_locks[object_id]
+                    released_locks.append({
+                        "canvas_id": canvas_id,
+                        "object_id": object_id,
+                        "user_id": lock_info["user_id"]
+                    })
+        
+        return {
+            "status": "session_locks_released",
+            "session_id": session_id,
+            "released_locks": released_locks,
+            "count": len(released_locks)
+        }
+
+    def get_all_locks(self, canvas_id: str = None) -> dict:
+        """Get all active locks, optionally filtered by canvas."""
+        all_locks = {}
+        current_time = datetime.utcnow()
+        
+        for cid, canvas_locks in self.locks.items():
+            if canvas_id and cid != canvas_id:
+                continue
+                
+            all_locks[cid] = {}
+            for obj_id, lock_info in canvas_locks.items():
+                # Check if lock is expired
+                lock_timestamp = datetime.fromisoformat(lock_info["timestamp"])
+                if (current_time - lock_timestamp).total_seconds() <= self.lock_timeout_seconds:
+                    all_locks[cid][obj_id] = {
+                        **lock_info,
+                        "expires_at": (lock_timestamp + timedelta(seconds=self.lock_timeout_seconds)).isoformat()
+                    }
+        
+        return all_locks 

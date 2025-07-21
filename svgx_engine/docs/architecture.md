@@ -84,6 +84,81 @@ simulation_state = runtime.get_state()
 4. **State Management**: Track runtime state
 5. **Output**: Simulation results and state
 
+### Behavior Engine Technical Design (2024-06)
+
+#### Overview
+The Behavior Engine is a core subsystem of the SVGX Engine responsible for executing programmable behaviors, handling user/system/physics/environmental/operational events, managing state machines, evaluating conditional logic, and providing real-time interactive UI behaviors. This design enables extensibility, modularity, and high performance for CAD-parity and infrastructure simulation.
+
+#### Component Diagram
+```
+┌─────────────────────────────┐
+│      SVGX Runtime           │
+├─────────────────────────────┤
+│  ┌───────────────────────┐  │
+│  │   Behavior Engine     │  │
+│  │ ┌───────────────────┐ │  │
+│  │ │ Event Dispatcher  │ │  │
+│  │ └───────────────────┘ │  │
+│  │ ┌───────────────────┐ │  │
+│  │ │ State Machine     │ │  │
+│  │ └───────────────────┘ │  │
+│  │ ┌───────────────────┐ │  │
+│  │ │ Condition Engine  │ │  │
+│  │ └───────────────────┘ │  │
+│  │ ┌───────────────────┐ │  │
+│  │ │ UI Behavior Sys   │ │  │
+│  │ └───────────────────┘ │  │
+│  │ ┌───────────────────┐ │  │
+│  │ │ Performance Opt   │ │  │
+│  │ └───────────────────┘ │  │
+│  │ ┌───────────────────┐ │  │
+│  │ │ Plugin Manager    │ │  │
+│  │ └───────────────────┘ │  │
+│  └───────────────────────┘  │
+└─────────────────────────────┘
+```
+
+#### Responsibilities
+- **Event Dispatcher:** Routes and processes all event types (user, system, physics, etc.)
+- **State Machine:** Manages state transitions for equipment, processes, systems, etc.
+- **Condition Engine:** Evaluates threshold, time, spatial, relational, and complex logic
+- **UI Behavior System:** Handles interactive behaviors (selection, editing, navigation, annotation)
+- **Performance Optimization:** Caching, lazy evaluation, parallel execution
+- **Plugin Manager:** Extensibility for custom behaviors, rules, and integrations
+
+#### Data Flow
+1. **Input:**
+   - Events (user/system/physics/environmental/operational)
+   - Behavior definitions (from SVGX AST)
+   - UI actions (from frontend or API)
+2. **Processing:**
+   - Event Dispatcher routes events to appropriate handlers
+   - State Machine updates state as needed
+   - Condition Engine evaluates logic for triggers and transitions
+   - UI Behavior System updates interactive state and feedback
+   - Performance Optimization caches and parallelizes as appropriate
+   - Plugins may extend or override default behavior
+3. **Output:**
+   - Updated simulation state
+   - UI feedback and state changes
+   - Logs, metrics, and error reports
+
+#### Extensibility Points
+- **Event Handlers:** Register new event types and custom handlers
+- **State Machine:** Define new state types and transitions
+- **Condition Engine:** Add new logic evaluators
+- **UI Behaviors:** Plug in new interaction patterns
+- **Plugins:** Support for external modules and scripting
+
+#### Integration
+- Consumes validated AST from Parser
+- Exposes runtime state and events to Compiler and Services
+- Integrates with Telemetry, Security, and Caching Services
+- UI Behavior System interfaces with frontend or API for real-time updates
+
+#### References
+- See [Behavior Reference](./reference/behavior.md) for detailed requirements, checklists, and feature breakdowns.
+
 ### 3. Compiler Module
 
 #### Purpose
@@ -466,6 +541,44 @@ svgx_engine/
 - **Offline Support**: Offline editing capabilities
 - **Touch Interface**: Touch-optimized interface
 - **Cross-platform**: Consistent experience across platforms
+
+## Interactive UI Behavior System Architecture
+
+The Interactive UI Behavior System is a modular, event-driven subsystem responsible for all user interface behaviors on SVGX canvases. It is tightly integrated with the core event-driven behavior engine and exposes extensible handlers for selection, editing, navigation, and annotation events.
+
+### **Component Diagram**
+
+- **UI Event Dispatcher**: Central entry point for all UI events (selection, editing, navigation, annotation)
+- **Selection Handler**: Manages selection state, multi-select, and feedback
+- **Editing Handler**: Manages edit state, edit history, undo/redo, and shadow model
+- **Navigation Handler**: Manages viewport state (pan, zoom, focus)
+- **Annotation Handler**: Manages annotation CRUD and state
+- **State Store**: In-memory state for all UI behaviors, with optional persistence
+- **Feedback Channel**: REST/WebSocket feedback to frontend clients
+
+### **Data Flow**
+1. UI event received via API/WebSocket
+2. Event validated and dispatched by `event_driven_behavior_engine`
+3. Routed to the appropriate handler (selection, editing, navigation, annotation)
+4. Handler updates state and triggers feedback
+5. State changes are broadcast to all relevant clients
+6. All operations are logged and metrics are collected
+
+### **Integration with Core Engine**
+- All UI event handlers are registered with the global dispatcher instance
+- State changes are coordinated with the core event-driven engine
+- Undo/redo and edit history are managed per-canvas/object
+- All code uses absolute imports and global instances via `svgx_engine`
+
+### **Extensibility**
+- New UI event types and handlers can be registered at runtime
+- All handlers are modular and independently testable
+- Feedback and state can be extended for new UI features
+
+### **Next Steps**
+- Implement selection, editing, navigation, and annotation handlers
+- Integrate with event dispatcher and feedback channels
+- Add comprehensive tests and update API documentation
 
 ---
 

@@ -2178,6 +2178,431 @@
             "reliable_performance": "High-accuracy behavior execution and optimization"
           }
         }
+      },
+      {
+        "id": "svgx_engine_comprehensive_enhancement_plan",
+        "title": "SVGX Engine Comprehensive Enhancement Plan",
+        "goal": "Address all identified gaps and implement enterprise-grade features for production readiness, including advanced collaboration, security, scalability, DevOps, and advanced features.",
+        "status": "planned",
+        "priority": "critical",
+        "key_tasks": [
+          "Implement advanced collaborative editing with lock expiry, conflict resolution, and real-time push updates",
+          "Add comprehensive security with authentication, authorization, and rate limiting",
+          "Implement distributed state management and persistence for horizontal scaling",
+          "Set up CI/CD pipeline and container orchestration support",
+          "Create frontend/CLI integration and feedback mechanisms",
+          "Generate comprehensive documentation and API specs",
+          "Implement advanced features: time-based triggers, rule engine, plugin system, animation, and external metrics"
+        ],
+        "owner": "Full development team + DevOps + Security + UX",
+        "success_criteria": [
+          "Advanced collaborative editing supports concurrent users with conflict resolution",
+          "All endpoints are secured with authentication and rate limiting",
+          "System scales horizontally with distributed state management",
+          "CI/CD pipeline automates testing and deployment",
+          "Frontend clients integrate seamlessly with real-time updates",
+          "Comprehensive documentation covers all aspects of the system",
+          "Advanced features provide extensibility and advanced behavior capabilities"
+        ],
+        "implementation_details": {
+          "phase_1_collaborative_editing_advanced": {
+            "timeline": "Weeks 1-3",
+            "priority": "critical",
+            "components": [
+              {
+                "id": "lock_expiry_timeouts",
+                "title": "Lock Expiry and Timeouts",
+                "description": "Prevent stale locks from blocking collaboration",
+                "tasks": [
+                  "Add timestamp and timeout to each lock",
+                  "Implement periodic cleanup for auto-release of stale locks",
+                  "Auto-release locks on session disconnect",
+                  "Expose lock timeout configuration",
+                  "Add tests for lock expiry and cleanup"
+                ],
+                "tech_stack": ["Python threading/asyncio", "config management"],
+                "deliverables": [
+                  "Lock expiry logic in backend",
+                  "Background cleanup task",
+                  "Configuration management for timeouts",
+                  "Comprehensive tests for lock expiry scenarios"
+                ]
+              },
+              {
+                "id": "conflict_resolution_edits",
+                "title": "Conflict Resolution for Edits",
+                "description": "Enable true collaborative editing with merge/conflict handling",
+                "tasks": [
+                  "Research and select real-time merge strategy (OT/CRDT)",
+                  "Refactor editing logic for concurrent edits and merging",
+                  "Add versioning to edit history and runtime shadow model",
+                  "Provide feedback to users on conflicts and merges",
+                  "Implement operational transform or CRDT for real-time collaboration"
+                ],
+                "tech_stack": ["automerge-py", "custom merge logic", "Python OT libraries"],
+                "deliverables": [
+                  "Collaborative editing engine with merge/conflict resolution",
+                  "Versioned edit history system",
+                  "Real-time merge feedback mechanisms",
+                  "Tests for concurrent editing scenarios"
+                ]
+              },
+              {
+                "id": "push_updates_edits",
+                "title": "Push Updates for All State Changes",
+                "description": "Ensure all clients see real-time changes (not just locks)",
+                "tasks": [
+                  "Extend WebSocket server for broadcasting all state changes",
+                  "Add event types for edit/annotation/navigation updates",
+                  "Ensure feedback to all relevant clients, not just initiator",
+                  "Implement server-initiated push of all state changes"
+                ],
+                "tech_stack": ["FastAPI WebSocket", "async broadcasting"],
+                "deliverables": [
+                  "Real-time push updates for all collaborative actions",
+                  "Enhanced WebSocket event system",
+                  "Tests for multi-client synchronization",
+                  "Performance optimization for broadcast messaging"
+                ]
+              }
+            ]
+          },
+          "phase_2_security_rate_limiting": {
+            "timeline": "Weeks 4-6",
+            "priority": "critical",
+            "components": [
+              {
+                "id": "authentication_authorization",
+                "title": "Authentication and Authorization",
+                "description": "Secure all endpoints and enforce permissions",
+                "tasks": [
+                  "Integrate JWT or OAuth2 authentication for REST and WebSocket",
+                  "Implement RBAC/ABAC with roles (admin, editor, viewer)",
+                  "Enforce permissions on sensitive operations",
+                  "Add user/session context to all events and logs",
+                  "Implement role-based access control"
+                ],
+                "tech_stack": ["FastAPI security", "fastapi-users", "PyJWT", "OAuth2"],
+                "deliverables": [
+                  "Auth middleware for REST/WebSocket",
+                  "Role/permission enforcement system",
+                  "User session management",
+                  "Auth tests and documentation",
+                  "Security audit and penetration testing"
+                ]
+              },
+              {
+                "id": "rate_limiting",
+                "title": "Rate Limiting",
+                "description": "Prevent abuse and DoS attacks",
+                "tasks": [
+                  "Add per-user/session rate limiting to REST and WebSocket",
+                  "Return standard error responses on rate limit exceeded",
+                  "Make rate limits configurable",
+                  "Implement rate limiting strategies (token bucket, sliding window)"
+                ],
+                "tech_stack": ["slowapi", "custom middleware", "Redis for rate limiting"],
+                "deliverables": [
+                  "Rate limiting logic and configuration",
+                  "Rate limit monitoring and alerting",
+                  "Tests for rate limiting scenarios",
+                  "Documentation for rate limit policies"
+                ]
+              }
+            ]
+          },
+          "phase_3_scalability_state_management": {
+            "timeline": "Weeks 7-9",
+            "priority": "critical",
+            "components": [
+              {
+                "id": "shared_state_instances",
+                "title": "Shared State Across Instances",
+                "description": "Support horizontal scaling and high availability",
+                "tasks": [
+                  "Refactor in-memory state to use distributed store (Redis)",
+                  "Ensure atomic operations for lock acquisition/release",
+                  "Update all state accessors to use shared backend",
+                  "Implement distributed locking mechanisms",
+                  "Add state synchronization across instances"
+                ],
+                "tech_stack": ["Redis", "aioredis", "distributed locks"],
+                "deliverables": [
+                  "Distributed state management system",
+                  "Atomic operation guarantees",
+                  "Tests for multi-instance consistency",
+                  "Performance benchmarks for distributed state",
+                  "Failover and recovery procedures"
+                ]
+              },
+              {
+                "id": "persistence_layer",
+                "title": "Persistence Layer",
+                "description": "Survive restarts and enable audit/history",
+                "tasks": [
+                  "Persist critical state to database or durable store",
+                  "Implement state recovery on startup",
+                  "Add periodic snapshotting if needed",
+                  "Create audit trail for all state changes",
+                  "Implement backup and restore procedures"
+                ],
+                "tech_stack": ["PostgreSQL", "SQLAlchemy", "Redis persistence"],
+                "deliverables": [
+                  "Persistence layer for runtime state",
+                  "Recovery logic and procedures",
+                  "Audit trail system",
+                  "Backup and restore functionality",
+                  "Tests for persistence and recovery"
+                ]
+              }
+            ]
+          },
+          "phase_4_devops_deployment": {
+            "timeline": "Weeks 10-12",
+            "priority": "high",
+            "components": [
+              {
+                "id": "ci_cd_integration",
+                "title": "CI/CD Integration",
+                "description": "Automate build, test, and deployment",
+                "tasks": [
+                  "Add GitHub Actions for linting, testing, building, deploying",
+                  "Automate Docker image builds and pushes",
+                  "Integrate with cloud provider or Kubernetes",
+                  "Implement automated security scanning",
+                  "Add deployment rollback capabilities"
+                ],
+                "tech_stack": ["GitHub Actions", "Docker", "Kubernetes", "Helm"],
+                "deliverables": [
+                  "CI/CD pipeline scripts and configuration",
+                  "Docker containerization",
+                  "Kubernetes deployment manifests",
+                  "Automated security scanning",
+                  "Deployment documentation and runbooks"
+                ]
+              },
+              {
+                "id": "health_check_endpoints",
+                "title": "Health Check Endpoints",
+                "description": "Support container orchestration and monitoring",
+                "tasks": [
+                  "Add /livez (liveness) and /readyz (readiness) endpoints",
+                  "Ensure endpoints reflect true system health",
+                  "Integrate with Kubernetes health checks",
+                  "Add graceful shutdown procedures"
+                ],
+                "tech_stack": ["FastAPI endpoints", "Kubernetes probes"],
+                "deliverables": [
+                  "Liveness and readiness endpoints",
+                  "Kubernetes deployment configuration",
+                  "Graceful shutdown procedures",
+                  "Health check monitoring and alerting"
+                ]
+              }
+            ]
+          },
+          "phase_5_frontend_ux_integration": {
+            "timeline": "Weeks 13-15",
+            "priority": "medium",
+            "components": [
+              {
+                "id": "frontend_cli_client",
+                "title": "Frontend/CLI Client",
+                "description": "Enable real user interaction and testing",
+                "tasks": [
+                  "Build or update frontend/CLI clients for new APIs",
+                  "Implement UI for collaborative editing and lock status",
+                  "Add real-time update handling in frontend",
+                  "Create CLI tools for testing and administration"
+                ],
+                "tech_stack": ["React/Vue", "CLI tools", "WebSocket clients"],
+                "deliverables": [
+                  "Frontend client with real-time collaboration",
+                  "CLI tools for testing and administration",
+                  "Integration tests for frontend-backend",
+                  "User interface for all collaborative features"
+                ]
+              },
+              {
+                "id": "feedback_ux_contract",
+                "title": "Feedback/UX Contract",
+                "description": "Ensure users receive actionable feedback",
+                "tasks": [
+                  "Document feedback contract for all user actions",
+                  "Add user-facing feedback mechanisms",
+                  "Implement toast notifications and error popups",
+                  "Create UX guidelines for collaborative features"
+                ],
+                "tech_stack": ["Documentation", "Frontend components"],
+                "deliverables": [
+                  "Feedback contract documentation",
+                  "UX implementation in frontend",
+                  "User experience guidelines",
+                  "Accessibility compliance features"
+                ]
+              }
+            ]
+          },
+          "phase_6_documentation": {
+            "timeline": "Weeks 16-17",
+            "priority": "medium",
+            "components": [
+              {
+                "id": "api_documentation",
+                "title": "API Documentation",
+                "description": "Make APIs discoverable and testable",
+                "tasks": [
+                  "Generate OpenAPI/Swagger docs for all endpoints",
+                  "Add examples and usage notes",
+                  "Create interactive API documentation",
+                  "Document WebSocket event schemas"
+                ],
+                "tech_stack": ["FastAPI auto-generated docs", "Swagger UI"],
+                "deliverables": [
+                  "OpenAPI schema for all endpoints",
+                  "Interactive API documentation",
+                  "WebSocket event documentation",
+                  "API usage examples and tutorials"
+                ]
+              },
+              {
+                "id": "developer_operator_docs",
+                "title": "Developer/Operator Documentation",
+                "description": "Support maintainers and operators",
+                "tasks": [
+                  "Write runbooks for setup, monitoring, and recovery",
+                  "Add deployment, scaling, and troubleshooting guides",
+                  "Create architecture documentation",
+                  "Document security and compliance procedures"
+                ],
+                "tech_stack": ["Markdown", "Sphinx", "Documentation generators"],
+                "deliverables": [
+                  "Runbooks and operational guides",
+                  "Deployment and scaling documentation",
+                  "Architecture and design documents",
+                  "Security and compliance documentation"
+                ]
+              }
+            ]
+          },
+          "phase_7_advanced_features": {
+            "timeline": "Weeks 18-24",
+            "priority": "medium",
+            "components": [
+              {
+                "id": "time_based_triggers_rule_engine",
+                "title": "Time-based Triggers and Rule Engine",
+                "description": "Enable scheduled/cyclic events and advanced logic",
+                "tasks": [
+                  "Implement time-based triggers (scheduling, cyclic events)",
+                  "Build rule engine for advanced event/behavior logic",
+                  "Add support for complex conditional logic",
+                  "Create rule validation and testing framework"
+                ],
+                "tech_stack": ["APScheduler", "Custom rule engine", "Python rule libraries"],
+                "deliverables": [
+                  "Time trigger and rule engine modules",
+                  "Scheduling and cyclic event system",
+                  "Rule validation and testing framework",
+                  "Documentation and examples"
+                ]
+              },
+              {
+                "id": "plugin_extensibility_system",
+                "title": "Plugin/Extensibility System",
+                "description": "Allow custom behaviors and scripting",
+                "tasks": [
+                  "Design plugin API for custom event/behavior handlers",
+                  "Support dynamic loading and registration of plugins",
+                  "Implement plugin sandboxing and security",
+                  "Create plugin development kit and examples"
+                ],
+                "tech_stack": ["Python plugin frameworks", "importlib", "Sandboxing"],
+                "deliverables": [
+                  "Plugin system architecture",
+                  "Plugin development kit",
+                  "Example plugins and documentation",
+                  "Plugin security and validation"
+                ]
+              },
+              {
+                "id": "animation_behavior_system",
+                "title": "Animation Behavior System",
+                "description": "Support motion, state, and process animations",
+                "tasks": [
+                  "Implement animation engine for runtime",
+                  "Expose animation APIs to frontend",
+                  "Add support for motion, state, and process animations",
+                  "Create animation configuration and customization"
+                ],
+                "tech_stack": ["Python animation libraries", "WebSocket", "Animation frameworks"],
+                "deliverables": [
+                  "Animation engine implementation",
+                  "Animation API and frontend integration",
+                  "Animation configuration system",
+                  "Performance optimization for animations"
+                ]
+              },
+              {
+                "id": "external_metrics_export",
+                "title": "External Metrics Export",
+                "description": "Integrate with external observability platforms",
+                "tasks": [
+                  "Add push/export to Prometheus Pushgateway",
+                  "Support log shipping to ELK stack",
+                  "Integrate with external monitoring systems",
+                  "Create custom metrics exporters"
+                ],
+                "tech_stack": ["Prometheus", "Logstash", "Custom exporters"],
+                "deliverables": [
+                  "External metrics/export integration",
+                  "Log shipping and aggregation",
+                  "Monitoring integration documentation",
+                  "Custom metrics and alerting"
+                ]
+              }
+            ]
+          },
+          "integration_benefits": {
+            "collaborative_editing": {
+              "real_time_collaboration": "Multiple users can edit simultaneously with conflict resolution",
+              "lock_management": "Intelligent lock expiry prevents blocking and improves user experience",
+              "state_synchronization": "All clients see real-time updates for all state changes"
+            },
+            "security_compliance": {
+              "authentication": "Secure access control with JWT/OAuth2 integration",
+              "authorization": "Role-based permissions for different user types",
+              "rate_limiting": "Protection against abuse and DoS attacks"
+            },
+            "scalability_reliability": {
+              "horizontal_scaling": "Distributed state enables multiple server instances",
+              "high_availability": "Persistence and failover support for production reliability",
+              "performance": "Optimized state management for large-scale deployments"
+            },
+            "devops_automation": {
+              "automated_deployment": "CI/CD pipeline reduces manual errors and deployment time",
+              "monitoring": "Health checks and metrics enable proactive issue detection",
+              "container_orchestration": "Kubernetes support for cloud-native deployment"
+            },
+            "user_experience": {
+              "real_time_feedback": "Immediate response to user actions with clear feedback",
+              "intuitive_interface": "Frontend integration provides seamless user experience",
+              "accessibility": "Comprehensive feedback mechanisms for all user types"
+            },
+            "maintainability": {
+              "comprehensive_documentation": "Complete API docs and operational runbooks",
+              "extensibility": "Plugin system enables custom behaviors and integrations",
+              "observability": "Advanced monitoring and metrics for system health"
+            }
+          },
+          "production_readiness": {
+            "enterprise_grade": "All features meet enterprise security, scalability, and reliability standards",
+            "monitoring_observability": "Comprehensive metrics, logging, and health monitoring",
+            "automated_operations": "CI/CD, health checks, and automated recovery procedures",
+            "documentation_support": "Complete documentation for development, deployment, and operations",
+            "extensibility": "Plugin system and advanced features enable future growth and customization"
+          }
+        }
       }
     ]
   }

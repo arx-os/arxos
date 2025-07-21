@@ -221,3 +221,28 @@ class ConditionError(SVGXError):
     def __init__(self, message: str, condition_type: str = None):
         self.condition_type = condition_type
         super().__init__(message, condition_type)
+
+
+# Additional error classes for core behavior systems
+class StateError(SVGXError):
+    """Exception raised for state-related errors."""
+    
+    def __init__(self, message: str, state_operation: str = None):
+        self.state_operation = state_operation
+        super().__init__(message, state_operation)
+
+
+class OptimizationError(SVGXError):
+    """Exception raised for optimization-related errors."""
+    
+    def __init__(self, message: str, optimization_operation: str = None):
+        self.optimization_operation = optimization_operation
+        super().__init__(message, optimization_operation)
+
+
+class MemoryError(SVGXError):
+    """Exception raised for memory-related errors."""
+    
+    def __init__(self, message: str, memory_operation: str = None):
+        self.memory_operation = memory_operation
+        super().__init__(message, memory_operation)

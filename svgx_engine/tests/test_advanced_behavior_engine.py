@@ -32,6 +32,9 @@ from runtime.advanced_behavior_engine import (
     RuleType,
     TriggerType
 )
+from svgx_engine.runtime.behavior.ui_event_schemas import (
+    SelectionEvent, EditingEvent, NavigationEvent, AnnotationEvent, SelectionPayload, EditingPayload, NavigationPayload, AnnotationPayload
+)
 
 # Configure logging for tests
 logging.basicConfig(level=logging.INFO)
@@ -709,6 +712,65 @@ class TestAdvancedBehaviorEngine:
         assert len(applicable_rules) == 2
         assert applicable_rules[0]['rule_id'] == 'safety_rule'
         assert applicable_rules[1]['rule_id'] == 'operational_rule'
+
+
+@pytest.fixture
+def engine():
+    return AdvancedBehaviorEngine()
+
+def test_handle_selection_event(engine):
+    event = SelectionEvent(
+        event_type="selection",
+        timestamp=datetime.utcnow(),
+        session_id="s1",
+        user_id="u1",
+        canvas_id="c1",
+        payload=SelectionPayload(selection_mode="single", selected_ids=["obj1"], selection_origin=None, modifiers=None)
+    )
+    feedback = engine._handle_selection_event(event)
+    assert feedback["status"] == "updated"
+    assert engine.get_selection_state("c1") == ["obj1"]
+
+def test_handle_editing_event(engine):
+    event = EditingEvent(
+        event_type="editing",
+        timestamp=datetime.utcnow(),
+        session_id="s1",
+        user_id="u1",
+        canvas_id="c1",
+        payload=EditingPayload(target_id="obj1", edit_type="move", before={"position": {"x": 0, "y": 0}}, after={"position": {"x": 1, "y": 2}}, property_changed=None)
+    )
+    feedback = engine._handle_editing_event(event)
+    assert feedback["status"] == "edited"
+    assert engine.edit_history["c1"][-1]["edit_type"] == "move"
+
+def test_handle_navigation_event(engine):
+    event = NavigationEvent(
+        event_type="navigation",
+        timestamp=datetime.utcnow(),
+        session_id="s1",
+        user_id="u1",
+        canvas_id="c1",
+        payload=NavigationPayload(action="zoom", zoom_level=2.0, camera_position=None, target_object_id=None, floor_id=None)
+    )
+    feedback = engine._handle_navigation_event(event)
+    assert feedback["status"] == "navigation_updated"
+    assert engine.get_navigation_state("c1")["zoom_level"] == 2.0
+
+def test_handle_annotation_event(engine):
+    event = AnnotationEvent(
+        event_type="annotation",
+        timestamp=datetime.utcnow(),
+        session_id="s1",
+        user_id="u1",
+        canvas_id="c1",
+        payload=AnnotationPayload(target_id="obj2", annotation_type="note", content="Test", location={"x": 1, "y": 2}, media=None, tag=["t"])
+    )
+    feedback = engine._handle_annotation_event(event)
+    assert feedback["status"] == "annotation_added"
+    ann = engine.get_annotations("c1")["obj2"]
+    assert ann[-1]["type"] == "note"
+    assert ann[-1]["content"] == "Test"
 
 
 if __name__ == '__main__':

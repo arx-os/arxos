@@ -9,8 +9,8 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import logging
 
-from .scoring_engine import reputation_engine, ContributionType
-from .badges import badge_system, BadgeType
+from services.scoring_engine
+from services.badges
 from ..auth.auth_utils import get_current_user
 from ..models.user import User
 
@@ -243,7 +243,7 @@ async def get_badges_by_rarity(
 ):
     """Get badges filtered by rarity"""
     
-    from .badges import BadgeRarity
+    from services.planarx.planarx_community.reputation.badges import BadgeRarity
     
     try:
         rarity_enum = BadgeRarity(rarity)

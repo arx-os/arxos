@@ -16,14 +16,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the actual scale calculation functions
 try:
-    from ..services.transform import (
+    from core.svg_parser.services.transform import (
         calculate_scale_factors,
         convert_to_real_world_coordinates,
         validate_coordinate_system,
         transform_coordinates_batch,
         create_transformation_matrix
     )
-    from ..services.coordinate_validator import validate_coordinates, validate_scale_factors
+    from core.svg_parser.services.coordinate_validator import validate_coordinates, validate_scale_factors
     SCALE_SERVICES_AVAILABLE = True
 except ImportError:
     # Mock the functions if they're not available

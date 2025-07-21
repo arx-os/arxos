@@ -5,7 +5,7 @@ This package provides intent detection functionality with confidence scoring
 and pattern matching for building operations.
 """
 
-from .intent_detector import IntentDetector, detect_intent
+from services.intent_detector
 
 __all__ = [
     "IntentDetector",

@@ -10,11 +10,11 @@ from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 
 from ..mod.community_guidelines import *
-from ..frontend.onboarding_flow import OnboardingFlow, OnboardingUI
-from ..user_agreement_flags import UserAgreementManager, AgreementType, AgreementStatus
-from ..mod.flagging import FlaggingSystem, FlagCategory, FlagPriority, FlagStatus
-from ..mod.mod_queue import ModerationQueue, QueueSortOption, QueueFilterOption
-from ..main import app
+from services.frontend.onboarding_flow
+from services.user_agreement_flags
+from services.mod.flagging
+from services.mod.mod_queue
+from services.main
 
 
 class TestCommunityGuidelines:

@@ -10,9 +10,9 @@ from datetime import datetime
 import json
 import logging
 
-from .realtime_editor import realtime_editor
-from .annotations import annotation_manager
-from ..notifications.collab_events import collab_notification_service
+from services.realtime_editor
+from services.annotations
+from services.notifications.collab_events
 from ..auth.auth_utils import get_current_user
 from ..models.draft import Draft
 from ..models.user import User
@@ -148,7 +148,7 @@ async def add_comment(
     """Add a comment to a thread"""
     
     try:
-        from ..notifications.collab_events import NotificationType
+        from services.planarx.planarx_community.notifications.collab_events import NotificationType
         
         comment = annotation_manager.add_comment(
             thread_id=thread_id,
@@ -418,7 +418,7 @@ async def get_notifications(
 ):
     """Get notifications for current user"""
     
-    from ..notifications.collab_events import NotificationStatus
+    from services.planarx.planarx_community.notifications.collab_events import NotificationStatus
     
     status_enum = None
     if status:

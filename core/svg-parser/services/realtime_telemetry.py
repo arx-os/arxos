@@ -26,9 +26,9 @@ from aiohttp import web
 import numpy as np
 
 # Import our existing services
-from .telemetry import TelemetryBuffer, TelemetryRecord, TelemetryIngestor
-from .failure_detection import FailureDetectionSystem
-from .analytics import (
+from core.telemetry
+from core.failure_detection
+from core.analytics
     ZScoreAnomalyDetector, IsolationForestAnomalyDetector, MovingAverageForecaster, ARIMAForecaster, compute_correlation
 )
 

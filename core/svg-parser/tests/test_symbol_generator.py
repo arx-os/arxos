@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from ..services.symbol_generator import SymbolGenerator
+from core.services.symbol_generator
 
 def test_symbol_generator():
     """Test the symbol generator with a mock URL"""

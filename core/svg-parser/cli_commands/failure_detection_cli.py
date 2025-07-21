@@ -24,7 +24,7 @@ from datetime import datetime
 import os
 
 # Use relative imports for package context
-from ..services.failure_detection import FailureDetectionSystem
+from core.services.failure_detection
 
 # Only import ML components if available
 try:

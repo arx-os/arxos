@@ -5,7 +5,7 @@ This package contains the rule validation engine for checking building designs
 against MCP (Model Context Protocol) rules and generating compliance reports.
 """
 
-from .rule_engine import MCPRuleEngine, ConditionEvaluator, ActionExecutor
+from services.rule_engine
 
 __all__ = [
     'MCPRuleEngine',

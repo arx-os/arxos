@@ -25,7 +25,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 # Use relative imports for package context
-from ..services.realtime_telemetry import RealtimeTelemetryService
+from core.services.realtime_telemetry
 
 from services.telemetry import generate_simulated_telemetry
 

@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from ..models.building_regulations import (
+from core.models.building_regulations
     BuildingRegulationsDB, Regulation, ValidationRule, 
     BuildingValidation, ValidationViolation, ValidationStatus,
     ViolationSeverity, RegulationType

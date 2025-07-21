@@ -13,7 +13,7 @@ from ..models.bim import (
     BIMModel, Room, Device, SystemType, DeviceCategory, Geometry, GeometryType,
     RoomType, Wall, Door, Window
 )
-from ..services.spatial_reasoning import (
+from core.services.spatial_reasoning
     SpatialReasoningEngine, SpatialRelation, AccessibilityType, SpatialConstraint,
     SpatialAnalysis
 )

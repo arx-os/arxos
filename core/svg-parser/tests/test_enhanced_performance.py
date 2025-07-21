@@ -17,7 +17,7 @@ import statistics
 from unittest.mock import Mock, patch
 from typing import List, Dict, Any
 
-from ..services.enhanced_performance import (
+from core.services.enhanced_performance
     AdaptiveBatchProcessor, AdvancedParallelProcessor, AdvancedPerformanceProfiler,
     ScalabilityAnalyzer, EnhancedPerformanceOptimizer,
     BatchStrategy, ParallelizationLevel, OptimizationLevel,

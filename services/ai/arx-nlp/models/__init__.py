@@ -5,7 +5,7 @@ This package contains data models for NLP processing including
 request/response handling, intent detection, slot filling, and CLI command generation.
 """
 
-from .nlp_models import (
+from services.nlp_models
     NLPRequest, NLPResponse, Intent, Slot, SlotResult, CLICommand,
     NLPContext, ValidationResult, ProcessingStats,
     IntentType, SlotType,

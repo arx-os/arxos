@@ -33,30 +33,30 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import with error handling for missing modules
 try:
-    from ..services.symbol_manager import SymbolManager
-    from services.json_symbol_library import JSONSymbolLibrary
-    from ..services.symbol_schema_validator import SymbolSchemaValidator
+    from core.svg_parser.services.symbol_manager import SymbolManager
+    from core.svg_parser.services.json_symbol_library import JSONSymbolLibrary
+    from core.svg_parser.services.symbol_schema_validator import SymbolSchemaValidator
     _services_available = True
 except ImportError as e:
     print(f"Warning: Services not available: {e}")
     _services_available = False
 
 try:
-    from ..cmd.symbol_manager_cli import SymbolManagerCLI
+    from core.svg_parser.cmd.symbol_manager_cli import SymbolManagerCLI
     _cli_available = True
 except ImportError as e:
     print(f"Warning: CLI not available: {e}")
     _cli_available = False
 
 try:
-    from ..routers.symbol_management import router, symbol_manager, schema_validator
+    from core.svg_parser.routers.symbol_management import router, symbol_manager, schema_validator
     _api_available = True
 except ImportError as e:
     print(f"Warning: API not available: {e}")
     _api_available = False
 
 try:
-    from utils.auth import create_user, login_user, UserRole, Permission
+    from core.svg_parser.utils.auth import create_user, login_user, UserRole, Permission
     _auth_available = True
 except ImportError as e:
     print(f"Warning: Auth not available: {e}")

@@ -17,7 +17,7 @@ from typing import Dict, List, Any
 from unittest.mock import Mock, patch
 from pathlib import Path
 
-from ..services.persistence_export_interoperability import (
+from core.services.persistence_export_interoperability
     BIMSerializer, BIMExporter, PersistenceExportManager,
     ExportFormat, DatabaseType, ExportOptions, DatabaseConfig,
     SQLiteInterface, create_persistence_manager, export_bim_model,
@@ -27,7 +27,7 @@ from ..models.bim import (
     BIMModel, Room, Wall, Door, Window, Device, Geometry, GeometryType,
     RoomType, SystemType, DeviceCategory
 )
-from ..utils.errors import ExportError, PersistenceError
+from core.utils.errors
 
 
 class TestBIMSerializer(unittest.TestCase):

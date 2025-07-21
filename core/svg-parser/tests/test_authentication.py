@@ -16,14 +16,14 @@ from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 
-from ..utils.auth import (
+from core.utils.auth
     create_access_token, create_refresh_token, decode_token,
     hash_password, verify_password, validate_password_strength,
     TokenUser, revoke_token, is_token_revoked
 )
-from ..services.access_control import access_control_service, UserRole
+from core.services.access_control
 from middleware.auth import AuthenticationMiddleware, RoleBasedAccessMiddleware
-from ..middleware.security import SecurityMiddleware, PasswordSecurity
+from core.middleware.security
 
 class TestJWTAuthentication:
     """Test JWT authentication functionality."""

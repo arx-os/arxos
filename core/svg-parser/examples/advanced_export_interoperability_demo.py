@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
 
-from ..services.advanced_export_interoperability import (
+from core.services.advanced_export_interoperability
     AdvancedExportInteroperabilityService,
     ExportFormat
 )

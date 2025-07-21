@@ -1,1172 +1,893 @@
 """
-SVGX Engine - Real-time Collaboration Service
+SVGX Engine - Real-time Collaboration System
 
-Implements real-time collaboration features including:
-- WebSocket-based live updates with <16ms propagation
-- Multi-user editing with concurrent access
-- Conflict resolution system with automatic detection
-- Version control integration (Git-like)
-- Presence awareness and activity tracking
-- ACID compliance for collaborative operations
-- Scalability for 100+ concurrent users
+This service provides advanced real-time collaboration capabilities for BIM behavior
+systems, enabling multi-user concurrent editing, synchronization, and conflict resolution.
 
-CTO Directives:
-- <16ms update propagation time
-- Automatic conflict resolution with user override
-- Support for 100+ concurrent users
-- ACID compliance for collaborative operations
+🎯 **Core Collaboration Features:**
+- Multi-user Concurrent Editing
+- Real-time Synchronization
+- Conflict Resolution Mechanisms
+- Version Control Integration
+- User Presence and Activity Tracking
+- Collaborative Annotations and Comments
+- Permission-based Access Control
+- Real-time Notifications and Alerts
 
-Author: SVGX Engineering Team
-Date: 2024
+🏗️ **Enterprise Features:**
+- Scalable WebSocket-based communication
+- Conflict detection and resolution algorithms
+- Comprehensive audit trails
+- Performance monitoring and optimization
+- Security and compliance features
+- Integration with BIM behavior engine
 """
 
-import redis
+import logging
 import asyncio
 import json
 import time
 import uuid
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Set, Callable
+from typing import Dict, List, Any, Optional, Union, Set
 from dataclasses import dataclass, field
 from enum import Enum
-import logging
-from websockets.server import WebSocketServerProtocol
-import sqlite3
+from datetime import datetime, timedelta
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict, deque
+import websockets
+from websockets.server import WebSocketServerProtocol
 import hashlib
 import hmac
-import base64
 
-from structlog import get_logger
+from svgx_engine.utils.performance import PerformanceMonitor
+from svgx_engine.utils.errors import BehaviorError, ValidationError
 
 logger = logging.getLogger(__name__)
 
-class OperationType(Enum):
-    """Types of collaborative operations."""
-    CREATE = "create"
-    UPDATE = "update"
-    DELETE = "delete"
-    MOVE = "move"
-    RESIZE = "resize"
-    SELECT = "select"
-    DESELECT = "deselect"
-    CONSTRAINT_ADD = "constraint_add"
-    CONSTRAINT_REMOVE = "constraint_remove"
-    ASSEMBLY_UPDATE = "assembly_update"
-    LAYER_CHANGE = "layer_change"
-    PROPERTY_UPDATE = "property_update"
 
-class ConflictResolution(Enum):
-    """Conflict resolution strategies."""
-    AUTOMATIC = "automatic"
-    MANUAL = "manual"
-    LAST_WRITE_WINS = "last_write_wins"
-    MERGE = "merge"
-    REJECT = "reject"
-    USER_CHOICE = "user_choice"
+class CollaborationEventType(Enum):
+    """Types of collaboration events."""
+    USER_JOINED = "user_joined"
+    USER_LEFT = "user_left"
+    EDIT_STARTED = "edit_started"
+    EDIT_COMPLETED = "edit_completed"
+    CONFLICT_DETECTED = "conflict_detected"
+    CONFLICT_RESOLVED = "conflict_resolved"
+    ANNOTATION_ADDED = "annotation_added"
+    COMMENT_ADDED = "comment_added"
+    PERMISSION_CHANGED = "permission_changed"
+    SYNC_REQUESTED = "sync_requested"
+    SYNC_COMPLETED = "sync_completed"
 
-class UserStatus(Enum):
-    """User presence status."""
-    ONLINE = "online"
-    AWAY = "away"
-    OFFLINE = "offline"
-    EDITING = "editing"
-    VIEWING = "viewing"
+
+class EditStatus(Enum):
+    """Status of collaborative edits."""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    CONFLICT = "conflict"
+    MERGED = "merged"
+
+
+class PermissionLevel(Enum):
+    """User permission levels."""
+    VIEWER = "viewer"
+    EDITOR = "editor"
+    ADMIN = "admin"
+    OWNER = "owner"
+
 
 @dataclass
-class User:
-    """User information for collaboration."""
+class UserSession:
+    """User session information."""
     user_id: str
     username: str
     session_id: str
-    status: UserStatus = UserStatus.ONLINE
-    last_activity: datetime = field(default_factory=datetime.now)
-    current_element: Optional[str] = None
-    cursor_position: Optional[Dict[str, float]] = None
-    selected_elements: List[str] = field(default_factory=list)
-    permissions: List[str] = field(default_factory=lambda: ["read", "write"])
-    connection_quality: float = 1.0
-    client_version: str = "1.0.0"
-
-@dataclass
-class Operation:
-    """Collaborative operation definition."""
-    operation_id: str
-    operation_type: OperationType
-    user_id: str
-    session_id: str
-    timestamp: datetime
-    element_id: Optional[str] = None
-    data: Dict[str, Any] = field(default_factory=dict)
-    version: int = 0
-    parent_operation: Optional[str] = None
-    resolved: bool = False
-    checksum: str = ""
-    priority: int = 0
-
-@dataclass
-class Conflict:
-    """Conflict definition between operations."""
-    conflict_id: str
-    operation_1: Operation
-    operation_2: Operation
-    conflict_type: str
-    detected_at: datetime
-    resolution: Optional[ConflictResolution] = None
-    resolved_by: Optional[str] = None
-    resolved_at: Optional[datetime] = None
-    severity: str = "medium"
-    auto_resolvable: bool = True
-
-@dataclass
-class DocumentVersion:
-    """Document version for version control."""
-    version_id: str
-    version_number: int
-    parent_version: Optional[str] = None
-    operations: List[Operation] = field(default_factory=list)
-    created_at: datetime = field(default_factory=datetime.now)
-    created_by: str = ""
-    description: str = ""
-    checksum: str = ""
+    websocket: WebSocketServerProtocol
+    joined_at: datetime
+    last_activity: datetime
+    permissions: PermissionLevel = PermissionLevel.VIEWER
+    active_elements: Set[str] = field(default_factory=set)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-class SecurityManager:
-    """Manages security for collaborative operations."""
+
+@dataclass
+class CollaborativeEdit:
+    """Collaborative edit operation."""
+    edit_id: str
+    user_id: str
+    element_id: str
+    edit_type: str
+    timestamp: datetime
+    data: Dict[str, Any]
+    status: EditStatus = EditStatus.PENDING
+    conflicts: List[str] = field(default_factory=list)
+    resolution: Optional[Dict[str, Any]] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ConflictResolution:
+    """Conflict resolution information."""
+    conflict_id: str
+    edit_ids: List[str]
+    detected_at: datetime
+    resolved_at: Optional[datetime] = None
+    resolution_type: str = "manual"
+    resolved_by: Optional[str] = None
+    resolution_data: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class Annotation:
+    """Collaborative annotation."""
+    annotation_id: str
+    user_id: str
+    element_id: str
+    annotation_type: str
+    content: str
+    position: Dict[str, float]
+    timestamp: datetime
+    replies: List[Dict[str, Any]] = field(default_factory=list)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class CollaborationConfig:
+    """Configuration for real-time collaboration system."""
+    # WebSocket settings
+    websocket_host: str = "localhost"
+    websocket_port: int = 8765
+    max_connections: int = 100
+    heartbeat_interval: int = 30  # seconds
     
-    def __init__(self, secret_key: str):
-        self.secret_key = secret_key.encode('utf-8')
-        self.session_tokens: Dict[str, str] = {}
-        self.rate_limits: Dict[str, List[float]] = {}
-        
-    def generate_token(self, user_id: str, session_id: str) -> str:
-        """Generate a secure session token."""
-        data = f"{user_id}:{session_id}:{int(time.time())}"
-        signature = hmac.new(self.secret_key, data.encode('utf-8'), hashlib.sha256).hexdigest()
-        return base64.b64encode(f"{data}:{signature}".encode('utf-8')).decode('utf-8')
+    # Edit settings
+    edit_timeout: int = 300  # seconds
+    conflict_detection_interval: int = 5  # seconds
+    auto_resolve_conflicts: bool = False
     
-    def validate_token(self, token: str) -> Optional[Dict[str, str]]:
-        """Validate a session token."""
-        try:
-            decoded = base64.b64decode(token).decode('utf-8')
-            data, signature = decoded.rsplit(':', 1)
-            expected_signature = hmac.new(self.secret_key, data.encode('utf-8'), hashlib.sha256).hexdigest()
-            
-            if hmac.compare_digest(signature, expected_signature):
-                user_id, session_id, timestamp = data.split(':', 2)
-                return {"user_id": user_id, "session_id": session_id}
-        except Exception as e:
-            logger.warning(f"Token validation failed: {e}")
-        return None
+    # Performance settings
+    max_edits_per_user: int = 10
+    max_annotations_per_element: int = 50
+    cache_size: int = 1000
     
-    def check_rate_limit(self, user_id: str, operation_type: str) -> bool:
-        """Check if user is within rate limits."""
-        current_time = time.time()
-        key = f"{user_id}:{operation_type}"
-        
-        if key not in self.rate_limits:
-            self.rate_limits[key] = []
-        
-        # Remove old entries (older than 1 minute)
-        self.rate_limits[key] = [t for t in self.rate_limits[key] if current_time - t < 60]
-        
-        # Check limits based on operation type
-        max_operations = {
-            "create": 10,
-            "update": 50,
-            "delete": 5,
-            "move": 30,
-            "resize": 30,
-            "select": 100
-        }
-        
-        limit = max_operations.get(operation_type, 20)
-        if len(self.rate_limits[key]) >= limit:
-            return False
-        
-        self.rate_limits[key].append(current_time)
-        return True
+    # Security settings
+    require_authentication: bool = True
+    session_timeout: int = 3600  # seconds
+    max_failed_attempts: int = 3
+
 
 class ConflictDetector:
-    """Detects and manages conflicts between operations."""
+    """Detect and resolve conflicts in collaborative edits."""
     
-    def __init__(self):
-        self.conflicts: Dict[str, Conflict] = {}
-        self.operation_history: Dict[str, Operation] = {}
-        self.element_locks: Dict[str, str] = {}  # element_id -> user_id
-        self.lock_timeout = 30  # seconds
-        
-    def detect_conflicts(self, new_operation: Operation, 
-                        recent_operations: List[Operation]) -> List[Conflict]:
-        """Detect conflicts between new operation and recent operations."""
+    def __init__(self, config: CollaborationConfig):
+        self.config = config
+        self.active_conflicts = {}
+        self.resolution_history = []
+    
+    def detect_conflicts(self, new_edit: CollaborativeEdit, 
+                        existing_edits: List[CollaborativeEdit]) -> List[ConflictResolution]:
+        """Detect conflicts between edits."""
         conflicts = []
         
-        # Add checksum validation
-        new_operation.checksum = self._calculate_checksum(new_operation)
-        
-        for recent_op in recent_operations:
-            if self._operations_conflict(new_operation, recent_op):
-                conflict = Conflict(
-                    conflict_id=str(uuid.uuid4()),
-                    operation_1=new_operation,
-                    operation_2=recent_op,
-                    conflict_type=self._get_conflict_type(new_operation, recent_op),
-                    detected_at=datetime.now(),
-                    severity=self._calculate_conflict_severity(new_operation, recent_op),
-                    auto_resolvable=self._is_auto_resolvable(new_operation, recent_op)
-                )
-                conflicts.append(conflict)
-                self.conflicts[conflict.conflict_id] = conflict
-                
-                logger.info(f"Conflict detected: {conflict.conflict_id} - {conflict.conflict_type}")
+        try:
+            for existing_edit in existing_edits:
+                if (existing_edit.element_id == new_edit.element_id and
+                    existing_edit.status == EditStatus.PENDING and
+                    existing_edit.user_id != new_edit.user_id):
+                    
+                    # Check for direct conflicts
+                    if self._has_direct_conflict(new_edit, existing_edit):
+                        conflict = ConflictResolution(
+                            conflict_id=str(uuid.uuid4()),
+                            edit_ids=[new_edit.edit_id, existing_edit.edit_id],
+                            detected_at=datetime.now(),
+                            resolution_type="automatic" if self.config.auto_resolve_conflicts else "manual"
+                        )
+                        
+                        conflicts.append(conflict)
+                        self.active_conflicts[conflict.conflict_id] = conflict
+                        
+                        # Update edit statuses
+                        new_edit.status = EditStatus.CONFLICT
+                        existing_edit.status = EditStatus.CONFLICT
+                        new_edit.conflicts.append(conflict.conflict_id)
+                        existing_edit.conflicts.append(conflict.conflict_id)
+            
+            logger.info(f"Detected {len(conflicts)} conflicts for edit {new_edit.edit_id}")
+            
+        except Exception as e:
+            logger.error(f"Error detecting conflicts: {e}")
         
         return conflicts
     
-    def _operations_conflict(self, op1: Operation, op2: Operation) -> bool:
-        """Check if two operations conflict."""
-        # Same element, different users, overlapping time window
-        if (op1.element_id == op2.element_id and 
-            op1.user_id != op2.user_id and
-            abs((op1.timestamp - op2.timestamp).total_seconds()) < 1.0):
-            
-            # Check for specific conflict types
-            if op1.operation_type == op2.operation_type:
-                return True
-            elif op1.operation_type in [OperationType.DELETE, OperationType.UPDATE]:
-                return True
-            elif op2.operation_type in [OperationType.DELETE, OperationType.UPDATE]:
-                return True
-            elif op1.operation_type in [OperationType.MOVE, OperationType.RESIZE]:
-                return True
-            elif op2.operation_type in [OperationType.MOVE, OperationType.RESIZE]:
-                return True
-        
-        return False
-    
-    def _get_conflict_type(self, op1: Operation, op2: Operation) -> str:
-        """Get the type of conflict between operations."""
-        if op1.operation_type == op2.operation_type:
-            return f"concurrent_{op1.operation_type.value}"
-        elif op1.operation_type == OperationType.DELETE:
-            return "delete_conflict"
-        elif op2.operation_type == OperationType.DELETE:
-            return "delete_conflict"
-        elif op1.operation_type in [OperationType.MOVE, OperationType.RESIZE]:
-            return "transformation_conflict"
-        elif op2.operation_type in [OperationType.MOVE, OperationType.RESIZE]:
-            return "transformation_conflict"
-        else:
-            return "modification_conflict"
-    
-    def _calculate_conflict_severity(self, op1: Operation, op2: Operation) -> str:
-        """Calculate the severity of a conflict."""
-        if op1.operation_type == OperationType.DELETE or op2.operation_type == OperationType.DELETE:
-            return "high"
-        elif op1.operation_type in [OperationType.MOVE, OperationType.RESIZE]:
-            return "medium"
-        else:
-            return "low"
-    
-    def _is_auto_resolvable(self, op1: Operation, op2: Operation) -> bool:
-        """Check if conflict can be auto-resolved."""
-        # Simple conflicts can be auto-resolved
-        if op1.operation_type == op2.operation_type:
-            return True
-        # Complex conflicts require manual resolution
-        return False
-    
-    def _calculate_checksum(self, operation: Operation) -> str:
-        """Calculate checksum for operation validation."""
-        data = f"{operation.operation_type.value}:{operation.element_id}:{operation.user_id}:{operation.timestamp.isoformat()}"
-        return hashlib.sha256(data.encode('utf-8')).hexdigest()
-    
-    def resolve_conflict(self, conflict_id: str, resolution: ConflictResolution, 
-                       resolved_by: str) -> bool:
-        """Resolve a conflict with the specified strategy."""
-        if conflict_id not in self.conflicts:
-            return False
-        
-        conflict = self.conflicts[conflict_id]
-        conflict.resolution = resolution
-        conflict.resolved_by = resolved_by
-        conflict.resolved_at = datetime.now()
-        
-        # Apply resolution strategy
-        if resolution == ConflictResolution.LAST_WRITE_WINS:
-            winner = conflict.operation_1 if conflict.operation_1.timestamp > conflict.operation_2.timestamp else conflict.operation_2
-            winner.resolved = True
-        elif resolution == ConflictResolution.MERGE:
-            # Merge operations (simplified)
-            conflict.operation_1.resolved = True
-            conflict.operation_2.resolved = True
-        elif resolution == ConflictResolution.REJECT:
-            # Reject both operations
-            conflict.operation_1.resolved = False
-            conflict.operation_2.resolved = False
-        elif resolution == ConflictResolution.USER_CHOICE:
-            # User will choose which operation to keep
-            pass
-        
-        logger.info(f"Conflict {conflict_id} resolved with {resolution.value} by {resolved_by}")
-        return True
-    
-    def acquire_lock(self, element_id: str, user_id: str) -> bool:
-        """Acquire a lock on an element."""
-        current_time = time.time()
-        
-        # Check if element is already locked
-        if element_id in self.element_locks:
-            lock_user, lock_time = self.element_locks[element_id]
-            if current_time - lock_time < self.lock_timeout:
-                return False
-        
-        self.element_locks[element_id] = (user_id, current_time)
-        return True
-    
-    def release_lock(self, element_id: str, user_id: str) -> bool:
-        """Release a lock on an element."""
-        if element_id in self.element_locks:
-            lock_user, _ = self.element_locks[element_id]
-            if lock_user == user_id:
-                del self.element_locks[element_id]
-                return True
-        return False
-
-class VersionControl:
-    """Version control system for collaborative documents."""
-    
-    def __init__(self, db_path: str = "collaboration.db"):
-        self.db_path = db_path
-        self._init_database()
-        
-    def _init_database(self):
-        """Initialize the version control database."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS versions (
-                    version_id TEXT PRIMARY KEY,
-                    version_number INTEGER,
-                    parent_version TEXT,
-                    created_at TEXT,
-                    created_by TEXT,
-                    description TEXT,
-                    checksum TEXT,
-                    metadata TEXT
-                )
-            """)
-            
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS operations (
-                    operation_id TEXT PRIMARY KEY,
-                    version_id TEXT,
-                    operation_type TEXT,
-                    user_id TEXT,
-                    session_id TEXT,
-                    timestamp TEXT,
-                    element_id TEXT,
-                    data TEXT,
-                    version INTEGER,
-                    parent_operation TEXT,
-                    resolved BOOLEAN,
-                    checksum TEXT,
-                    priority INTEGER,
-                    FOREIGN KEY (version_id) REFERENCES versions (version_id)
-                )
-            """)
-            
-            conn.commit()
-    
-    def create_version(self, operations: List[Operation], 
-                      created_by: str, description: str = "") -> DocumentVersion:
-        """Create a new document version."""
-        version_id = str(uuid.uuid4())
-        
-        # Calculate version number
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("SELECT MAX(version_number) FROM versions")
-            max_version = cursor.fetchone()[0]
-            version_number = (max_version or 0) + 1
-        
-        # Calculate checksum
-        operations_data = [f"{op.operation_id}:{op.operation_type.value}:{op.element_id}" for op in operations]
-        checksum = hashlib.sha256(":".join(operations_data).encode('utf-8')).hexdigest()
-        
-        version = DocumentVersion(
-            version_id=version_id,
-            version_number=version_number,
-            operations=operations,
-            created_by=created_by,
-            description=description,
-            checksum=checksum
-        )
-        
-        self._save_version(version)
-        logger.info(f"Created version {version_number} with {len(operations)} operations")
-        return version
-    
-    def _save_version(self, version: DocumentVersion):
-        """Save version to database."""
-        with sqlite3.connect(self.db_path) as conn:
-            # Save version
-            conn.execute("""
-                INSERT INTO versions (version_id, version_number, parent_version, 
-                                   created_at, created_by, description, checksum, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                version.version_id,
-                version.version_number,
-                version.parent_version,
-                version.created_at.isoformat(),
-                version.created_by,
-                version.description,
-                version.checksum,
-                json.dumps(version.metadata)
-            ))
-            
-            # Save operations
-            for operation in version.operations:
-                conn.execute("""
-                    INSERT INTO operations (operation_id, version_id, operation_type, 
-                                         user_id, session_id, timestamp, element_id, 
-                                         data, version, parent_operation, resolved, 
-                                         checksum, priority)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    operation.operation_id,
-                    version.version_id,
-                    operation.operation_type.value,
-                    operation.user_id,
-                    operation.session_id,
-                    operation.timestamp.isoformat(),
-                    operation.element_id,
-                    json.dumps(operation.data),
-                    operation.version,
-                    operation.parent_operation,
-                    operation.resolved,
-                    operation.checksum,
-                    operation.priority
-                ))
-            
-            conn.commit()
-    
-    def get_version_history(self) -> List[DocumentVersion]:
-        """Get the complete version history."""
-        versions = []
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
-                SELECT version_id, version_number, parent_version, created_at, 
-                       created_by, description, checksum, metadata
-                FROM versions ORDER BY version_number
-            """)
-            
-            for row in cursor.fetchall():
-                version = DocumentVersion(
-                    version_id=row[0],
-                    version_number=row[1],
-                    parent_version=row[2],
-                    created_at=datetime.fromisoformat(row[3]),
-                    created_by=row[4],
-                    description=row[5],
-                    checksum=row[6],
-                    metadata=json.loads(row[7]) if row[7] else {}
-                )
-                versions.append(version)
-        
-        return versions
-    
-    def revert_to_version(self, version_id: str) -> bool:
-        """Revert to a specific version."""
+    def _has_direct_conflict(self, edit1: CollaborativeEdit, edit2: CollaborativeEdit) -> bool:
+        """Check if two edits have a direct conflict."""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Get version information
-                cursor = conn.execute("SELECT version_number FROM versions WHERE version_id = ?", (version_id,))
-                result = cursor.fetchone()
-                if not result:
-                    return False
-                
-                # Create revert version
-                revert_version = DocumentVersion(
-                    version_id=str(uuid.uuid4()),
-                    version_number=result[0] + 1,
-                    parent_version=version_id,
-                    created_by="system",
-                    description=f"Revert to version {result[0]}"
-                )
-                
-                self._save_version(revert_version)
-                logger.info(f"Reverted to version {result[0]}")
-                return True
-        except Exception as e:
-            logger.error(f"Failed to revert to version {version_id}: {e}")
-            return False
-
-class PresenceManager:
-    """Manages user presence and activity tracking."""
-    
-    def __init__(self):
-        self.users: Dict[str, User] = {}
-        self.session_map: Dict[str, str] = {}  # session_id -> user_id
-        self.activity_log: List[Dict[str, Any]] = []
-        
-    def add_user(self, user_id: str, username: str, session_id: str) -> User:
-        """Add a new user to the presence system."""
-        user = User(
-            user_id=user_id,
-            username=username,
-            session_id=session_id,
-            status=UserStatus.ONLINE
-        )
-        
-        self.users[user_id] = user
-        self.session_map[session_id] = user_id
-        
-        self.activity_log.append({
-            "timestamp": datetime.now(),
-            "action": "user_joined",
-            "user_id": user_id,
-            "username": username,
-            "session_id": session_id
-        })
-        
-        logger.info(f"User {username} ({user_id}) joined session {session_id}")
-        return user
-    
-    def remove_user(self, session_id: str):
-        """Remove a user from the presence system."""
-        if session_id in self.session_map:
-            user_id = self.session_map[session_id]
-            if user_id in self.users:
-                user = self.users[user_id]
-                user.status = UserStatus.OFFLINE
-                
-                self.activity_log.append({
-                    "timestamp": datetime.now(),
-                    "action": "user_left",
-                    "user_id": user_id,
-                    "username": user.username,
-                    "session_id": session_id
-                })
-                
-                logger.info(f"User {user.username} ({user_id}) left session {session_id}")
-    
-    def update_user_activity(self, user_id: str, activity_data: Dict[str, Any]):
-        """Update user activity information."""
-        if user_id in self.users:
-            user = self.users[user_id]
-            user.last_activity = datetime.now()
+            # Check if edits modify the same properties
+            edit1_properties = set(edit1.data.keys())
+            edit2_properties = set(edit2.data.keys())
             
-            # Update specific fields
-            if "current_element" in activity_data:
-                user.current_element = activity_data["current_element"]
-            if "cursor_position" in activity_data:
-                user.cursor_position = activity_data["cursor_position"]
-            if "selected_elements" in activity_data:
-                user.selected_elements = activity_data["selected_elements"]
-            if "status" in activity_data:
-                user.status = UserStatus(activity_data["status"])
-            if "connection_quality" in activity_data:
-                user.connection_quality = activity_data["connection_quality"]
+            common_properties = edit1_properties.intersection(edit2_properties)
+            
+            if not common_properties:
+                return False
+            
+            # Check for conflicting values
+            for prop in common_properties:
+                if edit1.data[prop] != edit2.data[prop]:
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking direct conflict: {e}")
+            return False
     
-    def get_active_users(self) -> List[User]:
-        """Get list of currently active users."""
-        current_time = datetime.now()
-        active_users = []
-        
-        for user in self.users.values():
-            # Consider user active if last activity was within 5 minutes
-            if (current_time - user.last_activity).total_seconds() < 300:  # 5 minutes
-                active_users.append(user)
-        
-        return active_users
+    def resolve_conflict(self, conflict_id: str, resolution_data: Dict[str, Any], 
+                       resolved_by: str) -> bool:
+        """Resolve a conflict manually."""
+        try:
+            if conflict_id not in self.active_conflicts:
+                return False
+            
+            conflict = self.active_conflicts[conflict_id]
+            conflict.resolved_at = datetime.now()
+            conflict.resolved_by = resolved_by
+            conflict.resolution_data = resolution_data
+            
+            # Update edit statuses based on resolution
+            for edit_id in conflict.edit_ids:
+                # In a real implementation, you would update the actual edit objects
+                pass
+            
+            self.resolution_history.append(conflict)
+            del self.active_conflicts[conflict_id]
+            
+            logger.info(f"Conflict {conflict_id} resolved by {resolved_by}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error resolving conflict {conflict_id}: {e}")
+            return False
     
-    def get_user_presence(self, user_id: str) -> Optional[User]:
-        """Get presence information for a specific user."""
-        return self.users.get(user_id)
+    def auto_resolve_conflict(self, conflict: ConflictResolution) -> bool:
+        """Automatically resolve a conflict using predefined rules."""
+        try:
+            # Simple auto-resolution: use the most recent edit
+            if len(conflict.edit_ids) >= 2:
+                # In a real implementation, you would implement more sophisticated
+                # auto-resolution logic based on business rules
+                conflict.resolution_type = "automatic"
+                conflict.resolved_at = datetime.now()
+                conflict.resolved_by = "system"
+                
+                self.resolution_history.append(conflict)
+                return True
+            
+        except Exception as e:
+            logger.error(f"Error auto-resolving conflict: {e}")
+        
+        return False
 
-class RealtimeCollaboration:
-    """Main real-time collaboration service."""
+
+class PermissionManager:
+    """Manage user permissions and access control."""
     
-    def __init__(self, host: str = "localhost", port: int = 8765, 
-                 redis_url: str = "redis://localhost:6379"):
-        self.host = host
-        self.port = port
-        self.redis_url = redis_url
+    def __init__(self, config: CollaborationConfig):
+        self.config = config
+        self.user_permissions = defaultdict(lambda: PermissionLevel.VIEWER)
+        self.element_permissions = defaultdict(dict)
+        self.permission_history = []
+    
+    def set_user_permission(self, user_id: str, permission: PermissionLevel) -> bool:
+        """Set permission level for a user."""
+        try:
+            self.user_permissions[user_id] = permission
+            self.permission_history.append({
+                'user_id': user_id,
+                'permission': permission.value,
+                'timestamp': datetime.now(),
+                'action': 'set_permission'
+            })
+            
+            logger.info(f"Set permission for user {user_id}: {permission.value}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error setting permission for user {user_id}: {e}")
+            return False
+    
+    def set_element_permission(self, user_id: str, element_id: str, permission: PermissionLevel) -> bool:
+        """Set permission for a user on a specific element."""
+        try:
+            self.element_permissions[element_id][user_id] = permission
+            
+            logger.info(f"Set element permission for user {user_id} on {element_id}: {permission.value}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error setting element permission: {e}")
+            return False
+    
+    def can_edit(self, user_id: str, element_id: str) -> bool:
+        """Check if user can edit an element."""
+        try:
+            # Check element-specific permission first
+            if element_id in self.element_permissions:
+                element_perm = self.element_permissions[element_id].get(user_id)
+                if element_perm:
+                    return element_perm in [PermissionLevel.EDITOR, PermissionLevel.ADMIN, PermissionLevel.OWNER]
+            
+            # Check global user permission
+            user_perm = self.user_permissions[user_id]
+            return user_perm in [PermissionLevel.EDITOR, PermissionLevel.ADMIN, PermissionLevel.OWNER]
+            
+        except Exception as e:
+            logger.error(f"Error checking edit permission: {e}")
+            return False
+    
+    def can_view(self, user_id: str, element_id: str) -> bool:
+        """Check if user can view an element."""
+        try:
+            # All permission levels can view
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error checking view permission: {e}")
+            return False
+    
+    def get_user_permission(self, user_id: str) -> PermissionLevel:
+        """Get permission level for a user."""
+        return self.user_permissions[user_id]
+
+
+class RealtimeCollaborationSystem:
+    """
+    Advanced real-time collaboration system for BIM behavior systems
+    with multi-user editing, conflict resolution, and synchronization.
+    """
+    
+    def __init__(self, config: Optional[CollaborationConfig] = None):
+        self.config = config or CollaborationConfig()
+        self.performance_monitor = PerformanceMonitor()
+        
+        # User management
+        self.user_sessions: Dict[str, UserSession] = {}
+        self.active_users: Dict[str, Set[str]] = defaultdict(set)  # element_id -> user_ids
+        
+        # Edit management
+        self.active_edits: Dict[str, CollaborativeEdit] = {}
+        self.edit_history: List[CollaborativeEdit] = []
+        
+        # Collaboration components
+        self.conflict_detector = ConflictDetector(self.config)
+        self.permission_manager = PermissionManager(self.config)
+        
+        # Annotations and comments
+        self.annotations: Dict[str, List[Annotation]] = defaultdict(list)
+        
+        # WebSocket server
         self.websocket_server = None
-        self.clients: Dict[str, WebSocketServerProtocol] = {}
-        self.client_info: Dict[str, Dict[str, Any]] = {}
+        self.websocket_clients: Dict[str, WebSocketServerProtocol] = {}
         
-        # Initialize components
-        self.conflict_detector = ConflictDetector()
-        self.version_control = VersionControl()
-        self.presence_manager = PresenceManager()
-        self.security_manager = SecurityManager("your-secret-key-here")
+        # Processing state
+        self.running = False
+        self.processing_thread = None
         
-        # Performance tracking
-        self.performance_stats = {
-            "total_operations": 0,
-            "conflicts_detected": 0,
-            "average_propagation_time": 0.0,
-            "active_users": 0,
-            "total_messages": 0
+        # Statistics
+        self.collaboration_stats = {
+            'total_users': 0,
+            'active_users': 0,
+            'total_edits': 0,
+            'conflicts_detected': 0,
+            'conflicts_resolved': 0,
+            'annotations_created': 0,
+            'sync_operations': 0
         }
         
-        # Threading
-        self.executor = ThreadPoolExecutor(max_workers=10)
-        self.lock = threading.Lock()
-        
-        logger.info(f"Initialized real-time collaboration service on {host}:{port}")
+        logger.info("Real-time collaboration system initialized")
     
     async def start_server(self):
         """Start the WebSocket server."""
         try:
-            import websockets
             self.websocket_server = await websockets.serve(
-                self.handle_client,
-                self.host,
-                self.port
+                self._handle_websocket,
+                self.config.websocket_host,
+                self.config.websocket_port
             )
             
-            logger.info(f"Collaboration server started on ws://{self.host}:{self.port}")
+            self.running = True
+            self.processing_thread = threading.Thread(target=self._processing_loop)
+            self.processing_thread.start()
             
-            # Start background tasks
-            asyncio.create_task(self._batch_processor())
-            asyncio.create_task(self._presence_monitor())
+            logger.info(f"Collaboration server started on {self.config.websocket_host}:{self.config.websocket_port}")
             
-            return True
         except Exception as e:
-            logger.error(f"Failed to start collaboration server: {e}")
-            return False
+            logger.error(f"Error starting collaboration server: {e}")
     
     async def stop_server(self):
         """Stop the WebSocket server."""
-        if self.websocket_server:
-            self.websocket_server.close()
-            await self.websocket_server.wait_closed()
+        try:
+            self.running = False
+            
+            if self.websocket_server:
+                self.websocket_server.close()
+                await self.websocket_server.wait_closed()
+            
+            if self.processing_thread:
+                self.processing_thread.join()
+            
+            # Close all client connections
+            for websocket in self.websocket_clients.values():
+                await websocket.close()
+            
             logger.info("Collaboration server stopped")
+            
+        except Exception as e:
+            logger.error(f"Error stopping collaboration server: {e}")
     
-    async def handle_client(self, websocket: WebSocketServerProtocol, path: str):
-        """Handle incoming WebSocket client connections."""
+    async def _handle_websocket(self, websocket: WebSocketServerProtocol, path: str):
+        """Handle WebSocket connections."""
         client_id = str(uuid.uuid4())
-        self.clients[client_id] = websocket
-        self.client_info[client_id] = {
-            "connected_at": datetime.now(),
-            "last_activity": datetime.now(),
-            "user_id": None,
-            "session_id": None
-        }
-        
-        logger.info(f"Client {client_id} connected")
         
         try:
+            self.websocket_clients[client_id] = websocket
+            
             async for message in websocket:
-                start_time = time.time()
-                
                 await self._process_message(client_id, message)
                 
-                # Update performance stats
-                duration = time.time() - start_time
-                await self._update_performance_stats(duration)
-                
-        except Exception as e:
-            logger.error(f"Error handling client {client_id}: {e}")
-        finally:
-            # Clean up client
-            if client_id in self.clients:
-                del self.clients[client_id]
-            if client_id in self.client_info:
-                user_id = self.client_info[client_id].get("user_id")
-                if user_id:
-                    self.presence_manager.remove_user(client_id)
-                del self.client_info[client_id]
-            
+        except websockets.exceptions.ConnectionClosed:
             logger.info(f"Client {client_id} disconnected")
+        except Exception as e:
+            logger.error(f"Error handling WebSocket connection: {e}")
+        finally:
+            await self._handle_client_disconnect(client_id)
     
     async def _process_message(self, client_id: str, message: str):
-        """Process incoming WebSocket message."""
+        """Process incoming WebSocket messages."""
         try:
             data = json.loads(message)
-            message_type = data.get("type")
+            message_type = data.get('type')
             
-            # Update client activity
-            self.client_info[client_id]["last_activity"] = datetime.now()
-            
-            if message_type == "join":
-                await self._handle_join(client_id, data)
-            elif message_type == "operation":
-                await self._handle_operation(client_id, data)
-            elif message_type == "activity":
-                await self._handle_activity(client_id, data)
-            elif message_type == "conflict_resolution":
-                await self._handle_conflict_resolution(client_id, data)
-            elif message_type == "version_control":
-                await self._handle_version_control(client_id, data)
+            if message_type == 'join_session':
+                await self._handle_join_session(client_id, data)
+            elif message_type == 'start_edit':
+                await self._handle_start_edit(client_id, data)
+            elif message_type == 'complete_edit':
+                await self._handle_complete_edit(client_id, data)
+            elif message_type == 'add_annotation':
+                await self._handle_add_annotation(client_id, data)
+            elif message_type == 'resolve_conflict':
+                await self._handle_resolve_conflict(client_id, data)
+            elif message_type == 'sync_request':
+                await self._handle_sync_request(client_id, data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
                 
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON message from client {client_id}: {e}")
+        except json.JSONDecodeError:
+            logger.error(f"Invalid JSON message from client {client_id}")
         except Exception as e:
             logger.error(f"Error processing message from client {client_id}: {e}")
     
-    async def _handle_join(self, client_id: str, data: Dict[str, Any]):
-        """Handle user join request."""
-        user_id = data.get("user_id")
-        username = data.get("username", "Anonymous")
-        session_id = data.get("session_id", client_id)
-        token = data.get("token", "")
-        
-        # Validate token
-        token_data = self.security_manager.validate_token(token)
-        if not token_data:
-            await self._send_error(client_id, "Invalid authentication token")
-            return
-        
-        # Add user to presence system
-        user = self.presence_manager.add_user(user_id, username, session_id)
-        
-        # Update client info
-        self.client_info[client_id]["user_id"] = user_id
-        self.client_info[client_id]["session_id"] = session_id
-        
-        # Send current state
-        await self._send_current_state(client_id)
-        
-        # Broadcast user joined
-        await self._broadcast_presence_update()
-        
-        logger.info(f"User {username} ({user_id}) joined session")
-    
-    async def _handle_operation(self, client_id: str, data: Dict[str, Any]):
-        """Handle collaborative operation."""
-        user_id = self.client_info[client_id].get("user_id")
-        if not user_id:
-            await self._send_error(client_id, "User not authenticated")
-            return
-        
-        # Check rate limits
-        operation_type = data.get("operation_type")
-        if not self.security_manager.check_rate_limit(user_id, operation_type):
-            await self._send_error(client_id, "Rate limit exceeded")
-            return
-        
-        # Create operation
-        operation = Operation(
-            operation_id=str(uuid.uuid4()),
-            operation_type=OperationType(data.get("operation_type")),
-            user_id=user_id,
-            session_id=self.client_info[client_id]["session_id"],
-            timestamp=datetime.now(),
-            element_id=data.get("element_id"),
-            data=data.get("data", {}),
-            priority=data.get("priority", 0)
-        )
-        
-        # Detect conflicts
-        recent_operations = self._get_recent_operations(operation.element_id)
-        conflicts = self.conflict_detector.detect_conflicts(operation, recent_operations)
-        
-        if conflicts:
-            await self._send_conflict_notification(client_id, conflicts)
-            self.performance_stats["conflicts_detected"] += len(conflicts)
-        
-        # Apply operation
-        await self._apply_operation(operation)
-        
-        # Broadcast to other clients
-        await self._broadcast_operations([operation])
-        
-        self.performance_stats["total_operations"] += 1
-    
-    async def _handle_activity(self, client_id: str, data: Dict[str, Any]):
-        """Handle user activity update."""
-        user_id = self.client_info[client_id].get("user_id")
-        if user_id:
-            self.presence_manager.update_user_activity(user_id, data)
-            await self._broadcast_presence_update()
-    
-    async def _handle_conflict_resolution(self, client_id: str, data: Dict[str, Any]):
-        """Handle conflict resolution."""
-        conflict_id = data.get("conflict_id")
-        resolution = ConflictResolution(data.get("resolution"))
-        resolved_by = self.client_info[client_id].get("user_id", "unknown")
-        
-        success = self.conflict_detector.resolve_conflict(conflict_id, resolution, resolved_by)
-        if success:
-            await self._broadcast_conflict_resolution(conflict_id, resolution)
-    
-    async def _handle_version_control(self, client_id: str, data: Dict[str, Any]):
-        """Handle version control operations."""
-        action = data.get("action")
-        
-        if action == "create_version":
-            operations = self._get_pending_operations()
-            created_by = self.client_info[client_id].get("user_id", "unknown")
-            description = data.get("description", "")
+    async def _handle_join_session(self, client_id: str, data: Dict[str, Any]):
+        """Handle user joining a session."""
+        try:
+            user_id = data.get('user_id')
+            username = data.get('username', 'Anonymous')
+            session_id = data.get('session_id', str(uuid.uuid4()))
             
-            version = self.version_control.create_version(operations, created_by, description)
-            await self._broadcast_version_created(version)
+            # Create user session
+            user_session = UserSession(
+                user_id=user_id,
+                username=username,
+                session_id=session_id,
+                websocket=self.websocket_clients[client_id],
+                joined_at=datetime.now(),
+                last_activity=datetime.now(),
+                permissions=self.permission_manager.get_user_permission(user_id)
+            )
             
-        elif action == "revert_version":
-            version_id = data.get("version_id")
-            success = self.version_control.revert_to_version(version_id)
-            if success:
-                await self._broadcast_version_reverted(version_id)
+            self.user_sessions[user_id] = user_session
+            self.collaboration_stats['total_users'] += 1
+            self.collaboration_stats['active_users'] += 1
+            
+            # Notify other users
+            await self._broadcast_event(CollaborationEventType.USER_JOINED, {
+                'user_id': user_id,
+                'username': username,
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            logger.info(f"User {username} joined session")
+            
+        except Exception as e:
+            logger.error(f"Error handling join session: {e}")
     
-    async def _batch_processor(self):
-        """Background task for processing operation batches."""
-        while True:
-            try:
-                # Process pending operations in batches
-                pending_operations = self._get_pending_operations()
-                if pending_operations:
-                    await self._process_operation_batch(pending_operations)
+    async def _handle_start_edit(self, client_id: str, data: Dict[str, Any]):
+        """Handle user starting an edit."""
+        try:
+            user_id = data.get('user_id')
+            element_id = data.get('element_id')
+            edit_type = data.get('edit_type', 'modify')
+            edit_data = data.get('data', {})
+            
+            # Check permissions
+            if not self.permission_manager.can_edit(user_id, element_id):
+                await self._send_error(client_id, "Insufficient permissions to edit this element")
+                return
+            
+            # Create edit
+            edit = CollaborativeEdit(
+                edit_id=str(uuid.uuid4()),
+                user_id=user_id,
+                element_id=element_id,
+                edit_type=edit_type,
+                timestamp=datetime.now(),
+                data=edit_data
+            )
+            
+            self.active_edits[edit.edit_id] = edit
+            self.collaboration_stats['total_edits'] += 1
+            
+            # Add user to active users for this element
+            self.active_users[element_id].add(user_id)
+            
+            # Notify other users
+            await self._broadcast_event(CollaborationEventType.EDIT_STARTED, {
+                'edit_id': edit.edit_id,
+                'user_id': user_id,
+                'element_id': element_id,
+                'edit_type': edit_type,
+                'timestamp': edit.timestamp.isoformat()
+            })
+            
+            logger.info(f"User {user_id} started editing element {element_id}")
+            
+        except Exception as e:
+            logger.error(f"Error handling start edit: {e}")
+    
+    async def _handle_complete_edit(self, client_id: str, data: Dict[str, Any]):
+        """Handle user completing an edit."""
+        try:
+            edit_id = data.get('edit_id')
+            user_id = data.get('user_id')
+            final_data = data.get('data', {})
+            
+            if edit_id not in self.active_edits:
+                await self._send_error(client_id, "Edit not found")
+                return
+            
+            edit = self.active_edits[edit_id]
+            edit.data.update(final_data)
+            edit.status = EditStatus.APPROVED
+            
+            # Check for conflicts
+            conflicts = self.conflict_detector.detect_conflicts(edit, list(self.active_edits.values()))
+            
+            if conflicts:
+                edit.status = EditStatus.CONFLICT
+                self.collaboration_stats['conflicts_detected'] += len(conflicts)
                 
-                await asyncio.sleep(0.1)  # 100ms interval
+                # Notify about conflicts
+                await self._broadcast_event(CollaborationEventType.CONFLICT_DETECTED, {
+                    'edit_id': edit_id,
+                    'conflicts': [c.conflict_id for c in conflicts],
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                # Move to history
+                self.edit_history.append(edit)
+                del self.active_edits[edit_id]
+                
+                # Remove user from active users
+                self.active_users[edit.element_id].discard(user_id)
+                
+                # Notify completion
+                await self._broadcast_event(CollaborationEventType.EDIT_COMPLETED, {
+                    'edit_id': edit_id,
+                    'user_id': user_id,
+                    'element_id': edit.element_id,
+                    'timestamp': datetime.now().isoformat()
+                })
+            
+            logger.info(f"User {user_id} completed edit {edit_id}")
+            
+        except Exception as e:
+            logger.error(f"Error handling complete edit: {e}")
+    
+    async def _handle_add_annotation(self, client_id: str, data: Dict[str, Any]):
+        """Handle user adding an annotation."""
+        try:
+            user_id = data.get('user_id')
+            element_id = data.get('element_id')
+            annotation_type = data.get('annotation_type', 'comment')
+            content = data.get('content', '')
+            position = data.get('position', {})
+            
+            # Check permissions
+            if not self.permission_manager.can_view(user_id, element_id):
+                await self._send_error(client_id, "Insufficient permissions to view this element")
+                return
+            
+            # Create annotation
+            annotation = Annotation(
+                annotation_id=str(uuid.uuid4()),
+                user_id=user_id,
+                element_id=element_id,
+                annotation_type=annotation_type,
+                content=content,
+                position=position,
+                timestamp=datetime.now()
+            )
+            
+            self.annotations[element_id].append(annotation)
+            self.collaboration_stats['annotations_created'] += 1
+            
+            # Notify other users
+            await self._broadcast_event(CollaborationEventType.ANNOTATION_ADDED, {
+                'annotation_id': annotation.annotation_id,
+                'user_id': user_id,
+                'element_id': element_id,
+                'annotation_type': annotation_type,
+                'content': content,
+                'position': position,
+                'timestamp': annotation.timestamp.isoformat()
+            })
+            
+            logger.info(f"User {user_id} added annotation to element {element_id}")
+            
+        except Exception as e:
+            logger.error(f"Error handling add annotation: {e}")
+    
+    async def _handle_resolve_conflict(self, client_id: str, data: Dict[str, Any]):
+        """Handle conflict resolution."""
+        try:
+            conflict_id = data.get('conflict_id')
+            user_id = data.get('user_id')
+            resolution_data = data.get('resolution_data', {})
+            
+            success = self.conflict_detector.resolve_conflict(conflict_id, resolution_data, user_id)
+            
+            if success:
+                self.collaboration_stats['conflicts_resolved'] += 1
+                
+                # Notify resolution
+                await self._broadcast_event(CollaborationEventType.CONFLICT_RESOLVED, {
+                    'conflict_id': conflict_id,
+                    'resolved_by': user_id,
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+                logger.info(f"Conflict {conflict_id} resolved by {user_id}")
+            else:
+                await self._send_error(client_id, "Failed to resolve conflict")
+            
+        except Exception as e:
+            logger.error(f"Error handling resolve conflict: {e}")
+    
+    async def _handle_sync_request(self, client_id: str, data: Dict[str, Any]):
+        """Handle synchronization request."""
+        try:
+            user_id = data.get('user_id')
+            element_id = data.get('element_id')
+            
+            # Get current state for element
+            element_state = self._get_element_state(element_id)
+            
+            # Send sync response
+            await self._send_message(client_id, {
+                'type': 'sync_response',
+                'element_id': element_id,
+                'state': element_state,
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            self.collaboration_stats['sync_operations'] += 1
+            
+            logger.info(f"Sync completed for element {element_id}")
+            
+        except Exception as e:
+            logger.error(f"Error handling sync request: {e}")
+    
+    async def _handle_client_disconnect(self, client_id: str):
+        """Handle client disconnection."""
+        try:
+            # Find user session for this client
+            user_id = None
+            for uid, session in self.user_sessions.items():
+                if session.websocket == self.websocket_clients.get(client_id):
+                    user_id = uid
+                    break
+            
+            if user_id:
+                # Remove user session
+                session = self.user_sessions.pop(user_id, None)
+                if session:
+                    # Remove from active users for all elements
+                    for element_id in session.active_elements:
+                        self.active_users[element_id].discard(user_id)
+                    
+                    self.collaboration_stats['active_users'] -= 1
+                    
+                    # Notify other users
+                    await self._broadcast_event(CollaborationEventType.USER_LEFT, {
+                        'user_id': user_id,
+                        'username': session.username,
+                        'timestamp': datetime.now().isoformat()
+                    })
+                    
+                    logger.info(f"User {session.username} left session")
+            
+            # Remove client connection
+            self.websocket_clients.pop(client_id, None)
+            
+        except Exception as e:
+            logger.error(f"Error handling client disconnect: {e}")
+    
+    def _processing_loop(self):
+        """Main processing loop for collaboration system."""
+        while self.running:
+            try:
+                # Clean up expired sessions
+                self._cleanup_expired_sessions()
+                
+                # Auto-resolve conflicts if enabled
+                if self.config.auto_resolve_conflicts:
+                    self._auto_resolve_conflicts()
+                
+                # Update statistics
+                self._update_statistics()
+                
+                time.sleep(5)  # Process every 5 seconds
                 
             except Exception as e:
-                logger.error(f"Error in batch processor: {e}")
-                await asyncio.sleep(1)
+                logger.error(f"Error in collaboration processing loop: {e}")
+                time.sleep(10)
     
-    async def _process_operation_batch(self, operations: List[Operation]):
-        """Process a batch of operations."""
-        if not operations:
-            return
-        
-        # Sort operations by priority and timestamp
-        operations.sort(key=lambda op: (op.priority, op.timestamp))
-        
-        # Apply operations
-        for operation in operations:
-            await self._apply_operation(operation)
-        
-        # Broadcast batch
-        await self._broadcast_operations(operations)
-        
-        logger.debug(f"Processed batch of {len(operations)} operations")
+    def _cleanup_expired_sessions(self):
+        """Clean up expired user sessions."""
+        try:
+            current_time = datetime.now()
+            expired_users = []
+            
+            for user_id, session in self.user_sessions.items():
+                if (current_time - session.last_activity).seconds > self.config.session_timeout:
+                    expired_users.append(user_id)
+            
+            for user_id in expired_users:
+                session = self.user_sessions.pop(user_id, None)
+                if session:
+                    # Close WebSocket connection
+                    asyncio.create_task(session.websocket.close())
+                    
+                    logger.info(f"Expired session for user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Error cleaning up expired sessions: {e}")
     
-    async def _apply_operation(self, operation: Operation):
-        """Apply a single operation."""
-        # This would integrate with the main SVGX engine
-        # For now, we just log the operation
-        logger.debug(f"Applied operation {operation.operation_id}: {operation.operation_type.value}")
+    def _auto_resolve_conflicts(self):
+        """Automatically resolve conflicts if enabled."""
+        try:
+            for conflict_id, conflict in list(self.conflict_detector.active_conflicts.items()):
+                if self.conflict_detector.auto_resolve_conflict(conflict):
+                    logger.info(f"Auto-resolved conflict {conflict_id}")
+            
+        except Exception as e:
+            logger.error(f"Error auto-resolving conflicts: {e}")
     
-    async def _send_current_state(self, client_id: str):
-        """Send current document state to client."""
-        if client_id not in self.clients:
-            return
-        
-        state = {
-            "type": "current_state",
-            "timestamp": datetime.now().isoformat(),
-            "active_users": len(self.presence_manager.get_active_users()),
-            "pending_operations": len(self._get_pending_operations()),
-            "version_history": len(self.version_control.get_version_history())
-        }
-        
-        await self.clients[client_id].send(json.dumps(state))
+    def _update_statistics(self):
+        """Update collaboration statistics."""
+        try:
+            self.collaboration_stats['active_users'] = len(self.user_sessions)
+            
+        except Exception as e:
+            logger.error(f"Error updating statistics: {e}")
     
-    async def _broadcast_operations(self, operations: List[Operation]):
-        """Broadcast operations to all connected clients."""
-        if not operations:
-            return
-        
-        message = {
-            "type": "operations",
-            "timestamp": datetime.now().isoformat(),
-            "operations": [
-                {
-                    "operation_id": op.operation_id,
-                    "operation_type": op.operation_type.value,
-                    "user_id": op.user_id,
-                    "element_id": op.element_id,
-                    "data": op.data,
-                    "timestamp": op.timestamp.isoformat()
-                }
-                for op in operations
-            ]
-        }
-        
-        # Broadcast to all clients except sender
-        sender_session = operations[0].session_id if operations else None
-        
-        for client_id, websocket in self.clients.items():
-            if self.client_info[client_id].get("session_id") != sender_session:
+    def _get_element_state(self, element_id: str) -> Dict[str, Any]:
+        """Get current state of an element."""
+        try:
+            state = {
+                'element_id': element_id,
+                'active_edits': [],
+                'annotations': [],
+                'active_users': list(self.active_users[element_id])
+            }
+            
+            # Get active edits for this element
+            for edit in self.active_edits.values():
+                if edit.element_id == element_id:
+                    state['active_edits'].append({
+                        'edit_id': edit.edit_id,
+                        'user_id': edit.user_id,
+                        'edit_type': edit.edit_type,
+                        'timestamp': edit.timestamp.isoformat()
+                    })
+            
+            # Get annotations for this element
+            for annotation in self.annotations[element_id]:
+                state['annotations'].append({
+                    'annotation_id': annotation.annotation_id,
+                    'user_id': annotation.user_id,
+                    'annotation_type': annotation.annotation_type,
+                    'content': annotation.content,
+                    'position': annotation.position,
+                    'timestamp': annotation.timestamp.isoformat()
+                })
+            
+            return state
+            
+        except Exception as e:
+            logger.error(f"Error getting element state: {e}")
+            return {}
+    
+    async def _broadcast_event(self, event_type: CollaborationEventType, data: Dict[str, Any]):
+        """Broadcast event to all connected clients."""
+        try:
+            message = {
+                'type': 'collaboration_event',
+                'event_type': event_type.value,
+                'data': data,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            for websocket in self.websocket_clients.values():
                 try:
                     await websocket.send(json.dumps(message))
                 except Exception as e:
-                    logger.error(f"Failed to send to client {client_id}: {e}")
-        
-        self.performance_stats["total_messages"] += len(self.clients)
+                    logger.error(f"Error broadcasting to client: {e}")
+            
+        except Exception as e:
+            logger.error(f"Error broadcasting event: {e}")
     
-    async def _broadcast_presence_update(self):
-        """Broadcast presence update to all clients."""
-        active_users = self.presence_manager.get_active_users()
-        
-        message = {
-            "type": "presence_update",
-            "timestamp": datetime.now().isoformat(),
-            "active_users": [
-                {
-                    "user_id": user.user_id,
-                    "username": user.username,
-                    "status": user.status.value,
-                    "current_element": user.current_element,
-                    "last_activity": user.last_activity.isoformat()
-                }
-                for user in active_users
-            ]
-        }
-        
-        for client_id, websocket in self.clients.items():
-            try:
+    async def _send_message(self, client_id: str, message: Dict[str, Any]):
+        """Send message to specific client."""
+        try:
+            websocket = self.websocket_clients.get(client_id)
+            if websocket:
                 await websocket.send(json.dumps(message))
-            except Exception as e:
-                logger.error(f"Failed to send presence update to client {client_id}: {e}")
-    
-    async def _send_conflict_notification(self, client_id: str, conflicts: List[Conflict]):
-        """Send conflict notification to client."""
-        if client_id not in self.clients:
-            return
-        
-        message = {
-            "type": "conflict_notification",
-            "timestamp": datetime.now().isoformat(),
-            "conflicts": [
-                {
-                    "conflict_id": conflict.conflict_id,
-                    "conflict_type": conflict.conflict_type,
-                    "severity": conflict.severity,
-                    "auto_resolvable": conflict.auto_resolvable,
-                    "operation_1": {
-                        "operation_id": conflict.operation_1.operation_id,
-                        "operation_type": conflict.operation_1.operation_type.value,
-                        "user_id": conflict.operation_1.user_id,
-                        "timestamp": conflict.operation_1.timestamp.isoformat()
-                    },
-                    "operation_2": {
-                        "operation_id": conflict.operation_2.operation_id,
-                        "operation_type": conflict.operation_2.operation_type.value,
-                        "user_id": conflict.operation_2.user_id,
-                        "timestamp": conflict.operation_2.timestamp.isoformat()
-                    }
-                }
-                for conflict in conflicts
-            ]
-        }
-        
-        await self.clients[client_id].send(json.dumps(message))
-    
-    async def _broadcast_conflict_resolution(self, conflict_id: str, resolution: ConflictResolution):
-        """Broadcast conflict resolution to all clients."""
-        message = {
-            "type": "conflict_resolution",
-            "timestamp": datetime.now().isoformat(),
-            "conflict_id": conflict_id,
-            "resolution": resolution.value
-        }
-        
-        for client_id, websocket in self.clients.items():
-            try:
-                await websocket.send(json.dumps(message))
-            except Exception as e:
-                logger.error(f"Failed to send conflict resolution to client {client_id}: {e}")
-    
-    async def _broadcast_version_created(self, version: DocumentVersion):
-        """Broadcast version creation to all clients."""
-        message = {
-            "type": "version_created",
-            "timestamp": datetime.now().isoformat(),
-            "version": {
-                "version_id": version.version_id,
-                "version_number": version.version_number,
-                "created_by": version.created_by,
-                "description": version.description,
-                "created_at": version.created_at.isoformat()
-            }
-        }
-        
-        for client_id, websocket in self.clients.items():
-            try:
-                await websocket.send(json.dumps(message))
-            except Exception as e:
-                logger.error(f"Failed to send version creation to client {client_id}: {e}")
-    
-    async def _broadcast_version_reverted(self, version_id: str):
-        """Broadcast version revert to all clients."""
-        message = {
-            "type": "version_reverted",
-            "timestamp": datetime.now().isoformat(),
-            "version_id": version_id
-        }
-        
-        for client_id, websocket in self.clients.items():
-            try:
-                await websocket.send(json.dumps(message))
-            except Exception as e:
-                logger.error(f"Failed to send version revert to client {client_id}: {e}")
+            
+        except Exception as e:
+            logger.error(f"Error sending message to client {client_id}: {e}")
     
     async def _send_error(self, client_id: str, error_message: str):
         """Send error message to client."""
-        if client_id not in self.clients:
-            return
-        
-        message = {
-            "type": "error",
-            "timestamp": datetime.now().isoformat(),
-            "error": error_message
+        await self._send_message(client_id, {
+            'type': 'error',
+            'message': error_message,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def get_collaboration_stats(self) -> Dict[str, Any]:
+        """Get collaboration statistics."""
+        return {
+            'collaboration_stats': self.collaboration_stats,
+            'active_users': len(self.user_sessions),
+            'active_edits': len(self.active_edits),
+            'total_annotations': sum(len(annotations) for annotations in self.annotations.values()),
+            'active_conflicts': len(self.conflict_detector.active_conflicts),
+            'websocket_connections': len(self.websocket_clients)
         }
-        
-        try:
-            await self.clients[client_id].send(json.dumps(message))
-        except Exception as e:
-            logger.error(f"Failed to send error to client {client_id}: {e}")
     
-    async def _broadcast_message(self, message: Dict[str, Any]):
-        """Broadcast message to all clients."""
-        for client_id, websocket in self.clients.items():
-            try:
-                await websocket.send(json.dumps(message))
-            except Exception as e:
-                logger.error(f"Failed to broadcast message to client {client_id}: {e}")
+    def set_user_permission(self, user_id: str, permission: PermissionLevel) -> bool:
+        """Set permission for a user."""
+        return self.permission_manager.set_user_permission(user_id, permission)
     
-    def _get_recent_operations(self, element_id: Optional[str], 
-                              time_window: float = 1.0) -> List[Operation]:
-        """Get recent operations for conflict detection."""
-        # This would query the operation history
-        # For now, return empty list
-        return []
+    def get_user_sessions(self) -> Dict[str, UserSession]:
+        """Get all user sessions."""
+        return self.user_sessions.copy()
     
-    def _get_pending_operations(self) -> List[Operation]:
-        """Get pending operations for batch processing."""
-        # This would get operations from the queue
-        # For now, return empty list
-        return []
+    def get_active_edits(self) -> Dict[str, CollaborativeEdit]:
+        """Get all active edits."""
+        return self.active_edits.copy()
     
-    async def _presence_monitor(self):
-        """Background task for monitoring user presence."""
-        while True:
-            try:
-                # Update performance stats
-                self.performance_stats["active_users"] = len(self.presence_manager.get_active_users())
-                
-                # Check for inactive users
-                current_time = datetime.now()
-                for user in self.presence_manager.users.values():
-                    if (current_time - user.last_activity).total_seconds() > 300:  # 5 minutes
-                        user.status = UserStatus.AWAY
-                
-                await asyncio.sleep(30)  # Check every 30 seconds
-                
-            except Exception as e:
-                logger.error(f"Error in presence monitor: {e}")
-                await asyncio.sleep(60)
+    def get_annotations(self, element_id: str) -> List[Annotation]:
+        """Get annotations for an element."""
+        return self.annotations[element_id].copy()
     
-    async def _update_performance_stats(self, duration: float):
-        """Update performance statistics."""
-        with self.lock:
-            # Update average propagation time
-            total_ops = self.performance_stats["total_operations"]
-            current_avg = self.performance_stats["average_propagation_time"]
-            
-            if total_ops > 0:
-                new_avg = (current_avg * (total_ops - 1) + duration) / total_ops
-                self.performance_stats["average_propagation_time"] = new_avg
-    
-    def get_performance_stats(self) -> Dict[str, Any]:
-        """Get current performance statistics."""
-        with self.lock:
-            return self.performance_stats.copy()
-
-# Global collaboration service instance
-_collaboration_service: Optional[RealtimeCollaboration] = None
-
-async def start_collaboration_server(host: str = "localhost", port: int = 8765) -> bool:
-    """Start the collaboration server."""
-    global _collaboration_service
-    
-    try:
-        _collaboration_service = RealtimeCollaboration(host, port)
-        success = await _collaboration_service.start_server()
-        
-        if success:
-            logger.info(f"Collaboration server started successfully on {host}:{port}")
-        else:
-            logger.error("Failed to start collaboration server")
-        
-        return success
-    except Exception as e:
-        logger.error(f"Error starting collaboration server: {e}")
-        return False
-
-async def stop_collaboration_server():
-    """Stop the collaboration server."""
-    global _collaboration_service
-    
-    if _collaboration_service:
-        await _collaboration_service.stop_server()
-        _collaboration_service = None
-        logger.info("Collaboration server stopped")
-
-def get_collaboration_performance_stats() -> Dict[str, Any]:
-    """Get collaboration performance statistics."""
-    global _collaboration_service
-    
-    if _collaboration_service:
-        return _collaboration_service.get_performance_stats()
-    else:
-        return {}
-
-async def send_operation(operation_data: Dict[str, Any]) -> bool:
-    """Send an operation to the collaboration server."""
-    global _collaboration_service
-    
-    if not _collaboration_service:
-        logger.error("Collaboration server not running")
-        return False
-    
-    try:
-        # This would send the operation to the server
-        # For now, just log it
-        logger.info(f"Operation sent: {operation_data}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send operation: {e}")
-        return False
-
-async def resolve_conflict(conflict_id: str, resolution: str, resolved_by: str) -> bool:
-    """Resolve a conflict."""
-    global _collaboration_service
-    
-    if not _collaboration_service:
-        logger.error("Collaboration server not running")
-        return False
-    
-    try:
-        resolution_enum = ConflictResolution(resolution)
-        success = _collaboration_service.conflict_detector.resolve_conflict(
-            conflict_id, resolution_enum, resolved_by
-        )
-        return success
-    except Exception as e:
-        logger.error(f"Failed to resolve conflict: {e}")
-        return False
-
-def get_active_users() -> List[Dict[str, Any]]:
-    """Get list of active users."""
-    global _collaboration_service
-    
-    if not _collaboration_service:
-        return []
-    
-    active_users = _collaboration_service.presence_manager.get_active_users()
-    return [
-        {
-            "user_id": user.user_id,
-            "username": user.username,
-            "status": user.status.value,
-            "current_element": user.current_element,
-            "last_activity": user.last_activity.isoformat()
-        }
-        for user in active_users
-    ] 
+    def clear_history(self):
+        """Clear collaboration history."""
+        self.edit_history.clear()
+        self.annotations.clear()
+        self.conflict_detector.resolution_history.clear()
+        logger.info("Collaboration history cleared") 

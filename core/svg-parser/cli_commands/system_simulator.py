@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Use relative imports for package context
-from ..services.system_simulation import SystemSimulationService
+from core.services.system_simulation
 
 try:
     import yaml

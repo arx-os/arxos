@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from ..services.export_interoperability import (
+from core.services.export_interoperability
     ExportInteroperabilityService, ExportFormat, ExportStatus,
     ExportJob, IFCHeader, GLTFAsset
 )

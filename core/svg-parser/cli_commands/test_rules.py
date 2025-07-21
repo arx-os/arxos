@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Dict, Any, List
 from datetime import datetime
 
-from ..services.rule_engine import EnhancedRuleEngine
-from ..utils.test_data_generator import TestDataGenerator, TestScenario
+from core.services.rule_engine
+from core.utils.test_data_generator
 
 
 def main():

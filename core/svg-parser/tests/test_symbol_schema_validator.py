@@ -25,7 +25,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ..services.symbol_schema_validator import SymbolSchemaValidator
+from core.services.symbol_schema_validator
 
 class TestSymbolSchemaValidator:
     """Test cases for SymbolSchemaValidator class."""

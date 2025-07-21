@@ -11,7 +11,7 @@ from dataclasses import dataclass, asdict
 import json
 import logging
 
-from .models.board_roles import (
+from services.models.board_roles
     governance_board, 
     BoardMember, 
     Proposal, 

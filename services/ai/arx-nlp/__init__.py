@@ -12,9 +12,9 @@ Key Components:
 - Context Management: Handle contextual object resolution
 """
 
-from .nlp_router import NLPRouter, process_nlp_input
-from .intent_mapper import IntentMapper, detect_intent
-from .models.nlp_models import (
+from services.nlp_router
+from services.intent_mapper
+from services.models.nlp_models
     NLPRequest, NLPResponse, Intent, Slot, SlotResult, CLICommand,
     NLPContext, ValidationResult, ProcessingStats,
     IntentType, SlotType

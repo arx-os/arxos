@@ -22,7 +22,7 @@ from pathlib import Path
 from datetime import datetime
 import math
 
-from ..models.mcp_models import (
+from services.models.mcp_models
     ComplianceReport, MCPValidationReport, ValidationResult, ValidationViolation,
     RuleSeverity, RuleCategory
 )

@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 
 # Use relative imports for package context
-from ..services.building_code_validator import BuildingCodeValidator
+from core.services.building_code_validator
 
 try:
     import yaml

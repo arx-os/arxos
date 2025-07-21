@@ -229,4 +229,8 @@ class SymbolManager:
         except Exception as e:
             logger.error(f"Failed to list symbols: {str(e)}")
         
-        return symbols 
+        return symbols
+
+
+# Alias for backward compatibility
+SVGXSymbolManager = SymbolManager 

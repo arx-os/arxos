@@ -10,11 +10,11 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 
-from ..collab.realtime_editor import RealtimeEditor, EditOperation, UserPresence, CollaborationSession
-from ..collab.annotations import AnnotationManager, Comment, CommentThread, Annotation
-from ..notifications.collab_events import CollaborationNotificationService, Notification, NotificationType
-from ..collab.routes import router
-from ..main import app
+from services.collab.realtime_editor
+from services.collab.annotations
+from services.notifications.collab_events
+from services.collab.routes
+from services.main
 
 
 class TestRealtimeEditor:

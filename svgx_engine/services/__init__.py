@@ -17,7 +17,7 @@ except ImportError:
     DatabaseService = None
 
 try:
-    from .cache.redis_client import RedisCacheClient, get_cache_client, initialize_cache, close_cache
+    from svgx_engine.services.cache.redis_client import RedisCacheClient, get_cache_client, initialize_cache, close_cache
 except ImportError:
     RedisCacheClient = None
     get_cache_client = None
@@ -25,7 +25,7 @@ except ImportError:
     close_cache = None
 
 try:
-    from .logging.structured_logger import SVGXLogger, get_logger, setup_logging, logging_context
+    from svgx_engine.services.logging.structured_logger import SVGXLogger, get_logger, setup_logging, logging_context
 except ImportError:
     SVGXLogger = None
     get_logger = None
@@ -219,45 +219,97 @@ except ImportError:
 
 # Database Models
 try:
-    from ..database.models import (
-        SVGXDocument, SVGXElement, Symbol, SymbolUsage, User,
-        CollaborationSession, CollaborationOperation, ExportHistory,
-        PerformanceMetric, TelemetryEvent
+    from svgx_engine.database.models import (
+        SVGXDatabaseModel,
+        SVGXObjectModel,
+        SVGXSymbolModel,
+        SVGXUserModel,
+        SVGXExportModel,
+        SVGXMetadataModel,
+        SVGXBehaviorModel,
+        SVGXComplianceModel,
+        SVGXPerformanceModel,
+        SVGXSecurityModel,
+        SVGXTelemetryModel,
+        SVGXCollaborationModel,
+        SVGXIntegrationModel,
+        SVGXValidationModel,
+        SVGXGenerationModel,
+        SVGXRenderModel,
+        SVGXExportModel,
+        SVGXImportModel,
+        SVGXTransformModel,
+        SVGXAnalysisModel
     )
 except ImportError:
-    # Fallback if database models don't exist
-    SVGXDocument = None
-    SVGXElement = None
-    Symbol = None
-    SymbolUsage = None
-    User = None
-    CollaborationSession = None
-    CollaborationOperation = None
-    ExportHistory = None
-    PerformanceMetric = None
-    TelemetryEvent = None
+    SVGXDatabaseModel = None
+    SVGXObjectModel = None
+    SVGXSymbolModel = None
+    SVGXUserModel = None
+    SVGXExportModel = None
+    SVGXMetadataModel = None
+    SVGXBehaviorModel = None
+    SVGXComplianceModel = None
+    SVGXPerformanceModel = None
+    SVGXSecurityModel = None
+    SVGXTelemetryModel = None
+    SVGXCollaborationModel = None
+    SVGXIntegrationModel = None
+    SVGXValidationModel = None
+    SVGXGenerationModel = None
+    SVGXRenderModel = None
+    SVGXExportModel = None
+    SVGXImportModel = None
+    SVGXTransformModel = None
+    SVGXAnalysisModel = None
 
 # Configuration
 try:
-    from ..config.settings import (
-        SVGXConfig, DatabaseConfig, RedisConfig, LoggingConfig,
-        SecurityConfig, PerformanceConfig, APIConfig, ServerConfig,
-        MonitoringConfig, get_config, load_config, reload_config
+    from svgx_engine.config.settings import (
+        SVGXConfig,
+        SVGXSettings,
+        SVGXEnvironment,
+        SVGXDatabaseConfig,
+        SVGXCacheConfig,
+        SVGXSecurityConfig,
+        SVGXPerformanceConfig,
+        SVGXTelemetryConfig,
+        SVGXExportConfig,
+        SVGXImportConfig,
+        SVGXValidationConfig,
+        SVGXGenerationConfig,
+        SVGXRenderConfig,
+        SVGXAnalysisConfig,
+        SVGXCollaborationConfig,
+        SVGXIntegrationConfig,
+        SVGXComplianceConfig,
+        SVGXBehaviorConfig,
+        SVGXSymbolConfig,
+        SVGXUserConfig,
+        SVGXMetadataConfig
     )
 except ImportError:
-    # Fallback if config doesn't exist
     SVGXConfig = None
-    DatabaseConfig = None
-    RedisConfig = None
-    LoggingConfig = None
-    SecurityConfig = None
-    PerformanceConfig = None
-    APIConfig = None
-    ServerConfig = None
-    MonitoringConfig = None
-    get_config = None
-    load_config = None
-    reload_config = None
+    SVGXSettings = None
+    SVGXEnvironment = None
+    SVGXDatabaseConfig = None
+    SVGXCacheConfig = None
+    SVGXSecurityConfig = None
+    SVGXPerformanceConfig = None
+    SVGXTelemetryConfig = None
+    SVGXExportConfig = None
+    SVGXImportConfig = None
+    SVGXValidationConfig = None
+    SVGXGenerationConfig = None
+    SVGXRenderConfig = None
+    SVGXAnalysisConfig = None
+    SVGXCollaborationConfig = None
+    SVGXIntegrationConfig = None
+    SVGXComplianceConfig = None
+    SVGXBehaviorConfig = None
+    SVGXSymbolConfig = None
+    SVGXUserConfig = None
+    SVGXMetadataConfig = None
 
 __all__ = [
     # Database and Infrastructure
@@ -314,12 +366,47 @@ __all__ = [
     'ErrorHandlerService',
     
     # Database Models
-    'SVGXDocument', 'SVGXElement', 'Symbol', 'SymbolUsage', 'User',
-    'CollaborationSession', 'CollaborationOperation', 'ExportHistory',
-    'PerformanceMetric', 'TelemetryEvent',
+    'SVGXDatabaseModel',
+    'SVGXObjectModel',
+    'SVGXSymbolModel',
+    'SVGXUserModel',
+    'SVGXExportModel',
+    'SVGXMetadataModel',
+    'SVGXBehaviorModel',
+    'SVGXComplianceModel',
+    'SVGXPerformanceModel',
+    'SVGXSecurityModel',
+    'SVGXTelemetryModel',
+    'SVGXCollaborationModel',
+    'SVGXIntegrationModel',
+    'SVGXValidationModel',
+    'SVGXGenerationModel',
+    'SVGXRenderModel',
+    'SVGXExportModel',
+    'SVGXImportModel',
+    'SVGXTransformModel',
+    'SVGXAnalysisModel',
     
     # Configuration
-    'SVGXConfig', 'DatabaseConfig', 'RedisConfig', 'LoggingConfig',
-    'SecurityConfig', 'PerformanceConfig', 'APIConfig', 'ServerConfig',
-    'MonitoringConfig', 'get_config', 'load_config', 'reload_config'
+    'SVGXConfig',
+    'SVGXSettings',
+    'SVGXEnvironment',
+    'SVGXDatabaseConfig',
+    'SVGXCacheConfig',
+    'SVGXSecurityConfig',
+    'SVGXPerformanceConfig',
+    'SVGXTelemetryConfig',
+    'SVGXExportConfig',
+    'SVGXImportConfig',
+    'SVGXValidationConfig',
+    'SVGXGenerationConfig',
+    'SVGXRenderConfig',
+    'SVGXAnalysisConfig',
+    'SVGXCollaborationConfig',
+    'SVGXIntegrationConfig',
+    'SVGXComplianceConfig',
+    'SVGXBehaviorConfig',
+    'SVGXSymbolConfig',
+    'SVGXUserConfig',
+    'SVGXMetadataConfig'
 ] 

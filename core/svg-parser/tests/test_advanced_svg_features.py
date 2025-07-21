@@ -19,7 +19,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import xml.etree.ElementTree as ET
 
-from ..services.advanced_svg_features import (
+from core.services.advanced_svg_features
     AdvancedSVGFeatures,
     SVGOptimizationResult,
     SVGValidationResult,

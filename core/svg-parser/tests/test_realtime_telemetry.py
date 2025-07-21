@@ -26,8 +26,8 @@ from services.realtime_telemetry import (
     TelemetryProcessor, TelemetryConfig, TelemetryEvent, AlertRule,
     RealtimeTelemetryServer, create_telemetry_processor
 )
-from ..services.telemetry import TelemetryRecord
-from ..services.analytics import ZScoreAnomalyDetector
+from core.services.telemetry
+from core.services.analytics
 
 
 class TestTelemetryConfig(unittest.TestCase):

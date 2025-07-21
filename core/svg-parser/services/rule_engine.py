@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    from ..models.building_regulations import ValidationRule, ViolationSeverity
+    from core.svg_parser.models.building_regulations import ValidationRule, ViolationSeverity
 except ImportError:
     # Fallback for direct execution
     from models.building_regulations import ValidationRule, ViolationSeverity

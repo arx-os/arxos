@@ -10,7 +10,7 @@ from decimal import Decimal
 from datetime import datetime
 import logging
 
-from ..escrow_engine import escrow_engine, EscrowAccount, MilestoneStatus, TransactionType
+from services.escrow_engine
 
 logger = logging.getLogger(__name__)
 

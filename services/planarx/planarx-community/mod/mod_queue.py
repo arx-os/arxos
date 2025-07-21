@@ -136,7 +136,7 @@ class ModerationQueue:
     ) -> List[ModerationTask]:
         """Get sorted and filtered moderation queue"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         # Get all flags
         flags = list(flagging_system.flags.values())
@@ -247,7 +247,7 @@ class ModerationQueue:
     def get_queue_statistics(self) -> Dict:
         """Get moderation queue statistics"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         flags = list(flagging_system.flags.values())
         
@@ -280,7 +280,7 @@ class ModerationQueue:
     def get_moderator_workload(self, moderator_id: str) -> ModeratorWorkload:
         """Get moderator workload statistics"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         assigned_flags = [f for f in flagging_system.flags.values() 
                          if f.assigned_moderator_id == moderator_id]
@@ -316,7 +316,7 @@ class ModerationQueue:
     def get_all_moderator_workloads(self) -> List[ModeratorWorkload]:
         """Get workload statistics for all moderators"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         moderator_ids = set()
         for flag in flagging_system.flags.values():
@@ -335,7 +335,7 @@ class ModerationQueue:
         if not self.auto_assign_enabled:
             return
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         unassigned_flags = [f for f in flagging_system.flags.values() 
                            if not f.assigned_moderator_id and f.status.value == "pending"]
@@ -374,7 +374,7 @@ class ModerationQueue:
     def check_and_create_alerts(self):
         """Check for conditions that require alerts and create them"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         # Check for overdue flags
         if self.alert_configs["overdue"]["enabled"]:
@@ -395,7 +395,7 @@ class ModerationQueue:
     def _check_overdue_alerts(self):
         """Check for overdue flags and create alerts"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         threshold_hours = self.alert_configs["overdue"]["threshold_hours"]
         overdue_flags = [f for f in flagging_system.flags.values() 
@@ -419,7 +419,7 @@ class ModerationQueue:
     def _check_critical_alerts(self):
         """Check for critical flags and create alerts"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         threshold_hours = self.alert_configs["critical"]["threshold_hours"]
         critical_flags = [f for f in flagging_system.flags.values() 
@@ -445,7 +445,7 @@ class ModerationQueue:
     def _check_escalation_alerts(self):
         """Check for flags that need escalation"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         threshold_hours = self.alert_configs["escalation"]["threshold_hours"]
         escalation_candidates = [f for f in flagging_system.flags.values() 
@@ -513,7 +513,7 @@ class ModerationQueue:
     def get_queue_dashboard_data(self) -> Dict:
         """Get comprehensive dashboard data for moderation queue"""
         
-        from .flagging import flagging_system
+        from services.planarx.planarx_community.mod.flagging import flagging_system
         
         # Get queue statistics
         queue_stats = self.get_queue_statistics()

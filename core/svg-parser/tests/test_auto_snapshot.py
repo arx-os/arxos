@@ -17,7 +17,7 @@ import os
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 
-from ..services.auto_snapshot import (
+from core.services.auto_snapshot
     AutoSnapshotService, SnapshotConfig, SnapshotTrigger, 
     SnapshotPriority, ChangeMetrics, ChangeDetector,
     IntelligentSnapshotScheduler, SnapshotCleanupManager,

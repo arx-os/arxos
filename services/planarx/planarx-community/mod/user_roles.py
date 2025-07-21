@@ -10,7 +10,7 @@ from dataclasses import dataclass, asdict
 import json
 import logging
 
-from ..governance.models.board_roles import (
+from services.governance.models.board_roles
     governance_board, 
     BoardMember, 
     RoleType, 

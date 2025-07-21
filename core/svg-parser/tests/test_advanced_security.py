@@ -18,7 +18,7 @@ import os
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-from ..services.advanced_security import (
+from core.services.advanced_security
     PrivacyControlsService, EncryptionService, AuditTrailService,
     RBACService, AdvancedSecurityService, DataClassification,
     AuditEventType, PermissionLevel

@@ -21,12 +21,12 @@ from unittest.mock import patch, MagicMock
 import threading
 import concurrent.futures
 
-from ..services.export_interoperability import (
+from core.services.export_interoperability
     ExportInteroperabilityService, ExportFormat, ExportStatus
 )
 from ..services.enhanced_bim_assembly import EnhancedBIMAssembly
-from ..services.access_control import AccessControlService
-from ..utils.response_helpers import ResponseHelper
+from core.services.access_control
+from core.utils.response_helpers
 
 class TestExportIntegration:
     """Integration tests for export interoperability service."""

@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 
-from ..models.nlp_models import Intent, IntentType
+from services.models.nlp_models
 
 
 @dataclass

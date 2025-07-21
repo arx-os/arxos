@@ -12,7 +12,7 @@ import json
 import time
 from unittest.mock import patch, MagicMock
 
-from ..services.arxsvgx import (
+from core.services.arxsvgx
     ArxSVGXHeader,
     ArxSVGXMetadataManager,
     ArxSVGXCompressionEngine,

@@ -9,10 +9,10 @@ import json
 from datetime import datetime, date
 from unittest.mock import Mock, patch
 
-from ..services.building_code_validator import (
+from core.services.building_code_validator
     BuildingCodeValidator, RuleEngine, ValidationResult, ValidationStatus, ViolationSeverity
 )
-from ..models.building_regulations import (
+from core.models.building_regulations
     Regulation, ValidationRule, ValidationViolation, RegulationType
 )
 

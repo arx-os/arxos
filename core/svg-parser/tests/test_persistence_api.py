@@ -15,13 +15,13 @@ import json
 from unittest.mock import Mock, patch
 from typing import Dict, Any
 
-from ..services.persistence import PersistenceService
+from core.services.persistence
 from services.export_integration import ExportIntegration
 from utils.errors import ExportError, ValidationError
 
 # Mock FastAPI app for testing
 from fastapi.testclient import TestClient
-from ..api.main import app
+from core.api.main
 
 client = TestClient(app)
 

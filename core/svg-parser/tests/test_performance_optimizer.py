@@ -15,7 +15,7 @@ import threading
 from unittest.mock import Mock, patch
 from typing import List, Dict, Any
 
-from ..services.performance_optimizer import (
+from core.services.performance_optimizer
     PerformanceCache, CacheStrategy, PerformanceProfiler, PerformanceMetrics,
     BatchProcessor, MemoryManager, PerformanceOptimizer, OptimizationLevel,
     profile_operation, cache_result, batch_process

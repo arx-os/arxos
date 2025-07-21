@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Use relative imports for package context
-from ..services.rule_engine import EnhancedRuleEngine, RuleDefinition
+from core.services.rule_engine
 
 try:
     import yaml

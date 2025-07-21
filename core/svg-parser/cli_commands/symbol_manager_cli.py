@@ -37,12 +37,12 @@ try:
 except ImportError:
     yaml = None
 
-# Use relative imports for package context
+# Use absolute imports for package context
 try:
-    from ..services.symbol_manager import SymbolManager
-    from ..services.json_symbol_library import JSONSymbolLibrary
-    from ..services.schema_validation import SymbolSchemaValidator
-    from ..utils.auth import User, UserRole
+    from core.svg_parser.services.symbol_manager import SymbolManager
+    from core.svg_parser.services.json_symbol_library import JSONSymbolLibrary
+    from core.svg_parser.services.schema_validation import SymbolSchemaValidator
+    from core.svg_parser.utils.auth import User, UserRole
 except ImportError:
     # Fallback for direct script execution
     from services.symbol_manager import SymbolManager

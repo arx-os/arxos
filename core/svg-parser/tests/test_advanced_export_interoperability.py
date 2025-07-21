@@ -16,12 +16,12 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-from ..services.advanced_export_interoperability import (
+from core.services.advanced_export_interoperability
     AdvancedExportInteroperabilityService,
     ExportFormat
 )
-from ..routers.advanced_export_interoperability import router
-from ..api.main import app
+from core.routers.advanced_export_interoperability
+from core.api.main
 
 # Test BIM data
 SAMPLE_BIM_DATA = {

@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 
-from ..cli_commands.arx_cli import ArxCLI
+from core.cli_commands.arx_cli
 from models.arxfile import ArxfileSchema, PermissionLevel, ShareType, ContractType
 
 

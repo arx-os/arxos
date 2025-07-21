@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
 
-from ..services.rule_engine import EnhancedRuleEngine, RuleDefinition
+from core.services.rule_engine
 
 
 class RuleEngineTester:

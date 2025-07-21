@@ -38,7 +38,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ..services.cmms_maintenance_hooks import (
+from core.services.cmms_maintenance_hooks
     CMMSMaintenanceHooksService,
     WebhookEvent,
     WebhookResponse,
@@ -48,8 +48,8 @@ from ..services.cmms_maintenance_hooks import (
     MaintenanceEventHook,
     SyncConfiguration
 )
-from ..routers.cmms_maintenance_hooks import router
-from ..utils.auth import get_current_user
+from core.routers.cmms_maintenance_hooks
+from core.utils.auth
 
 # Test configuration
 TEST_DATABASE_URL = "sqlite:///./test_cmms_hooks.db"

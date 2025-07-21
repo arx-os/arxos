@@ -22,12 +22,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
-from ..services.ahj_api_service import (
+from core.services.ahj_api_service
     AHJAPIService, Inspection, Annotation, Violation, AuditEvent,
     InspectionStatus, AnnotationType, Coordinates, PermissionLevel
 )
-from ..routers.ahj_api import router
-from ..utils.logger import setup_logger
+from core.routers.ahj_api
+from core.utils.logger
 
 # Test client setup
 client = TestClient(router)

@@ -19,15 +19,15 @@ from pathlib import Path
 from typing import Dict, List, Any
 from unittest.mock import Mock, patch
 
-from ..services.svg_parser import extract_svg_elements
+from core.services.svg_parser
 from ..services.bim_assembly import BIMAssemblyPipeline, AssemblyConfig
 from services.export_integration import ExportIntegration
-from ..services.persistence import PersistenceService
+from core.services.persistence
 from services.performance_optimizer import PerformanceOptimizer, OptimizationLevel
-from ..services.spatial_reasoning import SpatialReasoningEngine
+from core.services.spatial_reasoning
 from services.relationship_manager import AdvancedRelationshipManager
-from ..api.main import app
-from ..utils.errors import (
+from core.api.main
+from core.utils.errors
     SVGParseError, BIMAssemblyError, GeometryError, RelationshipError,
     EnrichmentError, ValidationError, ExportError
 )

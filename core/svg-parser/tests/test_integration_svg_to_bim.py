@@ -6,7 +6,7 @@ Integration Tests: End-to-End SVG-to-BIM Pipeline
 
 import unittest
 from fastapi.testclient import TestClient
-from ..api.bim_api import app
+from core.api.bim_api
 
 class TestSVGToBIMIntegration(unittest.TestCase):
     def setUp(self):

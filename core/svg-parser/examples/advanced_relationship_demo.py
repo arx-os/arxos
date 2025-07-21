@@ -14,7 +14,7 @@ from ..models.bim import (
     BIMModel, Room, Device, SystemType, DeviceCategory, Geometry, GeometryType,
     RoomType, Wall, Door, Window
 )
-from ..services.relationship_manager import (
+from core.services.relationship_manager
     RelationshipManager, BIMRelationship, RelationshipType, RelationshipDirection,
     RelationshipStrength, RelationshipConstraint
 )

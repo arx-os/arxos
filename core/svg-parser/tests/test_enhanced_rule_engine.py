@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from ..services.rule_engine import EnhancedRuleEngine, RuleDefinition
+from core.services.rule_engine
 
 
 class TestRuleDefinition(unittest.TestCase):

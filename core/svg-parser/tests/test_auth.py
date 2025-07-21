@@ -18,10 +18,10 @@ import uuid
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from ..api.main import app
-from ..models.database import User
-from ..utils.auth import create_access_token, create_refresh_token, TokenUser
-from ..services.database_service import DatabaseService
+from core.api.main
+from core.models.database
+from core.utils.auth
+from core.services.database_service
 
 client = TestClient(app)
 

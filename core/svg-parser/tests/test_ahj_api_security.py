@@ -24,7 +24,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ..api.main import app
+from core.api.main
 from services.ahj_api_integration import (
     AHJAPIIntegration,
     AnnotationType,

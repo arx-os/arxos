@@ -11,9 +11,9 @@ Key Components:
 - Multi-jurisdiction Support
 """
 
-from .validate.rule_engine import MCPRuleEngine
-from .report.generate_report import ReportGenerator
-from .models.mcp_models import (
+from services.validate.rule_engine
+from services.report.generate_report
+from services.models.mcp_models
     MCPFile, MCPRule, BuildingModel, BuildingObject,
     ComplianceReport, MCPValidationReport, ValidationResult, ValidationViolation,
     RuleSeverity, RuleCategory, ConditionType, ActionType,

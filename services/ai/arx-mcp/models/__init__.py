@@ -5,7 +5,7 @@ This package contains all data models for the MCP (Model Context Protocol) syste
 including models for MCP files, rules, validation results, and compliance reports.
 """
 
-from .mcp_models import (
+from services.mcp_models
     # Enums
     RuleSeverity,
     RuleCategory,

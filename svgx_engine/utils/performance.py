@@ -100,6 +100,28 @@ class PerformanceMonitor:
         metrics = self.get_metrics()
         return metrics.get(operation_name)
     
+    def record_operation(self, operation_name: str, duration: float):
+        """
+        Record an operation with its duration.
+        
+        Args:
+            operation_name: Name of the operation
+            duration: Duration in seconds
+        """
+        with self.lock:
+            self.metrics[operation_name].append({
+                'start_time': time.time() - duration,
+                'end_time': time.time(),
+                'duration': duration,
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        logger.debug(
+            "Operation recorded",
+            operation=operation_name,
+            duration=duration
+        )
+    
     def clear_metrics(self):
         """Clear all performance metrics."""
         with self.lock:

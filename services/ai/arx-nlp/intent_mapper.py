@@ -20,8 +20,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
-from .models.nlp_models import Intent, Slot, SlotResult
-from .utils.context_manager import ContextManager
+from services.models.nlp_models
+from services.utils.context_manager
 
 
 class IntentType(Enum):

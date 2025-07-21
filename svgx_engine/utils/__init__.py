@@ -1,18 +1,23 @@
 """
-SVGX Engine - Utilities Package
+Utils Module
 
-Provides utility functions and classes for SVGX Engine including:
-- Error handling
-- Performance monitoring
-- Telemetry
-- Validation utilities
+This module contains utility classes and functions for the SVGX Engine.
 """
 
-from svgx_engine.utils.errors import PersistenceError, ValidationError, DatabaseError, SVGXError
+from .errors import (
+    SVGXError,
+    SymbolError,
+    ValidationError,
+    PipelineError,
+    ConfigurationError,
+    SecurityError
+)
 
 __all__ = [
-    'PersistenceError',
-    'ValidationError', 
-    'DatabaseError',
-    'SVGXError'
+    'SVGXError',
+    'SymbolError',
+    'ValidationError',
+    'PipelineError',
+    'ConfigurationError',
+    'SecurityError'
 ] 

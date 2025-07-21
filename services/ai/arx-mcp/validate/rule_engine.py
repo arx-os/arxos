@@ -23,7 +23,7 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, field
 
-from ..models.mcp_models import (
+from services.models.mcp_models
     MCPFile, MCPRule, RuleCondition, RuleAction, BuildingModel, BuildingObject,
     ValidationResult, ValidationViolation, MCPValidationReport, ComplianceReport,
     RuleSeverity, RuleCategory, ConditionType, ActionType,

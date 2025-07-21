@@ -682,7 +682,7 @@ class TestIntegrationFrameworkEndpoints:
     def client(self):
         """Create test client."""
         from fastapi.testclient import TestClient
-        from ..api.main import app
+        from core.svg_parser.api.main import app
         return TestClient(app)
     
     def test_create_system_connection_endpoint(self, client):

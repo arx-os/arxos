@@ -9,11 +9,11 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 from fastapi.testclient import TestClient
 
-from ..reputation.scoring_engine import ReputationScoringEngine, ContributionType, ReputationTier
-from ..reputation.badges import BadgeSystem, BadgeType, BadgeRarity
+from services.reputation.scoring_engine
+from services.reputation.badges
 from ..funding.grant_eligibility import GrantEligibilityEngine, GrantType, EligibilityStatus
-from ..reputation.routes import router
-from ..main import app
+from services.reputation.routes
+from services.main
 
 
 class TestReputationScoringEngine:

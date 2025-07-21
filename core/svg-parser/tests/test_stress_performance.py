@@ -30,13 +30,13 @@ from typing import Dict, List, Any
 
 # Import all services
 from services.version_control import VersionControlService
-from ..services.route_manager import RouteManager
-from ..services.floor_manager import FloorManager
-from ..services.auto_snapshot import AutoSnapshotService
+from core.services.route_manager
+from core.services.floor_manager
+from core.services.auto_snapshot
 from services.realtime_service import RealTimeService as RealtimeService
-from ..services.cache_service import CacheService
+from core.services.cache_service
 from services.data_partitioning import DataPartitioningService
-from ..services.access_control import AccessControlService
+from core.services.access_control
 
 
 class TestLoadTesting:

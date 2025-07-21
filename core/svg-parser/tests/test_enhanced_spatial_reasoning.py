@@ -13,7 +13,7 @@ import time
 from datetime import datetime, timezone
 from typing import Dict, List, Any
 
-from ..services.enhanced_spatial_reasoning import (
+from core.services.enhanced_spatial_reasoning
     EnhancedSpatialReasoningEngine, SpatialIndexType, TopologyType,
     SpatialHierarchyLevel, TopologyValidation, ZoneCalculation
 )

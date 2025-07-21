@@ -1,88 +1,223 @@
 """
-Error handling utilities for the Arxos SVGX Engine pipeline.
+Error classes for the SVGX Engine.
+
+This module provides custom exception classes for the SVGX Engine.
 """
 
 
-class PipelineError(Exception):
-    """Base exception for pipeline-related errors."""
+class SVGXError(Exception):
+    """Base exception for SVGX Engine errors."""
     
-    def __init__(self, message: str, details: dict = None):
-        super().__init__(message)
+    def __init__(self, message: str, context: str = None):
         self.message = message
-        self.details = details or {}
+        self.context = context
+        super().__init__(self.message)
 
 
-class ValidationError(Exception):
-    """Exception for validation-related errors."""
+class SymbolError(SVGXError):
+    """Exception raised for symbol-related errors."""
     
-    def __init__(self, message: str, field: str = None, value: any = None):
-        super().__init__(message)
-        self.message = message
+    def __init__(self, message: str, symbol_name: str = None):
+        self.symbol_name = symbol_name
+        super().__init__(message, symbol_name)
+
+
+class ValidationError(SVGXError):
+    """Exception raised for validation errors."""
+    
+    def __init__(self, message: str, field: str = None):
         self.field = field
-        self.value = value
+        super().__init__(message, field)
 
 
-class SymbolError(Exception):
-    """Exception for symbol-related errors."""
+class PipelineError(SVGXError):
+    """Exception raised for pipeline-related errors."""
     
-    def __init__(self, message: str, symbol: str = None):
-        super().__init__(message)
-        self.message = message
-        self.symbol = symbol
+    def __init__(self, message: str, operation: str = None):
+        self.operation = operation
+        super().__init__(message, operation)
 
 
-class BehaviorError(Exception):
-    """Exception for behavior profile-related errors."""
+class ConfigurationError(SVGXError):
+    """Exception raised for configuration errors."""
     
-    def __init__(self, message: str, behavior_profile: str = None):
-        super().__init__(message)
-        self.message = message
-        self.behavior_profile = behavior_profile
+    def __init__(self, message: str, config_key: str = None):
+        self.config_key = config_key
+        super().__init__(message, config_key)
 
 
-class ComplianceError(Exception):
-    """Exception for compliance-related errors."""
+class SecurityError(SVGXError):
+    """Exception raised for security-related errors."""
     
-    def __init__(self, message: str, compliance_rule: str = None):
-        super().__init__(message)
-        self.message = message
-        self.compliance_rule = compliance_rule
+    def __init__(self, message: str, security_context: str = None):
+        self.security_context = security_context
+        super().__init__(message, security_context)
 
 
-class SchemaError(Exception):
-    """Exception for schema-related errors."""
+class ExportError(SVGXError):
+    """Exception raised for export-related errors."""
     
-    def __init__(self, message: str, schema_file: str = None):
-        super().__init__(message)
-        self.message = message
-        self.schema_file = schema_file
+    def __init__(self, message: str, export_format: str = None):
+        self.export_format = export_format
+        super().__init__(message, export_format)
 
 
-def format_error_response(error: Exception, operation: str = None) -> dict:
-    """Format an error into a standardized response."""
-    response = {
-        "success": False,
-        "error": str(error),
-        "error_type": type(error).__name__,
-        "timestamp": __import__("time").time()
-    }
+class ImportError(SVGXError):
+    """Exception raised for import-related errors."""
     
-    if operation:
-        response["operation"] = operation
+    def __init__(self, message: str, import_format: str = None):
+        self.import_format = import_format
+        super().__init__(message, import_format)
+
+
+class PerformanceError(SVGXError):
+    """Exception raised for performance-related errors."""
     
-    # Add specific details based on error type
-    if isinstance(error, ValidationError):
-        response["field"] = error.field
-        response["value"] = error.value
-    elif isinstance(error, SymbolError):
-        response["symbol"] = error.symbol
-    elif isinstance(error, BehaviorError):
-        response["behavior_profile"] = error.behavior_profile
-    elif isinstance(error, ComplianceError):
-        response["compliance_rule"] = error.compliance_rule
-    elif isinstance(error, SchemaError):
-        response["schema_file"] = error.schema_file
-    elif isinstance(error, PipelineError):
-        response["details"] = error.details
+    def __init__(self, message: str, performance_metric: str = None):
+        self.performance_metric = performance_metric
+        super().__init__(message, performance_metric)
+
+
+class PersistenceError(SVGXError):
+    """Exception raised for persistence-related errors."""
     
-    return response
+    def __init__(self, message: str, persistence_operation: str = None):
+        self.persistence_operation = persistence_operation
+        super().__init__(message, persistence_operation)
+
+
+class NetworkError(SVGXError):
+    """Exception raised for network-related errors."""
+    
+    def __init__(self, message: str, network_endpoint: str = None):
+        self.network_endpoint = network_endpoint
+        super().__init__(message, network_endpoint)
+
+
+class AuthenticationError(SVGXError):
+    """Exception raised for authentication-related errors."""
+    
+    def __init__(self, message: str, auth_context: str = None):
+        self.auth_context = auth_context
+        super().__init__(message, auth_context)
+
+
+class AuthorizationError(SVGXError):
+    """Exception raised for authorization-related errors."""
+    
+    def __init__(self, message: str, auth_context: str = None):
+        self.auth_context = auth_context
+        super().__init__(message, auth_context)
+
+
+class ResourceNotFoundError(SVGXError):
+    """Exception raised when a resource is not found."""
+    
+    def __init__(self, message: str, resource_type: str = None, resource_id: str = None):
+        self.resource_type = resource_type
+        self.resource_id = resource_id
+        super().__init__(message, resource_type)
+
+
+class MetadataError(SVGXError):
+    """Exception raised for metadata-related errors."""
+    
+    def __init__(self, message: str, metadata_key: str = None):
+        self.metadata_key = metadata_key
+        super().__init__(message, metadata_key)
+
+
+class CacheError(SVGXError):
+    """Exception raised for cache-related errors."""
+    
+    def __init__(self, message: str, cache_operation: str = None):
+        self.cache_operation = cache_operation
+        super().__init__(message, cache_operation)
+
+
+class DatabaseError(SVGXError):
+    """Exception raised for database-related errors."""
+    
+    def __init__(self, message: str, database_operation: str = None):
+        self.database_operation = database_operation
+        super().__init__(message, database_operation)
+
+
+class RecognitionError(SVGXError):
+    """Exception raised for recognition-related errors."""
+    
+    def __init__(self, message: str, recognition_type: str = None):
+        self.recognition_type = recognition_type
+        super().__init__(message, recognition_type)
+
+
+class BIMError(SVGXError):
+    """Exception raised for BIM-related errors."""
+    
+    def __init__(self, message: str, bim_operation: str = None):
+        self.bim_operation = bim_operation
+        super().__init__(message, bim_operation)
+
+
+class PhysicsError(SVGXError):
+    """Exception raised for physics-related errors."""
+    
+    def __init__(self, message: str, physics_type: str = None):
+        self.physics_type = physics_type
+        super().__init__(message, physics_type)
+
+
+class IntegrationError(SVGXError):
+    """Exception raised for integration-related errors."""
+    
+    def __init__(self, message: str, integration_type: str = None):
+        self.integration_type = integration_type
+        super().__init__(message, integration_type)
+
+
+class BehaviorError(SVGXError):
+    """Exception raised for behavior-related errors."""
+    
+    def __init__(self, message: str, behavior_type: str = None):
+        self.behavior_type = behavior_type
+        super().__init__(message, behavior_type)
+
+
+class StateMachineError(SVGXError):
+    """Exception raised for state machine-related errors."""
+    
+    def __init__(self, message: str, state_machine_operation: str = None):
+        self.state_machine_operation = state_machine_operation
+        super().__init__(message, state_machine_operation)
+
+
+class TransitionError(SVGXError):
+    """Exception raised for state transition-related errors."""
+    
+    def __init__(self, message: str, transition_operation: str = None):
+        self.transition_operation = transition_operation
+        super().__init__(message, transition_operation)
+
+
+class LogicError(SVGXError):
+    """Exception raised for logic-related errors."""
+    
+    def __init__(self, message: str, logic_operation: str = None):
+        self.logic_operation = logic_operation
+        super().__init__(message, logic_operation)
+
+
+class EventError(SVGXError):
+    """Exception raised for event-related errors."""
+    
+    def __init__(self, message: str, event_type: str = None):
+        self.event_type = event_type
+        super().__init__(message, event_type)
+
+
+class ConditionError(SVGXError):
+    """Exception raised for condition-related errors."""
+    
+    def __init__(self, message: str, condition_type: str = None):
+        self.condition_type = condition_type
+        super().__init__(message, condition_type)

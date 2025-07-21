@@ -19,7 +19,7 @@ from typing import Dict, Any, List
 import time
 
 # Use relative imports for package context
-from ..services.geometry_resolver import (
+from core.services.geometry_resolver
     GeometryResolver, GeometricObject, Constraint, Point3D, BoundingBox,
     ConstraintType, ConflictType
 )

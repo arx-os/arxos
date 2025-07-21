@@ -13,7 +13,7 @@ from pathlib import Path
 
 from ..models.snapshot import Snapshot, SnapshotCreate, SnapshotResponse
 from ..services.snapshot_service import SnapshotService
-from ..utils.auth import get_current_user, User
+from core.utils.auth
 
 router = APIRouter(prefix="/auto-snapshot", tags=["Auto Snapshot"])
 

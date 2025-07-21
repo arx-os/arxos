@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from ..services.geometry_resolver import (
+from core.services.geometry_resolver
     GeometryResolver, GeometricObject, Constraint, Point3D, BoundingBox,
     ConstraintType, ConflictType, GeometricConflict, ResolutionResult
 )

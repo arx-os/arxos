@@ -1,78 +1,109 @@
-from typing import Callable, Dict, Any, Optional
-from .ui_event_schemas import UIEvent, SelectionEvent, EditingEvent, NavigationEvent, AnnotationEvent
-from pydantic import ValidationError
+"""
+UI Event Dispatcher - Event Routing and Processing
+
+This module provides event dispatching and routing functionality for
+UI events in the SVGX Engine behavior system.
+"""
+
+from typing import Dict, Any, Callable, Optional
 import logging
+from svgx_engine.runtime.behavior.ui_event_schemas import UIEvent, SelectionEvent, EditingEvent, NavigationEvent, AnnotationEvent
 
 logger = logging.getLogger(__name__)
 
 class UIEventDispatcher:
     """
-    Dispatches validated UI events to registered handlers and emits feedback.
-    Extensible for new event types and feedback mechanisms.
+    UI Event Dispatcher for routing and processing UI events.
+    
+    Provides centralized event dispatching for UI interactions
+    including selection, editing, navigation, and annotation events.
     """
+    
     def __init__(self):
-        self.handlers: Dict[str, Callable[[Any], Optional[dict]]] = {}
-        self._register_default_handlers()
-
-    def _register_default_handlers(self):
-        self.handlers = {
-            "selection": self.handle_selection,
-            "editing": self.handle_editing,
-            "navigation": self.handle_navigation,
-            "annotation": self.handle_annotation,
+        self.handlers: Dict[str, Callable] = {}
+        self.event_history: list = []
+        self.stats = {
+            "total_events": 0,
+            "events_by_type": {},
+            "errors": 0
         }
-
-    def register_handler(self, event_type: str, handler: Callable[[Any], Optional[dict]]):
-        self.handlers[event_type] = handler
-
-    def dispatch(self, event_data: dict) -> Optional[dict]:
+    
+    def register_handler(self, event_type: str, handler: Callable) -> None:
         """
-        Validate and dispatch a UI event. Returns feedback if any.
+        Register a handler for a specific event type.
+        
+        Args:
+            event_type: Type of event to handle
+            handler: Function to call when event occurs
+        """
+        self.handlers[event_type] = handler
+        logger.info(f"Registered handler for event type: {event_type}")
+    
+    def dispatch_event(self, event: UIEvent) -> Optional[Dict[str, Any]]:
+        """
+        Dispatch an event to the appropriate handler.
+        
+        Args:
+            event: UI event to dispatch
+            
+        Returns:
+            Handler result or None if no handler found
         """
         try:
-            event = self._validate_event(event_data)
-            handler = self.handlers.get(event.event_type)
-            if handler:
-                logger.info(f"Dispatching {event.event_type} event to handler.")
-                return handler(event)
+            self.stats["total_events"] += 1
+            event_type = event.event_type
+            
+            # Update event type statistics
+            if event_type not in self.stats["events_by_type"]:
+                self.stats["events_by_type"][event_type] = 0
+            self.stats["events_by_type"][event_type] += 1
+            
+            # Store event in history
+            self.event_history.append({
+                "event_type": event_type,
+                "timestamp": event.timestamp,
+                "payload": event.payload
+            })
+            
+            # Find and call appropriate handler
+            if event_type in self.handlers:
+                handler = self.handlers[event_type]
+                result = handler(event)
+                logger.debug(f"Dispatched {event_type} event to handler")
+                return result
             else:
-                logger.warning(f"No handler registered for event type: {event.event_type}")
-        except ValidationError as ve:
-            logger.error(f"UI event validation failed: {ve}")
+                logger.warning(f"No handler registered for event type: {event_type}")
+                return None
+                
         except Exception as e:
-            logger.error(f"Error dispatching UI event: {e}")
-        return None
+            self.stats["errors"] += 1
+            logger.error(f"Error dispatching event {event.event_type}: {e}")
+            return None
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get dispatcher statistics."""
+        return {
+            "total_events": self.stats["total_events"],
+            "events_by_type": self.stats["events_by_type"],
+            "errors": self.stats["errors"],
+            "history_size": len(self.event_history)
+        }
+    
+    def clear_history(self) -> None:
+        """Clear event history."""
+        self.event_history.clear()
+        logger.info("Event history cleared")
 
-    def _validate_event(self, event_data: dict) -> UIEvent:
-        etype = event_data.get("event_type")
-        if etype == "selection":
-            return SelectionEvent.parse_obj(event_data)
-        elif etype == "editing":
-            return EditingEvent.parse_obj(event_data)
-        elif etype == "navigation":
-            return NavigationEvent.parse_obj(event_data)
-        elif etype == "annotation":
-            return AnnotationEvent.parse_obj(event_data)
-        else:
-            raise ValidationError(f"Unknown event_type: {etype}")
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "UI event dispatcher for SVGX Engine"
 
-    # Default handler stubs (to be extended)
-    def handle_selection(self, event: SelectionEvent) -> Optional[dict]:
-        logger.info(f"[Dispatcher] Handling selection event: {event}")
-        # TODO: Integrate with runtime, emit feedback
-        return None
-
-    def handle_editing(self, event: EditingEvent) -> Optional[dict]:
-        logger.info(f"[Dispatcher] Handling editing event: {event}")
-        # TODO: Integrate with runtime, emit feedback
-        return None
-
-    def handle_navigation(self, event: NavigationEvent) -> Optional[dict]:
-        logger.info(f"[Dispatcher] Handling navigation event: {event}")
-        # TODO: Integrate with runtime, emit feedback
-        return None
-
-    def handle_annotation(self, event: AnnotationEvent) -> Optional[dict]:
-        logger.info(f"[Dispatcher] Handling annotation event: {event}")
-        # TODO: Integrate with runtime, emit feedback
-        return None 
+# Export all event types and dispatcher
+__all__ = [
+    "UIEventDispatcher",
+    "UIEvent",
+    "SelectionEvent",
+    "EditingEvent", 
+    "NavigationEvent",
+    "AnnotationEvent"
+] 

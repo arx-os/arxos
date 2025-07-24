@@ -28,7 +28,7 @@ REQUIRED_PYTHON_PACKAGES=(
 )
 
 REQUIRED_GO_PACKAGES=(
-    "github.com/gin-gonic/gin"
+    "github.com/go-chi/chi/v5"
     "github.com/google/uuid"
     "github.com/jmoiron/sqlx"
 )

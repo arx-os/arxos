@@ -1,99 +1,96 @@
 # SVGX Engine VS Code Extension
 
-A comprehensive VS Code extension for SVGX Engine that provides syntax highlighting, IntelliSense, live preview, error reporting, and debugging support for SVGX files.
+A comprehensive VS Code extension for SVGX (Scalable Vector Graphics Extended) development, providing syntax highlighting, IntelliSense, live preview, validation, and debugging capabilities.
 
 ## Features
 
-### 🎨 Syntax Highlighting
-- Full syntax highlighting for SVGX files
-- Support for elements, properties, and simulation types
-- Color-coded syntax for better readability
+### 🎨 **Syntax Highlighting**
+- Full SVGX syntax support with color-coded elements, attributes, and values
+- Custom language grammar for SVGX-specific keywords and patterns
+- Support for comments, strings, numbers, and special characters
 
-### 🧠 IntelliSense & Autocompletion
-- Smart autocompletion for SVGX elements
-- Property suggestions and validation
-- Simulation type suggestions
-- Context-aware completions
+### 🧠 **IntelliSense & Autocompletion**
+- Smart code completion for SVGX elements and attributes
+- Context-aware suggestions based on element types
+- Auto-completion for simulation types and parameters
+- Snippet support for common SVGX patterns
 
-### 👁️ Live Preview
+### 👁️ **Live Preview Integration**
 - Real-time preview of SVGX files
-- Interactive visualization
-- Instant updates as you type
-- Support for all SVGX element types
+- Interactive preview panel with controls
+- Syntax highlighting in preview
+- Error and warning display
 
-### ✅ Error Reporting & Validation
+### ✅ **Validation & Error Reporting**
 - Real-time validation of SVGX syntax
-- Detailed error messages with line numbers
-- Warning and error highlighting
-- Connection to SVGX Engine server for validation
+- Error and warning highlighting in editor
+- Problem matcher integration
+- Detailed error messages with line/column information
 
-### 🐛 Debugging Support
-- WebSocket connection to SVGX Engine
-- Real-time debugging information
-- Simulation status updates
-- Debug console integration
+### 🐛 **Debugging Support**
+- Integrated debugging for SVGX simulations
+- Breakpoint support for simulation execution
+- Variable inspection and watch expressions
+- Step-through debugging capabilities
 
-### 📦 Compilation Support
-- Compile SVGX to SVG format
-- Compile SVGX to JSON format
-- Export capabilities for different targets
+### 🔧 **Advanced Features**
+- WebSocket integration for real-time updates
+- Server communication for validation and compilation
+- Multiple export formats (SVG, JSON)
+- Simulation type support (structural, electrical, fluid dynamics, etc.)
 
 ## Installation
 
-### Prerequisites
-- VS Code 1.74.0 or higher
-- SVGX Engine server running (default: http://localhost:8000)
-
-### Installation Steps
-1. Clone this repository
-2. Navigate to the plugin directory: `cd vscode_plugin`
-3. Install dependencies: `npm install`
-4. Compile the extension: `npm run compile`
-5. Package the extension: `vsce package`
-6. Install the VSIX file in VS Code
+1. Clone the repository
+2. Navigate to the `vscode_plugin` directory
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Open the folder in VS Code
+5. Press `F5` to run the extension in development mode
 
 ## Configuration
 
 ### Server Settings
-Configure the SVGX Engine server connection in VS Code settings:
-
 ```json
 {
   "svgx.server.url": "http://localhost:8000",
-  "svgx.server.apiKey": "your-api-key-here"
+  "svgx.server.apiKey": "your-api-key"
+}
+```
+
+### Feature Toggles
+```json
+{
+  "svgx.preview.enabled": true,
+  "svgx.validation.enabled": true,
+  "svgx.debugging.enabled": true,
+  "svgx.simulation.enabled": true
 }
 ```
 
 ### Performance Settings
-Adjust performance targets:
-
 ```json
 {
-  "svgx.performance.targetResponseTime": 16,
-  "svgx.simulation.enabled": true,
-  "svgx.simulation.types": ["structural", "electrical"]
+  "svgx.performance.targetResponseTime": 16
 }
 ```
 
 ## Usage
 
-### Opening SVGX Files
-1. Open any `.svgx` file in VS Code
-2. The extension will automatically activate
-3. Syntax highlighting and IntelliSense will be available
-
 ### Commands
-Access SVGX commands through the Command Palette (`Ctrl+Shift+P`):
 
-- **SVGX: Open Preview** - Open live preview of current SVGX file
-- **SVGX: Validate File** - Validate SVGX syntax and structure
-- **SVGX: Run Simulation** - Run simulation on current SVGX file
-- **SVGX: Debug Simulation** - Start debugging session
-- **SVGX: Compile to SVG** - Compile SVGX to SVG format
-- **SVGX: Compile to JSON** - Compile SVGX to JSON format
+- **SVGX: Open Preview** - Opens live preview of current SVGX file
+- **SVGX: Validate File** - Validates the current SVGX file
+- **SVGX: Debug Simulation** - Starts debugging session for simulations
+- **SVGX: Run Simulation** - Runs simulation on current file
+- **SVGX: Compile to SVG** - Compiles SVGX to SVG format
+- **SVGX: Compile to JSON** - Compiles SVGX to JSON format
 
 ### Snippets
-Use code snippets for quick element creation:
+
+The extension provides numerous snippets for common SVGX patterns:
 
 - `rect` - Basic rectangle element
 - `circle` - Basic circle element
@@ -108,136 +105,115 @@ Use code snippets for quick element creation:
 - `current` - Current source
 - `sim-structural` - Structural simulation
 - `sim-electrical` - Electrical simulation
-- `sim-fluid` - Fluid dynamics simulation
-- `sim-heat` - Heat transfer simulation
-- `sim-rf` - RF propagation simulation
 
-### Example SVGX File
-```svgx
-// Simple structural example
-element beam(id="beam1", x=0, y=0, length=100, material="steel", elastic_modulus=200e9)
-element column(id="column1", x=0, y=0, height=300, material="concrete", elastic_modulus=30e9)
+### Views
 
-simulate structural {
-  elements: [beam1, column1],
-  loads: [
-    {type: "point_load", magnitude: 1000, position: [50, 0]}
-  ],
-  constraints: [
-    {type: "fixed", element: "column1"}
-  ]
-}
+The extension adds several views to the activity bar:
+
+- **Simulations** - View and manage simulation sessions
+- **Elements** - Browse SVGX elements in the current file
+- **Constraints** - View and edit element constraints
+
+## Architecture
+
+### Core Components
+
+1. **SVGXLanguageClient** - Handles communication with SVGX Engine server
+2. **SVGXPreviewProvider** - Manages live preview functionality
+3. **SVGXDiagnosticsProvider** - Provides error reporting and validation
+4. **SVGXCompletionProvider** - Implements IntelliSense and autocompletion
+
+### File Structure
+
+```
+vscode_plugin/
+├── src/
+│   └── extension.js          # Main extension file
+├── syntaxes/
+│   └── svgx.tmLanguage.json # Syntax highlighting rules
+├── snippets/
+│   └── svgx.json            # Code snippets
+├── language-configuration.json
+├── package.json
+└── README.md
 ```
 
 ## Development
 
-### Building the Extension
+### Prerequisites
+- Node.js (no TypeScript required)
+- VS Code Extension Development Host
+- SVGX Engine server running locally
+
+### Building
 ```bash
 npm install
-npm run compile
 ```
 
-### Running Tests
+### Testing
 ```bash
 npm test
 ```
 
-### Linting
-```bash
-npm run lint
-```
+### Debugging
+1. Open the extension in VS Code
+2. Press `F5` to launch extension development host
+3. Open an SVGX file to test functionality
 
-### Watching for Changes
-```bash
-npm run watch
-```
+## API Integration
 
-## Architecture
+The extension integrates with the SVGX Engine server via:
 
-### Components
-- **SVGXLanguageClient** - Handles communication with SVGX Engine server
-- **SVGXPreviewProvider** - Provides live preview functionality
-- **SVGXDiagnosticsProvider** - Handles error reporting and validation
-- **SVGXCompletionProvider** - Provides IntelliSense and autocompletion
+- **REST API** - For validation, parsing, and compilation
+- **WebSocket** - For real-time updates and notifications
+- **HTTP Client** - Using axios for reliable communication
 
-### Communication
-- HTTP API calls to SVGX Engine server
-- WebSocket connection for real-time updates
-- File system monitoring for live preview
+### Server Endpoints
 
-### Performance
-- Optimized for <16ms response time (CTO directive)
-- Efficient parsing and validation
+- `POST /validate` - Validate SVGX content
+- `POST /parse` - Parse SVGX content to elements
+- `POST /simulate` - Run simulations
+- `POST /compile/svg` - Compile to SVG
+- `POST /compile/json` - Compile to JSON
+- `WS /ws` - WebSocket for real-time updates
+
+## Error Handling
+
+The extension includes comprehensive error handling:
+
+- Network connectivity issues
+- Server communication failures
+- Invalid SVGX syntax
+- Simulation execution errors
+- Compilation failures
+
+## Performance
+
+- Optimized for large SVGX files
+- Efficient syntax highlighting
 - Minimal memory footprint
-- Background processing for non-critical operations
-
-## Troubleshooting
-
-### Common Issues
-
-**Extension not activating**
-- Ensure SVGX Engine server is running
-- Check server URL in settings
-- Verify API key if required
-
-**Preview not working**
-- Check WebSocket connection
-- Verify SVGX file syntax
-- Check browser console for errors
-
-**Validation errors**
-- Ensure SVGX Engine server is accessible
-- Check network connectivity
-- Verify API key permissions
-
-**Performance issues**
-- Check server response times
-- Monitor memory usage
-- Verify target response time settings
-
-### Debug Mode
-Enable debug mode for detailed logging:
-
-```json
-{
-  "svgx.debugging.enabled": true
-}
-```
+- Fast validation and parsing
+- Real-time preview updates
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
+4. Test thoroughly
 5. Submit a pull request
 
 ## License
 
-This extension is part of the SVGX Engine project and follows the same licensing terms.
+This extension is part of the Arxos Platform and follows the same licensing terms.
 
 ## Support
 
 For issues and questions:
-- Check the troubleshooting section
-- Review SVGX Engine documentation
-- Submit issues to the project repository
+- Check the VS Code extension documentation
+- Review the SVGX Engine documentation
+- Open an issue in the repository
 
-## Roadmap
+---
 
-### Planned Features
-- [ ] Advanced debugging tools
-- [ ] Simulation visualization
-- [ ] Performance profiling
-- [ ] Multi-file support
-- [ ] Version control integration
-- [ ] Collaborative editing
-- [ ] Custom themes
-- [ ] Extension marketplace publication
-
-### Performance Targets
-- [x] <16ms interaction response time
-- [x] Real-time validation
-- [x] Live preview updates
-- [ ] Advanced IntelliSense
-- [ ] Debugging performance optimization 
+**Note**: This extension is designed to work with the SVGX Engine server. Ensure the server is running and properly configured before using the extension features. 

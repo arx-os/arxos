@@ -1,23 +1,28 @@
 """
-Value Objects Module
+Domain Value Objects - Immutable Domain Concepts
 
-This module contains all value objects used in the domain layer.
-Value objects are immutable objects that represent concepts in the domain
-and are defined by their attributes rather than their identity.
+This module contains value objects that represent immutable domain concepts
+such as addresses, coordinates, dimensions, identifiers, money, and status.
+These objects encapsulate business rules and validation logic.
 """
 
-from .address import Address
-from .coordinates import Coordinates
-from .dimensions import Dimensions
-from .identifier import Identifier
-from .money import Money
-from .status import Status
+from svgx_engine.domain.value_objects.address import Address
+from svgx_engine.domain.value_objects.coordinates import Coordinates
+from svgx_engine.domain.value_objects.dimensions import Dimensions
+from svgx_engine.domain.value_objects.identifier import Identifier
+from svgx_engine.domain.value_objects.money import Money
+from svgx_engine.domain.value_objects.status import Status
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Domain value objects for SVGX Engine"
+
+# Export all value objects
 __all__ = [
-    'Address',
-    'Coordinates', 
-    'Dimensions',
-    'Identifier',
-    'Money',
-    'Status'
+    "Address",
+    "Coordinates", 
+    "Dimensions",
+    "Identifier",
+    "Money",
+    "Status"
 ] 

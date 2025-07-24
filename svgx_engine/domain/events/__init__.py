@@ -1,9 +1,9 @@
 """
-Domain Events Module
+Domain Events - Event-Driven Architecture
 
-This module contains all domain events used in the domain layer.
-Domain events represent something that happened in the domain and are used
-for communication between aggregates and external systems.
+This module contains domain events that represent something that happened
+in the domain and are used for communication between aggregates and
+external systems.
 """
 
 from abc import ABC, abstractmethod
@@ -34,21 +34,27 @@ class DomainEvent(ABC):
         pass
 
 
-from .building_events import (
+from svgx_engine.domain.events.building_events import (
     BuildingCreatedEvent,
     BuildingUpdatedEvent,
-    BuildingStatusChangedEvent,
-    BuildingAddressChangedEvent,
     BuildingDeletedEvent,
-    BuildingArchivedEvent
+    BuildingStatusChangedEvent,
+    BuildingLocationChangedEvent,
+    BuildingCostUpdatedEvent,
+    building_event_publisher
 )
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Domain events for SVGX Engine"
+
+# Export all events
 __all__ = [
-    'DomainEvent',
-    'BuildingCreatedEvent',
-    'BuildingUpdatedEvent',
-    'BuildingStatusChangedEvent',
-    'BuildingAddressChangedEvent',
-    'BuildingDeletedEvent',
-    'BuildingArchivedEvent'
+    "BuildingCreatedEvent",
+    "BuildingUpdatedEvent", 
+    "BuildingDeletedEvent",
+    "BuildingStatusChangedEvent",
+    "BuildingLocationChangedEvent",
+    "BuildingCostUpdatedEvent",
+    "building_event_publisher"
 ] 

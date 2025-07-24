@@ -1,266 +1,161 @@
 """
-Dependency Injection Container
-
-Container for managing dependencies and wiring up Clean Architecture components.
-This container follows the Dependency Inversion Principle and provides
-a clean way to configure and manage all dependencies.
+Dependency Injection Container - Infrastructure Layer
 """
 
-from typing import Dict, Any, Type
-from dataclasses import dataclass
+from typing import Dict, Any, Optional
+import logging
 
-from ..domain.repositories.building_repository import BuildingRepository
-from ..domain.services.building_service import BuildingService
-from ..application.use_cases.building_use_cases import (
+from svgx_engine.domain.repositories.building_repository import BuildingRepository
+from svgx_engine.domain.services.building_service import BuildingService
+from svgx_engine.application.use_cases.building_use_cases import (
     CreateBuildingUseCase,
     UpdateBuildingUseCase,
     GetBuildingUseCase,
-    ListBuildingsUseCase,
-    DeleteBuildingUseCase
+    DeleteBuildingUseCase,
+    ListBuildingsUseCase
 )
-from ..infrastructure.repositories.in_memory_building_repository import InMemoryBuildingRepository
+from svgx_engine.application.dto.building_dto import (
+    CreateBuildingRequest,
+    UpdateBuildingRequest,
+    BuildingResponse
+)
+from svgx_engine.infrastructure.repositories.in_memory_building_repository import InMemoryBuildingRepository
 
-
-@dataclass
-class ContainerConfig:
-    """Configuration for the dependency injection container."""
-    
-    # Repository implementations
-    building_repository_class: Type[BuildingRepository] = InMemoryBuildingRepository
-    
-    # Service configurations
-    enable_caching: bool = True
-    enable_logging: bool = True
-    enable_metrics: bool = True
-
+logger = logging.getLogger(__name__)
 
 class Container:
     """
-    Dependency injection container for managing all dependencies.
+    Dependency injection container for the application.
     
-    This container follows the Dependency Inversion Principle and provides
-    a clean way to configure and manage all dependencies in the application.
+    This container manages the creation and configuration of all dependencies
+    in the application, following the Dependency Inversion Principle.
     """
     
-    def __init__(self, config: ContainerConfig = None):
+    def __init__(self):
+        self._services: Dict[str, Any] = {}
+        self._configure_services()
+    
+    def _configure_services(self):
+        """Configure all services in the container."""
+        # Configure repositories
+        self._services['building_repository'] = InMemoryBuildingRepository()
+        
+        # Configure domain services
+        self._services['building_service'] = BuildingService(
+            building_repository=self._services['building_repository']
+        )
+        
+        # Configure use cases
+        self._services['create_building_use_case'] = CreateBuildingUseCase(
+            building_service=self._services['building_service']
+        )
+        
+        self._services['update_building_use_case'] = UpdateBuildingUseCase(
+            building_service=self._services['building_service']
+        )
+        
+        self._services['get_building_use_case'] = GetBuildingUseCase(
+            building_service=self._services['building_service']
+        )
+        
+        self._services['delete_building_use_case'] = DeleteBuildingUseCase(
+            building_service=self._services['building_service']
+        )
+        
+        self._services['list_buildings_use_case'] = ListBuildingsUseCase(
+            building_service=self._services['building_service']
+        )
+        
+        logger.info("Dependency injection container configured successfully")
+    
+    def get(self, service_name: str) -> Any:
         """
-        Initialize the container.
+        Get a service from the container.
         
         Args:
-            config: Container configuration
-        """
-        self.config = config or ContainerConfig()
-        self._instances: Dict[str, Any] = {}
-        self._factories: Dict[str, callable] = {}
-        
-        # Register default factories
-        self._register_default_factories()
-    
-    def _register_default_factories(self):
-        """Register default factory methods for dependencies."""
-        
-        # Repository factories
-        self._factories['building_repository'] = self._create_building_repository
-        
-        # Service factories
-        self._factories['building_service'] = self._create_building_service
-        
-        # Use case factories
-        self._factories['create_building_use_case'] = self._create_create_building_use_case
-        self._factories['update_building_use_case'] = self._create_update_building_use_case
-        self._factories['get_building_use_case'] = self._create_get_building_use_case
-        self._factories['list_buildings_use_case'] = self._create_list_buildings_use_case
-        self._factories['delete_building_use_case'] = self._create_delete_building_use_case
-    
-    def _create_building_repository(self) -> BuildingRepository:
-        """Create building repository instance."""
-        return self.config.building_repository_class()
-    
-    def _create_building_service(self) -> BuildingService:
-        """Create building service instance."""
-        repository = self.get('building_repository')
-        return BuildingService(repository)
-    
-    def _create_create_building_use_case(self) -> CreateBuildingUseCase:
-        """Create create building use case instance."""
-        repository = self.get('building_repository')
-        return CreateBuildingUseCase(repository)
-    
-    def _create_update_building_use_case(self) -> UpdateBuildingUseCase:
-        """Create update building use case instance."""
-        repository = self.get('building_repository')
-        return UpdateBuildingUseCase(repository)
-    
-    def _create_get_building_use_case(self) -> GetBuildingUseCase:
-        """Create get building use case instance."""
-        repository = self.get('building_repository')
-        return GetBuildingUseCase(repository)
-    
-    def _create_list_buildings_use_case(self) -> ListBuildingsUseCase:
-        """Create list buildings use case instance."""
-        repository = self.get('building_repository')
-        return ListBuildingsUseCase(repository)
-    
-    def _create_delete_building_use_case(self) -> DeleteBuildingUseCase:
-        """Create delete building use case instance."""
-        repository = self.get('building_repository')
-        return DeleteBuildingUseCase(repository)
-    
-    def get(self, name: str) -> Any:
-        """
-        Get a dependency by name.
-        
-        Args:
-            name: Name of the dependency
+            service_name: Name of the service to retrieve
             
         Returns:
-            Dependency instance
+            The requested service instance
             
         Raises:
-            KeyError: If dependency not found
+            KeyError: If the service is not found
         """
-        # Return cached instance if available
-        if name in self._instances:
-            return self._instances[name]
+        if service_name not in self._services:
+            raise KeyError(f"Service '{service_name}' not found in container")
         
-        # Create new instance if factory exists
-        if name in self._factories:
-            instance = self._factories[name]()
-            self._instances[name] = instance
-            return instance
-        
-        raise KeyError(f"Dependency '{name}' not found")
+        return self._services[service_name]
     
-    def register(self, name: str, factory: callable):
+    def register(self, service_name: str, service_instance: Any) -> None:
         """
-        Register a factory for a dependency.
+        Register a service in the container.
         
         Args:
-            name: Name of the dependency
-            factory: Factory function to create the dependency
+            service_name: Name of the service
+            service_instance: Service instance to register
         """
-        self._factories[name] = factory
+        self._services[service_name] = service_instance
+        logger.info(f"Registered service: {service_name}")
     
-    def register_instance(self, name: str, instance: Any):
+    def has(self, service_name: str) -> bool:
         """
-        Register an existing instance.
+        Check if a service exists in the container.
         
         Args:
-            name: Name of the dependency
-            instance: Instance to register
-        """
-        self._instances[name] = instance
-    
-    def clear(self):
-        """Clear all cached instances."""
-        self._instances.clear()
-    
-    def get_all_use_cases(self) -> Dict[str, Any]:
-        """
-        Get all use case instances.
-        
+            service_name: Name of the service to check
+            
         Returns:
-            Dictionary of use case instances
+            True if the service exists, False otherwise
         """
-        return {
-            'create_building': self.get('create_building_use_case'),
-            'update_building': self.get('update_building_use_case'),
-            'get_building': self.get('get_building_use_case'),
-            'list_buildings': self.get('list_buildings_use_case'),
-            'delete_building': self.get('delete_building_use_case')
-        }
+        return service_name in self._services
+    
+    def get_building_repository(self) -> BuildingRepository:
+        """Get the building repository."""
+        return self.get('building_repository')
+    
+    def get_building_service(self) -> BuildingService:
+        """Get the building service."""
+        return self.get('building_service')
+    
+    def get_create_building_use_case(self) -> CreateBuildingUseCase:
+        """Get the create building use case."""
+        return self.get('create_building_use_case')
+    
+    def get_update_building_use_case(self) -> UpdateBuildingUseCase:
+        """Get the update building use case."""
+        return self.get('update_building_use_case')
+    
+    def get_get_building_use_case(self) -> GetBuildingUseCase:
+        """Get the get building use case."""
+        return self.get('get_building_use_case')
+    
+    def get_delete_building_use_case(self) -> DeleteBuildingUseCase:
+        """Get the delete building use case."""
+        return self.get('delete_building_use_case')
+    
+    def get_list_buildings_use_case(self) -> ListBuildingsUseCase:
+        """Get the list buildings use case."""
+        return self.get('list_buildings_use_case')
     
     def get_all_services(self) -> Dict[str, Any]:
         """
-        Get all service instances.
+        Get all registered services.
         
         Returns:
-            Dictionary of service instances
+            Dictionary of all registered services
         """
-        return {
-            'building_service': self.get('building_service')
-        }
+        return self._services.copy()
     
-    def get_all_repositories(self) -> Dict[str, Any]:
-        """
-        Get all repository instances.
-        
-        Returns:
-            Dictionary of repository instances
-        """
-        return {
-            'building_repository': self.get('building_repository')
-        }
-
+    def clear(self) -> None:
+        """Clear all services from the container."""
+        self._services.clear()
+        logger.info("Container cleared")
+    
+    def reset(self) -> None:
+        """Reset the container to its initial state."""
+        self.clear()
+        self._configure_services()
+        logger.info("Container reset to initial state")
 
 # Global container instance
-_container: Container = None
-
-
-def get_container() -> Container:
-    """
-    Get the global container instance.
-    
-    Returns:
-        Global container instance
-    """
-    global _container
-    if _container is None:
-        _container = Container()
-    return _container
-
-
-def set_container(container: Container):
-    """
-    Set the global container instance.
-    
-    Args:
-        container: Container instance to set
-    """
-    global _container
-    _container = container
-
-
-def get_use_case(name: str) -> Any:
-    """
-    Get a use case by name.
-    
-    Args:
-        name: Name of the use case
-        
-    Returns:
-        Use case instance
-    """
-    container = get_container()
-    use_cases = container.get_all_use_cases()
-    return use_cases.get(name)
-
-
-def get_service(name: str) -> Any:
-    """
-    Get a service by name.
-    
-    Args:
-        name: Name of the service
-        
-    Returns:
-        Service instance
-    """
-    container = get_container()
-    services = container.get_all_services()
-    return services.get(name)
-
-
-def get_repository(name: str) -> Any:
-    """
-    Get a repository by name.
-    
-    Args:
-        name: Name of the repository
-        
-    Returns:
-        Repository instance
-    """
-    container = get_container()
-    repositories = container.get_all_repositories()
-    return repositories.get(name) 
+container = Container() 

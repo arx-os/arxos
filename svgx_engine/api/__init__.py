@@ -1,27 +1,26 @@
 """
-API Layer for Arxos Clean Architecture.
+API Module - REST API and WebSocket Interfaces
 
-This module contains the API layer components including REST endpoints,
-request/response models, and API documentation.
+This module contains API components including endpoints, models,
+and middleware for REST API and WebSocket interfaces.
 """
 
-from .endpoints import *
-from .models import *
-from .middleware import *
+from svgx_engine.api.endpoints import *
+from svgx_engine.api.models import *
+from svgx_engine.api.middleware import *
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "API module for SVGX Engine"
+
+# Export all API components
 __all__ = [
     # Endpoints
-    'BuildingAPI',
-    'HealthAPI',
+    "BuildingAPI", "HealthAPI",
     
     # Models
-    'BuildingResponse',
-    'CreateBuildingRequest',
-    'UpdateBuildingRequest',
-    'BuildingListResponse',
+    "APIRequest", "APIResponse",
     
     # Middleware
-    'ErrorHandlingMiddleware',
-    'LoggingMiddleware',
-    'AuthenticationMiddleware'
+    "APIMiddleware", "CorsMiddleware"
 ] 

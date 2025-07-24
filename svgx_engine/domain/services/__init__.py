@@ -1,13 +1,17 @@
 """
-Domain Services Module
+Domain Services - Business Logic Services
 
-This module contains all domain services used in the domain layer.
-Domain services contain business logic that doesn't belong to any specific entity
-or aggregate, following the Domain Service pattern.
+This module contains domain services that implement business logic
+and coordinate between aggregates and repositories.
 """
 
-from .building_service import BuildingService
+from svgx_engine.domain.services.building_service import BuildingService
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Domain services for SVGX Engine"
+
+# Export all services
 __all__ = [
-    'BuildingService'
+    "BuildingService"
 ] 

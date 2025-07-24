@@ -4,55 +4,101 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 )
 
-// CacheService provides a high-level caching abstraction with TTL and invalidation
+// CacheLevel represents different cache levels
+type CacheLevel string
+
+const (
+	LevelL1 CacheLevel = "L1" // Memory cache (fastest, limited size)
+	LevelL2 CacheLevel = "L2" // Redis cache (fast, larger size)
+	LevelL3 CacheLevel = "L3" // Disk cache (slower, unlimited size)
+	LevelL4 CacheLevel = "L4" // Database cache (persistent, queryable)
+)
+
+// CachePolicy represents cache eviction policies
+type CachePolicy string
+
+const (
+	PolicyLRU  CachePolicy = "lru"  // Least Recently Used
+	PolicyLFU  CachePolicy = "lfu"  // Least Frequently Used
+	PolicyTTL  CachePolicy = "ttl"  // Time To Live
+	PolicyFIFO CachePolicy = "fifo" // First In First Out
+)
+
+// CacheService provides a high-level caching abstraction with multi-level caching
 type CacheService struct {
-	redis  *RedisService
-	logger *zap.Logger
-	ctx    context.Context
+	redis       *RedisService
+	logger      *zap.Logger
+	ctx         context.Context
+	config      *CacheConfig
+	memoryCache *MemoryCache
+	diskCache   *DiskCache
+	dbCache     *DatabaseCache
+	strategies  *CacheStrategies
+	metrics     *CacheMetrics
+	mu          sync.RWMutex
 }
 
 // CacheConfig holds configuration for the cache service
 type CacheConfig struct {
-	DefaultTTL    time.Duration
-	MaxTTL        time.Duration
-	EnableMetrics bool
-	KeyPrefix     string
+	DefaultTTL        time.Duration
+	MaxTTL            time.Duration
+	EnableMetrics     bool
+	KeyPrefix         string
+	MemoryCacheSize   int64 // MB
+	DiskCacheSize     int64 // MB
+	EnableCompression bool
+	CacheLevels       []CacheLevel
+	EvictionPolicy    CachePolicy
+	WarmupEnabled     bool
 }
 
 // DefaultCacheConfig returns a default cache configuration
 func DefaultCacheConfig() *CacheConfig {
 	return &CacheConfig{
-		DefaultTTL:    15 * time.Minute,
-		MaxTTL:        24 * time.Hour,
-		EnableMetrics: true,
-		KeyPrefix:     "arx:cache:",
+		DefaultTTL:        15 * time.Minute,
+		MaxTTL:            24 * time.Hour,
+		EnableMetrics:     true,
+		KeyPrefix:         "arx:cache:",
+		MemoryCacheSize:   100,  // 100MB
+		DiskCacheSize:     1000, // 1GB
+		EnableCompression: true,
+		CacheLevels:       []CacheLevel{LevelL1, LevelL2, LevelL3, LevelL4},
+		EvictionPolicy:    PolicyLRU,
+		WarmupEnabled:     true,
 	}
 }
 
 // CacheEntry represents a cached item with metadata
 type CacheEntry struct {
-	Value       interface{} `json:"value"`
-	CreatedAt   time.Time   `json:"created_at"`
-	ExpiresAt   time.Time   `json:"expires_at"`
-	AccessCount int64       `json:"access_count"`
-	LastAccess  time.Time   `json:"last_access"`
+	Value       interface{}            `json:"value"`
+	CreatedAt   time.Time              `json:"created_at"`
+	ExpiresAt   time.Time              `json:"expires_at"`
+	AccessCount int64                  `json:"access_count"`
+	LastAccess  time.Time              `json:"last_access"`
+	SizeBytes   int64                  `json:"size_bytes"`
+	Compressed  bool                   `json:"compressed"`
+	Level       CacheLevel             `json:"level"`
+	Metadata    map[string]interface{} `json:"metadata"`
 }
 
 // CacheStats holds cache statistics
 type CacheStats struct {
-	Hits        int64
-	Misses      int64
-	HitRate     float64
-	TotalKeys   int64
-	MemoryUsage int64
+	Hits              int64
+	Misses            int64
+	HitRate           float64
+	TotalKeys         int64
+	MemoryUsage       int64
+	CompressionRatio  float64
+	AverageAccessTime float64
 }
 
-// NewCacheService creates a new cache service
+// NewCacheService creates a new enhanced cache service
 func NewCacheService(redisService *RedisService, config *CacheConfig, logger *zap.Logger) *CacheService {
 	if config == nil {
 		config = DefaultCacheConfig()
@@ -62,44 +108,103 @@ func NewCacheService(redisService *RedisService, config *CacheConfig, logger *za
 		redis:  redisService,
 		logger: logger,
 		ctx:    context.Background(),
+		config: config,
 	}
 
-	logger.Info("Cache service initialized",
+	// Initialize cache levels
+	service.initializeCacheLevels()
+
+	// Initialize strategies and metrics
+	service.strategies = NewCacheStrategies(service, logger)
+	service.metrics = NewCacheMetrics(service, logger)
+
+	logger.Info("Enhanced cache service initialized",
 		zap.Duration("default_ttl", config.DefaultTTL),
 		zap.Duration("max_ttl", config.MaxTTL),
 		zap.String("key_prefix", config.KeyPrefix),
+		zap.Int64("memory_cache_size_mb", config.MemoryCacheSize),
+		zap.Int64("disk_cache_size_mb", config.DiskCacheSize),
+		zap.Bool("compression_enabled", config.EnableCompression),
 	)
 
 	return service
 }
 
-// Get retrieves a value from cache
+// initializeCacheLevels initializes all cache levels
+func (c *CacheService) initializeCacheLevels() {
+	// Initialize memory cache (L1)
+	c.memoryCache = NewMemoryCache(c.config.MemoryCacheSize, c.config.EvictionPolicy, c.logger)
+
+	// Initialize disk cache (L3)
+	c.diskCache = NewDiskCache("cache", c.config.DiskCacheSize, c.logger)
+
+	// Initialize database cache (L4)
+	c.dbCache = NewDatabaseCache("cache.db", c.logger)
+}
+
+// Get retrieves a value from cache using multi-level strategy
 func (c *CacheService) Get(key string) (interface{}, error) {
+	startTime := time.Now()
 	fullKey := c.buildKey(key)
 
-	// Get raw value from Redis
+	// Try each cache level in order
+	for _, level := range c.config.CacheLevels {
+		value, err := c.getFromLevel(key, fullKey, level)
+		if err != nil {
+			c.logger.Debug("Cache miss at level", zap.String("key", key), zap.String("level", string(level)), zap.Error(err))
+			continue
+		}
+
+		if value != nil {
+			// Cache hit - update metrics and promote to higher levels
+			accessTime := time.Since(startTime)
+			c.metrics.RecordHit(level, accessTime)
+			c.promoteToHigherLevels(key, value, level)
+			return value, nil
+		}
+	}
+
+	// Cache miss
+	c.metrics.RecordMiss()
+	c.logger.Debug("Cache miss across all levels", zap.String("key", key))
+	return nil, nil
+}
+
+// getFromLevel retrieves a value from a specific cache level
+func (c *CacheService) getFromLevel(key, fullKey string, level CacheLevel) (interface{}, error) {
+	switch level {
+	case LevelL1:
+		return c.memoryCache.Get(key)
+	case LevelL2:
+		return c.getFromRedis(fullKey)
+	case LevelL3:
+		return c.diskCache.Get(key)
+	case LevelL4:
+		return c.dbCache.Get(key)
+	default:
+		return nil, fmt.Errorf("unknown cache level: %s", level)
+	}
+}
+
+// getFromRedis retrieves a value from Redis (L2)
+func (c *CacheService) getFromRedis(fullKey string) (interface{}, error) {
 	rawValue, err := c.redis.Get(fullKey)
 	if err != nil {
-		c.logger.Debug("Cache miss", zap.String("key", key), zap.Error(err))
-		return nil, fmt.Errorf("cache get failed for key %s: %w", key, err)
+		return nil, err
 	}
 
 	if rawValue == "" {
-		c.logger.Debug("Cache miss - key not found", zap.String("key", key))
 		return nil, nil
 	}
 
-	// Unmarshal cache entry
 	var entry CacheEntry
 	if err := json.Unmarshal([]byte(rawValue), &entry); err != nil {
-		c.logger.Error("Failed to unmarshal cache entry", zap.String("key", key), zap.Error(err))
-		return nil, fmt.Errorf("failed to unmarshal cache entry for key %s: %w", key, err)
+		return nil, err
 	}
 
 	// Check if entry has expired
 	if time.Now().After(entry.ExpiresAt) {
-		c.logger.Debug("Cache entry expired", zap.String("key", key))
-		c.Delete(key) // Clean up expired entry
+		c.Delete(fullKey) // Clean up expired entry
 		return nil, nil
 	}
 
@@ -108,24 +213,21 @@ func (c *CacheService) Get(key string) (interface{}, error) {
 	entry.LastAccess = time.Now()
 
 	// Update the entry in cache
-	if err := c.updateEntry(fullKey, entry); err != nil {
-		c.logger.Warn("Failed to update cache entry stats", zap.String("key", key), zap.Error(err))
-	}
+	c.updateEntry(fullKey, entry)
 
-	c.logger.Debug("Cache hit", zap.String("key", key), zap.Int64("access_count", entry.AccessCount))
 	return entry.Value, nil
 }
 
-// Set stores a value in cache with TTL
+// Set stores a value in cache across all levels
 func (c *CacheService) Set(key string, value interface{}, ttl time.Duration) error {
 	fullKey := c.buildKey(key)
 
 	// Validate TTL
 	if ttl <= 0 {
-		ttl = 15 * time.Minute // Default TTL
+		ttl = c.config.DefaultTTL
 	}
-	if ttl > 24*time.Hour {
-		ttl = 24 * time.Hour // Max TTL
+	if ttl > c.config.MaxTTL {
+		ttl = c.config.MaxTTL
 	}
 
 	// Create cache entry
@@ -135,65 +237,114 @@ func (c *CacheService) Set(key string, value interface{}, ttl time.Duration) err
 		ExpiresAt:   time.Now().Add(ttl),
 		AccessCount: 0,
 		LastAccess:  time.Now(),
+		Level:       LevelL1, // Start at L1
+		Metadata:    make(map[string]interface{}),
 	}
 
-	// Marshal entry to JSON
-	entryData, err := json.Marshal(entry)
-	if err != nil {
-		c.logger.Error("Failed to marshal cache entry", zap.String("key", key), zap.Error(err))
-		return fmt.Errorf("failed to marshal cache entry for key %s: %w", key, err)
+	// Store in all cache levels
+	for _, level := range c.config.CacheLevels {
+		if err := c.setInLevel(key, fullKey, entry, level, ttl); err != nil {
+			c.logger.Warn("Failed to set in cache level", zap.String("key", key), zap.String("level", string(level)), zap.Error(err))
+		}
 	}
 
-	// Store in Redis with TTL
-	if err := c.redis.Set(fullKey, string(entryData), ttl); err != nil {
-		c.logger.Error("Failed to set cache entry", zap.String("key", key), zap.Error(err))
-		return fmt.Errorf("failed to set cache entry for key %s: %w", key, err)
-	}
-
-	c.logger.Debug("Cache entry set", zap.String("key", key), zap.Duration("ttl", ttl))
+	c.logger.Debug("Cache entry set across all levels", zap.String("key", key), zap.Duration("ttl", ttl))
 	return nil
 }
 
-// Delete removes a key from cache
+// setInLevel stores a value in a specific cache level
+func (c *CacheService) setInLevel(key, fullKey string, entry CacheEntry, level CacheLevel, ttl time.Duration) error {
+	switch level {
+	case LevelL1:
+		return c.memoryCache.Set(key, entry.Value, ttl)
+	case LevelL2:
+		return c.setInRedis(fullKey, entry, ttl)
+	case LevelL3:
+		return c.diskCache.Set(key, entry.Value, ttl)
+	case LevelL4:
+		return c.dbCache.Set(key, entry.Value, ttl)
+	default:
+		return fmt.Errorf("unknown cache level: %s", level)
+	}
+}
+
+// setInRedis stores a value in Redis (L2)
+func (c *CacheService) setInRedis(fullKey string, entry CacheEntry, ttl time.Duration) error {
+	entryData, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+
+	// Compress if enabled
+	if c.config.EnableCompression {
+		entryData = c.strategies.Compress(entryData)
+		entry.Compressed = true
+	}
+
+	return c.redis.Set(fullKey, string(entryData), ttl)
+}
+
+// Delete removes a key from all cache levels
 func (c *CacheService) Delete(key string) error {
 	fullKey := c.buildKey(key)
 
-	if err := c.redis.Delete(fullKey); err != nil {
-		c.logger.Error("Failed to delete cache entry", zap.String("key", key), zap.Error(err))
-		return fmt.Errorf("failed to delete cache entry for key %s: %w", key, err)
+	// Delete from all levels
+	for _, level := range c.config.CacheLevels {
+		switch level {
+		case LevelL1:
+			c.memoryCache.Delete(key)
+		case LevelL2:
+			c.redis.Delete(fullKey)
+		case LevelL3:
+			c.diskCache.Delete(key)
+		case LevelL4:
+			c.dbCache.Delete(key)
+		}
 	}
 
-	c.logger.Debug("Cache entry deleted", zap.String("key", key))
+	c.logger.Debug("Cache entry deleted from all levels", zap.String("key", key))
 	return nil
 }
 
-// InvalidatePattern removes all keys matching a pattern
+// InvalidatePattern removes all keys matching a pattern across all levels
 func (c *CacheService) InvalidatePattern(pattern string) error {
 	fullPattern := c.buildKey(pattern)
 
-	// Use Redis SCAN to find matching keys
+	// Invalidate from all levels
+	for _, level := range c.config.CacheLevels {
+		switch level {
+		case LevelL1:
+			c.memoryCache.InvalidatePattern(pattern)
+		case LevelL2:
+			c.invalidateRedisPattern(fullPattern)
+		case LevelL3:
+			c.diskCache.InvalidatePattern(pattern)
+		case LevelL4:
+			c.dbCache.InvalidatePattern(pattern)
+		}
+	}
+
+	return nil
+}
+
+// invalidateRedisPattern removes Redis keys matching a pattern
+func (c *CacheService) invalidateRedisPattern(pattern string) error {
 	var keys []string
 	var cursor uint64
 	var err error
 
 	for {
-		// Scan for keys matching pattern
-		keys, cursor, err = c.redis.GetClient().Scan(c.ctx, cursor, fullPattern, 100).Result()
+		keys, cursor, err = c.redis.GetClient().Scan(c.ctx, cursor, pattern, 100).Result()
 		if err != nil {
-			c.logger.Error("Failed to scan for cache keys", zap.String("pattern", pattern), zap.Error(err))
-			return fmt.Errorf("failed to scan for cache keys with pattern %s: %w", pattern, err)
+			return err
 		}
 
-		// Delete matching keys
 		if len(keys) > 0 {
 			if err := c.redis.GetClient().Del(c.ctx, keys...).Err(); err != nil {
-				c.logger.Error("Failed to delete cache keys", zap.Strings("keys", keys), zap.Error(err))
-				return fmt.Errorf("failed to delete cache keys: %w", err)
+				return err
 			}
-			c.logger.Info("Invalidated cache keys", zap.String("pattern", pattern), zap.Int("count", len(keys)))
 		}
 
-		// Continue scanning if there are more keys
 		if cursor == 0 {
 			break
 		}
@@ -216,7 +367,6 @@ func (c *CacheService) GetWithTTL(key string) (interface{}, time.Duration, error
 	fullKey := c.buildKey(key)
 	ttl, err := c.redis.TTL(fullKey)
 	if err != nil {
-		c.logger.Warn("Failed to get TTL for cache key", zap.String("key", key), zap.Error(err))
 		return value, 0, nil
 	}
 
@@ -227,41 +377,31 @@ func (c *CacheService) GetWithTTL(key string) (interface{}, time.Duration, error
 func (c *CacheService) SetWithMetadata(key string, value interface{}, ttl time.Duration, metadata map[string]interface{}) error {
 	fullKey := c.buildKey(key)
 
-	// Create cache entry with metadata
 	entry := CacheEntry{
 		Value:       value,
 		CreatedAt:   time.Now(),
 		ExpiresAt:   time.Now().Add(ttl),
 		AccessCount: 0,
 		LastAccess:  time.Now(),
+		Level:       LevelL1,
+		Metadata:    metadata,
 	}
 
-	// Add metadata to entry
 	entryData := map[string]interface{}{
 		"entry":    entry,
 		"metadata": metadata,
 	}
 
-	// Marshal to JSON
 	data, err := json.Marshal(entryData)
 	if err != nil {
-		c.logger.Error("Failed to marshal cache entry with metadata", zap.String("key", key), zap.Error(err))
-		return fmt.Errorf("failed to marshal cache entry with metadata for key %s: %w", key, err)
+		return err
 	}
 
-	// Store in Redis
-	if err := c.redis.Set(fullKey, string(data), ttl); err != nil {
-		c.logger.Error("Failed to set cache entry with metadata", zap.String("key", key), zap.Error(err))
-		return fmt.Errorf("failed to set cache entry with metadata for key %s: %w", key, err)
-	}
-
-	c.logger.Debug("Cache entry with metadata set", zap.String("key", key), zap.Duration("ttl", ttl))
-	return nil
+	return c.redis.Set(fullKey, string(data), ttl)
 }
 
 // GetOrSet retrieves a value from cache or sets it using a function
 func (c *CacheService) GetOrSet(key string, ttl time.Duration, setter func() (interface{}, error)) (interface{}, error) {
-	// Try to get from cache first
 	value, err := c.Get(key)
 	if err != nil {
 		c.logger.Warn("Failed to get from cache, will use setter", zap.String("key", key), zap.Error(err))
@@ -269,17 +409,13 @@ func (c *CacheService) GetOrSet(key string, ttl time.Duration, setter func() (in
 		return value, nil
 	}
 
-	// Value not in cache, use setter function
 	value, err = setter()
 	if err != nil {
-		c.logger.Error("Setter function failed", zap.String("key", key), zap.Error(err))
-		return nil, fmt.Errorf("setter function failed for key %s: %w", key, err)
+		return nil, err
 	}
 
-	// Store in cache
 	if err := c.Set(key, value, ttl); err != nil {
 		c.logger.Warn("Failed to store value in cache", zap.String("key", key), zap.Error(err))
-		// Don't return error, just log warning
 	}
 
 	return value, nil
@@ -291,84 +427,30 @@ func (c *CacheService) MGet(keys ...string) (map[string]interface{}, error) {
 		return make(map[string]interface{}), nil
 	}
 
-	// Build full keys
-	fullKeys := make([]string, len(keys))
-	for i, key := range keys {
-		fullKeys[i] = c.buildKey(key)
-	}
-
-	// Get values from Redis
-	values, err := c.redis.GetClient().MGet(c.ctx, fullKeys...).Result()
-	if err != nil {
-		c.logger.Error("Failed to MGet from cache", zap.Strings("keys", keys), zap.Error(err))
-		return nil, fmt.Errorf("failed to MGet from cache: %w", err)
-	}
-
-	// Process results
 	result := make(map[string]interface{})
-	for i, key := range keys {
-		if i < len(values) && values[i] != nil {
-			// Unmarshal cache entry
-			var entry CacheEntry
-			if err := json.Unmarshal([]byte(values[i].(string)), &entry); err != nil {
-				c.logger.Warn("Failed to unmarshal cache entry", zap.String("key", key), zap.Error(err))
-				continue
-			}
 
-			// Check if entry has expired
-			if time.Now().After(entry.ExpiresAt) {
-				c.Delete(key) // Clean up expired entry
-				continue
-			}
-
-			result[key] = entry.Value
+	for _, key := range keys {
+		value, err := c.Get(key)
+		if err != nil {
+			c.logger.Warn("Failed to get key in MGet", zap.String("key", key), zap.Error(err))
+			continue
+		}
+		if value != nil {
+			result[key] = value
 		}
 	}
 
-	c.logger.Debug("MGet completed", zap.Strings("keys", keys), zap.Int("found", len(result)))
 	return result, nil
 }
 
 // MSet stores multiple values in cache
 func (c *CacheService) MSet(entries map[string]interface{}, ttl time.Duration) error {
-	if len(entries) == 0 {
-		return nil
-	}
-
-	// Use pipeline for better performance
-	pipe := c.redis.GetClient().Pipeline()
-
 	for key, value := range entries {
-		fullKey := c.buildKey(key)
-
-		// Create cache entry
-		entry := CacheEntry{
-			Value:       value,
-			CreatedAt:   time.Now(),
-			ExpiresAt:   time.Now().Add(ttl),
-			AccessCount: 0,
-			LastAccess:  time.Now(),
+		if err := c.Set(key, value, ttl); err != nil {
+			c.logger.Warn("Failed to set key in MSet", zap.String("key", key), zap.Error(err))
 		}
-
-		// Marshal entry
-		entryData, err := json.Marshal(entry)
-		if err != nil {
-			c.logger.Error("Failed to marshal cache entry", zap.String("key", key), zap.Error(err))
-			continue
-		}
-
-		// Add to pipeline
-		pipe.Set(c.ctx, fullKey, string(entryData), ttl)
 	}
 
-	// Execute pipeline
-	_, err := pipe.Exec(c.ctx)
-	if err != nil {
-		c.logger.Error("Failed to execute MSet pipeline", zap.Error(err))
-		return fmt.Errorf("failed to execute MSet pipeline: %w", err)
-	}
-
-	c.logger.Debug("MSet completed", zap.Int("count", len(entries)))
 	return nil
 }
 
@@ -384,65 +466,76 @@ func (c *CacheService) Expire(key string, ttl time.Duration) error {
 	return c.redis.Expire(fullKey, ttl)
 }
 
-// Clear removes all cache entries
+// Clear removes all cache entries from all levels
 func (c *CacheService) Clear() error {
-	pattern := c.buildKey("*")
-	return c.InvalidatePattern("*")
+	for _, level := range c.config.CacheLevels {
+		switch level {
+		case LevelL1:
+			c.memoryCache.Clear()
+		case LevelL2:
+			c.Clear()
+		case LevelL3:
+			c.diskCache.Clear()
+		case LevelL4:
+			c.dbCache.Clear()
+		}
+	}
+
+	return nil
 }
 
-// GetStats returns cache statistics
+// GetStats returns comprehensive cache statistics
 func (c *CacheService) GetStats() (*CacheStats, error) {
-	// Get Redis pool stats
-	poolStats := c.redis.GetStats()
+	stats := &CacheStats{}
 
-	// Count total keys
-	pattern := c.buildKey("*")
-	var totalKeys int64
-	var cursor uint64
-	var err error
-
-	for {
-		var keys []string
-		keys, cursor, err = c.redis.GetClient().Scan(c.ctx, cursor, pattern, 1000).Result()
-		if err != nil {
-			c.logger.Error("Failed to scan for cache keys during stats", zap.Error(err))
-			break
-		}
-
-		totalKeys += int64(len(keys))
-
-		if cursor == 0 {
-			break
-		}
+	// Get stats from all levels
+	for _, level := range c.config.CacheLevels {
+		levelStats := c.getLevelStats(level)
+		stats.Hits += levelStats.Hits
+		stats.Misses += levelStats.Misses
+		stats.TotalKeys += levelStats.TotalKeys
+		stats.MemoryUsage += levelStats.MemoryUsage
 	}
 
-	// Calculate hit rate
-	var hitRate float64
-	totalRequests := poolStats.Hits + poolStats.Misses
+	// Calculate overall hit rate
+	totalRequests := stats.Hits + stats.Misses
 	if totalRequests > 0 {
-		hitRate = float64(poolStats.Hits) / float64(totalRequests) * 100
+		stats.HitRate = float64(stats.Hits) / float64(totalRequests) * 100
 	}
 
-	stats := &CacheStats{
-		Hits:      poolStats.Hits,
-		Misses:    poolStats.Misses,
-		HitRate:   hitRate,
-		TotalKeys: totalKeys,
-	}
-
-	c.logger.Debug("Cache stats retrieved",
-		zap.Int64("hits", stats.Hits),
-		zap.Int64("misses", stats.Misses),
-		zap.Float64("hit_rate", stats.HitRate),
-		zap.Int64("total_keys", stats.TotalKeys),
-	)
+	// Get average access time from metrics
+	stats.AverageAccessTime = c.metrics.GetAverageAccessTime()
 
 	return stats, nil
 }
 
+// getLevelStats returns statistics for a specific cache level
+func (c *CacheService) getLevelStats(level CacheLevel) *CacheStats {
+	switch level {
+	case LevelL1:
+		return c.memoryCache.GetStats()
+	case LevelL2:
+		return c.getRedisStats()
+	case LevelL3:
+		return c.diskCache.GetStats()
+	case LevelL4:
+		return c.dbCache.GetStats()
+	default:
+		return &CacheStats{}
+	}
+}
+
+// getRedisStats returns Redis cache statistics
+func (c *CacheService) getRedisStats() *CacheStats {
+	poolStats := c.redis.GetStats()
+	return &CacheStats{
+		Hits:   poolStats.Hits,
+		Misses: poolStats.Misses,
+	}
+}
+
 // HealthCheck performs a health check on the cache service
 func (c *CacheService) HealthCheck() error {
-	// Test basic operations
 	testKey := "health_check_test"
 	testValue := "test_value"
 	testTTL := 10 * time.Second
@@ -462,45 +555,56 @@ func (c *CacheService) HealthCheck() error {
 		return fmt.Errorf("cache health check failed - value mismatch: expected %s, got %v", testValue, value)
 	}
 
-	// Test exists
-	exists, err := c.Exists(testKey)
-	if err != nil {
-		return fmt.Errorf("cache health check failed - exists: %w", err)
-	}
-
-	if !exists {
-		return fmt.Errorf("cache health check failed - key should exist")
-	}
-
 	// Clean up
-	if err := c.Delete(testKey); err != nil {
-		c.logger.Warn("Failed to clean up health check test key", zap.Error(err))
+	c.Delete(testKey)
+
+	return nil
+}
+
+// promoteToHigherLevels promotes a value to higher cache levels
+func (c *CacheService) promoteToHigherLevels(key string, value interface{}, currentLevel CacheLevel) {
+	// Find higher levels
+	var higherLevels []CacheLevel
+	for _, level := range c.config.CacheLevels {
+		if level != currentLevel {
+			higherLevels = append(higherLevels, level)
+		}
 	}
 
-	c.logger.Debug("Cache health check passed")
-	return nil
+	// Promote to higher levels asynchronously
+	go func() {
+		for _, level := range higherLevels {
+			switch level {
+			case LevelL1:
+				c.memoryCache.Set(key, value, c.config.DefaultTTL)
+			case LevelL2:
+				// Already in Redis
+			case LevelL3:
+				c.diskCache.Set(key, value, c.config.DefaultTTL)
+			case LevelL4:
+				c.dbCache.Set(key, value, c.config.DefaultTTL)
+			}
+		}
+	}()
 }
 
 // buildKey builds a full cache key with prefix
 func (c *CacheService) buildKey(key string) string {
-	return "arx:cache:" + key
+	return c.config.KeyPrefix + key
 }
 
 // updateEntry updates a cache entry with new access statistics
 func (c *CacheService) updateEntry(fullKey string, entry CacheEntry) error {
-	// Marshal updated entry
 	entryData, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}
 
-	// Get current TTL
 	ttl, err := c.redis.TTL(fullKey)
 	if err != nil {
 		return err
 	}
 
-	// Update entry with same TTL
 	return c.redis.Set(fullKey, string(entryData), ttl)
 }
 
@@ -510,7 +614,7 @@ func (c *CacheService) GetCacheEntry(key string) (*CacheEntry, error) {
 
 	rawValue, err := c.redis.Get(fullKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cache entry for key %s: %w", key, err)
+		return nil, err
 	}
 
 	if rawValue == "" {
@@ -519,19 +623,47 @@ func (c *CacheService) GetCacheEntry(key string) (*CacheEntry, error) {
 
 	var entry CacheEntry
 	if err := json.Unmarshal([]byte(rawValue), &entry); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal cache entry for key %s: %w", key, err)
+		return nil, err
 	}
 
-	// Check if entry has expired
 	if time.Now().After(entry.ExpiresAt) {
-		c.Delete(key) // Clean up expired entry
+		c.Delete(key)
 		return nil, nil
 	}
 
 	return &entry, nil
 }
 
-// Close closes the cache service and underlying Redis connection
+// WarmCache warms the cache with common operations
+func (c *CacheService) WarmCache(operations []CacheWarmupOperation) error {
+	if !c.config.WarmupEnabled {
+		return nil
+	}
+
+	c.logger.Info("Starting cache warmup", zap.Int("operations", len(operations)))
+
+	for _, op := range operations {
+		if err := c.strategies.WarmupOperation(op); err != nil {
+			c.logger.Warn("Failed to warmup operation", zap.String("key", op.Key), zap.Error(err))
+		}
+	}
+
+	return nil
+}
+
+// CacheWarmupOperation represents a cache warmup operation
+type CacheWarmupOperation struct {
+	Key         string
+	Value       interface{}
+	TTL         time.Duration
+	Priority    int
+	Description string
+}
+
+// Close closes the cache service and all underlying connections
 func (c *CacheService) Close() error {
+	c.memoryCache.Close()
+	c.diskCache.Close()
+	c.dbCache.Close()
 	return c.redis.Close()
 }

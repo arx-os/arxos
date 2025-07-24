@@ -1,13 +1,17 @@
 """
-Repositories Module
+Domain Repositories - Data Access Interfaces
 
-This module contains all repository interfaces used in the domain layer.
-Repositories define the contract for data access and persistence,
-following the Repository pattern for clean separation of concerns.
+This module contains repository interfaces that define the contract
+for data access and persistence operations.
 """
 
-from .building_repository import BuildingRepository
+from svgx_engine.domain.repositories.building_repository import BuildingRepository
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Domain repositories for SVGX Engine"
+
+# Export all repositories
 __all__ = [
-    'BuildingRepository'
+    "BuildingRepository"
 ] 

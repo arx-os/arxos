@@ -452,68 +452,127 @@ spec:
       storage: 1Gi
 
 ---
+# Prometheus ServiceMonitor for SVGX Engine
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: svgx-engine-monitor
+  namespace: svgx-engine
+  labels:
+    app: svgx-engine
+    team: platform
+spec:
+  selector:
+    matchLabels:
+      app: svgx-engine
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - svgx-engine
+
+---
+# PrometheusRule for SVGX Engine alerts
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: svgx-engine-alerts
-  namespace: svgx-engine-staging
+  namespace: svgx-engine
+  labels:
+    app: svgx-engine
+    team: platform
 spec:
   groups:
-  - name: svgx-engine
-    rules:
-    - alert: HighResponseTime
-      expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) * 1000 > 16
-      for: 2m
-      labels:
-        severity: warning
-      annotations:
-        summary: "High response time detected"
-        description: "P95 response time is {{ $value }}ms (CTO target: <16ms)"
+    - name: svgx-engine.rules
+      rules:
+        - alert: SVGXEngineDown
+          expr: up{app="svgx-engine"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "SVGX Engine is down"
+            description: "SVGX Engine has been down for more than 1 minute"
+        
+        - alert: SVGXEngineHighResponseTime
+          expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{app="svgx-engine"}[5m])) > 0.1
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SVGX Engine high response time"
+            description: "95th percentile response time is above 100ms"
+        
+        - alert: SVGXEngineHighErrorRate
+          expr: rate(http_requests_total{app="svgx-engine", status=~"5.."}[5m]) / rate(http_requests_total{app="svgx-engine"}[5m]) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SVGX Engine high error rate"
+            description: "Error rate is above 5%"
+        
+        - alert: SVGXEngineHighMemoryUsage
+          expr: (container_memory_usage_bytes{container="svgx-engine"} / container_spec_memory_limit_bytes{container="svgx-engine"}) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SVGX Engine high memory usage"
+            description: "Memory usage is above 85%"
+        
+        - alert: SVGXEngineHighCPUUsage
+          expr: (rate(container_cpu_usage_seconds_total{container="svgx-engine"}[5m]) * 100) > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SVGX Engine high CPU usage"
+            description: "CPU usage is above 80%"
 
-    - alert: HighErrorRate
-      expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.01
-      for: 1m
-      labels:
-        severity: critical
-      annotations:
-        summary: "High error rate detected"
-        description: "Error rate is {{ $value }} errors/sec"
-
-    - alert: ServiceDown
-      expr: up{job="svgx-engine-staging"} == 0
-      for: 30s
-      labels:
-        severity: critical
-      annotations:
-        summary: "SVGX Engine service is down"
-        description: "Service has been down for more than 30 seconds"
-
-    - alert: HighMemoryUsage
-      expr: process_resident_memory_bytes / 1024 / 1024 > 800
-      for: 5m
-      labels:
-        severity: warning
-      annotations:
-        summary: "High memory usage"
-        description: "Memory usage is {{ $value }}MB"
-
-    - alert: HighCPUUsage
-      expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
-      for: 5m
-      labels:
-        severity: warning
-      annotations:
-        summary: "High CPU usage"
-        description: "CPU usage is {{ $value }}%"
-
-    - alert: LowSuccessRate
-      expr: rate(http_requests_total{status!~"5.."}[5m]) / rate(http_requests_total[5m]) < 0.95
-      for: 2m
-      labels:
-        severity: warning
-      annotations:
-        summary: "Low success rate"
-        description: "Success rate is {{ $value | humanizePercentage }}"
+---
+# HorizontalPodAutoscaler for SVGX Engine
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: svgx-engine-hpa
+  namespace: svgx-engine
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: svgx-engine
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
 
 ---
 apiVersion: networking.k8s.io/v1

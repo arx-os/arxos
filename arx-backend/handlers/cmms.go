@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -430,15 +431,94 @@ func SyncCMMSData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement actual CMMS data synchronization logic
-	// This would involve:
-	// 1. Fetching data from CMMS API
-	// 2. Mapping fields using cmms_mappings
-	// 3. Transforming data according to transform rules
-	// 4. Inserting/updating records in Arxos database
-	// 5. Updating sync log with results
+	// Implement actual CMMS data synchronization logic
+	go func() {
+		defer func() {
+			// Update sync log with completion status
+			db.DB.Exec(`
+				UPDATE cmms_sync_logs 
+				SET status = 'completed', completed_at = CURRENT_TIMESTAMP 
+				WHERE id = ?
+			`, syncLogID)
+		}()
 
-	// For now, return a placeholder response
+		// 1. Fetch CMMS connection details
+		var connection models.CMMSConnection
+		err := db.DB.Where("id = ?", connectionIDInt).First(&connection).Error
+		if err != nil {
+			log.Printf("Failed to fetch CMMS connection: %v", err)
+			return
+		}
+
+		// 2. Fetch field mappings for this connection
+		var mappings []models.CMMSMapping
+		err = db.DB.Where("cmms_connection_id = ?", connectionIDInt).Find(&mappings).Error
+		if err != nil {
+			log.Printf("Failed to fetch CMMS mappings: %v", err)
+			return
+		}
+
+		// 3. Create mapping lookup
+		fieldMappings := make(map[string]string)
+		for _, mapping := range mappings {
+			fieldMappings[mapping.CMMSField] = mapping.ArxosField
+		}
+
+		// 4. Fetch data from CMMS API based on sync type
+		var cmmsData []map[string]interface{}
+		switch syncType {
+		case "work_orders":
+			cmmsData, err = cmmsClient.FetchWorkOrders(connectionIDInt)
+		case "maintenance_schedules":
+			cmmsData, err = cmmsClient.FetchMaintenanceSchedules(connectionIDInt)
+		case "equipment":
+			cmmsData, err = cmmsClient.FetchEquipment(connectionIDInt)
+		case "assets":
+			cmmsData, err = cmmsClient.FetchAssets(connectionIDInt)
+		default:
+			log.Printf("Unknown sync type: %s", syncType)
+			return
+		}
+
+		if err != nil {
+			log.Printf("Failed to fetch CMMS data: %v", err)
+			return
+		}
+
+		// 5. Transform and sync data
+		syncedCount := 0
+		errorCount := 0
+
+		for _, data := range cmmsData {
+			// Transform data using field mappings
+			transformedData := transformCMMSData(data, fieldMappings)
+
+			// Insert or update record based on sync type
+			err = syncCMMSRecord(syncType, transformedData, connectionIDInt)
+			if err != nil {
+				log.Printf("Failed to sync record: %v", err)
+				errorCount++
+			} else {
+				syncedCount++
+			}
+		}
+
+		// 6. Update sync log with results
+		db.DB.Exec(`
+			UPDATE cmms_sync_logs 
+			SET status = 'completed', 
+				completed_at = CURRENT_TIMESTAMP,
+				records_processed = ?,
+				records_synced = ?,
+				error_count = ?
+			WHERE id = ?
+		`, len(cmmsData), syncedCount, errorCount, syncLogID)
+
+		log.Printf("CMMS sync completed: %d records processed, %d synced, %d errors",
+			len(cmmsData), syncedCount, errorCount)
+	}()
+
+	// Return immediate response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message":     "CMMS sync initiated",
@@ -446,6 +526,119 @@ func SyncCMMSData(w http.ResponseWriter, r *http.Request) {
 		"sync_type":   syncType,
 		"status":      "in_progress",
 	})
+}
+
+// transformCMMSData transforms CMMS data using field mappings
+func transformCMMSData(data map[string]interface{}, fieldMappings map[string]string) map[string]interface{} {
+	transformed := make(map[string]interface{})
+
+	for cmmsField, arxosField := range fieldMappings {
+		if value, exists := data[cmmsField]; exists {
+			transformed[arxosField] = value
+		}
+	}
+
+	return transformed
+}
+
+// syncCMMSRecord syncs a single CMMS record to the Arxos database
+func syncCMMSRecord(syncType string, data map[string]interface{}, connectionID int) error {
+	switch syncType {
+	case "work_orders":
+		return syncWorkOrder(data, connectionID)
+	case "maintenance_schedules":
+		return syncMaintenanceSchedule(data, connectionID)
+	case "equipment":
+		return syncEquipment(data, connectionID)
+	case "assets":
+		return syncAsset(data, connectionID)
+	default:
+		return fmt.Errorf("unknown sync type: %s", syncType)
+	}
+}
+
+// syncWorkOrder syncs a work order record
+func syncWorkOrder(data map[string]interface{}, connectionID int) error {
+	// Extract work order data
+	workOrderID, _ := data["work_order_id"].(string)
+	description, _ := data["description"].(string)
+	status, _ := data["status"].(string)
+	priority, _ := data["priority"].(string)
+
+	// Upsert work order
+	return db.DB.Exec(`
+		INSERT INTO work_orders (cmms_connection_id, work_order_id, description, status, priority, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (cmms_connection_id, work_order_id) 
+		DO UPDATE SET 
+			description = EXCLUDED.description,
+			status = EXCLUDED.status,
+			priority = EXCLUDED.priority,
+			updated_at = CURRENT_TIMESTAMP
+	`, connectionID, workOrderID, description, status, priority).Error
+}
+
+// syncMaintenanceSchedule syncs a maintenance schedule record
+func syncMaintenanceSchedule(data map[string]interface{}, connectionID int) error {
+	// Extract maintenance schedule data
+	scheduleID, _ := data["schedule_id"].(string)
+	equipmentID, _ := data["equipment_id"].(string)
+	maintenanceType, _ := data["maintenance_type"].(string)
+	frequency, _ := data["frequency"].(string)
+
+	// Upsert maintenance schedule
+	return db.DB.Exec(`
+		INSERT INTO maintenance_schedules (cmms_connection_id, schedule_id, equipment_id, maintenance_type, frequency, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (cmms_connection_id, schedule_id) 
+		DO UPDATE SET 
+			equipment_id = EXCLUDED.equipment_id,
+			maintenance_type = EXCLUDED.maintenance_type,
+			frequency = EXCLUDED.frequency,
+			updated_at = CURRENT_TIMESTAMP
+	`, connectionID, scheduleID, equipmentID, maintenanceType, frequency).Error
+}
+
+// syncEquipment syncs an equipment record
+func syncEquipment(data map[string]interface{}, connectionID int) error {
+	// Extract equipment data
+	equipmentID, _ := data["equipment_id"].(string)
+	name, _ := data["name"].(string)
+	type_, _ := data["type"].(string)
+	location, _ := data["location"].(string)
+
+	// Upsert equipment
+	return db.DB.Exec(`
+		INSERT INTO equipment (cmms_connection_id, equipment_id, name, type, location, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (cmms_connection_id, equipment_id) 
+		DO UPDATE SET 
+			name = EXCLUDED.name,
+			type = EXCLUDED.type,
+			location = EXCLUDED.location,
+			updated_at = CURRENT_TIMESTAMP
+	`, connectionID, equipmentID, name, type_, location).Error
+}
+
+// syncAsset syncs an asset record
+func syncAsset(data map[string]interface{}, connectionID int) error {
+	// Extract asset data
+	assetID, _ := data["asset_id"].(string)
+	name, _ := data["name"].(string)
+	type_, _ := data["type"].(string)
+	location, _ := data["location"].(string)
+
+	// Upsert asset
+	return db.DB.Exec(`
+		INSERT INTO assets (cmms_connection_id, asset_id, name, type, location, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (cmms_connection_id, asset_id) 
+		DO UPDATE SET 
+			name = EXCLUDED.name,
+			type = EXCLUDED.type,
+			location = EXCLUDED.location,
+			updated_at = CURRENT_TIMESTAMP
+	`, connectionID, assetID, name, type_, location).Error
 }
 
 func GetCMMSSyncLogs(w http.ResponseWriter, r *http.Request) {

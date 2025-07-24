@@ -1,377 +1,269 @@
 """
 In-Memory Building Repository Implementation
-
-In-memory implementation of the BuildingRepository interface for testing
-and development purposes.
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime
-import uuid
+import logging
 
-from ...domain.repositories.building_repository import BuildingRepository
-from ...domain.aggregates.building_aggregate import BuildingAggregate
-from ...domain.value_objects.identifier import Identifier
-from ...domain.value_objects.address import Address
-from ...domain.value_objects.coordinates import Coordinates
-from ...domain.value_objects.status import Status
+from svgx_engine.domain.repositories.building_repository import BuildingRepository
+from svgx_engine.domain.aggregates.building_aggregate import BuildingAggregate
+from svgx_engine.domain.value_objects.identifier import Identifier
+from svgx_engine.domain.value_objects.address import Address
+from svgx_engine.domain.value_objects.coordinates import Coordinates
+from svgx_engine.domain.value_objects.status import Status
 
+logger = logging.getLogger(__name__)
 
 class InMemoryBuildingRepository(BuildingRepository):
     """
-    In-memory implementation of BuildingRepository for testing and development.
+    In-memory implementation of the building repository.
     
-    This implementation stores building aggregates in memory and provides
-    basic search and filtering capabilities.
+    This implementation stores building aggregates in memory and is suitable
+    for testing, development, and small-scale applications.
     """
     
     def __init__(self):
-        """Initialize the in-memory repository."""
         self._buildings: Dict[str, BuildingAggregate] = {}
         self._next_id = 1
+        logger.info("InMemoryBuildingRepository initialized")
     
-    def save(self, building_aggregate: BuildingAggregate) -> BuildingAggregate:
+    def save(self, building: BuildingAggregate) -> None:
         """
-        Save a building aggregate.
+        Save a building aggregate to the repository.
         
         Args:
-            building_aggregate: Building aggregate to save
+            building: The building aggregate to save
+        """
+        if not building:
+            raise ValueError("Building aggregate cannot be None")
+        
+        building_id = str(building.id)
+        self._buildings[building_id] = building
+        logger.debug(f"Saved building: {building_id}")
+    
+    def get_by_id(self, building_id: str) -> Optional[BuildingAggregate]:
+        """
+        Get a building aggregate by its ID.
+        
+        Args:
+            building_id: The ID of the building to retrieve
             
         Returns:
-            Saved building aggregate
+            The building aggregate if found, None otherwise
         """
-        if not building_aggregate.id:
-            # Generate new ID for new buildings
-            new_id = Identifier(str(self._next_id), prefix="BLD")
-            building_aggregate.building.id = new_id
-            self._next_id += 1
+        if not building_id:
+            return None
         
-        # Store in memory
-        building_id = str(building_aggregate.id)
-        self._buildings[building_id] = building_aggregate
+        building = self._buildings.get(building_id)
+        if building:
+            logger.debug(f"Retrieved building: {building_id}")
+        else:
+            logger.debug(f"Building not found: {building_id}")
         
-        return building_aggregate
+        return building
     
-    def find_by_id(self, building_id: Identifier) -> Optional[BuildingAggregate]:
+    def get_all(self) -> List[BuildingAggregate]:
         """
-        Find building aggregate by ID.
+        Get all building aggregates from the repository.
+        
+        Returns:
+            List of all building aggregates
+        """
+        buildings = list(self._buildings.values())
+        logger.debug(f"Retrieved {len(buildings)} buildings")
+        return buildings
+    
+    def delete(self, building_id: str) -> bool:
+        """
+        Delete a building aggregate by its ID.
         
         Args:
-            building_id: Building identifier
+            building_id: The ID of the building to delete
             
         Returns:
-            Building aggregate if found, None otherwise
+            True if the building was deleted, False if not found
         """
-        return self._buildings.get(str(building_id))
+        if not building_id:
+            return False
+        
+        if building_id in self._buildings:
+            del self._buildings[building_id]
+            logger.debug(f"Deleted building: {building_id}")
+            return True
+        else:
+            logger.debug(f"Building not found for deletion: {building_id}")
+            return False
     
-    def find_by_name(self, name: str) -> Optional[BuildingAggregate]:
+    def get_by_status(self, status: Status) -> List[BuildingAggregate]:
         """
-        Find building aggregate by name.
+        Get building aggregates filtered by status.
         
         Args:
-            name: Building name
-            
-        Returns:
-            Building aggregate if found, None otherwise
-        """
-        for building in self._buildings.values():
-            if building.building.name.lower() == name.lower():
-                return building
-        return None
-    
-    def find_by_address(self, address: Address) -> List[BuildingAggregate]:
-        """
-        Find building aggregates by address.
-        
-        Args:
-            address: Building address
-            
-        Returns:
-            List of building aggregates matching the address
-        """
-        matching_buildings = []
-        for building in self._buildings.values():
-            if building.building.address.full_address == address.full_address:
-                matching_buildings.append(building)
-        return matching_buildings
-    
-    def find_by_coordinates(self, coordinates: Coordinates, radius_km: float = 1.0) -> List[BuildingAggregate]:
-        """
-        Find building aggregates within radius of coordinates.
-        
-        Args:
-            coordinates: Center coordinates
-            radius_km: Search radius in kilometers
-            
-        Returns:
-            List of building aggregates within the radius
-        """
-        matching_buildings = []
-        for building in self._buildings.values():
-            distance = building.building.coordinates.distance_to(coordinates)
-            if distance <= radius_km:
-                matching_buildings.append(building)
-        return matching_buildings
-    
-    def find_by_status(self, status: Status) -> List[BuildingAggregate]:
-        """
-        Find building aggregates by status.
-        
-        Args:
-            status: Building status
+            status: The status to filter by
             
         Returns:
             List of building aggregates with the specified status
         """
-        matching_buildings = []
-        for building in self._buildings.values():
-            if building.building.status.value == status.value:
-                matching_buildings.append(building)
-        return matching_buildings
+        if not status:
+            return []
+        
+        buildings = [
+            building for building in self._buildings.values()
+            if building.status and building.status.value == status.value
+        ]
+        
+        logger.debug(f"Retrieved {len(buildings)} buildings with status: {status.value}")
+        return buildings
     
-    def find_by_building_type(self, building_type: str) -> List[BuildingAggregate]:
+    def get_by_location(
+        self,
+        coordinates: Coordinates,
+        radius: float
+    ) -> List[BuildingAggregate]:
         """
-        Find building aggregates by building type.
+        Get building aggregates within a specified radius of coordinates.
         
         Args:
-            building_type: Type of building
+            coordinates: The center coordinates for the search
+            radius: The radius in kilometers for the search
             
         Returns:
-            List of building aggregates of the specified type
+            List of building aggregates within the specified radius
         """
-        matching_buildings = []
-        for building in self._buildings.values():
-            if building.building.building_type.lower() == building_type.lower():
-                matching_buildings.append(building)
-        return matching_buildings
-    
-    def find_active_buildings(self) -> List[BuildingAggregate]:
-        """
-        Find all active building aggregates.
+        if not coordinates or radius <= 0:
+            return []
         
-        Returns:
-            List of active building aggregates
-        """
-        active_status = Status.active()
-        return self.find_by_status(active_status)
-    
-    def find_available_buildings(self) -> List[BuildingAggregate]:
-        """
-        Find all available building aggregates.
-        
-        Returns:
-            List of available building aggregates
-        """
-        available_buildings = []
+        buildings = []
         for building in self._buildings.values():
-            if building.building.is_available():
-                available_buildings.append(building)
-        return available_buildings
+            if building.address and building.address.coordinates:
+                distance = self._calculate_distance(
+                    coordinates,
+                    building.address.coordinates
+                )
+                if distance <= radius:
+                    buildings.append(building)
+        
+        logger.debug(f"Retrieved {len(buildings)} buildings within {radius}km of {coordinates}")
+        return buildings
     
-    def find_by_area_range(self, min_area: float, max_area: float) -> List[BuildingAggregate]:
+    def get_by_address(self, address: Address) -> List[BuildingAggregate]:
         """
-        Find building aggregates by area range.
+        Get building aggregates by address.
         
         Args:
-            min_area: Minimum area in square meters
-            max_area: Maximum area in square meters
+            address: The address to search for
             
         Returns:
-            List of building aggregates within the area range
+            List of building aggregates with the specified address
         """
-        matching_buildings = []
-        for building in self._buildings.values():
-            area = building.building.dimensions.area
-            if min_area <= area <= max_area:
-                matching_buildings.append(building)
-        return matching_buildings
-    
-    def find_by_volume_range(self, min_volume: float, max_volume: float) -> List[BuildingAggregate]:
-        """
-        Find building aggregates by volume range.
+        if not address:
+            return []
         
-        Args:
-            min_volume: Minimum volume in cubic meters
-            max_volume: Maximum volume in cubic meters
-            
-        Returns:
-            List of building aggregates within the volume range
-        """
-        matching_buildings = []
-        for building in self._buildings.values():
-            volume = building.building.dimensions.volume
-            if volume is not None and min_volume <= volume <= max_volume:
-                matching_buildings.append(building)
-        return matching_buildings
-    
-    def find_all(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[BuildingAggregate]:
-        """
-        Find all building aggregates with optional pagination.
+        buildings = [
+            building for building in self._buildings.values()
+            if building.address and self._addresses_match(building.address, address)
+        ]
         
-        Args:
-            limit: Maximum number of results
-            offset: Number of results to skip
-            
-        Returns:
-            List of building aggregates
-        """
-        buildings = list(self._buildings.values())
-        
-        if offset is not None:
-            buildings = buildings[offset:]
-        
-        if limit is not None:
-            buildings = buildings[:limit]
-        
+        logger.debug(f"Retrieved {len(buildings)} buildings with address: {address}")
         return buildings
     
     def count(self) -> int:
         """
-        Get total count of building aggregates.
+        Get the total count of building aggregates in the repository.
         
         Returns:
-            Total count of building aggregates
+            The total count of building aggregates
         """
-        return len(self._buildings)
+        count = len(self._buildings)
+        logger.debug(f"Repository contains {count} buildings")
+        return count
     
-    def count_by_status(self, status: Status) -> int:
+    def exists(self, building_id: str) -> bool:
         """
-        Get count of building aggregates by status.
+        Check if a building aggregate exists by its ID.
         
         Args:
-            status: Building status
+            building_id: The ID of the building to check
             
         Returns:
-            Count of building aggregates with the specified status
+            True if the building exists, False otherwise
         """
-        return len(self.find_by_status(status))
+        exists = building_id in self._buildings
+        logger.debug(f"Building {building_id} exists: {exists}")
+        return exists
     
-    def exists(self, building_id: Identifier) -> bool:
+    def clear(self) -> None:
         """
-        Check if building aggregate exists.
-        
-        Args:
-            building_id: Building identifier
-            
-        Returns:
-            True if building aggregate exists, False otherwise
+        Clear all building aggregates from the repository.
         """
-        return str(building_id) in self._buildings
-    
-    def delete(self, building_id: Identifier) -> bool:
-        """
-        Delete building aggregate by ID.
-        
-        Args:
-            building_id: Building identifier
-            
-        Returns:
-            True if deleted successfully, False otherwise
-        """
-        building_id_str = str(building_id)
-        if building_id_str in self._buildings:
-            del self._buildings[building_id_str]
-            return True
-        return False
-    
-    def delete_by_status(self, status: Status) -> int:
-        """
-        Delete building aggregates by status.
-        
-        Args:
-            status: Building status
-            
-        Returns:
-            Number of building aggregates deleted
-        """
-        buildings_to_delete = self.find_by_status(status)
-        deleted_count = 0
-        
-        for building in buildings_to_delete:
-            building_id = str(building.id)
-            if building_id in self._buildings:
-                del self._buildings[building_id]
-                deleted_count += 1
-        
-        return deleted_count
-    
-    def update_status(self, building_id: Identifier, new_status: Status) -> bool:
-        """
-        Update building status.
-        
-        Args:
-            building_id: Building identifier
-            new_status: New building status
-            
-        Returns:
-            True if updated successfully, False otherwise
-        """
-        building_aggregate = self.find_by_id(building_id)
-        if building_aggregate:
-            building_aggregate.change_status(new_status)
-            self.save(building_aggregate)
-            return True
-        return False
+        self._buildings.clear()
+        logger.info("Repository cleared")
     
     def get_statistics(self) -> Dict[str, Any]:
         """
-        Get building statistics.
+        Get repository statistics.
         
         Returns:
-            Dictionary containing building statistics
+            Dictionary containing repository statistics
         """
         total_buildings = len(self._buildings)
+        status_counts = {}
         
-        if total_buildings == 0:
-            return {
-                "total_buildings": 0,
-                "total_area": 0.0,
-                "total_volume": 0.0,
-                "status_distribution": {},
-                "type_distribution": {},
-                "average_area": 0.0,
-                "average_volume": 0.0
-            }
-        
-        # Calculate statistics
-        total_area = sum(b.building.dimensions.area for b in self._buildings.values())
-        total_volume = sum(
-            b.building.dimensions.volume or 0 
-            for b in self._buildings.values() 
-            if b.building.dimensions.volume is not None
-        )
-        
-        # Status distribution
-        status_distribution = {}
         for building in self._buildings.values():
-            status = building.building.status.value
-            status_distribution[status] = status_distribution.get(status, 0) + 1
+            if building.status:
+                status = building.status.value
+                status_counts[status] = status_counts.get(status, 0) + 1
         
-        # Type distribution
-        type_distribution = {}
-        for building in self._buildings.values():
-            building_type = building.building.building_type
-            type_distribution[building_type] = type_distribution.get(building_type, 0) + 1
-        
-        # Averages
-        average_area = total_area / total_buildings
-        buildings_with_volume = [
-            b for b in self._buildings.values() 
-            if b.building.dimensions.volume is not None
-        ]
-        average_volume = total_volume / len(buildings_with_volume) if buildings_with_volume else 0.0
-        
-        return {
+        stats = {
             "total_buildings": total_buildings,
-            "total_area": total_area,
-            "total_volume": total_volume,
-            "status_distribution": status_distribution,
-            "type_distribution": type_distribution,
-            "average_area": average_area,
-            "average_volume": average_volume
+            "status_counts": status_counts,
+            "repository_type": "in_memory"
         }
+        
+        logger.debug(f"Repository statistics: {stats}")
+        return stats
     
-    def clear(self):
-        """Clear all buildings from the repository (for testing)."""
-        self._buildings.clear()
-        self._next_id = 1 
+    def _calculate_distance(self, coord1: Coordinates, coord2: Coordinates) -> float:
+        """
+        Calculate distance between two coordinates using Haversine formula.
+        
+        Args:
+            coord1: First coordinates
+            coord2: Second coordinates
+            
+        Returns:
+            Distance in kilometers
+        """
+        import math
+        
+        lat1, lon1 = coord1.latitude, coord1.longitude
+        lat2, lon2 = coord2.latitude, coord2.longitude
+        
+        # Convert to radians
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        
+        # Haversine formula
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        
+        # Earth's radius in kilometers
+        r = 6371
+        
+        return c * r
+    
+    def _addresses_match(self, addr1: Address, addr2: Address) -> bool:
+        """
+        Check if two addresses match.
+        
+        Args:
+            addr1: First address
+            addr2: Second address
+            
+        Returns:
+            True if addresses match, False otherwise
+        """
+        # Simple string comparison for now
+        # In a real implementation, this would be more sophisticated
+        return str(addr1).lower() == str(addr2).lower() 

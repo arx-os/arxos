@@ -1,14 +1,19 @@
 """
-Repository Implementations Module
+Infrastructure Repositories - Data Access Implementations
 
-This module contains concrete implementations of repository interfaces
-defined in the domain layer.
+This module contains repository implementations that provide concrete
+data access and persistence operations.
 """
 
-from .in_memory_building_repository import InMemoryBuildingRepository
-from .postgresql_building_repository import PostgreSQLBuildingRepository
+from svgx_engine.infrastructure.repositories.in_memory_building_repository import InMemoryBuildingRepository
+from svgx_engine.infrastructure.repositories.postgresql_building_repository import PostgreSQLBuildingRepository
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Infrastructure repositories for SVGX Engine"
+
+# Export all repository implementations
 __all__ = [
-    'InMemoryBuildingRepository',
-    'PostgreSQLBuildingRepository'
+    "InMemoryBuildingRepository",
+    "PostgreSQLBuildingRepository"
 ] 

@@ -1,9 +1,12 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 
@@ -11,6 +14,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/disk"
+	"github.com/shirou/gopsutil/v3/mem"
 	"gorm.io/gorm"
 )
 
@@ -30,6 +36,24 @@ type MonitoringService struct {
 	rateLimitHits       *prometheus.CounterVec
 	securityAlerts      *prometheus.CounterVec
 
+	// Enhanced metrics
+	systemMemoryUsage     *prometheus.GaugeVec
+	systemCPUUsage        *prometheus.GaugeVec
+	systemDiskUsage       *prometheus.GaugeVec
+	goroutineCount        *prometheus.GaugeVec
+	heapAllocBytes        *prometheus.GaugeVec
+	heapSysBytes          *prometheus.GaugeVec
+	gcDuration            *prometheus.HistogramVec
+	svgxProcessingTime    *prometheus.HistogramVec
+	svgxElementsProcessed *prometheus.CounterVec
+	svgxValidationResults *prometheus.CounterVec
+	cacheHitRate          *prometheus.GaugeVec
+	cacheSize             *prometheus.GaugeVec
+	exportFileSize        *prometheus.HistogramVec
+	concurrentRequests    *prometheus.GaugeVec
+	responseTimeP95       *prometheus.GaugeVec
+	responseTimeP99       *prometheus.GaugeVec
+
 	// Internal metrics
 	metricsMutex sync.RWMutex
 	metrics      map[string]interface{}
@@ -37,14 +61,63 @@ type MonitoringService struct {
 	// Health check data
 	healthMutex sync.RWMutex
 	healthData  map[string]interface{}
+
+	// Real-time monitoring
+	monitoringActive bool
+	monitorCtx       context.Context
+	monitorCancel    context.CancelFunc
+
+	// Alerting
+	alertHandlers []AlertHandler
+	alertMutex    sync.RWMutex
+
+	// Performance tracking
+	performanceData map[string]*PerformanceTracker
+	perfMutex       sync.RWMutex
+}
+
+// AlertHandler defines the interface for alert handlers
+type AlertHandler interface {
+	HandleAlert(alert *SecurityAlert) error
+}
+
+// SecurityAlert represents a security alert
+type SecurityAlert struct {
+	ID        string                 `json:"id"`
+	Type      string                 `json:"type"`
+	Severity  string                 `json:"severity"`
+	Message   string                 `json:"message"`
+	Timestamp time.Time              `json:"timestamp"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	Source    string                 `json:"source"`
+	UserID    string                 `json:"user_id,omitempty"`
+	IPAddress string                 `json:"ip_address,omitempty"`
+	Resource  string                 `json:"resource,omitempty"`
+}
+
+// PerformanceTracker tracks performance metrics
+type PerformanceTracker struct {
+	Count       int64         `json:"count"`
+	TotalTime   time.Duration `json:"total_time"`
+	MinTime     time.Duration `json:"min_time"`
+	MaxTime     time.Duration `json:"max_time"`
+	LastUpdated time.Time     `json:"last_updated"`
+	mutex       sync.RWMutex
 }
 
 // NewMonitoringService creates a new monitoring service
 func NewMonitoringService(db *gorm.DB) *MonitoringService {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	ms := &MonitoringService{
-		db:         db,
-		metrics:    make(map[string]interface{}),
-		healthData: make(map[string]interface{}),
+		db:               db,
+		metrics:          make(map[string]interface{}),
+		healthData:       make(map[string]interface{}),
+		monitoringActive: true,
+		monitorCtx:       ctx,
+		monitorCancel:    cancel,
+		performanceData:  make(map[string]*PerformanceTracker),
+		alertHandlers:    make([]AlertHandler, 0),
 	}
 
 	// Initialize Prometheus metrics
@@ -143,6 +216,142 @@ func (ms *MonitoringService) initializeMetrics() {
 		[]string{"alert_type", "severity"},
 	)
 
+	// Enhanced system metrics
+	ms.systemMemoryUsage = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_system_memory_usage_bytes",
+			Help: "System memory usage in bytes",
+		},
+		[]string{"type"},
+	)
+
+	ms.systemCPUUsage = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_system_cpu_usage_percent",
+			Help: "System CPU usage percentage",
+		},
+		[]string{"core"},
+	)
+
+	ms.systemDiskUsage = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_system_disk_usage_bytes",
+			Help: "System disk usage in bytes",
+		},
+		[]string{"mountpoint"},
+	)
+
+	ms.goroutineCount = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_goroutines_total",
+			Help: "Number of goroutines",
+		},
+		[]string{},
+	)
+
+	ms.heapAllocBytes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_heap_alloc_bytes",
+			Help: "Heap memory allocated in bytes",
+		},
+		[]string{},
+	)
+
+	ms.heapSysBytes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_heap_sys_bytes",
+			Help: "Heap memory system bytes",
+		},
+		[]string{},
+	)
+
+	ms.gcDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "arxos_gc_duration_seconds",
+			Help:    "Garbage collection duration in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{},
+	)
+
+	// SVGX-specific metrics
+	ms.svgxProcessingTime = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "arxos_svgx_processing_duration_seconds",
+			Help:    "SVGX processing duration in seconds",
+			Buckets: []float64{0.001, 0.01, 0.1, 0.5, 1.0, 2.0, 5.0},
+		},
+		[]string{"operation", "element_type"},
+	)
+
+	ms.svgxElementsProcessed = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "arxos_svgx_elements_processed_total",
+			Help: "Total number of SVGX elements processed",
+		},
+		[]string{"element_type", "operation", "status"},
+	)
+
+	ms.svgxValidationResults = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "arxos_svgx_validation_results_total",
+			Help: "Total number of SVGX validation results",
+		},
+		[]string{"validation_type", "result"},
+	)
+
+	// Cache metrics
+	ms.cacheHitRate = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_cache_hit_rate",
+			Help: "Cache hit rate percentage",
+		},
+		[]string{"cache_type"},
+	)
+
+	ms.cacheSize = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_cache_size",
+			Help: "Cache size in bytes",
+		},
+		[]string{"cache_type"},
+	)
+
+	// Export metrics
+	ms.exportFileSize = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "arxos_export_file_size_bytes",
+			Help:    "Export file size in bytes",
+			Buckets: []float64{1024, 10240, 102400, 1048576, 10485760, 104857600},
+		},
+		[]string{"export_type", "format"},
+	)
+
+	// Performance metrics
+	ms.concurrentRequests = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_concurrent_requests",
+			Help: "Number of concurrent requests",
+		},
+		[]string{"endpoint"},
+	)
+
+	ms.responseTimeP95 = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_response_time_p95_seconds",
+			Help: "95th percentile response time in seconds",
+		},
+		[]string{"endpoint"},
+	)
+
+	ms.responseTimeP99 = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "arxos_response_time_p99_seconds",
+			Help: "99th percentile response time in seconds",
+		},
+		[]string{"endpoint"},
+	)
+
 	// Register metrics
 	prometheus.MustRegister(
 		ms.apiRequestsTotal,
@@ -155,6 +364,22 @@ func (ms *MonitoringService) initializeMetrics() {
 		ms.databaseConnections,
 		ms.rateLimitHits,
 		ms.securityAlerts,
+		ms.systemMemoryUsage,
+		ms.systemCPUUsage,
+		ms.systemDiskUsage,
+		ms.goroutineCount,
+		ms.heapAllocBytes,
+		ms.heapSysBytes,
+		ms.gcDuration,
+		ms.svgxProcessingTime,
+		ms.svgxElementsProcessed,
+		ms.svgxValidationResults,
+		ms.cacheHitRate,
+		ms.cacheSize,
+		ms.exportFileSize,
+		ms.concurrentRequests,
+		ms.responseTimeP95,
+		ms.responseTimeP99,
 	)
 }
 
@@ -168,6 +393,9 @@ func (ms *MonitoringService) startBackgroundMonitoring() {
 		case <-ticker.C:
 			ms.collectSystemMetrics()
 			ms.updateHealthData()
+			ms.collectPerformanceMetrics()
+		case <-ms.monitorCtx.Done():
+			return
 		}
 	}
 }
@@ -210,10 +438,63 @@ func (ms *MonitoringService) collectSystemMetrics() {
 	ms.databaseConnections.WithLabelValues("in_use").Set(float64(dbStats.InUse))
 	ms.databaseConnections.WithLabelValues("idle").Set(float64(dbStats.Idle))
 
+	// Collect system metrics
+	ms.collectSystemResources()
+
 	// Update internal metrics
 	ms.metrics["active_users"] = activeUsers
 	ms.metrics["database_stats"] = dbStats
 	ms.metrics["last_updated"] = time.Now()
+}
+
+// collectSystemResources collects system resource metrics
+func (ms *MonitoringService) collectSystemResources() {
+	// Memory metrics
+	if memory, err := mem.VirtualMemory(); err == nil {
+		ms.systemMemoryUsage.WithLabelValues("total").Set(float64(memory.Total))
+		ms.systemMemoryUsage.WithLabelValues("used").Set(float64(memory.Used))
+		ms.systemMemoryUsage.WithLabelValues("available").Set(float64(memory.Available))
+		ms.systemMemoryUsage.WithLabelValues("cached").Set(float64(memory.Cached))
+	}
+
+	// CPU metrics
+	if cpuPercentages, err := cpu.Percent(0, true); err == nil {
+		for i, percentage := range cpuPercentages {
+			ms.systemCPUUsage.WithLabelValues(fmt.Sprintf("core_%d", i)).Set(percentage)
+		}
+	}
+
+	// Disk metrics
+	if partitions, err := disk.Partitions(false); err == nil {
+		for _, partition := range partitions {
+			if usage, err := disk.Usage(partition.Mountpoint); err == nil {
+				ms.systemDiskUsage.WithLabelValues(partition.Mountpoint).Set(float64(usage.Used))
+			}
+		}
+	}
+
+	// Go runtime metrics
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	ms.goroutineCount.WithLabelValues().Set(float64(runtime.NumGoroutine()))
+	ms.heapAllocBytes.WithLabelValues().Set(float64(m.HeapAlloc))
+	ms.heapSysBytes.WithLabelValues().Set(float64(m.HeapSys))
+}
+
+// collectPerformanceMetrics collects performance metrics
+func (ms *MonitoringService) collectPerformanceMetrics() {
+	ms.perfMutex.Lock()
+	defer ms.perfMutex.Unlock()
+
+	for operation, tracker := range ms.performanceData {
+		tracker.mutex.RLock()
+		if tracker.Count > 0 {
+			avgTime := tracker.TotalTime.Seconds() / float64(tracker.Count)
+			ms.svgxProcessingTime.WithLabelValues(operation, "unknown").Observe(avgTime)
+		}
+		tracker.mutex.RUnlock()
+	}
 }
 
 // updateHealthData updates health check data
@@ -235,6 +516,31 @@ func (ms *MonitoringService) updateHealthData() {
 	sqlDB, _ := ms.db.DB()
 	dbStats := sqlDB.Stats()
 
+	// Check memory health
+	memoryHealth := "healthy"
+	if memory, err := mem.VirtualMemory(); err == nil {
+		if memory.UsedPercent > 90 {
+			memoryHealth = "critical"
+		} else if memory.UsedPercent > 80 {
+			memoryHealth = "warning"
+		}
+	}
+
+	// Check disk health
+	diskHealth := "healthy"
+	if partitions, err := disk.Partitions(false); err == nil {
+		for _, partition := range partitions {
+			if usage, err := disk.Usage(partition.Mountpoint); err == nil {
+				if usage.UsedPercent > 90 {
+					diskHealth = "critical"
+					break
+				} else if usage.UsedPercent > 80 {
+					diskHealth = "warning"
+				}
+			}
+		}
+	}
+
 	ms.healthData = map[string]interface{}{
 		"status":    "healthy",
 		"timestamp": time.Now(),
@@ -249,11 +555,17 @@ func (ms *MonitoringService) updateHealthData() {
 					"idle":                 dbStats.Idle,
 				},
 			},
+			"memory": map[string]interface{}{
+				"status": memoryHealth,
+			},
+			"disk": map[string]interface{}{
+				"status": diskHealth,
+			},
 		},
 	}
 
 	// Mark as unhealthy if any service is down
-	if dbStatus == "unhealthy" {
+	if dbStatus == "unhealthy" || memoryHealth == "critical" || diskHealth == "critical" {
 		ms.healthData["status"] = "unhealthy"
 	}
 }
@@ -292,6 +604,96 @@ func (ms *MonitoringService) RecordSecurityAlert(alertType, severity string) {
 	ms.securityAlerts.WithLabelValues(alertType, severity).Inc()
 }
 
+// RecordSVGXProcessing records SVGX processing metrics
+func (ms *MonitoringService) RecordSVGXProcessing(operation, elementType string, duration time.Duration) {
+	ms.svgxProcessingTime.WithLabelValues(operation, elementType).Observe(duration.Seconds())
+}
+
+// RecordSVGXElement records SVGX element processing
+func (ms *MonitoringService) RecordSVGXElement(elementType, operation, status string) {
+	ms.svgxElementsProcessed.WithLabelValues(elementType, operation, status).Inc()
+}
+
+// RecordValidationResult records validation results
+func (ms *MonitoringService) RecordValidationResult(validationType, result string) {
+	ms.svgxValidationResults.WithLabelValues(validationType, result).Inc()
+}
+
+// UpdateCacheMetrics updates cache metrics
+func (ms *MonitoringService) UpdateCacheMetrics(cacheType string, hitRate float64, sizeBytes int64) {
+	ms.cacheHitRate.WithLabelValues(cacheType).Set(hitRate)
+	ms.cacheSize.WithLabelValues(cacheType).Set(float64(sizeBytes))
+}
+
+// RecordExportFileSize records export file size
+func (ms *MonitoringService) RecordExportFileSize(exportType, format string, sizeBytes int64) {
+	ms.exportFileSize.WithLabelValues(exportType, format).Observe(float64(sizeBytes))
+}
+
+// UpdateConcurrentRequests updates concurrent requests metric
+func (ms *MonitoringService) UpdateConcurrentRequests(endpoint string, count int) {
+	ms.concurrentRequests.WithLabelValues(endpoint).Set(float64(count))
+}
+
+// UpdateResponseTimePercentiles updates response time percentiles
+func (ms *MonitoringService) UpdateResponseTimePercentiles(endpoint string, p95, p99 float64) {
+	ms.responseTimeP95.WithLabelValues(endpoint).Set(p95)
+	ms.responseTimeP99.WithLabelValues(endpoint).Set(p99)
+}
+
+// TrackPerformance tracks performance for an operation
+func (ms *MonitoringService) TrackPerformance(operation string, duration time.Duration) {
+	ms.perfMutex.Lock()
+	defer ms.perfMutex.Unlock()
+
+	tracker, exists := ms.performanceData[operation]
+	if !exists {
+		tracker = &PerformanceTracker{
+			MinTime:     duration,
+			MaxTime:     duration,
+			LastUpdated: time.Now(),
+		}
+		ms.performanceData[operation] = tracker
+	}
+
+	tracker.mutex.Lock()
+	tracker.Count++
+	tracker.TotalTime += duration
+	if duration < tracker.MinTime {
+		tracker.MinTime = duration
+	}
+	if duration > tracker.MaxTime {
+		tracker.MaxTime = duration
+	}
+	tracker.LastUpdated = time.Now()
+	tracker.mutex.Unlock()
+}
+
+// AddAlertHandler adds an alert handler
+func (ms *MonitoringService) AddAlertHandler(handler AlertHandler) {
+	ms.alertMutex.Lock()
+	defer ms.alertMutex.Unlock()
+	ms.alertHandlers = append(ms.alertHandlers, handler)
+}
+
+// TriggerAlert triggers a security alert
+func (ms *MonitoringService) TriggerAlert(alert *SecurityAlert) {
+	ms.alertMutex.RLock()
+	defer ms.alertMutex.RUnlock()
+
+	// Record in metrics
+	ms.securityAlerts.WithLabelValues(alert.Type, alert.Severity).Inc()
+
+	// Trigger handlers
+	for _, handler := range ms.alertHandlers {
+		go func(h AlertHandler) {
+			if err := h.HandleAlert(alert); err != nil {
+				log.Printf("Alert handler error: %v", err)
+			}
+		}(handler)
+	}
+}
+
 // GetMetrics returns current system metrics
 func (ms *MonitoringService) GetMetrics() map[string]interface{} {
 	ms.metricsMutex.RLock()
@@ -322,6 +724,26 @@ func (ms *MonitoringService) GetHealthStatus() map[string]interface{} {
 	}
 
 	return health
+}
+
+// GetPerformanceData returns performance tracking data
+func (ms *MonitoringService) GetPerformanceData() map[string]*PerformanceTracker {
+	ms.perfMutex.RLock()
+	defer ms.perfMutex.RUnlock()
+
+	// Create a copy of performance data
+	perfData := make(map[string]*PerformanceTracker)
+	for k, v := range ms.performanceData {
+		perfData[k] = &PerformanceTracker{
+			Count:       v.Count,
+			TotalTime:   v.TotalTime,
+			MinTime:     v.MinTime,
+			MaxTime:     v.MaxTime,
+			LastUpdated: v.LastUpdated,
+		}
+	}
+
+	return perfData
 }
 
 // GetAPIUsageStats returns API usage statistics
@@ -500,4 +922,10 @@ func (ms *MonitoringService) LogSystemEvent(eventType, message string, metadata 
 	}
 
 	ms.db.Create(&alert)
+}
+
+// Stop stops the monitoring service
+func (ms *MonitoringService) Stop() {
+	ms.monitoringActive = false
+	ms.monitorCancel()
 }

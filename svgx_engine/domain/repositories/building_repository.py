@@ -1,103 +1,78 @@
 """
-Building Repository Interface
-
-Defines the contract for building data access and persistence.
-This interface follows the Repository pattern for clean separation of concerns.
+Building Repository - Abstract Repository Interface
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
-from datetime import datetime
+from typing import List, Optional
+import logging
 
-from ..entities.building import Building
-from ..aggregates.building_aggregate import BuildingAggregate
-from ..value_objects.identifier import Identifier
-from ..value_objects.address import Address
-from ..value_objects.coordinates import Coordinates
-from ..value_objects.status import Status
+from svgx_engine.domain.entities.building import Building
+from svgx_engine.domain.aggregates.building_aggregate import BuildingAggregate
+from svgx_engine.domain.value_objects.identifier import Identifier
+from svgx_engine.domain.value_objects.address import Address
+from svgx_engine.domain.value_objects.coordinates import Coordinates
+from svgx_engine.domain.value_objects.status import Status
 
+logger = logging.getLogger(__name__)
 
 class BuildingRepository(ABC):
     """
-    Repository interface for building entities and aggregates.
-    
-    This interface defines the contract for building data access and persistence,
-    following the Repository pattern to abstract data access details from the domain.
+    Abstract repository interface for building persistence operations.
     """
     
     @abstractmethod
-    def save(self, building_aggregate: BuildingAggregate) -> BuildingAggregate:
+    def save(self, building: BuildingAggregate) -> None:
         """
-        Save a building aggregate.
+        Save a building aggregate to the repository.
         
         Args:
-            building_aggregate: Building aggregate to save
-            
-        Returns:
-            Saved building aggregate
+            building: The building aggregate to save
         """
         pass
     
     @abstractmethod
-    def find_by_id(self, building_id: Identifier) -> Optional[BuildingAggregate]:
+    def get_by_id(self, building_id: str) -> Optional[BuildingAggregate]:
         """
-        Find building aggregate by ID.
+        Get a building aggregate by its ID.
         
         Args:
-            building_id: Building identifier
+            building_id: The ID of the building to retrieve
             
         Returns:
-            Building aggregate if found, None otherwise
+            The building aggregate if found, None otherwise
         """
         pass
     
     @abstractmethod
-    def find_by_name(self, name: str) -> Optional[BuildingAggregate]:
+    def get_all(self) -> List[BuildingAggregate]:
         """
-        Find building aggregate by name.
+        Get all building aggregates from the repository.
         
-        Args:
-            name: Building name
-            
         Returns:
-            Building aggregate if found, None otherwise
+            List of all building aggregates
         """
         pass
     
     @abstractmethod
-    def find_by_address(self, address: Address) -> List[BuildingAggregate]:
+    def delete(self, building_id: str) -> bool:
         """
-        Find building aggregates by address.
+        Delete a building aggregate by its ID.
         
         Args:
-            address: Building address
+            building_id: The ID of the building to delete
             
         Returns:
-            List of building aggregates matching the address
+            True if the building was deleted, False if not found
         """
         pass
     
     @abstractmethod
-    def find_by_coordinates(self, coordinates: Coordinates, radius_km: float = 1.0) -> List[BuildingAggregate]:
+    def get_by_status(self, status: Status) -> List[BuildingAggregate]:
         """
-        Find building aggregates within radius of coordinates.
+        Get building aggregates filtered by status.
         
         Args:
-            coordinates: Center coordinates
-            radius_km: Search radius in kilometers
-            
-        Returns:
-            List of building aggregates within the radius
-        """
-        pass
-    
-    @abstractmethod
-    def find_by_status(self, status: Status) -> List[BuildingAggregate]:
-        """
-        Find building aggregates by status.
-        
-        Args:
-            status: Building status
+            status: The status to filter by
             
         Returns:
             List of building aggregates with the specified status
@@ -105,162 +80,93 @@ class BuildingRepository(ABC):
         pass
     
     @abstractmethod
-    def find_by_building_type(self, building_type: str) -> List[BuildingAggregate]:
+    def get_by_location(
+        self,
+        coordinates: Coordinates,
+        radius: float
+    ) -> List[BuildingAggregate]:
         """
-        Find building aggregates by building type.
+        Get building aggregates within a specified radius of coordinates.
         
         Args:
-            building_type: Type of building
+            coordinates: The center coordinates for the search
+            radius: The radius in kilometers for the search
             
         Returns:
-            List of building aggregates of the specified type
+            List of building aggregates within the specified radius
         """
         pass
     
     @abstractmethod
-    def find_active_buildings(self) -> List[BuildingAggregate]:
+    def get_by_address(self, address: Address) -> List[BuildingAggregate]:
         """
-        Find all active building aggregates.
-        
-        Returns:
-            List of active building aggregates
-        """
-        pass
-    
-    @abstractmethod
-    def find_available_buildings(self) -> List[BuildingAggregate]:
-        """
-        Find all available building aggregates.
-        
-        Returns:
-            List of available building aggregates
-        """
-        pass
-    
-    @abstractmethod
-    def find_by_area_range(self, min_area: float, max_area: float) -> List[BuildingAggregate]:
-        """
-        Find building aggregates by area range.
+        Get building aggregates by address.
         
         Args:
-            min_area: Minimum area in square meters
-            max_area: Maximum area in square meters
+            address: The address to search for
             
         Returns:
-            List of building aggregates within the area range
-        """
-        pass
-    
-    @abstractmethod
-    def find_by_volume_range(self, min_volume: float, max_volume: float) -> List[BuildingAggregate]:
-        """
-        Find building aggregates by volume range.
-        
-        Args:
-            min_volume: Minimum volume in cubic meters
-            max_volume: Maximum volume in cubic meters
-            
-        Returns:
-            List of building aggregates within the volume range
-        """
-        pass
-    
-    @abstractmethod
-    def find_all(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[BuildingAggregate]:
-        """
-        Find all building aggregates with optional pagination.
-        
-        Args:
-            limit: Maximum number of results
-            offset: Number of results to skip
-            
-        Returns:
-            List of building aggregates
+            List of building aggregates with the specified address
         """
         pass
     
     @abstractmethod
     def count(self) -> int:
         """
-        Get total count of building aggregates.
+        Get the total count of building aggregates in the repository.
         
         Returns:
-            Total count of building aggregates
+            The total count of building aggregates
         """
         pass
     
     @abstractmethod
-    def count_by_status(self, status: Status) -> int:
+    def exists(self, building_id: str) -> bool:
         """
-        Get count of building aggregates by status.
+        Check if a building aggregate exists by its ID.
         
         Args:
-            status: Building status
+            building_id: The ID of the building to check
             
         Returns:
-            Count of building aggregates with the specified status
+            True if the building exists, False otherwise
         """
         pass
     
-    @abstractmethod
-    def exists(self, building_id: Identifier) -> bool:
+    def get_by_name(self, name: str) -> List[BuildingAggregate]:
         """
-        Check if building aggregate exists.
+        Get building aggregates by name (partial match).
         
         Args:
-            building_id: Building identifier
+            name: The name to search for (case-insensitive partial match)
             
         Returns:
-            True if building aggregate exists, False otherwise
+            List of building aggregates with matching names
         """
-        pass
+        all_buildings = self.get_all()
+        return [
+            building for building in all_buildings
+            if name.lower() in building.name.lower()
+        ]
     
-    @abstractmethod
-    def delete(self, building_id: Identifier) -> bool:
+    def get_active_buildings(self) -> List[BuildingAggregate]:
         """
-        Delete building aggregate by ID.
-        
-        Args:
-            building_id: Building identifier
-            
-        Returns:
-            True if deleted successfully, False otherwise
-        """
-        pass
-    
-    @abstractmethod
-    def delete_by_status(self, status: Status) -> int:
-        """
-        Delete building aggregates by status.
-        
-        Args:
-            status: Building status
-            
-        Returns:
-            Number of building aggregates deleted
-        """
-        pass
-    
-    @abstractmethod
-    def update_status(self, building_id: Identifier, new_status: Status) -> bool:
-        """
-        Update building status.
-        
-        Args:
-            building_id: Building identifier
-            new_status: New building status
-            
-        Returns:
-            True if updated successfully, False otherwise
-        """
-        pass
-    
-    @abstractmethod
-    def get_statistics(self) -> Dict[str, Any]:
-        """
-        Get building statistics.
+        Get all active building aggregates.
         
         Returns:
-            Dictionary containing building statistics
+            List of active building aggregates
         """
-        pass 
+        from svgx_engine.domain.value_objects.status import Status, StatusType
+        active_status = Status(StatusType.ACTIVE)
+        return self.get_by_status(active_status)
+    
+    def get_inactive_buildings(self) -> List[BuildingAggregate]:
+        """
+        Get all inactive building aggregates.
+        
+        Returns:
+            List of inactive building aggregates
+        """
+        from svgx_engine.domain.value_objects.status import Status, StatusType
+        inactive_status = Status(StatusType.INACTIVE)
+        return self.get_by_status(inactive_status) 

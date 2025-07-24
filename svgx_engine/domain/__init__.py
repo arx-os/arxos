@@ -1,44 +1,52 @@
 """
-Domain Layer for Arxos Clean Architecture.
+Domain Layer - Core Domain Models and Business Logic
 
-This module contains the core business logic, entities, value objects,
-aggregates, and domain services that represent the heart of the application.
+This module contains the core domain models, entities, value objects,
+aggregates, repositories, services, and events that implement the
+business logic and rules of the SVGX Engine.
 """
 
-# Import only the new Clean Architecture components
-from .entities import *
-from .value_objects import *
-from .aggregates import *
-from .repositories import *
-from .services import *
-from .events import *
+# Domain Entities
+from svgx_engine.domain.entities import *
 
+# Domain Value Objects
+from svgx_engine.domain.value_objects import *
+
+# Domain Aggregates
+from svgx_engine.domain.aggregates import *
+
+# Domain Repositories
+from svgx_engine.domain.repositories import *
+
+# Domain Services
+from svgx_engine.domain.services import *
+
+# Domain Events
+from svgx_engine.domain.events import *
+
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Domain layer for SVGX Engine"
+
+# Export all domain components
 __all__ = [
     # Entities
-    'Building',
+    "Building",
     
     # Value Objects
-    'Address',
-    'Coordinates',
-    'Dimensions',
-    'Identifier',
-    'Money',
-    'Status',
+    "Address", "Coordinates", "Dimensions", "Identifier", "Money", "Status",
     
     # Aggregates
-    'BuildingAggregate',
+    "BuildingAggregate",
     
-    # Repository Interfaces
-    'BuildingRepository',
+    # Repositories
+    "BuildingRepository",
     
-    # Domain Services
-    'BuildingService',
+    # Services
+    "BuildingService",
     
-    # Domain Events
-    'BuildingCreatedEvent',
-    'BuildingUpdatedEvent',
-    'BuildingStatusChangedEvent',
-    'BuildingAddressChangedEvent',
-    'BuildingDeletedEvent',
-    'BuildingArchivedEvent'
+    # Events
+    "BuildingCreatedEvent", "BuildingUpdatedEvent", "BuildingDeletedEvent",
+    "BuildingStatusChangedEvent", "BuildingLocationChangedEvent", "BuildingCostUpdatedEvent",
+    "building_event_publisher"
 ] 

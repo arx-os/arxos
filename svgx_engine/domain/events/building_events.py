@@ -1,248 +1,132 @@
 """
-Building Domain Events
-
-Domain events related to building operations.
-These events represent something that happened in the building domain
-and are used for communication between aggregates and external systems.
+Building Events - Domain Events for Building Operations
 """
 
-from dataclasses import dataclass
+from typing import Dict, Any, Optional
 from datetime import datetime
-from typing import Any, Optional
+from dataclasses import dataclass, field
+import uuid
 
-from ..value_objects.identifier import Identifier
-from ..value_objects.address import Address
-from ..value_objects.coordinates import Coordinates
-from ..value_objects.status import Status
-from . import DomainEvent
+from svgx_engine.domain.value_objects.identifier import Identifier
+from svgx_engine.domain.value_objects.address import Address
+from svgx_engine.domain.value_objects.coordinates import Coordinates
+from svgx_engine.domain.value_objects.status import Status
 
+@dataclass
+class DomainEvent:
+    """Base class for all domain events."""
+    event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    occurred_on: datetime = field(default_factory=datetime.utcnow)
+    event_type: str = field(init=False)
+    
+    def __post_init__(self):
+        self.event_type = self.__class__.__name__
 
 @dataclass
 class BuildingCreatedEvent(DomainEvent):
-    """
-    Domain event raised when a building is created.
-    
-    Attributes:
-        building_id: ID of the created building
-        name: Building name
-        address: Building address
-        coordinates: Building coordinates
-        created_at: Event timestamp
-    """
-    
-    building_id: Identifier
+    """Event raised when a building is created."""
+    building_id: str
     name: str
     address: Address
     coordinates: Coordinates
-    created_at: datetime
-    
-    @property
-    def event_type(self) -> str:
-        """Get event type."""
-        return "building.created"
-    
-    @property
-    def event_version(self) -> str:
-        """Get event version."""
-        return "1.0"
-    
-    def to_dict(self) -> dict:
-        """Convert event to dictionary."""
-        return {
-            "event_type": self.event_type,
-            "event_version": self.event_version,
-            "building_id": str(self.building_id),
-            "name": self.name,
-            "address": self.address.full_address,
-            "coordinates": {
-                "latitude": self.coordinates.latitude,
-                "longitude": self.coordinates.longitude
-            },
-            "created_at": self.created_at.isoformat()
-        }
-
+    status: Status
+    created_by: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class BuildingUpdatedEvent(DomainEvent):
-    """
-    Domain event raised when a building is updated.
-    
-    Attributes:
-        building_id: ID of the updated building
-        update_type: Type of update event
-        data: Event data
-        updated_at: Event timestamp
-    """
-    
-    building_id: Identifier
-    update_type: str
-    data: dict
-    updated_at: datetime
-    
-    @property
-    def event_type(self) -> str:
-        """Get event type."""
-        return "building.updated"
-    
-    @property
-    def event_version(self) -> str:
-        """Get event version."""
-        return "1.0"
-    
-    def to_dict(self) -> dict:
-        """Convert event to dictionary."""
-        return {
-            "event_type": self.event_type,
-            "event_version": self.event_version,
-            "building_id": str(self.building_id),
-            "update_type": self.update_type,
-            "data": self.data,
-            "updated_at": self.updated_at.isoformat()
-        }
-
-
-@dataclass
-class BuildingStatusChangedEvent(DomainEvent):
-    """
-    Domain event raised when a building status changes.
-    
-    Attributes:
-        building_id: ID of the building
-        old_status: Previous status
-        new_status: New status
-        changed_at: Event timestamp
-    """
-    
-    building_id: Identifier
-    old_status: Status
-    new_status: Status
-    changed_at: datetime
-    
-    @property
-    def event_type(self) -> str:
-        """Get event type."""
-        return "building.status_changed"
-    
-    @property
-    def event_version(self) -> str:
-        """Get event version."""
-        return "1.0"
-    
-    def to_dict(self) -> dict:
-        """Convert event to dictionary."""
-        return {
-            "event_type": self.event_type,
-            "event_version": self.event_version,
-            "building_id": str(self.building_id),
-            "old_status": self.old_status.value,
-            "new_status": self.new_status.value,
-            "changed_at": self.changed_at.isoformat()
-        }
-
-
-@dataclass
-class BuildingAddressChangedEvent(DomainEvent):
-    """
-    Domain event raised when a building address changes.
-    
-    Attributes:
-        building_id: ID of the building
-        old_address: Previous address
-        new_address: New address
-        changed_at: Event timestamp
-    """
-    
-    building_id: Identifier
-    old_address: Address
-    new_address: Address
-    changed_at: datetime
-    
-    @property
-    def event_type(self) -> str:
-        """Get event type."""
-        return "building.address_changed"
-    
-    @property
-    def event_version(self) -> str:
-        """Get event version."""
-        return "1.0"
-    
-    def to_dict(self) -> dict:
-        """Convert event to dictionary."""
-        return {
-            "event_type": self.event_type,
-            "event_version": self.event_version,
-            "building_id": str(self.building_id),
-            "old_address": self.old_address.full_address,
-            "new_address": self.new_address.full_address,
-            "changed_at": self.changed_at.isoformat()
-        }
-
+    """Event raised when a building is updated."""
+    building_id: str
+    updated_fields: Dict[str, Any]
+    updated_by: str
+    previous_values: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class BuildingDeletedEvent(DomainEvent):
-    """
-    Domain event raised when a building is deleted.
-    
-    Attributes:
-        building_id: ID of the deleted building
-        deleted_at: Event timestamp
-    """
-    
-    building_id: Identifier
-    deleted_at: datetime
-    
-    @property
-    def event_type(self) -> str:
-        """Get event type."""
-        return "building.deleted"
-    
-    @property
-    def event_version(self) -> str:
-        """Get event version."""
-        return "1.0"
-    
-    def to_dict(self) -> dict:
-        """Convert event to dictionary."""
-        return {
-            "event_type": self.event_type,
-            "event_version": self.event_version,
-            "building_id": str(self.building_id),
-            "deleted_at": self.deleted_at.isoformat()
-        }
-
+    """Event raised when a building is deleted."""
+    building_id: str
+    deleted_by: str
+    deletion_reason: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
-class BuildingArchivedEvent(DomainEvent):
-    """
-    Domain event raised when a building is archived.
-    
-    Attributes:
-        building_id: ID of the archived building
-        archived_at: Event timestamp
-        reason: Optional reason for archiving
-    """
-    
-    building_id: Identifier
-    archived_at: datetime
+class BuildingStatusChangedEvent(DomainEvent):
+    """Event raised when a building status changes."""
+    building_id: str
+    old_status: Status
+    new_status: Status
+    changed_by: str
     reason: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class BuildingLocationChangedEvent(DomainEvent):
+    """Event raised when a building location changes."""
+    building_id: str
+    old_coordinates: Coordinates
+    new_coordinates: Coordinates
+    changed_by: str
+    reason: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class BuildingCostUpdatedEvent(DomainEvent):
+    """Event raised when a building cost is updated."""
+    building_id: str
+    old_cost: float
+    new_cost: float
+    currency: str
+    updated_by: str
+    reason: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+class BuildingEventPublisher:
+    """Event publisher for building domain events."""
     
-    @property
-    def event_type(self) -> str:
-        """Get event type."""
-        return "building.archived"
+    def __init__(self):
+        self.subscribers: Dict[str, list] = {}
     
-    @property
-    def event_version(self) -> str:
-        """Get event version."""
-        return "1.0"
+    def subscribe(self, event_type: str, subscriber):
+        """Subscribe to building events."""
+        if event_type not in self.subscribers:
+            self.subscribers[event_type] = []
+        self.subscribers[event_type].append(subscriber)
     
-    def to_dict(self) -> dict:
-        """Convert event to dictionary."""
-        return {
-            "event_type": self.event_type,
-            "event_version": self.event_version,
-            "building_id": str(self.building_id),
-            "archived_at": self.archived_at.isoformat(),
-            "reason": self.reason
-        } 
+    def publish(self, event: DomainEvent):
+        """Publish a building domain event."""
+        event_type = event.event_type
+        if event_type in self.subscribers:
+            for subscriber in self.subscribers[event_type]:
+                try:
+                    subscriber(event)
+                except Exception as e:
+                    # Log error but don't stop other subscribers
+                    print(f"Error in event subscriber: {e}")
+    
+    def publish_building_created(self, event: BuildingCreatedEvent):
+        """Publish building created event."""
+        self.publish(event)
+    
+    def publish_building_updated(self, event: BuildingUpdatedEvent):
+        """Publish building updated event."""
+        self.publish(event)
+    
+    def publish_building_deleted(self, event: BuildingDeletedEvent):
+        """Publish building deleted event."""
+        self.publish(event)
+    
+    def publish_building_status_changed(self, event: BuildingStatusChangedEvent):
+        """Publish building status changed event."""
+        self.publish(event)
+    
+    def publish_building_location_changed(self, event: BuildingLocationChangedEvent):
+        """Publish building location changed event."""
+        self.publish(event)
+    
+    def publish_building_cost_updated(self, event: BuildingCostUpdatedEvent):
+        """Publish building cost updated event."""
+        self.publish(event)
+
+# Global event publisher instance
+building_event_publisher = BuildingEventPublisher() 

@@ -1,23 +1,47 @@
 """
-DTO Module
+Data Transfer Objects (DTOs) - Application Layer Data Models
 
-This module contains all Data Transfer Objects (DTOs) used in the application layer.
-DTOs are used to transfer data between the application layer and external systems,
-providing a clean interface for data exchange.
+This module contains data transfer objects that define the structure
+of data exchanged between the application layer and external interfaces.
 """
 
-from .building_dto import (
-    BuildingDTO,
+from svgx_engine.application.dto.building_dto import (
     CreateBuildingRequest,
     UpdateBuildingRequest,
+    BuildingResponse,
+    BuildingSearchRequest,
     BuildingListResponse,
-    BuildingSearchRequest
+    AddressDTO,
+    CoordinatesDTO,
+    DimensionsDTO,
+    StatusDTO,
+    MoneyDTO,
+    BuildingResponseDTO,
+    CreateBuildingRequestDTO,
+    UpdateBuildingRequestDTO,
+    BuildingListResponseDTO,
+    BuildingSearchRequestDTO
 )
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Data transfer objects for SVGX Engine"
+
+# Export all DTOs
 __all__ = [
-    'BuildingDTO',
-    'CreateBuildingRequest', 
-    'UpdateBuildingRequest',
-    'BuildingListResponse',
-    'BuildingSearchRequest'
+    "CreateBuildingRequest",
+    "UpdateBuildingRequest", 
+    "BuildingResponse",
+    "BuildingSearchRequest",
+    "BuildingListResponse",
+    "AddressDTO",
+    "CoordinatesDTO",
+    "DimensionsDTO",
+    "StatusDTO",
+    "MoneyDTO",
+    "BuildingResponseDTO",
+    "CreateBuildingRequestDTO",
+    "UpdateBuildingRequestDTO",
+    "BuildingListResponseDTO",
+    "BuildingSearchRequestDTO"
 ] 

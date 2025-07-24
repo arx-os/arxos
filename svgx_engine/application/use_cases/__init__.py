@@ -1,23 +1,27 @@
 """
-Use Cases Module
+Use Cases - Application Layer Business Logic
 
-This module contains all use cases used in the application layer.
-Use cases represent specific business operations and orchestrate
-the domain layer to achieve business goals.
+This module contains use cases that orchestrate domain logic and
+handle external interfaces for specific business operations.
 """
 
-from .building_use_cases import (
+from svgx_engine.application.use_cases.building_use_cases import (
     CreateBuildingUseCase,
     UpdateBuildingUseCase,
     GetBuildingUseCase,
-    ListBuildingsUseCase,
-    DeleteBuildingUseCase
+    DeleteBuildingUseCase,
+    ListBuildingsUseCase
 )
 
+# Version and metadata
+__version__ = "1.0.0"
+__description__ = "Use cases for SVGX Engine"
+
+# Export all use cases
 __all__ = [
-    'CreateBuildingUseCase',
-    'UpdateBuildingUseCase',
-    'GetBuildingUseCase',
-    'ListBuildingsUseCase',
-    'DeleteBuildingUseCase'
+    "CreateBuildingUseCase",
+    "UpdateBuildingUseCase",
+    "GetBuildingUseCase", 
+    "DeleteBuildingUseCase",
+    "ListBuildingsUseCase"
 ] 

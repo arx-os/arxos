@@ -184,10 +184,8 @@ try:
 except ImportError:
     TelemetryService = None
 
-try:
-    from svgx_engine.services.realtime import SVGXRealtimeTelemetryServer as RealtimeService
-except ImportError:
-    RealtimeService = None
+# Realtime services have been migrated to Go backend
+RealtimeService = None
 
 # Advanced Features Services
 try:
@@ -205,10 +203,8 @@ try:
 except ImportError:
     AdvancedCADFeaturesService = None
 
-try:
-    from svgx_engine.services.realtime_collaboration import RealtimeCollaboration as RealtimeCollaborationService
-except ImportError:
-    RealtimeCollaborationService = None
+# Realtime collaboration service has been migrated to Go backend
+RealtimeCollaborationService = None
 
 # Error Handling Services
 try:
@@ -354,13 +350,11 @@ __all__ = [
     
     # Telemetry and Monitoring
     'TelemetryService',
-    'RealtimeService',
     
     # Advanced Features
     'EnhancedSimulationEngineService',
     'InteractiveCapabilitiesService',
     'AdvancedCADFeaturesService',
-    'RealtimeCollaborationService',
     
     # Error Handling
     'ErrorHandlerService',

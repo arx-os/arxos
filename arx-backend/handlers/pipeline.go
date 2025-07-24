@@ -1,21 +1,18 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"arx/models"
+	"arx/repository"
+	"arx/utils"
 
-	"arxos/arx-backend/models"
-	"arxos/arx-backend/repository"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 // PipelineStep represents a step in the integration pipeline
@@ -75,250 +72,194 @@ func NewPipelineHandler(repo *repository.PipelineRepository) *PipelineHandler {
 }
 
 // RegisterRoutes registers pipeline routes with the router
-func (h *PipelineHandler) RegisterRoutes(r *gin.RouterGroup) {
-	pipeline := r.Group("/pipeline")
-	{
-		pipeline.POST("/execute", h.ExecutePipeline)
-		pipeline.GET("/status/:id", h.GetPipelineStatus)
-		pipeline.POST("/validate-schema/:system", h.ValidateSchema)
-		pipeline.POST("/validate-symbol/:symbol", h.ValidateSymbol)
-		pipeline.POST("/validate-behavior/:system", h.ValidateBehavior)
-		pipeline.GET("/executions", h.ListExecutions)
-		pipeline.GET("/metrics", h.GetPipelineMetrics)
-		pipeline.GET("/configurations/:system", h.GetConfigurations)
-	}
+func (h *PipelineHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/api/pipeline", func(r chi.Router) {
+		r.Post("/execute", utils.ToChiHandler(h.ExecutePipeline))
+		r.Get("/status/{id}", utils.ToChiHandler(h.GetPipelineStatus))
+		r.Post("/validate-schema/{system}", utils.ToChiHandler(h.ValidateSchema))
+		r.Post("/validate-symbol/{symbol}", utils.ToChiHandler(h.ValidateSymbol))
+		r.Post("/validate-behavior/{system}", utils.ToChiHandler(h.ValidateBehavior))
+		r.Get("/executions", utils.ToChiHandler(h.ListExecutions))
+		r.Get("/metrics", utils.ToChiHandler(h.GetPipelineMetrics))
+		r.Get("/configurations/{system}", utils.ToChiHandler(h.GetConfigurations))
+	})
 }
 
 // ExecutePipeline handles the main pipeline execution
-func (h *PipelineHandler) ExecutePipeline(c *gin.Context) {
+func (h *PipelineHandler) ExecutePipeline(c *utils.ChiContext) {
 	var req models.PipelineRequest
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.PipelineResponse{
-			Success:   false,
-			Message:   "Invalid request format",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+	if err := c.Reader.ShouldBindJSON(&req); err != nil {
+		c.Writer.Error(http.StatusBadRequest, "Invalid request format", err.Error())
 		return
 	}
 
-	// Create pipeline execution in database
+	// Validate request
+	if req.System == "" {
+		c.Writer.Error(http.StatusBadRequest, "System is required")
+		return
+	}
+
+	// Create execution record
+	executionID := uuid.New()
 	execution := &models.PipelineExecution{
+		ID:         executionID.String(),
 		System:     req.System,
 		ObjectType: req.ObjectType,
-		Status:     "pending",
-		CreatedBy:  getCurrentUser(c),
+		Status:     "running",
+		CreatedAt:  time.Now(),
 	}
 
-	if err := h.repo.CreateExecution(c.Request.Context(), execution); err != nil {
-		c.JSON(http.StatusInternalServerError, models.PipelineResponse{
-			Success:   false,
-			Message:   "Failed to create pipeline execution",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+	// Save to database
+	if err := h.repo.CreateExecution(execution); err != nil {
+		c.Writer.Error(http.StatusInternalServerError, "Failed to create execution record", err.Error())
 		return
 	}
 
-	// Execute pipeline steps asynchronously
-	go h.runPipelineExecution(execution.ID, req)
+	// Start pipeline execution in background
+	go h.runPipelineExecution(executionID, req)
 
-	c.JSON(http.StatusAccepted, models.PipelineResponse{
+	response := models.PipelineResponse{
 		Success:     true,
-		ExecutionID: &execution.ID,
 		Message:     "Pipeline execution started",
-		Status:      "pending",
-		Timestamp:   time.Now(),
-	})
+		ExecutionID: executionID.String(),
+	}
+
+	c.Writer.JSON(http.StatusAccepted, response)
 }
 
-// GetPipelineStatus returns the status of a pipeline execution
-func (h *PipelineHandler) GetPipelineStatus(c *gin.Context) {
-	executionIDStr := c.Param("id")
-	executionID, err := uuid.Parse(executionIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, models.PipelineResponse{
-			Success:   false,
-			Message:   "Invalid execution ID",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+// GetPipelineStatus handles GET /api/pipeline/status/{id}
+func (h *PipelineHandler) GetPipelineStatus(c *utils.ChiContext) {
+	executionID := c.Reader.Param("id")
+	if executionID == "" {
+		c.Writer.Error(http.StatusBadRequest, "Execution ID is required")
 		return
 	}
 
-	execution, err := h.repo.GetExecution(c.Request.Context(), executionID)
+	execution, err := h.repo.GetExecution(executionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, models.PipelineResponse{
-			Success:   false,
-			Message:   "Pipeline execution not found",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+		c.Writer.Error(http.StatusNotFound, "Execution not found", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, models.PipelineResponse{
-		Success:     true,
-		ExecutionID: &execution.ID,
-		Message:     "Pipeline status retrieved",
-		Status:      execution.Status,
-		Metadata: map[string]interface{}{
-			"system":       execution.System,
-			"object_type":  execution.ObjectType,
-			"created_at":   execution.CreatedAt,
-			"completed_at": execution.CompletedAt,
-			"error":        execution.ErrorMessage,
-			"steps":        execution.Steps,
-		},
-		Timestamp: time.Now(),
-	})
+	c.Writer.JSON(http.StatusOK, execution)
 }
 
-// ListExecutions returns a list of pipeline executions
-func (h *PipelineHandler) ListExecutions(c *gin.Context) {
-	system := c.Query("system")
-	status := c.Query("status")
-	limit := 50 // Default limit
-	offset := 0 // Default offset
-
-	executions, err := h.repo.ListExecutions(c.Request.Context(), &system, &status, limit, offset)
+// ListExecutions handles GET /api/pipeline/executions
+func (h *PipelineHandler) ListExecutions(c *utils.ChiContext) {
+	executions, err := h.repo.ListExecutions()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.PipelineResponse{
-			Success:   false,
-			Message:   "Failed to retrieve pipeline executions",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+		c.Writer.Error(http.StatusInternalServerError, "Failed to list executions", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success":    true,
-		"executions": executions,
-		"timestamp":  time.Now(),
-	})
+	c.Writer.JSON(http.StatusOK, executions)
 }
 
-// GetPipelineMetrics returns pipeline metrics
-func (h *PipelineHandler) GetPipelineMetrics(c *gin.Context) {
-	stats, err := h.repo.GetExecutionStats(c.Request.Context())
+// GetPipelineMetrics handles GET /api/pipeline/metrics
+func (h *PipelineHandler) GetPipelineMetrics(c *utils.ChiContext) {
+	metrics, err := h.repo.GetMetrics()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.PipelineResponse{
-			Success:   false,
-			Message:   "Failed to retrieve pipeline metrics",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+		c.Writer.Error(http.StatusInternalServerError, "Failed to get metrics", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success":   true,
-		"metrics":   stats,
-		"timestamp": time.Now(),
-	})
+	c.Writer.JSON(http.StatusOK, metrics)
 }
 
-// GetConfigurations returns pipeline configurations for a system
-func (h *PipelineHandler) GetConfigurations(c *gin.Context) {
-	system := c.Param("system")
-
-	configs, err := h.repo.ListConfigurations(c.Request.Context(), system)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.PipelineResponse{
-			Success:   false,
-			Message:   "Failed to retrieve pipeline configurations",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+// GetConfigurations handles GET /api/pipeline/configurations/{system}
+func (h *PipelineHandler) GetConfigurations(c *utils.ChiContext) {
+	system := c.Reader.Param("system")
+	if system == "" {
+		c.Writer.Error(http.StatusBadRequest, "System is required")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"success":        true,
-		"system":         system,
-		"configurations": configs,
-		"timestamp":      time.Now(),
-	})
+	configs, err := h.repo.GetConfigurations(system)
+	if err != nil {
+		c.Writer.Error(http.StatusInternalServerError, "Failed to get configurations", err.Error())
+		return
+	}
+
+	c.Writer.JSON(http.StatusOK, configs)
 }
 
-// ValidateSchema validates a system schema
-func (h *PipelineHandler) ValidateSchema(c *gin.Context) {
-	system := c.Param("system")
+// ValidateSchema handles POST /api/pipeline/validate-schema/{system}
+func (h *PipelineHandler) ValidateSchema(c *utils.ChiContext) {
+	system := c.Reader.Param("system")
+	if system == "" {
+		c.Writer.Error(http.StatusBadRequest, "System is required")
+		return
+	}
+
+	var req models.ValidationRequest
+	if err := c.Reader.ShouldBindJSON(&req); err != nil {
+		c.Writer.Error(http.StatusBadRequest, "Invalid request format", err.Error())
+		return
+	}
 
 	result, err := h.executePythonBridge("validate-schema", map[string]string{
 		"system": system,
+		"schema": req.Data,
 	})
-
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.PipelineValidationResponse{
-			Success:   false,
-			Message:   "Schema validation failed",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+		c.Writer.Error(http.StatusInternalServerError, "Schema validation failed", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, models.PipelineValidationResponse{
-		Success:   true,
-		Message:   "Schema validation completed",
-		Details:   result,
-		Timestamp: time.Now(),
-	})
+	c.Writer.JSON(http.StatusOK, result)
 }
 
-// ValidateSymbol validates a symbol
-func (h *PipelineHandler) ValidateSymbol(c *gin.Context) {
-	symbol := c.Param("symbol")
+// ValidateSymbol handles POST /api/pipeline/validate-symbol/{symbol}
+func (h *PipelineHandler) ValidateSymbol(c *utils.ChiContext) {
+	symbol := c.Reader.Param("symbol")
+	if symbol == "" {
+		c.Writer.Error(http.StatusBadRequest, "Symbol is required")
+		return
+	}
+
+	var req models.ValidationRequest
+	if err := c.Reader.ShouldBindJSON(&req); err != nil {
+		c.Writer.Error(http.StatusBadRequest, "Invalid request format", err.Error())
+		return
+	}
 
 	result, err := h.executePythonBridge("validate-symbol", map[string]string{
 		"symbol": symbol,
+		"data":   req.Data,
 	})
-
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.PipelineValidationResponse{
-			Success:   false,
-			Message:   "Symbol validation failed",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+		c.Writer.Error(http.StatusInternalServerError, "Symbol validation failed", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, models.PipelineValidationResponse{
-		Success:   true,
-		Message:   "Symbol validation completed",
-		Details:   result,
-		Timestamp: time.Now(),
-	})
+	c.Writer.JSON(http.StatusOK, result)
 }
 
-// ValidateBehavior validates behavior profiles
-func (h *PipelineHandler) ValidateBehavior(c *gin.Context) {
-	system := c.Param("system")
+// ValidateBehavior handles POST /api/pipeline/validate-behavior/{system}
+func (h *PipelineHandler) ValidateBehavior(c *utils.ChiContext) {
+	system := c.Reader.Param("system")
+	if system == "" {
+		c.Writer.Error(http.StatusBadRequest, "System is required")
+		return
+	}
+
+	var req models.ValidationRequest
+	if err := c.Reader.ShouldBindJSON(&req); err != nil {
+		c.Writer.Error(http.StatusBadRequest, "Invalid request format", err.Error())
+		return
+	}
 
 	result, err := h.executePythonBridge("validate-behavior", map[string]string{
 		"system": system,
+		"data":   req.Data,
 	})
-
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.PipelineValidationResponse{
-			Success:   false,
-			Message:   "Behavior validation failed",
-			Error:     &err.Error(),
-			Timestamp: time.Now(),
-		})
+		c.Writer.Error(http.StatusInternalServerError, "Behavior validation failed", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, models.PipelineValidationResponse{
-		Success:   true,
-		Message:   "Behavior validation completed",
-		Details:   result,
-		Timestamp: time.Now(),
-	})
+	c.Writer.JSON(http.StatusOK, result)
 }
 
 // executePythonBridge executes Python bridge operations
@@ -329,278 +270,219 @@ func (h *PipelineHandler) executePythonBridge(operation string, params map[strin
 		return nil, fmt.Errorf("failed to marshal params: %v", err)
 	}
 
-	// Execute Python bridge
-	cmd := exec.Command("python", h.config.PythonBridgePath, "--operation", operation, "--params", string(paramsJSON))
-	cmd.Dir = "svgx_engine"
+	// Execute Python script
+	cmd := exec.Command("python", h.config.PythonBridgePath, operation, string(paramsJSON))
+	cmd.Dir = h.config.SVGXEnginePath
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("python bridge execution failed: %v, output: %s", err, string(output))
 	}
 
-	// Parse response
+	// Parse output
 	var result map[string]interface{}
 	if err := json.Unmarshal(output, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse python bridge response: %v", err)
+		return nil, fmt.Errorf("failed to parse python output: %v", err)
 	}
 
 	return result, nil
 }
 
-// runPipelineExecution runs the complete pipeline execution
+// runPipelineExecution runs the pipeline execution in background
 func (h *PipelineHandler) runPipelineExecution(executionID uuid.UUID, req models.PipelineRequest) {
-	ctx := context.Background()
-
-	// Update execution status to running
-	execution, err := h.repo.GetExecution(ctx, executionID)
-	if err != nil {
-		return
-	}
-
-	now := time.Now()
-	execution.Status = "running"
-	execution.StartedAt = &now
-	h.repo.UpdateExecution(ctx, execution)
-
-	// Create pipeline steps
+	// Create default steps
 	steps := h.createDefaultSteps(req.System, req.ObjectType)
 
-	for i, step := range steps {
-		// Create step in database
-		dbStep := &models.PipelineStep{
-			ExecutionID:  executionID,
-			StepName:     step.ID,
-			StepOrder:    i + 1,
-			Orchestrator: step.Orchestrator,
-			Status:       "pending",
-		}
+	// Update execution with steps
+	execution := &models.PipelineExecution{
+		ID:    executionID.String(),
+		Steps: steps,
+	}
 
-		if err := h.repo.CreateStep(ctx, dbStep); err != nil {
-			continue
-		}
+	if err := h.repo.UpdateExecution(execution); err != nil {
+		// Log error but continue execution
+		fmt.Printf("Failed to update execution: %v\n", err)
+	}
 
-		// Update step status to running
-		stepStarted := time.Now()
-		dbStep.Status = "running"
-		dbStep.StartedAt = &stepStarted
-		h.repo.UpdateStep(ctx, dbStep)
-
-		// Execute step based on orchestrator
-		var stepErr error
-		if step.Orchestrator == "go" {
-			stepErr = h.executeGoStep(&step, execution)
-		} else {
-			stepErr = h.executePythonStep(&step, execution)
-		}
+	// Execute each step
+	for i := range steps {
+		steps[i].Status = "running"
+		now := time.Now()
+		steps[i].StartedAt = &now
 
 		// Update step status
-		stepCompleted := time.Now()
-		if stepErr != nil {
-			dbStep.Status = "failed"
-			errorMsg := stepErr.Error()
-			dbStep.ErrorMessage = &errorMsg
-		} else {
-			dbStep.Status = "completed"
+		if err := h.repo.UpdateExecution(execution); err != nil {
+			fmt.Printf("Failed to update step status: %v\n", err)
 		}
-		dbStep.CompletedAt = &stepCompleted
-		h.repo.UpdateStep(ctx, dbStep)
 
-		if stepErr != nil {
-			// Update execution status to failed
+		// Execute step
+		var err error
+		switch steps[i].Orchestrator {
+		case "go":
+			err = h.executeGoStep(&steps[i], execution)
+		case "python":
+			err = h.executePythonStep(&steps[i], execution)
+		default:
+			err = fmt.Errorf("unknown orchestrator: %s", steps[i].Orchestrator)
+		}
+
+		// Update step completion
+		completedAt := time.Now()
+		steps[i].CompletedAt = &completedAt
+		if err != nil {
+			steps[i].Status = "failed"
+			steps[i].Error = err.Error()
 			execution.Status = "failed"
-			errorMsg := stepErr.Error()
-			execution.ErrorMessage = &errorMsg
-			h.repo.UpdateExecution(ctx, execution)
+			execution.Error = err.Error()
+		} else {
+			steps[i].Status = "completed"
+		}
+
+		// Update execution
+		if err := h.repo.UpdateExecution(execution); err != nil {
+			fmt.Printf("Failed to update execution: %v\n", err)
+		}
+
+		// Stop if step failed
+		if err != nil {
 			return
 		}
 	}
 
-	// Update execution status to completed
+	// Mark execution as completed
 	execution.Status = "completed"
-	executionCompleted := time.Now()
-	execution.CompletedAt = &executionCompleted
-	h.repo.UpdateExecution(ctx, execution)
-}
+	completedAt := time.Now()
+	execution.CompletedAt = &completedAt
 
-// executeGoStep executes a Go-orchestrated step
-func (h *PipelineHandler) executeGoStep(step *PipelineStep, execution *models.PipelineExecution) error {
-	switch step.ID {
-	case "define-schema":
-		return h.executeDefineSchema(execution)
-	case "update-registry":
-		return h.executeUpdateRegistry(execution)
-	case "documentation":
-		return h.executeDocumentation(execution)
-	default:
-		return fmt.Errorf("unknown Go step: %s", step.ID)
+	if err := h.repo.UpdateExecution(execution); err != nil {
+		fmt.Printf("Failed to mark execution as completed: %v\n", err)
 	}
 }
 
-// executePythonStep executes a Python-orchestrated step
+// executeGoStep executes a Go step
+func (h *PipelineHandler) executeGoStep(step *PipelineStep, execution *models.PipelineExecution) error {
+	// Implement Go step execution logic
+	// This would typically call Go functions or services
+	return nil
+}
+
+// executePythonStep executes a Python step
 func (h *PipelineHandler) executePythonStep(step *PipelineStep, execution *models.PipelineExecution) error {
-	params := map[string]string{
+	// Execute Python script for the step
+	cmd := exec.Command("python", h.config.PythonBridgePath, step.Name)
+	cmd.Dir = h.config.SVGXEnginePath
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("python step execution failed: %v, output: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// executeDefineSchema executes schema definition step
+func (h *PipelineHandler) executeDefineSchema(execution *models.PipelineExecution) error {
+	// Execute schema definition
+	result, err := h.executePythonBridge("define-schema", map[string]string{
 		"system":      execution.System,
 		"object_type": execution.ObjectType,
-		"step":        step.ID,
-	}
-
-	_, err := h.executePythonBridge(step.ID, params)
-	return err
-}
-
-// executeDefineSchema executes the schema definition step
-func (h *PipelineHandler) executeDefineSchema(execution *models.PipelineExecution) error {
-	// Create schema directory if it doesn't exist
-	schemaDir := filepath.Join("schemas", execution.System)
-	if err := os.MkdirAll(schemaDir, 0755); err != nil {
-		return fmt.Errorf("failed to create schema directory: %v", err)
-	}
-
-	// Create basic schema file
-	schemaFile := filepath.Join(schemaDir, "schema.json")
-	schema := map[string]interface{}{
-		"system": execution.System,
-		"objects": map[string]interface{}{
-			"default": map[string]interface{}{
-				"properties":       map[string]interface{}{},
-				"relationships":    map[string]interface{}{},
-				"behavior_profile": "default",
-			},
-		},
-		"created_at": time.Now().Format(time.RFC3339),
-	}
-
-	schemaData, err := json.MarshalIndent(schema, "", "  ")
+	})
 	if err != nil {
-		return fmt.Errorf("failed to marshal schema: %v", err)
+		return fmt.Errorf("schema definition failed: %v", err)
 	}
 
-	if err := os.WriteFile(schemaFile, schemaData, 0644); err != nil {
-		return fmt.Errorf("failed to write schema file: %v", err)
+	// Update execution metadata
+	if execution.Metadata == nil {
+		execution.Metadata = make(map[string]interface{})
 	}
+	execution.Metadata["schema_result"] = result
 
 	return nil
 }
 
-// executeUpdateRegistry executes the registry update step
+// executeUpdateRegistry executes registry update step
 func (h *PipelineHandler) executeUpdateRegistry(execution *models.PipelineExecution) error {
-	// Update symbol index
-	indexFile := "symbol_index.json"
-	var index map[string]interface{}
-
-	if data, err := os.ReadFile(indexFile); err == nil {
-		if err := json.Unmarshal(data, &index); err != nil {
-			return fmt.Errorf("failed to parse symbol index: %v", err)
-		}
-	} else {
-		index = make(map[string]interface{})
-	}
-
-	// Add system to index
-	index[execution.System] = map[string]interface{}{
-		"added_at": time.Now().Format(time.RFC3339),
-		"status":   "active",
-	}
-
-	indexData, err := json.MarshalIndent(index, "", "  ")
+	// Execute registry update
+	result, err := h.executePythonBridge("update-registry", map[string]string{
+		"system":      execution.System,
+		"object_type": execution.ObjectType,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to marshal index: %v", err)
+		return fmt.Errorf("registry update failed: %v", err)
 	}
 
-	if err := os.WriteFile(indexFile, indexData, 0644); err != nil {
-		return fmt.Errorf("failed to write index file: %v", err)
+	// Update execution metadata
+	if execution.Metadata == nil {
+		execution.Metadata = make(map[string]interface{})
 	}
+	execution.Metadata["registry_result"] = result
 
 	return nil
 }
 
-// executeDocumentation executes the documentation step
+// executeDocumentation executes documentation generation step
 func (h *PipelineHandler) executeDocumentation(execution *models.PipelineExecution) error {
-	// Create documentation directory
-	docsDir := filepath.Join("docs", "systems", execution.System)
-	if err := os.MkdirAll(docsDir, 0755); err != nil {
-		return fmt.Errorf("failed to create docs directory: %v", err)
+	// Execute documentation generation
+	result, err := h.executePythonBridge("generate-docs", map[string]string{
+		"system":      execution.System,
+		"object_type": execution.ObjectType,
+	})
+	if err != nil {
+		return fmt.Errorf("documentation generation failed: %v", err)
 	}
 
-	// Create basic documentation
-	docFile := filepath.Join(docsDir, "README.md")
-	docContent := fmt.Sprintf(`# %s System
-
-## Overview
-This system was integrated via the Arxos pipeline.
-
-## Objects
-- Default object type
-
-## Behavior Profiles
-- Default behavior profile
-
-## Integration Date
-%s
-
-## Status
-Active
-`, strings.Title(execution.System), time.Now().Format("2006-01-02"))
-
-	if err := os.WriteFile(docFile, []byte(docContent), 0644); err != nil {
-		return fmt.Errorf("failed to write documentation: %v", err)
+	// Update execution metadata
+	if execution.Metadata == nil {
+		execution.Metadata = make(map[string]interface{})
 	}
+	execution.Metadata["docs_result"] = result
 
 	return nil
 }
 
-// createDefaultSteps creates the default pipeline steps
+// createDefaultSteps creates default pipeline steps
 func (h *PipelineHandler) createDefaultSteps(system, objectType string) []PipelineStep {
-	return []PipelineStep{
+	steps := []PipelineStep{
 		{
-			ID:           "define-schema",
-			Name:         "Define Schema",
-			Description:  "Add or extend the BIM object schema",
-			Orchestrator: "go",
-			Status:       "pending",
-		},
-		{
-			ID:           "add-symbols",
-			Name:         "Add Symbols",
-			Description:  "Create or update SVGX symbols",
+			ID:           "1",
+			Name:         "validate-schema",
+			Description:  "Validate system schema",
 			Orchestrator: "python",
 			Status:       "pending",
 		},
 		{
-			ID:           "implement-behavior",
-			Name:         "Implement Behavior Profiles",
-			Description:  "Add programmable behavior for objects",
+			ID:           "2",
+			Name:         "define-schema",
+			Description:  "Define system schema",
 			Orchestrator: "python",
 			Status:       "pending",
 		},
 		{
-			ID:           "update-registry",
-			Name:         "Update Registry & Index",
-			Description:  "Make system discoverable",
-			Orchestrator: "go",
+			ID:           "3",
+			Name:         "update-registry",
+			Description:  "Update symbol registry",
+			Orchestrator: "python",
 			Status:       "pending",
 		},
 		{
-			ID:           "documentation",
-			Name:         "Documentation & Test Coverage",
-			Description:  "Add documentation and tests",
-			Orchestrator: "go",
-			Status:       "pending",
-		},
-		{
-			ID:           "compliance",
-			Name:         "Enterprise Compliance Validation",
-			Description:  "Ensure enterprise-grade standards",
+			ID:           "4",
+			Name:         "generate-docs",
+			Description:  "Generate documentation",
 			Orchestrator: "python",
 			Status:       "pending",
 		},
 	}
+
+	return steps
 }
 
-// getCurrentUser gets the current user from the context
-func getCurrentUser(c *gin.Context) *string {
-	// In a real implementation, this would extract the user from the JWT token
-	// For now, return a default value
-	user := "pipeline-system"
+// getCurrentUser gets the current user from context
+func getCurrentUser(c *utils.ChiContext) *string {
+	// Extract user from context
+	// This would typically get user from JWT token or session
+	user := c.Reader.GetHeader("X-User-ID")
+	if user == "" {
+		return nil
+	}
 	return &user
 }

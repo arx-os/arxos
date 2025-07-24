@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -10,34 +9,34 @@ import (
 
 // PipelineExecution represents a pipeline execution record
 type PipelineExecution struct {
-	ID          uuid.UUID              `json:"id" db:"id"`
-	System      string                 `json:"system" db:"system"`
-	ObjectType  *string                `json:"object_type,omitempty" db:"object_type"`
-	Status      string                 `json:"status" db:"status"`
-	CreatedAt   time.Time             `json:"created_at" db:"created_at"`
-	StartedAt   *time.Time            `json:"started_at,omitempty" db:"started_at"`
-	CompletedAt *time.Time            `json:"completed_at,omitempty" db:"completed_at"`
-	ErrorMessage *string              `json:"error_message,omitempty" db:"error_message"`
-	Metadata    map[string]interface{} `json:"metadata" db:"metadata"`
-	CreatedBy   *string               `json:"created_by,omitempty" db:"created_by"`
-	UpdatedAt   time.Time             `json:"updated_at" db:"updated_at"`
-	Steps       []PipelineStep         `json:"steps,omitempty"`
+	ID           uuid.UUID              `json:"id" db:"id"`
+	System       string                 `json:"system" db:"system"`
+	ObjectType   *string                `json:"object_type,omitempty" db:"object_type"`
+	Status       string                 `json:"status" db:"status"`
+	CreatedAt    time.Time              `json:"created_at" db:"created_at"`
+	StartedAt    *time.Time             `json:"started_at,omitempty" db:"started_at"`
+	CompletedAt  *time.Time             `json:"completed_at,omitempty" db:"completed_at"`
+	ErrorMessage *string                `json:"error_message,omitempty" db:"error_message"`
+	Metadata     map[string]interface{} `json:"metadata" db:"metadata"`
+	CreatedBy    *string                `json:"created_by,omitempty" db:"created_by"`
+	UpdatedAt    time.Time              `json:"updated_at" db:"updated_at"`
+	Steps        []PipelineStep         `json:"steps,omitempty"`
 }
 
 // PipelineStep represents a step in a pipeline execution
 type PipelineStep struct {
-	ID          uuid.UUID              `json:"id" db:"id"`
-	ExecutionID uuid.UUID              `json:"execution_id" db:"execution_id"`
-	StepName    string                 `json:"step_name" db:"step_name"`
-	StepOrder   int                    `json:"step_order" db:"step_order"`
-	Orchestrator string                `json:"orchestrator" db:"orchestrator"`
-	Status      string                 `json:"status" db:"status"`
-	StartedAt   *time.Time            `json:"started_at,omitempty" db:"started_at"`
-	CompletedAt *time.Time            `json:"completed_at,omitempty" db:"completed_at"`
-	ErrorMessage *string              `json:"error_message,omitempty" db:"error_message"`
-	Metadata    map[string]interface{} `json:"metadata" db:"metadata"`
-	CreatedAt   time.Time             `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time             `json:"updated_at" db:"updated_at"`
+	ID           uuid.UUID              `json:"id" db:"id"`
+	ExecutionID  uuid.UUID              `json:"execution_id" db:"execution_id"`
+	StepName     string                 `json:"step_name" db:"step_name"`
+	StepOrder    int                    `json:"step_order" db:"step_order"`
+	Orchestrator string                 `json:"orchestrator" db:"orchestrator"`
+	Status       string                 `json:"status" db:"status"`
+	StartedAt    *time.Time             `json:"started_at,omitempty" db:"started_at"`
+	CompletedAt  *time.Time             `json:"completed_at,omitempty" db:"completed_at"`
+	ErrorMessage *string                `json:"error_message,omitempty" db:"error_message"`
+	Metadata     map[string]interface{} `json:"metadata" db:"metadata"`
+	CreatedAt    time.Time              `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time              `json:"updated_at" db:"updated_at"`
 }
 
 // PipelineConfiguration represents a pipeline configuration
@@ -48,9 +47,9 @@ type PipelineConfiguration struct {
 	ConfigType string                 `json:"config_type" db:"config_type"`
 	ConfigData map[string]interface{} `json:"config_data" db:"config_data"`
 	IsActive   bool                   `json:"is_active" db:"is_active"`
-	CreatedAt  time.Time             `json:"created_at" db:"created_at"`
-	UpdatedAt  time.Time             `json:"updated_at" db:"updated_at"`
-	CreatedBy  *string               `json:"created_by,omitempty" db:"created_by"`
+	CreatedAt  time.Time              `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at" db:"updated_at"`
+	CreatedBy  *string                `json:"created_by,omitempty" db:"created_by"`
 }
 
 // PipelineQualityGate represents a quality gate for pipeline validation
@@ -61,20 +60,20 @@ type PipelineQualityGate struct {
 	GateConfig map[string]interface{} `json:"gate_config" db:"gate_config"`
 	IsRequired bool                   `json:"is_required" db:"is_required"`
 	IsActive   bool                   `json:"is_active" db:"is_active"`
-	CreatedAt  time.Time             `json:"created_at" db:"created_at"`
-	UpdatedAt  time.Time             `json:"updated_at" db:"updated_at"`
+	CreatedAt  time.Time              `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time              `json:"updated_at" db:"updated_at"`
 }
 
 // PipelineAuditLog represents an audit log entry for pipeline operations
 type PipelineAuditLog struct {
-	ID         uuid.UUID              `json:"id" db:"id"`
-	ExecutionID *uuid.UUID           `json:"execution_id,omitempty" db:"execution_id"`
-	StepID     *uuid.UUID            `json:"step_id,omitempty" db:"step_id"`
-	Action     string                 `json:"action" db:"action"`
-	ActionType string                 `json:"action_type" db:"action_type"`
-	Details    map[string]interface{} `json:"details" db:"details"`
-	CreatedAt  time.Time             `json:"created_at" db:"created_at"`
-	CreatedBy  *string               `json:"created_by,omitempty" db:"created_by"`
+	ID          uuid.UUID              `json:"id" db:"id"`
+	ExecutionID *uuid.UUID             `json:"execution_id,omitempty" db:"execution_id"`
+	StepID      *uuid.UUID             `json:"step_id,omitempty" db:"step_id"`
+	Action      string                 `json:"action" db:"action"`
+	ActionType  string                 `json:"action_type" db:"action_type"`
+	Details     map[string]interface{} `json:"details" db:"details"`
+	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
+	CreatedBy   *string                `json:"created_by,omitempty" db:"created_by"`
 }
 
 // PipelineExecutionSummary represents a summary view of pipeline executions
@@ -112,18 +111,18 @@ type PipelineRequest struct {
 
 // PipelineResponse represents a response from pipeline operations
 type PipelineResponse struct {
-	Success      bool                   `json:"success"`
-	ExecutionID  *uuid.UUID            `json:"execution_id,omitempty"`
-	Message      string                 `json:"message"`
-	Error        *string                `json:"error,omitempty"`
-	Status       string                 `json:"status,omitempty"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
-	Timestamp    time.Time             `json:"timestamp"`
+	Success     bool                   `json:"success"`
+	ExecutionID *uuid.UUID             `json:"execution_id,omitempty"`
+	Message     string                 `json:"message"`
+	Error       *string                `json:"error,omitempty"`
+	Status      string                 `json:"status,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Timestamp   time.Time              `json:"timestamp"`
 }
 
 // PipelineValidationRequest represents a validation request
 type PipelineValidationRequest struct {
-	System     string `json:"system" binding:"required"`
+	System     string  `json:"system" binding:"required"`
 	ObjectType *string `json:"object_type,omitempty"`
 	Step       *string `json:"step,omitempty"`
 }
@@ -134,7 +133,7 @@ type PipelineValidationResponse struct {
 	Message   string                 `json:"message"`
 	Error     *string                `json:"error,omitempty"`
 	Details   map[string]interface{} `json:"details,omitempty"`
-	Timestamp time.Time             `json:"timestamp"`
+	Timestamp time.Time              `json:"timestamp"`
 }
 
 // Scan implements the sql.Scanner interface for PipelineExecution
@@ -150,4 +149,5 @@ func (pe *PipelineExecution) Scan(value interface{}) error {
 		return json.Unmarshal([]byte(v), pe)
 	default:
 		return nil
-} 
+	}
+}

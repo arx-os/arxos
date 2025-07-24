@@ -1,0 +1,54 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database and Storage
+redis==5.0.1
+psycopg2-binary==2.9.9
+sqlite3
+
+# Authentication and Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# HTTP and WebSocket
+websockets==12.0
+aiohttp==3.9.1
+httpx==0.25.2
+
+# Monitoring and Metrics
+prometheus-client==0.19.0
+psutil==5.9.6
+
+# Async and Concurrency
+asyncio
+aiofiles==23.2.1
+
+# Data Processing
+pickle5==0.0.12
+hashlib
+
+# Logging and Error Handling
+structlog==23.2.0
+sentry-sdk[fastapi]==1.38.0
+
+# Configuration and Environment
+python-dotenv==1.0.0
+pyyaml==6.0.1
+
+# Development and Testing (will be in requirements-dev.txt)
+# pytest==7.4.3
+# pytest-asyncio==0.21.1
+# pytest-cov==4.1.0
+# black==23.11.0
+# flake8==6.1.0
+# mypy==1.7.1
+# bandit==1.7.5
+# safety==2.3.5
+
+# Optional: Advanced Features
+# automerge-py==0.1.0  # For CRDT support
+# python-ot==0.1.0     # For operational transform 

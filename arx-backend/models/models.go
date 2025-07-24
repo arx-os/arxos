@@ -30,6 +30,11 @@ type User struct {
 	Password  string         `json:"-"` // never expose in API responses
 	Role      string         `gorm:"not null;default:'user'" json:"role"`
 	Projects  []Project      `gorm:"constraint:OnDelete:CASCADE;" json:"projects"`
+
+	// Notification relationships
+	NotificationPreferences []NotificationPreference `json:"notification_preferences,omitempty"`
+	SentNotifications       []NotificationEnhanced   `gorm:"foreignKey:SenderID" json:"sent_notifications,omitempty"`
+	ReceivedNotifications   []NotificationEnhanced   `gorm:"foreignKey:RecipientID" json:"received_notifications,omitempty"`
 }
 
 // Project represents a building or site under a user's account.
@@ -788,6 +793,20 @@ type MaintenanceNotification struct {
 	ReadAt           *time.Time `json:"read_at" db:"read_at"`
 	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at" db:"updated_at"`
+
+	// Enhanced delivery tracking
+	NotificationID   *uint      `json:"notification_id" db:"notification_id"`     // Links to notifications table
+	DeliveryStatus   string     `json:"delivery_status" db:"delivery_status"`     // pending, sent, delivered, failed
+	DeliveryChannels []string   `json:"delivery_channels" db:"delivery_channels"` // JSON array of channels
+	SentAt           *time.Time `json:"sent_at" db:"sent_at"`
+	DeliveredAt      *time.Time `json:"delivered_at" db:"delivered_at"`
+	FailedAt         *time.Time `json:"failed_at" db:"failed_at"`
+	ErrorMessage     string     `json:"error_message" db:"error_message"`
+	RetryCount       int        `json:"retry_count" db:"retry_count"`
+	MaxRetries       int        `json:"max_retries" db:"max_retries"`
+
+	// Relationships
+	Notification NotificationEnhanced `json:"notification,omitempty"`
 }
 
 // ExportActivity tracks all export requests and their completion status
@@ -1026,4 +1045,192 @@ type APIKeyUsage struct {
 func (al *AuditLog) AfterFind(tx *gorm.DB) error {
 	// This ensures the archived field is always available
 	return nil
+}
+
+// Notification audit trail functions
+
+// LogNotificationCreation logs the creation of a notification
+func LogNotificationCreation(db *gorm.DB, userID uint, notificationID uint, notificationType string, payload map[string]interface{}, r interface{}) error {
+	jsonPayload, _ := json.Marshal(payload)
+
+	auditLog := &AuditLog{
+		UserID:     userID,
+		ObjectType: "notification",
+		ObjectID:   fmt.Sprintf("%d", notificationID),
+		Action:     "created",
+		Payload:    datatypes.JSON(jsonPayload),
+		CreatedAt:  time.Now(),
+	}
+
+	// Add context information
+	context := map[string]interface{}{
+		"notification_type": notificationType,
+		"request_info":      r,
+		"timestamp":         time.Now().Unix(),
+	}
+	jsonContext, _ := json.Marshal(context)
+	auditLog.Context = datatypes.JSON(jsonContext)
+
+	return db.Create(auditLog).Error
+}
+
+// LogNotificationDelivery logs notification delivery events
+func LogNotificationDelivery(db *gorm.DB, notificationID uint, deliveryID uint, channel string, status string, payload map[string]interface{}) error {
+	jsonPayload, _ := json.Marshal(payload)
+
+	auditLog := &AuditLog{
+		ObjectType: "notification_delivery",
+		ObjectID:   fmt.Sprintf("%d", deliveryID),
+		Action:     status,
+		Payload:    datatypes.JSON(jsonPayload),
+		CreatedAt:  time.Now(),
+	}
+
+	// Add context information
+	context := map[string]interface{}{
+		"notification_id": notificationID,
+		"channel":         channel,
+		"timestamp":       time.Now().Unix(),
+	}
+	jsonContext, _ := json.Marshal(context)
+	auditLog.Context = datatypes.JSON(jsonContext)
+
+	return db.Create(auditLog).Error
+}
+
+// LogNotificationTemplateChange logs changes to notification templates
+func LogNotificationTemplateChange(db *gorm.DB, userID uint, templateID uint, action string, before, after *NotificationTemplateEnhanced, r interface{}) error {
+	// Prepare field changes
+	fieldChanges := make(map[string]map[string]interface{})
+
+	if before != nil && after != nil {
+		if before.Name != after.Name {
+			fieldChanges["name"] = map[string]interface{}{
+				"before": before.Name,
+				"after":  after.Name,
+			}
+		}
+		if before.Type != after.Type {
+			fieldChanges["type"] = map[string]interface{}{
+				"before": before.Type,
+				"after":  after.Type,
+			}
+		}
+		if before.IsActive != after.IsActive {
+			fieldChanges["is_active"] = map[string]interface{}{
+				"before": before.IsActive,
+				"after":  after.IsActive,
+			}
+		}
+	}
+
+	jsonFieldChanges, _ := json.Marshal(fieldChanges)
+	auditLog := &AuditLog{
+		UserID:       userID,
+		ObjectType:   "notification_template",
+		ObjectID:     fmt.Sprintf("%d", templateID),
+		Action:       action,
+		FieldChanges: datatypes.JSON(jsonFieldChanges),
+		CreatedAt:    time.Now(),
+	}
+
+	// Add context information
+	context := map[string]interface{}{
+		"request_info": r,
+		"timestamp":    time.Now().Unix(),
+	}
+	jsonContext, _ := json.Marshal(context)
+	auditLog.Context = datatypes.JSON(jsonContext)
+
+	return db.Create(auditLog).Error
+}
+
+// LogNotificationConfigChange logs changes to notification configurations
+func LogNotificationConfigChange(db *gorm.DB, userID uint, configID uint, action string, before, after *NotificationConfigEnhanced, r interface{}) error {
+	// Prepare field changes
+	fieldChanges := make(map[string]map[string]interface{})
+
+	if before != nil && after != nil {
+		if before.Name != after.Name {
+			fieldChanges["name"] = map[string]interface{}{
+				"before": before.Name,
+				"after":  after.Name,
+			}
+		}
+		if before.Priority != after.Priority {
+			fieldChanges["priority"] = map[string]interface{}{
+				"before": before.Priority,
+				"after":  after.Priority,
+			}
+		}
+		if before.IsActive != after.IsActive {
+			fieldChanges["is_active"] = map[string]interface{}{
+				"before": before.IsActive,
+				"after":  after.IsActive,
+			}
+		}
+	}
+
+	auditLog := &AuditLog{
+		UserID:       userID,
+		ObjectType:   "notification_config",
+		ObjectID:     fmt.Sprintf("%d", configID),
+		Action:       action,
+		FieldChanges: datatypes.JSON(fieldChanges),
+		CreatedAt:    time.Now(),
+	}
+
+	// Add context information
+	context := map[string]interface{}{
+		"request_info": r,
+		"timestamp":    time.Now().Unix(),
+	}
+	auditLog.Context = datatypes.JSON(context)
+
+	return db.Create(auditLog).Error
+}
+
+// LogNotificationPreferenceChange logs changes to user notification preferences
+func LogNotificationPreferenceChange(db *gorm.DB, userID uint, preferenceID uint, action string, before, after *NotificationPreference, r interface{}) error {
+	// Prepare field changes
+	fieldChanges := make(map[string]map[string]interface{})
+
+	if before != nil && after != nil {
+		if before.IsEnabled != after.IsEnabled {
+			fieldChanges["is_enabled"] = map[string]interface{}{
+				"before": before.IsEnabled,
+				"after":  after.IsEnabled,
+			}
+		}
+		if before.Priority != after.Priority {
+			fieldChanges["priority"] = map[string]interface{}{
+				"before": before.Priority,
+				"after":  after.Priority,
+			}
+		}
+		if before.Frequency != after.Frequency {
+			fieldChanges["frequency"] = map[string]interface{}{
+				"before": before.Frequency,
+				"after":  after.Frequency,
+			}
+		}
+	}
+
+	auditLog := &AuditLog{
+		UserID:       userID,
+		ObjectType:   "notification_preference",
+		ObjectID:     fmt.Sprintf("%d", preferenceID),
+		Action:       action,
+		FieldChanges: datatypes.JSON(fieldChanges),
+		CreatedAt:    time.Now(),
+	}
+
+	// Add context information
+	context := map[string]interface{}{
+		"request_info": r,
+		"timestamp":    time.Now().Unix(),
+	}
+	auditLog.Context = datatypes.JSON(context)
+
+	return db.Create(auditLog).Error
 }

@@ -1,45 +1,36 @@
 """
-Building Use Cases
-
-Use cases for building operations that orchestrate the domain layer
-to achieve specific business goals.
+Building Use Cases - Application Layer Use Cases
 """
 
-from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+import logging
 
-from ...domain.aggregates.building_aggregate import BuildingAggregate
-from ...domain.repositories.building_repository import BuildingRepository
-from ...domain.value_objects.address import Address
-from ...domain.value_objects.coordinates import Coordinates
-from ...domain.value_objects.dimensions import Dimensions
-from ...domain.value_objects.status import Status
-from ...domain.value_objects.identifier import Identifier
-from ..dto.building_dto import (
-    BuildingDTO,
+from svgx_engine.domain.aggregates.building_aggregate import BuildingAggregate
+from svgx_engine.domain.repositories.building_repository import BuildingRepository
+from svgx_engine.domain.value_objects.address import Address
+from svgx_engine.domain.value_objects.coordinates import Coordinates
+from svgx_engine.domain.value_objects.dimensions import Dimensions
+from svgx_engine.domain.value_objects.status import Status
+from svgx_engine.domain.value_objects.identifier import Identifier
+from svgx_engine.application.dto.building_dto import (
     CreateBuildingRequest,
     UpdateBuildingRequest,
-    BuildingListResponse,
-    BuildingSearchRequest
+    BuildingResponse,
+    BuildingSearchRequest,
+    BuildingListResponse
 )
 
+logger = logging.getLogger(__name__)
 
 class CreateBuildingUseCase:
     """
     Use case for creating a new building.
     """
     
-    def __init__(self, building_repository: BuildingRepository):
-        """
-        Initialize use case.
-        
-        Args:
-            building_repository: Repository for building operations
-        """
-        self.building_repository = building_repository
+    def __init__(self, building_service):
+        self.building_service = building_service
     
-    def execute(self, request: CreateBuildingRequest) -> BuildingDTO:
+    def execute(self, request: CreateBuildingRequest) -> BuildingResponse:
         """
         Execute the create building use case.
         
@@ -47,294 +38,322 @@ class CreateBuildingUseCase:
             request: Create building request
             
         Returns:
-            Created building DTO
+            Building response with created building details
             
         Raises:
             ValueError: If request validation fails
         """
-        # Validate request
-        errors = request.validate()
-        if errors:
-            raise ValueError(f"Invalid request: {'; '.join(errors)}")
+        logger.info(f"Creating building: {request.name}")
         
-        # Convert DTO to domain objects
-        address = Address(
-            street=request.address['street'],
-            city=request.address['city'],
-            state=request.address['state'],
-            postal_code=request.address['postal_code'],
-            country=request.address['country'],
-            unit=request.address.get('unit')
-        )
-        
-        coordinates = Coordinates(
-            latitude=request.coordinates['latitude'],
-            longitude=request.coordinates['longitude']
-        )
-        
-        dimensions = Dimensions(
-            length=request.dimensions['length'],
-            width=request.dimensions['width'],
-            height=request.dimensions.get('height')
-        )
-        
-        status = None
-        if request.status:
-            status = Status.from_enum(Status.StatusType(request.status))
-        
-        # Create building aggregate
-        building_aggregate = BuildingAggregate.create(
-            name=request.name,
-            address=address,
-            coordinates=coordinates,
-            dimensions=dimensions,
-            building_type=request.building_type,
-            status=status
-        )
-        
-        # Save to repository
-        saved_aggregate = self.building_repository.save(building_aggregate)
-        
-        # Return DTO
-        return BuildingDTO.from_domain_aggregate(saved_aggregate)
-
+        try:
+            # Create building aggregate
+            building_aggregate = self.building_service.create_building(
+                name=request.name,
+                address=request.address,
+                coordinates=request.address.coordinates,
+                dimensions=request.dimensions,
+                status=request.status or Status("ACTIVE"),
+                cost=request.cost
+            )
+            
+            # Convert to response
+            response = BuildingResponse(
+                id=str(building_aggregate.id),
+                name=building_aggregate.building.name,
+                address=building_aggregate.building.address,
+                dimensions=building_aggregate.building.dimensions,
+                status=building_aggregate.status,
+                cost=building_aggregate.cost,
+                created_at=building_aggregate.building.created_at,
+                updated_at=building_aggregate.building.updated_at,
+                metadata=building_aggregate.building.metadata
+            )
+            
+            logger.info(f"Building created successfully: {response.id}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to create building: {e}")
+            raise
 
 class UpdateBuildingUseCase:
     """
     Use case for updating an existing building.
     """
     
-    def __init__(self, building_repository: BuildingRepository):
-        """
-        Initialize use case.
-        
-        Args:
-            building_repository: Repository for building operations
-        """
-        self.building_repository = building_repository
+    def __init__(self, building_service):
+        self.building_service = building_service
     
-    def execute(self, building_id: str, request: UpdateBuildingRequest) -> BuildingDTO:
+    def execute(self, request: UpdateBuildingRequest) -> BuildingResponse:
         """
         Execute the update building use case.
         
         Args:
-            building_id: ID of building to update
             request: Update building request
             
         Returns:
-            Updated building DTO
+            Building response with updated building details
             
         Raises:
-            ValueError: If request validation fails
-            KeyError: If building not found
+            ValueError: If building not found or validation fails
         """
-        # Validate request
-        errors = request.validate()
-        if errors:
-            raise ValueError(f"Invalid request: {'; '.join(errors)}")
+        logger.info(f"Updating building: {request.building_id}")
         
-        # Get existing building
-        building_id_obj = Identifier(building_id)
-        building_aggregate = self.building_repository.find_by_id(building_id_obj)
-        
-        if not building_aggregate:
-            raise KeyError(f"Building with ID {building_id} not found")
-        
-        # Update building properties
-        if request.name is not None:
-            building_aggregate.update_name(request.name)
-        
-        if request.address is not None:
-            address = Address(
-                street=request.address['street'],
-                city=request.address['city'],
-                state=request.address['state'],
-                postal_code=request.address['postal_code'],
-                country=request.address['country'],
-                unit=request.address.get('unit')
+        try:
+            # Prepare updates dictionary
+            updates = {}
+            if request.name is not None:
+                updates["name"] = request.name
+            if request.address is not None:
+                updates["address"] = request.address
+            if request.dimensions is not None:
+                updates["dimensions"] = request.dimensions
+            if request.status is not None:
+                updates["status"] = request.status
+            if request.cost is not None:
+                updates["cost"] = request.cost
+            if request.metadata is not None:
+                updates["metadata"] = request.metadata
+            
+            # Update building
+            building_aggregate = self.building_service.update_building(
+                building_id=request.building_id,
+                updates=updates
             )
-            building_aggregate.update_address(address)
-        
-        if request.coordinates is not None:
-            coordinates = Coordinates(
-                latitude=request.coordinates['latitude'],
-                longitude=request.coordinates['longitude']
+            
+            # Convert to response
+            response = BuildingResponse(
+                id=str(building_aggregate.id),
+                name=building_aggregate.building.name,
+                address=building_aggregate.building.address,
+                dimensions=building_aggregate.building.dimensions,
+                status=building_aggregate.status,
+                cost=building_aggregate.cost,
+                created_at=building_aggregate.building.created_at,
+                updated_at=building_aggregate.building.updated_at,
+                metadata=building_aggregate.building.metadata
             )
-            building_aggregate.update_coordinates(coordinates)
-        
-        if request.dimensions is not None:
-            dimensions = Dimensions(
-                length=request.dimensions['length'],
-                width=request.dimensions['width'],
-                height=request.dimensions.get('height')
-            )
-            building_aggregate.update_dimensions(dimensions)
-        
-        if request.building_type is not None:
-            building_aggregate.building.update_building_type(request.building_type)
-        
-        if request.status is not None:
-            status = Status.from_enum(Status.StatusType(request.status))
-            building_aggregate.change_status(status)
-        
-        if request.metadata is not None:
-            building_aggregate.building.update_metadata(request.metadata)
-        
-        # Save to repository
-        saved_aggregate = self.building_repository.save(building_aggregate)
-        
-        # Return DTO
-        return BuildingDTO.from_domain_aggregate(saved_aggregate)
-
+            
+            logger.info(f"Building updated successfully: {response.id}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to update building: {e}")
+            raise
 
 class GetBuildingUseCase:
     """
     Use case for retrieving a building by ID.
     """
     
-    def __init__(self, building_repository: BuildingRepository):
-        """
-        Initialize use case.
-        
-        Args:
-            building_repository: Repository for building operations
-        """
-        self.building_repository = building_repository
+    def __init__(self, building_service):
+        self.building_service = building_service
     
-    def execute(self, building_id: str) -> Optional[BuildingDTO]:
+    def execute(self, building_id: str) -> Optional[BuildingResponse]:
         """
         Execute the get building use case.
         
         Args:
-            building_id: ID of building to retrieve
+            building_id: ID of the building to retrieve
             
         Returns:
-            Building DTO if found, None otherwise
+            Building response if found, None otherwise
         """
-        building_id_obj = Identifier(building_id)
-        building_aggregate = self.building_repository.find_by_id(building_id_obj)
+        logger.info(f"Getting building: {building_id}")
         
-        if not building_aggregate:
-            return None
-        
-        return BuildingDTO.from_domain_aggregate(building_aggregate)
-
-
-class ListBuildingsUseCase:
-    """
-    Use case for listing buildings with search and pagination.
-    """
-    
-    def __init__(self, building_repository: BuildingRepository):
-        """
-        Initialize use case.
-        
-        Args:
-            building_repository: Repository for building operations
-        """
-        self.building_repository = building_repository
-    
-    def execute(self, request: BuildingSearchRequest) -> BuildingListResponse:
-        """
-        Execute the list buildings use case.
-        
-        Args:
-            request: Search request with filters and pagination
+        try:
+            building_aggregate = self.building_service.get_building(building_id)
             
-        Returns:
-            Building list response with pagination
+            if not building_aggregate:
+                logger.warning(f"Building not found: {building_id}")
+                return None
             
-        Raises:
-            ValueError: If request validation fails
-        """
-        # Validate request
-        errors = request.validate()
-        if errors:
-            raise ValueError(f"Invalid request: {'; '.join(errors)}")
-        
-        # Build search criteria
-        buildings = []
-        
-        if request.coordinates and request.radius_km:
-            coordinates = Coordinates(
-                latitude=request.coordinates['latitude'],
-                longitude=request.coordinates['longitude']
+            # Convert to response
+            response = BuildingResponse(
+                id=str(building_aggregate.id),
+                name=building_aggregate.building.name,
+                address=building_aggregate.building.address,
+                dimensions=building_aggregate.building.dimensions,
+                status=building_aggregate.status,
+                cost=building_aggregate.cost,
+                created_at=building_aggregate.building.created_at,
+                updated_at=building_aggregate.building.updated_at,
+                metadata=building_aggregate.building.metadata
             )
-            buildings = self.building_repository.find_by_coordinates(
-                coordinates, radius_km=request.radius_km
-            )
-        elif request.building_type:
-            buildings = self.building_repository.find_by_building_type(request.building_type)
-        elif request.status:
-            status = Status.from_enum(Status.StatusType(request.status))
-            buildings = self.building_repository.find_by_status(status)
-        elif request.min_area is not None and request.max_area is not None:
-            buildings = self.building_repository.find_by_area_range(
-                request.min_area, request.max_area
-            )
-        else:
-            # Get all buildings with pagination
-            offset = (request.page - 1) * request.page_size
-            buildings = self.building_repository.find_all(
-                limit=request.page_size,
-                offset=offset
-            )
-        
-        # Apply additional filtering
-        if request.query:
-            buildings = [b for b in buildings if request.query.lower() in b.name.lower()]
-        
-        # Convert to DTOs
-        building_dtos = [BuildingDTO.from_domain_aggregate(b) for b in buildings]
-        
-        # Calculate pagination
-        total_count = len(building_dtos)
-        total_pages = (total_count + request.page_size - 1) // request.page_size
-        
-        # Apply pagination
-        start_idx = (request.page - 1) * request.page_size
-        end_idx = start_idx + request.page_size
-        paginated_dtos = building_dtos[start_idx:end_idx]
-        
-        return BuildingListResponse(
-            buildings=paginated_dtos,
-            total_count=total_count,
-            page=request.page,
-            page_size=request.page_size,
-            total_pages=total_pages
-        )
-
+            
+            logger.info(f"Building retrieved successfully: {response.id}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Failed to get building: {e}")
+            raise
 
 class DeleteBuildingUseCase:
     """
     Use case for deleting a building.
     """
     
-    def __init__(self, building_repository: BuildingRepository):
-        """
-        Initialize use case.
-        
-        Args:
-            building_repository: Repository for building operations
-        """
-        self.building_repository = building_repository
+    def __init__(self, building_service):
+        self.building_service = building_service
     
     def execute(self, building_id: str) -> bool:
         """
         Execute the delete building use case.
         
         Args:
-            building_id: ID of building to delete
+            building_id: ID of the building to delete
             
         Returns:
-            True if deleted successfully, False otherwise
+            True if building was deleted, False if not found
         """
-        building_id_obj = Identifier(building_id)
+        logger.info(f"Deleting building: {building_id}")
         
-        # Check if building exists
-        building_aggregate = self.building_repository.find_by_id(building_id_obj)
-        if not building_aggregate:
+        try:
+            success = self.building_service.delete_building(building_id)
+            
+            if success:
+                logger.info(f"Building deleted successfully: {building_id}")
+            else:
+                logger.warning(f"Building not found for deletion: {building_id}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Failed to delete building: {e}")
+            raise
+
+class ListBuildingsUseCase:
+    """
+    Use case for listing buildings with optional filtering.
+    """
+    
+    def __init__(self, building_service):
+        self.building_service = building_service
+    
+    def execute(self, request: Optional[BuildingSearchRequest] = None) -> BuildingListResponse:
+        """
+        Execute the list buildings use case.
+        
+        Args:
+            request: Optional search request with filters
+            
+        Returns:
+            Building list response with pagination
+        """
+        logger.info("Listing buildings")
+        
+        try:
+            # Get all buildings
+            buildings = self.building_service.get_all_buildings()
+            
+            # Apply filters if provided
+            if request:
+                buildings = self._apply_filters(buildings, request)
+            
+            # Apply pagination
+            total_count = len(buildings)
+            page = request.page if request else 1
+            page_size = request.page_size if request else 10
+            
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            paginated_buildings = buildings[start_index:end_index]
+            
+            # Convert to responses
+            building_responses = []
+            for building_aggregate in paginated_buildings:
+                response = BuildingResponse(
+                    id=str(building_aggregate.id),
+                    name=building_aggregate.building.name,
+                    address=building_aggregate.building.address,
+                    dimensions=building_aggregate.building.dimensions,
+                    status=building_aggregate.status,
+                    cost=building_aggregate.cost,
+                    created_at=building_aggregate.building.created_at,
+                    updated_at=building_aggregate.building.updated_at,
+                    metadata=building_aggregate.building.metadata
+                )
+                building_responses.append(response)
+            
+            # Calculate total pages
+            total_pages = (total_count + page_size - 1) // page_size
+            
+            result = BuildingListResponse(
+                buildings=building_responses,
+                total_count=total_count,
+                page=page,
+                page_size=page_size,
+                total_pages=total_pages
+            )
+            
+            logger.info(f"Listed {len(building_responses)} buildings out of {total_count}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to list buildings: {e}")
+            raise
+    
+    def _apply_filters(self, buildings: List[BuildingAggregate], request: BuildingSearchRequest) -> List[BuildingAggregate]:
+        """
+        Apply filters to building list.
+        
+        Args:
+            buildings: List of building aggregates
+            request: Search request with filters
+            
+        Returns:
+            Filtered list of building aggregates
+        """
+        filtered_buildings = buildings
+        
+        # Filter by name
+        if request.name:
+            filtered_buildings = [
+                b for b in filtered_buildings
+                if request.name.lower() in b.building.name.lower()
+            ]
+        
+        # Filter by status
+        if request.status:
+            filtered_buildings = [
+                b for b in filtered_buildings
+                if b.status and b.status.value == request.status.value
+            ]
+        
+        # Filter by location
+        if request.coordinates and request.radius:
+            filtered_buildings = self.building_service.get_buildings_by_location(
+                request.coordinates, request.radius
+            )
+        
+        # Filter by area
+        if request.min_area or request.max_area:
+            filtered_buildings = [
+                b for b in filtered_buildings
+                if self._area_in_range(b.building.dimensions.area, request.min_area, request.max_area)
+            ]
+        
+        # Filter by cost
+        if request.min_cost or request.max_cost:
+            filtered_buildings = [
+                b for b in filtered_buildings
+                if self._cost_in_range(b.cost.amount, request.min_cost, request.max_cost)
+            ]
+        
+        return filtered_buildings
+    
+    def _area_in_range(self, area: float, min_area: Optional[float], max_area: Optional[float]) -> bool:
+        """Check if area is within specified range."""
+        if min_area and area < min_area:
             return False
-        
-        # Delete from repository
-        return self.building_repository.delete(building_id_obj) 
+        if max_area and area > max_area:
+            return False
+        return True
+    
+    def _cost_in_range(self, cost: float, min_cost: Optional[float], max_cost: Optional[float]) -> bool:
+        """Check if cost is within specified range."""
+        if min_cost and cost < min_cost:
+            return False
+        if max_cost and cost > max_cost:
+            return False
+        return True 

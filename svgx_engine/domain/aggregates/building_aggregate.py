@@ -1,96 +1,56 @@
 """
-Building Aggregate
-
-Represents a building aggregate with its related entities and business logic.
-This aggregate encapsulates the building entity and its related value objects,
-ensuring consistency and business rules.
+Building Aggregate - Domain Aggregate for Building Operations
 """
 
-from typing import List, Optional, Set
-from dataclasses import dataclass, field
+from typing import Optional, Dict, Any, List
 from datetime import datetime
+from dataclasses import dataclass, field
+import uuid
 
-from ..entities.building import Building
-from ..value_objects.address import Address
-from ..value_objects.coordinates import Coordinates
-from ..value_objects.dimensions import Dimensions
-from ..value_objects.money import Money
-from ..value_objects.status import Status, StatusType
-from ..value_objects.identifier import Identifier
-from ..events.building_events import (
+from svgx_engine.domain.entities.building import Building
+from svgx_engine.domain.value_objects.address import Address
+from svgx_engine.domain.value_objects.coordinates import Coordinates
+from svgx_engine.domain.value_objects.dimensions import Dimensions
+from svgx_engine.domain.value_objects.money import Money
+from svgx_engine.domain.value_objects.status import Status, StatusType
+from svgx_engine.domain.value_objects.identifier import Identifier
+from svgx_engine.domain.events.building_events import (
     BuildingCreatedEvent,
     BuildingUpdatedEvent,
+    BuildingDeletedEvent,
     BuildingStatusChangedEvent,
-    BuildingAddressChangedEvent
+    BuildingLocationChangedEvent,
+    BuildingCostUpdatedEvent,
+    building_event_publisher
 )
-
 
 @dataclass
 class BuildingAggregate:
     """
-    Building aggregate representing a building with its related entities.
+    Building aggregate that encapsulates the building entity and related business logic.
     
-    This aggregate encapsulates the building entity and ensures business rules
-    are enforced when making changes to the building or its related entities.
+    This aggregate serves as the main entry point for building operations,
+    ensuring business rules are enforced and domain events are raised.
     """
     
+    id: Identifier
     building: Building
-    _domain_events: List = field(default_factory=list, repr=False)
+    status: Status
+    cost: Money
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    metadata: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
         """Validate aggregate after initialization."""
-        if not isinstance(self.building, Building):
-            raise ValueError("Building must be a Building entity")
-    
-    @classmethod
-    def create(cls, 
-               name: str,
-               address: Address,
-               coordinates: Coordinates,
-               dimensions: Dimensions,
-               building_type: str,
-               status: Status = None) -> 'BuildingAggregate':
-        """
-        Create a new building aggregate.
+        if not self.building:
+            raise ValueError("Building entity is required")
         
-        Args:
-            name: Building name
-            address: Building address
-            coordinates: Building coordinates
-            dimensions: Building dimensions
-            building_type: Type of building
-            status: Initial status (defaults to active)
-            
-        Returns:
-            New BuildingAggregate instance
-        """
-        if status is None:
-            status = Status.active("Building created")
+        if not self.status:
+            raise ValueError("Building status is required")
         
-        building = Building.create(
-            name=name,
-            address=address,
-            coordinates=coordinates,
-            dimensions=dimensions,
-            building_type=building_type,
-            status=status
-        )
-        
-        aggregate = cls(building=building)
-        aggregate._add_domain_event(BuildingCreatedEvent(
-            building_id=building.id,
-            name=building.name,
-            address=building.address,
-            coordinates=building.coordinates,
-            created_at=datetime.utcnow()
-        ))
-        
-        return aggregate
-    
-    @property
-    def id(self) -> Identifier:
-        """Get building ID."""
-        return self.building.id
+        if not self.cost:
+            raise ValueError("Building cost is required")
     
     @property
     def name(self) -> str:
@@ -103,176 +63,276 @@ class BuildingAggregate:
         return self.building.address
     
     @property
-    def coordinates(self) -> Coordinates:
-        """Get building coordinates."""
-        return self.building.coordinates
-    
-    @property
     def dimensions(self) -> Dimensions:
         """Get building dimensions."""
         return self.building.dimensions
     
     @property
-    def building_type(self) -> str:
-        """Get building type."""
-        return self.building.building_type
+    def area(self) -> float:
+        """Get building area in square meters."""
+        return self.building.area
     
     @property
-    def status(self) -> Status:
-        """Get building status."""
-        return self.building.status
+    def volume(self) -> float:
+        """Get building volume in cubic meters."""
+        return self.building.volume
     
-    @property
-    def domain_events(self) -> List:
-        """Get all domain events."""
-        return self._domain_events.copy()
-    
-    def clear_domain_events(self):
-        """Clear all domain events."""
-        self._domain_events.clear()
-    
-    def _add_domain_event(self, event):
-        """Add a domain event to the aggregate."""
-        self._domain_events.append(event)
-    
-    def update_name(self, new_name: str):
+    def update_name(self, new_name: str, updated_by: str) -> None:
         """
         Update building name.
         
         Args:
             new_name: New building name
+            updated_by: User who made the update
         """
-        if not new_name or not new_name.strip():
-            raise ValueError("Building name cannot be empty")
-        
         old_name = self.building.name
         self.building.update_name(new_name)
+        self.updated_at = datetime.utcnow()
         
-        self._add_domain_event(BuildingUpdatedEvent(
-            building_id=self.building.id,
-            field_name="name",
-            old_value=old_name,
-            new_value=new_name,
-            updated_at=datetime.utcnow()
-        ))
+        # Raise domain event
+        event = BuildingUpdatedEvent(
+            building_id=str(self.id),
+            updated_fields={"name": new_name},
+            updated_by=updated_by,
+            previous_values={"name": old_name}
+        )
+        building_event_publisher.publish_building_updated(event)
     
-    def update_address(self, new_address: Address):
+    def update_address(self, new_address: Address, updated_by: str) -> None:
         """
         Update building address.
         
         Args:
             new_address: New building address
+            updated_by: User who made the update
         """
-        if not isinstance(new_address, Address):
-            raise ValueError("Address must be an Address value object")
-        
         old_address = self.building.address
         self.building.update_address(new_address)
+        self.updated_at = datetime.utcnow()
         
-        self._add_domain_event(BuildingAddressChangedEvent(
-            building_id=self.building.id,
-            old_address=old_address,
-            new_address=new_address,
-            changed_at=datetime.utcnow()
-        ))
+        # Raise domain event
+        event = BuildingLocationChangedEvent(
+            building_id=str(self.id),
+            old_coordinates=old_address.coordinates if old_address.coordinates else Coordinates(0, 0),
+            new_coordinates=new_address.coordinates if new_address.coordinates else Coordinates(0, 0),
+            changed_by=updated_by
+        )
+        building_event_publisher.publish_building_location_changed(event)
     
-    def update_coordinates(self, new_coordinates: Coordinates):
-        """
-        Update building coordinates.
-        
-        Args:
-            new_coordinates: New building coordinates
-        """
-        if not isinstance(new_coordinates, Coordinates):
-            raise ValueError("Coordinates must be a Coordinates value object")
-        
-        old_coordinates = self.building.coordinates
-        self.building.update_coordinates(new_coordinates)
-        
-        self._add_domain_event(BuildingUpdatedEvent(
-            building_id=self.building.id,
-            field_name="coordinates",
-            old_value=old_coordinates,
-            new_value=new_coordinates,
-            updated_at=datetime.utcnow()
-        ))
-    
-    def update_dimensions(self, new_dimensions: Dimensions):
+    def update_dimensions(self, new_dimensions: Dimensions, updated_by: str) -> None:
         """
         Update building dimensions.
         
         Args:
             new_dimensions: New building dimensions
+            updated_by: User who made the update
         """
-        if not isinstance(new_dimensions, Dimensions):
-            raise ValueError("Dimensions must be a Dimensions value object")
-        
         old_dimensions = self.building.dimensions
         self.building.update_dimensions(new_dimensions)
+        self.updated_at = datetime.utcnow()
         
-        self._add_domain_event(BuildingUpdatedEvent(
-            building_id=self.building.id,
-            field_name="dimensions",
-            old_value=old_dimensions,
-            new_value=new_dimensions,
-            updated_at=datetime.utcnow()
-        ))
+        # Raise domain event
+        event = BuildingUpdatedEvent(
+            building_id=str(self.id),
+            updated_fields={"dimensions": new_dimensions},
+            updated_by=updated_by,
+            previous_values={"dimensions": old_dimensions}
+        )
+        building_event_publisher.publish_building_updated(event)
     
-    def change_status(self, new_status: Status):
+    def update_status(self, new_status: Status, updated_by: str, reason: Optional[str] = None) -> None:
         """
-        Change building status.
+        Update building status.
         
         Args:
             new_status: New building status
+            updated_by: User who made the update
+            reason: Optional reason for status change
         """
-        if not isinstance(new_status, Status):
-            raise ValueError("Status must be a Status value object")
+        old_status = self.status
+        self.status = new_status
+        self.updated_at = datetime.utcnow()
         
-        if not self.building.status.can_transition_to(new_status):
-            raise ValueError(f"Cannot transition from {self.building.status.value} to {new_status.value}")
-        
-        old_status = self.building.status
-        self.building.change_status(new_status)
-        
-        self._add_domain_event(BuildingStatusChangedEvent(
-            building_id=self.building.id,
+        # Raise domain event
+        event = BuildingStatusChangedEvent(
+            building_id=str(self.id),
             old_status=old_status,
             new_status=new_status,
-            changed_at=datetime.utcnow()
-        ))
+            changed_by=updated_by,
+            reason=reason
+        )
+        building_event_publisher.publish_building_status_changed(event)
+    
+    def update_cost(self, new_cost: Money, updated_by: str, reason: Optional[str] = None) -> None:
+        """
+        Update building cost.
+        
+        Args:
+            new_cost: New building cost
+            updated_by: User who made the update
+            reason: Optional reason for cost change
+        """
+        old_cost = self.cost
+        self.cost = new_cost
+        self.updated_at = datetime.utcnow()
+        
+        # Raise domain event
+        event = BuildingCostUpdatedEvent(
+            building_id=str(self.id),
+            old_cost=old_cost.amount,
+            new_cost=new_cost.amount,
+            currency=new_cost.currency,
+            updated_by=updated_by,
+            reason=reason
+        )
+        building_event_publisher.publish_building_cost_updated(event)
+    
+    def add_metadata(self, key: str, value: Any, updated_by: str) -> None:
+        """
+        Add metadata to the building.
+        
+        Args:
+            key: Metadata key
+            value: Metadata value
+            updated_by: User who made the update
+        """
+        self.building.add_metadata(key, value)
+        self.updated_at = datetime.utcnow()
+        
+        # Raise domain event
+        event = BuildingUpdatedEvent(
+            building_id=str(self.id),
+            updated_fields={"metadata": {key: value}},
+            updated_by=updated_by
+        )
+        building_event_publisher.publish_building_updated(event)
+    
+    def remove_metadata(self, key: str, updated_by: str) -> None:
+        """
+        Remove metadata from the building.
+        
+        Args:
+            key: Metadata key to remove
+            updated_by: User who made the update
+        """
+        self.building.remove_metadata(key)
+        self.updated_at = datetime.utcnow()
+        
+        # Raise domain event
+        event = BuildingUpdatedEvent(
+            building_id=str(self.id),
+            updated_fields={"metadata": {key: None}},
+            updated_by=updated_by
+        )
+        building_event_publisher.publish_building_updated(event)
+    
+    def delete(self, deleted_by: str, reason: Optional[str] = None) -> None:
+        """
+        Mark building as deleted.
+        
+        Args:
+            deleted_by: User who deleted the building
+            reason: Optional reason for deletion
+        """
+        # Change status to deleted
+        deleted_status = Status(StatusType.DELETED)
+        self.update_status(deleted_status, deleted_by, reason)
+        
+        # Raise deletion event
+        event = BuildingDeletedEvent(
+            building_id=str(self.id),
+            deleted_by=deleted_by,
+            deletion_reason=reason
+        )
+        building_event_publisher.publish_building_deleted(event)
     
     def is_active(self) -> bool:
         """Check if building is active."""
-        return self.building.is_active()
+        return self.status.value == StatusType.ACTIVE.value
     
-    def is_available(self) -> bool:
-        """Check if building is available for use."""
-        return self.building.is_available()
+    def is_deleted(self) -> bool:
+        """Check if building is deleted."""
+        return self.status.value == StatusType.DELETED.value
     
-    def get_area(self) -> float:
-        """Get building area in square meters."""
-        return self.building.get_area()
+    def is_under_construction(self) -> bool:
+        """Check if building is under construction."""
+        return self.status.value == StatusType.UNDER_CONSTRUCTION.value
     
-    def get_volume(self) -> Optional[float]:
-        """Get building volume in cubic meters."""
-        return self.building.get_volume()
-    
-    def calculate_distance_to(self, other_coordinates: Coordinates) -> float:
+    def to_dict(self) -> Dict[str, Any]:
         """
-        Calculate distance to another location.
+        Convert aggregate to dictionary.
+        
+        Returns:
+            Dictionary representation of the building aggregate
+        """
+        return {
+            "id": str(self.id),
+            "building": self.building.to_dict(),
+            "status": self.status.value,
+            "cost": {
+                "amount": self.cost.amount,
+                "currency": self.cost.currency
+            },
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "metadata": self.metadata,
+            "area": self.area,
+            "volume": self.volume
+        }
+    
+    @classmethod
+    def create(
+        cls,
+        name: str,
+        address: Address,
+        coordinates: Coordinates,
+        dimensions: Dimensions,
+        status: Status,
+        cost: Money,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> "BuildingAggregate":
+        """
+        Create a new building aggregate.
         
         Args:
-            other_coordinates: Coordinates to calculate distance to
+            name: Building name
+            address: Building address
+            coordinates: Building coordinates
+            dimensions: Building dimensions
+            status: Building status
+            cost: Building cost
+            metadata: Optional metadata
             
         Returns:
-            Distance in kilometers
+            New building aggregate
         """
-        return self.building.calculate_distance_to(other_coordinates)
-    
-    def __str__(self) -> str:
-        """String representation of building aggregate."""
-        return f"BuildingAggregate(id={self.building.id}, name='{self.building.name}')"
-    
-    def __repr__(self) -> str:
-        """Detailed string representation."""
-        return f"BuildingAggregate(building={self.building}, domain_events_count={len(self._domain_events)})" 
+        # Create building entity
+        building = Building.create(
+            name=name,
+            address=address,
+            dimensions=dimensions,
+            metadata=metadata or {}
+        )
+        
+        # Create aggregate
+        aggregate_id = Identifier(str(uuid.uuid4()))
+        aggregate = cls(
+            id=aggregate_id,
+            building=building,
+            status=status,
+            cost=cost,
+            metadata=metadata or {}
+        )
+        
+        # Raise creation event
+        event = BuildingCreatedEvent(
+            building_id=str(aggregate_id),
+            name=name,
+            address=address,
+            coordinates=coordinates,
+            status=status,
+            created_by="system"
+        )
+        building_event_publisher.publish_building_created(event)
+        
+        return aggregate 

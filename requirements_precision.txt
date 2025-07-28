@@ -1,0 +1,32 @@
+# Precision Coordinate, Math, Validation, and Input System Dependencies
+# Required for sub-millimeter precision CAD functionality
+
+# Core numerical computing
+numpy>=1.21.0
+
+# Decimal precision for high-accuracy calculations
+# (included in Python standard library)
+
+# Testing framework
+pytest>=6.0.0
+pytest-cov>=2.10.0
+
+# Type checking
+mypy>=0.910
+
+# Code formatting and linting
+black>=21.0.0
+flake8>=3.9.0
+
+# Documentation
+sphinx>=4.0.0
+sphinx-rtd-theme>=0.5.0
+
+# Logging and monitoring
+# (included in Python standard library)
+
+# Validation system dependencies
+# (included in Python standard library)
+
+# Input system dependencies
+# (included in Python standard library) 

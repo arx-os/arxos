@@ -15,6 +15,7 @@ This module provides:
 
 import math
 import logging
+import time
 from typing import Dict, List, Any, Optional, Tuple, Set
 from dataclasses import dataclass, field
 from enum import Enum
@@ -23,6 +24,13 @@ from datetime import datetime
 import logging
 from utils.errors import GeometryError, ValidationError
 from utils.response_helpers import ResponseHelper
+
+# Import precision system modules
+from svgx_engine.core.precision_coordinate import PrecisionCoordinate, CoordinateValidator
+from svgx_engine.core.precision_math import PrecisionMath
+from svgx_engine.core.precision_validator import PrecisionValidator, ValidationLevel, ValidationType
+from svgx_engine.core.precision_config import PrecisionConfig, config_manager
+from svgx_engine.core.precision_undo_redo import PrecisionUndoRedo, OperationType, StateType
 
 logger = logging.getLogger(__name__)
 
@@ -83,45 +91,82 @@ class ConflictType(Enum):
 
 @dataclass
 class Point3D:
-    """3D point representation"""
+    """3D point representation with precision support"""
     x: float
     y: float
     z: float
+    precision_coordinate: Optional[PrecisionCoordinate] = None
+    
+    def __post_init__(self):
+        """Initialize precision coordinate if not provided"""
+        if self.precision_coordinate is None:
+            self.precision_coordinate = PrecisionCoordinate(self.x, self.y, self.z)
     
     def distance_to(self, other: 'Point3D') -> float:
-        """Calculate distance to another point"""
-        return math.sqrt((self.x - other.x)**2 + (self.y - other.y)**2 + (self.z - other.z)**2)
+        """Calculate distance to another point using precision math"""
+        if hasattr(self, 'precision_math') and hasattr(other, 'precision_math'):
+            return self.precision_math.distance(self.precision_coordinate, other.precision_coordinate)
+        else:
+            # Fallback to standard math
+            return math.sqrt((self.x - other.x)**2 + (self.y - other.y)**2 + (self.z - other.z)**2)
     
     def __add__(self, other: 'Point3D') -> 'Point3D':
-        return Point3D(self.x + other.x, self.y + other.y, self.z + other.z)
+        """Add two points with precision"""
+        if hasattr(self, 'precision_math'):
+            new_coord = self.precision_coordinate + other.precision_coordinate
+            return Point3D(new_coord.x, new_coord.y, new_coord.z, new_coord)
+        else:
+            return Point3D(self.x + other.x, self.y + other.y, self.z + other.z)
     
     def __sub__(self, other: 'Point3D') -> 'Point3D':
-        return Point3D(self.x - other.x, self.y - other.y, self.z - other.z)
+        """Subtract two points with precision"""
+        if hasattr(self, 'precision_math'):
+            new_coord = self.precision_coordinate - other.precision_coordinate
+            return Point3D(new_coord.x, new_coord.y, new_coord.z, new_coord)
+        else:
+            return Point3D(self.x - other.x, self.y - other.y, self.z - other.z)
 
 
 @dataclass
 class BoundingBox:
-    """3D bounding box"""
+    """3D bounding box with precision support"""
     min_point: Point3D
     max_point: Point3D
+    precision_min: Optional[PrecisionCoordinate] = None
+    precision_max: Optional[PrecisionCoordinate] = None
+    
+    def __post_init__(self):
+        """Initialize precision coordinates if not provided"""
+        if self.precision_min is None:
+            self.precision_min = PrecisionCoordinate(self.min_point.x, self.min_point.y, self.min_point.z)
+        if self.precision_max is None:
+            self.precision_max = PrecisionCoordinate(self.max_point.x, self.max_point.y, self.max_point.z)
     
     @property
     def center(self) -> Point3D:
-        """Get center point of bounding box"""
-        return Point3D(
-            (self.min_point.x + self.max_point.x) / 2,
-            (self.min_point.y + self.max_point.y) / 2,
-            (self.min_point.z + self.max_point.z) / 2
-        )
+        """Get center point of bounding box with precision"""
+        if hasattr(self, 'precision_math'):
+            center_coord = self.precision_min + (self.precision_max - self.precision_min) / 2
+            return Point3D(center_coord.x, center_coord.y, center_coord.z, center_coord)
+        else:
+            return Point3D(
+                (self.min_point.x + self.max_point.x) / 2,
+                (self.min_point.y + self.max_point.y) / 2,
+                (self.min_point.z + self.max_point.z) / 2
+            )
     
     @property
     def size(self) -> Point3D:
-        """Get size of bounding box"""
-        return Point3D(
-            self.max_point.x - self.min_point.x,
-            self.max_point.y - self.min_point.y,
-            self.max_point.z - self.min_point.z
-        )
+        """Get size of bounding box with precision"""
+        if hasattr(self, 'precision_math'):
+            size_coord = self.precision_max - self.precision_min
+            return Point3D(size_coord.x, size_coord.y, size_coord.z, size_coord)
+        else:
+            return Point3D(
+                self.max_point.x - self.min_point.x,
+                self.max_point.y - self.min_point.y,
+                self.max_point.z - self.min_point.z
+            )
     
     def intersects(self, other: 'BoundingBox') -> bool:
         """Check if this bounding box intersects with another"""
@@ -145,7 +190,7 @@ class BoundingBox:
 
 @dataclass
 class GeometricObject:
-    """Base geometric object"""
+    """Base geometric object with precision support"""
     object_id: str
     object_type: str
     position: Point3D
@@ -153,31 +198,51 @@ class GeometricObject:
     scale: Point3D = field(default_factory=lambda: Point3D(1, 1, 1))
     bounding_box: Optional[BoundingBox] = None
     properties: Dict[str, Any] = field(default_factory=dict)
+    precision_position: Optional[PrecisionCoordinate] = None
+    precision_rotation: Optional[PrecisionCoordinate] = None
+    precision_scale: Optional[PrecisionCoordinate] = None
+    
+    def __post_init__(self):
+        """Initialize precision coordinates if not provided"""
+        if self.precision_position is None:
+            self.precision_position = PrecisionCoordinate(self.position.x, self.position.y, self.position.z)
+        if self.precision_rotation is None:
+            self.precision_rotation = PrecisionCoordinate(self.rotation.x, self.rotation.y, self.rotation.z)
+        if self.precision_scale is None:
+            self.precision_scale = PrecisionCoordinate(self.scale.x, self.scale.y, self.scale.z)
     
     def get_bounding_box(self) -> BoundingBox:
-        """Get bounding box of the object"""
+        """Get bounding box of the object with precision"""
         if self.bounding_box:
             return self.bounding_box
         # Default bounding box
         size = Point3D(1, 1, 1)  # Default size
-        return BoundingBox(
-            Point3D(self.position.x - size.x/2, self.position.y - size.y/2, self.position.z - size.z/2),
-            Point3D(self.position.x + size.x/2, self.position.y + size.y/2, self.position.z + size.z/2)
+        min_point = Point3D(
+            self.position.x - size.x/2,
+            self.position.y - size.y/2,
+            self.position.z - size.z/2
         )
+        max_point = Point3D(
+            self.position.x + size.x/2,
+            self.position.y + size.y/2,
+            self.position.z + size.z/2
+        )
+        return BoundingBox(min_point, max_point)
 
 
 @dataclass
 class Constraint:
-    """Geometric constraint definition"""
+    """Geometric constraint definition with precision support"""
     constraint_id: str
     constraint_type: ConstraintType
     objects: List[str]  # Object IDs involved in constraint
     parameters: Dict[str, Any]  # Constraint parameters (distance, angle, etc.)
     priority: int = 1  # Constraint priority (higher = more important)
     enabled: bool = True
+    precision_tolerance: float = 0.001  # Precision tolerance for constraint evaluation
     
     def evaluate(self, objects: Dict[str, GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate constraint satisfaction"""
+        """Evaluate constraint satisfaction with precision"""
         if not self.enabled:
             return True, 0.0
         
@@ -209,19 +274,24 @@ class Constraint:
         return True, 0.0
     
     def _evaluate_distance(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate distance constraint"""
+        """Evaluate distance constraint with precision"""
         target_distance = self.parameters.get('distance', 0.0)
-        tolerance = self.parameters.get('tolerance', 0.1)
+        tolerance = self.parameters.get('tolerance', self.precision_tolerance)
         
-        actual_distance = objects[0].position.distance_to(objects[1].position)
+        # Use precision coordinates if available
+        if hasattr(objects[0], 'precision_position') and hasattr(objects[1], 'precision_position'):
+            actual_distance = objects[0].precision_position.distance_to(objects[1].precision_position)
+        else:
+            actual_distance = objects[0].position.distance_to(objects[1].position)
+        
         deviation = abs(actual_distance - target_distance)
         
         return deviation <= tolerance, deviation
     
     def _evaluate_alignment(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate alignment constraint"""
+        """Evaluate alignment constraint with precision"""
         axis = self.parameters.get('axis', 'x')  # x, y, z
-        tolerance = self.parameters.get('tolerance', 0.1)
+        tolerance = self.parameters.get('tolerance', self.precision_tolerance)
         
         if axis == 'x':
             deviation = abs(objects[0].position.x - objects[1].position.x)
@@ -233,25 +303,25 @@ class Constraint:
         return deviation <= tolerance, deviation
     
     def _evaluate_parallel(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate parallel constraint"""
-        tolerance = self.parameters.get('tolerance', 0.1)
+        """Evaluate parallel constraint with precision"""
+        tolerance = self.parameters.get('tolerance', self.precision_tolerance)
         
         # Simplified: check if rotation angles are similar
         angle_diff = abs(objects[0].rotation.z - objects[1].rotation.z)
         return angle_diff <= tolerance, angle_diff
     
     def _evaluate_perpendicular(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate perpendicular constraint"""
-        tolerance = self.parameters.get('tolerance', 0.1)
+        """Evaluate perpendicular constraint with precision"""
+        tolerance = self.parameters.get('tolerance', self.precision_tolerance)
         
         # Simplified: check if rotation angles differ by 90 degrees
         angle_diff = abs(abs(objects[0].rotation.z - objects[1].rotation.z) - math.pi/2)
         return angle_diff <= tolerance, angle_diff
     
     def _evaluate_angle(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate angle constraint"""
+        """Evaluate angle constraint with precision"""
         target_angle = self.parameters.get('angle', 0.0)
-        tolerance = self.parameters.get('tolerance', 0.1)
+        tolerance = self.parameters.get('tolerance', self.precision_tolerance)
         
         actual_angle = abs(objects[0].rotation.z - objects[1].rotation.z)
         deviation = abs(actual_angle - target_angle)
@@ -259,7 +329,7 @@ class Constraint:
         return deviation <= tolerance, deviation
     
     def _evaluate_clearance(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate clearance constraint"""
+        """Evaluate clearance constraint with precision"""
         min_clearance = self.parameters.get('min_clearance', 0.0)
         
         bbox1 = objects[0].get_bounding_box()
@@ -272,7 +342,7 @@ class Constraint:
         return violation == 0, violation
     
     def _evaluate_containment(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate containment constraint"""
+        """Evaluate containment constraint with precision"""
         bbox1 = objects[0].get_bounding_box()
         bbox2 = objects[1].get_bounding_box()
         
@@ -289,7 +359,7 @@ class Constraint:
         return contained, 0.0 if contained else 1.0
     
     def _evaluate_intersection(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate intersection constraint"""
+        """Evaluate intersection constraint with precision"""
         bbox1 = objects[0].get_bounding_box()
         bbox2 = objects[1].get_bounding_box()
         
@@ -297,7 +367,7 @@ class Constraint:
         return intersecting, 0.0 if intersecting else 1.0
     
     def _evaluate_min_size(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate minimum size constraint"""
+        """Evaluate minimum size constraint with precision"""
         min_size = self.parameters.get('min_size', Point3D(0, 0, 0))
         
         bbox = objects[0].get_bounding_box()
@@ -313,7 +383,7 @@ class Constraint:
         return total_violation == 0, total_violation
     
     def _evaluate_max_size(self, objects: List[GeometricObject]) -> Tuple[bool, float]:
-        """Evaluate maximum size constraint"""
+        """Evaluate maximum size constraint with precision"""
         max_size = self.parameters.get('max_size', Point3D(float('inf'), float('inf'), float('inf')))
         
         bbox = objects[0].get_bounding_box()
@@ -329,7 +399,7 @@ class Constraint:
         return total_violation == 0, total_violation
     
     def _calculate_bbox_distance(self, bbox1: BoundingBox, bbox2: BoundingBox) -> float:
-        """Calculate minimum distance between two bounding boxes"""
+        """Calculate minimum distance between two bounding boxes with precision"""
         if bbox1.intersects(bbox2):
             return 0.0
         
@@ -343,18 +413,19 @@ class Constraint:
 
 @dataclass
 class GeometricConflict:
-    """Geometric conflict between objects"""
+    """Geometric conflict between objects with precision support"""
     conflict_id: str
     conflict_type: ConflictType
     objects: List[str]  # Object IDs involved in conflict
     severity: float  # Conflict severity (0.0 to 1.0)
     description: str
     resolution_suggestions: List[str] = field(default_factory=list)
+    precision_violations: List[str] = field(default_factory=list)
 
 
 @dataclass
 class ResolutionResult:
-    """Result of constraint resolution"""
+    """Result of constraint resolution with precision support"""
     success: bool
     iterations: int
     final_violations: List[Tuple[str, float]]  # Constraint ID and violation amount
@@ -362,27 +433,48 @@ class ResolutionResult:
     conflicts_remaining: int
     optimization_score: float
     execution_time: float
+    precision_violations: List[str] = field(default_factory=list)
 
 
 class GeometryResolver:
-    """Main geometry resolution system"""
+    """Main geometry resolution system with precision support"""
     
-    def __init__(self):
+    def __init__(self, config: Optional[PrecisionConfig] = None):
+        self.config = config or config_manager.get_default_config()
         self.objects: Dict[str, GeometricObject] = {}
         self.constraints: Dict[str, Constraint] = {}
         self.conflicts: List[GeometricConflict] = []
         self.resolution_history: List[ResolutionResult] = []
+        
+        # Initialize precision components
+        self.precision_math = PrecisionMath()
+        self.coordinate_validator = CoordinateValidator()
+        self.precision_validator = PrecisionValidator()
+        
+        # Initialize precision undo/redo system
+        self.undo_redo = PrecisionUndoRedo(self.config)
     
     def add_object(self, obj: GeometricObject):
-        """Add a geometric object to the system"""
+        """Add a geometric object to the system with precision validation"""
+        # Validate object coordinates
+        if self.config.enable_coordinate_validation:
+            validation_result = self.coordinate_validator.validate_coordinate(obj.precision_position)
+            if not validation_result.is_valid:
+                if self.config.should_fail_on_violation():
+                    raise ValueError(f"Invalid object coordinates: {validation_result.errors}")
+                elif self.config.auto_correct_precision_errors:
+                    obj.precision_position = self._correct_coordinate(obj.precision_position)
+        
         self.objects[obj.object_id] = obj
     
     def add_constraint(self, constraint: Constraint):
-        """Add a constraint to the system"""
+        """Add a constraint to the system with precision settings"""
+        # Set precision tolerance from config
+        constraint.precision_tolerance = self.config.tolerance
         self.constraints[constraint.constraint_id] = constraint
     
     def validate_constraints(self) -> List[Tuple[str, float]]:
-        """Validate all constraints and return violations"""
+        """Validate all constraints and return violations with precision"""
         violations = []
         
         for constraint_id, constraint in self.constraints.items():
@@ -393,394 +485,463 @@ class GeometryResolver:
         return violations
     
     def detect_conflicts(self) -> List[GeometricConflict]:
-        """Detect geometric conflicts between objects"""
-        self.conflicts.clear()
-        conflict_id = 0
-        
-        # Check for overlaps
-        object_ids = list(self.objects.keys())
-        for i in range(len(object_ids)):
-            for j in range(i + 1, len(object_ids)):
-                obj1_id = object_ids[i]
-                obj2_id = object_ids[j]
-                
-                obj1 = self.objects[obj1_id]
-                obj2 = self.objects[obj2_id]
-                
-                bbox1 = obj1.get_bounding_box()
-                bbox2 = obj2.get_bounding_box()
-                
-                # Check for overlap
-                if bbox1.intersects(bbox2):
-                    overlap_volume = self._calculate_overlap_volume(bbox1, bbox2)
-                    severity = min(1.0, overlap_volume / min(bbox1.size.x * bbox1.size.y * bbox1.size.z,
-                                                           bbox2.size.x * bbox2.size.y * bbox2.size.z))
-                    
-                    conflict = GeometricConflict(
-                        conflict_id=f"conflict_{conflict_id}",
-                        conflict_type=ConflictType.OVERLAP,
-                        objects=[obj1_id, obj2_id],
-                        severity=severity,
-                        description=f"Objects {obj1_id} and {obj2_id} overlap",
-                        resolution_suggestions=[
-                            f"Move {obj1_id} away from {obj2_id}",
-                            f"Move {obj2_id} away from {obj1_id}",
-                            f"Resize {obj1_id} or {obj2_id}",
-                            f"Rotate {obj1_id} or {obj2_id}"
-                        ]
-                    )
-                    self.conflicts.append(conflict)
-                    conflict_id += 1
-        
-        # Check constraint violations
-        violations = self.validate_constraints()
-        for constraint_id, violation in violations:
-            constraint = self.constraints[constraint_id]
+        """Detect geometric conflicts between objects with precision validation"""
+        try:
+            # Create hook context for conflict detection
+            detection_data = {
+                'object_count': len(self.objects),
+                'constraint_count': len(self.constraints),
+                'operation_type': 'conflict_detection'
+            }
             
-            conflict = GeometricConflict(
-                conflict_id=f"conflict_{conflict_id}",
-                conflict_type=ConflictType.CLEARANCE_VIOLATION,
-                objects=constraint.objects,
-                severity=min(1.0, violation),
-                description=f"Constraint {constraint_id} violated: {constraint.constraint_type.value}",
-                resolution_suggestions=[
-                    f"Adjust position of objects {constraint.objects}",
-                    f"Modify constraint parameters for {constraint_id}",
-                    f"Disable constraint {constraint_id} if not critical"
-                ]
+            context = HookContext(
+                operation_name="conflict_detection",
+                coordinates=[obj.precision_position for obj in self.objects.values()],
+                constraint_data=detection_data
             )
-            self.conflicts.append(conflict)
-            conflict_id += 1
+            
+            # Execute geometric constraint hooks
+            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
+            
+            self.conflicts.clear()
+            conflict_id = 0
+            
+            # Check for overlaps with precision validation
+            object_ids = list(self.objects.keys())
+            for i in range(len(object_ids)):
+                for j in range(i + 1, len(object_ids)):
+                    obj1_id = object_ids[i]
+                    obj2_id = object_ids[j]
+                    
+                    obj1 = self.objects[obj1_id]
+                    obj2 = self.objects[obj2_id]
+                    
+                    bbox1 = obj1.get_bounding_box()
+                    bbox2 = obj2.get_bounding_box()
+                    
+                    # Check for overlap using precision math
+                    if bbox1.intersects(bbox2):
+                        overlap_volume = self._calculate_overlap_volume_precision(bbox1, bbox2)
+                        severity = min(1.0, overlap_volume / min(bbox1.size.x * bbox1.size.y * bbox1.size.z,
+                                                               bbox2.size.x * bbox2.size.y * bbox2.size.z))
+                        
+                        # Check for precision violations
+                        precision_violations = self._check_precision_violations(obj1, obj2)
+                        
+                        conflict = GeometricConflict(
+                            conflict_id=f"conflict_{conflict_id}",
+                            conflict_type=ConflictType.OVERLAP,
+                            objects=[obj1_id, obj2_id],
+                            severity=severity,
+                            description=f"Objects {obj1_id} and {obj2_id} overlap",
+                            resolution_suggestions=[
+                                f"Move {obj1_id} away from {obj2_id}",
+                                f"Move {obj2_id} away from {obj1_id}",
+                                f"Resize {obj1_id} or {obj2_id}",
+                                f"Rotate {obj1_id} or {obj2_id}"
+                            ],
+                            precision_violations=precision_violations
+                        )
+                        self.conflicts.append(conflict)
+                        conflict_id += 1
+            
+            # Check constraint violations with precision validation
+            violations = self.validate_constraints()
+            for constraint_id, violation in violations:
+                constraint = self.constraints[constraint_id]
+                
+                conflict = GeometricConflict(
+                    conflict_id=f"conflict_{conflict_id}",
+                    conflict_type=ConflictType.CLEARANCE_VIOLATION,
+                    objects=constraint.objects,
+                    severity=min(1.0, violation),
+                    description=f"Constraint {constraint_id} violated: {constraint.constraint_type.value}",
+                    resolution_suggestions=[
+                        f"Adjust position of objects {constraint.objects}",
+                        f"Modify constraint parameters for {constraint_id}",
+                        f"Disable constraint {constraint_id} if not critical"
+                    ]
+                )
+                self.conflicts.append(conflict)
+                conflict_id += 1
+            
+            # Execute precision validation hooks
+            hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
+            
+            return self.conflicts
+            
+        except Exception as e:
+            # Handle conflict detection error
+            handle_precision_error(
+                error_type=PrecisionErrorType.VALIDATION_ERROR,
+                message=f"Conflict detection failed: {str(e)}",
+                operation="conflict_detection",
+                coordinates=[obj.precision_position for obj in self.objects.values()],
+                context={'object_count': len(self.objects)},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            return []
+    
+    def _calculate_overlap_volume_precision(self, bbox1: BoundingBox, bbox2: BoundingBox) -> float:
+        """Calculate overlap volume using precision math"""
+        try:
+            # Calculate intersection bounds using precision math
+            min_x = self.precision_math.max(bbox1.min_point.x, bbox2.min_point.x)
+            min_y = self.precision_math.max(bbox1.min_point.y, bbox2.min_point.y)
+            min_z = self.precision_math.max(bbox1.min_point.z, bbox2.min_point.z)
+            
+            max_x = self.precision_math.min(bbox1.max_point.x, bbox2.max_point.x)
+            max_y = self.precision_math.min(bbox1.max_point.y, bbox2.max_point.y)
+            max_z = self.precision_math.min(bbox1.max_point.z, bbox2.max_point.z)
+            
+            # Calculate volume using precision math
+            width = self.precision_math.subtract(max_x, min_x)
+            height = self.precision_math.subtract(max_y, min_y)
+            depth = self.precision_math.subtract(max_z, min_z)
+            
+            volume = self.precision_math.multiply(
+                self.precision_math.multiply(width, height),
+                depth
+            )
+            
+            return max(0.0, volume)
+            
+        except Exception as e:
+            # Handle calculation error
+            handle_precision_error(
+                error_type=PrecisionErrorType.CALCULATION_ERROR,
+                message=f"Overlap volume calculation failed: {str(e)}",
+                operation="overlap_volume_calculation",
+                coordinates=[],
+                context={'bbox1': str(bbox1), 'bbox2': str(bbox2)},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            return 0.0
+    
+    def _check_precision_violations(self, obj1: GeometricObject, obj2: GeometricObject) -> List[str]:
+        """Check for precision violations between two objects using precision validation"""
+        violations = []
         
-        return self.conflicts
+        try:
+            # Validate coordinates using precision validator
+            for obj in [obj1, obj2]:
+                coord = obj.precision_position
+                validation_result = self.coordinate_validator.validate_coordinate(coord)
+                
+                if not validation_result.is_valid:
+                    violations.append(f"Object {obj.object_id} coordinate validation failed: {validation_result.errors}")
+                
+                # Check if coordinates are properly rounded to precision level
+                precision_value = self.config.get_precision_value()
+                if abs(coord.x - round(coord.x / precision_value) * precision_value) > 1e-10:
+                    violations.append(f"Object {obj.object_id} x-coordinate not at precision level")
+                if abs(coord.y - round(coord.y / precision_value) * precision_value) > 1e-10:
+                    violations.append(f"Object {obj.object_id} y-coordinate not at precision level")
+                if abs(coord.z - round(coord.z / precision_value) * precision_value) > 1e-10:
+                    violations.append(f"Object {obj.object_id} z-coordinate not at precision level")
+            
+            # Check for precision violations in geometric relationships
+            distance = self.precision_math.distance(obj1.precision_position, obj2.precision_position)
+            min_distance = self.config.validation_rules.get('min_object_distance', 0.001)
+            
+            if distance < min_distance:
+                violations.append(f"Objects {obj1.object_id} and {obj2.object_id} are too close: {distance} < {min_distance}")
+            
+        except Exception as e:
+            # Handle precision violation check error
+            handle_precision_error(
+                error_type=PrecisionErrorType.VALIDATION_ERROR,
+                message=f"Precision violation check failed: {str(e)}",
+                operation="precision_violation_check",
+                coordinates=[obj1.precision_position, obj2.precision_position],
+                context={'obj1_id': obj1.object_id, 'obj2_id': obj2.object_id},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            violations.append(f"Precision violation check error: {str(e)}")
+        
+        return violations
+    
+    def _correct_coordinate(self, coord: PrecisionCoordinate) -> PrecisionCoordinate:
+        """Correct coordinate based on precision level using precision math"""
+        try:
+            precision_value = self.config.get_precision_value()
+            
+            corrected_x = self.precision_math.round(coord.x / precision_value) * precision_value
+            corrected_y = self.precision_math.round(coord.y / precision_value) * precision_value
+            corrected_z = self.precision_math.round(coord.z / precision_value) * precision_value
+            
+            return PrecisionCoordinate(corrected_x, corrected_y, corrected_z)
+            
+        except Exception as e:
+            # Handle coordinate correction error
+            handle_precision_error(
+                error_type=PrecisionErrorType.CALCULATION_ERROR,
+                message=f"Coordinate correction failed: {str(e)}",
+                operation="coordinate_correction",
+                coordinates=[coord],
+                context={'precision_value': self.config.get_precision_value()},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            return coord
     
     def resolve_constraints(self, max_iterations: int = 100, tolerance: float = 0.01) -> ResolutionResult:
-        """Resolve constraints using optimization"""
+        """Resolve constraints using optimization with precision validation"""
         import time
+        from svgx_engine.core.precision_hooks import hook_manager, HookType, HookContext
+        from svgx_engine.core.precision_errors import handle_precision_error, PrecisionErrorType, PrecisionErrorSeverity
+        
         start_time = time.time()
         
-        # Initial state
-        initial_violations = self.validate_constraints()
-        initial_score = sum(violation for _, violation in initial_violations)
-        
-        # Detect conflicts
-        conflicts = self.detect_conflicts()
-        initial_conflicts = len(conflicts)
-        
-        # Constraint resolution using gradient descent
-        for iteration in range(max_iterations):
-            violations = self.validate_constraints()
-            current_score = sum(violation for _, violation in violations)
+        try:
+            # Create hook context for geometric constraint resolution
+            constraint_data = {
+                'max_iterations': max_iterations,
+                'tolerance': tolerance,
+                'constraint_count': len(self.constraints),
+                'operation_type': 'constraint_resolution'
+            }
             
-            if current_score < tolerance:
-                break
+            context = HookContext(
+                operation_name="geometric_constraint_resolution",
+                coordinates=[obj.precision_position for obj in self.objects.values()],
+                constraint_data=constraint_data
+            )
             
-            # Apply constraint forces
-            self._apply_constraint_forces(violations)
-        
-        # Final state
-        final_violations = self.validate_constraints()
-        final_conflicts = len(self.detect_conflicts())
-        
-        execution_time = time.time() - start_time
-        
-        result = ResolutionResult(
-            success=len(final_violations) == 0,
-            iterations=iteration + 1,
-            final_violations=final_violations,
-            conflicts_resolved=initial_conflicts - final_conflicts,
-            conflicts_remaining=final_conflicts,
-            optimization_score=initial_score - sum(violation for _, violation in final_violations),
-            execution_time=execution_time
-        )
-        
-        self.resolution_history.append(result)
-        return result
+            # Execute geometric constraint hooks
+            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
+            
+            # Initialize resolution tracking
+            iterations = 0
+            final_violations = []
+            conflicts_resolved = 0
+            conflicts_remaining = 0
+            optimization_score = 0.0
+            
+            # Iterative constraint resolution with precision
+            for iteration in range(max_iterations):
+                iterations = iteration + 1
+                
+                # Validate all constraints
+                violations = self.validate_constraints()
+                total_violation = sum(violation for _, violation in violations)
+                
+                if total_violation <= tolerance:
+                    conflicts_resolved = len(self.constraints) - len(violations)
+                    conflicts_remaining = len(violations)
+                    optimization_score = 1.0 - (total_violation / len(self.constraints))
+                    final_violations = violations
+                    break
+                
+                # Apply constraint forces using precision math
+                self._apply_constraint_forces_precision(violations)
+                
+                # Update optimization score
+                optimization_score = 1.0 - (total_violation / len(self.constraints))
+            
+            execution_time = time.time() - start_time
+            
+            # Execute precision validation hooks
+            hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
+            
+            return ResolutionResult(
+                success=conflicts_remaining == 0,
+                iterations=iterations,
+                final_violations=final_violations,
+                conflicts_resolved=conflicts_resolved,
+                conflicts_remaining=conflicts_remaining,
+                optimization_score=optimization_score,
+                execution_time=execution_time
+            )
+            
+        except Exception as e:
+            # Handle constraint resolution error
+            handle_precision_error(
+                error_type=PrecisionErrorType.CALCULATION_ERROR,
+                message=f"Constraint resolution failed: {str(e)}",
+                operation="constraint_resolution",
+                coordinates=[obj.precision_position for obj in self.objects.values()],
+                context={'max_iterations': max_iterations, 'tolerance': tolerance},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            
+            return ResolutionResult(
+                success=False,
+                iterations=0,
+                final_violations=[],
+                conflicts_resolved=0,
+                conflicts_remaining=len(self.constraints),
+                optimization_score=0.0,
+                execution_time=time.time() - start_time
+            )
     
-    def optimize_layout(self, optimization_goals: Dict[str, float]) -> ResolutionResult:
-        """Optimize layout based on multiple goals"""
-        import time
-        start_time = time.time()
-        
-        # Define optimization objectives
-        objectives = {
-            'minimize_overlaps': optimization_goals.get('minimize_overlaps', 1.0),
-            'minimize_constraint_violations': optimization_goals.get('minimize_constraint_violations', 1.0),
-            'minimize_total_area': optimization_goals.get('minimize_total_area', 0.5),
-            'maximize_alignment': optimization_goals.get('maximize_alignment', 0.3)
-        }
-        
-        # Multi-objective optimization
-        best_score = float('inf')
-        best_positions = {}
-        
-        for iteration in range(50):  # Optimization iterations
-            # Generate candidate positions
-            candidate_positions = self._generate_candidate_positions()
-            
-            # Evaluate candidate
-            score = self._evaluate_layout(candidate_positions, objectives)
-            
-            if score < best_score:
-                best_score = score
-                best_positions = candidate_positions.copy()
-        
-        # Apply best solution
-        for obj_id, position in best_positions.items():
-            if obj_id in self.objects:
-                self.objects[obj_id].position = position
-        
-        # Final resolution
-        result = self.resolve_constraints()
-        result.execution_time = time.time() - start_time
-        
-        return result
-    
-    def detect_3d_collisions(self) -> List[GeometricConflict]:
-        """Detect 3D collisions between objects"""
-        collisions = []
-        collision_id = 0
-        
-        object_ids = list(self.objects.keys())
-        for i in range(len(object_ids)):
-            for j in range(i + 1, len(object_ids)):
-                obj1_id = object_ids[i]
-                obj2_id = object_ids[j]
-                
-                obj1 = self.objects[obj1_id]
-                obj2 = self.objects[obj2_id]
-                
-                # Check for 3D collision using bounding boxes
-                bbox1 = obj1.get_bounding_box()
-                bbox2 = obj2.get_bounding_box()
-                
-                if bbox1.intersects(bbox2):
-                    # Calculate collision volume
-                    collision_volume = self._calculate_collision_volume(bbox1, bbox2)
+    def _apply_constraint_forces_precision(self, violations: List[Tuple[str, float]]):
+        """Apply constraint forces using precision math"""
+        try:
+            for constraint_id, violation in violations:
+                if constraint_id in self.constraints:
+                    constraint = self.constraints[constraint_id]
                     
-                    # Calculate severity based on collision volume
-                    obj1_volume = bbox1.size.x * bbox1.size.y * bbox1.size.z
-                    obj2_volume = bbox2.size.x * bbox2.size.y * bbox2.size.z
-                    severity = collision_volume / min(obj1_volume, obj2_volume)
-                    
-                    collision = GeometricConflict(
-                        conflict_id=f"collision_{collision_id}",
-                        conflict_type=ConflictType.INTERSECTION,
-                        objects=[obj1_id, obj2_id],
-                        severity=severity,
-                        description=f"3D collision between {obj1_id} and {obj2_id}",
-                        resolution_suggestions=[
-                            f"Move {obj1_id} in Z direction",
-                            f"Move {obj2_id} in Z direction",
-                            f"Reduce height of {obj1_id} or {obj2_id}",
-                            f"Add vertical separation between objects"
-                        ]
-                    )
-                    collisions.append(collision)
-                    collision_id += 1
-        
-        return collisions
-    
-    def _apply_constraint_forces(self, violations: List[Tuple[str, float]]):
-        """Apply constraint forces to resolve violations"""
-        for constraint_id, violation in violations:
-            constraint = self.constraints[constraint_id]
-            
-            if not constraint.enabled:
-                continue
-            
-            # Get objects involved in constraint
-            obj_list = [self.objects[obj_id] for obj_id in constraint.objects if obj_id in self.objects]
-            if len(obj_list) < 2:
-                continue
-            
-            # Apply corrective forces based on constraint type
-            if constraint.constraint_type == ConstraintType.DISTANCE:
-                self._apply_distance_force(obj_list[0], obj_list[1], constraint.parameters)
-            elif constraint.constraint_type == ConstraintType.ALIGNMENT:
-                self._apply_alignment_force(obj_list[0], obj_list[1], constraint.parameters)
-            elif constraint.constraint_type == ConstraintType.CLEARANCE:
-                self._apply_clearance_force(obj_list[0], obj_list[1], constraint.parameters)
-    
-    def _apply_distance_force(self, obj1: GeometricObject, obj2: GeometricObject, parameters: Dict[str, Any]):
-        """Apply distance constraint force"""
-        target_distance = parameters.get('distance', 0.0)
-        current_distance = obj1.position.distance_to(obj2.position)
-        
-        if current_distance == 0:
-            # Avoid division by zero
-            direction = Point3D(1, 0, 0)
-        else:
-            direction = Point3D(
-                (obj2.position.x - obj1.position.x) / current_distance,
-                (obj2.position.y - obj1.position.y) / current_distance,
-                (obj2.position.z - obj1.position.z) / current_distance
-            )
-        
-        # Calculate correction
-        correction = (target_distance - current_distance) * 0.1  # Damping factor
-        
-        # Apply correction
-        obj1.position = Point3D(
-            obj1.position.x - direction.x * correction / 2,
-            obj1.position.y - direction.y * correction / 2,
-            obj1.position.z - direction.z * correction / 2
-        )
-        obj2.position = Point3D(
-            obj2.position.x + direction.x * correction / 2,
-            obj2.position.y + direction.y * correction / 2,
-            obj2.position.z + direction.z * correction / 2
-        )
-    
-    def _apply_alignment_force(self, obj1: GeometricObject, obj2: GeometricObject, parameters: Dict[str, Any]):
-        """Apply alignment constraint force"""
-        axis = parameters.get('axis', 'x')
-        correction_factor = 0.1
-        
-        if axis == 'x':
-            avg_x = (obj1.position.x + obj2.position.x) / 2
-            obj1.position.x += (avg_x - obj1.position.x) * correction_factor
-            obj2.position.x += (avg_x - obj2.position.x) * correction_factor
-        elif axis == 'y':
-            avg_y = (obj1.position.y + obj2.position.y) / 2
-            obj1.position.y += (avg_y - obj1.position.y) * correction_factor
-            obj2.position.y += (avg_y - obj2.position.y) * correction_factor
-        else:  # z
-            avg_z = (obj1.position.z + obj2.position.z) / 2
-            obj1.position.z += (avg_z - obj1.position.z) * correction_factor
-            obj2.position.z += (avg_z - obj2.position.z) * correction_factor
-    
-    def _apply_clearance_force(self, obj1: GeometricObject, obj2: GeometricObject, parameters: Dict[str, Any]):
-        """Apply clearance constraint force"""
-        min_clearance = parameters.get('min_clearance', 0.0)
-        
-        bbox1 = obj1.get_bounding_box()
-        bbox2 = obj2.get_bounding_box()
-        
-        # Calculate current distance
-        current_distance = self._calculate_bbox_distance(bbox1, bbox2)
-        
-        if current_distance < min_clearance:
-            # Calculate separation direction
-            center1 = bbox1.center
-            center2 = bbox2.center
-            
-            direction = Point3D(
-                center2.x - center1.x,
-                center2.y - center1.y,
-                center2.z - center1.z
-            )
-            
-            # Normalize direction
-            length = math.sqrt(direction.x**2 + direction.y**2 + direction.z**2)
-            if length > 0:
-                direction = Point3D(direction.x/length, direction.y/length, direction.z/length)
-            else:
-                direction = Point3D(1, 0, 0)
-            
-            # Apply separation
-            separation = (min_clearance - current_distance) * 0.1
-            obj1.position = Point3D(
-                obj1.position.x - direction.x * separation / 2,
-                obj1.position.y - direction.y * separation / 2,
-                obj1.position.z - direction.z * separation / 2
-            )
-            obj2.position = Point3D(
-                obj2.position.x + direction.x * separation / 2,
-                obj2.position.y + direction.y * separation / 2,
-                obj2.position.z + direction.z * separation / 2
+                    if constraint.constraint_type == ConstraintType.DISTANCE:
+                        self._apply_distance_force_precision(constraint, violation)
+                    elif constraint.constraint_type == ConstraintType.ALIGNMENT:
+                        self._apply_alignment_force_precision(constraint, violation)
+                    elif constraint.constraint_type == ConstraintType.CLEARANCE:
+                        self._apply_clearance_force_precision(constraint, violation)
+                        
+        except Exception as e:
+            # Handle constraint force application error
+            handle_precision_error(
+                error_type=PrecisionErrorType.CALCULATION_ERROR,
+                message=f"Constraint force application failed: {str(e)}",
+                operation="constraint_force_application",
+                coordinates=[],
+                context={'violation_count': len(violations)},
+                severity=PrecisionErrorSeverity.ERROR
             )
     
-    def _generate_candidate_positions(self) -> Dict[str, Point3D]:
-        """Generate candidate positions for optimization"""
-        import random
-        
-        candidate_positions = {}
-        for obj_id, obj in self.objects.items():
-            # Add small random perturbation
-            perturbation = Point3D(
-                random.uniform(-0.5, 0.5),
-                random.uniform(-0.5, 0.5),
-                random.uniform(-0.5, 0.5)
+    def _apply_distance_force_precision(self, constraint: Constraint, violation: float):
+        """Apply distance constraint force using precision math"""
+        try:
+            if len(constraint.objects) != 2:
+                return
+            
+            obj1_id, obj2_id = constraint.objects
+            if obj1_id not in self.objects or obj2_id not in self.objects:
+                return
+            
+            obj1 = self.objects[obj1_id]
+            obj2 = self.objects[obj2_id]
+            
+            # Calculate current distance using precision math
+            current_distance = self.precision_math.distance(obj1.precision_position, obj2.precision_position)
+            target_distance = constraint.parameters.get('distance', 0.0)
+            
+            if current_distance == 0:
+                return
+            
+            # Calculate adjustment factor using precision math
+            adjustment_factor = self.precision_math.divide(target_distance, current_distance)
+            
+            # Apply adjustment to object positions using precision math
+            if hasattr(obj1, 'precision_position') and hasattr(obj2, 'precision_position'):
+                # Move objects apart or together based on constraint
+                direction = self.precision_math.normalize(obj2.precision_position - obj1.precision_position)
+                adjustment = self.precision_math.multiply(direction, violation * 0.5)
+                
+                obj1.precision_position = self.precision_math.subtract(obj1.precision_position, adjustment)
+                obj2.precision_position = self.precision_math.add(obj2.precision_position, adjustment)
+                
+        except Exception as e:
+            # Handle distance force application error
+            handle_precision_error(
+                error_type=PrecisionErrorType.CALCULATION_ERROR,
+                message=f"Distance force application failed: {str(e)}",
+                operation="distance_force_application",
+                coordinates=[],
+                context={'constraint_id': constraint.constraint_id},
+                severity=PrecisionErrorSeverity.ERROR
             )
-            candidate_positions[obj_id] = Point3D(
-                obj.position.x + perturbation.x,
-                obj.position.y + perturbation.y,
-                obj.position.z + perturbation.z
+    
+    def _apply_alignment_force_precision(self, constraint: Constraint, violation: float):
+        """Apply alignment constraint force using precision math"""
+        try:
+            if len(constraint.objects) != 2:
+                return
+            
+            obj1_id, obj2_id = constraint.objects
+            if obj1_id not in self.objects or obj2_id not in self.objects:
+                return
+            
+            obj1 = self.objects[obj1_id]
+            obj2 = self.objects[obj2_id]
+            
+            # Apply alignment force using precision math
+            axis = constraint.parameters.get('axis', 'x')
+            
+            if axis == 'x':
+                target_x = obj1.precision_position.x
+                adjustment = self.precision_math.subtract(target_x, obj2.precision_position.x)
+                obj2.precision_position = PrecisionCoordinate(
+                    self.precision_math.add(obj2.precision_position.x, adjustment * 0.5),
+                    obj2.precision_position.y,
+                    obj2.precision_position.z
+                )
+            elif axis == 'y':
+                target_y = obj1.precision_position.y
+                adjustment = self.precision_math.subtract(target_y, obj2.precision_position.y)
+                obj2.precision_position = PrecisionCoordinate(
+                    obj2.precision_position.x,
+                    self.precision_math.add(obj2.precision_position.y, adjustment * 0.5),
+                    obj2.precision_position.z
+                )
+            elif axis == 'z':
+                target_z = obj1.precision_position.z
+                adjustment = self.precision_math.subtract(target_z, obj2.precision_position.z)
+                obj2.precision_position = PrecisionCoordinate(
+                    obj2.precision_position.x,
+                    obj2.precision_position.y,
+                    self.precision_math.add(obj2.precision_position.z, adjustment * 0.5)
+                )
+                
+        except Exception as e:
+            # Handle alignment force application error
+            handle_precision_error(
+                error_type=PrecisionErrorType.CALCULATION_ERROR,
+                message=f"Alignment force application failed: {str(e)}",
+                operation="alignment_force_application",
+                coordinates=[],
+                context={'constraint_id': constraint.constraint_id},
+                severity=PrecisionErrorSeverity.ERROR
             )
-        
-        return candidate_positions
     
-    def _evaluate_layout(self, positions: Dict[str, Point3D], objectives: Dict[str, float]) -> float:
-        """Evaluate layout quality based on objectives"""
-        score = 0.0
-        
-        # Temporarily apply positions
-        original_positions = {obj_id: obj.position for obj_id, obj in self.objects.items()}
-        for obj_id, position in positions.items():
-            if obj_id in self.objects:
-                self.objects[obj_id].position = position
-        
-        # Evaluate overlaps
-        if objectives['minimize_overlaps'] > 0:
-            overlaps = len(self.detect_conflicts())
-            score += overlaps * objectives['minimize_overlaps']
-        
-        # Evaluate constraint violations
-        if objectives['minimize_constraint_violations'] > 0:
-            violations = self.validate_constraints()
-            score += sum(violation for _, violation in violations) * objectives['minimize_constraint_violations']
-        
-        # Evaluate total area
-        if objectives['minimize_total_area'] > 0:
-            total_area = self._calculate_total_area()
-            score += total_area * objectives['minimize_total_area']
-        
-        # Restore original positions
-        for obj_id, position in original_positions.items():
-            if obj_id in self.objects:
-                self.objects[obj_id].position = position
-        
-        return score
-    
-    def _calculate_total_area(self) -> float:
-        """Calculate total area occupied by all objects"""
-        if not self.objects:
-            return 0.0
-        
-        min_x = min(obj.get_bounding_box().min_point.x for obj in self.objects.values())
-        max_x = max(obj.get_bounding_box().max_point.x for obj in self.objects.values())
-        min_y = min(obj.get_bounding_box().min_point.y for obj in self.objects.values())
-        max_y = max(obj.get_bounding_box().max_point.y for obj in self.objects.values())
-        
-        return (max_x - min_x) * (max_y - min_y)
-    
-    def _calculate_overlap_volume(self, bbox1: BoundingBox, bbox2: BoundingBox) -> float:
-        """Calculate overlap volume between two bounding boxes"""
-        if not bbox1.intersects(bbox2):
-            return 0.0
-        
-        # Calculate intersection
-        min_x = max(bbox1.min_point.x, bbox2.min_point.x)
-        max_x = min(bbox1.max_point.x, bbox2.max_point.x)
-        min_y = max(bbox1.min_point.y, bbox2.min_point.y)
-        max_y = min(bbox1.max_point.y, bbox2.max_point.y)
-        min_z = max(bbox1.min_point.z, bbox2.min_point.z)
-        max_z = min(bbox1.max_point.z, bbox2.max_point.z)
-        
-        return (max_x - min_x) * (max_y - min_y) * (max_z - min_z)
-    
-    def _calculate_collision_volume(self, bbox1: BoundingBox, bbox2: BoundingBox) -> float:
-        """Calculate collision volume between two bounding boxes"""
-        return self._calculate_overlap_volume(bbox1, bbox2)
+    def _apply_clearance_force_precision(self, constraint: Constraint, violation: float):
+        """Apply clearance constraint force using precision math"""
+        try:
+            if len(constraint.objects) != 2:
+                return
+            
+            obj1_id, obj2_id = constraint.objects
+            if obj1_id not in self.objects or obj2_id not in self.objects:
+                return
+            
+            obj1 = self.objects[obj1_id]
+            obj2 = self.objects[obj2_id]
+            
+            # Calculate minimum clearance using precision math
+            min_clearance = constraint.parameters.get('min_clearance', 0.0)
+            current_distance = self.precision_math.distance(obj1.precision_position, obj2.precision_position)
+            
+            if current_distance < min_clearance:
+                # Move objects apart using precision math
+                direction = self.precision_math.normalize(obj2.precision_position - obj1.precision_position)
+                adjustment = self.precision_math.multiply(direction, (min_clearance - current_distance) * 0.5)
+                
+                obj1.precision_position = self.precision_math.subtract(obj1.precision_position, adjustment)
+                obj2.precision_position = self.precision_math.add(obj2.precision_position, adjustment)
+                
+        except Exception as e:
+            # Handle clearance force application error
+            handle_precision_error(
+                error_type=PrecisionErrorType.CALCULATION_ERROR,
+                message=f"Clearance force application failed: {str(e)}",
+                operation="clearance_force_application",
+                coordinates=[],
+                context={'constraint_id': constraint.constraint_id},
+                severity=PrecisionErrorSeverity.ERROR
+            )
     
     def export_results(self) -> Dict[str, Any]:
-        """Export resolution results and statistics"""
+        """Export resolution results and statistics with precision information"""
         return {
             'timestamp': datetime.now().isoformat(),
             'object_count': len(self.objects),
             'constraint_count': len(self.constraints),
             'conflict_count': len(self.conflicts),
+            'precision_config': {
+                'precision_level': self.config.precision_level.value,
+                'tolerance': self.config.tolerance,
+                'validation_strictness': self.config.validation_strictness.value
+            },
             'resolution_history': [
                 {
                     'success': result.success,
@@ -788,13 +949,265 @@ class GeometryResolver:
                     'conflicts_resolved': result.conflicts_resolved,
                     'conflicts_remaining': result.conflicts_remaining,
                     'optimization_score': result.optimization_score,
-                    'execution_time': result.execution_time
+                    'execution_time': result.execution_time,
+                    'precision_violations': result.precision_violations
                 }
                 for result in self.resolution_history
             ],
             'current_violations': self.validate_constraints(),
-            'current_conflicts': [conflict.__dict__ for conflict in self.conflicts]
-        } 
+            'current_conflicts': [conflict.__dict__ for conflict in self.conflicts],
+            'undo_redo_statistics': self.undo_redo.get_statistics()
+        }
+    
+    def add_object_with_undo(self, obj: GeometricObject) -> str:
+        """Add a geometric object with undo/redo support"""
+        try:
+            # Capture before state
+            before_state = self._capture_object_state(obj, "add_object")
+            
+            # Add object
+            self.add_object(obj)
+            
+            # Capture after state
+            after_state = self._capture_object_state(obj, "add_object")
+            
+            # Record operation
+            entry_id = self.undo_redo.push_operation(
+                OperationType.CREATE,
+                f"Added object {obj.object_id}",
+                before_state,
+                after_state
+            )
+            
+            return entry_id
+            
+        except Exception as e:
+            logger.error(f"Failed to add object with undo: {e}")
+            raise
+    
+    def remove_object_with_undo(self, object_id: str) -> str:
+        """Remove a geometric object with undo/redo support"""
+        try:
+            if object_id not in self.objects:
+                raise ValueError(f"Object {object_id} not found")
+            
+            obj = self.objects[object_id]
+            
+            # Capture before state
+            before_state = self._capture_object_state(obj, "remove_object")
+            
+            # Remove object
+            del self.objects[object_id]
+            
+            # Record operation
+            entry_id = self.undo_redo.push_operation(
+                OperationType.DELETE,
+                f"Removed object {object_id}",
+                before_state,
+                None
+            )
+            
+            return entry_id
+            
+        except Exception as e:
+            logger.error(f"Failed to remove object with undo: {e}")
+            raise
+    
+    def modify_object_with_undo(self, object_id: str, modifications: Dict[str, Any]) -> str:
+        """Modify a geometric object with undo/redo support"""
+        try:
+            if object_id not in self.objects:
+                raise ValueError(f"Object {object_id} not found")
+            
+            obj = self.objects[object_id]
+            
+            # Capture before state
+            before_state = self._capture_object_state(obj, "modify_object")
+            
+            # Apply modifications
+            self._apply_object_modifications(obj, modifications)
+            
+            # Capture after state
+            after_state = self._capture_object_state(obj, "modify_object")
+            
+            # Record operation
+            entry_id = self.undo_redo.push_operation(
+                OperationType.MODIFY,
+                f"Modified object {object_id}",
+                before_state,
+                after_state
+            )
+            
+            return entry_id
+            
+        except Exception as e:
+            logger.error(f"Failed to modify object with undo: {e}")
+            raise
+    
+    def _capture_object_state(self, obj: GeometricObject, operation: str) -> Optional[Any]:
+        """Capture the current state of an object for undo/redo"""
+        try:
+            # Create state data
+            state_data = {
+                'object_id': obj.object_id,
+                'object_type': obj.object_type,
+                'position': {
+                    'x': obj.position.x,
+                    'y': obj.position.y,
+                    'z': obj.position.z
+                },
+                'rotation': {
+                    'x': obj.rotation.x,
+                    'y': obj.rotation.y,
+                    'z': obj.rotation.z
+                },
+                'scale': {
+                    'x': obj.scale.x,
+                    'y': obj.scale.y,
+                    'z': obj.scale.z
+                },
+                'precision_position': {
+                    'x': obj.precision_position.x,
+                    'y': obj.precision_position.y,
+                    'z': obj.precision_position.z
+                },
+                'properties': obj.properties,
+                'operation': operation,
+                'timestamp': time.time()
+            }
+            
+            # Create precision state
+            return self.undo_redo.create_state(
+                object_id=obj.object_id,
+                data=state_data,
+                operation_type=OperationType.MODIFY,
+                state_type=StateType.GEOMETRY
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to capture object state: {e}")
+            return None
+    
+    def _apply_object_modifications(self, obj: GeometricObject, modifications: Dict[str, Any]):
+        """Apply modifications to an object with precision validation"""
+        try:
+            # Apply position modifications
+            if 'position' in modifications:
+                new_pos = modifications['position']
+                if isinstance(new_pos, dict):
+                    obj.position.x = self._get_precision_value(new_pos.get('x', obj.position.x))
+                    obj.position.y = self._get_precision_value(new_pos.get('y', obj.position.y))
+                    obj.position.z = self._get_precision_value(new_pos.get('z', obj.position.z))
+                    
+                    # Update precision position
+                    obj.precision_position = PrecisionCoordinate(
+                        obj.position.x, obj.position.y, obj.position.z
+                    )
+            
+            # Apply rotation modifications
+            if 'rotation' in modifications:
+                new_rot = modifications['rotation']
+                if isinstance(new_rot, dict):
+                    obj.rotation.x = self._get_precision_value(new_rot.get('x', obj.rotation.x))
+                    obj.rotation.y = self._get_precision_value(new_rot.get('y', obj.rotation.y))
+                    obj.rotation.z = self._get_precision_value(new_rot.get('z', obj.rotation.z))
+                    
+                    # Update precision rotation
+                    obj.precision_rotation = PrecisionCoordinate(
+                        obj.rotation.x, obj.rotation.y, obj.rotation.z
+                    )
+            
+            # Apply scale modifications
+            if 'scale' in modifications:
+                new_scale = modifications['scale']
+                if isinstance(new_scale, dict):
+                    obj.scale.x = self._get_precision_value(new_scale.get('x', obj.scale.x))
+                    obj.scale.y = self._get_precision_value(new_scale.get('y', obj.scale.y))
+                    obj.scale.z = self._get_precision_value(new_scale.get('z', obj.scale.z))
+                    
+                    # Update precision scale
+                    obj.precision_scale = PrecisionCoordinate(
+                        obj.scale.x, obj.scale.y, obj.scale.z
+                    )
+            
+            # Apply property modifications
+            if 'properties' in modifications:
+                obj.properties.update(modifications['properties'])
+            
+            # Validate object after modifications
+            if self.config.enable_coordinate_validation:
+                validation_result = self.coordinate_validator.validate_coordinate(obj.precision_position)
+                if not validation_result.is_valid:
+                    if self.config.should_fail_on_violation():
+                        raise ValueError(f"Invalid object coordinates after modification: {validation_result.errors}")
+                    elif self.config.auto_correct_precision_errors:
+                        obj.precision_position = self._correct_coordinate(obj.precision_position)
+        
+        except Exception as e:
+            logger.error(f"Failed to apply object modifications: {e}")
+            raise
+    
+    def _get_precision_value(self, value) -> float:
+        """Convert value to precision-aware float"""
+        try:
+            float_value = float(value)
+            
+            # Round to precision level if auto-correction is enabled
+            if self.config.auto_correct_precision_errors:
+                precision_value = self.config.get_precision_value()
+                float_value = round(float_value / precision_value) * precision_value
+            
+            return float_value
+        except (ValueError, TypeError):
+            return 0.0
+    
+    def undo(self) -> bool:
+        """Undo the last operation"""
+        try:
+            entry = self.undo_redo.undo()
+            if entry:
+                logger.info(f"Undid operation: {entry.description}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to undo operation: {e}")
+            return False
+    
+    def redo(self) -> bool:
+        """Redo the last undone operation"""
+        try:
+            entry = self.undo_redo.redo()
+            if entry:
+                logger.info(f"Redid operation: {entry.description}")
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to redo operation: {e}")
+            return False
+    
+    def can_undo(self) -> bool:
+        """Check if undo is possible"""
+        return self.undo_redo.can_undo()
+    
+    def can_redo(self) -> bool:
+        """Check if redo is possible"""
+        return self.undo_redo.can_redo()
+    
+    def get_undo_description(self) -> Optional[str]:
+        """Get description of the next undo operation"""
+        return self.undo_redo.get_undo_description()
+    
+    def get_redo_description(self) -> Optional[str]:
+        """Get description of the next redo operation"""
+        return self.undo_redo.get_redo_description()
+    
+    def clear_history(self):
+        """Clear all undo/redo history"""
+        self.undo_redo.clear_history()
+    
+    def get_undo_redo_statistics(self) -> Dict[str, Any]:
+        """Get undo/redo system statistics"""
+        return self.undo_redo.get_statistics() 
 
 class GeometryOptimizer:
     """Geometry optimization algorithms for performance and quality."""

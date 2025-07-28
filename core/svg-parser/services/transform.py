@@ -199,7 +199,7 @@ def transform_coordinates_batch(
     transformation_matrix: Optional[List[List[float]]] = None
 ) -> List[List[float]]:
     """
-    Transform coordinates between different coordinate systems
+    Transform coordinates between different coordinate systems with precision validation.
     
     Args:
         coordinates: List of [x, y] coordinates to transform
@@ -210,49 +210,240 @@ def transform_coordinates_batch(
     Returns:
         List of transformed coordinates
     """
-    # Validate inputs
-    validation = validate_coordinates(coordinates, source_system)
-    if not validation["valid"]:
-        raise CoordinateValidationError("Invalid source coordinates", "coordinates", coordinates)
+    from svgx_engine.core.precision_hooks import hook_manager, HookType, HookContext
+    from svgx_engine.core.precision_errors import handle_precision_error, PrecisionErrorType, PrecisionErrorSeverity
+    from svgx_engine.core.precision_coordinate import PrecisionCoordinate
+    from svgx_engine.core.precision_math import PrecisionMath
+    from svgx_engine.core.precision_config import config_manager
     
-    if transformation_matrix:
-        matrix_validation = validate_transformation_matrix(transformation_matrix)
-        if not matrix_validation["valid"]:
-            raise CoordinateValidationError("Invalid transformation matrix", "transformation_matrix", transformation_matrix)
+    # Initialize precision components
+    config = config_manager.get_default_config()
+    precision_math = PrecisionMath()
     
-    # Apply transformation based on coordinate systems
-    if source_system == "svg" and target_system in ["real_world_meters", "real_world_feet"]:
-        # Simple scale transformation (would need scale factors in real implementation)
-        scale_factor = 1.0  # This would come from calibration
-        transformed_coords = []
+    # Create hook context for batch transformation
+    transformation_data = {
+        'source_system': source_system,
+        'target_system': target_system,
+        'coordinate_count': len(coordinates),
+        'has_matrix': transformation_matrix is not None,
+        'operation_type': 'batch_coordinate_transformation'
+    }
+    
+    context = HookContext(
+        operation_name="batch_coordinate_transformation",
+        coordinates=[],
+        constraint_data=transformation_data
+    )
+    
+    # Execute geometric constraint hooks
+    context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
+    
+    try:
+        # Validate inputs with precision validation
+        validation = validate_coordinates(coordinates, source_system)
+        if not validation["valid"]:
+            handle_precision_error(
+                error_type=PrecisionErrorType.GEOMETRIC_ERROR,
+                message=f"Invalid source coordinates: {validation.get('errors', 'Unknown error')}",
+                operation="batch_coordinate_transformation",
+                coordinates=[],
+                context=transformation_data,
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            raise CoordinateValidationError("Invalid source coordinates", "coordinates", coordinates)
+        
+        if transformation_matrix:
+            matrix_validation = validate_transformation_matrix(transformation_matrix)
+            if not matrix_validation["valid"]:
+                handle_precision_error(
+                    error_type=PrecisionErrorType.GEOMETRIC_ERROR,
+                    message=f"Invalid transformation matrix: {matrix_validation.get('errors', 'Unknown error')}",
+                    operation="batch_coordinate_transformation",
+                    coordinates=[],
+                    context=transformation_data,
+                    severity=PrecisionErrorSeverity.ERROR
+                )
+                raise CoordinateValidationError("Invalid transformation matrix", "transformation_matrix", transformation_matrix)
+        
+        # Convert coordinates to precision coordinates
+        precision_coords = []
         for coord in coordinates:
-            x, y = coord
-            transformed_coords.append([x * scale_factor, y * scale_factor])
+            if len(coord) >= 2:
+                precision_coord = PrecisionCoordinate(coord[0], coord[1], coord[2] if len(coord) > 2 else 0.0)
+                precision_coords.append(precision_coord)
+        
+        # Apply transformation based on coordinate systems
+        if source_system == "svg" and target_system in ["real_world_meters", "real_world_feet"]:
+            # Simple scale transformation with precision
+            scale_factor = 1.0  # This would come from calibration
+            transformed_coords = []
+            for coord in precision_coords:
+                scaled_x = precision_math.multiply(coord.x, scale_factor)
+                scaled_y = precision_math.multiply(coord.y, scale_factor)
+                transformed_coords.append([scaled_x, scaled_y])
+            
+        elif source_system in ["real_world_meters", "real_world_feet"] and target_system == "svg":
+            # Inverse transformation with precision
+            scale_factor = 1.0  # This would come from calibration
+            transformed_coords = []
+            for coord in precision_coords:
+                scaled_x = precision_math.divide(coord.x, scale_factor)
+                scaled_y = precision_math.divide(coord.y, scale_factor)
+                transformed_coords.append([scaled_x, scaled_y])
+            
+        elif transformation_matrix:
+            # Apply matrix transformation with precision
+            transformed_coords = apply_matrix_transformation_precision(precision_coords, transformation_matrix, config)
+            
+        else:
+            # Identity transformation
+            transformed_coords = [[coord.x, coord.y] for coord in precision_coords]
+        
+        # Validate transformed coordinates
+        if config.enable_geometric_validation:
+            max_coordinate = config.validation_rules.get('max_coordinate', 1e6)
+            for i, coord in enumerate(transformed_coords):
+                if len(coord) >= 2:
+                    if abs(coord[0]) > max_coordinate or abs(coord[1]) > max_coordinate:
+                        handle_precision_error(
+                            error_type=PrecisionErrorType.GEOMETRIC_ERROR,
+                            message=f"Transformed coordinate {coord} at index {i} exceeds maximum range {max_coordinate}",
+                            operation="batch_coordinate_transformation",
+                            coordinates=precision_coords,
+                            context=transformation_data,
+                            severity=PrecisionErrorSeverity.WARNING
+                        )
+        
+        # Execute precision validation hooks
+        context.coordinates = precision_coords
+        hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
+        
         return transformed_coords
+        
+    except Exception as e:
+        # Handle batch transformation error
+        handle_precision_error(
+            error_type=PrecisionErrorType.TRANSFORMATION_ERROR,
+            message=f"Batch coordinate transformation failed: {str(e)}",
+            operation="batch_coordinate_transformation",
+            coordinates=precision_coords if 'precision_coords' in locals() else [],
+            context=transformation_data,
+            severity=PrecisionErrorSeverity.ERROR
+        )
+        raise
+
+def apply_matrix_transformation_precision(
+    coordinates: List[PrecisionCoordinate], 
+    matrix: List[List[float]],
+    config: Optional['PrecisionConfig'] = None
+) -> List[List[float]]:
+    """
+    Apply 4x4 transformation matrix to precision coordinates with validation.
     
-    elif source_system in ["real_world_meters", "real_world_feet"] and target_system == "svg":
-        # Inverse transformation
-        scale_factor = 1.0  # This would come from calibration
+    Args:
+        coordinates: List of PrecisionCoordinate instances
+        matrix: 4x4 transformation matrix
+        config: Precision configuration (optional)
+        
+    Returns:
+        List of transformed coordinates as [x, y] lists
+    """
+    from svgx_engine.core.precision_hooks import hook_manager, HookType, HookContext
+    from svgx_engine.core.precision_errors import handle_precision_error, PrecisionErrorType, PrecisionErrorSeverity
+    from svgx_engine.core.precision_math import PrecisionMath
+    from svgx_engine.core.precision_config import config_manager
+    
+    if config is None:
+        config = config_manager.get_default_config()
+    
+    precision_math = PrecisionMath()
+    
+    # Create hook context for matrix transformation
+    matrix_data = {
+        'matrix_shape': (len(matrix), len(matrix[0]) if matrix else 0),
+        'coordinate_count': len(coordinates),
+        'operation_type': 'matrix_transformation'
+    }
+    
+    context = HookContext(
+        operation_name="matrix_transformation",
+        coordinates=coordinates,
+        constraint_data=matrix_data
+    )
+    
+    # Execute geometric constraint hooks
+    context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
+    
+    try:
+        # Validate matrix
+        if not matrix or len(matrix) != 4 or any(len(row) != 4 for row in matrix):
+            handle_precision_error(
+                error_type=PrecisionErrorType.GEOMETRIC_ERROR,
+                message=f"Invalid transformation matrix shape: {matrix_data['matrix_shape']} (expected 4x4)",
+                operation="matrix_transformation",
+                coordinates=coordinates,
+                context=matrix_data,
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            raise ValueError(f"Transformation matrix must be 4x4, got {matrix_data['matrix_shape']}")
+        
         transformed_coords = []
+        
         for coord in coordinates:
-            x, y = coord
-            transformed_coords.append([x / scale_factor, y / scale_factor])
+            # Treat as homogeneous coordinates [x, y, 0, 1] with precision
+            x = precision_math.to_float(coord.x)
+            y = precision_math.to_float(coord.y)
+            z = precision_math.to_float(coord.z)
+            
+            # Apply matrix multiplication with precision
+            result = [0.0, 0.0, 0.0, 0.0]
+            
+            for i in range(4):
+                result[i] = precision_math.add(
+                    precision_math.add(
+                        precision_math.multiply(matrix[i][0], x),
+                        precision_math.multiply(matrix[i][1], y)
+                    ),
+                    precision_math.add(
+                        precision_math.multiply(matrix[i][2], z),
+                        precision_math.multiply(matrix[i][3], 1.0)
+                    )
+                )
+            
+            # Convert back from homogeneous coordinates
+            if abs(result[3]) > 1e-12:  # Avoid division by very small numbers
+                transformed_x = precision_math.divide(result[0], result[3])
+                transformed_y = precision_math.divide(result[1], result[3])
+            else:
+                transformed_x = result[0]
+                transformed_y = result[1]
+            
+            transformed_coords.append([transformed_x, transformed_y])
+        
+        # Execute precision validation hooks
+        context.coordinates = coordinates
+        hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
+        
         return transformed_coords
-    
-    elif transformation_matrix:
-        # Apply matrix transformation
-        return apply_matrix_transformation(coordinates, transformation_matrix)
-    
-    else:
-        # Identity transformation
-        return coordinates.copy()
+        
+    except Exception as e:
+        # Handle matrix transformation error
+        handle_precision_error(
+            error_type=PrecisionErrorType.TRANSFORMATION_ERROR,
+            message=f"Matrix transformation failed: {str(e)}",
+            operation="matrix_transformation",
+            coordinates=coordinates,
+            context=matrix_data,
+            severity=PrecisionErrorSeverity.ERROR
+        )
+        raise
 
 def apply_matrix_transformation(
     coordinates: List[List[float]], 
     matrix: List[List[float]]
 ) -> List[List[float]]:
     """
-    Apply 4x4 transformation matrix to coordinates
+    Apply 4x4 transformation matrix to coordinates (legacy function for backward compatibility).
     
     Args:
         coordinates: List of [x, y] coordinates
@@ -261,29 +452,17 @@ def apply_matrix_transformation(
     Returns:
         List of transformed coordinates
     """
-    transformed_coords = []
+    # Convert to precision coordinates and use the precision-aware version
+    from svgx_engine.core.precision_coordinate import PrecisionCoordinate
     
+    precision_coords = []
     for coord in coordinates:
-        x, y = coord
-        # Treat as homogeneous coordinates [x, y, 0, 1]
-        result = [0, 0, 0, 0]
-        
-        # Apply matrix multiplication
-        for i in range(4):
-            result[i] = (matrix[i][0] * x + 
-                        matrix[i][1] * y + 
-                        matrix[i][2] * 0 + 
-                        matrix[i][3] * 1)
-        
-        # Convert back from homogeneous coordinates
-        if result[3] != 0:
-            transformed_x = result[0] / result[3]
-            transformed_y = result[1] / result[3]
-        else:
-            transformed_x = result[0]
-            transformed_y = result[1]
-        
-        transformed_coords.append([transformed_x, transformed_y])
+        if len(coord) >= 2:
+            precision_coord = PrecisionCoordinate(coord[0], coord[1], coord[2] if len(coord) > 2 else 0.0)
+            precision_coords.append(precision_coord)
+    
+    # Use the precision-aware transformation
+    transformed_coords = apply_matrix_transformation_precision(precision_coords, matrix)
     
     return transformed_coords
 

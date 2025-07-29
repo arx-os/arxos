@@ -56,6 +56,7 @@ Integrate the ARX token into the Arxos platform as:
 - [ ] Accept ARX for simulation fees, Planarx proposals, premium tools
 - [ ] ArxCLI & ArxIDE integration with ARX payment hooks
 - [ ] Pricing engine (in ARX or USD equivalent)
+- [ ] ArxScope dashboard development and integration
 
 ---
 
@@ -81,18 +82,18 @@ Integrate the ARX token into the Arxos platform as:
 ## 🧠 Technical Architecture Overview
 
 ### 🔹 Token Layer (ERC-20 or equivalent)
-- Fungible, fixed-mint per verified work
+- Fungible, unlimited supply based on objects created
 - Controlled by platform signer or DAO
 
 ### 🔹 Minting Engine
-- Off-chain backend verifies contributions using AI + peer reviews
+- Off-chain backend verifies contributions using AI + secondary user verification
 - If validated → triggers `mint(address, amount)` on-chain
 
 ### 🔹 Revenue Router + Dividends
 - Platform revenue deposited in contract
-- 50% routed to ARX holders (pro-rata)
+- Equal distribution to all ARX holders (pro-rata)
 - Paid in ARX or stablecoins
-- Optional staking multipliers
+- No distinction between contributor-minted and secondary market tokens
 
 ### 🔹 Contribution Registry
 - Tracks all verified contributions
@@ -104,9 +105,15 @@ Integrate the ARX token into the Arxos platform as:
 - HTMX-based frontend
 - CLI and IDE integrated with ARX logic
 
+### 🔹 Transparency Dashboard (ArxScope)
+- Real-time metrics and performance visualization
+- Public dashboard at dashboard.arxos.xyz
+- Privacy-protected data with hash-based obfuscation
+- Investor-grade UX for Web3 infrastructure
+
 ### 🔹 Security & Fraud Defense
-- AI simulation checks
-- Peer review
+- AI verification checks
+- Secondary user verification
 - Contribution hashing
 - Minting delays and reputation system
 

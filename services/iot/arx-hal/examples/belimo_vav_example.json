@@ -1,0 +1,111 @@
+{
+  "$schema": "https://arxos.dev/specs/arxhal.schema.json",
+  "object_type": "vav",
+  "version": "1.0.0",
+  "description": "Variable Air Volume (VAV) device example using Belimo hardware",
+  "device_id": "belimo-vav-01",
+  "manufacturer": "Belimo",
+  "model": "VAV-24V",
+  "inputs": {
+    "temperature": {
+      "unit": "°C",
+      "type": "float",
+      "description": "Room temperature sensor",
+      "range": [-40, 80],
+      "accuracy": "±0.5°C",
+      "protocol_mapping": {
+        "modbus": {
+          "register": 40001,
+          "type": "float",
+          "scale": 1.0
+        }
+      }
+    },
+    "pressure": {
+      "unit": "Pa",
+      "type": "float",
+      "description": "Duct pressure sensor",
+      "range": [-1000, 1000],
+      "accuracy": "±10Pa",
+      "protocol_mapping": {
+        "modbus": {
+          "register": 40003,
+          "type": "float",
+          "scale": 1.0
+        }
+      }
+    },
+    "airflow": {
+      "unit": "m³/h",
+      "type": "float",
+      "description": "Airflow rate measurement",
+      "range": [0, 1000],
+      "accuracy": "±5%",
+      "protocol_mapping": {
+        "modbus": {
+          "register": 40005,
+          "type": "float",
+          "scale": 1.0
+        }
+      }
+    }
+  },
+  "outputs": {
+    "damper_position": {
+      "unit": "%",
+      "type": "float",
+      "description": "Damper position control (0-100%)",
+      "range": [0, 100],
+      "default": 0,
+      "protocol_mapping": {
+        "modbus": {
+          "register": 40007,
+          "type": "float",
+          "scale": 1.0
+        }
+      }
+    },
+    "fan_status": {
+      "type": "boolean",
+      "description": "Fan on/off status",
+      "default": false,
+      "protocol_mapping": {
+        "modbus": {
+          "register": 10001,
+          "type": "bool"
+        }
+      }
+    }
+  },
+  "behavior_profile": "vav_standard_v1",
+  "alarms": {
+    "high_temp": {
+      "description": "High temperature alarm",
+      "threshold": 28,
+      "unit": "°C",
+      "severity": "warning"
+    },
+    "low_temp": {
+      "description": "Low temperature alarm",
+      "threshold": 16,
+      "unit": "°C",
+      "severity": "warning"
+    },
+    "damper_failure": {
+      "description": "Damper actuator failure",
+      "type": "boolean",
+      "severity": "critical"
+    }
+  },
+  "metadata": {
+    "manufacturer": "Belimo",
+    "model": "VAV-24V",
+    "category": "hvac",
+    "subcategory": "vav",
+    "tags": ["hvac", "vav", "belimo", "building_automation"],
+    "datasheet_url": "https://www.belimo.com/vav-24v",
+    "protocols_supported": ["modbus", "bacnet"],
+    "voltage": "24VAC",
+    "certifications": ["UL", "CE"]
+  }
+} 

@@ -33,9 +33,9 @@ All contributions are run through ArxLogic and simulation validation:
 
 ---
 
-### 2. Peer Validation for High-Value Contributions
-- Required for full buildings or high-mint assets
-- 2-of-3 trusted peer approvals or validator network
+### 2. Secondary User Verification
+- Required for all contributions to proceed with minting
+- Secondary user must verify the object is valid and useful
 - Adds social consensus layer
 
 ---
@@ -102,14 +102,14 @@ All contributions are run through ArxLogic and simulation validation:
 
 ---
 
-## 🧱 Optional: Trusted Contributor Tiers
+## 🧱 Verification System
 
-| Tier | Requirements | Benefits |
-|------|--------------|----------|
-| Bronze | New user | Low mint cap, high audit |
-| Silver | 20+ verified submissions | Normal mint rights |
-| Gold | $500+ ARX yield, 95% accuracy | Fast minting, higher trust |
-| Platinum | Institutional (district, campus) | Upload APIs, bulk import support |
+| Component | Description |
+|-----------|-------------|
+| Primary Verification | AI validation using ArxLogic |
+| Secondary Verification | User verification required for all contributions |
+| Fraud Detection | AI + rule-based checks |
+| Reputation System | Contributor reputation tracking |
 
 ---
 

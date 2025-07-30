@@ -4,7 +4,7 @@
 
 **Status**: Planning Phase  
 **Timeline**: 2-3 months  
-**Focus**: Advanced simulation, interactive capabilities, VS Code plugin, CAD-parity features  
+**Focus**: Advanced simulation, interactive capabilities, ArxIDE integration, CAD-parity features  
 **Foundation**: Phase 4 completed (20/20 services migrated)  
 
 ## 📋 Phase 5 Goals
@@ -12,13 +12,13 @@
 ### Primary Objectives
 1. **Advanced Simulation Engine** - Enhanced physics and behavior simulation
 2. **Interactive Capabilities** - Real-time user interaction and manipulation
-3. **VS Code Plugin** - Development environment integration
+3. **ArxIDE Integration** - Development environment integration
 4. **CAD-Parity Features** - Professional CAD functionality
 
 ### Success Criteria
 - [ ] Advanced simulation with 5+ physics types
 - [ ] Interactive capabilities with real-time collaboration
-- [ ] VS Code plugin with full development support
+- [ ] ArxIDE integration with full development support
 - [ ] CAD-parity features matching professional tools
 - [ ] 100% test coverage for all new features
 - [ ] Production-ready deployment
@@ -235,11 +235,11 @@ class SVGXCollaborationSystem:
 
 ---
 
-## 💻 Phase 5.3: VS Code Plugin Development
+## 💻 Phase 5.3: ArxIDE Integration Development
 
 ### 5.3.1 Core Plugin Features
 
-**Target**: Full-featured VS Code extension for SVGX development
+**Target**: Full-featured ArxIDE extension for SVGX development
 
 #### Core Features
 - [ ] **Syntax Highlighting** - SVGX-specific syntax support
@@ -250,7 +250,7 @@ class SVGXCollaborationSystem:
 
 #### Implementation Plan
 ```typescript
-// VS Code Extension Architecture
+// ArxIDE Extension Architecture
 export class SVGXExtension {
     private syntaxHighlighter: SyntaxHighlighter;
     private intelliSense: IntelliSenseProvider;
@@ -258,7 +258,7 @@ export class SVGXExtension {
     private errorReporter: ErrorReporter;
     private debugger: DebuggerProvider;
     
-    activate(context: vscode.ExtensionContext) {
+    activate(context: arxide.ExtensionContext) {
         // Register syntax highlighting
         this.syntaxHighlighter.register();
         
@@ -275,15 +275,15 @@ export class SVGXExtension {
         this.debugger.register();
     }
     
-    provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    provideCompletionItems(document: arxide.TextDocument, position: arxide.Position) {
         // Provide SVGX-specific completions
     }
     
-    provideHover(document: vscode.TextDocument, position: vscode.Position) {
+    provideHover(document: arxide.TextDocument, position: arxide.Position) {
         // Provide hover information
     }
     
-    provideDiagnostics(document: vscode.TextDocument) {
+    provideDiagnostics(document: arxide.TextDocument) {
         // Provide validation diagnostics
     }
 }
@@ -453,10 +453,10 @@ class SVGXAdvancedCADTools:
 - [ ] **Week 4**: Real-time collaboration features
 - [ ] **Deliverables**: Full interactive system
 
-### Week 5-6: VS Code Plugin
+### Week 5-6: ArxIDE Integration
 - [ ] **Week 5**: Core plugin features development
 - [ ] **Week 6**: Advanced plugin features
-- [ ] **Deliverables**: Complete VS Code extension
+- [ ] **Deliverables**: Complete ArxIDE extension
 
 ### Week 7-8: CAD-Parity Features
 - [ ] **Week 7**: Professional CAD functionality
@@ -475,7 +475,7 @@ class SVGXAdvancedCADTools:
 ### Technical Success Criteria
 - [ ] **Advanced Simulation**: 5+ physics types implemented
 - [ ] **Interactive System**: <16ms response time
-- [ ] **VS Code Plugin**: 95%+ feature completeness
+- [ ] **ArxIDE Integration**: 95%+ feature completeness
 - [ ] **CAD-Parity**: Professional CAD functionality
 - [ ] **Performance**: 60fps smooth operation
 - [ ] **Scalability**: 1000+ element support
@@ -489,7 +489,7 @@ class SVGXAdvancedCADTools:
 
 ### Business Success Criteria
 - [ ] **Market Position**: CAD-parity with professional tools
-- [ ] **Developer Adoption**: VS Code plugin usage
+- [ ] **Developer Adoption**: ArxIDE extension usage
 - [ ] **User Satisfaction**: 4.5+ rating
 - [ ] **Performance**: Production deployment ready
 - [ ] **Scalability**: Enterprise-ready architecture
@@ -508,7 +508,7 @@ class SVGXAdvancedCADTools:
 ### Technology Stack
 - **Backend**: Python with advanced libraries
 - **Frontend**: Web technologies with real-time capabilities
-- **VS Code Plugin**: TypeScript with VS Code APIs
+- **ArxIDE Integration**: TypeScript with ArxIDE APIs
 - **Physics**: Custom physics engines with industry standards
 - **CAD**: Professional CAD algorithms and standards
 
@@ -526,7 +526,7 @@ class SVGXAdvancedCADTools:
 ### Technical Outcomes
 - **Advanced Simulation**: Professional-grade simulation capabilities
 - **Interactive System**: Intuitive and responsive user interface
-- **VS Code Integration**: Seamless development experience
+- **ArxIDE Integration**: Seamless development experience
 - **CAD-Parity**: Professional CAD functionality
 - **Performance**: High-performance, scalable system
 
@@ -541,7 +541,7 @@ class SVGXAdvancedCADTools:
 
 ## 🎉 Conclusion
 
-Phase 5 represents a significant advancement in the SVGX Engine, bringing it to CAD-parity levels while maintaining the web-native, programmable, and open nature of the platform. The combination of advanced simulation, interactive capabilities, VS Code integration, and CAD-parity features will position SVGX Engine as a leading platform for infrastructure modeling and simulation.
+Phase 5 represents a significant advancement in the SVGX Engine, bringing it to CAD-parity levels while maintaining the web-native, programmable, and open nature of the platform. The combination of advanced simulation, interactive capabilities, ArxIDE integration, and CAD-parity features will position SVGX Engine as a leading platform for infrastructure modeling and simulation.
 
 **Phase 5 Status**: 🚀 **READY FOR IMPLEMENTATION**  
 **Estimated Timeline**: 2-3 months  

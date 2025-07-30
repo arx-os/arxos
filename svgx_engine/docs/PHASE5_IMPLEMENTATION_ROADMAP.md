@@ -183,20 +183,20 @@ This document provides a detailed implementation roadmap for Phase 5 of the SVGX
 
 ---
 
-## 📅 Week 5-6: VS Code Plugin Development
+## 📅 Week 5-6: ArxIDE Integration Development
 
 ### Week 5: Core Plugin Features
 
 #### Day 1-2: Project Setup & Syntax Highlighting
 **Tasks:**
-- [ ] Create VS Code extension project
+- [ ] Create ArxIDE extension project
 - [ ] Implement SVGX syntax highlighting
 - [ ] Add language configuration
 - [ ] Create syntax test suite
 - [ ] Set up development environment
 
 **Deliverables:**
-- VS Code extension project structure
+- ArxIDE extension project structure
 - SVGX syntax highlighting
 - Language configuration
 
@@ -454,7 +454,7 @@ This document provides a detailed implementation roadmap for Phase 5 of the SVGX
 ### Business Metrics
 - **Market Position**: CAD-parity with professional tools
 - **User Satisfaction**: 4.5+ rating target
-- **Developer Adoption**: VS Code plugin usage
+- **Developer Adoption**: ArxIDE extension usage
 - **Performance**: Production deployment ready
 
 ### Quality Metrics
@@ -477,7 +477,7 @@ This document provides a detailed implementation roadmap for Phase 5 of the SVGX
 ### Technology Stack
 - **Backend**: Python with advanced libraries (NumPy, SciPy, etc.)
 - **Frontend**: Web technologies with real-time capabilities
-- **VS Code Plugin**: TypeScript with VS Code APIs
+- **ArxIDE Integration**: TypeScript with ArxIDE APIs
 - **Physics**: Custom physics engines with industry standards
 - **CAD**: Professional CAD algorithms and standards
 
@@ -495,7 +495,7 @@ This document provides a detailed implementation roadmap for Phase 5 of the SVGX
 ### Technical Outcomes
 - **Advanced Simulation**: Professional-grade simulation capabilities
 - **Interactive System**: Intuitive and responsive user interface
-- **VS Code Integration**: Seamless development experience
+- **ArxIDE Integration**: Seamless development experience
 - **CAD-Parity**: Professional CAD functionality
 - **Performance**: High-performance, scalable system
 
@@ -510,7 +510,7 @@ This document provides a detailed implementation roadmap for Phase 5 of the SVGX
 
 ## 🎉 Conclusion
 
-This implementation roadmap provides a detailed plan for Phase 5 development, with specific tasks, timelines, and deliverables for each component. The roadmap is designed to ensure successful delivery of advanced simulation features, interactive capabilities, VS Code plugin, and CAD-parity features.
+This implementation roadmap provides a detailed plan for Phase 5 development, with specific tasks, timelines, and deliverables for each component. The roadmap is designed to ensure successful delivery of advanced simulation features, interactive capabilities, ArxIDE integration, and CAD-parity features.
 
 **Phase 5 Status**: 🚀 **READY FOR IMPLEMENTATION**  
 **Estimated Timeline**: 10 weeks (2-3 months)  

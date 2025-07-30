@@ -136,7 +136,7 @@ This directory contains comprehensive documentation for the SVGX Engine, an adva
 1. Begin Phase 5: Advanced Features
 2. Implement enhanced simulation engine
 3. Add interactive capabilities
-4. Develop VS Code plugin
+4. Develop ArxIDE integration
 
 ### Medium-term (Week 11-12)
 1. Achieve production readiness

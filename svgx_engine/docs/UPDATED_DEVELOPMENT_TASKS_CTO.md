@@ -77,7 +77,7 @@
   - [ ] Implement undo/redo functionality
   - [ ] **CTO TARGET**: <16ms interaction response
 
-- [ ] **Create VS Code plugin** (Week 5-6) (CTO: Standard practices)
+- [ ] **Create ArxIDE integration** (Week 5-6) (CTO: Standard practices)
   - [ ] Implement syntax highlighting for SVGX
   - [ ] Add IntelliSense and autocompletion
   - [ ] Create live preview integration
@@ -782,14 +782,14 @@
 ### **Phase 5 Completion Metrics**
 - **Advanced Simulation**: Batch processing, defer global solve (CTO: Throttle non-critical updates)
 - **Interactive System**: <16ms response time (CTO: Performance must be measured continuously)
-- **VS Code Plugin**: Standard practices (CTO: Standard development practices)
+- **ArxIDE Integration**: Standard practices (CTO: Standard development practices)
 - **CAD-Parity**: WASM + Fixed-point + Export-only sub-mm (CTO: Tiered precision)
 - **Performance**: All benchmarks met (CTO: Build profiling hooks into every interactive service)
 
 ### **Business Impact Metrics**
 - **Market Position**: "We are upgrading CAD, not copying it" (CTO: Clear vision)
 - **User Satisfaction**: 4.5+ rating target
-- **Developer Adoption**: VS Code plugin usage
+- **Developer Adoption**: ArxIDE extension usage
 - **Performance**: Production deployment ready
 - **Scalability**: Enterprise-ready architecture
 

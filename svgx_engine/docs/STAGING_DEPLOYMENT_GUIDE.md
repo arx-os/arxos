@@ -386,7 +386,7 @@ After successful staging deployment:
 2. **Phase 5 Implementation**
    - Begin advanced simulation engine
    - Implement interactive capabilities
-   - Develop VS Code plugin
+   - Develop ArxIDE integration
    - Create CAD-parity features
 
 3. **Specialized Services**

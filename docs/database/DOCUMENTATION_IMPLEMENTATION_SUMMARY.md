@@ -311,7 +311,7 @@ const comment = `## 📋 Database Documentation Validation Report
 ### 2. Integration Improvements
 
 #### **IDE Integration**
-- **VS Code Extension**: Documentation validation in IDE
+- **ArxIDE Extension**: Documentation validation in IDE
 - **IntelliSense**: Schema documentation in code completion
 - **Error Detection**: Real-time documentation validation
 - **Auto-fix**: Automatic documentation updates

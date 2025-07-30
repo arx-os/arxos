@@ -24,7 +24,7 @@ This guide provides comprehensive instructions for developing, testing, and cont
 
 - **Python**: 3.8 or higher
 - **Git**: Latest version
-- **IDE**: VS Code, PyCharm, or similar
+- **IDE**: ArxIDE, PyCharm, or similar
 - **OS**: Windows, macOS, or Linux
 
 ### Installation
@@ -73,15 +73,9 @@ print(f"Simulation completed: {result.is_success()}")
 
 ### IDE Setup
 
-#### VS Code Configuration
+#### ArxIDE Configuration
 
-1. **Install extensions**
-   - Python
-   - Pylance
-   - Python Test Explorer
-   - GitLens
-
-2. **Workspace settings** (`.vscode/settings.json`)
+1. **Workspace settings** (`.arxide/settings.json`)
    ```json
    {
      "python.defaultInterpreterPath": "./venv/bin/python",

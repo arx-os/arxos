@@ -263,7 +263,7 @@
 
 ### **Planned Improvements**
 1. **Interactive Tutorials**: Web-based onboarding tutorials
-2. **Dev Container Support**: VS Code Dev Container configurations
+2. **Dev Container Support**: ArxIDE Dev Container configurations
 3. **Video Guides**: Screen recordings of setup processes
 4. **Integration Tests**: End-to-end onboarding validation
 5. **Performance Benchmarks**: Automated performance testing

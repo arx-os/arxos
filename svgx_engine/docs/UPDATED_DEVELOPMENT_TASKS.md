@@ -70,7 +70,7 @@
   - [ ] Add selection and multi-select
   - [ ] Implement undo/redo functionality
 
-- [ ] **Create VS Code plugin** (Week 5-6)
+- [ ] **Create ArxIDE integration** (Week 5-6)
   - [ ] Implement syntax highlighting for SVGX
   - [ ] Add IntelliSense and autocompletion
   - [ ] Create live preview integration
@@ -725,14 +725,14 @@
 ### **Phase 5 Completion Metrics**
 - **Advanced Simulation**: 5+ physics types implemented
 - **Interactive System**: <16ms response time
-- **VS Code Plugin**: 95%+ feature completeness
+- **ArxIDE Integration**: 95%+ feature completeness
 - **CAD-Parity**: Professional CAD functionality
 - **Performance**: All benchmarks met
 
 ### **Business Impact Metrics**
 - **Market Position**: CAD-parity with professional tools
 - **User Satisfaction**: 4.5+ rating target
-- **Developer Adoption**: VS Code plugin usage
+- **Developer Adoption**: ArxIDE extension usage
 - **Performance**: Production deployment ready
 - **Scalability**: Enterprise-ready architecture
 

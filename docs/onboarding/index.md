@@ -148,14 +148,14 @@ make migrate
 ## 🔧 **Development Environment**
 
 ### **Recommended Setup**
-- **IDE**: VS Code with Arxos extensions
+- **IDE**: ArxIDE with Arxos extensions
 - **Database**: PostgreSQL with PostGIS extension
 - **Cache**: Redis for session and data caching
 - **Message Queue**: Celery with Redis backend
 - **Monitoring**: Prometheus and Grafana
 
 ### **Dev Container Support**
-All repositories support VS Code Dev Containers for consistent development environments. Look for `.devcontainer.json` files in each repository.
+All repositories support ArxIDE Dev Containers for consistent development environments. Look for `.devcontainer.json` files in each repository.
 
 ## 📋 **Onboarding Checklist**
 

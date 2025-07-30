@@ -261,7 +261,7 @@ This document serves as the single source of truth for SVGX Engine migration pro
 ### Week 9-10: Phase 5 Implementation
 - Implement advanced simulation features
 - Add interactive capabilities
-- Develop VS Code plugin
+- Develop ArxIDE integration
 
 ### Week 11-12: Production Readiness
 - Achieve production deployment readiness

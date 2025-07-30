@@ -526,7 +526,7 @@ print(f"Average precision time: {performance_stats['average_precision_time_ms']:
 
 - **Simulation Integration**: Connect with simulation engine
 - **Interactive Features**: Connect with interactive capabilities
-- **VS Code Plugin**: Enhanced plugin integration
+- **ArxIDE Integration**: Enhanced IDE integration
 - **Real-time Collaboration**: Multi-user assembly editing
 - **AI Integration**: AI-powered constraint suggestions
 

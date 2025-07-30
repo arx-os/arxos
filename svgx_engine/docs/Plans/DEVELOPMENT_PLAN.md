@@ -200,7 +200,7 @@ This document serves as the single authoritative source for SVGX Engine developm
 
 ### 5.3 Advanced Tooling (Priority: MEDIUM)
 
-#### Step 5.3.1: VS Code Plugin
+#### Step 5.3.1: ArxIDE Integration
 - [ ] **5.3.1.1** Implement syntax highlighting for SVGX
 - [ ] **5.3.1.2** Add IntelliSense and autocompletion
 - [ ] **5.3.1.3** Create live preview integration
@@ -333,7 +333,7 @@ This document serves as the single authoritative source for SVGX Engine developm
 ### Phase 5 Completion
 - [ ] Enhanced simulation engine operational
 - [ ] Interactive features functional
-- [ ] VS Code plugin working
+- [ ] ArxIDE integration working
 - [ ] Advanced visualization implemented
 
 ### Phase 6 Completion

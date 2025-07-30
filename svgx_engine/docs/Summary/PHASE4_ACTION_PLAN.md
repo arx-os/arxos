@@ -201,7 +201,7 @@ This document outlines the focused plan to complete the remaining 6 services and
 ### Phase 5: Advanced Features
 1. **Enhanced Simulation Engine** - Advanced physics and behavior simulation
 2. **Interactive Capabilities** - Real-time interaction and manipulation
-3. **VS Code Plugin** - Development environment integration
+3. **ArxIDE Integration** - Development environment integration
 4. **Advanced CAD Features** - Professional CAD functionality
 
 ### Production Readiness

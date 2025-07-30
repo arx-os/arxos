@@ -121,7 +121,7 @@ o	Main: canvas (SVGX renderer)
 o	Bottom: CLI terminal (CartOS)
 o	Right: NLP chat assistant
 o	Inspector: selected object metadata + behavior editor
-•	Figma + VSCode + Packet Tracer — for real-world systems
+•	Figma + ArxIDE + Packet Tracer — for real-world systems
 📡 ArxLink Protocol for Offline Sync (Phase 6)
 •	Enables SVGX/ASCII-based updates to be sent via:
 o	Packet radio
@@ -623,8 +623,8 @@ ________________________________________
 12. Vision for the Future
 Arxos is not just building a product — it is laying the foundation for a new operating system for the built world. The long-term vision reaches beyond simple building documentation and aims to rewire the way society interacts with physical infrastructure. Arxos intends to be to buildings what GitHub is to code, what Linux is to servers, and what YouTube is to content creators — a foundational, community-powered platform that redefines an entire domain.
 ________________________________________
-🖥️ 12.1 ArxIDE: The VSCode + GitHub of Infrastructure
-ArxIDE is the planned flagship desktop/web application of the Arxos platform.
+🖥️ 12.1 ArxIDE: The Professional CAD IDE of Infrastructure
+ArxIDE is the flagship desktop application of the Arxos platform.
 What it becomes:
 •	A full-featured infrastructure development environment
 •	Combines:

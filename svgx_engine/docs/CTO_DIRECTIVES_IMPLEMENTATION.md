@@ -460,7 +460,7 @@ class SVGXQualityAssurance:
 | Real-Time Simulation | ⚠️ Medium | Throttle non-critical updates | Runtime Team | Week 2-3 |
 | Performance @ Scale | ⚠️ Medium | Virtualize + Lazy load | Performance Team | Week 2-4 |
 | DXF/IFC Interop | 🛠 Planned | Begin Q4 2025/Q1 2026 | Interop Team | Q4 2025 |
-| VSCode Plugin | ✅ High | Standard practices | Plugin Team | Week 5-6 |
+| ArxIDE Integration | ✅ High | Standard practices | Plugin Team | Week 5-6 |
 | Mobile Capability | 🛠 In Design | SVGX-lite mode | UX Team | Week 3-5 |
 
 ---

@@ -2,46 +2,49 @@
 
 ## 🎯 **Component Overview**
 
-ArxIDE is a professional desktop CAD IDE for building information modeling, designed to provide a comprehensive development environment for building systems and infrastructure. Built with Electron, Go, and Python, ArxIDE offers natural language CAD commands, real-time collaboration, and advanced 3D visualization.
+ArxIDE is a professional desktop CAD IDE for building information modeling, designed to provide a comprehensive development environment for building systems and infrastructure. Built with **Tauri (Rust + WebView)**, **Go (SVGX Engine)**, and **JavaScript (Canvas 2D)**, ArxIDE offers CAD-level functionality with native system access and professional CAD capabilities.
 
 ## 🏗️ **Architecture**
 
 ### **Technology Stack**
-- **Frontend**: Electron + React + TypeScript
-- **Backend**: Go (Gin framework)
-- **AI Services**: Python (FastAPI)
-- **Database**: PostgreSQL
+- **Frontend**: Tauri (Rust + WebView) + JavaScript (Canvas 2D) + HTMX + Tailwind
+- **Backend**: Go (SVGX Engine) + Go (Chi framework)
+- **Database**: PostgreSQL with PostGIS
 - **Cache**: Redis
-- **3D Rendering**: Three.js
-- **Code Editor**: Monaco Editor
+- **Rendering**: Canvas 2D (precise vector graphics)
+- **Performance**: Web Workers (background processing)
 
 ### **Component Architecture**
 ```
 ArxIDE Application
-├── Main Process (Electron)
+├── Tauri Main Process (Rust)
 │   ├── Window Management
-│   ├── IPC Communication
-│   └── System Integration
-├── Renderer Process (React)
-│   ├── UI Components
-│   ├── State Management
+│   ├── Native System Access
+│   ├── File System Operations
+│   └── ARX Wallet Integration
+├── WebView Process (JavaScript)
+│   ├── Canvas 2D Rendering
+│   ├── Web Workers (SVGX Processing)
+│   ├── HTMX UI Components
 │   └── User Interactions
-├── Backend Services (Go)
-│   ├── API Gateway
-│   ├── File Management
-│   └── Database Operations
-└── AI Services (Python)
-    ├── Natural Language Processing
-    ├── CAD Command Processing
-    └── SVGX Code Generation
+├── SVGX Engine Core (Go)
+│   ├── CAD Processing
+│   ├── Precision Calculations
+│   ├── Constraint Solving
+│   └── File Format Support
+└── Backend Services (Go)
+    ├── API Gateway (Chi)
+    ├── Database Operations
+    ├── Authentication
+    └── Business Logic
 ```
 
 ### **Key Features**
-- **Natural Language CAD Commands**: AI-powered command processing
+- **CAD-Level Precision**: Sub-millimeter accuracy with professional CAD tools
+- **Native System Access**: File system, CLI integration, ARX wallet
+- **Shared SVGX Engine**: Unified core between browser and desktop
+- **Professional CAD Tools**: Constraints, dimensioning, parametric modeling
 - **Real-time Collaboration**: Multi-user editing with conflict resolution
-- **Advanced 3D Visualization**: Building simulation and VR/AR support
-- **Extension System**: Plugin architecture for system-specific tools
-- **Version Control Integration**: Git integration with visual diff tools
 
 ## 📋 **Implementation Plan**
 
@@ -53,7 +56,7 @@ ArxIDE Application
 - [ ] **Create initial project structure** with all configuration files
 - [ ] **Initialize Git repository** with proper branching strategy
 - [ ] **Set up CI/CD pipeline** for automated testing and deployment
-- [ ] **Configure development tools** (ESLint, Prettier, Black, etc.)
+- [ ] **Configure development tools** (Rust, Go, JavaScript tooling)
 - [ ] **Create database schemas** and initial migration scripts
 - [ ] **Set up security monitoring** and audit logging infrastructure
 - [ ] **Configure development team** access and permissions
@@ -65,120 +68,68 @@ ArxIDE Application
 - [ ] Security monitoring capturing events
 - [ ] All configuration files in place and validated
 
-### **Phase 1: Foundation & Core Infrastructure (Weeks 1-4)**
+### **Phase 1: Browser CAD Foundation (Weeks 1-8)**
+**Status**: 📋 **PLANNED - Ready for Implementation**
 
-#### **Week 1: Project Setup & Configuration**
-- [ ] **Initialize Electron application structure**
-- [ ] **Set up TypeScript configuration and build pipeline**
-- [ ] **Configure Go backend with basic API structure**
-- [ ] **Set up Python services with FastAPI**
-- [ ] **Create shared type definitions and constants**
+#### **Week 1-2: Canvas 2D Setup**
+- [ ] **Set up Canvas 2D context** for precise vector rendering
+- [ ] **Implement basic vector rendering** with sub-millimeter precision
+- [ ] **Create drawing tools** with CAD-level accuracy
+- [ ] **Establish coordinate system** with high precision
 
-#### **Week 2: IPC Communication Framework**
-- [ ] **Design IPC message structure and protocols**
-- [ ] **Implement secure communication between main and renderer processes**
-- [ ] **Create error handling and recovery mechanisms**
-- [ ] **Set up message validation and sanitization**
-- [ ] **Implement logging and debugging tools**
+#### **Week 3-4: Web Workers Integration**
+- [ ] **Set up Web Workers** for background SVGX processing
+- [ ] **Implement SVGX parsing** in background threads
+- [ ] **Create communication protocol** between main thread and workers
+- [ ] **Optimize performance** for large CAD operations
 
-#### **Week 3: Basic UI Framework**
-- [ ] **Set up React with TypeScript**
-- [ ] **Create basic layout components**
-- [ ] **Implement Monaco Editor integration**
-- [ ] **Set up Three.js canvas for 3D rendering**
-- [ ] **Create basic navigation and menu system**
+#### **Week 5-6: HTMX UI Development**
+- [ ] **Set up HTMX + Tailwind** for lightweight, responsive UI
+- [ ] **Create responsive UI components** for CAD interface
+- [ ] **Integrate Canvas with HTMX** for real-time updates
+- [ ] **Implement real-time updates** for CAD operations
 
-#### **Week 4: Backend API Foundation**
-- [ ] **Set up Go REST API with Gin framework**
-- [ ] **Implement authentication and authorization**
-- [ ] **Create database connection and basic CRUD operations**
-- [ ] **Set up file system operations**
-- [ ] **Implement basic error handling and logging**
+#### **Week 7-8: CAD Features Integration**
+- [ ] **Implement precision drawing** with sub-millimeter accuracy
+- [ ] **Add geometric constraints** (distance, angle, parallel, perpendicular)
+- [ ] **Create dimensioning tools** with professional standards
+- [ ] **Integrate parametric modeling** for parameter-driven designs
 
-### **Phase 2: Core CAD Functionality (Weeks 5-8)**
+### **Phase 2: ArxIDE Development (Weeks 9-16)**
+**Status**: 📋 **PLANNED - After Browser CAD Completion**
 
-#### **Week 5: SVGX Engine Integration**
-- [ ] **Integrate SVGX parsing engine**
-- [ ] **Implement basic CAD operations**
-- [ ] **Set up 3D visualization**
-- [ ] **Create measurement and annotation tools**
-- [ ] **Implement undo/redo functionality**
+#### **Week 9-10: Tauri Setup**
+- [ ] **Set up Tauri project structure** with Rust backend
+- [ ] **Configure Rust backend** for native system access
+- [ ] **Set up WebView integration** for browser CAD
+- [ ] **Establish native system access** (file system, CLI, wallet)
 
-#### **Week 6: File Management System**
-- [ ] **Implement file operations**
-- [ ] **Set up version control integration**
-- [ ] **Create collaboration features**
-- [ ] **Set up backup system**
+#### **Week 11-13: Browser CAD Integration**
+- [ ] **Port Canvas 2D to Tauri** with native performance
+- [ ] **Integrate Web Workers** in desktop environment
+- [ ] **Adapt HTMX for desktop** with native features
+- [ ] **Optimize performance** for desktop CAD operations
 
-#### **Week 7: Extension System**
-- [ ] **Design extension architecture**
-- [ ] **Implement extension loading and management**
-- [ ] **Create system-specific extensions**
-- [ ] **Set up extension development tools**
+#### **Week 14-16: Native Features**
+- [ ] **Implement file system access** for local CAD files
+- [ ] **Add CLI integration** for command-line CAD operations
+- [ ] **Integrate ARX wallet** for blockchain transactions
+- [ ] **Add system notifications** for CAD operations
 
-#### **Week 8: Advanced CAD Features**
-- [ ] **Implement advanced drawing tools**
-- [ ] **Set up constraint system**
-- [ ] **Create layer management**
-- [ ] **Add precision tools**
+### **Phase 3: Integration and Advanced Features (Weeks 17-24)**
+**Status**: 📋 **PLANNED - After ArxIDE Foundation**
 
-### **Phase 3: AI Integration & Advanced Features (Weeks 9-12)**
+#### **Week 17-20: Shared SVGX Engine**
+- [ ] **Unify SVGX Engine** between browser and desktop
+- [ ] **Implement common SVGX processing** across platforms
+- [ ] **Create shared constraint solving** for CAD operations
+- [ ] **Establish unified file format** (.svgx) across platforms
 
-#### **Week 9-10: Arxos Agent Integration**
-- [ ] **Set up Python AI services with FastAPI**
-- [ ] **Implement natural language command processing**
-- [ ] **Create command-to-SVGX conversion system**
-- [ ] **Add context management and conversation history**
-- [ ] **Implement real-time command validation**
-
-#### **Week 11: Real-time Collaboration**
-- [ ] **Implement WebSocket-based real-time communication**
-- [ ] **Create multi-user editing support**
-- [ ] **Add conflict resolution and merging**
-- [ ] **Implement user presence and cursors**
-- [ ] **Add collaboration permissions and controls**
-
-#### **Week 12: Advanced 3D Features**
-- [ ] **Implement advanced 3D rendering**
-- [ ] **Create building simulation**
-- [ ] **Add VR/AR support**
-- [ ] **Implement performance optimization**
-
-### **Phase 4: Integration & Polish (Weeks 13-16)**
-
-#### **Week 13-14: System Integration**
-- [ ] **Integrate all components**
-- [ ] **Implement error handling and recovery**
-- [ ] **Add performance monitoring**
-- [ ] **Set up logging and debugging**
-
-#### **Week 15: User Experience Polish**
-- [ ] **Implement user interface polish**
-- [ ] **Add keyboard shortcuts and hotkeys**
-- [ ] **Create help system and documentation**
-- [ ] **Implement accessibility features**
-
-#### **Week 16: Testing and Quality Assurance**
-- [ ] **Implement comprehensive testing**
-- [ ] **Add performance testing**
-- [ ] **Set up security testing**
-- [ ] **Implement continuous integration**
-
-### **Phase 5: Deployment & Documentation (Weeks 17-18)**
-
-#### **Week 17: Build & Distribution**
-- [ ] **Set up Electron Builder configuration**
-- [ ] **Create automated build pipeline**
-- [ ] **Implement auto-updater system**
-- [ ] **Add code signing and security**
-- [ ] **Create installation packages**
-
-#### **Week 18: Documentation & Training**
-- [ ] **Create comprehensive user documentation**
-- [ ] **Write developer documentation**
-- [ ] **Create video tutorials and guides**
-- [ ] **Implement in-app help system**
-- [ ] **Create training materials**
+#### **Week 21-24: Advanced CAD Features**
+- [ ] **Implement assembly management** for multi-part designs
+- [ ] **Add drawing views** with multiple view types
+- [ ] **Create advanced dimensioning** with professional standards
+- [ ] **Implement professional export formats** (IFC, DXF, GLTF)
 
 ## 🛡️ **Security & Compliance**
 
@@ -205,7 +156,7 @@ ArxIDE Application
 - **Security Tests**: Vulnerability scanning and penetration testing
 
 ### **Quality Gates**
-- **Performance**: Startup time < 5 seconds, 3D rendering 60 FPS
+- **Performance**: Startup time < 3 seconds, CAD operations 60 FPS
 - **Quality**: Test coverage > 90%, code quality < 5% technical debt
 - **Security**: Zero critical vulnerabilities
 - **User Satisfaction**: > 4.5/5 rating
@@ -213,25 +164,25 @@ ArxIDE Application
 ## 📊 **Success Metrics**
 
 ### **Performance Metrics**
-- **Startup Time**: < 5 seconds
-- **File Load Time**: < 3 seconds for 10MB files
-- **3D Rendering**: 60 FPS for complex models
-- **Memory Usage**: < 2GB for large projects
+- **Startup Time**: < 3 seconds
+- **File Load Time**: < 2 seconds for 10MB files
+- **CAD Rendering**: 60 FPS for complex models
+- **Memory Usage**: < 1GB for large projects
 
 ### **Feature Metrics**
-- **Natural Language Commands**: 95% accuracy
+- **CAD Precision**: Sub-millimeter accuracy (0.001mm)
 - **File Format Support**: 10+ formats
-- **Extension System**: 20+ extensions
+- **Constraint System**: 8+ constraint types
 - **Collaboration**: 10+ simultaneous users
 
 ## 🚀 **Development Setup**
 
 ### **Prerequisites**
-- Node.js 18.0.0+
-- Go 1.21.0+
-- Python 3.11.0+
-- Docker 20.10.0+
-- Git 2.30.0+
+- **Rust**: 1.70.0+
+- **Go**: 1.21.0+
+- **Node.js**: 18.0.0+
+- **Docker**: 20.10.0+
+- **Git**: 2.30.0+
 
 ### **Quick Start**
 ```bash
@@ -243,26 +194,26 @@ cd arxide
 docker-compose up -d
 
 # Install dependencies
-cd desktop && npm install
-cd ../backend && go mod download
-cd ../services && pip install -r requirements.txt
+cd frontend/web && npm install
+cd ../../arxide/desktop && cargo install tauri-cli
+cd ../../svgx_engine && pip install -e .
 
 # Start development
-cd desktop && npm run dev
+cd frontend/web && npm run dev
 ```
 
 ## 📚 **Documentation**
 
 ### **Development Documentation**
-- **[Development Setup](DEVELOPMENT_SETUP.md)** - Complete setup guide
-- **[Architecture](ARCHITECTURE.md)** - System architecture and design
-- **[Implementation Plan](IMPLEMENTATION_PLAN.md)** - Detailed implementation roadmap
-- **[Testing Strategy](TESTING_STRATEGY.md)** - Testing framework and procedures
+- **[Browser CAD + ArxIDE Strategy](../development/browser-cad-arxide-strategy.md)** - Complete development strategy
+- **[Development Plan](../development/development-plan.md)** - Comprehensive development plan
+- **[Architecture Overview](../architecture/README.md)** - System architecture and design
+- **[Testing Strategy](../development/testing-strategy.md)** - Testing framework and procedures
 
 ### **User Documentation**
-- **[User Guide](USER_GUIDE.md)** - Complete user documentation
-- **[API Reference](API_REFERENCE.md)** - Technical API documentation
-- **[Extensions Guide](EXTENSIONS.md)** - Extension development guide
+- **[User Guide](../user-guides/README.md)** - Complete user documentation
+- **[API Reference](../api/README.md)** - Technical API documentation
+- **[CAD Features](../user-guides/features/cad-system.md)** - CAD system documentation
 
 ## 🔄 **Continuous Improvement**
 
@@ -295,12 +246,12 @@ cd desktop && npm run dev
 - CI/CD pipeline setup
 
 ### **📋 Planned**
-- Phase 1-5 implementation
+- Phase 1-3 implementation
 - User documentation
 - Training materials
 
 ---
 
 **Last Updated**: December 2024  
-**Version**: 1.0.0  
+**Version**: 2.0.0  
 **Status**: Pre-Development Setup

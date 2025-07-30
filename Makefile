@@ -1,179 +1,219 @@
 # Arxos Monorepo Makefile
 # Provides unified build, test, and deployment commands for the entire platform
 
-.PHONY: help build test deploy clean install setup
+.PHONY: help dev build test clean install deps docker-up docker-down lint format
 
 # Default target
 help:
-	@echo "Arxos Monorepo - Available Commands:"
+	@echo "🚀 Arxos Development Commands"
 	@echo ""
-	@echo "Setup & Installation:"
-	@echo "  setup          - Initial setup of the entire monorepo"
-	@echo "  install        - Install all dependencies"
-	@echo "  clean          - Clean all build artifacts"
+	@echo "📋 Available commands:"
+	@echo "  make dev          # Start all services in development mode"
+	@echo "  make build        # Build all services"
+	@echo "  make test         # Run all tests"
+	@echo "  make clean        # Clean build artifacts"
+	@echo "  make install      # Install all dependencies"
+	@echo "  make deps         # Install development dependencies"
+	@echo "  make docker-up    # Start Docker services"
+	@echo "  make docker-down  # Stop Docker services"
+	@echo "  make lint         # Run linting on all code"
+	@echo "  make format       # Format all code"
+	@echo "  make help         # Show this help message"
+
+# Development environment
+dev: docker-up
+	@echo "🚀 Starting Arxos development environment..."
+	@echo "📊 Services starting on:"
+	@echo "  - Browser CAD:      http://localhost:3000"
+	@echo "  - ArxIDE:           http://localhost:3001"
+	@echo "  - Backend API:      http://localhost:8080"
+	@echo "  - GUS Agent:        http://localhost:8000"
+	@echo "  - PostgreSQL:       localhost:5432"
+	@echo "  - Redis:            localhost:6379"
 	@echo ""
-	@echo "Development:"
-	@echo "  build          - Build all components"
-	@echo "  build-core     - Build core services only"
-	@echo "  build-frontend - Build frontend applications only"
-	@echo "  build-services - Build specialized services only"
-	@echo ""
-	@echo "Testing:"
-	@echo "  test           - Run all tests"
-	@echo "  test-core      - Test core services"
-	@echo "  test-frontend  - Test frontend applications"
-	@echo "  test-services  - Test specialized services"
-	@echo ""
-	@echo "Deployment:"
-	@echo "  deploy         - Deploy all services"
-	@echo "  deploy-staging - Deploy to staging environment"
-	@echo "  deploy-prod    - Deploy to production environment"
-	@echo ""
-	@echo "Development Tools:"
-	@echo "  lint           - Run linting on all code"
-	@echo "  format         - Format all code"
-	@echo "  docs           - Generate documentation"
+	@echo "⏳ Starting services in parallel..."
+	@make -j4 dev-backend dev-gus dev-cad dev-arxide
 
-# Setup and Installation
-setup: install
-	@echo "Setting up Arxos monorepo..."
-	@mkdir -p logs
-	@mkdir -p data
-	@echo "✅ Setup complete"
+# Start individual services
+dev-backend:
+	@echo "🔧 Starting Go Backend..."
+	cd arx-backend && go run main.go
 
-install:
-	@echo "Installing dependencies..."
-	# Core dependencies
-	cd core/svg-parser && pip install -r requirements.txt
-	cd core/backend && go mod download
-	# Frontend dependencies
-	cd frontend/web && npm install
-	cd frontend/ios && pod install
-	# Service dependencies
-	cd services/ai && pip install -r requirements.txt
-	cd services/iot && pip install -r requirements.txt
-	cd services/cmms && pip install -r requirements.txt
-	@echo "✅ Dependencies installed"
+dev-gus:
+	@echo "🤖 Starting GUS Agent..."
+	cd services/gus && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-clean:
-	@echo "Cleaning build artifacts..."
-	@find . -name "*.pyc" -delete
-	@find . -name "__pycache__" -type d -exec rm -rf {} +
-	@find . -name "node_modules" -type d -exec rm -rf {} +
-	@find . -name "dist" -type d -exec rm -rf {} +
-	@find . -name "build" -type d -exec rm -rf {} +
-	@echo "✅ Clean complete"
+dev-cad:
+	@echo "🎨 Starting Browser CAD..."
+	cd frontend/web && npm run dev
 
-# Building
-build: build-core build-frontend build-services
-	@echo "✅ All components built"
+dev-arxide:
+	@echo "🖥️  Starting ArxIDE..."
+	cd arxide && npm run dev
 
-build-core:
-	@echo "Building core services..."
-	cd core/svg-parser && python setup.py build
-	cd core/backend && go build -o bin/arx-backend ./cmd/main.go
-	@echo "✅ Core services built"
+# Build all services
+build: build-backend build-gus build-cad build-arxide
+	@echo "✅ All services built successfully!"
 
-build-frontend:
-	@echo "Building frontend applications..."
+build-backend:
+	@echo "🔧 Building Go Backend..."
+	cd arx-backend && go build -o bin/arx-backend .
+
+build-gus:
+	@echo "🤖 Building GUS Agent..."
+	cd services/gus && python setup.py build
+
+build-cad:
+	@echo "🎨 Building Browser CAD..."
 	cd frontend/web && npm run build
-	cd frontend/ios && xcodebuild -workspace Arxos.xcworkspace -scheme Arxos -configuration Release
-	cd frontend/android && ./gradlew assembleRelease
-	@echo "✅ Frontend applications built"
 
-build-services:
-	@echo "Building specialized services..."
-	cd services/ai && python setup.py build
-	cd services/iot && python setup.py build
-	cd services/cmms && python setup.py build
-	@echo "✅ Specialized services built"
+build-arxide:
+	@echo "🖥️  Building ArxIDE..."
+	cd arxide && npm run build
 
 # Testing
-test: test-core test-frontend test-services
-	@echo "✅ All tests passed"
+test: test-backend test-gus test-cad test-arxide
+	@echo "✅ All tests passed!"
 
-test-core:
-	@echo "Testing core services..."
-	cd core/svg-parser && python -m pytest tests/ -v
-	cd core/backend && go test ./...
-	@echo "✅ Core tests passed"
+test-backend:
+	@echo "🧪 Testing Go Backend..."
+	cd arx-backend && go test ./...
 
-test-frontend:
-	@echo "Testing frontend applications..."
+test-gus:
+	@echo "🧪 Testing GUS Agent..."
+	cd services/gus && python -m pytest
+
+test-cad:
+	@echo "🧪 Testing Browser CAD..."
 	cd frontend/web && npm test
-	cd frontend/ios && xcodebuild test -workspace Arxos.xcworkspace -scheme Arxos
-	cd frontend/android && ./gradlew test
-	@echo "✅ Frontend tests passed"
 
-test-services:
-	@echo "Testing specialized services..."
-	cd services/ai && python -m pytest tests/ -v
-	cd services/iot && python -m pytest tests/ -v
-	cd services/cmms && python -m pytest tests/ -v
-	@echo "✅ Service tests passed"
+test-arxide:
+	@echo "🧪 Testing ArxIDE..."
+	cd arxide && npm test
 
-# Deployment
-deploy: deploy-staging
-	@echo "✅ Deployment complete"
+# Code quality
+lint: lint-backend lint-gus lint-cad lint-arxide
+	@echo "✅ All linting passed!"
 
-deploy-staging:
-	@echo "Deploying to staging environment..."
-	docker-compose -f infrastructure/deploy/docker-compose.staging.yml up -d
-	@echo "✅ Staging deployment complete"
+lint-backend:
+	@echo "🔍 Linting Go Backend..."
+	cd arx-backend && golangci-lint run
 
-deploy-prod:
-	@echo "Deploying to production environment..."
-	docker-compose -f infrastructure/deploy/docker-compose.prod.yml up -d
-	@echo "✅ Production deployment complete"
+lint-gus:
+	@echo "🔍 Linting GUS Agent..."
+	cd services/gus && flake8 . && mypy .
 
-# Development Tools
-lint:
-	@echo "Running linting..."
-	cd core/svg-parser && flake8 .
-	cd core/backend && golangci-lint run
+lint-cad:
+	@echo "🔍 Linting Browser CAD..."
 	cd frontend/web && npm run lint
-	@echo "✅ Linting complete"
 
-format:
-	@echo "Formatting code..."
-	cd core/svg-parser && black .
-	cd core/backend && go fmt ./...
+lint-arxide:
+	@echo "🔍 Linting ArxIDE..."
+	cd arxide && npm run lint
+
+# Code formatting
+format: format-backend format-gus format-cad format-arxide
+	@echo "✅ All code formatted!"
+
+format-backend:
+	@echo "🎨 Formatting Go Backend..."
+	cd arx-backend && goimports -w .
+
+format-gus:
+	@echo "🎨 Formatting GUS Agent..."
+	cd services/gus && black . && isort .
+
+format-cad:
+	@echo "🎨 Formatting Browser CAD..."
 	cd frontend/web && npm run format
-	@echo "✅ Formatting complete"
 
-docs:
-	@echo "Generating documentation..."
-	cd tools/docs && python generate_docs.py
-	@echo "✅ Documentation generated"
+format-arxide:
+	@echo "🎨 Formatting ArxIDE..."
+	cd arxide && npm run format
 
-# Development shortcuts
-dev: install
-	@echo "Starting development environment..."
-	docker-compose -f infrastructure/deploy/docker-compose.dev.yml up -d
-	@echo "✅ Development environment started"
+# Dependencies
+install: install-backend install-gus install-cad install-arxide
+	@echo "✅ All dependencies installed!"
 
-dev-stop:
-	@echo "Stopping development environment..."
-	docker-compose -f infrastructure/deploy/docker-compose.dev.yml down
-	@echo "✅ Development environment stopped"
+install-backend:
+	@echo "📦 Installing Go Backend dependencies..."
+	cd arx-backend && go mod download
 
-# Database operations
+install-gus:
+	@echo "📦 Installing GUS Agent dependencies..."
+	cd services/gus && pip install -r requirements.txt
+
+install-cad:
+	@echo "📦 Installing Browser CAD dependencies..."
+	cd frontend/web && npm install
+
+install-arxide:
+	@echo "📦 Installing ArxIDE dependencies..."
+	cd arxide && npm install
+
+# Development dependencies
+deps: deps-backend deps-gus deps-cad deps-arxide
+	@echo "✅ All development dependencies installed!"
+
+deps-backend:
+	@echo "📦 Installing Go development tools..."
+	go install golang.org/x/tools/cmd/goimports@latest
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+deps-gus:
+	@echo "📦 Installing Python development tools..."
+	pip install black flake8 mypy pytest pre-commit
+
+deps-cad:
+	@echo "📦 Installing Node.js development tools..."
+	npm install -g eslint prettier typescript
+
+deps-arxide:
+	@echo "📦 Installing Rust development tools..."
+	rustup component add rustfmt clippy
+
+# Docker commands
+docker-up:
+	@echo "🐳 Starting Docker services..."
+	docker-compose -f dev/docker-compose.yml up -d
+
+docker-down:
+	@echo "🐳 Stopping Docker services..."
+	docker-compose -f dev/docker-compose.yml down
+
+# Cleanup
+clean: clean-backend clean-gus clean-cad clean-arxide
+	@echo "🧹 Cleaned all build artifacts!"
+
+clean-backend:
+	@echo "🧹 Cleaning Go Backend..."
+	cd arx-backend && rm -rf bin/ && go clean
+
+clean-gus:
+	@echo "🧹 Cleaning GUS Agent..."
+	cd services/gus && rm -rf build/ dist/ *.egg-info/
+
+clean-cad:
+	@echo "🧹 Cleaning Browser CAD..."
+	cd frontend/web && rm -rf dist/ node_modules/
+
+clean-arxide:
+	@echo "🧹 Cleaning ArxIDE..."
+	cd arxide && rm -rf dist/ node_modules/
+
+# Database
 db-migrate:
-	@echo "Running database migrations..."
-	cd infrastructure/database && alembic upgrade head
-	@echo "✅ Database migrations complete"
+	@echo "🗄️  Running database migrations..."
+	cd arx-backend && go run cmd/migrate/main.go
 
-db-reset:
-	@echo "Resetting database..."
-	cd infrastructure/database && alembic downgrade base
-	cd infrastructure/database && alembic upgrade head
-	@echo "✅ Database reset complete"
+db-seed:
+	@echo "🌱 Seeding database..."
+	cd arx-backend && go run cmd/seed/main.go
 
-# Monitoring and logs
-logs:
-	@echo "Showing application logs..."
-	docker-compose -f infrastructure/deploy/docker-compose.dev.yml logs -f
-
-monitor:
-	@echo "Starting monitoring dashboard..."
-	cd infrastructure/monitoring && python start_monitoring.py 
+# Health checks
+health:
+	@echo "🏥 Checking service health..."
+	@curl -f http://localhost:8080/health || echo "❌ Backend not responding"
+	@curl -f http://localhost:8000/health || echo "❌ GUS not responding"
+	@curl -f http://localhost:3000/health || echo "❌ CAD not responding"
+	@curl -f http://localhost:3001/health || echo "❌ ArxIDE not responding" 

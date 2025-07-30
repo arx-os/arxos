@@ -1,0 +1,91 @@
+{
+  "name": "Arxos Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.24"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "1.75"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.go",
+        "ms-python.python",
+        "ms-vscode.vscode-typescript-next",
+        "rust-lang.rust-analyzer",
+        "ms-vscode.vscode-json",
+        "yzhang.markdown-all-in-one",
+        "ms-vscode.vscode-yaml",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.vscode-kubernetes-tools",
+        "ms-vscode.vscode-json",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-eslint"
+      ],
+      "settings": {
+        "go.useLanguageServer": true,
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        }
+      }
+    }
+  },
+  "forwardPorts": [
+    3000,  // Browser CAD
+    3001,  // ArxIDE
+    8080,  // Go Backend
+    8000,  // GUS Agent
+    5432,  // PostgreSQL
+    6379   // Redis
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "Browser CAD",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "ArxIDE",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "Go Backend API",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "GUS Agent",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "notify"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=${localWorkspaceFolder}/.devcontainer/data,target=/workspaces/data,type=bind,consistency=cached"
+  ]
+} 

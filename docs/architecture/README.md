@@ -4,6 +4,21 @@
 
 This directory contains comprehensive architecture documentation for the Arxos platform, including system design, component architectures, decision records, and design patterns.
 
+## 🎯 **Technology Stack**
+
+### **Core Technology Stack**
+- **Backend**: Go (SVGX Engine) + Go (Chi framework)
+- **Frontend**: Tauri (Rust + WebView) + JavaScript (Canvas 2D) + HTMX + Tailwind
+- **Database**: PostgreSQL with PostGIS
+- **Cache**: Redis
+- **Rendering**: Canvas 2D (precise vector graphics)
+- **Performance**: Web Workers (background processing)
+
+### **Development Strategy**
+- **Phase 1**: Browser CAD (HTMX + Canvas 2D + Web Workers)
+- **Phase 2**: ArxIDE with Tauri (desktop app with native features)
+- **Shared SVGX Engine**: Unified core between browser and desktop
+
 ## 📚 **Documentation Sections**
 
 ### **System Overview**
@@ -12,10 +27,11 @@ This directory contains comprehensive architecture documentation for the Arxos p
 - **[Critical Planning Roadmap](CRITICAL_PLANNING_ROADMAP.md)** - Critical architecture planning
 
 ### **Component Architectures**
-- **[ArxIDE](components/arxide.md)** - Professional desktop CAD IDE architecture
+- **[ArxIDE](components/arxide.md)** - Professional desktop CAD IDE architecture (Tauri-based)
+- **[Browser CAD](components/browser-cad.md)** - Web-based CAD interface architecture
+- **[SVGX Engine](components/svgx-engine.md)** - Core SVG processing engine architecture
 - **[CLI System](components/cli-system.md)** - Command-line interface architecture
 - **[AI Agent](components/ai-agent.md)** - AI and machine learning services architecture
-- **[SVGX Engine](components/svgx-engine.md)** - Core SVG processing engine architecture
 - **[Data Vendor](components/data-vendor.md)** - Data vendor integration architecture
 - **[IoT Platform](components/iot-platform.md)** - IoT device management architecture
 - **[CMMS Integration](components/cmms-integration.md)** - Maintenance management architecture
@@ -23,7 +39,7 @@ This directory contains comprehensive architecture documentation for the Arxos p
 ### **Architecture Decisions**
 - **[Architecture Decision Records](decisions/)** - All architecture decisions
 - **[ADR-001 Clean Architecture](decisions/ADR-001-Clean-Architecture-Implementation.md)** - Clean architecture implementation
-- **[ADR-002 Technology Stack](decisions/ADR-002-technology-stack.md)** - Technology stack decisions
+- **[ADR-002 Technology Stack](decisions/ADR-002-technology-stack.md)** - Technology stack decisions (Chi framework)
 - **[ADR-003 Security Architecture](decisions/ADR-003-security-architecture.md)** - Security architecture decisions
 
 ### **Design Patterns**
@@ -40,6 +56,7 @@ This directory contains comprehensive architecture documentation for the Arxos p
 
 ### **For Developers**
 - **[Development Setup](../development/setup.md)** - Development environment setup
+- **[Browser CAD + ArxIDE Strategy](../development/browser-cad-arxide-strategy.md)** - Complete development strategy
 - **[API Reference](../api/reference/)** - Complete API documentation
 - **[Component Development](../development/)** - Component development guides
 
@@ -57,16 +74,16 @@ This directory contains comprehensive architecture documentation for the Arxos p
 
 ### **✅ Implemented**
 - Core SVGX Engine architecture
-- Basic API gateway and routing
-- Database schema and migrations
+- Basic API gateway and routing (Chi framework)
+- Database schema and migrations (PostgreSQL/PostGIS)
 - Authentication and authorization
 - Basic monitoring and logging
 
 ### **🔄 In Progress**
-- Frontend applications architecture
+- Browser CAD implementation (Canvas 2D + Web Workers)
+- ArxIDE development (Tauri-based)
 - Infrastructure and DevOps architecture
 - Core services architecture
-- Real-time collaboration system
 
 ### **📋 Planned**
 - Advanced AI services architecture
@@ -93,5 +110,5 @@ For questions about architecture documentation:
 ---
 
 **Last Updated**: December 2024  
-**Version**: 1.0.0  
+**Version**: 2.0.0  
 **Status**: Active Development 

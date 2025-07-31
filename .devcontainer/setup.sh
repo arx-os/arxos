@@ -33,7 +33,7 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 go install github.com/go-delve/delve/cmd/dlv@latest
 
 # Install Python tools
-pip install --upgrade pip
+pip install --upgrade pip setuptools wheel
 pip install \
     black \
     flake8 \

@@ -132,7 +132,7 @@ format-arxide:
 	cd arxide && npm run format
 
 # Dependencies
-install: install-backend install-gus install-cad install-arxide
+install: install-backend install-gus install-cad install-arxide install-svgx
 	@echo "✅ All dependencies installed!"
 
 install-backend:
@@ -150,6 +150,11 @@ install-cad:
 install-arxide:
 	@echo "📦 Installing ArxIDE dependencies..."
 	cd arxide && npm install
+
+install-svgx:
+	@echo "📦 Installing SVGX Engine dependencies..."
+	cd svgx_engine && pip install -e .
+	cd core/svg-parser && pip install -r requirements.txt
 
 # Development dependencies
 deps: deps-backend deps-gus deps-cad deps-arxide

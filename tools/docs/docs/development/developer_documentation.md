@@ -967,11 +967,11 @@ def get_cached_floor_data(floor_id):
 #### Response Compression
 
 ```python
-from flask import Flask, request, Response
+from fastapi import FastAPI, Request, Response
 import gzip
 import json
 
-app = Flask(__name__)
+app = FastAPI()
 
 def compress_response(data):
     """Compress response data."""
@@ -979,20 +979,21 @@ def compress_response(data):
     compressed_data = gzip.compress(json_data.encode('utf-8'))
     return compressed_data
 
-@app.route('/api/floors/<floor_id>')
-def get_floor(floor_id):
+@app.get('/api/floors/{floor_id}')
+async def get_floor(floor_id: int, request: Request):
     """Get floor data with compression."""
     floor_data = get_floor_data(floor_id)
     
     # Check if client accepts gzip
-    if 'gzip' in request.headers.get('Accept-Encoding', ''):
+    if 'gzip' in request.headers.get('accept-encoding', ''):
         compressed_data = compress_response(floor_data)
-        response = Response(compressed_data)
-        response.headers['Content-Encoding'] = 'gzip'
-        response.headers['Content-Type'] = 'application/json'
-        return response
+        return Response(
+            content=compressed_data,
+            media_type='application/json',
+            headers={'Content-Encoding': 'gzip'}
+        )
     
-    return jsonify(floor_data)
+    return floor_data
 ```
 
 #### Pagination Implementation

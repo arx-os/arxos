@@ -92,7 +92,7 @@ test-arxide:
 	cd arxide && npm test
 
 # Code quality
-lint: lint-backend lint-gus lint-cad lint-arxide
+lint: lint-backend lint-gus lint-cad lint-arxide lint-standards
 	@echo "✅ All linting passed!"
 
 lint-backend:
@@ -110,6 +110,10 @@ lint-cad:
 lint-arxide:
 	@echo "🔍 Linting ArxIDE..."
 	cd arxide && npm run lint
+
+lint-standards:
+	@echo "🔍 Enforcing Development Standards..."
+	python scripts/enforce_development_standards.py --report --output reports/standards_analysis.txt
 
 # Code formatting
 format: format-backend format-gus format-cad format-arxide

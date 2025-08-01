@@ -2,25 +2,10 @@ version: '3.8'
 
 services:
   # Core Services
-  svg-parser:
-    build:
-      context: ./core/svg-parser
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
 
   backend:
     build:
-      context: ./core/backend
+      context: ./arx-backend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"

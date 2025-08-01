@@ -12,9 +12,14 @@ import os
 import sys
 import tempfile
 import unittest
+import logging
 from pathlib import Path
 from typing import Dict, Any, List
 from unittest.mock import patch, MagicMock
+
+# Configure logging for tests
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Add the project root to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -38,7 +43,7 @@ class TestAVSystemIntegration(unittest.TestCase):
         self.schemas_dir = Path(self.temp_dir) / "schemas"
         self.schemas_dir.mkdir()
         
-        self.symbols_dir = Path(self.temp_dir) / "arx-symbol-library"
+        self.symbols_dir = Path(self.temp_dir) / "tools/symbols"
         self.symbols_dir.mkdir()
         
         self.behavior_dir = Path(self.temp_dir) / "svgx_engine" / "behavior"
@@ -56,7 +61,7 @@ class TestAVSystemIntegration(unittest.TestCase):
     
     def test_av_schema_validation(self):
         """Test AV system schema validation"""
-        print("Testing AV system schema validation...")
+        logger.info("Testing AV system schema validation...")
         
         # Load the AV schema
         schema_file = Path(__file__).parent.parent / "schemas" / "audiovisual" / "schema.json"
@@ -85,13 +90,13 @@ class TestAVSystemIntegration(unittest.TestCase):
             self.assertEqual(projector_obj["properties"]["technology"], "DLP")
             self.assertIn("behavior_profile", projector_obj)
             
-            print("✅ AV schema validation passed")
+            logger.info("✅ AV schema validation passed")
         else:
             self.fail("AV schema file not found")
     
     def test_av_symbol_creation(self):
         """Test AV symbol creation and validation"""
-        print("Testing AV symbol creation...")
+        logger.info("Testing AV symbol creation...")
         
         # Create AV symbols directory
         av_symbols_dir = self.symbols_dir / self.av_system
@@ -145,11 +150,11 @@ class TestAVSystemIntegration(unittest.TestCase):
         validation_result = symbol_manager.validate_symbols(self.av_system)
         self.assertTrue(validation_result.get("success", False))
         
-        print("✅ AV symbol creation and validation passed")
+        logger.info("✅ AV symbol creation and validation passed")
     
     def test_av_behavior_profiles(self):
         """Test AV behavior profile implementation"""
-        print("Testing AV behavior profiles...")
+        logger.info("Testing AV behavior profiles...")
         
         # Create behavior profiles
         behavior_files = {
@@ -243,11 +248,11 @@ class ControlSystemBehavior:
         validation_result = behavior_engine.validate_behaviors(self.av_system)
         self.assertTrue(validation_result.get("success", False))
         
-        print("✅ AV behavior profiles implementation passed")
+        logger.info("✅ AV behavior profiles implementation passed")
     
     def test_av_pipeline_execution(self):
         """Test complete AV pipeline execution"""
-        print("Testing AV pipeline execution...")
+        logger.info("Testing AV pipeline execution...")
         
         # Execute AV pipeline
         pipeline_result = self.service.handle_operation("execute-pipeline", {
@@ -258,11 +263,11 @@ class ControlSystemBehavior:
         self.assertTrue(pipeline_result.get("success", False),
                        f"AV pipeline execution failed: {pipeline_result.get('error')}")
         
-        print("✅ AV pipeline execution passed")
+        logger.info("✅ AV pipeline execution passed")
     
     def test_av_system_validation(self):
         """Test complete AV system validation"""
-        print("Testing AV system validation...")
+        logger.info("Testing AV system validation...")
         
         # Validate schema
         schema_result = self.service.handle_operation("validate-schema", {
@@ -282,11 +287,11 @@ class ControlSystemBehavior:
         })
         self.assertTrue(behaviors_result.get("success", False))
         
-        print("✅ AV system validation passed")
+        logger.info("✅ AV system validation passed")
     
     def test_av_device_operations(self):
         """Test AV device operations"""
-        print("Testing AV device operations...")
+        logger.info("Testing AV device operations...")
         
         # Test display operations
         display_operations = [
@@ -322,11 +327,11 @@ class ControlSystemBehavior:
             # Should return a result (even if it's an error for missing device)
             self.assertIsNotNone(result)
         
-        print("✅ AV device operations passed")
+        logger.info("✅ AV device operations passed")
     
     def test_av_system_integration(self):
         """Test AV system integration scenarios"""
-        print("Testing AV system integration scenarios...")
+        logger.info("Testing AV system integration scenarios...")
         
         # Test conference room scenario
         conference_room_devices = [
@@ -366,11 +371,11 @@ class ControlSystemBehavior:
             })
             self.assertIsNotNone(result)
         
-        print("✅ AV system integration scenarios passed")
+        logger.info("✅ AV system integration scenarios passed")
     
     def test_av_compliance_checking(self):
         """Test AV system compliance checking"""
-        print("Testing AV compliance checking...")
+        logger.info("Testing AV compliance checking...")
         
         # Test electrical compliance
         electrical_compliance = self.service.handle_operation("check_electrical_compliance", {
@@ -390,11 +395,11 @@ class ControlSystemBehavior:
         })
         self.assertIsNotNone(accessibility_compliance)
         
-        print("✅ AV compliance checking passed")
+        logger.info("✅ AV compliance checking passed")
     
     def test_av_performance_monitoring(self):
         """Test AV system performance monitoring"""
-        print("Testing AV performance monitoring...")
+        logger.info("Testing AV performance monitoring...")
         
         # Test performance metrics collection
         performance_result = self.service.handle_operation("get_performance_metrics", {
@@ -414,13 +419,13 @@ class ControlSystemBehavior:
         })
         self.assertIsNotNone(alert_result)
         
-        print("✅ AV performance monitoring passed")
+        logger.info("✅ AV performance monitoring passed")
 
 
 def run_av_integration_tests():
     """Run all AV integration tests"""
-    print("🧪 Starting AV System Integration Tests")
-    print("=" * 50)
+    logger.info("🧪 Starting AV System Integration Tests")
+    logger.info("=" * 50)
     
     # Create test suite
     suite = unittest.TestLoader().loadTestsFromTestCase(TestAVSystemIntegration)
@@ -430,18 +435,18 @@ def run_av_integration_tests():
     result = runner.run(suite)
     
     # Print summary
-    print("\n" + "=" * 50)
-    print("📊 AV Integration Test Summary")
-    print(f"Tests Run: {result.testsRun}")
-    print(f"Failures: {len(result.failures)}")
-    print(f"Errors: {len(result.errors)}")
-    print(f"Success Rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%")
+    logger.info("\n" + "=" * 50)
+    logger.info("📊 AV Integration Test Summary")
+    logger.info(f"Tests Run: {result.testsRun}")
+    logger.info(f"Failures: {len(result.failures)}")
+    logger.info(f"Errors: {len(result.errors)}")
+    logger.info(f"Success Rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%")
     
     if result.wasSuccessful():
-        print("🎉 All AV integration tests PASSED!")
+        logger.info("🎉 All AV integration tests PASSED!")
         return True
     else:
-        print("❌ Some AV integration tests FAILED!")
+        logger.info("❌ Some AV integration tests FAILED!")
         return False
 
 

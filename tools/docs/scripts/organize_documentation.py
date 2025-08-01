@@ -32,7 +32,7 @@ class DocumentationOrganizer:
         
         # Main repositories (directories starting with 'arx-')
         for item in self.root_dir.iterdir():
-            if item.is_dir() and (item.name.startswith('arx-') or item.name == 'arx_svg_parser'):
+            if item.is_dir() and item.name.startswith('arx-'):
                 repositories.append(item)
         
         # Add root directory for platform-level docs

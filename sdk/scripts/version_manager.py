@@ -52,11 +52,7 @@ class VersionManager:
                     'version_file': 'package.json',
                     'changelog_file': 'CHANGELOG.md'
                 },
-                'arx-svg-parser': {
-                    'current_version': '1.0.0',
-                    'version_file': 'package.json',
-                    'changelog_file': 'CHANGELOG.md'
-                },
+
                 'arx-cmms': {
                     'current_version': '1.0.0',
                     'version_file': 'package.json',

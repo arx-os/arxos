@@ -32,15 +32,24 @@ jobs:
     - name: Run SAST (Static Application Security Testing)
       run: |
         echo "Running SAST with Bandit..."
-        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . -f json -o bandit-report.json
+        if [ $? -ne 0 ]; then
+          echo "⚠️ Bandit found security issues. Review the report."
+        fi
         
         echo "Running Semgrep..."
-        semgrep --config=auto --json --output semgrep-report.json || true
+        semgrep --config=auto --json --output semgrep-report.json
+        if [ $? -ne 0 ]; then
+          echo "⚠️ Semgrep found security issues. Review the report."
+        fi
         
     - name: Run dependency vulnerability scanning
       run: |
         echo "Running Safety check..."
-        safety check --json --output safety-report.json || true
+        safety check --json --output safety-report.json
+        if [ $? -ne 0 ]; then
+          echo "⚠️ Safety found vulnerabilities. Review the report."
+        fi
         
     - name: Run comprehensive security testing
       run: |

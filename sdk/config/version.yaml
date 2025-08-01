@@ -28,21 +28,7 @@ services:
       ## Breaking Changes
       {breaking_changes}
   
-  arx-svg-parser:
-    current_version: "1.0.0"
-    version_file: package.json
-    changelog_file: CHANGELOG.md
-    breaking_changes: false
-    last_release_date: "2024-01-01"
-    release_notes_template: |
-      ## What's New
-      {features}
-      
-      ## Bug Fixes
-      {bugfixes}
-      
-      ## Breaking Changes
-      {breaking_changes}
+
   
   arx-cmms:
     current_version: "1.0.0"

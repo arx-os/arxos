@@ -9,9 +9,9 @@ The Arxos platform is a comprehensive building information modeling (BIM) system
 ### Core Components
 ```
 arxos/
-├── arx_svg_parser/          # Python-based SVG processing
-├── arx-symbol-library/      # JSON-based symbol definitions
-├── arx-backend/            # Go-based backend services
+
+├── tools/symbols/          # JSON-based symbol definitions
+├── core/backend/           # Go-based backend services
 ├── arx-web-frontend/       # Web interface
 ├── arx-database/           # Database and migrations
 ├── arx-infra/              # Infrastructure configuration
@@ -27,7 +27,7 @@ arxos/
 
 ## Component Details
 
-### arx_svg_parser
+
 - **Language**: Python 3.8+
 - **Framework**: FastAPI
 - **Purpose**: SVG processing and BIM assembly
@@ -37,7 +37,7 @@ arxos/
   - REST API for integration
   - CLI tools for automation
 
-### arx-symbol-library
+### tools/symbols
 - **Format**: JSON symbol definitions
 - **Organization**: System-based directory structure
 - **Validation**: JSON schema validation
@@ -47,7 +47,7 @@ arxos/
   - Connection and relationship data
   - Version control and history
 
-### arx-backend
+### core/backend
 - **Language**: Go 1.19+
 - **Framework**: Gin or Echo
 - **Purpose**: High-performance backend services
@@ -78,7 +78,7 @@ arxos/
 ### Symbol Library Configuration
 ```json
 {
-  "library_path": "../arx-symbol-library",
+  "library_path": "../tools/symbols",
   "validation_schema": "schemas/symbol.schema.json",
   "cache_enabled": true,
   "cache_ttl": 3600,

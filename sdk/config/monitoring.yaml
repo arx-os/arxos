@@ -108,7 +108,6 @@ retention:
 # Services to monitor
 services:
   - arx-backend
-  - arx-svg-parser
   - arx-cmms
   - arx-database
 

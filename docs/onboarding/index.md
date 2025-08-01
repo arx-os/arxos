@@ -81,7 +81,7 @@ Welcome to Arxos! This index provides quick access to onboarding documentation f
 ## 🛠️ **Development Tools**
 
 ### **Common Libraries**
-- **[arx-common](https://github.com/arxos/arxos/tree/main/arxos/arx_common/ONBOARDING.md)** - Shared utilities and libraries
+- **[core/shared](https://github.com/arxos/arxos/tree/main/arxos/core/shared)** - Shared utilities and libraries
   - **Language**: Python 3.11+
   - **Purpose**: Common utilities, shared components
   - **Key Features**: Date utilities, object utilities, error handling

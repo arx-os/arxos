@@ -8,6 +8,7 @@ Provides all services for SVGX Engine including:
 - Symbol management services
 - Rendering and generation services
 - Security and authentication services
+- CMMS integration services
 """
 
 # Database and Infrastructure Services
@@ -51,6 +52,12 @@ try:
     from svgx_engine.services.symbol_recognition import SVGXSymbolRecognitionService as SymbolRecognitionService
 except ImportError:
     SymbolRecognitionService = None
+
+# New Integrated Symbol Recognition Service
+try:
+    from svgx_engine.services.symbols.symbol_recognition import SymbolRecognitionEngine
+except ImportError:
+    SymbolRecognitionEngine = None
 
 try:
     from svgx_engine.services.symbol_schema_validator import SVGXSchemaValidator, ValidationRule, ValidationResult, get_schema_validator, validate_symbol_schema, add_validation_rule, get_validation_statistics
@@ -97,18 +104,33 @@ try:
 except ImportError:
     ExportInteroperabilityService = None
 
+# CMMS Integration Services
 try:
-    from svgx_engine.services.persistence_export import SVGXPersistenceExportService as PersistenceExportService
+    from svgx_engine.services.cmms.cmms_integration import (
+        CMMSIntegrationService,
+        FloorAssetManager,
+        MaintenanceScheduler,
+        WorkOrderManager,
+        FloorAsset,
+        MaintenanceSchedule,
+        WorkOrder,
+        MaintenanceHistory,
+        WorkOrderStatus,
+        MaintenanceType,
+        PriorityLevel
+    )
 except ImportError:
-    PersistenceExportService = None
-
-try:
-    from svgx_engine.services.export_integration import SVGXExportIntegrationService, ScaleMetadata, ExportMetadata, ExportOptions
-except ImportError:
-    SVGXExportIntegrationService = None
-    ScaleMetadata = None
-    ExportMetadata = None
-    ExportOptions = None
+    CMMSIntegrationService = None
+    FloorAssetManager = None
+    MaintenanceScheduler = None
+    WorkOrderManager = None
+    FloorAsset = None
+    MaintenanceSchedule = None
+    WorkOrder = None
+    MaintenanceHistory = None
+    WorkOrderStatus = None
+    MaintenanceType = None
+    PriorityLevel = None
 
 # BIM Integration Services
 try:

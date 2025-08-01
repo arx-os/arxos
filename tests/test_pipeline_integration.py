@@ -34,7 +34,7 @@ class TestPipelineIntegration(unittest.TestCase):
         self.schemas_dir = Path(self.temp_dir) / "schemas"
         self.schemas_dir.mkdir()
         
-        self.symbols_dir = Path(self.temp_dir) / "arx-symbol-library"
+        self.symbols_dir = Path(self.temp_dir) / "tools/symbols"
         self.symbols_dir.mkdir()
         
         self.behavior_dir = Path(self.temp_dir) / "svgx_engine" / "behavior"

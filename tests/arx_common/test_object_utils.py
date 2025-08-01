@@ -1,12 +1,16 @@
 """
-Tests for arx_common.object_utils module.
+Tests for core.shared.object_utils module.
+
+This module contains comprehensive tests for the object manipulation and data
+structure utility functions provided by the core.shared.object_utils module.
 """
 
 import pytest
 import json
 from datetime import datetime
 from dataclasses import dataclass
-from arx_common.object_utils import (
+
+from core.shared.object_utils import (
     flatten_dict,
     unflatten_dict,
     deep_merge,

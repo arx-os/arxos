@@ -183,7 +183,7 @@ class DevelopmentWorkflowValidator:
         }
         
         # Check pyproject.toml configuration
-        pyproject_file = Path("arx_svg_parser/pyproject.toml")
+        
         if pyproject_file.exists():
             results["checks"].append("pyproject.toml exists")
             
@@ -255,10 +255,7 @@ class DevelopmentWorkflowValidator:
             
         # Check test directory structure
         test_dirs = [
-            "arx_svg_parser/tests/",
-            "arx_svg_parser/tests/unit/",
-            "arx_svg_parser/tests/integration/",
-            "arx_svg_parser/tests/performance/"
+            
         ]
         
         for test_dir in test_dirs:
@@ -268,14 +265,14 @@ class DevelopmentWorkflowValidator:
                 results["warnings"].append(f"Test directory '{test_dir}' not found")
                 
         # Check for test files
-        test_files = list(Path("arx_svg_parser/tests/").glob("test_*.py"))
+        
         if test_files:
             results["checks"].append(f"Found {len(test_files)} test files")
         else:
             results["warnings"].append("No test files found")
             
         # Check coverage configuration
-        coverage_file = Path("arx_svg_parser/.coveragerc")
+        
         if coverage_file.exists():
             results["checks"].append("Coverage configuration exists")
         else:
@@ -310,9 +307,7 @@ class DevelopmentWorkflowValidator:
             
         # Check for security configuration
         security_configs = [
-            "arx_svg_parser/pyproject.toml",  # bandit config
-            "requirements.txt",  # dependencies for safety
-            "arx_svg_parser/requirements.txt"
+            "requirements.txt"  # dependencies for safety
         ]
         
         for config in security_configs:
@@ -345,9 +340,9 @@ class DevelopmentWorkflowValidator:
                 
         # Check for build configuration files
         build_configs = [
-            "arx_svg_parser/pyproject.toml",
-            "arx_svg_parser/setup.py",
-            "arx_svg_parser/requirements.txt"
+            "pyproject.toml",
+            "setup.py",
+            "requirements.txt"
         ]
         
         for config in build_configs:
@@ -360,7 +355,7 @@ class DevelopmentWorkflowValidator:
         try:
             success, stdout, stderr = self.run_command(
                 ["python", "-m", "build", "--dry-run"],
-                cwd="arx_svg_parser"
+    
             )
             if success:
                 results["checks"].append("Package can be built successfully")

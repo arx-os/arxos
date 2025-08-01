@@ -285,7 +285,7 @@ class ConstraintSystem:
         # Validates all constraints with precision requirements
 ```
 
-### Geometry Resolver (`core/svg-parser/services/geometry_resolver.py`)
+### Geometry Resolver (`svgx_engine/services/geometry_resolver.py`)
 
 #### Conflict Detection
 

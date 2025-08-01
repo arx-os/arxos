@@ -126,7 +126,7 @@ cd core/backend && go build -o bin/arx-backend ./cmd/main.go
 ### Database Changes
 ```bash
 # Create new migration
-cd core/svg-parser && alembic revision --autogenerate -m "Description"
+
 
 # Apply migrations
 docker-compose exec svg-parser alembic upgrade head
@@ -138,7 +138,7 @@ docker-compose exec svg-parser alembic upgrade head
 make test
 
 # Run specific service tests
-cd core/svg-parser && python -m pytest
+
 cd core/backend && go test ./...
 cd svgx_engine && python -m pytest
 ```

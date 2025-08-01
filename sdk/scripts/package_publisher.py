@@ -88,7 +88,7 @@ class PackagePublisher:
                     'version_file': 'composer.json'
                 }
             },
-            'services': ['arx-backend', 'arx-svg-parser', 'arx-cmms', 'arx-database'],
+            'services': ['arx-backend', 'arx-cmms', 'arx-database'],
             'version_management': {
                 'auto_increment': True,
                 'semantic_versioning': True,

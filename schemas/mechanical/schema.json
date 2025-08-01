@@ -1,0 +1,378 @@
+{
+  "system": "mechanical",
+  "description": "Mechanical system for building infrastructure including HVAC, ventilation, air handling, and mechanical equipment",
+  "version": "1.0.0",
+  "created_by": "Arxos System",
+  "created_at": "2024-12-19",
+  "objects": {
+    "air_handler": {
+      "properties": {
+        "type": "air_handler",
+        "capacity": "5000 CFM",
+        "static_pressure": "3.0 inches WC",
+        "motor_hp": "10 HP",
+        "efficiency": "85%",
+        "filter_type": "MERV 13",
+        "filter_efficiency": "90%",
+        "heating_capacity": "200,000 BTU/hr",
+        "cooling_capacity": "15 tons",
+        "air_temperature": "55°F supply",
+        "humidity_control": true,
+        "energy_recovery": true,
+        "vfd_control": true,
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "ductwork", "chilled_water", "hot_water"],
+        "supplies_air_to": ["vav_boxes", "diffusers", "zones"],
+        "monitored_by": ["building_management_system", "hvac_monitoring"],
+        "controlled_by": ["hvac_control_system"],
+        "part_of_system": ["hvac_system"]
+      },
+      "behavior_profile": "air_handler_behavior",
+      "metadata": {
+        "category": "hvac_device",
+        "subcategory": "air_handling",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "6 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "vav_box": {
+      "properties": {
+        "type": "vav_box",
+        "capacity": "500 CFM",
+        "min_airflow": "50 CFM",
+        "max_airflow": "500 CFM",
+        "damper_type": "butterfly",
+        "actuator_type": "electric",
+        "reheat_coil": true,
+        "reheat_capacity": "20,000 BTU/hr",
+        "temperature_sensor": true,
+        "pressure_sensor": true,
+        "occupancy_sensor": false,
+        "communication_protocol": ["BACnet", "LonWorks"],
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["air_handler", "ductwork", "hot_water"],
+        "supplies_air_to": ["diffusers", "zones"],
+        "monitored_by": ["building_management_system"],
+        "controlled_by": ["hvac_control_system"],
+        "part_of_system": ["hvac_system"]
+      },
+      "behavior_profile": "vav_box_behavior",
+      "metadata": {
+        "category": "hvac_device",
+        "subcategory": "terminal_unit",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "ductwork": {
+      "properties": {
+        "type": "ductwork",
+        "material": "galvanized_steel",
+        "insulation": "fiberglass",
+        "insulation_thickness": "2 inches",
+        "air_velocity": "800 FPM",
+        "static_pressure": "2.5 inches WC",
+        "leakage_rate": "3%",
+        "acoustic_liner": true,
+        "fire_damper": true,
+        "smoke_damper": false,
+        "volume_damper": true,
+        "access_door": true
+      },
+      "relationships": {
+        "connected_to": ["air_handler", "vav_box", "diffusers"],
+        "distributes_air_to": ["zones", "rooms"],
+        "monitored_by": ["hvac_monitoring"],
+        "part_of_system": ["hvac_system"]
+      },
+      "behavior_profile": "ductwork_behavior",
+      "metadata": {
+        "category": "hvac_device",
+        "subcategory": "air_distribution",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "24 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "diffuser": {
+      "properties": {
+        "type": "diffuser",
+        "size": "12x12 inches",
+        "airflow": "150 CFM",
+        "throw": "8 feet",
+        "pattern": "4-way",
+        "material": "aluminum",
+        "finish": "white",
+        "adjustable": true,
+        "acoustic": true,
+        "mount_type": "ceiling_mount",
+        "accessibility": "accessible"
+      },
+      "relationships": {
+        "connected_to": ["ductwork", "vav_box"],
+        "supplies_air_to": ["room", "zone"],
+        "part_of_system": ["hvac_system"]
+      },
+      "behavior_profile": "diffuser_behavior",
+      "metadata": {
+        "category": "hvac_device",
+        "subcategory": "air_distribution",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "24 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "chiller": {
+      "properties": {
+        "type": "chiller",
+        "capacity": "100 tons",
+        "efficiency": "0.6 kW/ton",
+        "compressor_type": "screw",
+        "refrigerant": "R-134a",
+        "evaporator_type": "shell_and_tube",
+        "condenser_type": "air_cooled",
+        "chilled_water_temp": "44°F",
+        "chilled_water_flow": "240 GPM",
+        "vfd_control": true,
+        "monitoring": true,
+        "communication_protocol": ["BACnet", "Modbus"]
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "air_handler", "cooling_tower"],
+        "supplies_cooling_to": ["air_handler", "fan_coil_units"],
+        "monitored_by": ["building_management_system"],
+        "controlled_by": ["hvac_control_system"],
+        "part_of_system": ["hvac_system"]
+      },
+      "behavior_profile": "chiller_behavior",
+      "metadata": {
+        "category": "hvac_device",
+        "subcategory": "cooling",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "6 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "boiler": {
+      "properties": {
+        "type": "boiler",
+        "capacity": "500,000 BTU/hr",
+        "efficiency": "85%",
+        "fuel_type": "natural_gas",
+        "hot_water_temp": "180°F",
+        "hot_water_flow": "100 GPM",
+        "pressure": "30 PSI",
+        "burner_type": "modulating",
+        "vent_type": "induced_draft",
+        "monitoring": true,
+        "communication_protocol": ["BACnet", "Modbus"]
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "gas_service", "air_handler"],
+        "supplies_heating_to": ["air_handler", "fan_coil_units"],
+        "monitored_by": ["building_management_system"],
+        "controlled_by": ["hvac_control_system"],
+        "part_of_system": ["hvac_system"]
+      },
+      "behavior_profile": "boiler_behavior",
+      "metadata": {
+        "category": "hvac_device",
+        "subcategory": "heating",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "6 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "cooling_tower": {
+      "properties": {
+        "type": "cooling_tower",
+        "capacity": "100 tons",
+        "fan_type": "induced_draft",
+        "fan_hp": "15 HP",
+        "water_flow": "300 GPM",
+        "approach": "7°F",
+        "range": "10°F",
+        "basin_heater": true,
+        "drift_eliminator": true,
+        "fill_type": "film",
+        "monitoring": true,
+        "communication_protocol": ["BACnet", "Modbus"]
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "chiller"],
+        "cools_water_for": ["chiller"],
+        "monitored_by": ["building_management_system"],
+        "controlled_by": ["hvac_control_system"],
+        "part_of_system": ["hvac_system"]
+      },
+      "behavior_profile": "cooling_tower_behavior",
+      "metadata": {
+        "category": "hvac_device",
+        "subcategory": "cooling",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "6 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "thermostat": {
+      "properties": {
+        "type": "thermostat",
+        "control_type": "digital",
+        "temperature_range": "50-90°F",
+        "humidity_control": true,
+        "programming": true,
+        "occupancy_sensor": true,
+        "communication_protocol": ["BACnet", "LonWorks"],
+        "display_type": "touch_screen",
+        "remote_access": true,
+        "energy_monitoring": true,
+        "mount_type": "wall_mount"
+      },
+      "relationships": {
+        "connected_to": ["hvac_control_system"],
+        "controls": ["vav_box", "air_handler"],
+        "monitored_by": ["building_management_system"],
+        "receives_data_from": ["temperature_sensor", "humidity_sensor"],
+        "part_of_system": ["hvac_control_system"]
+      },
+      "behavior_profile": "thermostat_behavior",
+      "metadata": {
+        "category": "control_device",
+        "subcategory": "temperature_control",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "hvac_control": {
+      "properties": {
+        "type": "hvac_control",
+        "control_type": "direct_digital",
+        "protocol": "BACnet",
+        "zones": 50,
+        "equipment_control": true,
+        "scheduling": true,
+        "optimization": true,
+        "alarm_management": true,
+        "trend_logging": true,
+        "user_interface": "web_based",
+        "mobile_app": true,
+        "energy_monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "building_management_system"],
+        "controls": ["air_handler", "vav_box", "chiller", "boiler"],
+        "monitored_by": ["building_management_system"],
+        "receives_data_from": ["thermostats", "sensors"],
+        "part_of_system": ["hvac_control_system"]
+      },
+      "behavior_profile": "hvac_control_behavior",
+      "metadata": {
+        "category": "control_device",
+        "subcategory": "hvac_control",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "hvac_monitoring": {
+      "properties": {
+        "type": "hvac_monitoring",
+        "monitoring_type": "real_time",
+        "parameters": ["temperature", "humidity", "airflow", "pressure", "energy"],
+        "sampling_rate": "1 minute",
+        "data_logging": true,
+        "alarm_thresholds": true,
+        "communication_protocol": ["BACnet", "Modbus"],
+        "web_interface": true,
+        "mobile_app": true,
+        "reporting": true,
+        "trend_analysis": true
+      },
+      "relationships": {
+        "connected_to": ["air_handler", "vav_box", "chiller", "boiler"],
+        "monitors": ["air_handler", "vav_box", "chiller", "boiler", "thermostats"],
+        "reports_to": ["building_management_system"],
+        "receives_data_from": ["air_handler", "vav_box", "chiller", "boiler"],
+        "part_of_system": ["hvac_monitoring_system"]
+      },
+      "behavior_profile": "hvac_monitoring_behavior",
+      "metadata": {
+        "category": "monitoring_device",
+        "subcategory": "hvac_monitoring",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    }
+  },
+  "system_requirements": {
+    "mechanical": {
+      "temperature_range": "55-75°F",
+      "humidity_range": "30-60%",
+      "air_quality": "ASHRAE 62.1",
+      "ventilation_rates": "Per ASHRAE 62.1",
+      "energy_efficiency": "ASHRAE 90.1"
+    },
+    "network": {
+      "bandwidth": "100Mbps minimum",
+      "latency": "< 10ms",
+      "qos_requirements": "Priority for control traffic",
+      "vlan_support": "Required",
+      "poe_support": "Required for IP devices"
+    },
+    "environmental": {
+      "temperature_range": "10-40°C",
+      "humidity_range": "20-80%",
+      "dust_protection": "IP54 minimum",
+      "mechanical_room_requirements": "Dedicated mechanical room"
+    },
+    "structural": {
+      "mounting_requirements": "Reinforced mounting points",
+      "ductwork_support": "Proper hanger spacing",
+      "access_requirements": "Service access for maintenance",
+      "mechanical_room_size": "Minimum 400 sq ft"
+    }
+  },
+  "compliance_standards": {
+    "mechanical": ["ASHRAE", "SMACNA", "AMCA"],
+    "hvac": ["ASHRAE 62.1", "ASHRAE 90.1", "ASHRAE 55"],
+    "energy": ["ASHRAE 90.1", "LEED", "ENERGY STAR"],
+    "network": ["IEEE 802.3", "PoE", "VLAN"],
+    "safety": ["OSHA", "NFPA", "IBC"],
+    "accessibility": ["ADA", "WCAG", "Section 508"]
+  },
+  "maintenance_schedule": {
+    "daily": ["System health check", "Performance monitoring"],
+    "weekly": ["Filter inspection", "Efficiency monitoring"],
+    "monthly": ["Filter replacement", "Equipment inspection"],
+    "quarterly": ["Performance testing", "Energy analysis"],
+    "annually": ["Comprehensive testing", "Preventive maintenance"]
+  }
+} 

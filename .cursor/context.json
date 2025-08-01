@@ -247,6 +247,21 @@
         "Implement proper debugging and profiling tools",
         "Use containerized development environments"
       ]
+    },
+    {
+      "name": "Script Organization",
+      "description": "Script placement and organization standards",
+      "rules": [
+        "Component-specific scripts belong in their respective component directories (e.g., /svgx_engine/scripts/, /sdk/scripts/, /infrastructure/database/scripts/)",
+        "Global/cross-cutting scripts belong in /arxos/scripts/ with appropriate categorization (setup/, deploy/, testing/, integration/, utils/)",
+        "Component-specific operations (validation, initialization, component-specific testing) stay in component directories",
+        "System orchestration, global deployment, and cross-component integration scripts go in /arxos/scripts/",
+        "Follow the decision matrix: affects multiple components → /arxos/scripts/, component-specific → /component/scripts/",
+        "Maintain high cohesion by keeping related scripts with their components",
+        "Ensure low coupling by avoiding unnecessary dependencies between components",
+        "Use clear naming conventions and documentation for all scripts",
+        "Follow established patterns: Python scripts use shebang and docstrings, shell scripts use set -e and colored output"
+      ]
     }
   ],
   "context": {

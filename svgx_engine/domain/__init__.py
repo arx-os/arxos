@@ -7,22 +7,36 @@ business logic and rules of the SVGX Engine.
 """
 
 # Domain Entities
-from svgx_engine.domain.entities import *
+from svgx_engine.domain.entities import (
+    Building,
+)
 
 # Domain Value Objects
-from svgx_engine.domain.value_objects import *
+from svgx_engine.domain.value_objects import (
+    Address, Coordinates, Dimensions, Identifier, Money, Status,
+)
 
 # Domain Aggregates
-from svgx_engine.domain.aggregates import *
+from svgx_engine.domain.aggregates import (
+    BuildingAggregate,
+)
 
 # Domain Repositories
-from svgx_engine.domain.repositories import *
+from svgx_engine.domain.repositories import (
+    BuildingRepository,
+)
 
 # Domain Services
-from svgx_engine.domain.services import *
+from svgx_engine.domain.services import (
+    BuildingService,
+)
 
 # Domain Events
-from svgx_engine.domain.events import *
+from svgx_engine.domain.events import (
+    BuildingCreatedEvent, BuildingUpdatedEvent, BuildingDeletedEvent,
+    BuildingStatusChangedEvent, BuildingLocationChangedEvent, BuildingCostUpdatedEvent,
+    building_event_publisher
+)
 
 # Version and metadata
 __version__ = "1.0.0"

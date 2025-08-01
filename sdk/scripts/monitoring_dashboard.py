@@ -75,7 +75,7 @@ class MonitoringDashboard:
                 'reports_days': 30,
                 'logs_days': 7
             },
-            'services': ['arx-backend', 'arx-svg-parser', 'arx-cmms', 'arx-database'],
+            'services': ['arx-backend', 'arx-cmms', 'arx-database'],
             'languages': ['typescript', 'python', 'go', 'java', 'csharp', 'php']
         }
     

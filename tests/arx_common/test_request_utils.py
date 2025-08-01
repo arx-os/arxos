@@ -1,11 +1,14 @@
 """
-Tests for arx_common.request_utils module.
+Tests for core.shared.request_utils module.
+
+This module contains comprehensive tests for the HTTP request processing and
+validation utility functions provided by the core.shared.request_utils module.
 """
 
 import pytest
 from unittest.mock import Mock, MagicMock
 from fastapi import Request
-from arx_common.request_utils import (
+from core.shared.request_utils import (
     get_client_ip,
     get_user_agent,
     get_request_headers,

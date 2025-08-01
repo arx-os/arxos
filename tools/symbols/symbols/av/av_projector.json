@@ -1,0 +1,70 @@
+{
+  "id": "av_projector",
+  "name": "AV Projector",
+  "description": "Digital projector for audiovisual presentations",
+  "system": "av",
+  "category": "display",
+  "subcategory": "",
+  "svg": {
+    "content": "<svg width='80' height='60' viewBox='0 0 80 60' xmlns='http://www.w3.org/2000/svg'><rect width='80' height='60' fill='#1f2937' stroke='#374151' stroke-width='2' rx='4'/><rect x='8' y='8' width='64' height='44' fill='#111827' stroke='#4b5563' stroke-width='1'/><circle cx='40' cy='30' r='15' fill='#3b82f6' stroke='#60a5fa' stroke-width='2'/><circle cx='40' cy='30' r='8' fill='#1e40af'/><text x='40' y='20' text-anchor='middle' fill='white' font-family='Arial' font-size='6' font-weight='bold'>PROJECTOR</text><text x='40' y='50' text-anchor='middle' fill='white' font-family='Arial' font-size='5'>AV</text><circle cx='15' cy='15' r='2' fill='#ef4444'/><circle cx='65' cy='15' r='2' fill='#10b981'/><circle cx='15' cy='45' r='2' fill='#f59e0b'/><circle cx='65' cy='45' r='2' fill='#8b5cf6'/></svg>",
+    "width": 80,
+    "height": 60,
+    "scale": 1.0
+  },
+  "properties": {
+    "type": "projector",
+    "resolution": "1920x1080",
+    "brightness": "3500 lumens",
+    "contrast_ratio": "2000:1",
+    "throw_ratio": "1.2:1",
+    "lamp_life": "4000 hours",
+    "input_ports": ["HDMI", "VGA", "USB", "Audio"],
+    "output_ports": ["Audio", "VGA"],
+    "wireless_capability": true,
+    "3d_support": false,
+    "mount_type": "ceiling",
+    "power_consumption": "300W",
+    "noise_level": "32 dB"
+  },
+  "connections": [
+    {
+      "id": "power",
+      "type": "power",
+      "x": 15,
+      "y": 15,
+      "voltage": "120V"
+    },
+    {
+      "id": "hdmi",
+      "type": "video",
+      "x": 65,
+      "y": 15,
+      "protocol": "HDMI"
+    },
+    {
+      "id": "vga",
+      "type": "video",
+      "x": 15,
+      "y": 45,
+      "protocol": "VGA"
+    },
+    {
+      "id": "audio",
+      "type": "audio",
+      "x": 65,
+      "y": 45,
+      "protocol": "3.5mm"
+    }
+  ],
+  "tags": ["projector", "display", "av", "presentation"],
+  "metadata": {
+    "created": "2024-01-01",
+    "version": "1.0",
+    "source": "arxos/tools/symbols",
+    "manufacturer": "generic",
+    "model": "standard",
+    "warranty_period": "24 months",
+    "maintenance_interval": "6 months",
+    "lifecycle_stage": "operational"
+  }
+} 

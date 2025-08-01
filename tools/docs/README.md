@@ -65,8 +65,8 @@ For technical support or questions about the documentation, please refer to the 
 ## 📁 Repository-Specific Documentation
 
 ### Core Services
-- **[arx-backend/README.md](../arx-backend/README.md)** - Go backend service documentation
-- **[arx_svg_parser/README.md](../arx_svg_parser/README.md)** - SVG parsing and BIM processing service
+- **[core/backend/README.md](../core/backend/README.md)** - Go backend service documentation
+
 
 ### Frontend Applications
 - **[arx-web-frontend/README.md](../arx-web-frontend/README.md)** - Web frontend application documentation
@@ -74,7 +74,7 @@ For technical support or questions about the documentation, please refer to the 
 ### Supporting Services
 - **[arx-cmms/README.md](../arx-cmms/README.md)** - Computerized Maintenance Management System
 - **[arx-database/README.md](../arx-database/README.md)** - Database schema and migrations
-- **[arx-symbol-library/README.md](../arx-symbol-library/README.md)** - Building symbol library
+- **[tools/symbols/README.md](../tools/symbols/README.md)** - Building symbol library
 
 ### Development Tools
 - **[arx-cli/README.md](../arx-cli/README.md)** - Command-line interface tools

@@ -26,7 +26,7 @@
    - Converted all relative imports to absolute imports
    - Fixed import patterns across all modules:
      - `svgx_engine` modules
-     - `core/svg-parser` modules  
+       
      - `services/planarx` modules
      - Test files and CLI commands
 
@@ -49,12 +49,7 @@
 ### **Files Successfully Refactored**
 
 #### **Core SVG Parser Modules**
-- `core/svg-parser/cli_commands/symbol_manager_cli.py`
-- `core/svg-parser/services/rule_engine.py`
-- `core/svg-parser/tests/test_scale_calculation_unit.py`
-- `core/svg-parser/tests/test_symbol_management_integration.py`
-- `core/svg-parser/tests/test_ahj_api_integration.py`
-- `core/svg-parser/tests/test_multi_system_integration.py`
+
 
 #### **SVGX Engine Modules**
 - `svgx_engine/services/__init__.py`

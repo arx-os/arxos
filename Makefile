@@ -154,7 +154,7 @@ install-arxide:
 install-svgx:
 	@echo "📦 Installing SVGX Engine dependencies..."
 	cd svgx_engine && pip install -e .
-	cd core/svg-parser && pip install -r requirements.txt
+
 
 # Development dependencies
 deps: deps-backend deps-gus deps-cad deps-arxide

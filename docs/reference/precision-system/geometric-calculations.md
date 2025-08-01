@@ -35,7 +35,7 @@ This document describes the comprehensive update to all geometric calculations i
 
 ## Updated Functions
 
-### Core Geometry Utils (`core/svg-parser/utils/geometry_utils.py`)
+### Core Geometry Utils (`svgx_engine/utils/geometry_utils.py`)
 
 #### `calculate_area(coordinates, config=None)`
 ```python

@@ -947,7 +947,7 @@ class DocumentationGenerator:
         content.append("## Available APIs")
         content.append("")
         content.append("- **[Arx Backend API](./arx-backend/)** - Core backend services")
-        content.append("- **[SVG Parser API](./arx-svg-parser/)** - SVG to BIM conversion")
+
         content.append("- **[CMMS Service API](./arx-cmms/)** - Maintenance management")
         content.append("- **[Database Infrastructure API](./arx-database/)** - Schema management")
         content.append("")

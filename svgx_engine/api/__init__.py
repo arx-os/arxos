@@ -5,9 +5,16 @@ This module contains API components including endpoints, models,
 and middleware for REST API and WebSocket interfaces.
 """
 
-from svgx_engine.api.endpoints import *
-from svgx_engine.api.models import *
-from svgx_engine.api.middleware import *
+from svgx_engine.api.endpoints import (
+    BuildingEndpoints, HealthEndpoints
+)
+from svgx_engine.api.models import (
+    BuildingCreateRequest, BuildingUpdateRequest, BuildingResponse,
+    ErrorResponse, HealthResponse
+)
+from svgx_engine.api.middleware import (
+    LoggingMiddleware, AuthenticationMiddleware, CORSMiddleware
+)
 
 # Version and metadata
 __version__ = "1.0.0"

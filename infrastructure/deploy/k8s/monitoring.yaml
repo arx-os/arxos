@@ -1,0 +1,397 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: svgx-engine-monitor
+  namespace: arxos
+  labels:
+    app: svgx-engine
+    team: svgx
+spec:
+  selector:
+    matchLabels:
+      app: svgx-engine
+  endpoints:
+  - port: http
+    path: /metrics/prometheus
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'svgx_(.*)'
+      targetLabel: __name__
+      replacement: 'svgx_engine_$1'
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: svgx-engine-alerts
+  namespace: arxos
+  labels:
+    app: svgx-engine
+    team: svgx
+spec:
+  groups:
+  - name: svgx-engine.rules
+    rules:
+    - alert: SVGXEngineHighErrorRate
+      expr: rate(svgx_engine_errors_total[5m]) > 0.1
+      for: 2m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High error rate detected"
+        description: "SVGX Engine is experiencing a high error rate of {{ $value }} errors per second"
+
+    - alert: SVGXEngineHighResponseTime
+      expr: histogram_quantile(0.95, rate(svgx_engine_request_duration_seconds_bucket[5m])) > 2
+      for: 2m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time is {{ $value }} seconds"
+
+    - alert: SVGXEngineHighCPUUsage
+      expr: container_cpu_usage_seconds_total{container="svgx-engine"} / container_spec_cpu_quota{container="svgx-engine"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High CPU usage detected"
+        description: "CPU usage is {{ $value | humanizePercentage }}"
+
+    - alert: SVGXEngineHighMemoryUsage
+      expr: container_memory_usage_bytes{container="svgx-engine"} / container_spec_memory_limit_bytes{container="svgx-engine"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High memory usage detected"
+        description: "Memory usage is {{ $value | humanizePercentage }}"
+
+    - alert: SVGXEnginePodDown
+      expr: up{job="svgx-engine"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        team: svgx
+      annotations:
+        summary: "SVGX Engine pod is down"
+        description: "SVGX Engine pod {{ $labels.pod }} is down"
+
+    - alert: SVGXEngineHighWebSocketConnections
+      expr: svgx_engine_websocket_connections_total > 1000
+      for: 2m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High WebSocket connection count"
+        description: "WebSocket connections: {{ $value }}"
+
+    - alert: SVGXEngineHighRateLimitHits
+      expr: rate(svgx_engine_rate_limit_hits_total[5m]) > 10
+      for: 2m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High rate limit hits"
+        description: "Rate limit hits: {{ $value }} per second"
+
+    - alert: SVGXEngineHighDiskUsage
+      expr: container_fs_usage_bytes{container="svgx-engine"} / container_fs_limit_bytes{container="svgx-engine"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High disk usage detected"
+        description: "Disk usage is {{ $value | humanizePercentage }}"
+
+    - alert: SVGXEngineHighNetworkErrors
+      expr: rate(container_network_receive_errors_total{container="svgx-engine"}[5m]) > 0.1
+      for: 2m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "High network error rate"
+        description: "Network errors: {{ $value }} per second"
+
+    - alert: SVGXEngineRestartFrequent
+      expr: increase(container_start_time_seconds{container="svgx-engine"}[15m]) > 5
+      for: 1m
+      labels:
+        severity: warning
+        team: svgx
+      annotations:
+        summary: "Frequent pod restarts"
+        description: "Pod has restarted {{ $value }} times in the last 15 minutes"
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: arxos-export-service-monitor
+  namespace: arxos
+  labels:
+    app: arxos-export-service
+    team: arxos
+spec:
+  selector:
+    matchLabels:
+      app: arxos-export-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'arxos_(.*)'
+      targetLabel: __name__
+      replacement: 'arxos_export_$1'
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: arxos-export-service-alerts
+  namespace: arxos
+  labels:
+    app: arxos-export-service
+    team: arxos
+spec:
+  groups:
+  - name: arxos-export-service.rules
+    rules:
+    - alert: ArxosExportServiceHighErrorRate
+      expr: rate(arxos_export_errors_total[5m]) > 0.1
+      for: 2m
+      labels:
+        severity: warning
+        team: arxos
+      annotations:
+        summary: "High error rate detected"
+        description: "Arxos Export Service is experiencing a high error rate of {{ $value }} errors per second"
+
+    - alert: ArxosExportServiceHighResponseTime
+      expr: histogram_quantile(0.95, rate(arxos_export_request_duration_seconds_bucket[5m])) > 5
+      for: 2m
+      labels:
+        severity: warning
+        team: arxos
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time is {{ $value }} seconds"
+
+    - alert: ArxosExportServiceHighCPUUsage
+      expr: container_cpu_usage_seconds_total{container="export-service"} / container_spec_cpu_quota{container="export-service"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        team: arxos
+      annotations:
+        summary: "High CPU usage detected"
+        description: "CPU usage is {{ $value | humanizePercentage }}"
+
+    - alert: ArxosExportServiceHighMemoryUsage
+      expr: container_memory_usage_bytes{container="export-service"} / container_spec_memory_limit_bytes{container="export-service"} > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        team: arxos
+      annotations:
+        summary: "High memory usage detected"
+        description: "Memory usage is {{ $value | humanizePercentage }}"
+
+    - alert: ArxosExportServicePodDown
+      expr: up{job="arxos-export-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        team: arxos
+      annotations:
+        summary: "Arxos Export Service pod is down"
+        description: "Arxos Export Service pod {{ $labels.pod }} is down"
+
+    - alert: ArxosExportServiceHighExportQueue
+      expr: arxos_export_queue_size > 100
+      for: 2m
+      labels:
+        severity: warning
+        team: arxos
+      annotations:
+        summary: "High export queue size"
+        description: "Export queue size: {{ $value }}"
+
+    - alert: ArxosExportServiceExportFailure
+      expr: rate(arxos_export_failures_total[5m]) > 0.05
+      for: 2m
+      labels:
+        severity: warning
+        team: arxos
+      annotations:
+        summary: "High export failure rate"
+        description: "Export failure rate: {{ $value }} per second"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-svgx
+  namespace: arxos
+  labels:
+    grafana_dashboard: "1"
+data:
+  svgx-engine-dashboard.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "SVGX Engine Dashboard",
+        "tags": ["svgx", "engine"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(svgx_engine_requests_total[5m])",
+                "legendFormat": "requests/sec"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(svgx_engine_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(svgx_engine_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(svgx_engine_errors_total[5m])",
+                "legendFormat": "errors/sec"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "WebSocket Connections",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "svgx_engine_websocket_connections_total",
+                "legendFormat": "connections"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Active Locks",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "svgx_engine_active_locks_total",
+                "legendFormat": "locks"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8}
+          },
+          {
+            "id": 6,
+            "title": "CPU Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{container=\"svgx-engine\"}[5m]) * 100",
+                "legendFormat": "CPU %"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 7,
+            "title": "Memory Usage",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{container=\"svgx-engine\"} / 1024 / 1024",
+                "legendFormat": "Memory MB"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: arxos
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      slack_api_url: 'https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK'
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'slack-notifications'
+      routes:
+      - match:
+          severity: critical
+        receiver: 'pager-duty-critical'
+        continue: true
+    
+    receivers:
+    - name: 'slack-notifications'
+      slack_configs:
+      - channel: '#svgx-alerts'
+        send_resolved: true
+        title: '{{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+    
+    - name: 'pager-duty-critical'
+      pagerduty_configs:
+      - routing_key: YOUR_PAGERDUTY_KEY
+        send_resolved: true
+    
+    templates:
+    - '/etc/alertmanager/template/*.tmpl' 

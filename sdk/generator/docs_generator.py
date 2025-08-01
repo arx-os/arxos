@@ -43,7 +43,7 @@ class DocumentationGenerator:
                 "interactive_docs": True
             },
             "languages": ["typescript", "python", "go", "java", "csharp", "php"],
-            "services": ["arx-backend", "arx-svg-parser", "arx-cmms", "arx-database"]
+            "services": ["arx-backend", "arx-cmms", "arx-database"]
         }
     
     def setup_templates(self) -> jinja2.Environment:
@@ -92,7 +92,6 @@ class DocumentationGenerator:
         # Generate documentation for each service
         services = [
             ("arx-backend", "Arx Backend API"),
-            ("arx-svg-parser", "SVG Parser API"),
             ("arx-cmms", "CMMS Service API"),
             ("arx-database", "Database Infrastructure API")
         ]

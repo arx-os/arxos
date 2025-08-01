@@ -55,39 +55,7 @@ services:
       - logs
       - version_control
 
-  arx-svg-parser:
-    name: "SVG Parser API"
-    description: "SVG to BIM conversion and management"
-    openapi_spec: "../../arx-docs/api/svg_parser_api_spec.yaml"
-    base_url: "http://localhost:8082"
-    version: "1.0.0"
-    languages:
-      - typescript
-      - python
-      - go
-      - java
-      - csharp
-      - php
-    features:
-      - svg_processing
-      - symbol_recognition
-      - bim_assembly
-      - export_interoperability
-      - advanced_svg_features
-      - symbol_management
-      - nlp_cli_integration
-      - ar_mobile_integration
-    endpoints:
-      - authentication
-      - health
-      - symbols
-      - drawings
-      - export
-      - admin
-      - advanced_features
-      - symbol_management
-      - nlp_cli
-      - ar_mobile
+
 
   arx-cmms:
     name: "CMMS Service API"

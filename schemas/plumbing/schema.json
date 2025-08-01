@@ -1,0 +1,376 @@
+{
+  "system": "plumbing",
+  "description": "Plumbing system for building infrastructure including water supply, drainage, fixtures, and water treatment",
+  "version": "1.0.0",
+  "created_by": "Arxos System",
+  "created_at": "2024-12-19",
+  "objects": {
+    "water_main": {
+      "properties": {
+        "type": "water_main",
+        "pipe_material": "ductile_iron",
+        "pipe_size": "8 inches",
+        "pressure": "80 PSI",
+        "flow_rate": "500 GPM",
+        "water_source": "municipal",
+        "backflow_prevention": true,
+        "pressure_reducing_valve": true,
+        "water_meter": true,
+        "monitoring": true,
+        "communication_protocol": ["Modbus", "BACnet"]
+      },
+      "relationships": {
+        "connected_to": ["municipal_water", "water_distribution"],
+        "supplies_water_to": ["water_distribution", "fire_sprinkler"],
+        "monitored_by": ["building_management_system", "plumbing_monitoring"],
+        "metered_by": ["water_meter"],
+        "part_of_system": ["water_supply_system"]
+      },
+      "behavior_profile": "water_main_behavior",
+      "metadata": {
+        "category": "supply_device",
+        "subcategory": "water_supply",
+        "manufacturer": "municipal",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "60 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "water_distribution": {
+      "properties": {
+        "type": "water_distribution",
+        "pipe_material": "copper",
+        "pipe_size": "2 inches",
+        "pressure": "60 PSI",
+        "flow_rate": "50 GPM",
+        "temperature": "cold_water",
+        "insulation": "fiberglass",
+        "valves": ["shut_off", "pressure_regulating"],
+        "backflow_prevention": true,
+        "monitoring": true,
+        "communication_protocol": ["Modbus", "BACnet"]
+      },
+      "relationships": {
+        "connected_to": ["water_main", "hot_water_heater"],
+        "supplies_water_to": ["plumbing_fixtures", "equipment"],
+        "monitored_by": ["building_management_system", "plumbing_monitoring"],
+        "controlled_by": ["plumbing_control_system"],
+        "part_of_system": ["water_supply_system"]
+      },
+      "behavior_profile": "water_distribution_behavior",
+      "metadata": {
+        "category": "distribution_device",
+        "subcategory": "water_distribution",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "24 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "hot_water_heater": {
+      "properties": {
+        "type": "hot_water_heater",
+        "capacity": "100 gallons",
+        "heating_capacity": "100,000 BTU/hr",
+        "fuel_type": "natural_gas",
+        "efficiency": "85%",
+        "temperature": "140°F",
+        "pressure": "60 PSI",
+        "recovery_rate": "50 GPH",
+        "tank_material": "glass_lined_steel",
+        "anode_rod": true,
+        "drain_valve": true,
+        "temperature_pressure_relief": true,
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["water_distribution", "gas_service", "electrical_panel"],
+        "supplies_hot_water_to": ["plumbing_fixtures", "equipment"],
+        "monitored_by": ["building_management_system", "plumbing_monitoring"],
+        "controlled_by": ["plumbing_control_system"],
+        "part_of_system": ["hot_water_system"]
+      },
+      "behavior_profile": "hot_water_heater_behavior",
+      "metadata": {
+        "category": "heating_device",
+        "subcategory": "water_heating",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "plumbing_fixture": {
+      "properties": {
+        "type": "plumbing_fixture",
+        "fixture_type": "sink",
+        "material": "stainless_steel",
+        "mount_type": "wall_mount",
+        "faucet_type": "single_handle",
+        "water_flow": "2.2 GPM",
+        "temperature_control": true,
+        "backflow_prevention": true,
+        "drain_size": "1.5 inches",
+        "trap_type": "P_trap",
+        "vent_connection": true,
+        "accessibility": "ADA_compliant"
+      },
+      "relationships": {
+        "connected_to": ["water_distribution", "drainage_system"],
+        "receives_water_from": ["water_distribution", "hot_water_heater"],
+        "drains_to": ["drainage_system"],
+        "monitored_by": ["plumbing_monitoring"],
+        "part_of_system": ["plumbing_system"]
+      },
+      "behavior_profile": "plumbing_fixture_behavior",
+      "metadata": {
+        "category": "fixture_device",
+        "subcategory": "plumbing_fixture",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "drainage_system": {
+      "properties": {
+        "type": "drainage_system",
+        "pipe_material": "PVC",
+        "pipe_size": "4 inches",
+        "slope": "2%",
+        "vent_type": "individual_vent",
+        "trap_type": "P_trap",
+        "cleanout_access": true,
+        "backwater_valve": false,
+        "grease_interceptor": false,
+        "monitoring": false,
+        "communication_protocol": ["Modbus", "BACnet"]
+      },
+      "relationships": {
+        "connected_to": ["plumbing_fixtures", "sewer_main"],
+        "receives_waste_from": ["plumbing_fixtures"],
+        "drains_to": ["sewer_main"],
+        "monitored_by": ["plumbing_monitoring"],
+        "part_of_system": ["drainage_system"]
+      },
+      "behavior_profile": "drainage_system_behavior",
+      "metadata": {
+        "category": "drainage_device",
+        "subcategory": "waste_drainage",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "60 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "sewer_main": {
+      "properties": {
+        "type": "sewer_main",
+        "pipe_material": "vitrified_clay",
+        "pipe_size": "8 inches",
+        "slope": "1%",
+        "depth": "8 feet",
+        "cleanout_access": true,
+        "backwater_valve": true,
+        "grease_interceptor": false,
+        "pump_station": false,
+        "monitoring": false,
+        "communication_protocol": ["Modbus", "BACnet"]
+      },
+      "relationships": {
+        "connected_to": ["drainage_system", "municipal_sewer"],
+        "receives_waste_from": ["drainage_system"],
+        "drains_to": ["municipal_sewer"],
+        "monitored_by": ["plumbing_monitoring"],
+        "part_of_system": ["sewer_system"]
+      },
+      "behavior_profile": "sewer_main_behavior",
+      "metadata": {
+        "category": "drainage_device",
+        "subcategory": "sewer_drainage",
+        "manufacturer": "municipal",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "60 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "water_pump": {
+      "properties": {
+        "type": "water_pump",
+        "pump_type": "centrifugal",
+        "capacity": "100 GPM",
+        "head": "100 feet",
+        "horsepower": "5 HP",
+        "efficiency": "75%",
+        "impeller_material": "bronze",
+        "seal_type": "mechanical",
+        "vfd_control": true,
+        "monitoring": true,
+        "communication_protocol": ["Modbus", "BACnet"]
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "water_source"],
+        "supplies_water_to": ["water_distribution", "equipment"],
+        "monitored_by": ["building_management_system", "plumbing_monitoring"],
+        "controlled_by": ["plumbing_control_system"],
+        "part_of_system": ["water_supply_system"]
+      },
+      "behavior_profile": "water_pump_behavior",
+      "metadata": {
+        "category": "pump_device",
+        "subcategory": "water_pumping",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "valve": {
+      "properties": {
+        "type": "valve",
+        "valve_type": "ball_valve",
+        "size": "2 inches",
+        "material": "brass",
+        "pressure_rating": "150 PSI",
+        "temperature_rating": "200°F",
+        "actuator_type": "manual",
+        "position_indicator": true,
+        "lock_open": false,
+        "monitoring": false,
+        "communication_protocol": ["Modbus", "BACnet"]
+      },
+      "relationships": {
+        "connected_to": ["water_distribution", "drainage_system"],
+        "controls_flow_to": ["plumbing_fixtures", "equipment"],
+        "monitored_by": ["plumbing_monitoring"],
+        "controlled_by": ["plumbing_control_system"],
+        "part_of_system": ["plumbing_system"]
+      },
+      "behavior_profile": "valve_behavior",
+      "metadata": {
+        "category": "control_device",
+        "subcategory": "flow_control",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "24 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "plumbing_control": {
+      "properties": {
+        "type": "plumbing_control",
+        "control_type": "digital",
+        "protocol": "BACnet",
+        "zones": 10,
+        "equipment_control": true,
+        "scheduling": true,
+        "optimization": true,
+        "alarm_management": true,
+        "trend_logging": true,
+        "user_interface": "web_based",
+        "mobile_app": true,
+        "energy_monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "building_management_system"],
+        "controls": ["water_pump", "hot_water_heater", "valves"],
+        "monitored_by": ["building_management_system"],
+        "receives_data_from": ["sensors", "flow_meters"],
+        "part_of_system": ["plumbing_control_system"]
+      },
+      "behavior_profile": "plumbing_control_behavior",
+      "metadata": {
+        "category": "control_device",
+        "subcategory": "plumbing_control",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "plumbing_monitoring": {
+      "properties": {
+        "type": "plumbing_monitoring",
+        "monitoring_type": "real_time",
+        "parameters": ["flow_rate", "pressure", "temperature", "level"],
+        "sampling_rate": "1 minute",
+        "data_logging": true,
+        "alarm_thresholds": true,
+        "communication_protocol": ["BACnet", "Modbus"],
+        "web_interface": true,
+        "mobile_app": true,
+        "reporting": true,
+        "trend_analysis": true
+      },
+      "relationships": {
+        "connected_to": ["water_distribution", "hot_water_heater", "water_pump"],
+        "monitors": ["water_distribution", "hot_water_heater", "water_pump", "valves"],
+        "reports_to": ["building_management_system"],
+        "receives_data_from": ["water_distribution", "hot_water_heater", "water_pump"],
+        "part_of_system": ["plumbing_monitoring_system"]
+      },
+      "behavior_profile": "plumbing_monitoring_behavior",
+      "metadata": {
+        "category": "monitoring_device",
+        "subcategory": "plumbing_monitoring",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    }
+  },
+  "system_requirements": {
+    "plumbing": {
+      "water_pressure": "40-80 PSI",
+      "water_temperature": "120-140°F hot water",
+      "flow_rates": "Per fixture requirements",
+      "drainage_slope": "2% minimum",
+      "ventilation": "Per code requirements"
+    },
+    "network": {
+      "bandwidth": "100Mbps minimum",
+      "latency": "< 10ms",
+      "qos_requirements": "Priority for control traffic",
+      "vlan_support": "Required",
+      "poe_support": "Required for IP devices"
+    },
+    "environmental": {
+      "temperature_range": "10-40°C",
+      "humidity_range": "20-80%",
+      "dust_protection": "IP54 minimum",
+      "plumbing_room_requirements": "Dedicated plumbing room"
+    },
+    "structural": {
+      "mounting_requirements": "Reinforced mounting points",
+      "pipe_support": "Proper hanger spacing",
+      "access_requirements": "Service access for maintenance",
+      "plumbing_room_size": "Minimum 100 sq ft"
+    }
+  },
+  "compliance_standards": {
+    "plumbing": ["IPC", "UPC", "NSPC"],
+    "water": ["EPA", "NSF", "ANSI"],
+    "drainage": ["IPC", "UPC", "NSPC"],
+    "network": ["IEEE 802.3", "PoE", "VLAN"],
+    "safety": ["OSHA", "NFPA", "IBC"],
+    "accessibility": ["ADA", "WCAG", "Section 508"]
+  },
+  "maintenance_schedule": {
+    "daily": ["System health check", "Performance monitoring"],
+    "weekly": ["Flow rate check", "Pressure monitoring"],
+    "monthly": ["Fixture inspection", "Valve testing"],
+    "quarterly": ["Performance testing", "Water quality analysis"],
+    "annually": ["Comprehensive testing", "Preventive maintenance"]
+  }
+} 

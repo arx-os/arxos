@@ -8,9 +8,9 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - 'arx_svg_parser/cmd/**'
-      - 'arx_svg_parser/setup.py'
-      - 'arx_svg_parser/pyproject.toml'
+      - 'cli/**'
+      - 'svgx_engine/cli/**'
+      - 'arx-backend/cmd/**'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
@@ -25,31 +25,46 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         
-    - name: Install dependencies
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-cov pyyaml build twine
-        pip install -e arx_svg_parser/
+        pip install -e svgx_engine/
         
-    - name: Test CLI installation
+    - name: Test SVGX CLI installation
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         
         # Test CLI installation and import
-        python -c "from cmd.symbol_manager_cli import SymbolManagerCLI; print('✅ CLI import successful')"
-        python -c "from cmd.validate_building import main; print('✅ CLI function import successful')"
+        python -c "from cli.svgx_cli import SVGXCLI; print('✅ SVGX CLI import successful')"
+        python -c "from cli.validator import BuildingValidator; print('✅ Validator import successful')"
         
         # Test CLI as installed package
-        python -m arx_svg_parser.cmd.symbol_manager_cli --help
-        python -m arx_svg_parser.cmd.validate_building --help
+        python -m svgx_engine.cli.svgx_cli --help
+        python -m svgx_engine.cli.validator --help
         
-        echo "✅ CLI installation testing completed"
+        echo "✅ SVGX CLI installation testing completed"
+        
+    - name: Test Go CLI installation
+      run: |
+        cd arx-backend
+        
+        # Test Go CLI commands
+        go build -o bin/arx-cli ./cmd/cli/
+        ./bin/arx-cli --help
+        
+        echo "✅ Go CLI installation testing completed"
         
     - name: Test CLI packaging
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         
         # Test package building
         python -m build
@@ -58,14 +73,14 @@ jobs:
         pip install dist/*.whl
         
         # Verify CLI commands work after installation
-        python -m arx_svg_parser.cmd.symbol_manager_cli --help
-        python -m arx_svg_parser.cmd.validate_building --help
+        python -m svgx_engine.cli.svgx_cli --help
+        python -m svgx_engine.cli.validator --help
         
         echo "✅ CLI packaging testing completed"
         
     - name: Test CLI configuration in production environment
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         
         # Create production-like config
         cat > production_config.yaml << EOF
@@ -78,55 +93,56 @@ jobs:
         EOF
         
         # Test with production config
-        python -m cmd.symbol_manager_cli --config production_config.yaml list
-        python -m cmd.validate_building --config production_config.yaml test_building.json || true
+        python -m cli.svgx_cli --config production_config.yaml list
+        python -m cli.validator --config production_config.yaml test_building.json || true
         
         echo "✅ Production configuration testing completed"
         
     - name: Test CLI security and validation
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         
         echo "Testing CLI security and validation..."
         
         # Test input validation
         echo '{"invalid": "json"' > invalid_input.json
-        python -m cmd.symbol_manager_cli create --file invalid_input.json 2>&1 | grep -q "error\|Error" || echo "Expected error for invalid input"
+        python -m cli.svgx_cli create --file invalid_input.json 2>&1 | grep -q "error\|Error" || echo "Expected error for invalid input"
         
         # Test path traversal protection
-        python -m cmd.symbol_manager_cli create --file "../../../etc/passwd" 2>&1 | grep -q "error\|Error" || echo "Expected error for path traversal"
+        python -m cli.svgx_cli create --file "../../../etc/passwd" 2>&1 | grep -q "error\|Error" || echo "Expected error for path traversal"
         
         # Test config file validation
         echo "invalid: yaml: with: colons" > invalid_config.yaml
-        python -m cmd.symbol_manager_cli --config invalid_config.yaml list 2>&1 | grep -q "warning\|Warning" || echo "Expected warning for invalid config"
+        python -m cli.svgx_cli --config invalid_config.yaml list 2>&1 | grep -q "warning\|Warning" || echo "Expected warning for invalid config"
         
         echo "✅ CLI security testing completed"
         
     - name: Test CLI performance
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         
         echo "Testing CLI performance..."
         
         # Test help command performance
-        time python -m cmd.symbol_manager_cli --help > /dev/null
-        time python -m cmd.validate_building --help > /dev/null
+        time python -m cli.svgx_cli --help > /dev/null
+        time python -m cli.validator --help > /dev/null
         
         # Test config loading performance
-        time python -m cmd.symbol_manager_cli --config production_config.yaml list > /dev/null
+        time python -m cli.svgx_cli --config production_config.yaml list > /dev/null
         
         echo "✅ CLI performance testing completed"
         
     - name: Generate deployment report
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         
         # Create deployment report
         cat > cli_deployment_report.md << EOF
         # CLI Deployment Report
         
         ## Deployment Validation Results
-        - ✅ CLI installation: Successful
+        - ✅ SVGX CLI installation: Successful
+        - ✅ Go CLI installation: Successful
         - ✅ CLI packaging: Successful
         - ✅ Production configuration: Valid
         - ✅ Security validation: Passed
@@ -144,12 +160,12 @@ jobs:
         The CLI system is ready for production deployment.
         
         ## CLI Tools Validated
-        - symbol_manager_cli
-        - geometry_resolver_cli
-        - validate_building
+        - svgx_cli
+        - validator
+        - geometry_resolver
         - rule_manager
-        - realtime_telemetry_cli
-        - failure_detection_cli
+        - realtime_telemetry
+        - failure_detection
         - system_simulator
         
         Generated: $(date)
@@ -159,7 +175,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: cli-deployment-report
-        path: arx_svg_parser/cli_deployment_report.md
+        path: svgx_engine/cli_deployment_report.md
         
     - name: Comment on PR
       if: github.event_name == 'pull_request'
@@ -168,7 +184,8 @@ jobs:
         script: |
           let comment = '## ✅ CLI Deployment Validation Completed\n\n';
           comment += 'The CLI system has been validated for production deployment:\n\n';
-          comment += '- ✅ Installation testing passed\n';
+          comment += '- ✅ SVGX CLI installation testing passed\n';
+          comment += '- ✅ Go CLI installation testing passed\n';
           comment += '- ✅ Packaging validation successful\n';
           comment += '- ✅ Production configuration tested\n';
           comment += '- ✅ Security validation passed\n';
@@ -195,11 +212,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         
-    - name: Build and publish CLI package
+    - name: Build and publish SVGX CLI package
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         python -m build
         python -m twine upload --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_PASSWORD }} dist/*
         
@@ -216,9 +233,9 @@ jobs:
           This release includes the complete CLI system for Arxos:
           
           ### CLI Tools
-          - Symbol Manager CLI
-          - Geometry Resolver CLI
+          - SVGX Engine CLI
           - Building Validator CLI
+          - Geometry Resolver CLI
           - Rule Manager CLI
           - Telemetry CLI
           - Failure Detection CLI
@@ -232,12 +249,12 @@ jobs:
           
           ### Installation
           ```bash
-          pip install arx-svg-parser
+          pip install svgx-engine
           ```
           
           ### Usage
           ```bash
-          python -m arx_svg_parser.cmd.symbol_manager_cli --help
+          python -m svgx_engine.cli.svgx_cli --help
           ```
         draft: false
         prerelease: false 

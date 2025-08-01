@@ -1,10 +1,15 @@
 """
-Tests for arx_common.date_utils module.
+Tests for core.shared.date_utils module.
+
+This module contains comprehensive tests for the date and time utility functions
+provided by the core.shared.date_utils module.
 """
 
 import pytest
 from datetime import datetime, timedelta, timezone
-from arx_common.date_utils import (
+from unittest.mock import patch, Mock
+
+from core.shared.date_utils import (
     get_current_timestamp,
     get_current_timestamp_iso,
     parse_timestamp,

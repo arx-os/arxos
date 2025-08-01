@@ -1,19 +1,21 @@
+#!/usr/bin/env python3
 """
-GUS CLI Integration
+GUS (General Utility Script) - Command line interface for Arxos Platform utilities.
 
-Command-line interface for the GUS (General User Support) agent,
-providing natural language query processing and knowledge access.
+This script provides command-line access to common utility functions
+from the Arxos Platform shared library.
 """
 
-import asyncio
+import argparse
 import json
 import sys
+from datetime import datetime
 from typing import Dict, Any, Optional
 import httpx
 import click
 import structlog
 
-from arx_common.config import get_settings
+from core.shared.config import get_settings
 
 logger = structlog.get_logger()
 

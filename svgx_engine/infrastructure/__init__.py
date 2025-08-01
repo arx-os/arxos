@@ -6,7 +6,9 @@ external service adapters, and infrastructure services that handle
 persistence, external APIs, and technical concerns.
 """
 
-from svgx_engine.infrastructure.repositories import *
+from svgx_engine.infrastructure.repositories import (
+    PostgresBuildingRepository, InMemoryBuildingRepository
+)
 
 # Version and metadata
 __version__ = "1.0.0"

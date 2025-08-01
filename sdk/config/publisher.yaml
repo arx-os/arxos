@@ -84,7 +84,6 @@ languages:
 # Services to publish
 services:
   - arx-backend
-  - arx-svg-parser
   - arx-cmms
   - arx-database
 

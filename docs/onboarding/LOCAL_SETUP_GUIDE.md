@@ -112,28 +112,11 @@ redis-server
 
 ### 2. Core Services Setup
 
-#### SVG Parser (Python/FastAPI)
-```bash
-cd arxos/core/svg-parser
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up database
-alembic upgrade head
-
-# Start the service
-python main.py
-# Or: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
-```
 
 #### Backend (Go/Chi)
 ```bash
-cd arxos/core/backend
+cd core/backend
 
 # Install Go dependencies
 go mod download
@@ -340,7 +323,7 @@ curl http://localhost:8080/api/health
 # The services will auto-reload (if using --reload flag)
 
 # For Go backend, rebuild:
-cd arxos/core/backend
+cd core/backend
 go build -o bin/arx-backend ./cmd/main.go
 ```
 
@@ -360,7 +343,6 @@ alembic revision --autogenerate -m "Description"
 make test
 
 # Run specific service tests
-cd arxos/core/svg-parser && python -m pytest
 cd arxos/core/backend && go test ./...
 cd arxos/svgx_engine && python -m pytest
 ```
@@ -399,7 +381,6 @@ cd arxos
 
 # Install packages in editable mode
 pip install -e ./svgx_engine
-pip install -e ./core/svg-parser
 ```
 
 #### 4. Docker Issues
@@ -435,7 +416,7 @@ docker stats
 ### ✅ Core Services
 - [ ] PostgreSQL running and accessible
 - [ ] Redis running and accessible
-- [ ] SVG Parser API responding on port 8000
+
 - [ ] Backend API responding on port 8080
 - [ ] SVGX Engine responding on port 8001
 

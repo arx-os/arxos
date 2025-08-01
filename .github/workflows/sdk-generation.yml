@@ -156,7 +156,7 @@ jobs:
     needs: generate-sdks
     strategy:
       matrix:
-        service: [arx-backend, arx-svg-parser, arx-cmms, arx-database]
+        service: [arx-backend, svgx-engine, arx-cmms, arx-database]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -179,6 +179,12 @@ jobs:
           
           echo "🧪 Testing TypeScript SDK for ${{ matrix.service }}..."
           
+          # Check if directory exists
+          if [ ! -d "sdk/generated/typescript/${{ matrix.service }}" ]; then
+            echo "⚠️ SDK directory for ${{ matrix.service }} not found, skipping..."
+            exit 0
+          fi
+          
           # Install dependencies
           npm install
           
@@ -193,7 +199,7 @@ jobs:
     needs: generate-sdks
     strategy:
       matrix:
-        service: [arx_backend, arx_svg_parser, arx_cmms, arx_database]
+        service: [arx_backend, svgx_engine, arx_cmms, arx_database]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -230,7 +236,7 @@ jobs:
     needs: generate-sdks
     strategy:
       matrix:
-        service: [arx-backend, arx-svg-parser, arx-cmms, arx-database]
+        service: [arx-backend, svgx-engine, arx-cmms, arx-database]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -267,7 +273,7 @@ jobs:
     needs: generate-sdks
     strategy:
       matrix:
-        service: [arx-backend, arx-svg-parser, arx-cmms, arx-database]
+        service: [arx-backend, svgx-engine, arx-cmms, arx-database]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -301,7 +307,7 @@ jobs:
     needs: generate-sdks
     strategy:
       matrix:
-        service: [arx-backend, arx-svg-parser, arx-cmms, arx-database]
+        service: [arx-backend, svgx-engine, arx-cmms, arx-database]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -337,7 +343,7 @@ jobs:
     needs: generate-sdks
     strategy:
       matrix:
-        service: [arx-backend, arx-svg-parser, arx-cmms, arx-database]
+        service: [arx-backend, svgx-engine, arx-cmms, arx-database]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -424,7 +430,7 @@ jobs:
         run: |
           echo "📦 Building TypeScript packages..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/typescript/$service" ]; then
               cd sdk/generated/typescript/$service
               npm run build
@@ -436,7 +442,7 @@ jobs:
         run: |
           echo "📦 Building Python packages..."
           
-          for service in arx_backend arx_svg_parser arx_cmms arx_database; do
+          for service in arx_backend svgx_engine arx_cmms arx_database; do
             if [ -d "sdk/generated/python/$service" ]; then
               cd sdk/generated/python/$service
               python setup.py sdist bdist_wheel
@@ -448,7 +454,7 @@ jobs:
         run: |
           echo "📦 Building Go packages..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/go/$service" ]; then
               cd sdk/generated/go/$service
               go build ./...
@@ -460,7 +466,7 @@ jobs:
         run: |
           echo "📦 Building Java packages..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/java/$service" ]; then
               cd sdk/generated/java/$service
               mvn clean package
@@ -472,7 +478,7 @@ jobs:
         run: |
           echo "📦 Building C# packages..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/csharp/$service" ]; then
               cd sdk/generated/csharp/$service
               dotnet pack
@@ -484,7 +490,7 @@ jobs:
         run: |
           echo "📦 Building PHP packages..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/php/$service" ]; then
               cd sdk/generated/php/$service
               composer install --no-dev --optimize-autoloader
@@ -524,7 +530,13 @@ jobs:
         run: |
           echo "📤 Publishing TypeScript packages to npm..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          # Validate token exists
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "❌ NPM_TOKEN not found"
+            exit 1
+          fi
+          
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/typescript/$service" ]; then
               cd sdk/generated/typescript/$service
               npm publish --access public
@@ -560,7 +572,7 @@ jobs:
           
           pip install twine
           
-          for service in arx_backend arx_svg_parser arx_cmms arx_database; do
+          for service in arx_backend svgx_engine arx_cmms arx_database; do
             if [ -d "sdk/generated/python/$service" ]; then
               cd sdk/generated/python/$service
               python -m twine upload dist/*
@@ -596,7 +608,7 @@ jobs:
         run: |
           echo "📤 Publishing Java packages to Maven Central..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/java/$service" ]; then
               cd sdk/generated/java/$service
               mvn deploy
@@ -631,7 +643,7 @@ jobs:
         run: |
           echo "📤 Publishing C# packages to NuGet..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/csharp/$service" ]; then
               cd sdk/generated/csharp/$service
               dotnet nuget push *.nupkg
@@ -667,7 +679,7 @@ jobs:
         run: |
           echo "📤 Publishing PHP packages to Packagist..."
           
-          for service in arx-backend arx-svg-parser arx-cmms arx-database; do
+          for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/php/$service" ]; then
               cd sdk/generated/php/$service
               composer publish

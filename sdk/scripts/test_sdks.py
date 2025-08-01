@@ -768,7 +768,7 @@ def main():
     )
     parser.add_argument(
         "--service",
-        help="Specific service to test (e.g., arx-backend, arx-svg-parser)",
+        help="Specific service to test (e.g., arx-backend, arx-cmms)",
         default=None
     )
     parser.add_argument(

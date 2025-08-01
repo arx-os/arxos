@@ -8,9 +8,13 @@ import (
 )
 
 // ProjectManager handles construction project lifecycle management
+//
+// NOTE: This is a development implementation with placeholder database operations.
+// In production, this would integrate with a proper database and include
+// comprehensive logging, error handling, and transaction management.
 type ProjectManager struct {
-	// TODO: Add database connection
-	// TODO: Add logger
+	// TODO: Add database connection (deferred until database schema is finalized)
+	// TODO: Add structured logger (deferred until logging infrastructure is ready)
 }
 
 // NewProjectManager creates a new project manager
@@ -35,16 +39,16 @@ func (pm *ProjectManager) CreateProject(req models.ProjectCreateRequest) (*model
 		UpdatedAt:   time.Now(),
 	}
 
-	// TODO: Save to database
-	// TODO: Create project directory structure
-	// TODO: Initialize SVGX integration
+	// TODO: Save to database (deferred until database schema is finalized)
+	// TODO: Create project directory structure (deferred until file system integration is ready)
+	// TODO: Initialize SVGX integration (deferred until SVGX engine is production-ready)
 
 	return project, nil
 }
 
 // GetProject retrieves a project by ID
 func (pm *ProjectManager) GetProject(projectID string) (*models.Project, error) {
-	// TODO: Retrieve from database
+	// TODO: Retrieve from database (deferred until database schema is finalized)
 	project := &models.Project{
 		ID:          projectID,
 		Name:        "Sample Project",
@@ -98,23 +102,23 @@ func (pm *ProjectManager) UpdateProject(projectID string, req models.ProjectUpda
 
 	project.UpdatedAt = time.Now()
 
-	// TODO: Save to database
+	// TODO: Save to database (deferred until database schema is finalized)
 
 	return project, nil
 }
 
 // DeleteProject deletes a project
 func (pm *ProjectManager) DeleteProject(projectID string) error {
-	// TODO: Implement soft delete or archive
-	// TODO: Clean up project resources
-	// TODO: Archive project data
+	// TODO: Implement soft delete or archive (deferred until database schema is finalized)
+	// TODO: Clean up project resources (deferred until file system integration is ready)
+	// TODO: Archive project data (deferred until archiving system is implemented)
 
 	return nil
 }
 
 // ListProjects retrieves a list of projects with pagination
 func (pm *ProjectManager) ListProjects(page, limit int) (*models.ProjectListResponse, error) {
-	// TODO: Retrieve from database with pagination
+	// TODO: Retrieve from database with pagination (deferred until database schema is finalized)
 	projects := []models.Project{
 		{
 			ID:          "proj_001",
@@ -147,23 +151,23 @@ func (pm *ProjectManager) AssignUserToProject(projectID, userID, role string) (*
 		CreatedAt: time.Now(),
 	}
 
-	// TODO: Save to database
-	// TODO: Update project permissions
+	// TODO: Save to database (deferred until database schema is finalized)
+	// TODO: Update project permissions (deferred until permission system is implemented)
 
 	return projectUser, nil
 }
 
 // RemoveUserFromProject removes a user from a project
 func (pm *ProjectManager) RemoveUserFromProject(projectID, userID string) error {
-	// TODO: Remove user assignment from database
-	// TODO: Update project permissions
+	// TODO: Remove user assignment from database (deferred until database schema is finalized)
+	// TODO: Update project permissions (deferred until permission system is implemented)
 
 	return nil
 }
 
 // GetProjectUsers retrieves all users assigned to a project
 func (pm *ProjectManager) GetProjectUsers(projectID string) ([]models.ProjectUser, error) {
-	// TODO: Retrieve from database
+	// TODO: Retrieve from database (deferred until database schema is finalized)
 	return []models.ProjectUser{}, nil
 }
 

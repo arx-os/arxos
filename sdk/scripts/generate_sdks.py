@@ -30,7 +30,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Arxos SDKs from OpenAPI specifications")
     parser.add_argument(
         "--service",
-        help="Specific service to generate SDK for (e.g., arx-backend, arx-svg-parser)",
+        help="Specific service to generate SDK for (e.g., arx-backend, arx-cmms)",
         default=None
     )
     parser.add_argument(

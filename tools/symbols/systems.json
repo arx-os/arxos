@@ -44,7 +44,9 @@
     "av": [
       "audio",
       "video",
-      "presentation"
+      "presentation",
+      "control_system",
+      "display"
     ],
     "building_controls": [
       "bas",
@@ -52,11 +54,11 @@
       "automation"
     ]
   },
-  "total_symbols": 86,
+  "total_symbols": 90,
   "system_counts": {
     "building_controls": 16,
     "mechanical": 22,
-    "av": 23,
+    "av": 27,
     "fire_alarm": 8,
     "network": 21,
     "plumbing": 17,

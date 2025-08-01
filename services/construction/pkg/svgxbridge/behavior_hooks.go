@@ -76,7 +76,7 @@ func (m *BehaviorHookManager) CreateHook(req BehaviorHookRequest) (*BehaviorHook
 
 // TriggerHook triggers a behavior hook based on project events
 func (m *BehaviorHookManager) TriggerHook(hookID string, eventData map[string]interface{}) error {
-	// TODO: Implement hook triggering logic
+	// TODO: Implement hook triggering logic (deferred until SVGX engine API is finalized)
 	// This would send the event data to SVGX and trigger the associated behavior
 
 	hook := &BehaviorHook{
@@ -96,20 +96,20 @@ func (m *BehaviorHookManager) TriggerHook(hookID string, eventData map[string]in
 
 // GetHooks retrieves all behavior hooks for a project
 func (m *BehaviorHookManager) GetHooks(projectID string) ([]BehaviorHook, error) {
-	// TODO: Implement retrieval from database
+	// TODO: Implement retrieval from database (deferred until database schema is finalized)
 	return []BehaviorHook{}, nil
 }
 
 // DeleteHook deletes a behavior hook
 func (m *BehaviorHookManager) DeleteHook(hookID string) error {
-	// TODO: Implement hook deletion
+	// TODO: Implement hook deletion (deferred until SVGX engine API is finalized)
 	// This would remove the hook from SVGX and clean up any associated data
 	return nil
 }
 
 // registerWithSVGX registers a behavior hook with the SVGX engine
 func (m *BehaviorHookManager) registerWithSVGX(hook *BehaviorHook) error {
-	// TODO: Implement registration with SVGX engine
+	// TODO: Implement registration with SVGX engine (deferred until SVGX engine API is finalized)
 	// This would send the hook configuration to SVGX for event monitoring
 
 	data, err := json.Marshal(hook)
@@ -117,7 +117,7 @@ func (m *BehaviorHookManager) registerWithSVGX(hook *BehaviorHook) error {
 		return fmt.Errorf("failed to marshal hook data: %w", err)
 	}
 
-	// TODO: Make HTTP request to SVGX engine
+	// TODO: Make HTTP request to SVGX engine (deferred until SVGX engine API is finalized)
 	// POST to m.svgxEndpoint + "/api/v1/hooks"
 	_ = data // Placeholder to avoid unused variable error
 
@@ -126,7 +126,7 @@ func (m *BehaviorHookManager) registerWithSVGX(hook *BehaviorHook) error {
 
 // sendEventToSVGX sends event data to SVGX engine
 func (m *BehaviorHookManager) sendEventToSVGX(hook *BehaviorHook) error {
-	// TODO: Implement event sending to SVGX engine
+	// TODO: Implement event sending to SVGX engine (deferred until SVGX engine API is finalized)
 	// This would send the event data to trigger SVGX behavior changes
 
 	data, err := json.Marshal(hook)
@@ -134,7 +134,7 @@ func (m *BehaviorHookManager) sendEventToSVGX(hook *BehaviorHook) error {
 		return fmt.Errorf("failed to marshal event data: %w", err)
 	}
 
-	// TODO: Make HTTP request to SVGX engine
+	// TODO: Make HTTP request to SVGX engine (deferred until SVGX engine API is finalized)
 	// POST to m.svgxEndpoint + "/api/v1/events"
 	_ = data // Placeholder to avoid unused variable error
 

@@ -4,17 +4,15 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'arx_svg_parser/cmd/**'
-      - 'arx_svg_parser/services/**'
-      - 'arx_svg_parser/utils/**'
-      - 'arx_svg_parser/tests/**'
+      - 'cli/**'
+      - 'svgx_engine/cli/**'
+      - 'arx-backend/cmd/**'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'arx_svg_parser/cmd/**'
-      - 'arx_svg_parser/services/**'
-      - 'arx_svg_parser/utils/**'
-      - 'arx_svg_parser/tests/**'
+      - 'cli/**'
+      - 'svgx_engine/cli/**'
+      - 'arx-backend/cmd/**'
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
@@ -29,32 +27,42 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         
-    - name: Install dependencies
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+        
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-cov pyyaml
-        pip install -e arx_svg_parser/
+        pip install -e svgx_engine/
         
-    - name: Run CLI validation script
+    - name: Run SVGX CLI validation script
       run: |
-        cd arx_svg_parser
+        cd svgx_engine
         python scripts/validate_cli.py --verbose --exit-code --report cli_validation_report.json
         
-    - name: Run CLI integration tests
+    - name: Run SVGX CLI integration tests
       run: |
-        cd arx_svg_parser
-        pytest tests/test_cli_integration.py -v --cov=cmd --cov-report=xml
+        cd svgx_engine
+        pytest tests/test_cli_integration.py -v --cov=cli --cov-report=xml
+        
+    - name: Run Go CLI tests
+      run: |
+        cd arx-backend
+        go test ./cmd/... -v
         
     - name: Upload CLI validation reports
       uses: actions/upload-artifact@v3
       with:
         name: cli-validation-reports
         path: |
-          arx_svg_parser/cli_validation_report.json
-          arx_svg_parser/.coverage
-          arx_svg_parser/coverage.xml
+          svgx_engine/cli_validation_report.json
+          svgx_engine/.coverage
+          svgx_engine/coverage.xml
         
     - name: Comment on PR
       if: github.event_name == 'pull_request'
@@ -64,13 +72,15 @@ jobs:
           const fs = require('fs');
           let report = '';
           try {
-            report = fs.readFileSync('arx_svg_parser/cli_test_report.md', 'utf8');
+            report = fs.readFileSync('svgx_engine/cli_test_report.md', 'utf8');
           } catch (e) {
             report = 'CLI testing completed successfully.';
           }
           
           let comment = '## ✅ CLI Testing Completed\n\n';
           comment += 'All CLI tools have been tested and validated:\n\n';
+          comment += '- SVGX Engine CLI ✓\n';
+          comment += '- Go Backend CLI ✓\n';
           comment += '- CLI help commands ✓\n';
           comment += '- Config management ✓\n';
           comment += '- Environment variables ✓\n';

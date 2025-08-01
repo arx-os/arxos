@@ -1,0 +1,347 @@
+{
+  "system": "security",
+  "description": "Security system for building infrastructure including access control, surveillance, intrusion detection, and security management",
+  "version": "1.0.0",
+  "created_by": "Arxos System",
+  "created_at": "2024-12-19",
+  "objects": {
+    "security_camera": {
+      "properties": {
+        "type": "security_camera",
+        "camera_type": "IP_camera",
+        "resolution": "4K",
+        "frame_rate": "30 fps",
+        "field_of_view": "120 degrees",
+        "night_vision": true,
+        "motion_detection": true,
+        "audio": true,
+        "ptz": false,
+        "mount_type": "ceiling_mount",
+        "weather_resistant": false,
+        "poe": true,
+        "compression": "H.264",
+        "storage": "cloud_and_local",
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["network_switch", "security_server"],
+        "monitors": ["access_points", "perimeter", "interior_spaces"],
+        "controlled_by": ["security_control_system"],
+        "monitored_by": ["security_monitoring"],
+        "part_of_system": ["surveillance_system"]
+      },
+      "behavior_profile": "security_camera_behavior",
+      "metadata": {
+        "category": "security_device",
+        "subcategory": "surveillance",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "access_control": {
+      "properties": {
+        "type": "access_control",
+        "control_type": "card_reader",
+        "reader_type": "proximity",
+        "card_type": "RFID",
+        "door_controller": true,
+        "strike": "electric_strike",
+        "lock_type": "electromagnetic",
+        "fail_secure": true,
+        "battery_backup": "24 hours",
+        "communication_protocol": ["Wiegand", "OSDP"],
+        "monitoring": true,
+        "audit_trail": true
+      },
+      "relationships": {
+        "connected_to": ["network_switch", "security_server"],
+        "controls": ["door_lock", "strike"],
+        "monitors": ["door_status", "card_reader"],
+        "monitored_by": ["security_control_system", "security_monitoring"],
+        "part_of_system": ["access_control_system"]
+      },
+      "behavior_profile": "access_control_behavior",
+      "metadata": {
+        "category": "security_device",
+        "subcategory": "access_control",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "card_reader": {
+      "properties": {
+        "type": "card_reader",
+        "reader_type": "proximity",
+        "card_type": "RFID",
+        "read_range": "3 inches",
+        "mount_type": "wall_mount",
+        "weather_resistant": false,
+        "backlight": true,
+        "keypad": false,
+        "display": false,
+        "communication_protocol": ["Wiegand", "OSDP"],
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["access_control", "door_controller"],
+        "reads": ["access_cards", "badges"],
+        "monitored_by": ["access_control", "security_monitoring"],
+        "part_of_system": ["access_control_system"]
+      },
+      "behavior_profile": "card_reader_behavior",
+      "metadata": {
+        "category": "security_device",
+        "subcategory": "card_reader",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "intrusion_detector": {
+      "properties": {
+        "type": "intrusion_detector",
+        "detector_type": "motion_sensor",
+        "technology": "PIR",
+        "coverage_area": "30x30 feet",
+        "mount_type": "ceiling_mount",
+        "tamper_protection": true,
+        "pet_immune": false,
+        "battery_backup": "24 hours",
+        "communication_protocol": ["RF", "Wired"],
+        "monitoring": true,
+        "supervision": true
+      },
+      "relationships": {
+        "connected_to": ["intrusion_panel", "security_server"],
+        "monitors": ["interior_spaces", "perimeter"],
+        "monitored_by": ["intrusion_panel", "security_monitoring"],
+        "part_of_system": ["intrusion_detection_system"]
+      },
+      "behavior_profile": "intrusion_detector_behavior",
+      "metadata": {
+        "category": "security_device",
+        "subcategory": "intrusion_detection",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "intrusion_panel": {
+      "properties": {
+        "type": "intrusion_panel",
+        "panel_type": "addressable",
+        "zones": 32,
+        "partitions": 8,
+        "battery_backup": "24 hours",
+        "ac_power": "120V",
+        "communication_protocol": ["IP", "Cellular"],
+        "remote_arming": true,
+        "event_history": "1000 events",
+        "monitoring": true,
+        "supervision": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "emergency_power"],
+        "monitors": ["intrusion_detectors", "door_contacts", "glass_breaks"],
+        "controls": ["sirens", "strobe_lights"],
+        "monitored_by": ["security_control_system", "security_monitoring"],
+        "part_of_system": ["intrusion_detection_system"]
+      },
+      "behavior_profile": "intrusion_panel_behavior",
+      "metadata": {
+        "category": "security_device",
+        "subcategory": "intrusion_panel",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "6 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "security_server": {
+      "properties": {
+        "type": "security_server",
+        "server_type": "dedicated",
+        "storage_capacity": "10TB",
+        "retention_period": "90 days",
+        "backup_system": true,
+        "redundancy": true,
+        "user_licenses": 50,
+        "camera_licenses": 100,
+        "software_version": "latest",
+        "remote_access": true,
+        "mobile_app": true,
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["network_switch", "storage_system"],
+        "manages": ["security_cameras", "access_control", "intrusion_panel"],
+        "monitored_by": ["security_monitoring"],
+        "reports_to": ["building_management_system"],
+        "part_of_system": ["security_management_system"]
+      },
+      "behavior_profile": "security_server_behavior",
+      "metadata": {
+        "category": "security_device",
+        "subcategory": "security_server",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "video_recorder": {
+      "properties": {
+        "type": "video_recorder",
+        "recorder_type": "NVR",
+        "channels": 32,
+        "storage_capacity": "20TB",
+        "retention_period": "90 days",
+        "compression": "H.264",
+        "resolution": "4K",
+        "frame_rate": "30 fps",
+        "backup_system": true,
+        "redundancy": true,
+        "remote_access": true,
+        "mobile_app": true,
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["network_switch", "security_cameras"],
+        "records_from": ["security_cameras"],
+        "monitored_by": ["security_monitoring"],
+        "reports_to": ["security_server"],
+        "part_of_system": ["surveillance_system"]
+      },
+      "behavior_profile": "video_recorder_behavior",
+      "metadata": {
+        "category": "security_device",
+        "subcategory": "video_recording",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "security_control": {
+      "properties": {
+        "type": "security_control",
+        "control_type": "integrated",
+        "protocol": "IP",
+        "zones": 100,
+        "equipment_control": true,
+        "scheduling": true,
+        "optimization": true,
+        "alarm_management": true,
+        "trend_logging": true,
+        "user_interface": "web_based",
+        "mobile_app": true,
+        "remote_access": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "building_management_system"],
+        "controls": ["access_control", "intrusion_panel", "security_cameras"],
+        "monitored_by": ["building_management_system"],
+        "receives_data_from": ["security_cameras", "access_control", "intrusion_panel"],
+        "part_of_system": ["security_control_system"]
+      },
+      "behavior_profile": "security_control_behavior",
+      "metadata": {
+        "category": "control_device",
+        "subcategory": "security_control",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "security_monitoring": {
+      "properties": {
+        "type": "security_monitoring",
+        "monitoring_type": "real_time",
+        "parameters": ["alarm_status", "access_events", "video_events", "system_status"],
+        "sampling_rate": "1 second",
+        "data_logging": true,
+        "alarm_thresholds": true,
+        "communication_protocol": ["IP", "Cellular"],
+        "web_interface": true,
+        "mobile_app": true,
+        "reporting": true,
+        "trend_analysis": true
+      },
+      "relationships": {
+        "connected_to": ["security_server", "video_recorder", "access_control"],
+        "monitors": ["security_cameras", "access_control", "intrusion_panel"],
+        "reports_to": ["building_management_system"],
+        "receives_data_from": ["security_server", "video_recorder", "access_control"],
+        "part_of_system": ["security_monitoring_system"]
+      },
+      "behavior_profile": "security_monitoring_behavior",
+      "metadata": {
+        "category": "monitoring_device",
+        "subcategory": "security_monitoring",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    }
+  },
+  "system_requirements": {
+    "security": {
+      "response_time": "< 5 seconds",
+      "video_quality": "4K minimum",
+      "storage_retention": "90 days minimum",
+      "backup_system": "Required",
+      "redundancy": "Required for critical systems"
+    },
+    "network": {
+      "bandwidth": "1Gbps minimum",
+      "latency": "< 10ms",
+      "qos_requirements": "Priority for video traffic",
+      "vlan_support": "Required",
+      "poe_support": "Required for IP devices"
+    },
+    "environmental": {
+      "temperature_range": "10-40°C",
+      "humidity_range": "20-80%",
+      "dust_protection": "IP54 minimum",
+      "security_room_requirements": "Dedicated security room"
+    },
+    "structural": {
+      "mounting_requirements": "Reinforced mounting points",
+      "cable_management": "Conduit or cable tray",
+      "access_requirements": "Service access for maintenance",
+      "security_room_size": "Minimum 200 sq ft"
+    }
+  },
+  "compliance_standards": {
+    "security": ["UL", "FM", "ANSI"],
+    "access_control": ["UL 294", "ANSI/BHMA"],
+    "surveillance": ["UL 2044", "ANSI"],
+    "network": ["IEEE 802.3", "PoE", "VLAN"],
+    "safety": ["OSHA", "NFPA", "IBC"],
+    "accessibility": ["ADA", "WCAG", "Section 508"]
+  },
+  "maintenance_schedule": {
+    "daily": ["System health check", "Alarm status monitoring"],
+    "weekly": ["Device status check", "Video quality check"],
+    "monthly": ["Device testing", "Storage check"],
+    "quarterly": ["Performance testing", "Backup testing"],
+    "annually": ["Comprehensive testing", "Preventive maintenance"]
+  }
+} 

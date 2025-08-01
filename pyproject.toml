@@ -179,7 +179,7 @@ minversion = "6.0"
 addopts = "-ra -q --strict-markers --strict-config"
 testpaths = [
     "tests",
-    "core/svg-parser/tests",
+    
     "services/ai/tests",
     "services/iot/tests",
     "services/cmms/tests",

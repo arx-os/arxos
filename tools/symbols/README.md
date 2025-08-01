@@ -1,6 +1,6 @@
-# Arxos Symbol Library (`arx-symbol-library`)
+# Arxos Symbol Library (`tools/symbols`)
 
-**`arx-symbol-library`** is the centralized repository of graphical symbols (inlined SVG) used throughout the Arxos platform for building system markup and logic modeling. Each symbol represents a physical or logical component within a building's infrastructure.
+**`tools/symbols`** is the centralized repository of graphical symbols (inlined SVG) used throughout the Arxos platform for building system markup and logic modeling. Each symbol represents a physical or logical component within a building's infrastructure.
 
 ---
 
@@ -18,7 +18,7 @@ This library provides:
 ## 📁 Structure
 
 ```
-/arx-symbol-library/
+/tools/symbols/
 ├── symbols/
 │   ├── mechanical/          # HVAC, air handling, etc.
 │   ├── electrical/          # Power, lighting, etc.
@@ -70,7 +70,7 @@ This library is used by the following Arxos components:
 | Component            | Purpose |
 |---------------------|---------|
 | `svgx-engine`        | Renders symbols on SVG floor plans |
-| `arx_svg_parser`     | Recognizes and parses symbols |
+
 | `arxfile.json`       | References `arx_symbol` ID in object metadata |
 | `ascii-bim`          | CLI/text-based visual mapping |
 | `behavior_profiles`  | (Future) Logic simulation profiles linked to symbols |
@@ -115,7 +115,7 @@ We welcome symbol contributions for new systems or components!
 
 ## 🔗 Related Repositories
 
-- [`arx_svg_parser`](https://github.com/capstanistan/arx_svg_parser)
+
 - [`arx-backend`](https://github.com/capstanistan/arx-backend)
 - [`arx-docs`](https://github.com/capstanistan/arx-docs)
 - [`arx-infra`](https://github.com/capstanistan/arx-infra)

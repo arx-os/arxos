@@ -1,0 +1,324 @@
+{
+  "system": "electrical",
+  "description": "Electrical system for building infrastructure including power distribution, lighting, controls, and safety systems",
+  "version": "1.0.0",
+  "created_by": "Arxos System",
+  "created_at": "2024-12-19",
+  "objects": {
+    "electrical_panel": {
+      "properties": {
+        "type": "electrical_panel",
+        "voltage": "480V/277V",
+        "amperage": "400A",
+        "phases": 3,
+        "frequency": "60Hz",
+        "main_breaker": "400A",
+        "sub_panels": 8,
+        "circuits": 42,
+        "load_center": "Square D",
+        "enclosure_type": "NEMA 1",
+        "mount_type": "wall_mount",
+        "power_consumption": "0W",
+        "monitoring": true,
+        "communication_protocol": ["Modbus", "BACnet"],
+        "protection": ["overcurrent", "short_circuit", "ground_fault"]
+      },
+      "relationships": {
+        "connected_to": ["electrical_service", "sub_panels", "emergency_power"],
+        "supplies_power_to": ["lighting_panels", "mechanical_panels", "plumbing_panels"],
+        "monitored_by": ["building_management_system", "electrical_monitoring"],
+        "controlled_by": ["electrical_control_system"],
+        "part_of_system": ["electrical_distribution"]
+      },
+      "behavior_profile": "electrical_panel_behavior",
+      "metadata": {
+        "category": "distribution_device",
+        "subcategory": "power_distribution",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "electrical_circuit": {
+      "properties": {
+        "type": "electrical_circuit",
+        "voltage": "120V/240V",
+        "amperage": "20A",
+        "breaker_size": "20A",
+        "wire_size": "12 AWG",
+        "conduit_type": "EMT",
+        "circuit_type": "general_purpose",
+        "load_type": "lighting",
+        "load_capacity": "2400W",
+        "current_load": "0W",
+        "power_factor": "0.95",
+        "protection": ["circuit_breaker", "ground_fault"],
+        "monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "sub_panel"],
+        "supplies_power_to": ["lighting_fixtures", "outlets", "equipment"],
+        "monitored_by": ["electrical_monitoring"],
+        "protected_by": ["circuit_breaker", "ground_fault_interrupter"],
+        "part_of_system": ["electrical_distribution"]
+      },
+      "behavior_profile": "electrical_circuit_behavior",
+      "metadata": {
+        "category": "distribution_device",
+        "subcategory": "circuit_distribution",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "electrical_outlet": {
+      "properties": {
+        "type": "electrical_outlet",
+        "voltage": "120V",
+        "amperage": "20A",
+        "outlet_type": "duplex",
+        "receptacle_type": "NEMA 5-20R",
+        "mount_type": "wall_mount",
+        "tamper_resistant": true,
+        "weather_resistant": false,
+        "gfi_protected": false,
+        "usb_charging": false,
+        "smart_outlet": false,
+        "monitoring": false
+      },
+      "relationships": {
+        "connected_to": ["electrical_circuit"],
+        "supplies_power_to": ["equipment", "appliances"],
+        "monitored_by": ["electrical_monitoring"],
+        "protected_by": ["circuit_breaker"],
+        "part_of_system": ["electrical_distribution"]
+      },
+      "behavior_profile": "electrical_outlet_behavior",
+      "metadata": {
+        "category": "distribution_device",
+        "subcategory": "power_outlet",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "lighting_fixture": {
+      "properties": {
+        "type": "lighting_fixture",
+        "fixture_type": "LED_troffers",
+        "lamp_type": "LED",
+        "wattage": "32W",
+        "voltage": "120V",
+        "lumen_output": "4000 lumens",
+        "color_temperature": "4000K",
+        "cri": "85",
+        "dimming": true,
+        "motion_sensor": false,
+        "daylight_sensor": false,
+        "emergency_backup": false,
+        "mount_type": "ceiling_mount",
+        "lifespan": "50000 hours",
+        "power_factor": "0.95"
+      },
+      "relationships": {
+        "connected_to": ["electrical_circuit", "lighting_control"],
+        "controlled_by": ["lighting_control", "building_management_system"],
+        "monitored_by": ["lighting_monitoring"],
+        "part_of_system": ["lighting_system"]
+      },
+      "behavior_profile": "lighting_fixture_behavior",
+      "metadata": {
+        "category": "lighting_device",
+        "subcategory": "general_lighting",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "24 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "emergency_power": {
+      "properties": {
+        "type": "emergency_power",
+        "system_type": "UPS",
+        "capacity": "10kVA",
+        "runtime": "30 minutes",
+        "voltage": "120V/240V",
+        "battery_type": "lead_acid",
+        "battery_count": 8,
+        "transfer_time": "4ms",
+        "monitoring": true,
+        "communication_protocol": ["Modbus", "SNMP"],
+        "mount_type": "floor_mount",
+        "enclosure_type": "NEMA 1",
+        "cooling": "fan_cooled"
+      },
+      "relationships": {
+        "connected_to": ["electrical_service", "electrical_panel"],
+        "supplies_power_to": ["emergency_lighting", "life_safety_systems"],
+        "monitored_by": ["building_management_system"],
+        "controlled_by": ["emergency_power_control"],
+        "part_of_system": ["emergency_power_system"]
+      },
+      "behavior_profile": "emergency_power_behavior",
+      "metadata": {
+        "category": "emergency_device",
+        "subcategory": "backup_power",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "36 months",
+        "maintenance_interval": "6 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "electrical_service": {
+      "properties": {
+        "type": "electrical_service",
+        "service_type": "utility",
+        "voltage": "480V/277V",
+        "amperage": "800A",
+        "phases": 3,
+        "frequency": "60Hz",
+        "service_entrance": "underground",
+        "meter_type": "smart_meter",
+        "demand_monitoring": true,
+        "power_factor_correction": true,
+        "transformer": "pad_mount",
+        "transformer_size": "500kVA"
+      },
+      "relationships": {
+        "connected_to": ["utility_grid"],
+        "supplies_power_to": ["electrical_panel", "emergency_power"],
+        "monitored_by": ["utility_monitoring", "building_management_system"],
+        "metered_by": ["utility_meter"],
+        "part_of_system": ["electrical_service"]
+      },
+      "behavior_profile": "electrical_service_behavior",
+      "metadata": {
+        "category": "service_device",
+        "subcategory": "utility_service",
+        "manufacturer": "utility",
+        "model": "standard",
+        "warranty_period": "120 months",
+        "maintenance_interval": "60 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "lighting_control": {
+      "properties": {
+        "type": "lighting_control",
+        "control_type": "digital",
+        "protocol": "DALI",
+        "zones": 16,
+        "fixtures_per_zone": 8,
+        "dimming": true,
+        "scheduling": true,
+        "occupancy_sensing": true,
+        "daylight_harvesting": true,
+        "communication_protocol": ["BACnet", "LonWorks"],
+        "user_interface": "touch_screen",
+        "remote_access": true,
+        "energy_monitoring": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "building_management_system"],
+        "controls": ["lighting_fixtures", "lighting_zones"],
+        "monitored_by": ["building_management_system"],
+        "receives_data_from": ["occupancy_sensors", "daylight_sensors"],
+        "part_of_system": ["lighting_control_system"]
+      },
+      "behavior_profile": "lighting_control_behavior",
+      "metadata": {
+        "category": "control_device",
+        "subcategory": "lighting_control",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    },
+    "electrical_monitoring": {
+      "properties": {
+        "type": "electrical_monitoring",
+        "monitoring_type": "real_time",
+        "parameters": ["voltage", "current", "power", "energy", "power_factor"],
+        "sampling_rate": "1 second",
+        "data_logging": true,
+        "alarm_thresholds": true,
+        "communication_protocol": ["Modbus", "BACnet"],
+        "web_interface": true,
+        "mobile_app": true,
+        "reporting": true,
+        "trend_analysis": true
+      },
+      "relationships": {
+        "connected_to": ["electrical_panel", "electrical_circuit"],
+        "monitors": ["electrical_panel", "electrical_circuit", "electrical_outlet"],
+        "reports_to": ["building_management_system"],
+        "receives_data_from": ["electrical_panel", "electrical_circuit"],
+        "part_of_system": ["electrical_monitoring_system"]
+      },
+      "behavior_profile": "electrical_monitoring_behavior",
+      "metadata": {
+        "category": "monitoring_device",
+        "subcategory": "electrical_monitoring",
+        "manufacturer": "generic",
+        "model": "standard",
+        "warranty_period": "60 months",
+        "maintenance_interval": "12 months",
+        "lifecycle_stage": "operational"
+      }
+    }
+  },
+  "system_requirements": {
+    "electrical": {
+      "voltage": "480V/277V service, 120V/240V distribution",
+      "frequency": "60Hz",
+      "power_consumption": "1000kW",
+      "circuit_requirements": "Dedicated circuits for major loads",
+      "ups_requirement": "Required for critical systems",
+      "backup_generator": "Required for emergency systems"
+    },
+    "network": {
+      "bandwidth": "100Mbps minimum",
+      "latency": "< 10ms",
+      "qos_requirements": "Priority for control traffic",
+      "vlan_support": "Required",
+      "poe_support": "Required for IP devices"
+    },
+    "environmental": {
+      "temperature_range": "10-40°C",
+      "humidity_range": "20-80%",
+      "dust_protection": "IP54 minimum",
+      "electrical_room_requirements": "Dedicated electrical room"
+    },
+    "structural": {
+      "mounting_requirements": "Reinforced mounting points",
+      "cable_management": "Conduit or cable tray",
+      "access_requirements": "Service access for maintenance",
+      "electrical_room_size": "Minimum 200 sq ft"
+    }
+  },
+  "compliance_standards": {
+    "electrical": ["NEC", "UL", "CE", "IEEE"],
+    "lighting": ["IES", "ASHRAE", "LEED"],
+    "emergency": ["NFPA", "IBC", "OSHA"],
+    "network": ["IEEE 802.3", "PoE", "VLAN"],
+    "safety": ["OSHA", "NFPA", "IBC"],
+    "accessibility": ["ADA", "WCAG", "Section 508"]
+  },
+  "maintenance_schedule": {
+    "daily": ["System health check", "Performance monitoring"],
+    "weekly": ["Load balancing check", "Efficiency monitoring"],
+    "monthly": ["Circuit testing", "Protection device testing"],
+    "quarterly": ["Load analysis", "Energy efficiency review"],
+    "annually": ["Comprehensive testing", "Preventive maintenance"]
+  }
+} 

@@ -48,8 +48,7 @@ class DocumentationIssueResolver:
         
         # Files that should remain in their original locations
         important_files = [
-            "arx_svg_parser/docs/INTEGRATION_GUIDE.md",
-            "arx_svg_parser/scripts/CI_CD_VALIDATION_SUMMARY.md",
+            
             "project_meta/arxos_context.json",
             "project_meta/context_rules.json", 
             "project_meta/engineering_playbook.json",

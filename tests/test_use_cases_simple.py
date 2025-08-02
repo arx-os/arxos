@@ -104,37 +104,32 @@ def test_unit_of_work_directly():
     try:
         with uow:
             # Create a building directly
-            building_id = BuildingId()
-            address = Address.from_string("456 Direct St, Direct City, CA 12345")
-            
             building = Building(
-                id=building_id,
+                id=BuildingId.generate(),
                 name="Direct Test Building",
-                address=address,
+                address=Address("456 Direct St", "Direct City", "CA", "54321"),
                 description="Building created directly with UnitOfWork",
+                status=BuildingStatus.ACTIVE,
                 created_by="test_user"
             )
             
-            # Save building using UnitOfWork
-            uow.buildings.save(building)
-            print(f"✅ Building saved directly: {building.name}")
+            # Add to repository
+            uow.buildings.add(building)
             
-            # Retrieve building
-            retrieved_building = uow.buildings.get_by_id(building_id)
+            # Commit the transaction
+            uow.commit()
+            
+            print(f"✅ Building created directly: {building.id}")
+            
+            # Retrieve the building
+            retrieved_building = uow.buildings.get_by_id(building.id)
             
             if retrieved_building:
                 print(f"✅ Building retrieved directly: {retrieved_building.name}")
                 print(f"  Address: {retrieved_building.address}")
-                print(f"  Status: {retrieved_building.status.value}")
+                print(f"  Status: {retrieved_building.status}")
             else:
-                print("❌ Failed to retrieve building")
-            
-            # List all buildings
-            all_buildings = uow.buildings.get_all()
-            print(f"✅ Total buildings: {len(all_buildings)}")
-            
-            for b in all_buildings:
-                print(f"  - {b.name} ({b.status.value})")
+                print("❌ Failed to retrieve building directly")
                 
     except Exception as e:
         print(f"❌ Error in direct test: {e}")
@@ -142,12 +137,72 @@ def test_unit_of_work_directly():
         traceback.print_exc()
 
 
+def test_repository_operations():
+    """Test repository operations directly."""
+    print("\n=== Testing Repository Operations ===")
+    
+    # Setup database
+    engine = create_engine('sqlite:///test_arxos_repo.db', echo=False)
+    session_factory = sessionmaker(bind=engine)
+    initialize_repository_factory(session_factory)
+    
+    # Get repository factory
+    factory = get_repository_factory()
+    
+    # Create UnitOfWork
+    uow = factory.create_unit_of_work()
+    
+    try:
+        with uow:
+            # Create multiple buildings
+            buildings = []
+            for i in range(3):
+                building = Building(
+                    id=BuildingId.generate(),
+                    name=f"Repo Test Building {i+1}",
+                    address=Address(f"{100+i} Repo St", "Repo City", "CA", "12345"),
+                    description=f"Building {i+1} for repository testing",
+                    status=BuildingStatus.ACTIVE,
+                    created_by="test_user"
+                )
+                buildings.append(building)
+                uow.buildings.add(building)
+            
+            # Commit all buildings
+            uow.commit()
+            
+            print(f"✅ Created {len(buildings)} buildings")
+            
+            # Test list all
+            all_buildings = uow.buildings.list()
+            print(f"✅ Listed {len(all_buildings)} buildings")
+            
+            # Test filtering
+            active_buildings = uow.buildings.list(status=BuildingStatus.ACTIVE)
+            print(f"✅ Found {len(active_buildings)} active buildings")
+            
+            # Test get by name
+            for building in buildings:
+                found = uow.buildings.get_by_name(building.name)
+                if found:
+                    print(f"✅ Found building by name: {found.name}")
+                else:
+                    print(f"❌ Failed to find building by name: {building.name}")
+                    
+    except Exception as e:
+        print(f"❌ Error in repository test: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 if __name__ == "__main__":
-    print("🚀 Starting Use Cases Tests")
+    print("🧪 Running Use Case Tests")
     print("=" * 50)
     
+    # Run all tests
     test_basic_use_cases()
     test_unit_of_work_directly()
+    test_repository_operations()
     
     print("\n" + "=" * 50)
-    print("✅ Use Cases Tests Completed") 
+    print("✅ All tests completed!") 

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos CAD Test Runner</title>
+    
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Custom CAD Styles -->
+    <link rel="stylesheet" href="static/css/cad.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Arxos CAD Test Runner</h1>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Test Results -->
+            <div class="lg:col-span-2 bg-gray-800 p-4 rounded">
+                <h2 class="text-xl font-semibold mb-4">Test Results</h2>
+                <div id="test-results" class="space-y-2 text-sm max-h-96 overflow-y-auto">
+                    <div class="text-gray-400">Ready to run tests...</div>
+                </div>
+            </div>
+            
+            <!-- Test Controls -->
+            <div class="bg-gray-800 p-4 rounded">
+                <h2 class="text-xl font-semibold mb-4">Test Controls</h2>
+                <div class="space-y-2">
+                    <button id="run-all-tests" class="w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium">
+                        Run All Tests
+                    </button>
+                    <button id="run-core-tests" class="w-full bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm font-medium">
+                        Run Core Tests
+                    </button>
+                    <button id="run-performance-tests" class="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-sm font-medium">
+                        Run Performance Tests
+                    </button>
+                    <button id="run-ai-tests" class="w-full bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded text-sm font-medium">
+                        Run AI Tests
+                    </button>
+                    <button id="clear-results" class="w-full bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-sm font-medium">
+                        Clear Results
+                    </button>
+                </div>
+                
+                <div class="mt-4 p-3 bg-gray-700 rounded">
+                    <h3 class="font-semibold mb-2">Test Summary</h3>
+                    <div id="test-summary" class="text-sm">
+                        <div>Total: 0</div>
+                        <div>Passed: 0</div>
+                        <div>Failed: 0</div>
+                        <div>Errors: 0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Test Canvas -->
+        <div class="mt-4 bg-gray-800 p-4 rounded">
+            <h2 class="text-xl font-semibold mb-4">Test Canvas</h2>
+            <div class="h-64 bg-white rounded border">
+                <canvas id="test-canvas" class="w-full h-full"></canvas>
+            </div>
+        </div>
+        
+        <!-- Performance Monitor -->
+        <div class="mt-4 bg-gray-800 p-4 rounded">
+            <h2 class="text-xl font-semibold mb-4">Performance Monitor</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <div class="text-gray-400">FPS</div>
+                    <div id="fps-display" class="text-white font-mono">0</div>
+                </div>
+                <div>
+                    <div class="text-gray-400">Objects</div>
+                    <div id="objects-display" class="text-white font-mono">0</div>
+                </div>
+                <div>
+                    <div class="text-gray-400">Memory</div>
+                    <div id="memory-display" class="text-white font-mono">0 MB</div>
+                </div>
+                <div>
+                    <div class="text-gray-400">Render Time</div>
+                    <div id="render-time-display" class="text-white font-mono">0ms</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CAD Engine Scripts -->
+    <script src="static/js/cad-engine.js"></script>
+    <script src="static/js/cad-workers.js"></script>
+    <script src="static/js/arx-objects.js"></script>
+    <script src="static/js/cad-ui.js"></script>
+    <script src="static/js/ai-assistant.js"></script>
+    <script src="static/js/cad-tests.js"></script>
+    
+    <!-- Test Runner Script -->
+    <script>
+        class TestRunner {
+            constructor() {
+                this.testSuite = null;
+                this.cadEngine = null;
+                this.performanceMonitor = {
+                    fps: 0,
+                    objects: 0,
+                    memory: 0,
+                    renderTime: 0
+                };
+            }
+            
+            async initialize() {
+                console.log('Initializing Test Runner...');
+                
+                // Initialize test suite
+                this.testSuite = new CadTestSuite();
+                await this.testSuite.initialize();
+                
+                // Initialize CAD engine for testing
+                this.cadEngine = new CadEngine();
+                await this.cadEngine.initialize('test-canvas');
+                
+                // Start performance monitoring
+                this.startPerformanceMonitoring();
+                
+                console.log('Test Runner initialized successfully');
+            }
+            
+            startPerformanceMonitoring() {
+                setInterval(() => {
+                    this.updatePerformanceDisplay();
+                }, 1000);
+            }
+            
+            updatePerformanceDisplay() {
+                if (this.cadEngine) {
+                    document.getElementById('fps-display').textContent = Math.round(this.cadEngine.fps);
+                    document.getElementById('objects-display').textContent = this.cadEngine.arxObjects.size;
+                    
+                    // Estimate memory usage
+                    const memoryUsage = this.cadEngine.arxObjects.size * 0.1; // Rough estimate
+                    document.getElementById('memory-display').textContent = `${memoryUsage.toFixed(1)} MB`;
+                    
+                    // Measure render time
+                    const startTime = performance.now();
+                    this.cadEngine.render();
+                    const endTime = performance.now();
+                    const renderTime = endTime - startTime;
+                    document.getElementById('render-time-display').textContent = `${renderTime.toFixed(2)}ms`;
+                }
+            }
+            
+            async runAllTests() {
+                this.clearResults();
+                this.log('🚀 Starting comprehensive test suite...');
+                
+                const results = await this.testSuite.runAllTests();
+                this.updateSummary(results);
+                
+                this.log(`✅ Test suite completed: ${results.passed} passed, ${results.failed} failed`);
+                return results;
+            }
+            
+            async runCoreTests() {
+                this.clearResults();
+                this.log('🔧 Running core functionality tests...');
+                
+                const coreTests = [
+                    'Class Loading',
+                    'CAD Engine Initialization',
+                    'ArxObject System',
+                    'AI Assistant',
+                    'Drawing Tools',
+                    'Precision Drawing'
+                ];
+                
+                const results = await this.runSpecificTests(coreTests);
+                this.updateSummary(results);
+                
+                this.log(`✅ Core tests completed: ${results.passed} passed, ${results.failed} failed`);
+                return results;
+            }
+            
+            async runPerformanceTests() {
+                this.clearResults();
+                this.log('⚡ Running performance tests...');
+                
+                const performanceTests = [
+                    'Performance Tracking',
+                    'Memory Management',
+                    'Rendering Performance'
+                ];
+                
+                const results = await this.runSpecificTests(performanceTests);
+                this.updateSummary(results);
+                
+                this.log(`✅ Performance tests completed: ${results.passed} passed, ${results.failed} failed`);
+                return results;
+            }
+            
+            async runAiTests() {
+                this.clearResults();
+                this.log('🤖 Running AI functionality tests...');
+                
+                const aiTests = [
+                    'AI Command Parsing',
+                    'AI Object Creation',
+                    'AI Design Analysis'
+                ];
+                
+                const results = await this.runSpecificTests(aiTests);
+                this.updateSummary(results);
+                
+                this.log(`✅ AI tests completed: ${results.passed} passed, ${results.failed} failed`);
+                return results;
+            }
+            
+            async runSpecificTests(testNames) {
+                const results = {
+                    total: testNames.length,
+                    passed: 0,
+                    failed: 0,
+                    results: []
+                };
+                
+                for (const testName of testNames) {
+                    const test = this.testSuite.tests.find(t => t.name === testName);
+                    if (test) {
+                        try {
+                            this.log(`Running: ${testName}`);
+                            const result = await test.function();
+                            
+                            if (result) {
+                                results.passed++;
+                                results.results.push({ name: testName, status: 'PASS', message: 'Test passed' });
+                                this.log(`✅ ${testName}: PASS`);
+                            } else {
+                                results.failed++;
+                                results.results.push({ name: testName, status: 'FAIL', message: 'Test failed' });
+                                this.log(`❌ ${testName}: FAIL`);
+                            }
+                        } catch (error) {
+                            results.failed++;
+                            results.results.push({ name: testName, status: 'ERROR', message: error.message });
+                            this.log(`❌ ${testName}: ERROR - ${error.message}`);
+                        }
+                    }
+                }
+                
+                this.displayResults(results.results);
+                return results;
+            }
+            
+            clearResults() {
+                const resultsDiv = document.getElementById('test-results');
+                resultsDiv.innerHTML = '';
+            }
+            
+            log(message) {
+                const resultsDiv = document.getElementById('test-results');
+                const div = document.createElement('div');
+                div.className = 'p-2 rounded mb-2 bg-gray-700';
+                div.textContent = message;
+                resultsDiv.appendChild(div);
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
+                console.log(message);
+            }
+            
+            displayResults(results) {
+                const resultsDiv = document.getElementById('test-results');
+                
+                for (const result of results) {
+                    const div = document.createElement('div');
+                    div.className = `p-2 rounded mb-2 ${
+                        result.status === 'PASS' ? 'bg-green-600' : 
+                        result.status === 'FAIL' ? 'bg-red-600' : 'bg-yellow-600'
+                    }`;
+                    div.textContent = `${result.status}: ${result.name} - ${result.message}`;
+                    resultsDiv.appendChild(div);
+                }
+            }
+            
+            updateSummary(results) {
+                const summaryDiv = document.getElementById('test-summary');
+                summaryDiv.innerHTML = `
+                    <div>Total: ${results.total}</div>
+                    <div>Passed: ${results.passed}</div>
+                    <div>Failed: ${results.failed}</div>
+                    <div>Errors: ${results.results.filter(r => r.status === 'ERROR').length}</div>
+                `;
+            }
+        }
+        
+        // Initialize test runner when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            const testRunner = new TestRunner();
+            await testRunner.initialize();
+            
+            // Set up event listeners
+            document.getElementById('run-all-tests').addEventListener('click', () => {
+                testRunner.runAllTests();
+            });
+            
+            document.getElementById('run-core-tests').addEventListener('click', () => {
+                testRunner.runCoreTests();
+            });
+            
+            document.getElementById('run-performance-tests').addEventListener('click', () => {
+                testRunner.runPerformanceTests();
+            });
+            
+            document.getElementById('run-ai-tests').addEventListener('click', () => {
+                testRunner.runAiTests();
+            });
+            
+            document.getElementById('clear-results').addEventListener('click', () => {
+                testRunner.clearResults();
+                testRunner.log('Results cleared');
+            });
+            
+            // Auto-run basic tests after initialization
+            setTimeout(() => {
+                testRunner.runCoreTests();
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

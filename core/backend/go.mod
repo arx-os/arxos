@@ -1,8 +1,8 @@
 module arx
 
-go 1.21
+go 1.23.0
 
-toolchain go1.21.0
+toolchain go1.24.5
 
 require (
 	github.com/go-chi/chi/v5 v5.0.10
@@ -19,16 +19,16 @@ require (
 )
 
 require (
-	arx-cmms v0.0.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-redis/redis/extra/redisotel/v8 v8.11.5
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/gorilla/mux v1.8.1
+	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v2 v2.27.7
 	golang.org/x/time v0.12.0
 )
-
-replace arx-cmms => ../arx-cmms
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -41,8 +41,6 @@ require (
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-redis/redis/extra/rediscmd/v8 v8.11.5 // indirect
-	github.com/go-redis/redis/extra/redisotel/v8 v8.11.5 // indirect
-	github.com/go-redis/redis/v8 v8.11.5 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect

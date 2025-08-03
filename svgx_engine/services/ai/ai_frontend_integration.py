@@ -148,6 +148,22 @@ class AIFrontendIntegrationService:
     """Service for HTMX-powered AI frontend integration"""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.requests: Dict[UUID, HTMXRequest] = {}
         self.responses: Dict[UUID, HTMXResponse] = {}
         self.components: Dict[UUID, AIComponent] = {}

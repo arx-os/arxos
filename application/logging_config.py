@@ -64,6 +64,23 @@ class ApplicationLogger:
     """Application logger with structured logging capabilities."""
     
     def __init__(self, name: str, level: str = "INFO"):
+    """
+    Perform __init__ operation
+
+Args:
+        name: Description of name
+        level: Description of level
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.logger = logging.getLogger(name)
         self.logger.setLevel(getattr(logging, level.upper()))
     
@@ -335,6 +352,22 @@ def log_function_call(func):
 
 
 def log_database_operation(operation: str, table: str, record_id: str = None):
+    """
+    Perform wrapper operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = wrapper(param)
+        print(result)
+    """
     """Decorator to log database operations."""
     def decorator(func):
         def wrapper(*args, **kwargs):

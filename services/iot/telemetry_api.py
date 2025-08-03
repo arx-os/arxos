@@ -67,6 +67,22 @@ class TelemetryProcessor:
     """Process and validate telemetry data."""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.validators = {}
         self.transformers = {}
         self.aggregators = {}
@@ -259,6 +275,22 @@ class TelemetryProcessor:
 
 
 class TelemetryStorage:
+    """
+    Perform __init__ operation
+
+Args:
+        db_path: Description of db_path
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Store and retrieve telemetry data."""
     
     def __init__(self, db_path: str = "telemetry.db"):

@@ -28,6 +28,22 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for logging all API requests."""
     
     def __init__(self, app: ASGIApp):
+    """
+    Perform __init__ operation
+
+Args:
+        app: Description of app
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         super().__init__(app)
         self.logger = get_logger("api.request_logging")
     
@@ -101,6 +117,22 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):
+    """
+    Perform __init__ operation
+
+Args:
+        app: Description of app
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Middleware for handling and formatting errors."""
     
     def __init__(self, app: ASGIApp):

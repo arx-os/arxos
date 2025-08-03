@@ -620,6 +620,22 @@ if __name__ == "__main__":
     
     # Set up callbacks
     def on_coordinate_input(coordinate):
+    """
+    Perform on_coordinate_input operation
+
+Args:
+        coordinate: Description of coordinate
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = on_coordinate_input(param)
+        print(result)
+    """
         print(f"Coordinate input: {coordinate}")
     
     def on_precision_feedback(feedback_type, data):

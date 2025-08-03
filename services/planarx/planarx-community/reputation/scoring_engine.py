@@ -62,6 +62,22 @@ class ContributionEvent:
     abuse_score: float
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.metadata is None:
             self.metadata = {}
         if self.abuse_score is None:
@@ -109,6 +125,22 @@ class AbuseDetection:
 
 
 class ReputationScoringEngine:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Main reputation scoring engine with anti-abuse protection"""
     
     def __init__(self):

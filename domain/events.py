@@ -51,6 +51,25 @@ class DomainEvent(ABC):
     """Base class for all domain events."""
     
     def __init__(self, event_id: str = None, occurred_on: datetime = None, version: int = 1, metadata: Dict[str, Any] = None):
+    """
+    Perform __init__ operation
+
+Args:
+        event_id: Description of event_id
+        occurred_on: Description of occurred_on
+        version: Description of version
+        metadata: Description of metadata
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.event_id = event_id or str(uuid.uuid4())
         self.occurred_on = occurred_on or datetime.utcnow()
         self.version = version
@@ -537,6 +556,22 @@ class EventHandler(ABC):
 
 
 class EventBus:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Event bus for publishing and subscribing to domain events."""
     
     def __init__(self):

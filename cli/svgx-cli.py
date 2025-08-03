@@ -28,6 +28,18 @@ class SVGXCLI:
     """SVGX Engine CLI client."""
     
     def __init__(self, base_url: str = "http://localhost:8000"):
+        """
+        Initialize the SVGX CLI.
+        
+        Args:
+            base_url: Base URL for the SVGX Engine
+            
+        Returns:
+            None
+            
+        Raises:
+            None
+        """
         self.base_url = base_url
         self.session = requests.Session()
         self.token = None

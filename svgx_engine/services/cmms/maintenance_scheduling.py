@@ -179,6 +179,22 @@ class MaintenanceSchedulingService:
     """Service for managing maintenance scheduling and workflows"""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.schedules: Dict[UUID, MaintenanceSchedule] = {}
         self.tasks: Dict[UUID, MaintenanceTask] = {}
         self.history: Dict[UUID, MaintenanceHistory] = {}

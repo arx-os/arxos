@@ -65,6 +65,22 @@ class Badge:
     created_at: datetime
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.criteria is None:
             self.criteria = {}
 
@@ -85,6 +101,22 @@ class UserBadge:
 
 
 class BadgeSystem:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Badge assignment and tracking system"""
     
     def __init__(self):

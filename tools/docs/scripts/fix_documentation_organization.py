@@ -19,6 +19,34 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import re
 
+def handle_errors(func):
+    """
+    Decorator to handle errors securely.
+    
+    Args:
+        func: Function to wrap
+        
+    Returns:
+        Wrapped function with error handling
+    """
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ValueError as e:
+            logger.error(f"Value error in {func.__name__}: {e}")
+            raise HTTPException(status_code=400, detail="Invalid input")
+        except FileNotFoundError as e:
+            logger.error(f"File not found in {func.__name__}: {e}")
+            raise HTTPException(status_code=404, detail="Resource not found")
+        except PermissionError as e:
+            logger.error(f"Permission error in {func.__name__}: {e}")
+            raise HTTPException(status_code=403, detail="Access denied")
+        except Exception as e:
+            logger.error(f"Unexpected error in {func.__name__}: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+    return wrapper
+
+
 class DocumentationFixer:
     """Fixes documentation organization issues."""
     
@@ -139,7 +167,7 @@ class DocumentationFixer:
         
         try:
             content = md_file.read_text(encoding='utf-8').lower()
-        except:
+        except Exception as e:
             content = ""
         
         # Architecture and design docs

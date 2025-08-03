@@ -46,6 +46,22 @@ class Annotation:
     updated_at: datetime = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.created_at is None:
             self.created_at = datetime.utcnow()
         if self.updated_at is None:
@@ -427,6 +443,22 @@ annotation_handler = AnnotationHandler()
 
 # Register with the event-driven engine
 def _register_annotation_handler():
+    """
+    Handle events or exceptions
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = _register_annotation_handler(param)
+        print(result)
+    """
     def handler(event: Event):
         if event.type == EventType.USER_INTERACTION and event.data.get('event_subtype') == 'annotation':
             return annotation_handler.handle_annotation_event(event)

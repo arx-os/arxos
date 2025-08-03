@@ -85,6 +85,22 @@ class BuildingId:
             raise ValueError("Building ID must be a non-empty string")
     
     def __str__(self) -> str:
+    """
+    Perform __str__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __str__(param)
+        print(result)
+    """
         return self.value
     
     def __repr__(self) -> str:
@@ -99,6 +115,22 @@ class FloorId:
     def __post_init__(self):
         """Validate floor ID format."""
         if not self.value or not isinstance(self.value, str):
+    """
+    Perform __str__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __str__(param)
+        print(result)
+    """
             raise ValueError("Floor ID must be a non-empty string")
     
     def __str__(self) -> str:
@@ -116,6 +148,22 @@ class RoomId:
     def __post_init__(self):
         """Validate room ID format."""
         if not self.value or not isinstance(self.value, str):
+    """
+    Perform __repr__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __repr__(param)
+        print(result)
+    """
             raise ValueError("Room ID must be a non-empty string")
     
     def __str__(self) -> str:
@@ -127,6 +175,22 @@ class RoomId:
 
 @dataclass(frozen=True)
 class DeviceId:
+    """
+    Perform __str__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __str__(param)
+        print(result)
+    """
     """Device identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
     
@@ -144,6 +208,22 @@ class DeviceId:
 
 @dataclass(frozen=True)
 class UserId:
+    """
+    Perform __repr__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __repr__(param)
+        print(result)
+    """
     """User identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
     
@@ -398,6 +478,22 @@ class Email:
 
 @dataclass(frozen=True)
 class PhoneNumber:
+    """
+    Perform __str__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __str__(param)
+        print(result)
+    """
     """Phone number value object."""
     value: str
     country_code: str = "+1"

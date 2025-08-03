@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 from pydantic.json import pydantic_encoder
 
 from ..services.export.advanced_export_system import (
+from core.security.auth_middleware import get_current_user, User
     AdvancedExportSystem,
     ExportFormat,
     ExportQuality,
@@ -97,7 +98,7 @@ class ExportStatisticsResponse(BaseModel):
 export_jobs: Dict[str, Dict[str, Any]] = {}
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event(user: User = Depends(get_current_user)):
     """Initialize export system on startup."""
     logger.info("Export API starting up...")
     global export_system
@@ -105,19 +106,20 @@ async def startup_event():
     logger.info("Export API started successfully")
 
 @app.on_event("shutdown")
-async def shutdown_event():
+async def shutdown_event(user: User = Depends(get_current_user)):
     """Cleanup on shutdown."""
     logger.info("Export API shutting down...")
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint."""
     return {"status": "healthy", "service": "export-api"}
 
 # Export data endpoint
 @app.post("/export/data", response_model=ExportDataResponse)
-async def export_data(request: ExportDataRequest):
+async def export_data(request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Export data to the specified format."""
     try:
         start_time = time.time()
@@ -154,49 +156,50 @@ async def export_data(request: ExportDataRequest):
 
 # IFC export endpoint
 @app.post("/export/ifc", response_model=ExportDataResponse)
-async def export_to_ifc(request: ExportDataRequest):
+async def export_to_ifc(request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Export data to IFC format."""
     request.format = ExportFormat.IFC
     return await export_data(request)
 
 # GLTF export endpoint
 @app.post("/export/gltf", response_model=ExportDataResponse)
-async def export_to_gltf(request: ExportDataRequest):
+async def export_to_gltf(request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Export data to GLTF format."""
     request.format = ExportFormat.GLTF
     return await export_data(request)
 
 # DXF export endpoint
 @app.post("/export/dxf", response_model=ExportDataResponse)
-async def export_to_dxf(request: ExportDataRequest):
+async def export_to_dxf(request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Export data to DXF format."""
     request.format = ExportFormat.DXF
     return await export_data(request)
 
 # STEP export endpoint
 @app.post("/export/step", response_model=ExportDataResponse)
-async def export_to_step(request: ExportDataRequest):
+async def export_to_step(request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Export data to STEP format."""
     request.format = ExportFormat.STEP
     return await export_data(request)
 
 # IGES export endpoint
 @app.post("/export/iges", response_model=ExportDataResponse)
-async def export_to_iges(request: ExportDataRequest):
+async def export_to_iges(request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Export data to IGES format."""
     request.format = ExportFormat.IGES
     return await export_data(request)
 
 # Parasolid export endpoint
 @app.post("/export/parasolid", response_model=ExportDataResponse)
-async def export_to_parasolid(request: ExportDataRequest):
+async def export_to_parasolid(request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Export data to Parasolid format."""
     request.format = ExportFormat.PARASOLID
     return await export_data(request)
 
 # Get supported formats endpoint
 @app.get("/export/formats")
-async def get_supported_formats():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_supported_formats(user: User = Depends(get_current_user)):
     """Get list of supported export formats."""
     formats = [
         ExportFormat.IFC,
@@ -213,7 +216,8 @@ async def get_supported_formats():
 
 # Get export history endpoint
 @app.get("/export/history")
-async def get_export_history(limit: int = 50):
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_export_history(limit: int = 50, user: User = Depends(get_current_user)):
     """Get export history."""
     try:
         history = export_system.export_history[-limit:] if export_system.export_history else []
@@ -238,7 +242,7 @@ async def get_export_history(limit: int = 50):
 
 # Get export statistics endpoint
 @app.get("/export/statistics", response_model=ExportStatisticsResponse)
-async def get_export_statistics():
+async def get_export_statistics(user: User = Depends(get_current_user)):
     """Get export statistics."""
     try:
         history = export_system.export_history
@@ -286,7 +290,7 @@ async def get_export_statistics():
 
 # Validate export data endpoint
 @app.post("/export/validate", response_model=ValidateExportResponse)
-async def validate_export_data(request: ValidateExportRequest):
+async def validate_export_data(request: ValidateExportRequest, user: User = Depends(get_current_user)):
     """Validate export data."""
     try:
         # Basic validation
@@ -342,7 +346,7 @@ async def validate_export_data(request: ValidateExportRequest):
 
 # Batch export endpoint
 @app.post("/export/batch", response_model=BatchExportResponse)
-async def batch_export(request: BatchExportRequest):
+async def batch_export(request: BatchExportRequest, user: User = Depends(get_current_user)):
     """Perform batch export operations."""
     try:
         results = []
@@ -393,7 +397,7 @@ async def batch_export(request: BatchExportRequest):
         raise HTTPException(status_code=500, detail=f"Batch export failed: {str(e)}")
 
 # Background export job
-async def background_export_job(job_id: str, request: ExportDataRequest):
+async def background_export_job(job_id: str, request: ExportDataRequest, user: User = Depends(get_current_user)):
     """Background export job."""
     try:
         export_jobs[job_id]["status"] = "running"
@@ -432,7 +436,8 @@ async def background_export_job(job_id: str, request: ExportDataRequest):
 
 # Start background export job
 @app.post("/export/start-job")
-async def start_export_job(request: ExportDataRequest, background_tasks: BackgroundTasks):
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def start_export_job(request: ExportDataRequest, background_tasks: BackgroundTasks, user: User = Depends(get_current_user)):
     """Start a background export job."""
     try:
         job_id = str(uuid.uuid4())
@@ -458,7 +463,8 @@ async def start_export_job(request: ExportDataRequest, background_tasks: Backgro
 
 # Get export progress endpoint
 @app.get("/export/progress/{job_id}")
-async def get_export_progress(job_id: str):
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_export_progress(job_id: str, user: User = Depends(get_current_user)):
     """Get export progress for a specific job."""
     try:
         if job_id not in export_jobs:
@@ -484,7 +490,8 @@ async def get_export_progress(job_id: str):
 
 # Cancel export job endpoint
 @app.post("/export/cancel/{job_id}")
-async def cancel_export_job(job_id: str):
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def cancel_export_job(job_id: str, user: User = Depends(get_current_user)):
     """Cancel an export job."""
     try:
         if job_id not in export_jobs:
@@ -507,7 +514,8 @@ async def cancel_export_job(job_id: str):
 
 # Download export file endpoint
 @app.get("/export/download/{filename}")
-async def download_export_file(filename: str):
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def download_export_file(filename: str, user: User = Depends(get_current_user)):
     """Download an exported file."""
     try:
         # Security check - prevent path traversal
@@ -555,6 +563,7 @@ async def download_export_file(filename: str):
 
 # Upload file for export endpoint
 @app.post("/export/upload")
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def upload_file_for_export(file: UploadFile = File(...)):
     """Upload a file for export processing."""
     try:
@@ -581,7 +590,8 @@ async def upload_file_for_export(file: UploadFile = File(...)):
 
 # Get export system info endpoint
 @app.get("/export/info")
-async def get_export_system_info():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_export_system_info(user: User = Depends(get_current_user)):
     """Get export system information."""
     try:
         return {
@@ -613,7 +623,7 @@ async def get_export_system_info():
 
 # Error handlers
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request, exc, user: User = Depends(get_current_user)):
     """Global exception handler."""
     logger.error(f"Unhandled exception: {exc}")
     return JSONResponse(

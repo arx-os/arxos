@@ -11,6 +11,7 @@ from .project_routes import router as project_router
 from .building_routes import router as building_router
 from .floor_routes import router as floor_router
 from .health_routes import router as health_router
+from .pdf_analysis_routes import pdf_router
 
 # Export all routers
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "project_router",
     "building_router",
     "floor_router",
-    "health_router"
+    "health_router",
+    "pdf_router"
 ] 

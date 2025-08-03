@@ -78,6 +78,22 @@ class PermissionChecker:
     """Comprehensive permission checker for the Arxos Platform."""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         # Permission hierarchy with numeric levels
         self.permission_hierarchy = {
             PermissionLevel.OWNER: 100,

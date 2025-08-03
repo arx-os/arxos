@@ -113,6 +113,22 @@ class AnimationBehaviorSystem:
     Supports smooth transitions, animation synchronization, and enterprise-grade animation management.
     """
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         # {animation_id: Animation}
         self.animations: Dict[str, Animation] = {}
         # {element_id: Set[animation_id]}
@@ -756,6 +772,22 @@ animation_behavior_system = AnimationBehaviorSystem()
 
 # Register with the event-driven engine
 def _register_animation_behavior_system():
+    """
+    Perform _register_animation_behavior_system operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = _register_animation_behavior_system(param)
+        print(result)
+    """
     def handler(event: Event):
         if event.type == EventType.SYSTEM and event.data.get('animation'):
             # Animation events are handled internally

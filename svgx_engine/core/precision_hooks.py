@@ -611,6 +611,22 @@ hook_manager = PrecisionHookManager()
 def precision_hook(hook_type: HookType, priority: int = 0, enabled: bool = True):
     """Decorator for registering precision validation hooks."""
     def decorator(func: Callable) -> Callable:
+    """
+    Perform decorator operation
+
+Args:
+        func: Description of func
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = decorator(param)
+        print(result)
+    """
         hook = PrecisionHook(
             hook_id=f"{func.__module__}.{func.__name__}",
             hook_type=hook_type,

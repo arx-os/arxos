@@ -638,6 +638,22 @@ class AdvancedThermalAnalysisService:
         """
         try:
             def objective_wrapper(x):
+    """
+    Perform objective_wrapper operation
+
+Args:
+        x: Description of x
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = objective_wrapper(param)
+        print(result)
+    """
                 # Update design variables
                 updated_mesh = self._update_design_variables(mesh, x, optimization_variables)
                 

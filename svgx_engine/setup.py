@@ -11,6 +11,22 @@ import os
 
 # Read the README file
 def read_readme():
+    """
+    Perform read_readme operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = read_readme(param)
+        print(result)
+    """
     readme_path = os.path.join(os.path.dirname(__file__), 'README.md')
     if os.path.exists(readme_path):
         with open(readme_path, 'r', encoding='utf-8') as f:

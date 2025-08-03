@@ -584,6 +584,22 @@ class AutoDimensioner:
         
         # Sort by angle from centroid
         def angle_from_centroid(point):
+    """
+    Perform angle_from_centroid operation
+
+Args:
+        point: Description of point
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = angle_from_centroid(param)
+        print(result)
+    """
             return math.atan2(float(point.y - centroid.y), float(point.x - centroid.x))
         
         sorted_points = sorted(points, key=angle_from_centroid)

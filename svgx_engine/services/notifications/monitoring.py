@@ -37,9 +37,41 @@ except ImportError:
     PROMETHEUS_AVAILABLE = False
     # Mock classes for when prometheus_client is not available
     class Counter:
+    """
+    Class for Counter functionality
+
+Attributes:
+        None
+
+Methods:
+        __init__(): Description of __init__
+        inc(): Description of inc
+
+Example:
+        instance = Counter()
+        result = instance.method()
+        print(result)
+    """
         def __init__(self, *args, **kwargs): pass
         def inc(self, *args, **kwargs): pass
     class Histogram:
+    """
+    Class for Gauge functionality
+
+Attributes:
+        None
+
+Methods:
+        __init__(): Description of __init__
+        set(): Description of set
+        inc(): Description of inc
+        dec(): Description of dec
+
+Example:
+        instance = Gauge()
+        result = instance.method()
+        print(result)
+    """
         def __init__(self, *args, **kwargs): pass
         def observe(self, *args, **kwargs): pass
     class Gauge:
@@ -122,6 +154,22 @@ class StructuredLogger:
     """Structured logger with correlation IDs"""
     
     def __init__(self, logger_name: str = "notification_system"):
+    """
+    Perform __init__ operation
+
+Args:
+        logger_name: Description of logger_name
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.logger = logging.getLogger(logger_name)
         self.correlation_id = None
         self._lock = threading.Lock()
@@ -163,6 +211,22 @@ class StructuredLogger:
 
 
 class PrometheusMetrics:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Prometheus metrics for notification system"""
     
     def __init__(self):

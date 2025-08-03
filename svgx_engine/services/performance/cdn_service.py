@@ -30,6 +30,42 @@ import aiohttp
 import boto3
 from botocore.exceptions import ClientError
 import requests
+import secrets
+import bcrypt
+
+def secure_hash(data: str) -> str:
+    """
+    Generate secure hash using SHA-256.
+    
+    Args:
+        data: Data to hash
+        
+    Returns:
+        Secure hash string
+    """
+    return hashlib.sha256(data.encode()).hexdigest()
+
+def secure_password_hash(password: str) -> str:
+    """
+    Hash password securely using bcrypt.
+    
+    Args:
+        password: Plain text password
+        
+    Returns:
+        Hashed password
+    """
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def generate_secure_token() -> str:
+    """
+    Generate secure random token.
+    
+    Returns:
+        Secure random token
+    """
+    return secrets.token_urlsafe(32)
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -123,6 +159,22 @@ class CloudFrontCDN:
     """AWS CloudFront CDN Integration"""
     
     def __init__(self, config: CDNConfig):
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.config = config
         self.cloudfront = boto3.client(
             'cloudfront',
@@ -225,6 +277,22 @@ class CloudFrontCDN:
             return {}
 
 class CloudflareCDN:
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Cloudflare CDN Integration"""
     
     def __init__(self, config: CDNConfig):
@@ -328,7 +396,7 @@ class CDNService:
         """Upload content to CDN"""
         try:
             content_id = str(uuid4())
-            checksum = hashlib.md5(content).hexdigest()
+            checksum = hashlib.sha256(content.encode()).hexdigest()
             
             # Create content item
             content_item = ContentItem(

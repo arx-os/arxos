@@ -33,6 +33,22 @@ class NavigationHandler:
     Supports pan, zoom, focus, and reset operations with smooth transitions.
     """
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         # {canvas_id: ViewportState}
         self.viewport_states: Dict[str, ViewportState] = {}
         # {canvas_id: list of navigation actions}
@@ -310,6 +326,22 @@ navigation_handler = NavigationHandler()
 
 # Register with the event-driven engine
 def _register_navigation_handler():
+    """
+    Handle events or exceptions
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = _register_navigation_handler(param)
+        print(result)
+    """
     def handler(event: Event):
         if event.type == EventType.USER_INTERACTION and event.data.get('event_subtype') == 'navigation':
             return navigation_handler.handle_navigation_event(event)

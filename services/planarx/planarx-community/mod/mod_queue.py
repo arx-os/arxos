@@ -80,11 +80,43 @@ class QueueAlert:
     acknowledged_at: Optional[datetime]
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.acknowledged_at is None:
             self.acknowledged_at = None
 
 
 class ModerationQueue:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Enhanced moderation queue with sorting and alerting"""
     
     def __init__(self):

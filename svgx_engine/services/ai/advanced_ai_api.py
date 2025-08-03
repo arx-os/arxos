@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 import uvicorn
 
 from .advanced_ai_service import (
+from core.security.auth_middleware import get_current_user, User
     AdvancedAIService, AIModelConfig, AIModelType, LearningType,
     OptimizationType, OptimizationRequest, TrainingMetrics,
     PredictionResult, OptimizationResult
@@ -215,7 +216,7 @@ class ModelExplanationResponse(BaseModel):
 # API Endpoints
 
 @app.post("/ai/advanced/create_model", response_model=CreateModelResponse)
-async def create_model(request: CreateModelRequest):
+async def create_model(request: CreateModelRequest, user: User = Depends(get_current_user)):
     """Create a new AI model"""
     try:
         model_id = await ai_service.create_model(request.config)
@@ -228,7 +229,7 @@ async def create_model(request: CreateModelRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/train_model", response_model=TrainModelResponse)
-async def train_model(request: TrainModelRequest):
+async def train_model(request: TrainModelRequest, user: User = Depends(get_current_user)):
     """Train an AI model"""
     try:
         metrics = await ai_service.train_model(
@@ -245,7 +246,7 @@ async def train_model(request: TrainModelRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/predict", response_model=PredictResponse)
-async def predict(request: PredictRequest):
+async def predict(request: PredictRequest, user: User = Depends(get_current_user)):
     """Make predictions using a trained model"""
     try:
         result = await ai_service.predict(request.model_id, request.input_data)
@@ -258,7 +259,7 @@ async def predict(request: PredictRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/optimize_design", response_model=OptimizeDesignResponse)
-async def optimize_design(request: OptimizeDesignRequest):
+async def optimize_design(request: OptimizeDesignRequest, user: User = Depends(get_current_user)):
     """Optimize design using AI models"""
     try:
         result = await ai_service.optimize_design(request.request)
@@ -271,7 +272,7 @@ async def optimize_design(request: OptimizeDesignRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/ai/advanced/model_info/{model_id}", response_model=ModelInfoResponse)
-async def get_model_info(model_id: str):
+async def get_model_info(model_id: str, user: User = Depends(get_current_user)):
     """Get information about a model"""
     try:
         info = await ai_service.get_model_info(model_id)
@@ -284,7 +285,7 @@ async def get_model_info(model_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/ai/advanced/delete_model/{model_id}", response_model=DeleteModelResponse)
-async def delete_model(model_id: str):
+async def delete_model(model_id: str, user: User = Depends(get_current_user)):
     """Delete a model"""
     try:
         success = await ai_service.delete_model(model_id)
@@ -296,7 +297,7 @@ async def delete_model(model_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/export_model", response_model=ExportModelResponse)
-async def export_model(request: ExportModelRequest):
+async def export_model(request: ExportModelRequest, user: User = Depends(get_current_user)):
     """Export a model to file"""
     try:
         success = await ai_service.export_model(request.model_id, request.filepath)
@@ -308,7 +309,7 @@ async def export_model(request: ExportModelRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/import_model", response_model=ImportModelResponse)
-async def import_model(request: ImportModelRequest):
+async def import_model(request: ImportModelRequest, user: User = Depends(get_current_user)):
     """Import a model from file"""
     try:
         model_id = await ai_service.import_model(request.filepath)
@@ -321,7 +322,7 @@ async def import_model(request: ImportModelRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/ai/advanced/analytics", response_model=AIAnalyticsResponse)
-async def get_ai_analytics():
+async def get_ai_analytics(user: User = Depends(get_current_user)):
     """Get AI analytics"""
     try:
         analytics = await ai_service.get_ai_analytics()
@@ -334,7 +335,7 @@ async def get_ai_analytics():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/cleanup_predictions", response_model=CleanupPredictionsResponse)
-async def cleanup_old_predictions(request: CleanupPredictionsRequest):
+async def cleanup_old_predictions(request: CleanupPredictionsRequest, user: User = Depends(get_current_user)):
     """Clean up old predictions"""
     try:
         cleaned_count = await ai_service.cleanup_old_predictions(request.max_age_hours)
@@ -347,7 +348,7 @@ async def cleanup_old_predictions(request: CleanupPredictionsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/batch_predict", response_model=BatchPredictResponse)
-async def batch_predict(request: BatchPredictRequest):
+async def batch_predict(request: BatchPredictRequest, user: User = Depends(get_current_user)):
     """Perform batch predictions"""
     try:
         results = []
@@ -364,7 +365,7 @@ async def batch_predict(request: BatchPredictRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/batch_train", response_model=BatchTrainResponse)
-async def batch_train(request: BatchTrainRequest):
+async def batch_train(request: BatchTrainRequest, user: User = Depends(get_current_user)):
     """Perform batch training"""
     try:
         results = []
@@ -386,7 +387,7 @@ async def batch_train(request: BatchTrainRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/batch_optimize", response_model=BatchOptimizeResponse)
-async def batch_optimize(request: BatchOptimizeRequest):
+async def batch_optimize(request: BatchOptimizeRequest, user: User = Depends(get_current_user)):
     """Perform batch optimization"""
     try:
         results = []
@@ -403,7 +404,7 @@ async def batch_optimize(request: BatchOptimizeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/compare_models", response_model=CompareModelsResponse)
-async def compare_models(request: CompareModelsRequest):
+async def compare_models(request: CompareModelsRequest, user: User = Depends(get_current_user)):
     """Compare multiple models"""
     try:
         comparison = {}
@@ -423,7 +424,7 @@ async def compare_models(request: CompareModelsRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/ensemble_predict", response_model=EnsemblePredictResponse)
-async def ensemble_predict(request: EnsemblePredictRequest):
+async def ensemble_predict(request: EnsemblePredictRequest, user: User = Depends(get_current_user)):
     """Perform ensemble prediction"""
     try:
         # Get predictions from all models
@@ -444,7 +445,7 @@ async def ensemble_predict(request: EnsemblePredictRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/auto_ml", response_model=AutoMLResponse)
-async def auto_ml(request: AutoMLRequest):
+async def auto_ml(request: AutoMLRequest, user: User = Depends(get_current_user)):
     """Perform automated machine learning"""
     try:
         # AutoML implementation would go here
@@ -478,7 +479,7 @@ async def auto_ml(request: AutoMLRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/hyperparameter_optimization", response_model=HyperparameterOptimizationResponse)
-async def hyperparameter_optimization(request: HyperparameterOptimizationRequest):
+async def hyperparameter_optimization(request: HyperparameterOptimizationRequest, user: User = Depends(get_current_user)):
     """Perform hyperparameter optimization"""
     try:
         # Hyperparameter optimization implementation would go here
@@ -512,7 +513,7 @@ async def hyperparameter_optimization(request: HyperparameterOptimizationRequest
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/feature_importance", response_model=FeatureImportanceResponse)
-async def feature_importance(request: FeatureImportanceRequest):
+async def feature_importance(request: FeatureImportanceRequest, user: User = Depends(get_current_user)):
     """Calculate feature importance"""
     try:
         # Feature importance calculation would go here
@@ -528,7 +529,7 @@ async def feature_importance(request: FeatureImportanceRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ai/advanced/model_explanation", response_model=ModelExplanationResponse)
-async def model_explanation(request: ModelExplanationRequest):
+async def model_explanation(request: ModelExplanationRequest, user: User = Depends(get_current_user)):
     """Generate model explanation"""
     try:
         # Model explanation generation would go here
@@ -669,7 +670,8 @@ def combine_predictions_voting(predictions: List[PredictionResult]) -> Predictio
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint"""
     return {"status": "healthy", "service": "advanced_ai_api", "timestamp": datetime.now()}
 

@@ -259,6 +259,22 @@ class EnterpriseConfigManager:
     """
     
     def __init__(self, config_path: Optional[str] = None):
+    """
+    Perform __init__ operation
+
+Args:
+        config_path: Description of config_path
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.logger = logger
         self.config_path = config_path or self._get_default_config_path()
         self.config: Optional[SVGXEnterpriseConfig] = None

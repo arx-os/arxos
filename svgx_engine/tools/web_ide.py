@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from svgx_engine.parser import SVGXParser
 from svgx_engine.compiler.svgx_to_svg import SVGXToSVGCompiler
 from svgx_engine.tools.svgx_linter import SVGXLinter
+import html
 
 logger = logging.getLogger(__name__)
 
@@ -398,7 +399,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
 
         function updatePreview(svgContent) {
             const preview = document.getElementById('preview');
-            preview.innerHTML = svgContent;
+            preview.innerHTML = html.escape(svgContent);
         }
 
         function showStatus(type, message) {

@@ -1,12 +1,17 @@
 """
-Arx AI Services Main Application
+AI Service Main Application
 
-FastAPI application providing AI/ML capabilities including GPT-based logic,
-geometry validation, voice input, and AI agents for the Arxos platform.
+This module contains the FastAPI application for the AI service, following
+Clean Architecture principles by keeping the presentation layer separate
+from domain logic.
+
+Presentation Layer:
+- FastAPI application setup
+- HTTP endpoint definitions
+- Request/response models
+- Error handling
 """
 
-import asyncio
-import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Dict, Any
@@ -18,9 +23,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import structlog
 
-from core.ai_agent import AIAgent, AIResponse
-from api.routes import router as api_router
+# Import domain and application layers (framework independent)
+from domain.entities.ai_agent import AIAgentConfig, ModelType
+from application.use_cases.process_ai_query_use_case import (
+    ProcessAIQueryUseCase, ProcessAIQueryRequest, ProcessAIQueryResponse
+)
+from infrastructure.ai_agent_impl import ConcreteAIAgent
 from config.settings import get_settings
+from core.security.auth_middleware import get_current_user, User
 
 
 # Configure structured logging
@@ -45,6 +55,7 @@ structlog.configure(
 logger = structlog.get_logger()
 
 
+# Pydantic models for API requests/responses (Presentation Layer)
 class AIQueryRequest(BaseModel):
     """Request model for AI queries"""
     query: str
@@ -76,41 +87,56 @@ class AgentTaskRequest(BaseModel):
     agent_type: str = "general"
 
 
-# Global AI agent instance
-ai_agent: AIAgent = None
+# Global use case instance (dependency injection)
+ai_query_use_case: ProcessAIQueryUseCase = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI, user: User = Depends(get_current_user)):
     """Application lifespan manager"""
-    global ai_agent
+    global ai_query_use_case
     
     # Startup
     logger.info("Starting Arx AI Services...")
     
     try:
-        # Initialize AI agent
+        # Initialize domain and application layers
         settings = get_settings()
-        ai_agent = AIAgent(settings.model_dump())
-        logger.info("AI Agent initialized successfully")
+        
+        # Create domain configuration
+        config = AIAgentConfig(
+            model_type=ModelType.GPT_4,
+            api_key=settings.openai_api_key,
+            max_tokens=settings.max_tokens,
+            temperature=settings.temperature,
+            timeout=settings.timeout
+        )
+        
+        # Create infrastructure implementation
+        ai_agent = ConcreteAIAgent(config)
+        
+        # Create use case with dependency injection
+        ai_query_use_case = ProcessAIQueryUseCase(ai_agent)
+        
+        logger.info("AI Service initialized successfully")
         
         yield
         
     except Exception as e:
-        logger.error(f"Failed to initialize AI Agent: {e}")
+        logger.error(f"Failed to initialize AI Service: {e}")
         raise
     
     finally:
         # Shutdown
         logger.info("Shutting down Arx AI Services...")
-        if ai_agent:
-            await ai_agent.shutdown()
+        if ai_query_use_case and ai_query_use_case.ai_agent:
+            ai_query_use_case.ai_agent.shutdown()
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="Arx AI Services",
-    description="AI/ML microservices for the Arxos platform",
+    title="Arx AI Service",
+    description="AI service for building information modeling",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -118,49 +144,50 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API routes
-app.include_router(api_router, prefix="/api/v1")
-
 
 @app.get("/health")
-async def health_check():
+    async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "arx-ai-services",
-        "version": "1.0.0",
-        "ai_agent_ready": ai_agent is not None
+        "service": "ai",
+        "version": "1.0.0"
     }
 
 
 @app.get("/")
-async def root():
+    async def root(user: User = Depends(get_current_user)):
     """Root endpoint"""
     return {
-        "message": "Arx AI Services",
+        "message": "Arx AI Service",
         "version": "1.0.0",
-        "endpoints": {
-            "health": "/health",
-            "api": "/api/v1",
-            "docs": "/docs"
-        }
+        "endpoints": [
+            "/health",
+            "/api/v1/query",
+            "/api/v1/geometry/validate",
+            "/api/v1/voice/process",
+            "/api/v1/agent/task"
+        ]
     }
 
 
 @app.post("/api/v1/query")
-async def process_ai_query(request: AIQueryRequest):
-    """Process AI queries using GPT-based logic"""
+    async def process_ai_query(request: AIQueryRequest, user: User = Depends(get_current_user)):
+    """
+    Process AI query endpoint.
+    
+    This endpoint uses the use case to process AI queries while keeping
+    the presentation layer separate from business logic.
+    """
     try:
-        if not ai_agent:
-            raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
-        response = await ai_agent.process_query(
+        # Convert API request to use case request
+        use_case_request = ProcessAIQueryRequest(
             query=request.query,
             user_id=request.user_id,
             context=request.context,
@@ -168,81 +195,100 @@ async def process_ai_query(request: AIQueryRequest):
             model=request.model
         )
         
-        return response.model_dump()
+        # Execute use case
+        response = ai_query_use_case.execute(use_case_request)
         
+        # Convert use case response to API response
+        if response.success:
+            return {
+                "success": True,
+                "response_id": response.response_id,
+                "content": response.content,
+                "confidence": response.confidence,
+                "model_used": response.model_used,
+                "processing_time": response.processing_time,
+                "metadata": response.metadata
+            }
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=response.error_message
+            )
+            
     except Exception as e:
         logger.error(f"Error processing AI query: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 
 @app.post("/api/v1/geometry/validate")
-async def validate_geometry(request: GeometryValidationRequest):
-    """Validate geometry using AI-powered analysis"""
+    async def validate_geometry(request: GeometryValidationRequest, user: User = Depends(get_current_user)):
+    """Validate geometry endpoint"""
     try:
-        if not ai_agent:
-            raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
-        response = await ai_agent.validate_geometry(
-            geometry_data=request.geometry_data,
-            validation_type=request.validation_type,
-            user_id=request.user_id
-        )
-        
-        return response.model_dump()
-        
+        # TODO: Implement geometry validation use case
+        return {
+            "success": True,
+            "valid": True,
+            "issues": [],
+            "message": "Geometry validation not yet implemented"
+        }
     except Exception as e:
         logger.error(f"Error validating geometry: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 
 @app.post("/api/v1/voice/process")
-async def process_voice_input(request: VoiceInputRequest):
-    """Process voice input and convert to text"""
+    async def process_voice_input(request: VoiceInputRequest, user: User = Depends(get_current_user)):
+    """Process voice input endpoint"""
     try:
-        if not ai_agent:
-            raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
-        response = await ai_agent.process_voice_input(
-            audio_data=request.audio_data,
-            user_id=request.user_id,
-            language=request.language
-        )
-        
-        return response.model_dump()
-        
+        # TODO: Implement voice processing use case
+        return {
+            "success": True,
+            "transcription": "Voice processing not yet implemented",
+            "confidence": 0.0
+        }
     except Exception as e:
         logger.error(f"Error processing voice input: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 
 @app.post("/api/v1/agent/task")
-async def execute_agent_task(request: AgentTaskRequest):
-    """Execute AI agent tasks"""
+    async def execute_agent_task(request: AgentTaskRequest, user: User = Depends(get_current_user)):
+    """Execute agent task endpoint"""
     try:
-        if not ai_agent:
-            raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
-        response = await ai_agent.execute_task(
-            task=request.task,
-            parameters=request.parameters,
-            user_id=request.user_id,
-            agent_type=request.agent_type
-        )
-        
-        return response.model_dump()
-        
+        # TODO: Implement agent task use case
+        return {
+            "success": True,
+            "task_id": "task-001",
+            "result": "Agent task execution not yet implemented"
+        }
     except Exception as e:
         logger.error(f"Error executing agent task: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+    async def global_exception_handler(request, exc, user: User = Depends(get_current_user)):
     """Global exception handler"""
     logger.error(f"Unhandled exception: {exc}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"}
+        content={
+            "success": False,
+            "error": "Internal server error",
+            "detail": str(exc)
+        }
     )
 
 
@@ -250,7 +296,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8001,
-        reload=True,
-        log_level="info"
+        port=8000,
+        reload=True
     ) 

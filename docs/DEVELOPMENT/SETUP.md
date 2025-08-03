@@ -12,7 +12,8 @@ This guide provides complete instructions for setting up the Arxos development e
 - **Python**: 3.11.0 or higher
 - **Docker**: 20.10.0 or higher
 - **Git**: 2.30.0 or higher
-- **PostgreSQL**: 15.0 or higher (or use Docker)
+- **PostgreSQL**: 17.0 or higher (or use Docker)
+- **PostGIS**: 3.5.3 or higher
 - **Redis**: 7.0 or higher (or use Docker)
 
 ### **System Requirements**

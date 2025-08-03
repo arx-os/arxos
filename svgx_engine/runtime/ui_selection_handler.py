@@ -19,6 +19,22 @@ class SelectionHandler:
     Supports single-select, multi-select, and deselect operations.
     """
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         # {canvas_id: Set[object_id]}
         self.selection_state: Dict[str, Set[str]] = {}
 
@@ -199,6 +215,22 @@ selection_handler = SelectionHandler()
 
 # Register with the event-driven engine
 def _register_selection_handler():
+    """
+    Handle events or exceptions
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = _register_selection_handler(param)
+        print(result)
+    """
     def handler(event: Event):
         if event.type == EventType.USER_INTERACTION and event.data.get('event_subtype') == 'selection':
             return selection_handler.handle_selection_event(event)

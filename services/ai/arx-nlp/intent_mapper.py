@@ -95,7 +95,7 @@ class IntentMapper:
         self.logger = logging.getLogger(__name__)
         
         # Initialize context manager
-        self.context_manager = ContextManager(config.get('context', {}))
+        self.context_manager = ContextManager(config.get('context', {})
         
         # Load patterns and rules
         self._load_intent_patterns()
@@ -272,7 +272,7 @@ class IntentMapper:
                 confidence += pattern.confidence_boost
                 
                 # Boost for longer matches
-                confidence += min(0.2, len(match.group(0)) / len(text_lower) * 0.2)
+                confidence += min(0.2, len(match.group(0) / len(text_lower) * 0.2)
                 
                 if confidence > highest_confidence:
                     highest_confidence = confidence
@@ -325,7 +325,6 @@ class IntentMapper:
                         confidence=0.8,  # Base confidence for pattern matches
                         start_pos=match.start(),
                         end_pos=match.end()
-                    )
                     slots.append(slot)
         
         # Extract additional slots based on intent type
@@ -338,7 +337,6 @@ class IntentMapper:
         return SlotResult(
             slots=resolved_slots,
             confidence=min(1.0, len(slots) * 0.1 + 0.5)
-        )
     
     def _validate_slot_value(self, value: str, pattern: SlotPattern) -> bool:
         """Validate slot value against pattern rules"""
@@ -379,7 +377,7 @@ class IntentMapper:
                     value=f"{size_match.group(1)}x{size_match.group(2)}",
                     value_type="dimensions",
                     confidence=0.9
-                ))
+                )
             
             color_match = re.search(r'(red|green|blue|yellow|black|white|gray|grey)', text)
             if color_match:
@@ -388,7 +386,7 @@ class IntentMapper:
                     value=color_match.group(1),
                     value_type="color",
                     confidence=0.9
-                ))
+                )
         
         elif intent_type == IntentType.MODIFY:
             # Extract property changes
@@ -399,13 +397,13 @@ class IntentMapper:
                     value=property_match.group(1),
                     value_type="property_name",
                     confidence=0.8
-                ))
+                )
                 slots.append(Slot(
                     slot_type=SlotType.VALUE,
                     value=property_match.group(2),
                     value_type="new_value",
                     confidence=0.8
-                ))
+                )
         
         elif intent_type == IntentType.QUERY:
             # Extract query filters
@@ -416,7 +414,7 @@ class IntentMapper:
                     value=f"{filter_match.group(1)} {filter_match.group(2)}",
                     value_type="filter",
                     confidence=0.7
-                ))
+                )
         
         return slots
     
@@ -459,7 +457,7 @@ class IntentMapper:
         # Get intent suggestions
         for pattern in self.intent_patterns:
             if partial_lower in pattern.pattern.lower():
-                suggestions.append(pattern.pattern.replace(r'(\w+)', '<object>'))
+                suggestions.append(pattern.pattern.replace(r'(\w+)', '<object>')
         
         # Get object suggestions
         for obj_name in self.object_mappings.keys():
@@ -468,7 +466,7 @@ class IntentMapper:
                 suggestions.append(f"modify {obj_name}")
                 suggestions.append(f"delete {obj_name}")
         
-        return list(set(suggestions))[:10]  # Limit to 10 unique suggestions
+        return list(set(suggestions)[:10]  # Limit to 10 unique suggestions
     
     def validate_intent(self, intent: Intent) -> bool:
         """

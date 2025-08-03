@@ -397,6 +397,12 @@ class UnitOfWork(ABC):
     def projects(self) -> ProjectRepository:
         """Get the project repository."""
         pass
+    
+    @property
+    @abstractmethod
+    def pdf_analyses(self) -> 'PDFAnalysisRepository':
+        """Get the PDF analysis repository."""
+        pass
 
 
 class RepositoryFactory(ABC):
@@ -430,6 +436,11 @@ class RepositoryFactory(ABC):
     @abstractmethod
     def create_project_repository(self) -> ProjectRepository:
         """Create a project repository instance."""
+        pass
+    
+    @abstractmethod
+    def create_pdf_analysis_repository(self) -> 'PDFAnalysisRepository':
+        """Create a PDF analysis repository instance."""
         pass
     
     @abstractmethod

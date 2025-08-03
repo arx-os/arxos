@@ -62,6 +62,22 @@ class NodeInfo:
     metadata: Dict[str, Any] = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.children is None:
             self.children = []
         if self.capabilities is None:
@@ -102,6 +118,22 @@ class RouteInfo:
 
 
 class MeshTopology:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Mesh network topology management."""
     
     def __init__(self):

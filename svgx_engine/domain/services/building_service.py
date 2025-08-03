@@ -22,6 +22,22 @@ class BuildingService:
     """
     
     def __init__(self, building_repository: BuildingRepository):
+    """
+    Perform __init__ operation
+
+Args:
+        building_repository: Description of building_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.building_repository = building_repository
     
     def create_building(

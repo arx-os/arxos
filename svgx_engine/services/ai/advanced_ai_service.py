@@ -140,6 +140,22 @@ class AdvancedAIService:
     """Advanced AI Service for SVGX Engine"""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.models: Dict[str, Any] = {}
         self.scalers: Dict[str, StandardScaler] = {}
         self.model_configs: Dict[str, AIModelConfig] = {}

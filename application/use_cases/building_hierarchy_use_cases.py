@@ -29,6 +29,22 @@ class CreateBuildingWithFloorsUseCase:
     """Use case for creating a building with multiple floors in a single transaction."""
     
     def __init__(self, unit_of_work: UnitOfWork):
+    """
+    Perform __init__ operation
+
+Args:
+        unit_of_work: Description of unit_of_work
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.unit_of_work = unit_of_work
     
     def execute(self, building_request: CreateBuildingRequest, 
@@ -87,6 +103,22 @@ class CreateBuildingWithFloorsUseCase:
 
 
 class GetBuildingHierarchyUseCase:
+    """
+    Perform __init__ operation
+
+Args:
+        unit_of_work: Description of unit_of_work
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Use case for getting a complete building hierarchy (building, floors, rooms, devices)."""
     
     def __init__(self, unit_of_work: UnitOfWork):

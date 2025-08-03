@@ -68,6 +68,22 @@ class SnapConfig:
     magnetic_snap: bool = True
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.enabled_types is None:
             self.enabled_types = [
                 SnapType.GRID,
@@ -85,6 +101,22 @@ class SnapPoint:
     confidence: float = 1.0
 
 class GridSystem:
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Grid system for CAD functionality"""
     
     def __init__(self, config: GridConfig):

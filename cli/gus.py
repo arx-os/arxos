@@ -24,6 +24,18 @@ class GUSCLI:
     """CLI interface for GUS agent"""
     
     def __init__(self):
+        """
+        Initialize the GUS CLI.
+        
+        Args:
+            None
+            
+        Returns:
+            None
+            
+        Raises:
+            None
+        """
         self.settings = get_settings()
         self.gus_api_url = self.settings.gus_api_url or "http://localhost:9001"
         self.client = httpx.AsyncClient(timeout=30.0)

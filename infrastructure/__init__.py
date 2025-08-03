@@ -15,6 +15,11 @@ from .services import *
 from .caching import *
 from .monitoring import *
 
+# PDF Analysis specific imports
+from .repositories.postgresql_pdf_analysis_repository import PostgreSQLPDFAnalysisRepository
+from .services.gus_service import GUSService, PDFAnalysisResult
+from .services.file_storage_service import FileStorageService
+
 __all__ = [
     # Database
     'DatabaseConfig', 'DatabaseConnection', 'DatabaseSession',
@@ -24,9 +29,11 @@ __all__ = [
     'BaseRepository', 'SQLAlchemyBuildingRepository', 'SQLAlchemyFloorRepository',
     'SQLAlchemyRoomRepository', 'SQLAlchemyDeviceRepository',
     'SQLAlchemyUserRepository', 'SQLAlchemyProjectRepository',
+    'PostgreSQLPDFAnalysisRepository',
     
     # Unit of Work
     'SQLAlchemyUnitOfWork', 'UnitOfWorkFactory', 'unit_of_work',
+    'PostgreSQLPDFAnalysisRepository',
     
     # Repository Factory
     'SQLAlchemyRepositoryFactory', 'RepositoryFactoryManager',
@@ -34,6 +41,7 @@ __all__ = [
     
     # Services
     'RedisCacheService', 'EventStoreService', 'MessageQueueService',
+    'GUSService', 'PDFAnalysisResult', 'FileStorageService',
     
     # Caching
     'CacheManager', 'CacheStrategy',

@@ -80,7 +80,7 @@ class VotingSession:
         
         # Create vote
         vote = Vote(
-            id=str(uuid.uuid4()),
+            id=str(uuid.uuid4(),
             proposal_id=self.proposal.id,
             voter_id=voter_id,
             vote_type=vote_type,
@@ -118,7 +118,7 @@ class VotingSession:
         """Check if quorum has been reached"""
         active_members = governance_board.get_active_members()
         total_possible_weight = sum(member.voting_weight for member in active_members)
-        current_weight = sum(vote.weight for vote in self.votes.values())
+        current_weight = sum(vote.weight for vote in self.votes.values()
         
         quorum_threshold = governance_board.quorum_threshold
         if current_weight / total_possible_weight >= quorum_threshold:
@@ -174,7 +174,7 @@ class VotingSession:
             "quorum_reached": self.quorum_reached,
             "decision_made": self.decision_made,
             "final_result": self.final_result.value if self.final_result else None,
-            "time_remaining": (self.end_time - datetime.utcnow()).total_seconds() if self.is_active else 0,
+            "time_remaining": (self.end_time - datetime.utcnow().total_seconds() if self.is_active else 0,
             "votes": [
                 {
                     "voter_id": vote.voter_id,
@@ -215,7 +215,7 @@ class ProposalEngine:
             raise ValueError(f"User {created_by} does not have permission to create proposals")
         
         # Create proposal
-        proposal_id = str(uuid.uuid4())
+        proposal_id = str(uuid.uuid4()
         created_date = datetime.utcnow()
         deadline = created_date + timedelta(days=deadline_days)
         

@@ -65,6 +65,20 @@ class AIServiceSettings(BaseSettings):
     health_check_interval: int = Field(default=30, description="Health check interval in seconds")
     
     class Config:
+    """
+    Class for Config functionality
+
+Attributes:
+        None
+
+Methods:
+        None
+
+Example:
+        instance = Config()
+        result = instance.method()
+        print(result)
+    """
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False

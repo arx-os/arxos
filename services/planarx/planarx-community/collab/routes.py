@@ -78,8 +78,7 @@ async def create_thread(
     description: str,
     priority: str = "normal",
     tags: List[str] = None,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Create a new comment thread"""
     
     try:
@@ -122,8 +121,7 @@ async def create_thread(
 @router.get("/threads/{thread_id}")
 async def get_thread(
     thread_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get a comment thread"""
     
     thread = annotation_manager.get_thread(thread_id)
@@ -143,8 +141,7 @@ async def add_comment(
     comment_type: str = "general",
     parent_id: Optional[str] = None,
     metadata: Dict = None,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Add a comment to a thread"""
     
     try:
@@ -208,8 +205,7 @@ async def add_comment(
 async def resolve_thread(
     thread_id: str,
     resolution_note: str = "",
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Resolve a comment thread"""
     
     success = annotation_manager.resolve_thread(
@@ -237,8 +233,7 @@ async def resolve_thread(
 async def assign_thread(
     thread_id: str,
     assigned_to: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Assign a thread to a user"""
     
     success = annotation_manager.assign_thread(
@@ -250,7 +245,7 @@ async def assign_thread(
     
     collab_notification_service.notify_thread_assigned(
         thread_id=thread_id,
-        thread_title="Thread",  # Would get from thread
+        thread_title="Thread",  # Would get from thread import *
         assignee_id=assigned_to,
         assigner_id=current_user.id,
         assigner_name=current_user.display_name
@@ -262,8 +257,7 @@ async def assign_thread(
 @router.post("/threads/{thread_id}/subscribe")
 async def subscribe_to_thread(
     thread_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Subscribe to a thread"""
     
     success = annotation_manager.subscribe_to_thread(thread_id, current_user.id)
@@ -277,8 +271,7 @@ async def subscribe_to_thread(
 @router.delete("/threads/{thread_id}/subscribe")
 async def unsubscribe_from_thread(
     thread_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Unsubscribe from a thread"""
     
     success = annotation_manager.unsubscribe_from_thread(thread_id, current_user.id)
@@ -292,8 +285,7 @@ async def unsubscribe_from_thread(
 @router.get("/drafts/{draft_id}/threads")
 async def get_draft_threads(
     draft_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get all threads for a draft"""
     
     threads = annotation_manager.get_threads_by_draft(draft_id)
@@ -310,8 +302,7 @@ async def get_draft_threads(
 @router.get("/objects/{object_id}/threads")
 async def get_object_threads(
     object_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get all threads for an ArxObject"""
     
     threads = annotation_manager.get_threads_by_object(object_id)
@@ -327,8 +318,7 @@ async def get_object_threads(
 
 @router.get("/user/threads")
 async def get_user_threads(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get threads for current user"""
     
     threads = annotation_manager.get_user_threads(current_user.id)
@@ -350,8 +340,7 @@ async def add_annotation(
     coordinates: Dict,
     content: str,
     style: Dict = None,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Add a visual annotation to a thread"""
     
     try:
@@ -385,8 +374,7 @@ async def add_annotation(
 @router.get("/threads/{thread_id}/annotations")
 async def get_thread_annotations(
     thread_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get all annotations for a thread"""
     
     annotations = annotation_manager.get_annotations(thread_id)
@@ -414,8 +402,7 @@ async def get_notifications(
     status: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get notifications for current user"""
     
     from services.planarx.planarx_community.notifications.collab_events import NotificationStatus
@@ -450,8 +437,7 @@ async def get_notifications(
 
 @router.get("/notifications/unread-count")
 async def get_unread_count(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get unread notification count"""
     
     count = collab_notification_service.get_unread_count(current_user.id)
@@ -464,8 +450,7 @@ async def get_unread_count(
 
 @router.get("/notifications/stats")
 async def get_notification_stats(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get notification statistics"""
     
     stats = collab_notification_service.get_notification_stats(current_user.id)
@@ -479,8 +464,7 @@ async def get_notification_stats(
 @router.put("/notifications/{notification_id}/read")
 async def mark_notification_read(
     notification_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Mark a notification as read"""
     
     success = collab_notification_service.mark_notification_read(
@@ -495,8 +479,7 @@ async def mark_notification_read(
 
 @router.put("/notifications/read-all")
 async def mark_all_notifications_read(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Mark all notifications as read"""
     
     count = collab_notification_service.mark_all_notifications_read(current_user.id)
@@ -510,8 +493,7 @@ async def mark_all_notifications_read(
 @router.delete("/notifications/{notification_id}")
 async def delete_notification(
     notification_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Delete a notification"""
     
     success = collab_notification_service.delete_notification(
@@ -528,8 +510,7 @@ async def delete_notification(
 @router.get("/sessions/{draft_id}/stats")
 async def get_session_stats(
     draft_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get collaboration session statistics"""
     
     # Find session for draft
@@ -555,8 +536,7 @@ async def get_session_stats(
 
 @router.get("/sessions/user")
 async def get_user_sessions(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get sessions user is participating in"""
     
     session_ids = realtime_editor.get_user_sessions(current_user.id)
@@ -577,8 +557,7 @@ async def get_user_sessions(
 async def search_threads(
     query: str,
     draft_id: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Search comment threads"""
     
     threads = annotation_manager.search_threads(query, draft_id)
@@ -597,8 +576,7 @@ async def search_threads(
 async def add_reaction(
     comment_id: str,
     reaction_type: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Add a reaction to a comment"""
     
     success = annotation_manager.add_reaction(
@@ -615,8 +593,7 @@ async def add_reaction(
 async def remove_reaction(
     comment_id: str,
     reaction_type: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Remove a reaction from a comment"""
     
     success = annotation_manager.remove_reaction(

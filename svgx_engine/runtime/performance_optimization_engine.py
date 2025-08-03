@@ -41,6 +41,86 @@ import hashlib
 from svgx_engine.utils.performance import PerformanceMonitor
 from svgx_engine.utils.errors import OptimizationError, CacheError, MemoryError
 from svgx_engine.services.telemetry_logger import telemetry_instrumentation
+import secrets
+import bcrypt
+
+def handle_errors(func):
+    """
+    Decorator to handle errors securely.
+    
+    Args:
+        func: Function to wrap
+        
+    Returns:
+        Wrapped function with error handling
+    """
+    def wrapper(*args, **kwargs):
+    """
+    Perform wrapper operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = wrapper(param)
+        print(result)
+    """
+        try:
+            return func(*args, **kwargs)
+        except ValueError as e:
+            logger.error(f"Value error in {func.__name__}: {e}")
+            raise HTTPException(status_code=400, detail="Invalid input")
+        except FileNotFoundError as e:
+            logger.error(f"File not found in {func.__name__}: {e}")
+            raise HTTPException(status_code=404, detail="Resource not found")
+        except PermissionError as e:
+            logger.error(f"Permission error in {func.__name__}: {e}")
+            raise HTTPException(status_code=403, detail="Access denied")
+        except Exception as e:
+            logger.error(f"Unexpected error in {func.__name__}: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+    return wrapper
+
+
+def secure_hash(data: str) -> str:
+    """
+    Generate secure hash using SHA-256.
+    
+    Args:
+        data: Data to hash
+        
+    Returns:
+        Secure hash string
+    """
+    return hashlib.sha256(data.encode()).hexdigest()
+
+def secure_password_hash(password: str) -> str:
+    """
+    Hash password securely using bcrypt.
+    
+    Args:
+        password: Plain text password
+        
+    Returns:
+        Hashed password
+    """
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def generate_secure_token() -> str:
+    """
+    Generate secure random token.
+    
+    Returns:
+        Secure random token
+    """
+    return secrets.token_urlsafe(32)
+
 
 logger = logging.getLogger(__name__)
 
@@ -629,7 +709,7 @@ class PerformanceOptimizationEngine:
         """Calculate approximate size of an object in bytes."""
         try:
             return len(json.dumps(obj, default=str))
-        except:
+        except Exception as e:
             return 1024  # Default size
     
     def _evict_cache_entries(self):

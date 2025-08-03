@@ -129,7 +129,7 @@ class ContextManager:
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
         import uuid
-        return str(uuid.uuid4())
+        return str(uuid.uuid4()
     
     def get_context(self, session_id: str) -> Optional[NLPContext]:
         """
@@ -271,7 +271,7 @@ class ContextManager:
         for session_id, context in self.contexts.items():
             # Check if context has timestamp and is expired
             if hasattr(context, 'timestamp'):
-                age_hours = (current_time - context.timestamp.timestamp()) / 3600
+                age_hours = (current_time - context.timestamp.timestamp() / 3600
                 if age_hours > max_age_hours:
                     expired_sessions.append(session_id)
         

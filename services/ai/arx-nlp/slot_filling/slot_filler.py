@@ -139,7 +139,6 @@ class SlotFiller:
                         confidence=0.8 + pattern.confidence_boost,  # Base confidence for pattern matches
                         start_pos=match.start(),
                         end_pos=match.end()
-                    )
                     slots.append(slot)
         
         # Extract additional slots based on intent type
@@ -155,7 +154,6 @@ class SlotFiller:
         return SlotResult(
             slots=final_slots,
             confidence=min(1.0, len(final_slots) * 0.1 + 0.5)
-        )
     
     def _validate_slot_value(self, value: str, pattern: SlotPattern) -> bool:
         """Validate slot value against pattern rules"""
@@ -207,7 +205,7 @@ class SlotFiller:
                     value=f"{size_match.group(1)}x{size_match.group(2)}",
                     value_type="dimensions",
                     confidence=0.9
-                ))
+                )
             
             color_match = re.search(r'(red|green|blue|yellow|black|white|gray|grey)', text)
             if color_match:
@@ -216,7 +214,7 @@ class SlotFiller:
                     value=color_match.group(1),
                     value_type="color",
                     confidence=0.9
-                ))
+                )
             
             # Extract room type
             room_match = re.search(r'(bedroom|bathroom|kitchen|living|office|dining|study)', text)
@@ -226,7 +224,7 @@ class SlotFiller:
                     value=room_match.group(1),
                     value_type="room_type",
                     confidence=0.9
-                ))
+                )
         
         elif intent_type == IntentType.MODIFY:
             # Extract property changes
@@ -237,13 +235,13 @@ class SlotFiller:
                     value=property_match.group(1),
                     value_type="property_name",
                     confidence=0.8
-                ))
+                )
                 slots.append(Slot(
                     slot_type=SlotType.VALUE,
                     value=property_match.group(2),
                     value_type="new_value",
                     confidence=0.8
-                ))
+                )
             
             # Extract dimension changes
             dim_match = re.search(r'(\w+)\s+(\d+)\s*(?:x|by)\s*(\d+)', text)
@@ -253,13 +251,13 @@ class SlotFiller:
                     value=dim_match.group(1),
                     value_type="dimension_property",
                     confidence=0.8
-                ))
+                )
                 slots.append(Slot(
                     slot_type=SlotType.VALUE,
                     value=f"{dim_match.group(2)}x{dim_match.group(3)}",
                     value_type="new_dimensions",
                     confidence=0.8
-                ))
+                )
         
         elif intent_type == IntentType.QUERY:
             # Extract query filters
@@ -270,7 +268,7 @@ class SlotFiller:
                     value=f"{filter_match.group(1)} {filter_match.group(2)}",
                     value_type="filter",
                     confidence=0.7
-                ))
+                )
             
             # Extract location queries
             location_match = re.search(r'on\s+floor\s+(\d+)', text)
@@ -280,7 +278,7 @@ class SlotFiller:
                     value=location_match.group(1),
                     value_type="floor_number",
                     confidence=0.8
-                ))
+                )
         
         elif intent_type == IntentType.EXPORT:
             # Extract export format
@@ -291,7 +289,7 @@ class SlotFiller:
                     value=format_match.group(1),
                     value_type="export_format",
                     confidence=0.9
-                ))
+                )
         
         elif intent_type == IntentType.MOVE:
             # Extract destination
@@ -302,7 +300,7 @@ class SlotFiller:
                     value=dest_match.group(1),
                     value_type="destination",
                     confidence=0.8
-                ))
+                )
         
         return slots
     
@@ -391,7 +389,7 @@ class SlotFiller:
         # Get slot suggestions based on patterns
         for pattern in self.slot_patterns:
             if partial_lower in pattern.pattern.lower():
-                suggestions.append(pattern.pattern.replace(r'(\w+)', '<value>'))
+                suggestions.append(pattern.pattern.replace(r'(\w+)', '<value>')
         
         # Get common property suggestions
         common_properties = [
@@ -403,7 +401,7 @@ class SlotFiller:
             if partial_lower in prop or prop.startswith(partial_lower):
                 suggestions.append(f"{prop} <value>")
         
-        return list(set(suggestions))[:10]  # Limit to 10 unique suggestions
+        return list(set(suggestions)[:10]  # Limit to 10 unique suggestions
     
     def validate_slot(self, slot: Slot) -> bool:
         """

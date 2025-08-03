@@ -49,6 +49,22 @@ class OnboardingSession:
     user_data: Dict
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.steps_completed is None:
             self.steps_completed = []
         if self.user_data is None:
@@ -73,6 +89,22 @@ class GuidelinesAcceptance:
 
 
 class OnboardingFlow:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Manages user onboarding with guidelines integration"""
     
     def __init__(self):

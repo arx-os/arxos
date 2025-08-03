@@ -81,6 +81,22 @@ class PrecisionPoint:
         )
     
     def __repr__(self) -> str:
+    """
+    Perform __repr__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __repr__(param)
+        print(result)
+    """
         return f"PrecisionPoint({self.x}, {self.y}, precision={self.precision.value})"
 
 
@@ -352,6 +368,22 @@ class PrecisionDrawingSystem:
 
 
 class CoordinateSystem:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """High-precision coordinate system management."""
     
     def __init__(self):

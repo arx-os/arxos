@@ -65,6 +65,22 @@ class DatabaseConnection:
     """Database connection wrapper."""
     
     def __init__(self, config: DatabaseConfig):
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.config = config
         self.connection = None
         self.state = ConnectionState.IDLE
@@ -177,6 +193,22 @@ class DatabaseConnection:
 
 
 class ConnectionPool:
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Database connection pool."""
     
     def __init__(self, config: DatabaseConfig):

@@ -1,0 +1,102 @@
+================================================================================
+ARXOS DEVELOPMENT STANDARDS ANALYSIS REPORT
+================================================================================
+
+📊 SUMMARY
+----------------------------------------
+Total Files Analyzed: 401
+Total Violations: 2314
+Architecture Compliance: 89.3%
+Overall Quality Score: 81.5%
+Security Score: 94.2%
+
+🚨 VIOLATIONS BY TYPE
+----------------------------------------
+Documentation: 656
+Code Quality: 1585
+Naming Convention: 4
+Clean Architecture: 40
+Analysis Error: 22
+Security: 7
+
+❌ CRITICAL VIOLATIONS
+----------------------------------------
+services/ai/main.py:20 - Domain layer should not depend on fastapi
+services/ai/main.py:21 - Domain layer should not depend on fastapi
+services/ai/main.py:22 - Domain layer should not depend on fastapi
+services/gus/main.py:15 - Domain layer should not depend on fastapi
+services/gus/main.py:16 - Domain layer should not depend on fastapi
+services/gus/main.py:17 - Domain layer should not depend on fastapi
+services/planarx/planarx-community/main.py:6 - Domain layer should not depend on fastapi
+services/planarx/planarx-community/main.py:7 - Domain layer should not depend on fastapi
+services/planarx/planarx-community/main.py:8 - Domain layer should not depend on fastapi
+services/planarx/planarx-community/main.py:9 - Domain layer should not depend on fastapi
+... and 59 more
+
+💡 RECOMMENDATIONS
+----------------------------------------
+• Address 7 security vulnerabilities
+• Add documentation to 656 functions/classes
+• Improve code quality in 1585 areas
+
+📁 FILE-LEVEL ANALYSIS
+----------------------------------------
+plugins/example_behavior_plugin.py
+  Architecture: Unknown
+  Quality Score: 95.0%
+  Security Score: 100.0%
+  Violations: 1
+
+cli/gus.py
+  Architecture: presentation
+  Quality Score: 95.0%
+  Security Score: 100.0%
+  Violations: 1
+
+cli/svgx-cli.py
+  Architecture: presentation
+  Quality Score: 86.0%
+  Security Score: 100.0%
+  Violations: 10
+
+scripts/setup_dev_environment.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+scripts/fix_syntax_errors.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+scripts/validate_pdf_analysis_integration.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+scripts/enforce_development_standards.py
+  Architecture: Unknown
+  Quality Score: 90.0%
+  Security Score: 100.0%
+  Violations: 2
+
+svgx_engine/deploy_production.py
+  Architecture: Unknown
+  Quality Score: 95.0%
+  Security Score: 100.0%
+  Violations: 1
+
+svgx_engine/code_quality_standards.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+svgx_engine/enterprise_compliance.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0

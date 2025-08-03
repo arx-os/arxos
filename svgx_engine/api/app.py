@@ -17,6 +17,7 @@ from typing import Dict, Any
 from svgx_engine.infrastructure.container import Container
 from svgx_engine.api.endpoints.building_api import router as building_router
 from svgx_engine.utils.errors import SVGXError, ValidationError, ResourceNotFoundError
+from core.security.auth_middleware import get_current_user, User
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI, user: User = Depends(get_current_user)):
     """Application lifespan manager."""
     # Startup
     logger.info("Starting Arxos Clean Architecture API...")
@@ -68,7 +69,7 @@ def create_app() -> FastAPI:
     
     # Global exception handlers
     @app.exception_handler(SVGXError)
-    async def svgx_exception_handler(request, exc: SVGXError):
+    async def svgx_exception_handler(request, exc: SVGXError, user: User = Depends(get_current_user)):
         """Handle SVGX-specific exceptions."""
         return JSONResponse(
             status_code=400,
@@ -80,7 +81,7 @@ def create_app() -> FastAPI:
         )
     
     @app.exception_handler(ValidationError)
-    async def validation_exception_handler(request, exc: ValidationError):
+    async def validation_exception_handler(request, exc: ValidationError, user: User = Depends(get_current_user)):
         """Handle validation exceptions."""
         return JSONResponse(
             status_code=422,
@@ -92,7 +93,7 @@ def create_app() -> FastAPI:
         )
     
     @app.exception_handler(ResourceNotFoundError)
-    async def not_found_exception_handler(request, exc: ResourceNotFoundError):
+    async def not_found_exception_handler(request, exc: ResourceNotFoundError, user: User = Depends(get_current_user)):
         """Handle resource not found exceptions."""
         return JSONResponse(
             status_code=404,
@@ -105,7 +106,7 @@ def create_app() -> FastAPI:
         )
     
     @app.exception_handler(Exception)
-    async def general_exception_handler(request, exc: Exception):
+    async def general_exception_handler(request, exc: Exception, user: User = Depends(get_current_user)):
         """Handle general exceptions."""
         logger.error(f"Unhandled exception: {exc}", exc_info=True)
         return JSONResponse(
@@ -118,7 +119,7 @@ def create_app() -> FastAPI:
     
     # Health check endpoint
     @app.get("/health", tags=["health"])
-    async def health_check():
+    async def health_check(user: User = Depends(get_current_user)):
         """Health check endpoint."""
         return {
             "status": "healthy",
@@ -128,7 +129,7 @@ def create_app() -> FastAPI:
     
     # Root endpoint
     @app.get("/", tags=["root"])
-    async def root():
+    async def root(user: User = Depends(get_current_user)):
         """Root endpoint with API information."""
         return {
             "message": "Welcome to Arxos Clean Architecture API",

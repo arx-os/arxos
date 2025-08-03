@@ -14,6 +14,24 @@ class ApplicationError(Exception):
     """Base exception for all application layer errors."""
     
     def __init__(self, message: str, error_code: str = None, details: Dict[str, Any] = None):
+    """
+    Perform __init__ operation
+
+Args:
+        message: Description of message
+        error_code: Description of error_code
+        details: Description of details
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         super().__init__(message)
         self.message = message
         self.error_code = error_code or "APPLICATION_ERROR"
@@ -47,6 +65,24 @@ class ApplicationError(Exception):
 
 
 class ValidationError(ApplicationError):
+    """
+    Perform __init__ operation
+
+Args:
+        message: Description of message
+        field: Description of field
+        value: Description of value
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Exception raised when input validation fails."""
     
     def __init__(self, message: str, field: str = None, value: Any = None):

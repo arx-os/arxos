@@ -80,6 +80,22 @@ class Alert:
     metadata: Dict[str, Any] = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.metadata is None:
             self.metadata = {}
 

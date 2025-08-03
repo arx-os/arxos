@@ -105,6 +105,22 @@ class TransactionDecorator:
         """Apply transaction management to the function."""
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
+    """
+    Perform wrapper operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = wrapper(param)
+        print(result)
+    """
             try:
                 if self.read_only:
                     return self.transaction_manager.execute_read_only(func, *args, **kwargs)
@@ -323,6 +339,22 @@ def with_transaction(read_only: bool = False):
 def with_retry(max_retries: int = 3):
     """Decorator for automatic retry logic."""
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
+    """
+    Perform decorator operation
+
+Args:
+        func: Description of func
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = decorator(param)
+        print(result)
+    """
         @wraps(func)
         def wrapper(*args, **kwargs) -> T:
             return transaction_service.execute_with_retry(func, max_retries, *args, **kwargs)

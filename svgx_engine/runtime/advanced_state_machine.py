@@ -107,6 +107,22 @@ class AdvancedStateMachine:
     """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.config = config or {}
         self.performance_monitor = PerformanceMonitor()
         

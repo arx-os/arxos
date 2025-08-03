@@ -23,6 +23,18 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
     """Example behavior handler plugin that adds custom behaviors."""
     
     def __init__(self):
+        """
+        Initialize the plugin.
+        
+        Args:
+            None
+            
+        Returns:
+            None
+            
+        Raises:
+            None
+        """
         self.initialized = False
         self.config = {}
         self.behavior_count = 0

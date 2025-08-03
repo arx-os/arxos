@@ -194,6 +194,22 @@ def get_performance_monitor() -> PerformanceMonitor:
 def monitor_operation(operation_name: str):
     """Decorator for monitoring function performance."""
     def decorator(func):
+    """
+    Perform decorator operation
+
+Args:
+        func: Description of func
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = decorator(param)
+        print(result)
+    """
         def wrapper(*args, **kwargs):
             monitor = get_performance_monitor()
             with monitor.monitor(operation_name):

@@ -57,6 +57,22 @@ class OpenAPIValidator:
     """Validates OpenAPI specifications"""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.swagger_cli_available = self._check_swagger_cli()
     
     def _check_swagger_cli(self) -> bool:
@@ -90,6 +106,22 @@ class OpenAPIValidator:
 
 
 class TemplateEngine:
+    """
+    Perform __init__ operation
+
+Args:
+        template_dir: Description of template_dir
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Handles template processing and customization"""
     
     def __init__(self, template_dir: Path):

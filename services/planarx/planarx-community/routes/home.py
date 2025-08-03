@@ -43,6 +43,20 @@ engagement_service = EngagementService()
 # Pydantic Models for API
 
 class HomepageStats(BaseModel):
+    """
+    Class for HomepageStats functionality
+
+Attributes:
+        None
+
+Methods:
+        None
+
+Example:
+        instance = HomepageStats()
+        result = instance.method()
+        print(result)
+    """
     total_projects: int = Field(..., description="Total number of projects")
     active_projects: int = Field(..., description="Number of active projects")
     total_users: int = Field(..., description="Total number of users")

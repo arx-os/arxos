@@ -62,6 +62,22 @@ class Milestone:
     evidence_urls: List[str] = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.evidence_urls is None:
             self.evidence_urls = []
 
@@ -109,6 +125,22 @@ class EscrowAccount:
 
 
 class EscrowEngine:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Core escrow management engine"""
     
     def __init__(self):

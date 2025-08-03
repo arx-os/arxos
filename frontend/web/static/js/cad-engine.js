@@ -3,7 +3,7 @@
  * Handles Canvas 2D rendering, precision drawing, and Web Workers integration for high-performance CAD operations
  * 
  * @author Arxos Team
- * @version 1.0.0
+ * @version 1.2.0 - Enhanced CAD Features and Parametric Modeling
  * @license MIT
  */
 
@@ -19,10 +19,28 @@ class CadEngine {
         this.startPoint = null;
         this.currentPoint = null;
         
-        // Precision settings
-        this.precision = 0.001; // Sub-millimeter precision
+        // Enhanced precision settings
+        this.precision = 0.001; // Sub-millimeter precision (0.001 inches)
         this.units = 'inches';
         this.scale = 1.0;
+        this.gridSize = 0.1; // Grid size in current units
+        
+        // CAD-level precision system
+        this.precisionLevels = {
+            'UI': 0.01,      // UI precision (0.01 inches)
+            'EDIT': 0.001,   // Edit precision (0.001 inches)
+            'COMPUTE': 0.0001 // Compute precision (0.0001 inches)
+        };
+        this.currentPrecisionLevel = 'EDIT';
+        
+        // Geometric constraint system
+        this.constraints = new Map();
+        this.constraintSolver = new ConstraintSolver();
+        
+        // Parametric modeling system
+        this.parameters = new Map();
+        this.parametricObjects = new Map();
+        this.parameterId = 0;
         
         // Performance tracking
         this.fps = 60;
@@ -221,7 +239,7 @@ class CadEngine {
         const precisionSelect = document.getElementById('precision-select');
         if (precisionSelect) {
             precisionSelect.addEventListener('change', (e) => {
-                this.setPrecision(parseFloat(e.target.value));
+                this.setPrecisionLevel(e.target.value);
             });
         }
     }
@@ -253,11 +271,13 @@ class CadEngine {
      */
     handleMouseDown(event) {
         const point = this.getCanvasPoint(event);
+        if (!point) return; // Exit if point is invalid
+        
         this.startPoint = this.snapToGrid(point);
         
         switch (this.currentTool) {
             case 'select':
-                this.selectObjectAtPoint(point);
+                this.selectObjectAtPoint(this.startPoint);
                 break;
             case 'line':
             case 'rectangle':
@@ -267,7 +287,7 @@ class CadEngine {
                 break;
         }
         
-        this.updateMouseCoordinates(point);
+        this.updateMouseCoordinates(this.startPoint);
     }
     
     /**
@@ -275,13 +295,15 @@ class CadEngine {
      */
     handleMouseMove(event) {
         const point = this.getCanvasPoint(event);
+        if (!point) return; // Exit if point is invalid
+        
         this.currentPoint = this.snapToGrid(point);
         
         if (this.isDrawing) {
             this.previewDrawing();
         }
         
-        this.updateMouseCoordinates(point);
+        this.updateMouseCoordinates(this.currentPoint);
     }
     
     /**
@@ -356,33 +378,138 @@ class CadEngine {
     }
     
     /**
-     * Get canvas coordinates from mouse event
+     * Enhanced precision coordinate calculation with sub-millimeter accuracy
+     * @param {number} x - Raw x coordinate
+     * @param {number} y - Raw y coordinate
+     * @returns {Object} Precision-adjusted point
+     */
+    calculatePrecisionPoint(x, y) {
+        // Convert to current units and apply precision
+        const precision = this.precisionLevels[this.currentPrecisionLevel];
+        
+        // Apply sub-millimeter precision (0.001 inches = 0.0254 mm)
+        const precisionX = Math.round(x / precision) * precision;
+        const precisionY = Math.round(y / precision) * precision;
+        
+        // Validate precision bounds
+        const maxCoordinate = 1000000; // 1 million units
+        if (Math.abs(precisionX) > maxCoordinate || Math.abs(precisionY) > maxCoordinate) {
+            console.warn('Coordinate out of bounds:', { x: precisionX, y: precisionY });
+            return null;
+        }
+        
+        return {
+            x: precisionX,
+            y: precisionY,
+            precision: precision,
+            units: this.units,
+            timestamp: Date.now()
+        };
+    }
+
+    /**
+     * Get canvas point with enhanced precision and validation
+     * @param {Event} event - Mouse or touch event
+     * @returns {Object} Precision-adjusted canvas point
      */
     getCanvasPoint(event) {
         const rect = this.canvas.getBoundingClientRect();
-        const x = (event.clientX - rect.left) / this.scale;
-        const y = (event.clientY - rect.top) / this.scale;
-        return { x, y };
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        
+        let clientX, clientY;
+        
+        if (event.touches && event.touches.length > 0) {
+            clientX = event.touches[0].clientX;
+            clientY = event.touches[0].clientY;
+        } else {
+            clientX = event.clientX;
+            clientY = event.clientY;
+        }
+        
+        const canvasX = (clientX - rect.left) * scaleX;
+        const canvasY = (clientY - rect.top) * scaleY;
+        
+        // Apply precision and grid snapping
+        const precisionPoint = this.calculatePrecisionPoint(canvasX, canvasY);
+        if (!precisionPoint) return null;
+        
+        // Apply grid snapping if enabled
+        if (document.getElementById('grid-snap')?.checked) {
+            return this.snapToGrid(precisionPoint);
+        }
+        
+        return precisionPoint;
     }
-    
+
     /**
-     * Snap point to grid based on precision
+     * Enhanced grid snapping with precision levels
+     * @param {Object} point - Point to snap
+     * @returns {Object} Snapped point
      */
     snapToGrid(point) {
-        const snappedX = Math.round(point.x / this.precision) * this.precision;
-        const snappedY = Math.round(point.y / this.precision) * this.precision;
-        return { x: snappedX, y: snappedY };
+        const gridSize = parseFloat(document.getElementById('grid-size')?.value || this.gridSize);
+        const precision = this.precisionLevels[this.currentPrecisionLevel];
+        
+        // Use the smaller of grid size or precision for snapping
+        const snapSize = Math.min(gridSize, precision);
+        
+        const snappedX = Math.round(point.x / snapSize) * snapSize;
+        const snappedY = Math.round(point.y / snapSize) * snapSize;
+        
+        return {
+            ...point,
+            x: snappedX,
+            y: snappedY,
+            snapped: true,
+            snapSize: snapSize
+        };
     }
-    
+
     /**
-     * Update mouse coordinates display
+     * Set precision level with validation and UI updates
+     * @param {string} level - Precision level (UI, EDIT, COMPUTE)
+     */
+    setPrecisionLevel(level) {
+        if (!this.precisionLevels[level]) {
+            console.error('Invalid precision level:', level);
+            return;
+        }
+        
+        this.currentPrecisionLevel = level;
+        this.precision = this.precisionLevels[level];
+        
+        // Update UI
+        const precisionSelect = document.getElementById('precision-level');
+        if (precisionSelect) {
+            precisionSelect.value = level;
+        }
+        
+        // Update status bar
+        this.updateMouseCoordinates({ x: 0, y: 0 });
+        
+        console.log(`Precision level set to: ${level} (${this.precision} ${this.units})`);
+        
+        // Dispatch precision change event
+        this.dispatchEvent('precisionChanged', {
+            level: level,
+            precision: this.precision,
+            units: this.units
+        });
+    }
+
+    /**
+     * Update mouse coordinates display with enhanced precision
+     * @param {Object} point - Current mouse point
      */
     updateMouseCoordinates(point) {
         const coordsElement = document.getElementById('mouse-coordinates');
         if (coordsElement) {
-            const x = point.x.toFixed(3);
-            const y = point.y.toFixed(3);
-            coordsElement.textContent = `X: ${x}" Y: ${y}"`;
+            const precision = this.precisionLevels[this.currentPrecisionLevel];
+            const decimalPlaces = Math.abs(Math.log10(precision));
+            const x = point.x.toFixed(decimalPlaces);
+            const y = point.y.toFixed(decimalPlaces);
+            coordsElement.textContent = `X: ${x}" Y: ${y}" (${this.currentPrecisionLevel})`;
         }
     }
     
@@ -392,14 +519,6 @@ class CadEngine {
     setCurrentTool(tool) {
         this.currentTool = tool;
         console.log('Current tool set to:', tool);
-    }
-    
-    /**
-     * Set precision level
-     */
-    setPrecision(precision) {
-        this.precision = precision;
-        console.log('Precision set to:', precision);
     }
     
     /**
@@ -718,11 +837,18 @@ class CadEngine {
     calculateDistance(point1, point2) {
         const dx = point2.x - point1.x;
         const dy = point2.y - point1.y;
-        return Math.sqrt(dx * dx + dy * dy);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Round to current precision level
+        const precision = this.precisionLevels[this.currentPrecisionLevel];
+        return Math.round(distance / precision) * precision;
     }
     
     calculateAngle(point1, point2) {
-        return Math.atan2(point2.y - point1.y, point2.x - point1.x) * 180 / Math.PI;
+        const angle = Math.atan2(point2.y - point1.y, point2.x - point1.x) * 180 / Math.PI;
+        
+        // Round to 0.1 degrees for CAD precision
+        return Math.round(angle * 10) / 10;
     }
     
     generateObjectId() {
@@ -957,6 +1083,398 @@ class CadEngine {
         this.dispatchEvent('objectUpdated', { objectId, arxObject });
         
         return arxObject;
+    }
+
+    /**
+     * Parametric Modeling Methods
+     */
+
+    /**
+     * Define a parameter for parametric modeling
+     * @param {string} name - Parameter name
+     * @param {number} value - Parameter value
+     * @param {Object} constraints - Parameter constraints
+     * @returns {string} Parameter ID
+     */
+    defineParameter(name, value, constraints = {}) {
+        const parameterId = `param_${++this.parameterId}`;
+        
+        const parameter = {
+            id: parameterId,
+            name: name,
+            value: value,
+            constraints: constraints,
+            createdAt: Date.now()
+        };
+        
+        this.parameters.set(parameterId, parameter);
+        console.log(`Defined parameter: ${name} = ${value}`, parameter);
+        
+        // Dispatch event
+        this.dispatchEvent('parameterDefined', { parameterId, parameter });
+        
+        return parameterId;
+    }
+
+    /**
+     * Update a parameter value
+     * @param {string} parameterId - Parameter ID
+     * @param {number} newValue - New parameter value
+     */
+    updateParameter(parameterId, newValue) {
+        const parameter = this.parameters.get(parameterId);
+        if (!parameter) {
+            throw new Error(`Parameter not found: ${parameterId}`);
+        }
+        
+        // Validate constraints
+        if (parameter.constraints.min !== undefined && newValue < parameter.constraints.min) {
+            throw new Error(`Value ${newValue} is below minimum ${parameter.constraints.min}`);
+        }
+        if (parameter.constraints.max !== undefined && newValue > parameter.constraints.max) {
+            throw new Error(`Value ${newValue} is above maximum ${parameter.constraints.max}`);
+        }
+        
+        parameter.value = newValue;
+        parameter.updatedAt = Date.now();
+        
+        // Update all parametric objects that depend on this parameter
+        this.updateParametricObjects(parameterId);
+        
+        // Dispatch event
+        this.dispatchEvent('parameterUpdated', { parameterId, parameter });
+        
+        console.log(`Updated parameter: ${parameter.name} = ${newValue}`);
+    }
+
+    /**
+     * Create a parametric object
+     * @param {string} type - Object type
+     * @param {Object} parameters - Parameter dependencies
+     * @param {Object} geometry - Base geometry
+     * @returns {string} Object ID
+     */
+    createParametricObject(type, parameters, geometry) {
+        const objectId = this.generateObjectId();
+        
+        const parametricObject = {
+            id: objectId,
+            type: type,
+            parameters: parameters,
+            baseGeometry: geometry,
+            createdAt: Date.now()
+        };
+        
+        this.parametricObjects.set(objectId, parametricObject);
+        
+        // Generate initial geometry
+        this.generateParametricGeometry(objectId);
+        
+        console.log(`Created parametric object: ${type}`, parametricObject);
+        
+        // Dispatch event
+        this.dispatchEvent('parametricObjectCreated', { objectId, parametricObject });
+        
+        return objectId;
+    }
+
+    /**
+     * Generate geometry for a parametric object
+     * @param {string} objectId - Parametric object ID
+     */
+    generateParametricGeometry(objectId) {
+        const parametricObject = this.parametricObjects.get(objectId);
+        if (!parametricObject) {
+            throw new Error(`Parametric object not found: ${objectId}`);
+        }
+        
+        // Calculate parameter values
+        const parameterValues = {};
+        for (const [paramName, paramId] of Object.entries(parametricObject.parameters)) {
+            const parameter = this.parameters.get(paramId);
+            if (parameter) {
+                parameterValues[paramName] = parameter.value;
+            }
+        }
+        
+        // Generate geometry based on type and parameters
+        let geometry;
+        switch (parametricObject.type) {
+            case 'rectangle':
+                geometry = this.generateParametricRectangle(parametricObject.baseGeometry, parameterValues);
+                break;
+            case 'circle':
+                geometry = this.generateParametricCircle(parametricObject.baseGeometry, parameterValues);
+                break;
+            case 'line':
+                geometry = this.generateParametricLine(parametricObject.baseGeometry, parameterValues);
+                break;
+            default:
+                throw new Error(`Unknown parametric object type: ${parametricObject.type}`);
+        }
+        
+        // Create or update ArxObject
+        const arxObject = {
+            id: objectId,
+            type: parametricObject.type,
+            geometry: geometry,
+            isParametric: true,
+            parameterDependencies: parametricObject.parameters
+        };
+        
+        this.arxObjects.set(objectId, arxObject);
+        
+        // Dispatch event
+        this.dispatchEvent('parametricGeometryGenerated', { objectId, geometry });
+    }
+
+    /**
+     * Generate parametric rectangle geometry
+     * @param {Object} baseGeometry - Base geometry
+     * @param {Object} parameters - Parameter values
+     * @returns {Object} Generated geometry
+     */
+    generateParametricRectangle(baseGeometry, parameters) {
+        const width = parameters.width || baseGeometry.width || 1;
+        const height = parameters.height || baseGeometry.height || 1;
+        const x = parameters.x || baseGeometry.x || 0;
+        const y = parameters.y || baseGeometry.y || 0;
+        
+        return {
+            type: 'rectangle',
+            startPoint: { x: x, y: y },
+            endPoint: { x: x + width, y: y + height },
+            width: width,
+            height: height
+        };
+    }
+
+    /**
+     * Generate parametric circle geometry
+     * @param {Object} baseGeometry - Base geometry
+     * @param {Object} parameters - Parameter values
+     * @returns {Object} Generated geometry
+     */
+    generateParametricCircle(baseGeometry, parameters) {
+        const radius = parameters.radius || baseGeometry.radius || 1;
+        const centerX = parameters.centerX || baseGeometry.centerX || 0;
+        const centerY = parameters.centerY || baseGeometry.centerY || 0;
+        
+        return {
+            type: 'circle',
+            center: { x: centerX, y: centerY },
+            radius: radius
+        };
+    }
+
+    /**
+     * Generate parametric line geometry
+     * @param {Object} baseGeometry - Base geometry
+     * @param {Object} parameters - Parameter values
+     * @returns {Object} Generated geometry
+     */
+    generateParametricLine(baseGeometry, parameters) {
+        const startX = parameters.startX || baseGeometry.startX || 0;
+        const startY = parameters.startY || baseGeometry.startY || 0;
+        const endX = parameters.endX || baseGeometry.endX || 1;
+        const endY = parameters.endY || baseGeometry.endY || 1;
+        
+        return {
+            type: 'line',
+            startPoint: { x: startX, y: startY },
+            endPoint: { x: endX, y: endY }
+        };
+    }
+
+    /**
+     * Update all parametric objects that depend on a parameter
+     * @param {string} parameterId - Parameter ID
+     */
+    updateParametricObjects(parameterId) {
+        for (const [objectId, parametricObject] of this.parametricObjects) {
+            // Check if this object depends on the updated parameter
+            const dependsOnParameter = Object.values(parametricObject.parameters).includes(parameterId);
+            
+            if (dependsOnParameter) {
+                this.generateParametricGeometry(objectId);
+            }
+        }
+    }
+
+    /**
+     * Get all parameters
+     * @returns {Array} Array of parameters
+     */
+    getParameters() {
+        return Array.from(this.parameters.values());
+    }
+
+    /**
+     * Get all parametric objects
+     * @returns {Array} Array of parametric objects
+     */
+    getParametricObjects() {
+        return Array.from(this.parametricObjects.values());
+    }
+
+    /**
+     * Remove a parameter and update dependent objects
+     * @param {string} parameterId - Parameter ID to remove
+     */
+    removeParameter(parameterId) {
+        if (this.parameters.has(parameterId)) {
+            this.parameters.delete(parameterId);
+            
+            // Remove parametric objects that depend on this parameter
+            for (const [objectId, parametricObject] of this.parametricObjects) {
+                const dependsOnParameter = Object.values(parametricObject.parameters).includes(parameterId);
+                
+                if (dependsOnParameter) {
+                    this.parametricObjects.delete(objectId);
+                    this.arxObjects.delete(objectId);
+                }
+            }
+            
+            console.log(`Removed parameter: ${parameterId}`);
+            
+            // Dispatch event
+            this.dispatchEvent('parameterRemoved', { parameterId });
+        }
+    }
+
+    /**
+     * Enhanced Constraint Integration Methods
+     */
+
+    /**
+     * Add a constraint with enhanced precision
+     * @param {string} type - Constraint type
+     * @param {Object} params - Constraint parameters
+     * @returns {string} Constraint ID
+     */
+    addConstraint(type, params) {
+        if (!this.constraintSolver) {
+            throw new Error('Constraint solver not initialized');
+        }
+        
+        const constraintId = this.constraintSolver.addConstraint(type, params);
+        
+        // Apply constraint to affected objects
+        const affectedObjects = this.getAffectedObjects(params);
+        if (affectedObjects.length > 0) {
+            const updatedObjects = this.constraintSolver.solveConstraints(affectedObjects);
+            this.updateObjectsFromConstraints(updatedObjects);
+        }
+        
+        // Dispatch event
+        this.dispatchEvent('constraintAdded', { constraintId, type, params });
+        
+        return constraintId;
+    }
+
+    /**
+     * Get objects affected by a constraint
+     * @param {Object} params - Constraint parameters
+     * @returns {Array} Affected objects
+     */
+    getAffectedObjects(params) {
+        const affectedObjects = [];
+        
+        if (params.objectIds) {
+            for (const objectId of params.objectIds) {
+                const arxObject = this.arxObjects.get(objectId);
+                if (arxObject) {
+                    affectedObjects.push(arxObject);
+                }
+            }
+        }
+        
+        return affectedObjects;
+    }
+
+    /**
+     * Update objects from constraint solving
+     * @param {Array} updatedObjects - Updated objects from constraint solver
+     */
+    updateObjectsFromConstraints(updatedObjects) {
+        for (const updatedObject of updatedObjects) {
+            const existingObject = this.arxObjects.get(updatedObject.id);
+            if (existingObject) {
+                // Update geometry
+                if (updatedObject.geometry) {
+                    existingObject.geometry = updatedObject.geometry;
+                }
+                
+                // Update properties
+                if (updatedObject.properties) {
+                    existingObject.properties = { ...existingObject.properties, ...updatedObject.properties };
+                }
+                
+                // Dispatch event
+                this.dispatchEvent('objectUpdated', { objectId: updatedObject.id, arxObject: existingObject });
+            }
+        }
+    }
+
+    /**
+     * Get constraint statistics
+     * @returns {Object} Constraint statistics
+     */
+    getConstraintStatistics() {
+        if (!this.constraintSolver) {
+            return { totalConstraints: 0, activeConstraints: 0 };
+        }
+        
+        return this.constraintSolver.getStatistics();
+    }
+
+    /**
+     * Enhanced Precision Methods
+     */
+
+    /**
+     * Set precision level with validation
+     * @param {string} level - Precision level (UI, EDIT, COMPUTE)
+     */
+    setPrecisionLevel(level) {
+        if (!this.precisionLevels[level]) {
+            throw new Error(`Invalid precision level: ${level}`);
+        }
+        
+        this.currentPrecisionLevel = level;
+        this.precision = this.precisionLevels[level];
+        
+        // Update constraint solver precision
+        if (this.constraintSolver) {
+            this.constraintSolver.precision = this.precision;
+        }
+        
+        console.log(`Precision level set to: ${level} (${this.precision} inches)`);
+        
+        // Dispatch event
+        this.dispatchEvent('precisionChanged', { level, precision: this.precision });
+    }
+
+    /**
+     * Validate precision for a value
+     * @param {number} value - Value to validate
+     * @param {string} level - Precision level to validate against
+     * @returns {boolean} True if value meets precision requirements
+     */
+    validatePrecision(value, level = this.currentPrecisionLevel) {
+        const requiredPrecision = this.precisionLevels[level];
+        const roundedValue = Math.round(value / requiredPrecision) * requiredPrecision;
+        return Math.abs(value - roundedValue) < requiredPrecision / 2;
+    }
+
+    /**
+     * Round value to current precision level
+     * @param {number} value - Value to round
+     * @returns {number} Rounded value
+     */
+    roundToPrecision(value) {
+        const precision = this.precisionLevels[this.currentPrecisionLevel];
+        return Math.round(value / precision) * precision;
     }
 }
 

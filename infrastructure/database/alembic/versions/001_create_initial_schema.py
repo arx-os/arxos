@@ -17,6 +17,22 @@ depends_on = None
 
 
 def upgrade() -> None:
+    """
+    Perform upgrade operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = upgrade(param)
+        print(result)
+    """
     # Enable PostGIS extension
     op.execute('CREATE EXTENSION IF NOT EXISTS postgis')
     

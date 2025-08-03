@@ -29,7 +29,7 @@ The Arxos platform includes:
 - **Python GUS Agent** - AI assistance and natural language processing
 - **Browser CAD** - Web-based CAD interface with Canvas 2D
 - **ArxIDE** - Desktop CAD IDE built with Tauri
-- **PostgreSQL/PostGIS** - Spatial database for CAD/BIM data
+- **PostgreSQL 17/PostGIS 3.5.3** - Spatial database for CAD/BIM data
 - **Redis** - Caching and real-time features
 
 ## 🛠️ Available Commands
@@ -69,7 +69,7 @@ Once running, services are available at:
 - **ArxIDE**: http://localhost:3001
 - **Backend API**: http://localhost:8080
 - **GUS Agent**: http://localhost:8000
-- **PostgreSQL**: localhost:5432
+- **PostgreSQL**: localhost:5432 (arxos_db_pg17)
 - **Redis**: localhost:6379
 
 ## 🏗️ Architecture
@@ -87,7 +87,7 @@ Once running, services are available at:
 - **AI Services**: Python with FastAPI
 - **Frontend**: HTML/HTMX/CSS/JS + Canvas 2D
 - **Desktop**: Tauri (Rust + WebView)
-- **Database**: PostgreSQL with PostGIS
+- **Database**: PostgreSQL 17 with PostGIS 3.5.3
 - **Cache**: Redis
 - **Development**: Docker Compose
 

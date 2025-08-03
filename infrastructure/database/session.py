@@ -56,11 +56,43 @@ class DatabaseSession:
         """Decorator to wrap functions with database transaction."""
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
+    """
+    Perform wrapper operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = wrapper(param)
+        print(result)
+    """
             with self.transaction() as session:
                 return func(session, *args, **kwargs)
         return wrapper
     
     def with_session(self, func: Callable) -> Callable:
+    """
+    Perform wrapper operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = wrapper(param)
+        print(result)
+    """
         """Decorator to wrap functions with database session."""
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:

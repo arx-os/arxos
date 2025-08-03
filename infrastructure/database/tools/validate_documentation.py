@@ -30,6 +30,50 @@ import structlog
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+def handle_errors(func):
+    """
+    Decorator to handle errors securely.
+    
+    Args:
+        func: Function to wrap
+        
+    Returns:
+        Wrapped function with error handling
+    """
+    def wrapper(*args, **kwargs):
+    """
+    Perform wrapper operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = wrapper(param)
+        print(result)
+    """
+        try:
+            return func(*args, **kwargs)
+        except ValueError as e:
+            logger.error(f"Value error in {func.__name__}: {e}")
+            raise HTTPException(status_code=400, detail="Invalid input")
+        except FileNotFoundError as e:
+            logger.error(f"File not found in {func.__name__}: {e}")
+            raise HTTPException(status_code=404, detail="Resource not found")
+        except PermissionError as e:
+            logger.error(f"Permission error in {func.__name__}: {e}")
+            raise HTTPException(status_code=403, detail="Access denied")
+        except Exception as e:
+            logger.error(f"Unexpected error in {func.__name__}: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+    return wrapper
+
+
 # Configure structured logging following Arxos standards
 logger = structlog.get_logger(__name__)
 
@@ -222,7 +266,7 @@ class DocumentationValidator:
             with self.connection.cursor() as cursor:
                 cursor.execute("SELECT current_database()")
                 return cursor.fetchone()[0]
-        except:
+        except Exception as e:
             return "unknown"
     
     def _validate_schema_documentation(self) -> List[ValidationResult]:

@@ -21,6 +21,7 @@ from svgx_engine.services.cmms.data_synchronization import CMMSDataSynchronizati
 from svgx_engine.services.cmms.work_order_processing import WorkOrderProcessingService
 from svgx_engine.services.cmms.maintenance_scheduling import MaintenanceSchedulingService
 from svgx_engine.services.cmms.asset_tracking import AssetTrackingService
+from core.security.auth_middleware import get_current_user, User
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class PerformanceDataRequest(BaseModel):
 
 # Data Synchronization Endpoints
 @app.post("/cmms/connections", response_model=Dict)
-async def add_cmms_connection(request: CMMSConnectionRequest):
+async def add_cmms_connection(request: CMMSConnectionRequest, user: User = Depends(get_current_user)):
     """Add a new CMMS connection"""
     try:
         connection = await data_sync_service.add_cmms_connection(
@@ -162,7 +163,7 @@ async def add_cmms_connection(request: CMMSConnectionRequest):
 
 
 @app.post("/cmms/mappings", response_model=Dict)
-async def add_field_mapping(request: FieldMappingRequest):
+async def add_field_mapping(request: FieldMappingRequest, user: User = Depends(get_current_user)):
     """Add a field mapping for data transformation"""
     try:
         mapping = await data_sync_service.add_field_mapping(
@@ -179,7 +180,7 @@ async def add_field_mapping(request: FieldMappingRequest):
 
 
 @app.post("/cmms/sync/work-orders", response_model=Dict)
-async def sync_work_orders(request: SyncRequest):
+async def sync_work_orders(request: SyncRequest, user: User = Depends(get_current_user)):
     """Synchronize work orders from CMMS"""
     try:
         result = await data_sync_service.sync_work_orders(
@@ -198,7 +199,7 @@ async def sync_work_orders(request: SyncRequest):
 
 
 @app.post("/cmms/sync/maintenance-schedules", response_model=Dict)
-async def sync_maintenance_schedules(request: SyncRequest):
+async def sync_maintenance_schedules(request: SyncRequest, user: User = Depends(get_current_user)):
     """Synchronize maintenance schedules from CMMS"""
     try:
         result = await data_sync_service.sync_maintenance_schedules(
@@ -217,7 +218,7 @@ async def sync_maintenance_schedules(request: SyncRequest):
 
 
 @app.post("/cmms/sync/assets", response_model=Dict)
-async def sync_assets(request: SyncRequest):
+async def sync_assets(request: SyncRequest, user: User = Depends(get_current_user)):
     """Synchronize assets from CMMS"""
     try:
         result = await data_sync_service.sync_assets(
@@ -236,7 +237,7 @@ async def sync_assets(request: SyncRequest):
 
 
 @app.post("/cmms/sync/all", response_model=Dict)
-async def sync_all_data(request: SyncRequest):
+async def sync_all_data(request: SyncRequest, user: User = Depends(get_current_user)):
     """Synchronize all data from CMMS"""
     try:
         result = await data_sync_service.sync_all(
@@ -258,7 +259,7 @@ async def sync_all_data(request: SyncRequest):
 
 # Work Order Processing Endpoints
 @app.post("/work-orders", response_model=Dict)
-async def create_work_order(request: WorkOrderRequest):
+async def create_work_order(request: WorkOrderRequest, user: User = Depends(get_current_user)):
     """Create a new work order"""
     try:
         if request.template_id:
@@ -293,7 +294,7 @@ async def create_work_order(request: WorkOrderRequest):
 
 
 @app.get("/work-orders/{work_order_id}", response_model=Dict)
-async def get_work_order(work_order_id: UUID):
+async def get_work_order(work_order_id: UUID, user: User = Depends(get_current_user)):
     """Get work order by ID"""
     try:
         work_order = await work_order_service.get_work_order(work_order_id)
@@ -313,7 +314,7 @@ async def get_work_orders(
     status: Optional[str] = None,
     asset_id: Optional[str] = None,
     assigned_to: Optional[str] = None
-):
+, user: User = Depends(get_current_user)):
     """Get work orders with optional filters"""
     try:
         work_orders = await work_order_service.get_work_orders(
@@ -333,7 +334,7 @@ async def get_work_orders(
 
 
 @app.put("/work-orders/{work_order_id}/status", response_model=Dict)
-async def update_work_order_status(work_order_id: UUID, status: str):
+async def update_work_order_status(work_order_id: UUID, status: str, user: User = Depends(get_current_user)):
     """Update work order status"""
     try:
         work_order = await work_order_service.update_work_order_status(work_order_id, status)
@@ -350,7 +351,7 @@ async def update_work_order_status(work_order_id: UUID, status: str):
 
 # Maintenance Scheduling Endpoints
 @app.post("/maintenance/schedules", response_model=Dict)
-async def create_maintenance_schedule(request: MaintenanceScheduleRequest):
+async def create_maintenance_schedule(request: MaintenanceScheduleRequest, user: User = Depends(get_current_user)):
     """Create a new maintenance schedule"""
     try:
         schedule = await maintenance_service.create_maintenance_schedule(
@@ -379,7 +380,7 @@ async def create_maintenance_schedule(request: MaintenanceScheduleRequest):
 
 
 @app.get("/maintenance/schedules", response_model=Dict)
-async def get_maintenance_schedules():
+async def get_maintenance_schedules(user: User = Depends(get_current_user)):
     """Get all maintenance schedules"""
     try:
         schedules = await maintenance_service.get_all_maintenance_schedules()
@@ -394,7 +395,7 @@ async def get_maintenance_schedules():
 
 
 @app.post("/maintenance/tasks", response_model=Dict)
-async def create_maintenance_task(request: MaintenanceTaskRequest):
+async def create_maintenance_task(request: MaintenanceTaskRequest, user: User = Depends(get_current_user)):
     """Create a new maintenance task"""
     try:
         task = await maintenance_service.create_maintenance_task(
@@ -428,7 +429,7 @@ async def get_maintenance_tasks(
     status: Optional[str] = None,
     asset_id: Optional[str] = None,
     assigned_to: Optional[str] = None
-):
+, user: User = Depends(get_current_user)):
     """Get maintenance tasks with optional filters"""
     try:
         tasks = await maintenance_service.get_maintenance_tasks(
@@ -448,7 +449,7 @@ async def get_maintenance_tasks(
 
 
 @app.post("/maintenance/tasks/{task_id}/start", response_model=Dict)
-async def start_maintenance_task(task_id: UUID, performer: str):
+async def start_maintenance_task(task_id: UUID, performer: str, user: User = Depends(get_current_user)):
     """Start a maintenance task"""
     try:
         task = await maintenance_service.start_maintenance_task(task_id, performer)
@@ -471,7 +472,7 @@ async def complete_maintenance_task(
     notes: Optional[str] = None,
     findings: Optional[str] = None,
     recommendations: Optional[str] = None
-):
+, user: User = Depends(get_current_user)):
     """Complete a maintenance task"""
     try:
         task = await maintenance_service.complete_maintenance_task(
@@ -495,7 +496,7 @@ async def complete_maintenance_task(
 
 
 @app.post("/maintenance/schedule-recurring", response_model=Dict)
-async def schedule_recurring_maintenance():
+async def schedule_recurring_maintenance(user: User = Depends(get_current_user)):
     """Schedule recurring maintenance tasks"""
     try:
         new_tasks = await maintenance_service.schedule_recurring_maintenance()
@@ -513,7 +514,7 @@ async def schedule_recurring_maintenance():
 async def get_maintenance_statistics(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
-):
+, user: User = Depends(get_current_user)):
     """Get maintenance statistics"""
     try:
         stats = await maintenance_service.get_maintenance_statistics(
@@ -528,7 +529,7 @@ async def get_maintenance_statistics(
 
 # Asset Tracking Endpoints
 @app.post("/assets", response_model=Dict)
-async def register_asset(request: AssetRegistrationRequest):
+async def register_asset(request: AssetRegistrationRequest, user: User = Depends(get_current_user)):
     """Register a new asset"""
     try:
         asset = await asset_tracking_service.register_asset(
@@ -559,7 +560,7 @@ async def register_asset(request: AssetRegistrationRequest):
 
 
 @app.get("/assets/{asset_id}", response_model=Dict)
-async def get_asset(asset_id: str):
+async def get_asset(asset_id: str, user: User = Depends(get_current_user)):
     """Get asset by ID"""
     try:
         asset = await asset_tracking_service.get_asset(asset_id)
@@ -579,7 +580,7 @@ async def get_assets(
     asset_type: Optional[str] = None,
     status: Optional[str] = None,
     department: Optional[str] = None
-):
+, user: User = Depends(get_current_user)):
     """Get assets with optional filters"""
     try:
         assets = await asset_tracking_service.get_all_assets(
@@ -610,7 +611,7 @@ async def update_asset_location(
     zone: Optional[str] = None,
     department: Optional[str] = None,
     updated_by: Optional[str] = None
-):
+, user: User = Depends(get_current_user)):
     """Update asset location"""
     try:
         coords_tuple = tuple(coordinates) if coordinates else None
@@ -650,7 +651,7 @@ async def assess_asset_condition(
     performance_metrics: Optional[Dict] = None,
     recommendations: Optional[str] = None,
     next_assessment_date: Optional[datetime] = None
-):
+, user: User = Depends(get_current_user)):
     """Assess asset condition"""
     try:
         condition_assessment = await asset_tracking_service.assess_asset_condition(
@@ -677,7 +678,7 @@ async def assess_asset_condition(
 
 
 @app.post("/assets/{asset_id}/performance", response_model=Dict)
-async def record_performance_data(asset_id: str, request: PerformanceDataRequest):
+async def record_performance_data(asset_id: str, request: PerformanceDataRequest, user: User = Depends(get_current_user)):
     """Record performance data for an asset"""
     try:
         performance = await asset_tracking_service.record_performance_data(
@@ -713,7 +714,7 @@ async def get_asset_performance_history(
     asset_id: str,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
-):
+, user: User = Depends(get_current_user)):
     """Get asset performance history"""
     try:
         performance_data = await asset_tracking_service.get_asset_performance_history(
@@ -739,7 +740,7 @@ async def get_asset_alerts(
     severity: Optional[str] = None,
     is_acknowledged: Optional[bool] = None,
     is_resolved: Optional[bool] = None
-):
+, user: User = Depends(get_current_user)):
     """Get asset alerts"""
     try:
         alerts = await asset_tracking_service.get_asset_alerts(
@@ -761,7 +762,7 @@ async def get_asset_alerts(
 
 
 @app.post("/assets/{asset_id}/alerts/{alert_id}/acknowledge", response_model=Dict)
-async def acknowledge_asset_alert(asset_id: str, alert_id: UUID, acknowledged_by: str):
+async def acknowledge_asset_alert(asset_id: str, alert_id: UUID, acknowledged_by: str, user: User = Depends(get_current_user)):
     """Acknowledge an asset alert"""
     try:
         alert = await asset_tracking_service.acknowledge_alert(alert_id, acknowledged_by)
@@ -782,7 +783,7 @@ async def resolve_asset_alert(
     alert_id: UUID,
     resolved_by: str,
     resolution_notes: Optional[str] = None
-):
+, user: User = Depends(get_current_user)):
     """Resolve an asset alert"""
     try:
         alert = await asset_tracking_service.resolve_alert(alert_id, resolved_by, resolution_notes)
@@ -802,7 +803,7 @@ async def get_asset_statistics(
     asset_id: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
-):
+, user: User = Depends(get_current_user)):
     """Get asset statistics"""
     try:
         stats = await asset_tracking_service.get_asset_statistics(
@@ -818,7 +819,7 @@ async def get_asset_statistics(
 
 # Health check endpoint
 @app.get("/health", response_model=Dict)
-async def health_check():
+async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint"""
     return {
         "status": "healthy",

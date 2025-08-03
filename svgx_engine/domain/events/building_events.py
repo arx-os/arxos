@@ -20,6 +20,22 @@ class DomainEvent:
     event_type: str = field(init=False)
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         self.event_type = self.__class__.__name__
 
 @dataclass
@@ -82,6 +98,22 @@ class BuildingCostUpdatedEvent(DomainEvent):
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 class BuildingEventPublisher:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Event publisher for building domain events."""
     
     def __init__(self):

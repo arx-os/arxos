@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from domain.repositories import (
     UnitOfWork, BuildingRepository, FloorRepository, RoomRepository,
-    DeviceRepository, UserRepository, ProjectRepository
+    DeviceRepository, UserRepository, ProjectRepository, PDFAnalysisRepository
 )
 from domain.exceptions import RepositoryError
 
@@ -23,6 +23,7 @@ from .repositories import (
     SQLAlchemyBuildingRepository, SQLAlchemyFloorRepository, SQLAlchemyRoomRepository,
     SQLAlchemyDeviceRepository, SQLAlchemyUserRepository, SQLAlchemyProjectRepository
 )
+from .repositories.postgresql_pdf_analysis_repository import PostgreSQLPDFAnalysisRepository
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,16 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         if 'projects' not in self._repositories:
             self._repositories['projects'] = SQLAlchemyProjectRepository(self.session)
         return self._repositories['projects']
+    
+    @property
+    def pdf_analyses(self) -> PDFAnalysisRepository:
+        """Get the PDF analysis repository."""
+        if 'pdf_analyses' not in self._repositories:
+            # PDF analysis repository uses PostgreSQL directly, not SQLAlchemy session
+            from .database.connection_manager import DatabaseConnectionManager
+            connection_manager = DatabaseConnectionManager()
+            self._repositories['pdf_analyses'] = PostgreSQLPDFAnalysisRepository(connection_manager)
+        return self._repositories['pdf_analyses']
 
 
 class UnitOfWorkFactory:

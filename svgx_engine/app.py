@@ -31,6 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 import uvicorn
+from core.security.auth_middleware import get_current_user, User
 
 # SVGX Engine imports
 try:
@@ -171,7 +172,7 @@ class HealthResponse(BaseModel):
 
 # Middleware for performance monitoring
 @app.middleware("http")
-async def performance_middleware(request: Request, call_next):
+    async def performance_middleware(request: Request, call_next, user: User = Depends(get_current_user)):
     """Middleware to monitor request performance."""
     start_time = time.time()
     
@@ -192,7 +193,7 @@ async def performance_middleware(request: Request, call_next):
 
 # Health and Monitoring Endpoints
 @app.get("/health", response_model=HealthResponse)
-async def health_check():
+    async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint for Docker/Kubernetes."""
     try:
         # Basic health checks
@@ -219,7 +220,7 @@ async def health_check():
 
 
 @app.get("/metrics")
-async def get_metrics():
+    async def get_metrics(user: User = Depends(get_current_user)):
     """Get detailed performance metrics."""
     try:
         metrics = performance_monitor.get_metrics()
@@ -231,7 +232,7 @@ async def get_metrics():
 
 # Core SVGX Processing Endpoints
 @app.post("/parse")
-async def parse_svgx(request: SVGXRequest):
+    async def parse_svgx(request: SVGXRequest, user: User = Depends(get_current_user)):
     """Parse SVGX content and return structured elements."""
     try:
         start_time = time.time()
@@ -275,7 +276,7 @@ async def parse_svgx(request: SVGXRequest):
 
 
 @app.post("/evaluate")
-async def evaluate_behavior(request: SVGXRequest):
+    async def evaluate_behavior(request: SVGXRequest, user: User = Depends(get_current_user)):
     """Evaluate SVGX behavior and simulation logic."""
     try:
         start_time = time.time()
@@ -311,7 +312,7 @@ async def evaluate_behavior(request: SVGXRequest):
 
 
 @app.post("/simulate")
-async def simulate_physics(request: SVGXRequest):
+    async def simulate_physics(request: SVGXRequest, user: User = Depends(get_current_user)):
     """Run physics simulation on SVGX content."""
     try:
         start_time = time.time()
@@ -348,7 +349,7 @@ async def simulate_physics(request: SVGXRequest):
 
 # Interactive Behavior Endpoints
 @app.post("/interactive")
-async def handle_interactive_operation(request: InteractiveRequest):
+    async def handle_interactive_operation(request: InteractiveRequest, user: User = Depends(get_current_user)):
     """Handle interactive operations (click, drag, hover)."""
     try:
         start_time = time.time()
@@ -391,7 +392,7 @@ async def handle_interactive_operation(request: InteractiveRequest):
         raise HTTPException(status_code=400, detail=f"Failed to handle operation: {str(e)}")
 
 
-async def handle_click(element_id: Optional[str], coordinates: Dict[str, float], modifiers: Dict[str, bool]):
+    async def handle_click(element_id: Optional[str], coordinates: Dict[str, float], modifiers: Dict[str, bool], user: User = Depends(get_current_user)):
     """Handle click operation."""
     if element_id:
         # Add to selection if Ctrl/Cmd is pressed
@@ -408,7 +409,7 @@ async def handle_click(element_id: Optional[str], coordinates: Dict[str, float],
     }
 
 
-async def handle_drag_start(element_id: Optional[str], coordinates: Dict[str, float], modifiers: Dict[str, bool]):
+    async def handle_drag_start(element_id: Optional[str], coordinates: Dict[str, float], modifiers: Dict[str, bool], user: User = Depends(get_current_user)):
     """Handle drag start operation."""
     interactive_state["drag_state"] = {
         "element_id": element_id,
@@ -424,7 +425,7 @@ async def handle_drag_start(element_id: Optional[str], coordinates: Dict[str, fl
     }
 
 
-async def handle_drag_move(coordinates: Dict[str, float], modifiers: Dict[str, bool]):
+    async def handle_drag_move(coordinates: Dict[str, float], modifiers: Dict[str, bool], user: User = Depends(get_current_user)):
     """Handle drag move operation."""
     if interactive_state["drag_state"] and interactive_state["drag_state"]["is_dragging"]:
         interactive_state["drag_state"]["current_position"] = coordinates
@@ -441,7 +442,7 @@ async def handle_drag_move(coordinates: Dict[str, float], modifiers: Dict[str, b
     return {"is_dragging": False}
 
 
-async def handle_drag_end(coordinates: Dict[str, float], modifiers: Dict[str, bool]):
+    async def handle_drag_end(coordinates: Dict[str, float], modifiers: Dict[str, bool], user: User = Depends(get_current_user)):
     """Handle drag end operation."""
     if interactive_state["drag_state"]:
         final_position = apply_constraints(coordinates, interactive_state["constraints"])
@@ -459,7 +460,7 @@ async def handle_drag_end(coordinates: Dict[str, float], modifiers: Dict[str, bo
     return {"drag_ended": False}
 
 
-async def handle_hover(element_id: Optional[str], coordinates: Dict[str, float], modifiers: Dict[str, bool]):
+    async def handle_hover(element_id: Optional[str], coordinates: Dict[str, float], modifiers: Dict[str, bool], user: User = Depends(get_current_user)):
     """Handle hover operation."""
     interactive_state["hovered_element"] = element_id
     
@@ -469,7 +470,7 @@ async def handle_hover(element_id: Optional[str], coordinates: Dict[str, float],
     }
 
 
-async def handle_select(element_id: str, modifiers: Dict[str, bool]):
+    async def handle_select(element_id: str, modifiers: Dict[str, bool], user: User = Depends(get_current_user)):
     """Handle element selection."""
     if modifiers.get("ctrl", False) or modifiers.get("meta", False):
         # Multi-select
@@ -484,7 +485,7 @@ async def handle_select(element_id: str, modifiers: Dict[str, bool]):
     }
 
 
-async def handle_deselect(element_id: str):
+    async def handle_deselect(element_id: str, user: User = Depends(get_current_user)):
     """Handle element deselection."""
     if element_id in interactive_state["selected_elements"]:
         interactive_state["selected_elements"].remove(element_id)
@@ -508,7 +509,7 @@ def apply_constraints(coordinates: Dict[str, float], constraints: List[Dict[str,
 
 # Precision and Advanced Features
 @app.post("/precision")
-async def set_precision_level(request: PrecisionRequest):
+    async def set_precision_level(request: PrecisionRequest, user: User = Depends(get_current_user)):
     """Set precision level for operations."""
     try:
         level = request.level.lower()
@@ -536,7 +537,7 @@ async def set_precision_level(request: PrecisionRequest):
 
 
 @app.get("/state")
-async def get_interactive_state():
+    async def get_interactive_state(user: User = Depends(get_current_user)):
     """Get current interactive state."""
     return {
         "selected_elements": interactive_state["selected_elements"],
@@ -549,7 +550,7 @@ async def get_interactive_state():
 
 # Compilation Endpoints
 @app.post("/compile/svg")
-async def compile_to_svg(request: SVGXRequest):
+    async def compile_to_svg(request: SVGXRequest, user: User = Depends(get_current_user)):
     """Compile SVGX to SVG format."""
     try:
         start_time = time.time()
@@ -571,7 +572,7 @@ async def compile_to_svg(request: SVGXRequest):
 
 
 @app.post("/compile/json")
-async def compile_to_json(request: SVGXRequest):
+    async def compile_to_json(request: SVGXRequest, user: User = Depends(get_current_user)):
     """Compile SVGX to JSON format."""
     try:
         start_time = time.time()
@@ -595,7 +596,7 @@ async def compile_to_json(request: SVGXRequest):
 # Advanced CAD Features Endpoints
 
 @app.post("/cad/precision")
-async def cad_set_precision(request: PrecisionRequest):
+    async def cad_set_precision(request: PrecisionRequest, user: User = Depends(get_current_user)):
     """Set CAD precision level for advanced operations."""
     try:
         start_time = time.time()
@@ -622,7 +623,7 @@ async def cad_set_precision(request: PrecisionRequest):
 
 
 @app.post("/cad/constraint")
-async def cad_add_constraint(request: CADConstraintRequest):
+    async def cad_add_constraint(request: CADConstraintRequest, user: User = Depends(get_current_user)):
     """Add a geometric constraint to the CAD system."""
     try:
         start_time = time.time()
@@ -654,7 +655,7 @@ async def cad_add_constraint(request: CADConstraintRequest):
 
 
 @app.post("/cad/solve")
-async def cad_solve_constraints():
+    async def cad_solve_constraints(user: User = Depends(get_current_user)):
     """Solve all CAD constraints using batching."""
     try:
         start_time = time.time()
@@ -674,7 +675,7 @@ async def cad_solve_constraints():
 
 
 @app.post("/cad/assembly")
-async def cad_create_assembly(request: AssemblyRequest):
+    async def cad_create_assembly(request: AssemblyRequest, user: User = Depends(get_current_user)):
     """Create a new CAD assembly."""
     try:
         start_time = time.time()
@@ -698,7 +699,7 @@ async def cad_create_assembly(request: AssemblyRequest):
 
 
 @app.post("/cad/export")
-async def cad_export_high_precision(request: ExportRequest):
+    async def cad_export_high_precision(request: ExportRequest, user: User = Depends(get_current_user)):
     """Export elements with high precision for manufacturing."""
     try:
         start_time = time.time()
@@ -723,7 +724,7 @@ async def cad_export_high_precision(request: ExportRequest):
 
 
 @app.get("/cad/stats")
-async def get_cad_performance_stats():
+    async def get_cad_performance_stats(user: User = Depends(get_current_user)):
     """Get CAD features performance statistics."""
     try:
         stats = get_cad_performance_stats()
@@ -758,7 +759,7 @@ class LogicExecutionRequest(BaseModel):
 
 
 @app.post("/logic/create_rule")
-async def create_logic_rule(request: LogicRuleRequest):
+    async def create_logic_rule(request: LogicRuleRequest, user: User = Depends(get_current_user)):
     """Create a new logic rule."""
     try:
         start_time = time.time()
@@ -790,7 +791,7 @@ async def create_logic_rule(request: LogicRuleRequest):
 
 
 @app.post("/logic/execute")
-async def execute_logic_rules(request: LogicExecutionRequest):
+    async def execute_logic_rules(request: LogicExecutionRequest, user: User = Depends(get_current_user)):
     """Execute logic rules for an element."""
     try:
         start_time = time.time()
@@ -816,7 +817,7 @@ async def execute_logic_rules(request: LogicExecutionRequest):
 
 
 @app.get("/logic/stats")
-async def get_logic_engine_stats():
+    async def get_logic_engine_stats(user: User = Depends(get_current_user)):
     """Get logic engine performance statistics."""
     try:
         stats = runtime.get_logic_engine_stats()
@@ -831,7 +832,7 @@ async def get_logic_engine_stats():
 
 
 @app.get("/logic/rules")
-async def list_logic_rules():
+    async def list_logic_rules(user: User = Depends(get_current_user)):
     """List all available logic rules."""
     try:
         if not runtime.logic_engine:
@@ -850,7 +851,7 @@ async def list_logic_rules():
 
 
 @app.get("/logic/rules/{rule_id}")
-async def get_logic_rule(rule_id: str):
+    async def get_logic_rule(rule_id: str, user: User = Depends(get_current_user)):
     """Get a specific logic rule."""
     try:
         if not runtime.logic_engine:
@@ -883,7 +884,7 @@ async def get_logic_rule(rule_id: str):
 
 
 @app.delete("/logic/rules/{rule_id}")
-async def delete_logic_rule(rule_id: str):
+    async def delete_logic_rule(rule_id: str, user: User = Depends(get_current_user)):
     """Delete a logic rule."""
     try:
         if not runtime.logic_engine:
@@ -907,7 +908,7 @@ async def delete_logic_rule(rule_id: str):
 # Real-time Collaboration Endpoints
 
 @app.post("/collaboration/join")
-async def join_collaboration_session(request: Dict[str, Any]):
+    async def join_collaboration_session(request: Dict[str, Any], user: User = Depends(get_current_user)):
     """Join a real-time collaboration session."""
     try:
         start_time = time.time()
@@ -938,7 +939,7 @@ async def join_collaboration_session(request: Dict[str, Any]):
 
 
 @app.post("/collaboration/operation")
-async def send_collaboration_operation(request: Dict[str, Any]):
+    async def send_collaboration_operation(request: Dict[str, Any], user: User = Depends(get_current_user)):
     """Send a collaborative operation."""
     try:
         start_time = time.time()
@@ -963,7 +964,7 @@ async def send_collaboration_operation(request: Dict[str, Any]):
 
 
 @app.post("/collaboration/resolve")
-async def resolve_collaboration_conflict(request: Dict[str, Any]):
+    async def resolve_collaboration_conflict(request: Dict[str, Any], user: User = Depends(get_current_user)):
     """Resolve a collaboration conflict."""
     try:
         start_time = time.time()
@@ -993,7 +994,7 @@ async def resolve_collaboration_conflict(request: Dict[str, Any]):
 
 
 @app.get("/collaboration/users")
-async def get_collaboration_users():
+    async def get_collaboration_users(user: User = Depends(get_current_user)):
     """Get active collaboration users."""
     try:
         from svgx_engine.services.realtime_collaboration import get_active_users
@@ -1012,7 +1013,7 @@ async def get_collaboration_users():
 
 
 @app.get("/collaboration/stats")
-async def get_collaboration_stats():
+    async def get_collaboration_stats(user: User = Depends(get_current_user)):
     """Get collaboration performance statistics."""
     try:
         from svgx_engine.services.realtime_collaboration import get_collaboration_performance_stats
@@ -1031,7 +1032,7 @@ async def get_collaboration_stats():
 
 # Initialize collaboration server on startup
 @app.on_event("startup")
-async def startup_collaboration():
+    async def startup_collaboration(user: User = Depends(get_current_user)):
     """Initialize collaboration server on application startup."""
     try:
         from svgx_engine.services.realtime_collaboration import start_collaboration_server
@@ -1047,7 +1048,7 @@ async def startup_collaboration():
 
 # Initialize CAD features on startup
 @app.on_event("startup")
-async def startup_event():
+    async def startup_event(user: User = Depends(get_current_user)):
     """Initialize CAD features on application startup."""
     try:
         success = await initialize_advanced_cad_features()
@@ -1061,7 +1062,7 @@ async def startup_event():
 
 # Error handling
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+    async def global_exception_handler(request: Request, exc: Exception, user: User = Depends(get_current_user)):
     """Global exception handler."""
     logger.error(f"Unhandled exception: {exc}")
     return JSONResponse(

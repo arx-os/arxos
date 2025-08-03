@@ -17,6 +17,7 @@ from drafts.draft_model import router as drafts_router
 from mod.mod_dashboard import router as mod_router
 from engagement.onboarding_flow import router as onboarding_router
 from funding.routes.init_escrow import router as escrow_router
+from core.security.auth_middleware import get_current_user, User
 
 # Configure logging
 logging.basicConfig(
@@ -55,7 +56,7 @@ app.include_router(escrow_router, prefix="/api/funding")
 
 # Frontend routes
 @app.get("/", response_class=HTMLResponse)
-async def homepage():
+    async def homepage(user: User = Depends(get_current_user)):
     """Serve the main homepage"""
     try:
         with open("frontend/index.html", "r", encoding="utf-8") as f:
@@ -64,7 +65,7 @@ async def homepage():
         raise HTTPException(status_code=404, detail="Homepage not found")
 
 @app.get("/submit", response_class=HTMLResponse)
-async def submit_page():
+    async def submit_page(user: User = Depends(get_current_user)):
     """Serve the project submission page"""
     try:
         with open("frontend/submit_design.html", "r", encoding="utf-8") as f:
@@ -73,7 +74,7 @@ async def submit_page():
         raise HTTPException(status_code=404, detail="Submit page not found")
 
 @app.get("/my-drafts", response_class=HTMLResponse)
-async def my_drafts_page():
+    async def my_drafts_page(user: User = Depends(get_current_user)):
     """Serve the drafts management page"""
     try:
         with open("frontend/my_drafts.html", "r", encoding="utf-8") as f:
@@ -82,7 +83,7 @@ async def my_drafts_page():
         raise HTTPException(status_code=404, detail="Drafts page not found")
 
 @app.get("/mod-dashboard", response_class=HTMLResponse)
-async def mod_dashboard_page():
+    async def mod_dashboard_page(user: User = Depends(get_current_user)):
     """Serve the moderator dashboard page"""
     try:
         with open("frontend/mod_dashboard.html", "r", encoding="utf-8") as f:
@@ -91,7 +92,7 @@ async def mod_dashboard_page():
         raise HTTPException(status_code=404, detail="Moderator dashboard not found")
 
 @app.get("/funding/{project_id}", response_class=HTMLResponse)
-async def funding_page(project_id: str):
+    async def funding_page(project_id: str, user: User = Depends(get_current_user)):
     """Serve the funding escrow panel for a specific project"""
     try:
         with open("funding/frontend/escrow_panel.html", "r", encoding="utf-8") as f:
@@ -104,7 +105,7 @@ async def funding_page(project_id: str):
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
+    async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint"""
     return {
         "status": "healthy",
@@ -120,14 +121,14 @@ async def health_check():
 
 # API documentation redirect
 @app.get("/docs")
-async def docs_redirect():
+    async def docs_redirect(user: User = Depends(get_current_user)):
     """Redirect to API documentation"""
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/api/docs")
 
 # Error handlers
 @app.exception_handler(404)
-async def not_found_handler(request, exc):
+    async def not_found_handler(request, exc, user: User = Depends(get_current_user)):
     """Handle 404 errors"""
     return {
         "error": "Not found",
@@ -136,7 +137,7 @@ async def not_found_handler(request, exc):
     }
 
 @app.exception_handler(500)
-async def internal_error_handler(request, exc):
+    async def internal_error_handler(request, exc, user: User = Depends(get_current_user)):
     """Handle 500 errors"""
     logger.error(f"Internal server error: {exc}")
     return {
@@ -146,7 +147,7 @@ async def internal_error_handler(request, exc):
 
 # Startup event
 @app.on_event("startup")
-async def startup_event():
+    async def startup_event(user: User = Depends(get_current_user)):
     """Application startup event"""
     logger.info("Planarx Community Platform starting up...")
     
@@ -160,7 +161,7 @@ async def startup_event():
 
 # Shutdown event
 @app.on_event("shutdown")
-async def shutdown_event():
+    async def shutdown_event(user: User = Depends(get_current_user)):
     """Application shutdown event"""
     logger.info("Planarx Community Platform shutting down...")
 

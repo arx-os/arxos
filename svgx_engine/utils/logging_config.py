@@ -112,6 +112,23 @@ class SVGXLogger:
     """Enhanced logger for SVGX Engine."""
     
     def __init__(self, name: str, category: str = LogCategory.GENERAL):
+    """
+    Perform __init__ operation
+
+Args:
+        name: Description of name
+        category: Description of category
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.name = name
         self.category = category
         self.logger = logging.getLogger(name)
@@ -198,6 +215,22 @@ class SVGXLogger:
 
 
 class LoggingManager:
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Centralized logging manager for SVGX Engine."""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):

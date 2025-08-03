@@ -94,6 +94,22 @@ class AdvancedRuleEngine:
     Supports business, safety, operational, maintenance, and compliance rules.
     """
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         # {rule_id: Rule}
         self.rules: Dict[str, Rule] = {}
         # {rule_type: Set[rule_id]}
@@ -591,6 +607,22 @@ advanced_rule_engine = AdvancedRuleEngine()
 
 # Register with the event-driven engine
 def _register_advanced_rule_engine():
+    """
+    Perform _register_advanced_rule_engine operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = _register_advanced_rule_engine(param)
+        print(result)
+    """
     def handler(event: Event):
         if event.type == EventType.SYSTEM and event.data.get('rule_evaluation'):
             # Rule evaluation events are handled internally

@@ -28,6 +28,22 @@ class CreateFloorUseCase:
     """Use case for creating a new floor."""
     
     def __init__(self, floor_repository: FloorRepository):
+    """
+    Perform __init__ operation
+
+Args:
+        floor_repository: Description of floor_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.floor_repository = floor_repository
     
     def execute(self, request: CreateFloorRequest) -> CreateFloorResponse:
@@ -82,6 +98,22 @@ class CreateFloorUseCase:
 
 
 class UpdateFloorUseCase:
+    """
+    Perform __init__ operation
+
+Args:
+        floor_repository: Description of floor_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Use case for updating an existing floor."""
     
     def __init__(self, floor_repository: FloorRepository):

@@ -1,0 +1,471 @@
+/* Auto-Snapshot CSS Styles */
+
+/* Main Container */
+.auto-snapshot-container {
+    @apply bg-white rounded-lg shadow-md border border-gray-200;
+}
+
+.auto-snapshot-header {
+    @apply p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50;
+}
+
+.auto-snapshot-title {
+    @apply text-lg font-semibold text-gray-900 flex items-center;
+}
+
+.auto-snapshot-title i {
+    @apply mr-2 text-blue-600;
+}
+
+/* Configuration Panel */
+.auto-snapshot-config-panel {
+    @apply p-6;
+}
+
+.auto-snapshot-config-panel h3 {
+    @apply text-lg font-semibold text-gray-900 mb-4 flex items-center;
+}
+
+.auto-snapshot-config-panel h3 i {
+    @apply mr-2 text-blue-600;
+}
+
+.config-form-group {
+    @apply mb-4;
+}
+
+.config-form-group label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.config-form-group input[type="number"],
+.config-form-group input[type="text"] {
+    @apply w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+.config-form-group input[type="checkbox"] {
+    @apply h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded;
+}
+
+.config-checkbox-group {
+    @apply flex items-center space-x-4;
+}
+
+.config-checkbox-item {
+    @apply flex items-center;
+}
+
+.config-checkbox-item input[type="checkbox"] {
+    @apply mr-2;
+}
+
+.config-checkbox-item label {
+    @apply text-sm text-gray-700;
+}
+
+.config-actions {
+    @apply flex space-x-3 mt-6;
+}
+
+.config-btn {
+    @apply px-4 py-2 rounded-md text-sm font-medium transition-colors;
+}
+
+.config-btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+.config-btn-secondary {
+    @apply bg-gray-300 text-gray-700 hover:bg-gray-400 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+}
+
+.config-btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+}
+
+/* Statistics Panel */
+.auto-snapshot-stats-panel {
+    @apply p-6;
+}
+
+.auto-snapshot-stats-panel h3 {
+    @apply text-lg font-semibold text-gray-900 mb-4 flex items-center;
+}
+
+.auto-snapshot-stats-panel h3 i {
+    @apply mr-2 text-green-600;
+}
+
+.stats-grid {
+    @apply grid grid-cols-2 gap-4 mb-6;
+}
+
+.stats-card {
+    @apply p-4 rounded-lg border;
+}
+
+.stats-card-success {
+    @apply bg-green-50 border-green-200;
+}
+
+.stats-card-info {
+    @apply bg-blue-50 border-blue-200;
+}
+
+.stats-card-warning {
+    @apply bg-yellow-50 border-yellow-200;
+}
+
+.stats-card-danger {
+    @apply bg-red-50 border-red-200;
+}
+
+.stats-card-purple {
+    @apply bg-purple-50 border-purple-200;
+}
+
+.stats-card-orange {
+    @apply bg-orange-50 border-orange-200;
+}
+
+.stats-label {
+    @apply text-sm font-medium mb-1;
+}
+
+.stats-label-success {
+    @apply text-green-600;
+}
+
+.stats-label-info {
+    @apply text-blue-600;
+}
+
+.stats-label-warning {
+    @apply text-yellow-600;
+}
+
+.stats-label-danger {
+    @apply text-red-600;
+}
+
+.stats-label-purple {
+    @apply text-purple-600;
+}
+
+.stats-label-orange {
+    @apply text-orange-600;
+}
+
+.stats-value {
+    @apply text-2xl font-bold;
+}
+
+.stats-value-success {
+    @apply text-green-700;
+}
+
+.stats-value-info {
+    @apply text-blue-700;
+}
+
+.stats-value-warning {
+    @apply text-yellow-700;
+}
+
+.stats-value-danger {
+    @apply text-red-700;
+}
+
+.stats-value-purple {
+    @apply text-purple-700;
+}
+
+.stats-value-orange {
+    @apply text-orange-700;
+}
+
+.stats-actions {
+    @apply flex space-x-2;
+}
+
+.stats-btn {
+    @apply px-3 py-1 rounded text-sm font-medium transition-colors;
+}
+
+.stats-btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.stats-btn-warning {
+    @apply bg-orange-600 text-white hover:bg-orange-700;
+}
+
+/* Floor Activity Panel */
+.auto-snapshot-floor-activity-panel {
+    @apply p-6;
+}
+
+.auto-snapshot-floor-activity-panel h3 {
+    @apply text-lg font-semibold text-gray-900 mb-4 flex items-center;
+}
+
+.auto-snapshot-floor-activity-panel h3 i {
+    @apply mr-2 text-purple-600;
+}
+
+.floor-activity-controls {
+    @apply flex items-center space-x-4 mb-4;
+}
+
+.floor-activity-checkbox {
+    @apply flex items-center;
+}
+
+.floor-activity-checkbox input[type="checkbox"] {
+    @apply mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded;
+}
+
+.floor-activity-checkbox label {
+    @apply text-sm font-medium text-gray-700;
+}
+
+.floor-activity-btn {
+    @apply px-3 py-1 rounded text-sm font-medium transition-colors;
+}
+
+.floor-activity-btn-success {
+    @apply bg-green-600 text-white hover:bg-green-700;
+}
+
+.floor-activity-btn-warning {
+    @apply bg-orange-600 text-white hover:bg-orange-700;
+}
+
+.floor-activity-content {
+    @apply bg-gray-50 p-4 rounded-lg border border-gray-200;
+}
+
+.floor-activity-item {
+    @apply flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0;
+}
+
+.floor-activity-label {
+    @apply text-sm font-medium text-gray-700;
+}
+
+.floor-activity-value {
+    @apply text-sm text-gray-900;
+}
+
+/* Status Indicators */
+.status-indicator {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-indicator-success {
+    @apply bg-green-100 text-green-800;
+}
+
+.status-indicator-warning {
+    @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-indicator-danger {
+    @apply bg-red-100 text-red-800;
+}
+
+.status-indicator-info {
+    @apply bg-blue-100 text-blue-800;
+}
+
+/* Activity Indicators */
+.activity-indicator {
+    @apply fixed bottom-4 right-4 p-3 rounded-full shadow-lg z-50;
+}
+
+.activity-indicator-active {
+    @apply bg-green-500 text-white;
+}
+
+.activity-indicator-inactive {
+    @apply bg-gray-400 text-white;
+}
+
+.activity-indicator-pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+/* Notification Styles */
+.auto-snapshot-notification {
+    @apply fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 max-w-sm;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.auto-snapshot-notification-success {
+    @apply bg-green-500 text-white;
+}
+
+.auto-snapshot-notification-error {
+    @apply bg-red-500 text-white;
+}
+
+.auto-snapshot-notification-warning {
+    @apply bg-yellow-500 text-black;
+}
+
+.auto-snapshot-notification-info {
+    @apply bg-blue-500 text-white;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Progress Indicators */
+.auto-snapshot-progress {
+    @apply w-full bg-gray-200 rounded-full h-2;
+}
+
+.auto-snapshot-progress-bar {
+    @apply bg-blue-600 h-2 rounded-full transition-all duration-300;
+}
+
+.auto-snapshot-progress-success {
+    @apply bg-green-600;
+}
+
+.auto-snapshot-progress-warning {
+    @apply bg-yellow-600;
+}
+
+.auto-snapshot-progress-danger {
+    @apply bg-red-600;
+}
+
+/* Loading States */
+.auto-snapshot-loading {
+    @apply flex items-center justify-center p-4;
+}
+
+.auto-snapshot-loading-spinner {
+    @apply animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600;
+}
+
+.auto-snapshot-loading-text {
+    @apply ml-2 text-sm text-gray-600;
+}
+
+/* Empty States */
+.auto-snapshot-empty {
+    @apply text-center py-8;
+}
+
+.auto-snapshot-empty-icon {
+    @apply text-4xl text-gray-400 mb-2;
+}
+
+.auto-snapshot-empty-text {
+    @apply text-gray-500 text-sm;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stats-grid {
+        @apply grid-cols-1;
+    }
+    
+    .floor-activity-controls {
+        @apply flex-col items-start space-y-2;
+    }
+    
+    .config-actions {
+        @apply flex-col space-y-2;
+    }
+    
+    .config-actions .config-btn {
+        @apply w-full;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .auto-snapshot-container {
+        @apply bg-gray-800 border-gray-700;
+    }
+    
+    .auto-snapshot-header {
+        @apply bg-gradient-to-r from-gray-700 to-gray-800;
+    }
+    
+    .auto-snapshot-title {
+        @apply text-gray-100;
+    }
+    
+    .config-form-group label {
+        @apply text-gray-300;
+    }
+    
+    .config-form-group input[type="number"],
+    .config-form-group input[type="text"] {
+        @apply bg-gray-700 border-gray-600 text-gray-100;
+    }
+    
+    .stats-card {
+        @apply bg-gray-700 border-gray-600;
+    }
+    
+    .floor-activity-content {
+        @apply bg-gray-700 border-gray-600;
+    }
+    
+    .floor-activity-label {
+        @apply text-gray-300;
+    }
+    
+    .floor-activity-value {
+        @apply text-gray-100;
+    }
+}
+
+/* Accessibility */
+.auto-snapshot-container:focus-within {
+    @apply ring-2 ring-blue-500 ring-offset-2;
+}
+
+.config-btn:focus,
+.stats-btn:focus,
+.floor-activity-btn:focus {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Print Styles */
+@media print {
+    .auto-snapshot-container {
+        @apply shadow-none border-none;
+    }
+    
+    .config-actions,
+    .stats-actions,
+    .floor-activity-controls {
+        @apply hidden;
+    }
+} 

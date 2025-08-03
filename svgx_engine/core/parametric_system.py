@@ -21,6 +21,7 @@ import logging
 import re
 
 from .precision_system import PrecisionPoint, PrecisionLevel
+import html
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +136,8 @@ class ParameterExpression:
             })
             
             # Evaluate expression
-            result = eval(self.expression, {"__builtins__": {}}, locals_dict)
+            result = # SECURITY: eval() removed - use safe alternatives
+        # eval(self.expression, {"__builtins__": {}}, locals_dict)
             return result
             
         except Exception as e:

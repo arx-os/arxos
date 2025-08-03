@@ -704,6 +704,22 @@ class BaseDriver:
     """Base class for device drivers."""
     
     def __init__(self, config: Dict[str, Any]):
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.config = config
     
     async def discover(self, address_range: Optional[str] = None) -> List[Dict[str, Any]]:

@@ -18,6 +18,25 @@ class SVGXElement:
     """Represents an SVGX element with extended attributes."""
     
     def __init__(self, tag: str, attributes: Dict[str, str], content: str = "", position: List[float] = None):
+    """
+    Perform __init__ operation
+
+Args:
+        tag: Description of tag
+        attributes: Description of attributes
+        content: Description of content
+        position: Description of position
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.tag = tag
         self.attributes = attributes
         self.content = content
@@ -41,6 +60,24 @@ class SVGXElement:
 
 
 class ArxObject:
+    """
+    Perform __init__ operation
+
+Args:
+        object_id: Description of object_id
+        object_type: Description of object_type
+        system: Description of system
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Represents an arx:object with semantic data."""
     
     def __init__(self, object_id: str, object_type: str, system: str = None):

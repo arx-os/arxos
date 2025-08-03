@@ -194,6 +194,22 @@ class PrecisionValidator:
     """Validator for precision operations"""
     
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
+    """
+    Perform __init__ operation
+
+Args:
+        precision_level: Description of precision_level
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.precision_level = precision_level
         self.tolerance = Decimal(str(precision_level.value))
     
@@ -231,6 +247,22 @@ class PrecisionValidator:
             return False
 
 class PrecisionDisplay:
+    """
+    Perform __init__ operation
+
+Args:
+        precision_level: Description of precision_level
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Display utilities for precision values"""
     
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
@@ -259,6 +291,22 @@ class PrecisionDisplay:
         elif self.precision_level == PrecisionLevel.NANOMETER:
             return "0.000001mm"
         else:
+    """
+    Perform __init__ operation
+
+Args:
+        precision_level: Description of precision_level
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
             return "1.0mm"
 
 class PrecisionDrawingSystem:

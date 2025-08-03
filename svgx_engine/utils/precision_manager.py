@@ -40,6 +40,23 @@ class FixedPointNumber:
     """Fixed-point number implementation to avoid float precision issues."""
     
     def __init__(self, value: Union[int, float, str], scale: int = 1000):
+    """
+    Perform __init__ operation
+
+Args:
+        value: Description of value
+        scale: Description of scale
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.scale = scale
         if isinstance(value, str):
             # Parse string value
@@ -47,33 +64,177 @@ class FixedPointNumber:
         elif isinstance(value, float):
             self.value = int(value * scale)
         else:
+    """
+    Perform __add__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __add__(param)
+        print(result)
+    """
             self.value = int(value * scale)
     
     def __add__(self, other):
+    """
+    Perform __sub__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __sub__(param)
+        print(result)
+    """
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value + other.value, self.scale)
         else:
+    """
+    Perform __mul__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __mul__(param)
+        print(result)
+    """
             return FixedPointNumber(self.value + int(other * self.scale), self.scale)
     
     def __sub__(self, other):
+    """
+    Perform __truediv__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __truediv__(param)
+        print(result)
+    """
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value - other.value, self.scale)
         else:
+    """
+    Perform __lt__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __lt__(param)
+        print(result)
+    """
             return FixedPointNumber(self.value - int(other * self.scale), self.scale)
     
     def __mul__(self, other):
+    """
+    Perform __le__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __le__(param)
+        print(result)
+    """
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value * other.value // self.scale, self.scale)
         else:
+    """
+    Perform __eq__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __eq__(param)
+        print(result)
+    """
             return FixedPointNumber(self.value * int(other), self.scale)
     
     def __truediv__(self, other):
+    """
+    Perform __ne__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __ne__(param)
+        print(result)
+    """
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value * self.scale // other.value, self.scale)
         else:
             return FixedPointNumber(self.value // int(other), self.scale)
     
     def __lt__(self, other):
+    """
+    Perform __ge__ operation
+
+Args:
+        other: Description of other
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __ge__(param)
+        print(result)
+    """
         if isinstance(other, FixedPointNumber):
             return self.value < other.value
         else:
@@ -98,6 +259,22 @@ class FixedPointNumber:
         if isinstance(other, FixedPointNumber):
             return self.value > other.value
         else:
+    """
+    Perform __str__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __str__(param)
+        print(result)
+    """
             return self.value > int(other * self.scale)
     
     def __ge__(self, other):

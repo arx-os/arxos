@@ -128,7 +128,6 @@ async def deposit_funds(escrow_id: str, request: FundDepositRequest):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
-        )
     except Exception as e:
         logger.error(f"Failed to deposit funds: {str(e)}")
         raise HTTPException(
@@ -169,7 +168,6 @@ async def submit_milestone(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
-        )
     except Exception as e:
         logger.error(f"Failed to submit milestone: {str(e)}")
         raise HTTPException(
@@ -210,7 +208,6 @@ async def approve_milestone(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
-        )
     except Exception as e:
         logger.error(f"Failed to approve milestone: {str(e)}")
         raise HTTPException(
@@ -258,7 +255,6 @@ async def reject_milestone(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
-        )
     except Exception as e:
         logger.error(f"Failed to reject milestone: {str(e)}")
         raise HTTPException(
@@ -278,7 +274,6 @@ async def get_escrow_summary(escrow_id: str):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
-        )
     except Exception as e:
         logger.error(f"Failed to get escrow summary: {str(e)}")
         raise HTTPException(
@@ -298,7 +293,6 @@ async def get_milestone_details(escrow_id: str, milestone_id: str):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
-        )
     except Exception as e:
         logger.error(f"Failed to get milestone details: {str(e)}")
         raise HTTPException(

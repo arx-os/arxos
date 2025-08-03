@@ -32,6 +32,7 @@ from svgx_engine.services.notifications.webhook_notification_service import (
     WebhookNotificationService, WebhookConfig, WebhookMessage, WebhookMethod, WebhookStatus
 )
 from svgx_engine.services.notifications.notification_system import (
+from core.security.auth_middleware import get_current_user, User
     UnifiedNotificationSystem, NotificationChannel, NotificationPriority, NotificationConfig,
     NotificationResult, UnifiedNotification
 )
@@ -191,7 +192,8 @@ class ConfigurationResponse(BaseModel):
 # API Endpoints
 
 @app.get("/")
-async def root():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def root(user: User = Depends(get_current_user)):
     """Root endpoint."""
     return {
         "message": "Arxos Notification API",
@@ -201,7 +203,8 @@ async def root():
     }
 
 @app.get("/health")
-async def health_check():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint."""
     return {
         "status": "healthy",
@@ -218,7 +221,7 @@ async def health_check():
 # Configuration endpoints
 
 @app.post("/config/email", response_model=ConfigurationResponse)
-async def configure_email(config: SMTPConfigRequest):
+async def configure_email(config: SMTPConfigRequest, user: User = Depends(get_current_user)):
     """Configure email service."""
     try:
         smtp_config = SMTPConfig(
@@ -244,7 +247,7 @@ async def configure_email(config: SMTPConfigRequest):
         raise HTTPException(status_code=500, detail=f"Email configuration failed: {str(e)}")
 
 @app.post("/config/slack", response_model=ConfigurationResponse)
-async def configure_slack(config: SlackWebhookConfigRequest):
+async def configure_slack(config: SlackWebhookConfigRequest, user: User = Depends(get_current_user)):
     """Configure Slack service."""
     try:
         webhook_config = SlackWebhookConfig(
@@ -269,7 +272,7 @@ async def configure_slack(config: SlackWebhookConfigRequest):
         raise HTTPException(status_code=500, detail=f"Slack configuration failed: {str(e)}")
 
 @app.post("/config/sms", response_model=ConfigurationResponse)
-async def configure_sms(config: SMSProviderConfigRequest):
+async def configure_sms(config: SMSProviderConfigRequest, user: User = Depends(get_current_user)):
     """Configure SMS service."""
     try:
         provider_map = {
@@ -301,7 +304,7 @@ async def configure_sms(config: SMSProviderConfigRequest):
         raise HTTPException(status_code=500, detail=f"SMS configuration failed: {str(e)}")
 
 @app.post("/config/webhook", response_model=ConfigurationResponse)
-async def configure_webhook(config: WebhookConfigRequest):
+async def configure_webhook(config: WebhookConfigRequest, user: User = Depends(get_current_user)):
     """Configure webhook service."""
     try:
         method_map = {
@@ -335,7 +338,7 @@ async def configure_webhook(config: WebhookConfigRequest):
 # Email notification endpoints
 
 @app.post("/notifications/email", response_model=NotificationResponse)
-async def send_email_notification(request: EmailNotificationRequest):
+async def send_email_notification(request: EmailNotificationRequest, user: User = Depends(get_current_user)):
     """Send email notification."""
     try:
         result = await email_service.send_email(
@@ -363,7 +366,7 @@ async def send_email_notification(request: EmailNotificationRequest):
         raise HTTPException(status_code=500, detail=f"Email notification failed: {str(e)}")
 
 @app.get("/notifications/email/{message_id}", response_model=NotificationResponse)
-async def get_email_notification(message_id: str):
+async def get_email_notification(message_id: str, user: User = Depends(get_current_user)):
     """Get email notification by ID."""
     try:
         message = email_service.get_message(message_id)
@@ -390,7 +393,7 @@ async def get_email_notification(message_id: str):
         raise HTTPException(status_code=500, detail=f"Get email notification failed: {str(e)}")
 
 @app.get("/notifications/email/statistics", response_model=NotificationStatistics)
-async def get_email_statistics():
+async def get_email_statistics(user: User = Depends(get_current_user)):
     """Get email statistics."""
     try:
         stats = email_service.get_email_statistics()
@@ -410,7 +413,7 @@ async def get_email_statistics():
 # Slack notification endpoints
 
 @app.post("/notifications/slack", response_model=NotificationResponse)
-async def send_slack_notification(request: SlackNotificationRequest):
+async def send_slack_notification(request: SlackNotificationRequest, user: User = Depends(get_current_user)):
     """Send Slack notification."""
     try:
         result = await slack_service.send_message(
@@ -437,7 +440,7 @@ async def send_slack_notification(request: SlackNotificationRequest):
         raise HTTPException(status_code=500, detail=f"Slack notification failed: {str(e)}")
 
 @app.get("/notifications/slack/{message_id}", response_model=NotificationResponse)
-async def get_slack_notification(message_id: str):
+async def get_slack_notification(message_id: str, user: User = Depends(get_current_user)):
     """Get Slack notification by ID."""
     try:
         message = slack_service.get_message(message_id)
@@ -464,7 +467,7 @@ async def get_slack_notification(message_id: str):
         raise HTTPException(status_code=500, detail=f"Get Slack notification failed: {str(e)}")
 
 @app.get("/notifications/slack/statistics", response_model=NotificationStatistics)
-async def get_slack_statistics():
+async def get_slack_statistics(user: User = Depends(get_current_user)):
     """Get Slack statistics."""
     try:
         stats = slack_service.get_slack_statistics()
@@ -484,7 +487,7 @@ async def get_slack_statistics():
 # SMS notification endpoints
 
 @app.post("/notifications/sms", response_model=NotificationResponse)
-async def send_sms_notification(request: SMSNotificationRequest):
+async def send_sms_notification(request: SMSNotificationRequest, user: User = Depends(get_current_user)):
     """Send SMS notification."""
     try:
         result = await sms_service.send_message(
@@ -507,7 +510,7 @@ async def send_sms_notification(request: SMSNotificationRequest):
         raise HTTPException(status_code=500, detail=f"SMS notification failed: {str(e)}")
 
 @app.get("/notifications/sms/{message_id}", response_model=NotificationResponse)
-async def get_sms_notification(message_id: str):
+async def get_sms_notification(message_id: str, user: User = Depends(get_current_user)):
     """Get SMS notification by ID."""
     try:
         message = sms_service.get_message(message_id)
@@ -534,7 +537,7 @@ async def get_sms_notification(message_id: str):
         raise HTTPException(status_code=500, detail=f"Get SMS notification failed: {str(e)}")
 
 @app.get("/notifications/sms/statistics", response_model=NotificationStatistics)
-async def get_sms_statistics():
+async def get_sms_statistics(user: User = Depends(get_current_user)):
     """Get SMS statistics."""
     try:
         stats = sms_service.get_sms_statistics()
@@ -554,7 +557,7 @@ async def get_sms_statistics():
 # Webhook notification endpoints
 
 @app.post("/notifications/webhook", response_model=NotificationResponse)
-async def send_webhook_notification(request: WebhookNotificationRequest):
+async def send_webhook_notification(request: WebhookNotificationRequest, user: User = Depends(get_current_user)):
     """Send webhook notification."""
     try:
         method_map = {
@@ -585,7 +588,7 @@ async def send_webhook_notification(request: WebhookNotificationRequest):
         raise HTTPException(status_code=500, detail=f"Webhook notification failed: {str(e)}")
 
 @app.get("/notifications/webhook/{message_id}", response_model=NotificationResponse)
-async def get_webhook_notification(message_id: str):
+async def get_webhook_notification(message_id: str, user: User = Depends(get_current_user)):
     """Get webhook notification by ID."""
     try:
         message = webhook_service.get_message(message_id)
@@ -612,7 +615,7 @@ async def get_webhook_notification(message_id: str):
         raise HTTPException(status_code=500, detail=f"Get webhook notification failed: {str(e)}")
 
 @app.get("/notifications/webhook/statistics", response_model=NotificationStatistics)
-async def get_webhook_statistics():
+async def get_webhook_statistics(user: User = Depends(get_current_user)):
     """Get webhook statistics."""
     try:
         stats = webhook_service.get_webhook_statistics()
@@ -632,7 +635,7 @@ async def get_webhook_statistics():
 # Unified notification endpoints
 
 @app.post("/notifications/unified", response_model=List[NotificationResponse])
-async def send_unified_notification(request: UnifiedNotificationRequest):
+async def send_unified_notification(request: UnifiedNotificationRequest, user: User = Depends(get_current_user)):
     """Send unified notification to multiple channels."""
     try:
         # Create unified notification
@@ -666,7 +669,7 @@ async def send_unified_notification(request: UnifiedNotificationRequest):
         raise HTTPException(status_code=500, detail=f"Unified notification failed: {str(e)}")
 
 @app.get("/notifications/unified/statistics", response_model=NotificationStatistics)
-async def get_unified_statistics():
+async def get_unified_statistics(user: User = Depends(get_current_user)):
     """Get unified notification statistics."""
     try:
         stats = unified_system.get_statistics()
@@ -686,6 +689,7 @@ async def get_unified_statistics():
 # Template management endpoints
 
 @app.post("/templates/email")
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def create_email_template(
     template_id: str,
     name: str,
@@ -693,7 +697,7 @@ async def create_email_template(
     body_template: str,
     html_template: Optional[str] = None,
     variables: Optional[List[str]] = None
-):
+, user: User = Depends(get_current_user)):
     """Create email template."""
     try:
         email_service.create_template(
@@ -711,7 +715,8 @@ async def create_email_template(
         raise HTTPException(status_code=500, detail=f"Create email template failed: {str(e)}")
 
 @app.get("/templates/email/{template_id}")
-async def get_email_template(template_id: str):
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_email_template(template_id: str, user: User = Depends(get_current_user)):
     """Get email template."""
     try:
         template = email_service.get_template(template_id)
@@ -737,7 +742,8 @@ async def get_email_template(template_id: str):
 # Service information endpoints
 
 @app.get("/services/email/supported-priorities")
-async def get_supported_email_priorities():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_supported_email_priorities(user: User = Depends(get_current_user)):
     """Get supported email priorities."""
     try:
         priorities = email_service.get_supported_priorities()
@@ -747,7 +753,8 @@ async def get_supported_email_priorities():
         raise HTTPException(status_code=500, detail=f"Get supported email priorities failed: {str(e)}")
 
 @app.get("/services/slack/supported-message-types")
-async def get_supported_slack_message_types():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_supported_slack_message_types(user: User = Depends(get_current_user)):
     """Get supported Slack message types."""
     try:
         message_types = slack_service.get_supported_message_types()
@@ -757,7 +764,8 @@ async def get_supported_slack_message_types():
         raise HTTPException(status_code=500, detail=f"Get supported Slack message types failed: {str(e)}")
 
 @app.get("/services/sms/supported-providers")
-async def get_supported_sms_providers():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_supported_sms_providers(user: User = Depends(get_current_user)):
     """Get supported SMS providers."""
     try:
         providers = sms_service.get_supported_providers()
@@ -767,7 +775,8 @@ async def get_supported_sms_providers():
         raise HTTPException(status_code=500, detail=f"Get supported SMS providers failed: {str(e)}")
 
 @app.get("/services/webhook/supported-methods")
-async def get_supported_webhook_methods():
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+async def get_supported_webhook_methods(user: User = Depends(get_current_user)):
     """Get supported webhook HTTP methods."""
     try:
         methods = webhook_service.get_supported_methods()

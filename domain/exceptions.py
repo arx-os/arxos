@@ -13,6 +13,23 @@ class DomainException(Exception):
     """Base exception for all domain-related errors."""
     
     def __init__(self, message: str, details: Optional[Any] = None):
+    """
+    Perform __init__ operation
+
+Args:
+        message: Description of message
+        details: Description of details
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.message = message
         self.details = details
         super().__init__(self.message)

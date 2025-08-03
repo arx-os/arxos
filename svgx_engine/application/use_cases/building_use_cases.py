@@ -28,6 +28,22 @@ class CreateBuildingUseCase:
     """
     
     def __init__(self, building_service):
+    """
+    Perform __init__ operation
+
+Args:
+        building_service: Description of building_service
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.building_service = building_service
     
     def execute(self, request: CreateBuildingRequest) -> BuildingResponse:

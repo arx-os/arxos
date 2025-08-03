@@ -16,6 +16,22 @@ class SVGXToGLTFCompiler:
     """Compiler for converting SVGX to GLTF format."""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.gltf_version = "2.0"
         self.asset_info = {
             "version": self.gltf_version,

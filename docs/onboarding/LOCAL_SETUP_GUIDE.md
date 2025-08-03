@@ -78,24 +78,34 @@ docker-compose logs -f
 
 #### PostgreSQL with PostGIS
 ```bash
-# Install PostgreSQL and PostGIS
+# Install PostgreSQL 17 and PostGIS 3.5.3
 # Ubuntu/Debian:
-sudo apt-get install postgresql postgresql-contrib postgis
+sudo apt-get install postgresql-17 postgresql-17-postgis-3
 
 # macOS:
-brew install postgresql postgis
+brew install postgresql@17 postgis
 
-# Windows: Download from https://www.postgresql.org/download/windows/
+# Windows: Download PostgreSQL 17 from https://www.postgresql.org/download/windows/
+
+# Start PostgreSQL service
+# Ubuntu/Debian:
+sudo systemctl start postgresql
+
+# macOS:
+brew services start postgresql@17
 
 # Create database and user
 sudo -u postgres psql
-CREATE DATABASE arxos;
+CREATE DATABASE arxos_db_pg17;
 CREATE USER arxos WITH PASSWORD 'password';
-GRANT ALL PRIVILEGES ON DATABASE arxos TO arxos;
+GRANT ALL PRIVILEGES ON DATABASE arxos_db_pg17 TO arxos;
 \q
 
 # Enable PostGIS extension
-psql -U arxos -d arxos -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+psql -U arxos -d arxos_db_pg17 -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+
+# Verify installation
+psql -U arxos -d arxos_db_pg17 -c "SELECT PostGIS_Version();"
 ```
 
 #### Redis

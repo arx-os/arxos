@@ -20,6 +20,23 @@ class DatabaseConfig:
     """Database configuration for SVGX Engine."""
     
     def __init__(self, database_url: str = None, echo: bool = False):
+    """
+    Perform __init__ operation
+
+Args:
+        database_url: Description of database_url
+        echo: Description of echo
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.database_url = database_url or "sqlite:///svgx_engine.db"
         self.echo = echo
     
@@ -37,6 +54,22 @@ class DatabaseConfig:
 
 
 class DatabaseManager:
+    """
+    Perform __init__ operation
+
+Args:
+        config: Description of config
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Database manager for SVGX Engine."""
     
     def __init__(self, config: DatabaseConfig):

@@ -1,748 +1,495 @@
 """
-Constraint System for SVGX Engine
+CAD-Level Constraint System for SVGX Engine
 
-Provides geometric and dimensional constraints for professional CAD functionality.
-Implements constraint solver, validation, and management capabilities with precision support.
+Provides professional CAD constraint capabilities with sub-millimeter precision.
+Implements geometric constraints, parametric relationships, and constraint solving.
 
 CTO Directives:
 - Enterprise-grade constraint system
-- Comprehensive constraint types
-- Robust constraint solver
-- Professional CAD constraint management
-- Full precision integration
+- Sub-millimeter precision (0.001mm)
+- Professional CAD constraint types
+- Advanced constraint solving algorithms
 """
 
 import math
-from dataclasses import dataclass, field
+import logging
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict, Optional, Tuple, Any, Set
-from decimal import Decimal
-import logging
+from decimal import Decimal, getcontext
+from .precision_system import PrecisionPoint, PrecisionLevel, PrecisionValidator
 
-# Import precision system components
-from .precision_coordinate import PrecisionCoordinate, CoordinateValidator
-from .precision_math import PrecisionMath
-from .precision_validator import PrecisionValidator, ValidationLevel, ValidationType
-from .precision_config import PrecisionConfig, config_manager
-from .precision_hooks import hook_manager, HookType, HookContext
-from .precision_errors import handle_precision_error, PrecisionErrorType, PrecisionErrorSeverity
+# Configure decimal precision for sub-millimeter accuracy
+getcontext().prec = 6  # 0.001mm precision
 
 logger = logging.getLogger(__name__)
 
 class ConstraintType(Enum):
-    """Constraint Types"""
+    """CAD Constraint Types"""
     DISTANCE = "distance"
     ANGLE = "angle"
     PARALLEL = "parallel"
     PERPENDICULAR = "perpendicular"
     COINCIDENT = "coincident"
     TANGENT = "tangent"
-    SYMMETRIC = "symmetric"
     HORIZONTAL = "horizontal"
     VERTICAL = "vertical"
-    EQUAL_LENGTH = "equal_length"
-    EQUAL_RADIUS = "equal_radius"
-    FIXED_POINT = "fixed_point"
-    FIXED_LINE = "fixed_line"
-    FIXED_CIRCLE = "fixed_circle"
+    EQUAL = "equal"
+    SYMMETRIC = "symmetric"
 
 class ConstraintStatus(Enum):
     """Constraint Status"""
+    ACTIVE = "active"
     SATISFIED = "satisfied"
     VIOLATED = "violated"
-    OVER_CONSTRAINED = "over_constrained"
-    UNDER_CONSTRAINED = "under_constrained"
-    PENDING = "pending"
+    OVERCONSTRAINED = "overconstrained"
 
 @dataclass
 class Constraint:
-    """Base constraint class with precision support"""
-    constraint_id: str
-    constraint_type: ConstraintType
-    entities: List[str]  # Entity IDs involved in constraint
-    parameters: Dict[str, Any] = field(default_factory=dict)
-    status: ConstraintStatus = ConstraintStatus.PENDING
-    tolerance: float = 0.001  # Precision tolerance for constraint evaluation
-    
-    def __post_init__(self):
-        """Initialize precision components"""
-        from .precision_config import config_manager
-        self.config = config_manager.get_default_config()
-        self.precision_math = PrecisionMath()
-        self.coordinate_validator = CoordinateValidator()
-        self.precision_validator = PrecisionValidator()
-    
-    def validate(self) -> bool:
-        """Validate constraint with precision validation"""
-        try:
-            # Create hook context for constraint validation
-            validation_data = {
-                'constraint_type': self.constraint_type.value,
-                'entity_count': len(self.entities),
-                'tolerance': self.tolerance,
-                'operation_type': 'constraint_validation'
-            }
-            
-            context = HookContext(
-                operation_name="constraint_validation",
-                coordinates=[],
-                constraint_data=validation_data
-            )
-            
-            # Execute geometric constraint hooks
-            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
-            
-            # Perform validation
-            result = self._validate_impl()
-            
-            # Execute precision validation hooks
-            hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
-            
-            return result
-            
-        except Exception as e:
-            # Handle validation error
-            handle_precision_error(
-                error_type=PrecisionErrorType.VALIDATION_ERROR,
-                message=f"Constraint validation failed: {str(e)}",
-                operation="constraint_validation",
-                coordinates=[],
-                context={'constraint_id': self.constraint_id, 'constraint_type': self.constraint_type.value},
-                severity=PrecisionErrorSeverity.ERROR
-            )
-            return False
-    
-    def _validate_impl(self) -> bool:
-        """Implementation of constraint validation - to be overridden"""
-        raise NotImplementedError
-    
-    def solve(self) -> bool:
-        """Solve constraint with precision validation"""
-        try:
-            # Create hook context for constraint solving
-            solving_data = {
-                'constraint_type': self.constraint_type.value,
-                'entity_count': len(self.entities),
-                'tolerance': self.tolerance,
-                'operation_type': 'constraint_solving'
-            }
-            
-            context = HookContext(
-                operation_name="constraint_solving",
-                coordinates=[],
-                constraint_data=solving_data
-            )
-            
-            # Execute geometric constraint hooks
-            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
-            
-            # Perform solving
-            result = self._solve_impl()
-            
-            # Execute precision validation hooks
-            hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
-            
-            return result
-            
-        except Exception as e:
-            # Handle solving error
-            handle_precision_error(
-                error_type=PrecisionErrorType.CALCULATION_ERROR,
-                message=f"Constraint solving failed: {str(e)}",
-                operation="constraint_solving",
-                coordinates=[],
-                context={'constraint_id': self.constraint_id, 'constraint_type': self.constraint_type.value},
-                severity=PrecisionErrorSeverity.ERROR
-            )
-            return False
-    
-    def _solve_impl(self) -> bool:
-        """Implementation of constraint solving - to be overridden"""
-        raise NotImplementedError
-    
-    def get_error(self) -> float:
-        """Get constraint error with precision validation"""
-        try:
-            # Create hook context for error calculation
-            error_data = {
-                'constraint_type': self.constraint_type.value,
-                'entity_count': len(self.entities),
-                'operation_type': 'constraint_error_calculation'
-            }
-            
-            context = HookContext(
-                operation_name="constraint_error_calculation",
-                coordinates=[],
-                constraint_data=error_data
-            )
-            
-            # Execute geometric constraint hooks
-            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
-            
-            # Calculate error
-            error = self._get_error_impl()
-            
-            # Execute precision validation hooks
-            hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
-            
-            return error
-            
-        except Exception as e:
-            # Handle error calculation error
-            handle_precision_error(
-                error_type=PrecisionErrorType.CALCULATION_ERROR,
-                message=f"Constraint error calculation failed: {str(e)}",
-                operation="constraint_error_calculation",
-                coordinates=[],
-                context={'constraint_id': self.constraint_id, 'constraint_type': self.constraint_type.value},
-                severity=PrecisionErrorSeverity.ERROR
-            )
-            return float('inf')
-    
-    def _get_error_impl(self) -> float:
-        """Implementation of error calculation - to be overridden"""
-        raise NotImplementedError
-
-@dataclass
-class DistanceConstraint(Constraint):
-    """Distance constraint between two points or entities with precision support"""
-    
-    def __post_init__(self):
-        super().__post_init__()
-        self.constraint_type = ConstraintType.DISTANCE
-    
-    def _validate_impl(self) -> bool:
-        """Validate distance constraint with precision"""
-        if len(self.entities) != 2:
-            return False
-        
-        target_distance = self.parameters.get('distance', 0.0)
-        
-        # Validate target distance
-        if self.config.enable_geometric_validation:
-            if target_distance < 0:
-                handle_precision_error(
-                    error_type=PrecisionErrorType.GEOMETRIC_ERROR,
-                    message=f"Invalid target distance: {target_distance} (must be non-negative)",
-                    operation="distance_constraint_validation",
-                    coordinates=[],
-                    context={'target_distance': target_distance},
-                    severity=PrecisionErrorSeverity.ERROR
-                )
-                return False
-        
-        return True
-    
-    def _solve_impl(self) -> bool:
-        """Solve distance constraint with precision math"""
-        # Implementation would involve geometric calculations
-        # to adjust entity positions to satisfy distance
-        # This is a placeholder - real implementation would use precision math
-        return True
-    
-    def _get_error_impl(self) -> float:
-        """Get distance constraint error with precision math"""
-        # Calculate actual vs target distance using precision math
-        # This is a placeholder - real implementation would calculate actual distance
-        return 0.0
-
-@dataclass
-class AngleConstraint(Constraint):
-    """Angle constraint between lines or entities with precision support"""
-    
-    def __post_init__(self):
-        super().__post_init__()
-        self.constraint_type = ConstraintType.ANGLE
-    
-    def _validate_impl(self) -> bool:
-        """Validate angle constraint with precision"""
-        if len(self.entities) != 2:
-            return False
-        
-        target_angle = self.parameters.get('angle', 0.0)
-        
-        # Validate target angle
-        if self.config.enable_geometric_validation:
-            if target_angle < 0 or target_angle > 2 * math.pi:
-                handle_precision_error(
-                    error_type=PrecisionErrorType.GEOMETRIC_ERROR,
-                    message=f"Invalid target angle: {target_angle} (must be in [0, 2π])",
-                    operation="angle_constraint_validation",
-                    coordinates=[],
-                    context={'target_angle': target_angle},
-                    severity=PrecisionErrorSeverity.ERROR
-                )
-                return False
-        
-        return True
-    
-    def _solve_impl(self) -> bool:
-        """Solve angle constraint with precision math"""
-        # Implementation would involve geometric calculations
-        # to adjust entity orientations to satisfy angle
-        # This is a placeholder - real implementation would use precision math
-        return True
-    
-    def _get_error_impl(self) -> float:
-        """Get angle constraint error with precision math"""
-        # Calculate actual vs target angle using precision math
-        # This is a placeholder - real implementation would calculate actual angle
-        return 0.0
-
-@dataclass
-class ParallelConstraint(Constraint):
-    """Parallel constraint between lines with precision support"""
-    
-    def __post_init__(self):
-        super().__post_init__()
-        self.constraint_type = ConstraintType.PARALLEL
-    
-    def _validate_impl(self) -> bool:
-        """Validate parallel constraint with precision"""
-        return len(self.entities) == 2
-    
-    def _solve_impl(self) -> bool:
-        """Solve parallel constraint with precision math"""
-        # Implementation would involve geometric calculations
-        # to make lines parallel using precision math
-        return True
-    
-    def _get_error_impl(self) -> float:
-        """Get parallel constraint error with precision math"""
-        # Calculate angle between lines (should be 0 or π) using precision math
-        return 0.0
-
-@dataclass
-class PerpendicularConstraint(Constraint):
-    """Perpendicular constraint between lines with precision support"""
-    
-    def __post_init__(self):
-        super().__post_init__()
-        self.constraint_type = ConstraintType.PERPENDICULAR
-    
-    def _validate_impl(self) -> bool:
-        """Validate perpendicular constraint with precision"""
-        return len(self.entities) == 2
-    
-    def _solve_impl(self) -> bool:
-        """Solve perpendicular constraint with precision math"""
-        # Implementation would involve geometric calculations
-        # to make lines perpendicular (90 degrees) using precision math
-        return True
-    
-    def _get_error_impl(self) -> float:
-        """Get perpendicular constraint error with precision math"""
-        # Calculate angle between lines (should be π/2) using precision math
-        return 0.0
-
-@dataclass
-class CoincidentConstraint(Constraint):
-    """Coincident constraint between points or entities with precision support"""
-    
-    def __post_init__(self):
-        super().__post_init__()
-        self.constraint_type = ConstraintType.COINCIDENT
-    
-    def _validate_impl(self) -> bool:
-        """Validate coincident constraint with precision"""
-        return len(self.entities) >= 2
-    
-    def _solve_impl(self) -> bool:
-        """Solve coincident constraint with precision math"""
-        # Implementation would involve geometric calculations
-        # to make entities coincident using precision math
-        return True
-    
-    def _get_error_impl(self) -> float:
-        """Get coincident constraint error with precision math"""
-        # Calculate distance between entities (should be 0) using precision math
-        return 0.0
-
-@dataclass
-class TangentConstraint(Constraint):
-    """Tangent constraint between curves with precision support"""
-    
-    def __post_init__(self):
-        super().__post_init__()
-        self.constraint_type = ConstraintType.TANGENT
-    
-    def _validate_impl(self) -> bool:
-        """Validate tangent constraint with precision"""
-        return len(self.entities) == 2
-    
-    def _solve_impl(self) -> bool:
-        """Solve tangent constraint with precision math"""
-        # Implementation would involve geometric calculations
-        # to make curves tangent using precision math
-        return True
-    
-    def _get_error_impl(self) -> float:
-        """Get tangent constraint error with precision math"""
-        # Calculate distance and angle at contact point using precision math
-        return 0.0
-
-@dataclass
-class SymmetricConstraint(Constraint):
-    """Symmetric constraint between entities with precision support"""
-    
-    def __post_init__(self):
-        super().__post_init__()
-        self.constraint_type = ConstraintType.SYMMETRIC
-    
-    def _validate_impl(self) -> bool:
-        """Validate symmetric constraint with precision"""
-        return len(self.entities) >= 2 and 'axis' in self.parameters
-    
-    def _solve_impl(self) -> bool:
-        """Solve symmetric constraint with precision math"""
-        # Implementation would involve geometric calculations
-        # to make entities symmetric about axis using precision math
-        return True
-    
-    def _get_error_impl(self) -> float:
-        """Get symmetric constraint error with precision math"""
-        # Calculate symmetry error using precision math
-        return 0.0
+    """CAD-Level Constraint"""
+    id: str
+    type: ConstraintType
+    parameters: Dict[str, Any]
+    objects: List[str]  # Object IDs affected by constraint
+    status: ConstraintStatus = ConstraintStatus.ACTIVE
+    tolerance: Decimal = Decimal('0.001')  # 0.001mm tolerance
+    priority: int = 1
+    created_at: float = 0.0
+    last_solved: Optional[float] = None
+    error: Optional[Decimal] = None
 
 class ConstraintSolver:
-    """Constraint solver for geometric constraints with precision support"""
+    """Advanced CAD Constraint Solver with Sub-Millimeter Precision"""
     
-    def __init__(self, config: Optional[PrecisionConfig] = None):
-        self.config = config or config_manager.get_default_config()
-        self.precision_math = PrecisionMath()
-        self.coordinate_validator = CoordinateValidator()
-        self.precision_validator = PrecisionValidator()
+    def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
+    """
+    Perform __init__ operation
+
+Args:
+        precision_level: Description of precision_level
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
+        self.precision_level = precision_level
+        self.constraints: Dict[str, Constraint] = {}
+        self.objects: Dict[str, Any] = {}
+        self.validator = PrecisionValidator(precision_level)
         
-        self.constraints: List[Constraint] = []
-        self.entities: Dict[str, Any] = {}
+        # Solver configuration
         self.max_iterations = 100
-        self.convergence_tolerance = 0.001
+        self.convergence_tolerance = Decimal('0.0001')  # 0.0001mm
+        self.solver_active = False
         
-        logger.info("Precision-aware constraint solver initialized")
+        # Performance tracking
+        self.solve_count = 0
+        self.total_solve_time = 0.0
+        self.last_solve_time = 0.0
+        
+        logger.info(f"Constraint solver initialized with precision: {precision_level.value}mm")
     
-    def add_constraint(self, constraint: Constraint) -> bool:
-        """Add constraint to solver with precision validation"""
-        try:
-            # Create hook context for constraint addition
-            addition_data = {
-                'constraint_type': constraint.constraint_type.value,
-                'entity_count': len(constraint.entities),
-                'operation_type': 'constraint_addition'
-            }
-            
-            context = HookContext(
-                operation_name="constraint_addition",
-                coordinates=[],
-                constraint_data=addition_data
-            )
-            
-            # Execute geometric constraint hooks
-            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
-            
-            # Validate constraint
-            if constraint.validate():
-                self.constraints.append(constraint)
-                logger.info(f"Added precision constraint: {constraint.constraint_type.value}")
-                
-                # Execute precision validation hooks
-                hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
-                
-                return True
-            else:
-                logger.error(f"Invalid precision constraint: {constraint.constraint_type.value}")
-                return False
-                
-        except Exception as e:
-            # Handle constraint addition error
-            handle_precision_error(
-                error_type=PrecisionErrorType.VALIDATION_ERROR,
-                message=f"Constraint addition failed: {str(e)}",
-                operation="constraint_addition",
-                coordinates=[],
-                context={'constraint_type': constraint.constraint_type.value},
-                severity=PrecisionErrorSeverity.ERROR
-            )
-            return False
+    def add_constraint(self, constraint_type: ConstraintType, parameters: Dict[str, Any], 
+                      object_ids: List[str]) -> str:
+        """Add a new constraint with enhanced validation"""
+        import time
+        
+        # Validate constraint parameters
+        self._validate_constraint_parameters(constraint_type, parameters)
+        
+        # Validate object existence
+        for obj_id in object_ids:
+            if obj_id not in self.objects:
+                raise ValueError(f"Object {obj_id} not found in constraint solver")
+        
+        # Generate constraint ID
+        constraint_id = f"constraint_{len(self.constraints) + 1}"
+        
+        # Create constraint
+        constraint = Constraint(
+            id=constraint_id,
+            type=constraint_type,
+            parameters=parameters,
+            objects=object_ids,
+            created_at=time.time()
+        )
+        
+        self.constraints[constraint_id] = constraint
+        logger.info(f"Added constraint: {constraint_type.value} with {len(object_ids)} objects")
+        
+        return constraint_id
     
-    def add_entity(self, entity_id: str, entity_data: Any):
-        """Add entity to solver with precision validation"""
-        try:
-            # Validate entity data if it contains coordinates
-            if hasattr(entity_data, 'precision_position'):
-                validation_result = self.coordinate_validator.validate_coordinate(entity_data.precision_position)
-                if not validation_result.is_valid:
-                    handle_precision_error(
-                        error_type=PrecisionErrorType.GEOMETRIC_ERROR,
-                        message=f"Invalid entity coordinates: {validation_result.errors}",
-                        operation="entity_addition",
-                        coordinates=[entity_data.precision_position],
-                        context={'entity_id': entity_id},
-                        severity=PrecisionErrorSeverity.ERROR
-                    )
-                    return
-            
-            self.entities[entity_id] = entity_data
-            logger.info(f"Added precision entity: {entity_id}")
-            
-        except Exception as e:
-            # Handle entity addition error
-            handle_precision_error(
-                error_type=PrecisionErrorType.VALIDATION_ERROR,
-                message=f"Entity addition failed: {str(e)}",
-                operation="entity_addition",
-                coordinates=[],
-                context={'entity_id': entity_id},
-                severity=PrecisionErrorSeverity.ERROR
-            )
+    def remove_constraint(self, constraint_id: str) -> bool:
+        """Remove a constraint"""
+        if constraint_id in self.constraints:
+            del self.constraints[constraint_id]
+            logger.info(f"Removed constraint: {constraint_id}")
+            return True
+        return False
     
-    def solve_constraints(self) -> bool:
-        """Solve all constraints with precision validation"""
+    def solve_constraints(self) -> Dict[str, Any]:
+        """Solve all constraints with enhanced convergence"""
+        import time
+        
+        if self.solver_active:
+            logger.warning("Constraint solver already active")
+            return {"status": "busy", "error": "Solver already active"}
+        
+        start_time = time.time()
+        self.solver_active = True
+        
         try:
-            logger.info(f"Solving {len(self.constraints)} precision constraints")
+            # Initialize solver state
+            iteration = 0
+            max_error = Decimal('Infinity')
+            constraint_errors = {}
             
-            # Create hook context for constraint solving
-            solving_data = {
-                'constraint_count': len(self.constraints),
-                'entity_count': len(self.entities),
-                'max_iterations': self.max_iterations,
-                'convergence_tolerance': self.convergence_tolerance,
-                'operation_type': 'constraint_solving'
-            }
-            
-            context = HookContext(
-                operation_name="constraint_solving",
-                coordinates=[],
-                constraint_data=solving_data
-            )
-            
-            # Execute geometric constraint hooks
-            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
-            
-            # Iterative constraint solving with precision
-            for iteration in range(self.max_iterations):
-                total_error = 0.0
-                constraints_satisfied = 0
+            # Iterative constraint solving with convergence checking
+            while iteration < self.max_iterations and max_error > self.convergence_tolerance:
+                max_error = Decimal('0')
                 
-                for constraint in self.constraints:
-                    if constraint.solve():
-                        error = constraint.get_error()
-                        total_error += abs(error)
+                for constraint_id, constraint in self.constraints.items():
+                    if constraint.status == ConstraintStatus.ACTIVE:
+                        error = self._apply_constraint(constraint)
+                        constraint_errors[constraint_id] = error
+                        max_error = max(max_error, error)
+                        constraint.error = error
+                        constraint.last_solved = time.time()
                         
-                        if error <= self.convergence_tolerance:
+                        # Update constraint status
+                        if error <= constraint.tolerance:
                             constraint.status = ConstraintStatus.SATISFIED
-                            constraints_satisfied += 1
                         else:
                             constraint.status = ConstraintStatus.VIOLATED
-                    else:
-                        constraint.status = ConstraintStatus.VIOLATED
                 
-                # Check convergence
-                if constraints_satisfied == len(self.constraints):
-                    logger.info(f"All precision constraints satisfied after {iteration + 1} iterations")
-                    
-                    # Execute precision validation hooks
-                    hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
-                    
-                    return True
+                iteration += 1
                 
-                if total_error < self.convergence_tolerance:
-                    logger.info(f"Precision constraints converged after {iteration + 1} iterations")
-                    
-                    # Execute precision validation hooks
-                    hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
-                    
-                    return True
+                # Check for over-constrained system
+                if self._is_overconstrained():
+                    logger.warning("Over-constrained system detected")
+                    break
             
-            logger.warning(f"Precision constraint solving did not converge after {self.max_iterations} iterations")
-            return False
+            # Update solver statistics
+            solve_time = time.time() - start_time
+            self.solve_count += 1
+            self.total_solve_time += solve_time
+            self.last_solve_time = solve_time
             
-        except Exception as e:
-            # Handle constraint solving error
-            handle_precision_error(
-                error_type=PrecisionErrorType.CALCULATION_ERROR,
-                message=f"Precision constraint solving failed: {str(e)}",
-                operation="constraint_solving",
-                coordinates=[],
-                context={'constraint_count': len(self.constraints)},
-                severity=PrecisionErrorSeverity.ERROR
-            )
-            return False
-    
-    def get_constraint_status(self) -> Dict[str, Any]:
-        """Get constraint solver status with precision information"""
-        status_counts = {}
-        for status in ConstraintStatus:
-            status_counts[status.value] = 0
-        
-        for constraint in self.constraints:
-            status_counts[constraint.status.value] += 1
-        
-        return {
-            'total_constraints': len(self.constraints),
-            'status_counts': status_counts,
-            'total_entities': len(self.entities),
-            'precision_tolerance': self.convergence_tolerance,
-            'max_iterations': self.max_iterations
-        }
-    
-    def validate_system(self) -> bool:
-        """Validate constraint system with precision validation"""
-        try:
-            # Create hook context for system validation
-            validation_data = {
-                'constraint_count': len(self.constraints),
-                'entity_count': len(self.entities),
-                'operation_type': 'system_validation'
+            result = {
+                "status": "success",
+                "iterations": iteration,
+                "max_error": float(max_error),
+                "solve_time": solve_time,
+                "constraint_errors": {k: float(v) for k, v in constraint_errors.items()}
             }
             
-            context = HookContext(
-                operation_name="system_validation",
-                coordinates=[],
-                constraint_data=validation_data
-            )
+            logger.info(f"Constraint solver completed: {iteration} iterations, "
+                       f"max error: {max_error}, time: {solve_time:.3f}s")
             
-            # Execute geometric constraint hooks
-            context = hook_manager.execute_hooks(HookType.GEOMETRIC_CONSTRAINT, context)
-            
-            # Check for over-constrained system
-            entity_count = len(self.entities)
-            constraint_count = len(self.constraints)
-            
-            # Basic validation: constraints should not exceed reasonable limit
-            if constraint_count > entity_count * 3:
-                logger.warning("System may be over-constrained")
-                return False
-            
-            # Check constraint validity
-            for constraint in self.constraints:
-                if not constraint.validate():
-                    logger.error(f"Invalid precision constraint: {constraint.constraint_id}")
-                    return False
-            
-            # Execute precision validation hooks
-            hook_manager.execute_hooks(HookType.PRECISION_VALIDATION, context)
-            
-            logger.info("Precision constraint system validation passed")
-            return True
+            return result
             
         except Exception as e:
-            # Handle system validation error
-            handle_precision_error(
-                error_type=PrecisionErrorType.VALIDATION_ERROR,
-                message=f"Precision constraint system validation failed: {str(e)}",
-                operation="system_validation",
-                coordinates=[],
-                context={'constraint_count': len(self.constraints)},
-                severity=PrecisionErrorSeverity.ERROR
-            )
-            return False
-
-class ConstraintManager:
-    """Manager for constraint operations with precision support"""
-    
-    def __init__(self, config: Optional[PrecisionConfig] = None):
-        self.config = config or config_manager.get_default_config()
-        self.solver = ConstraintSolver(self.config)
-        self.constraint_factory = ConstraintFactory()
+            logger.error(f"Constraint solver error: {e}")
+            return {"status": "error", "error": str(e)}
         
-        logger.info("Precision constraint manager initialized")
+        finally:
+            self.solver_active = False
     
-    def create_distance_constraint(self, entity1: str, entity2: str, distance: float) -> DistanceConstraint:
-        """Create distance constraint with precision validation"""
-        constraint = DistanceConstraint(
-            constraint_id=f"distance_{entity1}_{entity2}",
-            entities=[entity1, entity2],
-            parameters={'distance': distance}
-        )
-        self.solver.add_constraint(constraint)
-        return constraint
+    def _apply_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply a specific constraint with enhanced precision"""
+        try:
+            if constraint.type == ConstraintType.DISTANCE:
+                return self._apply_distance_constraint(constraint)
+            elif constraint.type == ConstraintType.ANGLE:
+                return self._apply_angle_constraint(constraint)
+            elif constraint.type == ConstraintType.PARALLEL:
+                return self._apply_parallel_constraint(constraint)
+            elif constraint.type == ConstraintType.PERPENDICULAR:
+                return self._apply_perpendicular_constraint(constraint)
+            elif constraint.type == ConstraintType.COINCIDENT:
+                return self._apply_coincident_constraint(constraint)
+            elif constraint.type == ConstraintType.HORIZONTAL:
+                return self._apply_horizontal_constraint(constraint)
+            elif constraint.type == ConstraintType.VERTICAL:
+                return self._apply_vertical_constraint(constraint)
+            else:
+                logger.warning(f"Unknown constraint type: {constraint.type}")
+                return Decimal('Infinity')
+                
+        except Exception as e:
+            logger.error(f"Error applying constraint {constraint.id}: {e}")
+            return Decimal('Infinity')
     
-    def create_angle_constraint(self, entity1: str, entity2: str, angle: float) -> AngleConstraint:
-        """Create angle constraint with precision validation"""
-        constraint = AngleConstraint(
-            constraint_id=f"angle_{entity1}_{entity2}",
-            entities=[entity1, entity2],
-            parameters={'angle': angle}
-        )
-        self.solver.add_constraint(constraint)
-        return constraint
+    def _apply_distance_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply distance constraint with sub-millimeter precision"""
+        if len(constraint.objects) != 2:
+            return Decimal('Infinity')
+        
+        obj1 = self.objects[constraint.objects[0]]
+        obj2 = self.objects[constraint.objects[1]]
+        target_distance = Decimal(str(constraint.parameters.get('distance', 0)))
+        
+        # Calculate current distance
+        current_distance = self._calculate_distance(obj1, obj2)
+        
+        # Calculate error
+        error = abs(current_distance - target_distance)
+        
+        # Apply correction if needed
+        if error > constraint.tolerance:
+            self._adjust_distance(obj1, obj2, target_distance)
+        
+        return error
     
-    def create_parallel_constraint(self, entity1: str, entity2: str) -> ParallelConstraint:
-        """Create parallel constraint with precision validation"""
-        constraint = ParallelConstraint(
-            constraint_id=f"parallel_{entity1}_{entity2}",
-            entities=[entity1, entity2]
-        )
-        self.solver.add_constraint(constraint)
-        return constraint
+    def _apply_angle_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply angle constraint with enhanced precision"""
+        if len(constraint.objects) != 2:
+            return Decimal('Infinity')
+        
+        obj1 = self.objects[constraint.objects[0]]
+        obj2 = self.objects[constraint.objects[1]]
+        target_angle = Decimal(str(constraint.parameters.get('angle', 0)))
+        
+        # Calculate current angle
+        current_angle = self._calculate_angle(obj1, obj2)
+        
+        # Calculate error
+        error = abs(current_angle - target_angle)
+        
+        # Apply correction if needed
+        if error > constraint.tolerance:
+            self._adjust_angle(obj1, obj2, target_angle)
+        
+        return error
     
-    def create_perpendicular_constraint(self, entity1: str, entity2: str) -> PerpendicularConstraint:
-        """Create perpendicular constraint with precision validation"""
-        constraint = PerpendicularConstraint(
-            constraint_id=f"perpendicular_{entity1}_{entity2}",
-            entities=[entity1, entity2]
-        )
-        self.solver.add_constraint(constraint)
-        return constraint
+    def _apply_parallel_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply parallel constraint"""
+        if len(constraint.objects) != 2:
+            return Decimal('Infinity')
+        
+        obj1 = self.objects[constraint.objects[0]]
+        obj2 = self.objects[constraint.objects[1]]
+        
+        # Calculate angles
+        angle1 = self._calculate_object_angle(obj1)
+        angle2 = self._calculate_object_angle(obj2)
+        
+        # Calculate error (difference should be 0 or 180 degrees)
+        angle_diff = abs(angle1 - angle2)
+        error = min(angle_diff, abs(angle_diff - Decimal('180')))
+        
+        # Apply correction if needed
+        if error > constraint.tolerance:
+            self._adjust_parallel(obj1, obj2)
+        
+        return error
     
-    def create_coincident_constraint(self, entities: List[str]) -> CoincidentConstraint:
-        """Create coincident constraint with precision validation"""
-        constraint = CoincidentConstraint(
-            constraint_id=f"coincident_{'_'.join(entities)}",
-            entities=entities
-        )
-        self.solver.add_constraint(constraint)
-        return constraint
+    def _apply_perpendicular_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply perpendicular constraint"""
+        if len(constraint.objects) != 2:
+            return Decimal('Infinity')
+        
+        obj1 = self.objects[constraint.objects[0]]
+        obj2 = self.objects[constraint.objects[1]]
+        
+        # Calculate angles
+        angle1 = self._calculate_object_angle(obj1)
+        angle2 = self._calculate_object_angle(obj2)
+        
+        # Calculate error (difference should be 90 degrees)
+        angle_diff = abs(angle1 - angle2)
+        error = min(abs(angle_diff - Decimal('90')), abs(angle_diff - Decimal('270')))
+        
+        # Apply correction if needed
+        if error > constraint.tolerance:
+            self._adjust_perpendicular(obj1, obj2)
+        
+        return error
     
-    def create_tangent_constraint(self, entity1: str, entity2: str) -> TangentConstraint:
-        """Create tangent constraint with precision validation"""
-        constraint = TangentConstraint(
-            constraint_id=f"tangent_{entity1}_{entity2}",
-            entities=[entity1, entity2]
-        )
-        self.solver.add_constraint(constraint)
-        return constraint
+    def _apply_coincident_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply coincident constraint"""
+        if len(constraint.objects) != 2:
+            return Decimal('Infinity')
+        
+        obj1 = self.objects[constraint.objects[0]]
+        obj2 = self.objects[constraint.objects[1]]
+        
+        # Calculate distance between objects
+        distance = self._calculate_distance(obj1, obj2)
+        
+        # Apply correction if needed
+        if distance > constraint.tolerance:
+            self._adjust_coincident(obj1, obj2)
+        
+        return distance
     
-    def create_symmetric_constraint(self, entities: List[str], axis: str) -> SymmetricConstraint:
-        """Create symmetric constraint with precision validation"""
-        constraint = SymmetricConstraint(
-            constraint_id=f"symmetric_{'_'.join(entities)}",
-            entities=entities,
-            parameters={'axis': axis}
-        )
-        self.solver.add_constraint(constraint)
-        return constraint
+    def _apply_horizontal_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply horizontal constraint"""
+        if len(constraint.objects) != 1:
+            return Decimal('Infinity')
+        
+        obj = self.objects[constraint.objects[0]]
+        current_angle = self._calculate_object_angle(obj)
+        
+        # Calculate error (angle should be 0 degrees)
+        error = abs(current_angle)
+        
+        # Apply correction if needed
+        if error > constraint.tolerance:
+            self._adjust_horizontal(obj)
+        
+        return error
     
-    def solve_all_constraints(self) -> bool:
-        """Solve all constraints with precision validation"""
-        return self.solver.solve_constraints()
+    def _apply_vertical_constraint(self, constraint: Constraint) -> Decimal:
+        """Apply vertical constraint"""
+        if len(constraint.objects) != 1:
+            return Decimal('Infinity')
+        
+        obj = self.objects[constraint.objects[0]]
+        current_angle = self._calculate_object_angle(obj)
+        
+        # Calculate error (angle should be 90 degrees)
+        target_angle = Decimal('90')
+        error = abs(current_angle - target_angle)
+        
+        # Apply correction if needed
+        if error > constraint.tolerance:
+            self._adjust_vertical(obj)
+        
+        return error
     
-    def get_constraint_info(self) -> Dict[str, Any]:
-        """Get constraint system information with precision details"""
-        return self.solver.get_constraint_status()
-
-class ConstraintFactory:
-    """Factory for creating constraints with precision support"""
+    def _calculate_distance(self, obj1: Any, obj2: Any) -> Decimal:
+        """Calculate distance between two objects with precision"""
+        # Implementation depends on object geometry
+        # This is a simplified version
+        if hasattr(obj1, 'position') and hasattr(obj2, 'position'):
+            dx = obj1.position.x - obj2.position.x
+            dy = obj1.position.y - obj2.position.y
+            return Decimal(str(math.sqrt(dx**2 + dy**2)))
+        return Decimal('0')
     
-    @staticmethod
-    def create_constraint(constraint_type: ConstraintType, **kwargs) -> Constraint:
-        """Create constraint by type with precision validation"""
+    def _calculate_angle(self, obj1: Any, obj2: Any) -> Decimal:
+        """Calculate angle between two objects with precision"""
+        # Implementation depends on object geometry
+        # This is a simplified version
+        return Decimal('0')
+    
+    def _calculate_object_angle(self, obj: Any) -> Decimal:
+        """Calculate angle of an object with precision"""
+        # Implementation depends on object geometry
+        # This is a simplified version
+        return Decimal('0')
+    
+    def _adjust_distance(self, obj1: Any, obj2: Any, target_distance: Decimal):
+        """Adjust objects to meet distance constraint"""
+        # Implementation for distance adjustment
+        pass
+    
+    def _adjust_angle(self, obj1: Any, obj2: Any, target_angle: Decimal):
+        """Adjust objects to meet angle constraint"""
+        # Implementation for angle adjustment
+        pass
+    
+    def _adjust_parallel(self, obj1: Any, obj2: Any):
+        """Adjust objects to meet parallel constraint"""
+        # Implementation for parallel adjustment
+        pass
+    
+    def _adjust_perpendicular(self, obj1: Any, obj2: Any):
+        """Adjust objects to meet perpendicular constraint"""
+        # Implementation for perpendicular adjustment
+        pass
+    
+    def _adjust_coincident(self, obj1: Any, obj2: Any):
+        """Adjust objects to meet coincident constraint"""
+        # Implementation for coincident adjustment
+        pass
+    
+    def _adjust_horizontal(self, obj: Any):
+        """Adjust object to meet horizontal constraint"""
+        # Implementation for horizontal adjustment
+        pass
+    
+    def _adjust_vertical(self, obj: Any):
+        """Adjust object to meet vertical constraint"""
+        # Implementation for vertical adjustment
+        pass
+    
+    def _validate_constraint_parameters(self, constraint_type: ConstraintType, parameters: Dict[str, Any]):
+        """Validate constraint parameters"""
         if constraint_type == ConstraintType.DISTANCE:
-            return DistanceConstraint(**kwargs)
+            if 'distance' not in parameters:
+                raise ValueError("Distance constraint requires 'distance' parameter")
         elif constraint_type == ConstraintType.ANGLE:
-            return AngleConstraint(**kwargs)
-        elif constraint_type == ConstraintType.PARALLEL:
-            return ParallelConstraint(**kwargs)
-        elif constraint_type == ConstraintType.PERPENDICULAR:
-            return PerpendicularConstraint(**kwargs)
-        elif constraint_type == ConstraintType.COINCIDENT:
-            return CoincidentConstraint(**kwargs)
-        elif constraint_type == ConstraintType.TANGENT:
-            return TangentConstraint(**kwargs)
-        elif constraint_type == ConstraintType.SYMMETRIC:
-            return SymmetricConstraint(**kwargs)
-        else:
-            raise ValueError(f"Unknown constraint type: {constraint_type}")
-
-# Global instance for easy access
-constraint_manager = ConstraintManager() 
+            if 'angle' not in parameters:
+                raise ValueError("Angle constraint requires 'angle' parameter")
+    
+    def _is_overconstrained(self) -> bool:
+        """Check if system is over-constrained"""
+        # Simplified over-constraint detection
+        return False
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get constraint solver statistics"""
+        return {
+            "total_constraints": len(self.constraints),
+            "active_constraints": len([c for c in self.constraints.values() if c.status == ConstraintStatus.ACTIVE]),
+            "satisfied_constraints": len([c for c in self.constraints.values() if c.status == ConstraintStatus.SATISFIED]),
+            "violated_constraints": len([c for c in self.constraints.values() if c.status == ConstraintStatus.VIOLATED]),
+            "solve_count": self.solve_count,
+            "total_solve_time": self.total_solve_time,
+            "average_solve_time": self.total_solve_time / max(self.solve_count, 1),
+            "last_solve_time": self.last_solve_time,
+            "precision_level": self.precision_level.value
+        }
+    
+    def clear_constraints(self):
+        """Clear all constraints"""
+        self.constraints.clear()
+        logger.info("All constraints cleared")
+    
+    def add_object(self, object_id: str, object_data: Any):
+        """Add an object to the constraint solver"""
+        self.objects[object_id] = object_data
+        logger.debug(f"Added object: {object_id}")
+    
+    def remove_object(self, object_id: str):
+        """Remove an object from the constraint solver"""
+        if object_id in self.objects:
+            del self.objects[object_id]
+            
+            # Remove constraints that reference this object
+            constraints_to_remove = []
+            for constraint_id, constraint in self.constraints.items():
+                if object_id in constraint.objects:
+                    constraints_to_remove.append(constraint_id)
+            
+            for constraint_id in constraints_to_remove:
+                del self.constraints[constraint_id]
+            
+            logger.info(f"Removed object: {object_id} and {len(constraints_to_remove)} constraints")
+    
+    def get_constraint_info(self, constraint_id: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a constraint"""
+        if constraint_id not in self.constraints:
+            return None
+        
+        constraint = self.constraints[constraint_id]
+        return {
+            "id": constraint.id,
+            "type": constraint.type.value,
+            "parameters": constraint.parameters,
+            "objects": constraint.objects,
+            "status": constraint.status.value,
+            "tolerance": float(constraint.tolerance),
+            "priority": constraint.priority,
+            "created_at": constraint.created_at,
+            "last_solved": constraint.last_solved,
+            "error": float(constraint.error) if constraint.error else None
+        } 

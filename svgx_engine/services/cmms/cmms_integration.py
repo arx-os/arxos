@@ -145,6 +145,22 @@ class FloorAssetManager:
     """Manages floor-specific assets with precision coordinate support"""
     
     def __init__(self, db_manager: DatabaseManager):
+    """
+    Perform __init__ operation
+
+Args:
+        db_manager: Description of db_manager
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.db_manager = db_manager
         self.precision_math = PrecisionMath()
         
@@ -256,6 +272,22 @@ class FloorAssetManager:
             return []
 
 class MaintenanceScheduler:
+    """
+    Perform __init__ operation
+
+Args:
+        db_manager: Description of db_manager
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Manages maintenance schedules with precision timing"""
     
     def __init__(self, db_manager: DatabaseManager):

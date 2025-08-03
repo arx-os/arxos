@@ -28,6 +28,22 @@ class CreateUserUseCase:
     """Use case for creating a new user."""
     
     def __init__(self, user_repository: UserRepository):
+    """
+    Perform __init__ operation
+
+Args:
+        user_repository: Description of user_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.user_repository = user_repository
     
     def execute(self, request: CreateUserRequest) -> CreateUserResponse:
@@ -118,6 +134,22 @@ class CreateUserUseCase:
 
 
 class UpdateUserUseCase:
+    """
+    Perform __init__ operation
+
+Args:
+        user_repository: Description of user_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Use case for updating a user."""
     
     def __init__(self, user_repository: UserRepository):

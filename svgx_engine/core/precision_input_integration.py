@@ -726,6 +726,22 @@ if __name__ == "__main__":
     
     # Set up callbacks
     def on_input_feedback(feedback):
+    """
+    Perform on_input_feedback operation
+
+Args:
+        feedback: Description of feedback
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = on_input_feedback(param)
+        print(result)
+    """
         print(f"Input feedback: {feedback.message}")
     
     def on_geometry_created(geometry):

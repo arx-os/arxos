@@ -14,6 +14,22 @@ class SVGXToIFCCompiler:
     """Compiler for converting SVGX to IFC format."""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.ifc_version = "IFC4"
         self.project_name = "SVGX_Project"
         self.project_description = "Generated from SVGX content"

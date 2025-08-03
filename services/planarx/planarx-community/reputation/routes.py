@@ -25,8 +25,7 @@ async def record_contribution(
     contribution_type: str,
     metadata: Dict = None,
     quality_score: float = 1.0,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Record a contribution and award reputation points"""
     
     try:
@@ -64,8 +63,7 @@ async def record_contribution(
 @router.get("/profile/{user_id}")
 async def get_user_reputation(
     user_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get user's reputation profile"""
     
     reputation = reputation_engine.get_user_reputation(user_id)
@@ -103,8 +101,7 @@ async def get_user_reputation(
 @router.get("/leaderboard")
 async def get_reputation_leaderboard(
     limit: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get reputation leaderboard"""
     
     leaderboard = reputation_engine.get_leaderboard(limit)
@@ -121,8 +118,7 @@ async def get_user_contributions(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     limit: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get user's contribution history"""
     
     try:
@@ -130,9 +126,9 @@ async def get_user_contributions(
         end_dt = None
         
         if start_date:
-            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00')
         if end_date:
-            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00')
         
         contributions = reputation_engine.get_user_contributions(
             user_id, start_dt, end_dt
@@ -164,8 +160,7 @@ async def get_user_contributions(
 @router.get("/stats/{user_id}")
 async def get_user_stats(
     user_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get detailed user statistics"""
     
     stats = reputation_engine.get_contribution_stats(user_id)
@@ -182,8 +177,7 @@ async def get_user_stats(
 # Badge Routes
 @router.get("/badges")
 async def get_all_badges(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get all available badges"""
     
     badges = badge_system.get_all_badges()
@@ -210,8 +204,7 @@ async def get_all_badges(
 @router.get("/badges/{badge_id}")
 async def get_badge_details(
     badge_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get detailed information about a badge"""
     
     badge = badge_system.get_badge_details(badge_id)
@@ -239,8 +232,7 @@ async def get_badge_details(
 @router.get("/badges/rarity/{rarity}")
 async def get_badges_by_rarity(
     rarity: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get badges filtered by rarity"""
     
     from services.planarx.planarx_community.reputation.badges import BadgeRarity
@@ -272,8 +264,7 @@ async def get_badges_by_rarity(
 @router.get("/user/{user_id}/badges")
 async def get_user_badges(
     user_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get badges earned by a user"""
     
     user_badges = badge_system.get_user_badges(user_id)
@@ -299,8 +290,7 @@ async def get_user_badges(
 async def get_badge_progress(
     user_id: str,
     badge_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get user's progress towards earning a badge"""
     
     progress = badge_system.get_badge_progress(user_id, badge_id)
@@ -325,8 +315,7 @@ async def get_badge_progress(
 @router.get("/badge-leaderboard")
 async def get_badge_leaderboard(
     limit: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get leaderboard based on badge points"""
     
     leaderboard = badge_system.get_leaderboard_by_badges(limit)
@@ -340,8 +329,7 @@ async def get_badge_leaderboard(
 # Abuse Detection Routes
 @router.get("/abuse-reports")
 async def get_abuse_reports(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get all users flagged for abuse review"""
     
     # Check if user has moderation privileges
@@ -361,8 +349,7 @@ async def get_abuse_reports(
 async def flag_user_for_review(
     user_id: str,
     reason: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Flag a user for manual review"""
     
     # Check if user has moderation privileges
@@ -381,8 +368,7 @@ async def flag_user_for_review(
 @router.post("/clear-flag/{user_id}")
 async def clear_abuse_flag(
     user_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Clear abuse flag for a user"""
     
     # Check if user has moderation privileges
@@ -402,8 +388,7 @@ async def clear_abuse_flag(
 @router.get("/grant-eligibility/{user_id}")
 async def get_grant_eligibility(
     user_id: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get user's eligibility for different grant types"""
     
     from ..funding.grant_eligibility import grant_eligibility_engine, GrantType
@@ -468,8 +453,7 @@ async def get_grant_eligibility(
 @router.get("/funding-priority-leaderboard")
 async def get_funding_priority_leaderboard(
     limit: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get leaderboard of users by funding priority"""
     
     from ..funding.grant_eligibility import grant_eligibility_engine
@@ -485,8 +469,7 @@ async def get_funding_priority_leaderboard(
 @router.get("/grant-visibility/{grant_type}")
 async def get_grant_visibility_rules(
     grant_type: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get visibility rules for a grant type"""
     
     from ..funding.grant_eligibility import grant_eligibility_engine, GrantType
@@ -514,8 +497,7 @@ async def get_grant_visibility_rules(
 @router.get("/escrow-rules/{grant_type}")
 async def get_escrow_rules(
     grant_type: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get escrow rules for a grant type"""
     
     from ..funding.grant_eligibility import grant_eligibility_engine, GrantType
@@ -536,8 +518,7 @@ async def get_escrow_rules(
 @router.get("/review-requirements/{grant_type}")
 async def get_review_requirements(
     grant_type: str,
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get review requirements for a grant type"""
     
     from ..funding.grant_eligibility import grant_eligibility_engine, GrantType
@@ -558,8 +539,7 @@ async def get_review_requirements(
 # Analytics Routes
 @router.get("/analytics/eligibility-stats")
 async def get_eligibility_stats(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get statistics about grant eligibility across the platform"""
     
     from ..funding.grant_eligibility import grant_eligibility_engine
@@ -579,8 +559,7 @@ async def get_eligibility_stats(
 
 @router.get("/analytics/reputation-stats")
 async def get_reputation_stats(
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Get reputation system statistics"""
     
     # Check if user has admin privileges
@@ -589,7 +568,7 @@ async def get_reputation_stats(
         raise HTTPException(status_code=403, detail="Insufficient privileges")
     
     # Calculate reputation statistics
-    all_reputations = list(reputation_engine.user_reputations.values())
+    all_reputations = list(reputation_engine.user_reputations.values()
     
     if not all_reputations:
         return {
@@ -633,12 +612,11 @@ async def search_users_by_reputation(
     max_points: Optional[int] = None,
     tier: Optional[str] = None,
     limit: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user):
     """Search users by reputation criteria"""
     
     # Get all reputations
-    all_reputations = list(reputation_engine.user_reputations.values())
+    all_reputations = list(reputation_engine.user_reputations.values()
     
     # Filter by criteria
     filtered_reputations = []

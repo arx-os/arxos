@@ -28,6 +28,22 @@ class CreateBuildingUseCase:
     """Use case for creating a new building."""
     
     def __init__(self, unit_of_work: UnitOfWork):
+    """
+    Perform __init__ operation
+
+Args:
+        unit_of_work: Description of unit_of_work
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.unit_of_work = unit_of_work
     
     def execute(self, request: CreateBuildingRequest) -> CreateBuildingResponse:
@@ -108,6 +124,22 @@ class CreateBuildingUseCase:
 
 
 class UpdateBuildingUseCase:
+    """
+    Perform __init__ operation
+
+Args:
+        unit_of_work: Description of unit_of_work
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Use case for updating an existing building."""
     
     def __init__(self, unit_of_work: UnitOfWork):

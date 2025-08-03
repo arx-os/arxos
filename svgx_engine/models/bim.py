@@ -126,6 +126,22 @@ class Geometry:
     properties: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if not isinstance(self.coordinates, (list, tuple)):
             raise ValueError("Coordinates must be a list or tuple")
         if self.geometry_type == GeometryType.POINT:

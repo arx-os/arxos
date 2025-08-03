@@ -74,6 +74,22 @@ class Mass:
     center_of_mass: Vector3D = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.center_of_mass is None:
             self.center_of_mass = Vector3D(0, 0, 0)
 
@@ -91,6 +107,22 @@ class Anchor:
 
 
 class SVGXPhysicsEngine:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Physics engine for SVGX elements."""
     
     def __init__(self):

@@ -31,6 +31,42 @@ from collections import defaultdict, Counter
 import structlog
 from dateutil import parser as date_parser
 import pandas as pd
+import secrets
+import bcrypt
+
+def secure_hash(data: str) -> str:
+    """
+    Generate secure hash using SHA-256.
+    
+    Args:
+        data: Data to hash
+        
+    Returns:
+        Secure hash string
+    """
+    return hashlib.sha256(data.encode()).hexdigest()
+
+def secure_password_hash(password: str) -> str:
+    """
+    Hash password securely using bcrypt.
+    
+    Args:
+        password: Plain text password
+        
+    Returns:
+        Hashed password
+    """
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def generate_secure_token() -> str:
+    """
+    Generate secure random token.
+    
+    Returns:
+        Secure random token
+    """
+    return secrets.token_urlsafe(32)
+
 
 # Configure structured logging following Arxos standards
 logger = structlog.get_logger(__name__)

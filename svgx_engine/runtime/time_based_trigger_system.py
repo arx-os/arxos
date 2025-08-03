@@ -57,6 +57,22 @@ class Trigger:
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.next_execution is None:
             self.next_execution = self._calculate_next_execution()
 
@@ -396,6 +412,22 @@ time_based_trigger_system = TimeBasedTriggerSystem()
 
 # Register with the event-driven engine
 def _register_time_based_trigger_system():
+    """
+    Perform _register_time_based_trigger_system operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = _register_time_based_trigger_system(param)
+        print(result)
+    """
     def handler(event: Event):
         if event.type == EventType.SYSTEM and event.data.get('trigger_id'):
             # Trigger events are handled internally by the system

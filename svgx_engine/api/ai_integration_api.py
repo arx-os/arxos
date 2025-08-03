@@ -28,6 +28,7 @@ from svgx_engine.services.ai.ai_frontend_integration import (
     AIComponentType
 )
 from svgx_engine.services.ai.advanced_ai_analytics import (
+from core.security.auth_middleware import get_current_user, User
     AdvancedAIAnalyticsService,
     AnalyticsType,
     PredictionModel,
@@ -115,7 +116,7 @@ class InsightRequest(BaseModel):
 
 # User Pattern Learning Endpoints
 @app.post("/user-actions", response_model=Dict)
-async def record_user_action(request: UserActionRequest):
+async def record_user_action(request: UserActionRequest, user: User = Depends(get_current_user)):
     """Record a user action for pattern learning"""
     try:
         # Convert location to tuple if provided
@@ -148,7 +149,7 @@ async def record_user_action(request: UserActionRequest):
 
 
 @app.post("/user-sessions/start", response_model=Dict)
-async def start_user_session(request: UserSessionRequest):
+async def start_user_session(request: UserSessionRequest, user: User = Depends(get_current_user)):
     """Start a new user session"""
     try:
         # Convert location to tuple if provided
@@ -174,7 +175,7 @@ async def start_user_session(request: UserSessionRequest):
 
 
 @app.post("/user-sessions/{session_id}/end", response_model=Dict)
-async def end_user_session(session_id: str):
+async def end_user_session(session_id: str, user: User = Depends(get_current_user)):
     """End a user session"""
     try:
         session = await user_pattern_service.end_user_session(session_id)
@@ -199,7 +200,7 @@ async def get_user_patterns(
     pattern_type: Optional[str] = None,
     context: Optional[str] = None,
     active_only: bool = True
-):
+, user: User = Depends(get_current_user)):
     """Get user patterns"""
     try:
         pattern_type_enum = PatternType(pattern_type) if pattern_type else None
@@ -227,7 +228,7 @@ async def get_user_recommendations(
     user_id: str,
     recommendation_type: Optional[str] = None,
     active_only: bool = True
-):
+, user: User = Depends(get_current_user)):
     """Get user recommendations"""
     try:
         recommendations = await user_pattern_service.get_user_recommendations(
@@ -247,7 +248,7 @@ async def get_user_recommendations(
 
 
 @app.get("/user-analytics/{user_id}", response_model=Dict)
-async def get_user_analytics(user_id: str):
+async def get_user_analytics(user_id: str, user: User = Depends(get_current_user)):
     """Get user analytics"""
     try:
         analytics = await user_pattern_service.get_user_analytics(user_id)
@@ -266,7 +267,7 @@ async def get_user_analytics(user_id: str):
 
 
 @app.get("/user-insights/{user_id}", response_model=Dict)
-async def get_user_insights(user_id: str):
+async def get_user_insights(user_id: str, user: User = Depends(get_current_user)):
     """Get comprehensive user insights"""
     try:
         insights = await user_pattern_service.get_user_insights(user_id)
@@ -282,7 +283,7 @@ async def get_user_insights(user_id: str):
 
 # HTMX AI Frontend Integration Endpoints
 @app.post("/htmx/process", response_model=Dict)
-async def process_htmx_request(request: HTMXRequestModel):
+async def process_htmx_request(request: HTMXRequestModel, user: User = Depends(get_current_user)):
     """Process HTMX request and generate AI-powered response"""
     try:
         # Convert location to tuple if provided
@@ -321,7 +322,7 @@ async def create_ai_component(
     target_selector: str,
     htmx_config: Dict[str, Any] = None,
     ai_config: Dict[str, Any] = None
-):
+, user: User = Depends(get_current_user)):
     """Create a new AI component"""
     try:
         component = await ai_frontend_service.create_ai_component(
@@ -347,7 +348,7 @@ async def create_ai_component(
 async def get_ai_components(
     component_type: Optional[str] = None,
     active_only: bool = True
-):
+, user: User = Depends(get_current_user)):
     """Get AI components"""
     try:
         component_type_enum = AIComponentType(component_type) if component_type else None
@@ -369,7 +370,7 @@ async def get_ai_components(
 
 # Advanced AI Analytics Endpoints
 @app.post("/predictions", response_model=Dict)
-async def generate_prediction(request: PredictionRequest):
+async def generate_prediction(request: PredictionRequest, user: User = Depends(get_current_user)):
     """Generate prediction using AI models"""
     try:
         prediction = await ai_analytics_service.predict_user_behavior(
@@ -390,7 +391,7 @@ async def generate_prediction(request: PredictionRequest):
 
 
 @app.post("/analytics/datasets", response_model=Dict)
-async def create_analytics_dataset(request: AnalyticsRequest):
+async def create_analytics_dataset(request: AnalyticsRequest, user: User = Depends(get_current_user)):
     """Create analytics dataset"""
     try:
         dataset = await ai_analytics_service.create_dataset(
@@ -412,7 +413,7 @@ async def create_analytics_dataset(request: AnalyticsRequest):
 
 
 @app.post("/analytics/trends/{dataset_id}", response_model=Dict)
-async def analyze_trends(dataset_id: UUID, variable_name: str):
+async def analyze_trends(dataset_id: UUID, variable_name: str, user: User = Depends(get_current_user)):
     """Analyze trends in dataset"""
     try:
         trend = await ai_analytics_service.analyze_trends(
@@ -435,7 +436,7 @@ async def analyze_correlations(
     dataset_id: UUID,
     variable1: str,
     variable2: str
-):
+, user: User = Depends(get_current_user)):
     """Analyze correlations between variables"""
     try:
         correlation = await ai_analytics_service.analyze_correlations(
@@ -459,7 +460,7 @@ async def detect_anomalies(
     dataset_id: UUID,
     variable_name: str,
     threshold: float = 2.0
-):
+, user: User = Depends(get_current_user)):
     """Detect anomalies in dataset"""
     try:
         anomalies = await ai_analytics_service.detect_anomalies(
@@ -480,7 +481,7 @@ async def detect_anomalies(
 
 
 @app.post("/analytics/insights", response_model=Dict)
-async def generate_insights(request: InsightRequest):
+async def generate_insights(request: InsightRequest, user: User = Depends(get_current_user)):
     """Generate AI insights"""
     try:
         insight_types = [InsightType(it) for it in request.insight_types] if request.insight_types else None
@@ -508,7 +509,7 @@ async def track_performance_metrics(
     unit: str,
     benchmark: Optional[float] = None,
     target: Optional[float] = None
-):
+, user: User = Depends(get_current_user)):
     """Track performance metrics"""
     try:
         metric = await ai_analytics_service.track_performance_metrics(
@@ -534,7 +535,7 @@ async def get_analytics_summary(
     user_id: str,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
-):
+, user: User = Depends(get_current_user)):
     """Get comprehensive analytics summary"""
     try:
         summary = await ai_analytics_service.get_analytics_summary(
@@ -554,7 +555,7 @@ async def get_analytics_summary(
 
 # Recommendation Management Endpoints
 @app.post("/recommendations/{recommendation_id}/dismiss", response_model=Dict)
-async def dismiss_recommendation(recommendation_id: UUID):
+async def dismiss_recommendation(recommendation_id: UUID, user: User = Depends(get_current_user)):
     """Dismiss a user recommendation"""
     try:
         success = await user_pattern_service.dismiss_recommendation(recommendation_id)
@@ -573,7 +574,7 @@ async def dismiss_recommendation(recommendation_id: UUID):
 
 
 @app.post("/recommendations/{recommendation_id}/apply", response_model=Dict)
-async def apply_recommendation(recommendation_id: UUID):
+async def apply_recommendation(recommendation_id: UUID, user: User = Depends(get_current_user)):
     """Apply a user recommendation"""
     try:
         success = await user_pattern_service.apply_recommendation(recommendation_id)
@@ -593,7 +594,7 @@ async def apply_recommendation(recommendation_id: UUID):
 
 # Health check endpoint
 @app.get("/health", response_model=Dict)
-async def health_check():
+async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint"""
     return {
         "status": "healthy",

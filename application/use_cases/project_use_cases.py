@@ -28,6 +28,22 @@ class CreateProjectUseCase:
     """Use case for creating a new project."""
     
     def __init__(self, project_repository: ProjectRepository):
+    """
+    Perform __init__ operation
+
+Args:
+        project_repository: Description of project_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.project_repository = project_repository
     
     def execute(self, request: CreateProjectRequest) -> CreateProjectResponse:
@@ -91,6 +107,22 @@ class CreateProjectUseCase:
 
 
 class UpdateProjectUseCase:
+    """
+    Perform __init__ operation
+
+Args:
+        project_repository: Description of project_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Use case for updating a project."""
     
     def __init__(self, project_repository: ProjectRepository):

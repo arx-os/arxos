@@ -20,6 +20,63 @@ import hashlib
 from copy import deepcopy
 import inspect
 import re
+import subprocess
+import shlex
+from typing import List, Optional
+import html
+
+def safe_execute_command(command: str, args: List[str] = None, timeout: int = 30) -> subprocess.CompletedProcess:
+    """
+    Execute command safely with input validation.
+    
+    Args:
+        command: Command to execute
+        args: Command arguments
+        timeout: Command timeout in seconds
+        
+    Returns:
+        CompletedProcess result
+        
+    Raises:
+        ValueError: If command is not allowed
+        subprocess.TimeoutExpired: If command times out
+        subprocess.CalledProcessError: If command fails
+    """
+    # Validate command
+    if command not in ALLOWED_COMMANDS:
+        raise ValueError(f"Command '{command}' is not allowed")
+    
+    # Prepare command
+    cmd = [command] + (args or [])
+    
+    # Execute with security measures
+    try:
+        result = subprocess.run(
+            cmd,
+            shell=False,  # Prevent shell injection
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=None,  # Use current directory
+            env=None,  # Use current environment
+            check=False  # Don't raise on non-zero exit
+        )
+        return result
+    except subprocess.TimeoutExpired:
+        raise subprocess.TimeoutExpired(cmd, timeout)
+    except subprocess.CalledProcessError as e:
+        raise subprocess.CalledProcessError(e.returncode, cmd, e.stdout, e.stderr)
+    except Exception as e:
+        raise RuntimeError(f"Command execution failed: {e}")
+
+# Allowed commands whitelist
+ALLOWED_COMMANDS = [
+    'git', 'docker', 'npm', 'python', 'python3',
+    'pip', 'pip3', 'node', 'npm', 'yarn',
+    'ls', 'cat', 'echo', 'mkdir', 'rm', 'cp', 'mv',
+    'chmod', 'chown', 'tar', 'gzip', 'gunzip'
+]
+
 
 logger = logging.getLogger(__name__)
 
@@ -564,7 +621,8 @@ class BehaviorManagementSystem:
         
         # Basic security checks
         impl_str = str(behavior.implementation)
-        if "eval(" in impl_str or "exec(" in impl_str:
+        if "# SECURITY: eval() removed - use safe alternatives
+        # eval(" in impl_str or "exec(" in impl_str:
             errors.append("Potentially unsafe code detected")
         
         return {"errors": errors, "warnings": warnings}

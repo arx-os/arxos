@@ -67,6 +67,22 @@ class Flag:
     metadata: Dict
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.evidence is None:
             self.evidence = []
         if self.metadata is None:
@@ -114,6 +130,22 @@ class UserViolationHistory:
 
 
 class FlaggingSystem:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Enhanced flagging system with category management"""
     
     def __init__(self):

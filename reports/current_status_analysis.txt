@@ -1,0 +1,103 @@
+================================================================================
+ARXOS DEVELOPMENT STANDARDS ANALYSIS REPORT
+================================================================================
+
+📊 SUMMARY
+----------------------------------------
+Total Files Analyzed: 433
+Total Violations: 1062
+Architecture Compliance: 59.1%
+Overall Quality Score: 58.5%
+Security Score: 62.0%
+
+🚨 VIOLATIONS BY TYPE
+----------------------------------------
+Documentation: 56
+Code Quality: 804
+Security: 7
+Analysis Error: 163
+Naming Convention: 8
+Clean Architecture: 24
+
+❌ CRITICAL VIOLATIONS
+----------------------------------------
+scripts/fix_command_injection.py:44 - Potential xss vulnerability detected
+scripts/fix_remaining_security_vulnerabilities.py:123 - Potential xss vulnerability detected
+scripts/fix_remaining_security_vulnerabilities.py:137 - Potential xss vulnerability detected
+scripts/fix_remaining_security_vulnerabilities.py:144 - Potential xss vulnerability detected
+scripts/fix_remaining_security_vulnerabilities.py:144 - Potential xss vulnerability detected
+svgx_engine/deploy_production.py:0 - Failed to analyze file: expected an indented block after function definition on line 24 (<unknown>, line 25)
+svgx_engine/app.py:0 - Failed to analyze file: unexpected indent (<unknown>, line 175)
+api/middleware.py:0 - Failed to analyze file: expected an indented block after function definition on line 30 (<unknown>, line 31)
+application/logging_config.py:0 - Failed to analyze file: expected an indented block after function definition on line 66 (<unknown>, line 67)
+application/transaction.py:0 - Failed to analyze file: expected an indented block after function definition on line 107 (<unknown>, line 108)
+... and 184 more
+
+💡 RECOMMENDATIONS
+----------------------------------------
+• Improve Clean Architecture compliance by reducing cross-layer dependencies
+• Address 7 security vulnerabilities
+• Add documentation to 56 functions/classes
+• Improve code quality in 804 areas
+
+📁 FILE-LEVEL ANALYSIS
+----------------------------------------
+plugins/example_behavior_plugin.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+docs/proper_documentation_syntax_example.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+docs/proper_docstring_patterns_example.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+docs/critical_syntax_fix_example.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+docs/secure_coding_example.py
+  Architecture: Unknown
+  Quality Score: 93.0%
+  Security Score: 100.0%
+  Violations: 3
+
+docs/authentication_example.py
+  Architecture: Unknown
+  Quality Score: 97.0%
+  Security Score: 100.0%
+  Violations: 3
+
+docs/proper_docstring_indentation_example.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+docs/proper_endpoint_example.py
+  Architecture: Unknown
+  Quality Score: 94.0%
+  Security Score: 100.0%
+  Violations: 2
+
+docs/safe_command_example.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+docs/proper_docstring_syntax_example.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0

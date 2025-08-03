@@ -113,6 +113,22 @@ class BoardMember:
     contact_info: Dict
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.participation_score is None:
             self.participation_score = 0.0
         if self.decisions_made is None:
@@ -169,6 +185,22 @@ class Vote:
 
 
 class GovernanceBoard:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Governance board management system"""
     
     def __init__(self):

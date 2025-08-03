@@ -15,6 +15,20 @@ from datetime import datetime
 import uuid
 
 class ClassificationSystem(Enum):
+    """
+    Class for ClassificationSystem functionality
+
+Attributes:
+        None
+
+Methods:
+        None
+
+Example:
+        instance = ClassificationSystem()
+        result = instance.method()
+        print(result)
+    """
     IFC = "IFC"
     UNIFORMAT = "Uniformat"
     OMNICLASS = "Omniclass"
@@ -38,6 +52,23 @@ class PropertySet:
     updated_at: datetime = field(default_factory=datetime.now)
 
     def add_property(self, key: str, value: Any):
+    """
+    Perform add_property operation
+
+Args:
+        key: Description of key
+        value: Description of value
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = add_property(param)
+        print(result)
+    """
         self.properties[key] = value
         self.updated_at = datetime.now()
 

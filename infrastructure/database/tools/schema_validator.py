@@ -35,6 +35,22 @@ class TableInfo:
     indexes: Set[str] = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.foreign_keys is None:
             self.foreign_keys = []
         if self.indexes is None:

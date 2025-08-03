@@ -1,0 +1,102 @@
+================================================================================
+ARXOS DEVELOPMENT STANDARDS ANALYSIS REPORT
+================================================================================
+
+📊 SUMMARY
+----------------------------------------
+Total Files Analyzed: 416
+Total Violations: 2055
+Architecture Compliance: 88.5%
+Overall Quality Score: 81.0%
+Security Score: 92.2%
+
+🚨 VIOLATIONS BY TYPE
+----------------------------------------
+Documentation: 602
+Code Quality: 1379
+Security: 8
+Analysis Error: 31
+Naming Convention: 8
+Clean Architecture: 27
+
+❌ CRITICAL VIOLATIONS
+----------------------------------------
+scripts/fix_command_injection.py:44 - Potential xss vulnerability detected
+svgx_engine/app.py:0 - Failed to analyze file: expected an indented block after function definition on line 223 (<unknown>, line 224)
+services/ai/main.py:0 - Failed to analyze file: expected an indented block after function definition on line 155 (<unknown>, line 156)
+services/gus/main.py:0 - Failed to analyze file: expected an indented block after function definition on line 160 (<unknown>, line 161)
+services/planarx/planarx-community/main.py:0 - Failed to analyze file: expected an indented block after function definition on line 108 (<unknown>, line 109)
+services/planarx/planarx-funding/hooks/milestone_hook.py:36 - Domain layer should not depend on fastapi
+services/planarx/planarx-community/reputation/routes.py:0 - Failed to analyze file: invalid syntax (<unknown>, line 12)
+services/planarx/planarx-community/workflows/task_trigger_map.py:34 - Domain layer should not depend on fastapi
+services/planarx/planarx-community/integrations/build_hooks.py:35 - Domain layer should not depend on fastapi
+services/planarx/planarx-community/collab/routes.py:0 - Failed to analyze file: invalid syntax (<unknown>, line 13)
+... and 56 more
+
+💡 RECOMMENDATIONS
+----------------------------------------
+• Address 8 security vulnerabilities
+• Add documentation to 602 functions/classes
+• Improve code quality in 1379 areas
+
+📁 FILE-LEVEL ANALYSIS
+----------------------------------------
+plugins/example_behavior_plugin.py
+  Architecture: Unknown
+  Quality Score: 95.0%
+  Security Score: 100.0%
+  Violations: 1
+
+docs/authentication_example.py
+  Architecture: Unknown
+  Quality Score: 97.0%
+  Security Score: 100.0%
+  Violations: 3
+
+docs/safe_command_example.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+cli/gus.py
+  Architecture: presentation
+  Quality Score: 95.0%
+  Security Score: 100.0%
+  Violations: 1
+
+cli/svgx-cli.py
+  Architecture: presentation
+  Quality Score: 86.0%
+  Security Score: 100.0%
+  Violations: 10
+
+scripts/setup_dev_environment.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+scripts/fix_syntax_errors.py
+  Architecture: Unknown
+  Quality Score: 100.0%
+  Security Score: 100.0%
+  Violations: 0
+
+scripts/apply_authentication.py
+  Architecture: Unknown
+  Quality Score: 85.0%
+  Security Score: 100.0%
+  Violations: 3
+
+scripts/security_audit.py
+  Architecture: Unknown
+  Quality Score: 90.0%
+  Security Score: 100.0%
+  Violations: 2
+
+scripts/fix_command_injection.py
+  Architecture: Unknown
+  Quality Score: 85.0%
+  Security Score: 80.0%
+  Violations: 2

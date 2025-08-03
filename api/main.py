@@ -31,7 +31,8 @@ from api.routes import (
     user_router,
     project_router,
     building_router,
-    health_router
+    health_router,
+    pdf_router
 )
 from api.middleware import (
     RequestLoggingMiddleware,
@@ -40,6 +41,7 @@ from api.middleware import (
     RateLimitingMiddleware
 )
 from api.dependencies import get_current_user, get_api_key
+from core.security.auth_middleware import get_current_user, User
 
 
 # Configure structured logging
@@ -79,7 +81,7 @@ app_state: Dict[str, Any] = {}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI, user: User = Depends(get_current_user)):
     """Application lifespan manager"""
     # Startup
     logger.info("Starting Arxos Platform API...")
@@ -110,7 +112,7 @@ async def lifespan(app: FastAPI):
         await _cleanup_services()
 
 
-async def _initialize_services():
+async def _initialize_services(user: User = Depends(get_current_user)):
     """Initialize application services"""
     try:
         # Initialize database connections
@@ -146,7 +148,7 @@ async def _initialize_services():
         raise
 
 
-async def _cleanup_services():
+async def _cleanup_services(user: User = Depends(get_current_user)):
     """Cleanup application services"""
     try:
         # Cleanup database connections
@@ -280,7 +282,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Global exception handlers
 @app.exception_handler(ApplicationError)
-async def application_error_handler(request: Request, exc: ApplicationError):
+async def application_error_handler(request: Request, exc: ApplicationError, user: User = Depends(get_current_user)):
     """Handle application-specific errors"""
     logger.error(f"Application error: {exc.message}", error_code=exc.error_code, details=exc.details)
     
@@ -297,7 +299,7 @@ async def application_error_handler(request: Request, exc: ApplicationError):
 
 
 @app.exception_handler(ValidationError)
-async def validation_error_handler(request: Request, exc: ValidationError):
+async def validation_error_handler(request: Request, exc: ValidationError, user: User = Depends(get_current_user)):
     """Handle validation errors"""
     logger.error(f"Validation error: {exc.message}", field=exc.field, value=exc.value)
     
@@ -314,7 +316,7 @@ async def validation_error_handler(request: Request, exc: ValidationError):
 
 
 @app.exception_handler(BusinessRuleError)
-async def business_rule_error_handler(request: Request, exc: BusinessRuleError):
+async def business_rule_error_handler(request: Request, exc: BusinessRuleError, user: User = Depends(get_current_user)):
     """Handle business rule errors"""
     logger.error(f"Business rule error: {exc.message}", rule=exc.rule, context=exc.context)
     
@@ -331,7 +333,7 @@ async def business_rule_error_handler(request: Request, exc: BusinessRuleError):
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(request: Request, exc: Exception, user: User = Depends(get_current_user)):
     """Handle all other exceptions"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     
@@ -349,7 +351,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Root endpoint
 @app.get("/", response_model=Dict[str, Any])
-async def root():
+async def root(user: User = Depends(get_current_user)):
     """Root endpoint with API information"""
     return {
         "service": "Arxos Platform API",
@@ -373,7 +375,7 @@ async def root():
 
 # Health check endpoint
 @app.get("/health", response_model=Dict[str, Any])
-async def health_check():
+async def health_check(user: User = Depends(get_current_user)):
     """Comprehensive health check endpoint"""
     try:
         # Check database connection
@@ -427,6 +429,7 @@ app.include_router(room_router, prefix="/api/v1/rooms", tags=["Rooms"])
 app.include_router(user_router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(project_router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(building_router, prefix="/api/v1/buildings", tags=["Buildings"])
+app.include_router(pdf_router, tags=["PDF Analysis"])
 
 
 if __name__ == "__main__":

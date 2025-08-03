@@ -95,7 +95,7 @@ class GovernanceUserManager:
     ) -> UserProfile:
         """Create a new user profile with governance capabilities"""
         
-        user_id = str(uuid.uuid4())
+        user_id = str(uuid.uuid4()
         created_at = datetime.utcnow()
         
         user = UserProfile(
@@ -272,7 +272,7 @@ class GovernanceUserManager:
             raise ValueError(f"User {user_id} not found")
         
         user = self.users[user_id]
-        user.participation_score = max(0.0, min(1.0, score))
+        user.participation_score = max(0.0, min(1.0, score)
         
         # Update governance board if user is a board member
         if user.board_member_id:
@@ -285,7 +285,7 @@ class GovernanceUserManager:
             raise ValueError(f"User {user_id} not found")
         
         user = self.users[user_id]
-        user.reputation_score = max(0.0, min(10.0, score))
+        user.reputation_score = max(0.0, min(10.0, score)
         
         # Update governance board if user is a board member
         if user.board_member_id:
@@ -312,7 +312,7 @@ class GovernanceUserManager:
                 continue
             
             # Calculate eligibility score
-            skill_match = len(user_skills.intersection(required_skills)) / len(required_skills)
+            skill_match = len(user_skills.intersection(required_skills) / len(required_skills)
             experience_bonus = min(1.0, user.experience_years / role_perm.required_experience_years)
             participation_bonus = user.participation_score
             reputation_bonus = user.reputation_score / 10.0
@@ -429,7 +429,7 @@ class GovernanceUserManager:
             # Check if user matches query
             if (query_lower in user.username.lower() or 
                 query_lower in user.display_name.lower() or
-                query_lower in user.email.lower()):
+                query_lower in user.email.lower():
                 
                 # Apply role filter if specified
                 if role_filter:

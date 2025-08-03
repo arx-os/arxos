@@ -3,128 +3,307 @@
  * Handles background processing for SVGX operations, geometry calculations, and constraint solving
  * 
  * @author Arxos Team
- * @version 1.0.0
+ * @version 1.1.0 - Enhanced Performance and Error Handling
  * @license MIT
  */
 
+// Performance monitoring
+let performanceMetrics = {
+    svgxProcessing: 0,
+    geometryCalculations: 0,
+    constraintSolving: 0,
+    totalOperations: 0
+};
+
 // Worker context - this file runs in Web Worker environment
 self.onmessage = function(event) {
-    const { type, objectId, object } = event.data;
+    const { type, objectId, object, options = {} } = event.data;
     
     try {
+        performanceMetrics.totalOperations++;
+        const startTime = performance.now();
+        
         switch (type) {
             case 'process_svgx':
-                processSvgxObject(objectId, object);
+                processSvgxObject(objectId, object, options);
                 break;
             case 'calculate_geometry':
-                calculateGeometry(objectId, object);
+                calculateGeometry(objectId, object, options);
                 break;
             case 'solve_constraints':
-                solveConstraints(objectId, object);
+                solveConstraints(objectId, object, options);
                 break;
             case 'process_large_building':
-                processLargeBuilding(objectId, object);
+                processLargeBuilding(objectId, object, options);
+                break;
+            case 'validate_precision':
+                validatePrecision(objectId, object, options);
+                break;
+            case 'optimize_performance':
+                optimizePerformance(objectId, object, options);
                 break;
             default:
                 console.warn('Unknown worker message type:', type);
+                self.postMessage({
+                    type: 'error',
+                    objectId: objectId,
+                    error: `Unknown message type: ${type}`
+                });
         }
+        
+        // Update performance metrics
+        const endTime = performance.now();
+        const duration = endTime - startTime;
+        
+        switch (type) {
+            case 'process_svgx':
+                performanceMetrics.svgxProcessing += duration;
+                break;
+            case 'calculate_geometry':
+                performanceMetrics.geometryCalculations += duration;
+                break;
+            case 'solve_constraints':
+                performanceMetrics.constraintSolving += duration;
+                break;
+        }
+        
     } catch (error) {
         console.error('Worker error:', error);
         self.postMessage({
             type: 'error',
             objectId: objectId,
-            error: error.message
+            error: error.message,
+            stack: error.stack
         });
     }
 };
 
 /**
- * Process SVGX object in background
+ * Enhanced SVGX object processing with precision validation
  */
-function processSvgxObject(objectId, object) {
-    console.log('Processing SVGX object:', objectId);
+function processSvgxObject(objectId, object, options = {}) {
+    console.log('Processing SVGX object:', objectId, 'with options:', options);
     
-    // Simulate SVGX processing
-    setTimeout(() => {
+    try {
+        // Validate input object
+        if (!object || typeof object !== 'object') {
+            throw new Error('Invalid object provided for SVGX processing');
+        }
+        
+        // Apply precision settings
+        const precision = options.precision || 0.001; // Default to 0.001 inches
+        const units = options.units || 'inches';
+        
+        // Process SVGX with enhanced precision
         const processedObject = {
             ...object,
             svgx: {
-                path: generateSvgxPath(object),
-                attributes: generateSvgxAttributes(object),
+                path: generateSvgxPath(object, precision),
+                attributes: generateSvgxAttributes(object, precision),
                 metadata: {
                     processed: true,
                     timestamp: Date.now(),
-                    version: '1.0.0'
+                    version: '1.1.0',
+                    precision: precision,
+                    units: units,
+                    workerId: self.name || 'unknown'
                 }
             }
         };
         
+        // Validate processed object
+        if (!processedObject.svgx.path) {
+            throw new Error('Failed to generate SVGX path');
+        }
+        
         self.postMessage({
             type: 'svgx_processed',
             objectId: objectId,
-            result: processedObject
+            result: processedObject,
+            performance: {
+                duration: performance.now(),
+                precision: precision,
+                units: units
+            }
         });
-    }, 10); // Simulate processing time
+        
+    } catch (error) {
+        console.error('SVGX processing error:', error);
+        self.postMessage({
+            type: 'svgx_error',
+            objectId: objectId,
+            error: error.message
+        });
+    }
 }
 
 /**
- * Calculate geometry for object
+ * Enhanced geometry calculation with precision validation
  */
-function calculateGeometry(objectId, object) {
-    console.log('Calculating geometry for:', objectId);
+function calculateGeometry(objectId, object, options = {}) {
+    console.log('Calculating geometry for:', objectId, 'with options:', options);
     
-    // Simulate geometry calculation
-    setTimeout(() => {
-        const geometry = calculateObjectGeometry(object);
+    try {
+        const precision = options.precision || 0.001;
+        const geometry = calculateObjectGeometry(object, precision);
+        
+        // Validate geometry results
+        if (!geometry || !geometry.bounds) {
+            throw new Error('Failed to calculate geometry');
+        }
         
         self.postMessage({
             type: 'geometry_calculated',
             objectId: objectId,
-            geometry: geometry
+            geometry: geometry,
+            performance: {
+                duration: performance.now(),
+                precision: precision
+            }
         });
-    }, 5);
+        
+    } catch (error) {
+        console.error('Geometry calculation error:', error);
+        self.postMessage({
+            type: 'geometry_error',
+            objectId: objectId,
+            error: error.message
+        });
+    }
 }
 
 /**
- * Solve constraints for object
+ * Enhanced constraint solving with validation
  */
-function solveConstraints(objectId, object) {
-    console.log('Solving constraints for:', objectId);
+function solveConstraints(objectId, object, options = {}) {
+    console.log('Solving constraints for:', objectId, 'with options:', options);
     
-    // Simulate constraint solving
-    setTimeout(() => {
-        const constraints = solveObjectConstraints(object);
+    try {
+        const precision = options.precision || 0.001;
+        const constraints = solveObjectConstraints(object, precision);
+        
+        // Validate constraint results
+        if (!constraints || !Array.isArray(constraints)) {
+            throw new Error('Failed to solve constraints');
+        }
         
         self.postMessage({
             type: 'constraints_solved',
             objectId: objectId,
-            constraints: constraints
+            constraints: constraints,
+            performance: {
+                duration: performance.now(),
+                precision: precision
+            }
         });
-    }, 15);
+        
+    } catch (error) {
+        console.error('Constraint solving error:', error);
+        self.postMessage({
+            type: 'constraint_error',
+            objectId: objectId,
+            error: error.message
+        });
+    }
 }
 
 /**
- * Process large building data
+ * Precision validation for CAD operations
  */
-function processLargeBuilding(objectId, buildingData) {
-    console.log('Processing large building:', objectId);
+function validatePrecision(objectId, object, options = {}) {
+    console.log('Validating precision for:', objectId);
     
-    // Simulate large building processing
-    setTimeout(() => {
-        const processedBuilding = processBuildingData(buildingData);
+    try {
+        const precision = options.precision || 0.001;
+        const maxCoordinate = 1000000; // 1 million units
+        
+        const validation = {
+            objectId: objectId,
+            isValid: true,
+            errors: [],
+            warnings: []
+        };
+        
+        // Validate coordinates
+        if (object.coordinates) {
+            for (const coord of object.coordinates) {
+                if (Math.abs(coord.x) > maxCoordinate || Math.abs(coord.y) > maxCoordinate) {
+                    validation.errors.push(`Coordinate out of bounds: ${coord.x}, ${coord.y}`);
+                    validation.isValid = false;
+                }
+                
+                // Check precision compliance
+                const roundedX = Math.round(coord.x / precision) * precision;
+                const roundedY = Math.round(coord.y / precision) * precision;
+                
+                if (Math.abs(coord.x - roundedX) > precision || Math.abs(coord.y - roundedY) > precision) {
+                    validation.warnings.push(`Coordinate precision mismatch: ${coord.x}, ${coord.y}`);
+                }
+            }
+        }
         
         self.postMessage({
-            type: 'building_processed',
+            type: 'precision_validated',
             objectId: objectId,
-            result: processedBuilding
+            validation: validation
         });
-    }, 100); // Longer processing time for large buildings
+        
+    } catch (error) {
+        console.error('Precision validation error:', error);
+        self.postMessage({
+            type: 'validation_error',
+            objectId: objectId,
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Performance optimization for large operations
+ */
+function optimizePerformance(objectId, object, options = {}) {
+    console.log('Optimizing performance for:', objectId);
+    
+    try {
+        const optimization = {
+            objectId: objectId,
+            optimizations: [],
+            performance: performanceMetrics
+        };
+        
+        // Suggest optimizations based on performance metrics
+        if (performanceMetrics.svgxProcessing > 100) {
+            optimization.optimizations.push('Consider reducing SVGX complexity');
+        }
+        
+        if (performanceMetrics.geometryCalculations > 50) {
+            optimization.optimizations.push('Consider caching geometry calculations');
+        }
+        
+        if (performanceMetrics.constraintSolving > 200) {
+            optimization.optimizations.push('Consider simplifying constraints');
+        }
+        
+        self.postMessage({
+            type: 'performance_optimized',
+            objectId: objectId,
+            optimization: optimization
+        });
+        
+    } catch (error) {
+        console.error('Performance optimization error:', error);
+        self.postMessage({
+            type: 'optimization_error',
+            objectId: objectId,
+            error: error.message
+        });
+    }
 }
 
 /**
  * Generate SVGX path for object
  */
-function generateSvgxPath(object) {
+function generateSvgxPath(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
             return `M ${object.startPoint.x} ${object.startPoint.y} L ${object.endPoint.x} ${object.endPoint.y}`;
@@ -149,7 +328,7 @@ function generateSvgxPath(object) {
 /**
  * Generate SVGX attributes for object
  */
-function generateSvgxAttributes(object) {
+function generateSvgxAttributes(object, precision = 0.001) {
     const baseAttributes = {
         'stroke': '#1F2937',
         'stroke-width': '2',
@@ -187,19 +366,19 @@ function generateSvgxAttributes(object) {
 /**
  * Calculate geometry for object
  */
-function calculateObjectGeometry(object) {
+function calculateObjectGeometry(object, precision = 0.001) {
     const geometry = {
         type: object.type,
-        bounds: calculateBounds(object),
-        centroid: calculateCentroid(object),
-        area: calculateArea(object),
-        perimeter: calculatePerimeter(object)
+        bounds: calculateBounds(object, precision),
+        centroid: calculateCentroid(object, precision),
+        area: calculateArea(object, precision),
+        perimeter: calculatePerimeter(object, precision)
     };
     
     switch (object.type) {
         case 'line':
-            geometry.length = calculateDistance(object.startPoint, object.endPoint);
-            geometry.angle = calculateAngle(object.startPoint, object.endPoint);
+            geometry.length = calculateDistance(object.startPoint, object.endPoint, precision);
+            geometry.angle = calculateAngle(object.startPoint, object.endPoint, precision);
             break;
             
         case 'rectangle':
@@ -220,13 +399,13 @@ function calculateObjectGeometry(object) {
 /**
  * Solve constraints for object
  */
-function solveObjectConstraints(object) {
+function solveObjectConstraints(object, precision = 0.001) {
     const constraints = [];
     
     // Add geometric constraints
     if (object.constraints && object.constraints.length > 0) {
         for (const constraint of object.constraints) {
-            const solvedConstraint = solveConstraint(constraint, object);
+            const solvedConstraint = solveConstraint(constraint, object, precision);
             if (solvedConstraint) {
                 constraints.push(solvedConstraint);
             }
@@ -234,7 +413,7 @@ function solveObjectConstraints(object) {
     }
     
     // Add automatic constraints based on object type
-    const automaticConstraints = generateAutomaticConstraints(object);
+    const automaticConstraints = generateAutomaticConstraints(object, precision);
     constraints.push(...automaticConstraints);
     
     return constraints;
@@ -331,7 +510,7 @@ function processComponent(component) {
 /**
  * Utility functions for geometry calculations
  */
-function calculateBounds(object) {
+function calculateBounds(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
             return {
@@ -362,7 +541,7 @@ function calculateBounds(object) {
     }
 }
 
-function calculateCentroid(object) {
+function calculateCentroid(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
             return {
@@ -387,7 +566,7 @@ function calculateCentroid(object) {
     }
 }
 
-function calculateArea(object) {
+function calculateArea(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
             return 0; // Lines have no area
@@ -405,10 +584,10 @@ function calculateArea(object) {
     }
 }
 
-function calculatePerimeter(object) {
+function calculatePerimeter(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
-            return calculateDistance(object.startPoint, object.endPoint);
+            return calculateDistance(object.startPoint, object.endPoint, precision);
             
         case 'rectangle':
             const width = Math.abs(object.endPoint.x - object.startPoint.x);
@@ -423,13 +602,13 @@ function calculatePerimeter(object) {
     }
 }
 
-function calculateDistance(point1, point2) {
+function calculateDistance(point1, point2, precision = 0.001) {
     const dx = point2.x - point1.x;
     const dy = point2.y - point1.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-function calculateAngle(point1, point2) {
+function calculateAngle(point1, point2, precision = 0.001) {
     return Math.atan2(point2.y - point1.y, point2.x - point1.x) * 180 / Math.PI;
 }
 
@@ -478,43 +657,43 @@ function calculateVolume(component) {
     return 0;
 }
 
-function solveConstraint(constraint, object) {
+function solveConstraint(constraint, object, precision = 0.001) {
     // Solve individual constraint
     switch (constraint.type) {
         case 'distance':
-            return solveDistanceConstraint(constraint, object);
+            return solveDistanceConstraint(constraint, object, precision);
         case 'angle':
-            return solveAngleConstraint(constraint, object);
+            return solveAngleConstraint(constraint, object, precision);
         case 'parallel':
-            return solveParallelConstraint(constraint, object);
+            return solveParallelConstraint(constraint, object, precision);
         case 'perpendicular':
-            return solvePerpendicularConstraint(constraint, object);
+            return solvePerpendicularConstraint(constraint, object, precision);
         default:
             return null;
     }
 }
 
-function solveDistanceConstraint(constraint, object) {
+function solveDistanceConstraint(constraint, object, precision = 0.001) {
     // Solve distance constraint
     return {
         type: 'distance',
         value: constraint.value,
-        tolerance: constraint.tolerance || 0.001,
+        tolerance: constraint.tolerance || precision,
         satisfied: true
     };
 }
 
-function solveAngleConstraint(constraint, object) {
+function solveAngleConstraint(constraint, object, precision = 0.001) {
     // Solve angle constraint
     return {
         type: 'angle',
         value: constraint.value,
-        tolerance: constraint.tolerance || 0.1,
+        tolerance: constraint.tolerance || precision,
         satisfied: true
     };
 }
 
-function solveParallelConstraint(constraint, object) {
+function solveParallelConstraint(constraint, object, precision = 0.001) {
     // Solve parallel constraint
     return {
         type: 'parallel',
@@ -523,7 +702,7 @@ function solveParallelConstraint(constraint, object) {
     };
 }
 
-function solvePerpendicularConstraint(constraint, object) {
+function solvePerpendicularConstraint(constraint, object, precision = 0.001) {
     // Solve perpendicular constraint
     return {
         type: 'perpendicular',
@@ -532,7 +711,7 @@ function solvePerpendicularConstraint(constraint, object) {
     };
 }
 
-function generateAutomaticConstraints(object) {
+function generateAutomaticConstraints(object, precision = 0.001) {
     const constraints = [];
     
     // Add automatic constraints based on object type
@@ -541,7 +720,7 @@ function generateAutomaticConstraints(object) {
             // Lines automatically have length constraint
             constraints.push({
                 type: 'length',
-                value: calculateDistance(object.startPoint, object.endPoint),
+                value: calculateDistance(object.startPoint, object.endPoint, precision),
                 automatic: true
             });
             break;

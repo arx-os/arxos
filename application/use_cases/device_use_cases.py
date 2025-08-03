@@ -28,6 +28,22 @@ class CreateDeviceUseCase:
     """Use case for creating a new device."""
     
     def __init__(self, device_repository: DeviceRepository):
+    """
+    Perform __init__ operation
+
+Args:
+        device_repository: Description of device_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.device_repository = device_repository
     
     def execute(self, request: CreateDeviceRequest) -> CreateDeviceResponse:
@@ -100,6 +116,22 @@ class CreateDeviceUseCase:
 
 
 class UpdateDeviceUseCase:
+    """
+    Perform __init__ operation
+
+Args:
+        device_repository: Description of device_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Use case for updating a device."""
     
     def __init__(self, device_repository: DeviceRepository):

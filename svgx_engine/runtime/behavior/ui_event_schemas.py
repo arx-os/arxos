@@ -3,6 +3,20 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 class SelectionOrigin(BaseModel):
+    """
+    Class for SelectionOrigin functionality
+
+Attributes:
+        None
+
+Methods:
+        None
+
+Example:
+        instance = SelectionOrigin()
+        result = instance.method()
+        print(result)
+    """
     x: float
     y: float
     zoom_level: Optional[float] = 1.0
@@ -32,6 +46,20 @@ class NavigationPayload(BaseModel):
     floor_id: Optional[str]
 
 class MediaInfo(BaseModel):
+    """
+    Class for AnnotationPayload functionality
+
+Attributes:
+        None
+
+Methods:
+        None
+
+Example:
+        instance = AnnotationPayload()
+        result = instance.method()
+        print(result)
+    """
     image_url: Optional[str]
 
 class AnnotationPayload(BaseModel):

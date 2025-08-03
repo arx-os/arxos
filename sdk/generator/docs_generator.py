@@ -18,6 +18,22 @@ class DocumentationGenerator:
     """Documentation generator for SDKs"""
     
     def __init__(self, config_path: str = None):
+    """
+    Perform __init__ operation
+
+Args:
+        config_path: Description of config_path
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.config_path = config_path or "sdk/generator/config/documentation.yaml"
         self.config = self.load_config()
         self.template_env = self.setup_templates()

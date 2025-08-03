@@ -19,6 +19,25 @@ from .repositories import *
 from .services import *
 from .exceptions import *
 
+# PDF Analysis specific imports
+from .entities.pdf_analysis import PDFAnalysis
+from .value_objects.pdf_analysis_value_objects import (
+    TaskId, TaskStatus, ConfidenceScore, FileName, FilePath, 
+    AnalysisResult, AnalysisRequirements
+)
+from .events.pdf_analysis_events import (
+    PDFAnalysisCreated, PDFAnalysisStarted, PDFAnalysisCompleted,
+    PDFAnalysisFailed, PDFAnalysisCancelled, PDFAnalysisResultGenerated,
+    PDFAnalysisExported, PDFAnalysisValidated, PDFAnalysisRequirementsUpdated,
+    PDFAnalysisStatusChanged, PDFAnalysisProcessingStarted, PDFAnalysisProcessingProgress,
+    PDFAnalysisSymbolRecognized, PDFAnalysisSystemIdentified, PDFAnalysisQualityAssessed,
+    PDFAnalysisCostEstimated, PDFAnalysisTimelineGenerated, PDFAnalysisBackupCreated,
+    PDFAnalysisRestored, PDFAnalysisArchived, PDFAnalysisShared, PDFAnalysisCommented,
+    PDFAnalysisVersionCreated, PDFAnalysisCollaboratorAdded, PDFAnalysisCollaboratorRemoved,
+    PDFAnalysisNotificationSent, PDFAnalysisAuditLogCreated
+)
+from .repositories.pdf_analysis_repository import PDFAnalysisRepository
+
 __all__ = [
     # Entities
     'Building',
@@ -27,6 +46,7 @@ __all__ = [
     'Device',
     'User',
     'Project',
+    'PDFAnalysis',
     
     # Value Objects
     'BuildingId',
@@ -35,6 +55,13 @@ __all__ = [
     'DeviceId',
     'UserId',
     'ProjectId',
+    'TaskId',
+    'TaskStatus',
+    'ConfidenceScore',
+    'FileName',
+    'FilePath',
+    'AnalysisResult',
+    'AnalysisRequirements',
     'Address',
     'Coordinates',
     'Dimensions',
@@ -74,6 +101,35 @@ __all__ = [
     'subscribe_to_event',
     'unsubscribe_from_event',
     
+    # PDF Analysis Events
+    'PDFAnalysisCreated',
+    'PDFAnalysisStarted',
+    'PDFAnalysisCompleted',
+    'PDFAnalysisFailed',
+    'PDFAnalysisCancelled',
+    'PDFAnalysisResultGenerated',
+    'PDFAnalysisExported',
+    'PDFAnalysisValidated',
+    'PDFAnalysisRequirementsUpdated',
+    'PDFAnalysisStatusChanged',
+    'PDFAnalysisProcessingStarted',
+    'PDFAnalysisProcessingProgress',
+    'PDFAnalysisSymbolRecognized',
+    'PDFAnalysisSystemIdentified',
+    'PDFAnalysisQualityAssessed',
+    'PDFAnalysisCostEstimated',
+    'PDFAnalysisTimelineGenerated',
+    'PDFAnalysisBackupCreated',
+    'PDFAnalysisRestored',
+    'PDFAnalysisArchived',
+    'PDFAnalysisShared',
+    'PDFAnalysisCommented',
+    'PDFAnalysisVersionCreated',
+    'PDFAnalysisCollaboratorAdded',
+    'PDFAnalysisCollaboratorRemoved',
+    'PDFAnalysisNotificationSent',
+    'PDFAnalysisAuditLogCreated',
+    
     # Repository Interfaces
     'BuildingRepository',
     'FloorRepository',
@@ -81,6 +137,7 @@ __all__ = [
     'DeviceRepository',
     'UserRepository',
     'ProjectRepository',
+    'PDFAnalysisRepository',
     'UnitOfWork',
     'RepositoryFactory',
     
@@ -91,6 +148,7 @@ __all__ = [
     'DeviceDomainService',
     'UserDomainService',
     'ProjectDomainService',
+    'PDFAnalysisDomainService',
     
     # Exceptions
     'DomainException',
@@ -100,6 +158,8 @@ __all__ = [
     'InvalidDeviceError',
     'InvalidUserError',
     'InvalidProjectError',
+    'InvalidPDFAnalysisError',
+    'InvalidTaskStatusError',
     'InvalidAddressError',
     'InvalidCoordinatesError',
     'InvalidDimensionsError',

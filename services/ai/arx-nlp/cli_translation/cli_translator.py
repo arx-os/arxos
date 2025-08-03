@@ -230,7 +230,7 @@ class CLITranslator:
             
         except Exception as e:
             self.logger.error(f"Error generating CLI command: {e}")
-            return self._create_error_command(intent, str(e))
+            return self._create_error_command(intent, str(e)
     
     def _find_command_template(self, intent_type: IntentType) -> Optional[CommandTemplate]:
         """Find command template for intent type"""
@@ -436,7 +436,7 @@ class CLITranslator:
                 suggestions.append(f"arx modify {obj}")
                 suggestions.append(f"arx query {obj}")
         
-        return list(set(suggestions))[:10]  # Limit to 10 unique suggestions
+        return list(set(suggestions)[:10]  # Limit to 10 unique suggestions
 
 
 # Convenience function for quick CLI translation

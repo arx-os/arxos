@@ -22,6 +22,22 @@ class SVGXCompiler:
     """Main compiler class that orchestrates format conversions."""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.svg_compiler = SVGXToSVGCompiler()
         self.ifc_compiler = SVGXToIFCCompiler()
         self.json_compiler = SVGXToJSONCompiler()

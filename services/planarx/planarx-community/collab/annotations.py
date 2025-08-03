@@ -50,6 +50,22 @@ class Comment:
     reactions: Dict[str, List[str]]  # reaction_type -> [user_ids]
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.mentions is None:
             self.mentions = []
         if self.metadata is None:
@@ -105,6 +121,22 @@ class Annotation:
 
 
 class AnnotationManager:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Manages annotation and comment threads"""
     
     def __init__(self):

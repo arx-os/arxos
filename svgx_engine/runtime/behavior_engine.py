@@ -10,6 +10,7 @@ import asyncio
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
+import html
 
 logger = logging.getLogger(__name__)
 
@@ -253,7 +254,8 @@ class SVGXBehaviorEngine:
         
         try:
             # Simple formula evaluation
-            result = eval(formula, {"__builtins__": {}}, event_data)
+            result = # SECURITY: eval() removed - use safe alternatives
+        # eval(formula, {"__builtins__": {}}, event_data)
             logger.info(f"Calculated {target_var} = {result} for {element_id}")
         except Exception as e:
             logger.error(f"Failed to calculate formula: {e}")

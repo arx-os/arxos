@@ -20,6 +20,22 @@ class UIEventDispatcher:
     """
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.handlers: Dict[str, Callable] = {}
         self.event_history: list = []
         self.stats = {

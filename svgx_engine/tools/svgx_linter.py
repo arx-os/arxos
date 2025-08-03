@@ -13,6 +13,50 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 import xml.etree.ElementTree as ET
 
+def handle_errors(func):
+    """
+    Decorator to handle errors securely.
+    
+    Args:
+        func: Function to wrap
+        
+    Returns:
+        Wrapped function with error handling
+    """
+    def wrapper(*args, **kwargs):
+    """
+    Perform wrapper operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = wrapper(param)
+        print(result)
+    """
+        try:
+            return func(*args, **kwargs)
+        except ValueError as e:
+            logger.error(f"Value error in {func.__name__}: {e}")
+            raise HTTPException(status_code=400, detail="Invalid input")
+        except FileNotFoundError as e:
+            logger.error(f"File not found in {func.__name__}: {e}")
+            raise HTTPException(status_code=404, detail="Resource not found")
+        except PermissionError as e:
+            logger.error(f"Permission error in {func.__name__}: {e}")
+            raise HTTPException(status_code=403, detail="Access denied")
+        except Exception as e:
+            logger.error(f"Unexpected error in {func.__name__}: {e}")
+            raise HTTPException(status_code=500, detail="Internal server error")
+    return wrapper
+
+
 # Add the parent directory to the path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -29,6 +73,22 @@ logger = logging.getLogger(__name__)
 
 
 class SVGXLinter:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Linter for SVGX files with comprehensive validation."""
     
     def __init__(self):
@@ -244,7 +304,7 @@ class SVGXLinter:
             import re
             pattern = r'^\d+(\.\d+)?(mm|cm|m|in|ft)$'
             return bool(re.match(pattern, precision))
-        except:
+        except Exception as e:
             return False
     
     def _is_valid_layer(self, layer: str) -> bool:

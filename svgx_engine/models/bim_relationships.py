@@ -15,6 +15,20 @@ from datetime import datetime
 import uuid
 
 class SpatialRelationshipType(str, Enum):
+    """
+    Class for SpatialRelationshipType functionality
+
+Attributes:
+        None
+
+Methods:
+        None
+
+Example:
+        instance = SpatialRelationshipType()
+        result = instance.method()
+        print(result)
+    """
     CONTAINS = "contains"
     ADJACENT = "adjacent"
     CONNECTED = "connected"
@@ -49,6 +63,22 @@ class BIMRelationship:
     updated_at: datetime = field(default_factory=datetime.now)
 
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.source_id == self.target_id:
             raise ValueError("Relationship cannot be self-referential (source == target)")
 
@@ -66,6 +96,22 @@ class BIMRelationshipSet:
         elif rel.relationship_type == 'dependency':
             self.dependency.append(rel)
         else:
+    """
+    Validate the given input against rules
+
+Args:
+        valid_ids: Description of valid_ids
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = validate_relationships(param)
+        print(result)
+    """
             raise ValueError(f"Unknown relationship type: {rel.relationship_type}")
 
     def validate_relationships(self, valid_ids: List[str]) -> List[str]:

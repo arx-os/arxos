@@ -59,7 +59,38 @@ def logging_context(**kwargs):
     """Context manager for logging with additional context."""
     # Simple context manager that does nothing for now
     class ContextManager:
+    """
+    Manager class for coordinating operations
+
+Attributes:
+        None
+
+Methods:
+        __enter__(): Description of __enter__
+        __exit__(): Description of __exit__
+
+Example:
+        instance = ContextManager()
+        result = instance.method()
+        print(result)
+    """
         def __enter__(self):
+    """
+    Perform __enter__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __enter__(param)
+        print(result)
+    """
             return self
         
         def __exit__(self, exc_type, exc_val, exc_tb):

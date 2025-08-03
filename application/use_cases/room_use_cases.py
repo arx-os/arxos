@@ -28,6 +28,22 @@ class CreateRoomUseCase:
     """Use case for creating a new room."""
     
     def __init__(self, room_repository: RoomRepository):
+    """
+    Perform __init__ operation
+
+Args:
+        room_repository: Description of room_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.room_repository = room_repository
     
     def execute(self, request: CreateRoomRequest) -> CreateRoomResponse:
@@ -107,6 +123,22 @@ class CreateRoomUseCase:
 
 
 class UpdateRoomUseCase:
+    """
+    Perform __init__ operation
+
+Args:
+        room_repository: Description of room_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Use case for updating a room."""
     
     def __init__(self, room_repository: RoomRepository):

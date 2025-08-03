@@ -300,6 +300,22 @@ class ViewGenerator:
     """View generator for creating multiple views"""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.views: List[DrawingView] = []
         self.view_counter = 0
         
@@ -405,6 +421,22 @@ class ViewGenerator:
         return detail_view
 
 class ViewManager:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Manager for drawing views"""
     
     def __init__(self):

@@ -9,12 +9,46 @@ class SVGXError(Exception):
     """Base exception for SVGX Engine errors."""
     
     def __init__(self, message: str, context: str = None):
+    """
+    Perform __init__ operation
+
+Args:
+        message: Description of message
+        context: Description of context
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.message = message
         self.context = context
         super().__init__(self.message)
 
 
 class SymbolError(SVGXError):
+    """
+    Perform __init__ operation
+
+Args:
+        message: Description of message
+        symbol_name: Description of symbol_name
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Exception raised for symbol-related errors."""
     
     def __init__(self, message: str, symbol_name: str = None):

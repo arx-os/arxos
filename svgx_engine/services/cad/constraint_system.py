@@ -335,6 +335,24 @@ class ParallelConstraint(Constraint):
     """Parallel constraint between two lines or vectors."""
     
     def __init__(self, entity1: Any, entity2: Any, tolerance: float = 0.001):
+    """
+    Perform __init__ operation
+
+Args:
+        entity1: Description of entity1
+        entity2: Description of entity2
+        tolerance: Description of tolerance
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         super().__init__(ConstraintType.PARALLEL, [entity1, entity2], {}, tolerance)
     
     def _validate_impl(self) -> bool:
@@ -394,6 +412,24 @@ class ParallelConstraint(Constraint):
 
 @dataclass
 class PerpendicularConstraint(Constraint):
+    """
+    Perform __init__ operation
+
+Args:
+        entity1: Description of entity1
+        entity2: Description of entity2
+        tolerance: Description of tolerance
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Perpendicular constraint between two lines or vectors."""
     
     def __init__(self, entity1: Any, entity2: Any, tolerance: float = 0.001):

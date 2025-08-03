@@ -12,13 +12,14 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from domain.repositories import (
     RepositoryFactory, UnitOfWork, BuildingRepository, FloorRepository, RoomRepository,
-    DeviceRepository, UserRepository, ProjectRepository
+    DeviceRepository, UserRepository, ProjectRepository, PDFAnalysisRepository
 )
 
 from .repositories import (
     SQLAlchemyBuildingRepository, SQLAlchemyFloorRepository, SQLAlchemyRoomRepository,
     SQLAlchemyDeviceRepository, SQLAlchemyUserRepository, SQLAlchemyProjectRepository
 )
+from .repositories.postgresql_pdf_analysis_repository import PostgreSQLPDFAnalysisRepository
 from .unit_of_work import SQLAlchemyUnitOfWork
 
 
@@ -59,6 +60,12 @@ class SQLAlchemyRepositoryFactory(RepositoryFactory):
     def create_project_repository(self) -> ProjectRepository:
         """Create a project repository instance."""
         return SQLAlchemyProjectRepository(self._get_session())
+    
+    def create_pdf_analysis_repository(self) -> PDFAnalysisRepository:
+        """Create a PDF analysis repository instance."""
+        from .database.connection_manager import DatabaseConnectionManager
+        connection_manager = DatabaseConnectionManager()
+        return PostgreSQLPDFAnalysisRepository(connection_manager)
     
     def create_unit_of_work(self) -> UnitOfWork:
         """Create a unit of work instance."""

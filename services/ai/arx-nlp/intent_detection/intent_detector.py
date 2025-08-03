@@ -156,7 +156,6 @@ class IntentDetector:
                     pattern=pattern['pattern'],
                     intent_type=IntentType(pattern['intent_type']),
                     confidence_boost=pattern.get('confidence_boost', 0.0)
-                )
             else:
                 pattern_obj = pattern
             
@@ -173,7 +172,7 @@ class IntentDetector:
                 confidence += pattern_obj.confidence_boost
                 
                 # Boost for longer matches
-                confidence += min(0.2, len(match.group(0)) / len(text_lower) * 0.2)
+                confidence += min(0.2, len(match.group(0) / len(text_lower) * 0.2)
                 
                 if confidence > highest_confidence:
                     highest_confidence = confidence
@@ -213,7 +212,7 @@ class IntentDetector:
         # Get intent suggestions
         for pattern in self.intent_patterns:
             if partial_lower in pattern.pattern.lower():
-                suggestions.append(pattern.pattern.replace(r'(\w+)', '<object>'))
+                suggestions.append(pattern.pattern.replace(r'(\w+)', '<object>')
         
         # Get common object suggestions
         common_objects = [
@@ -228,7 +227,7 @@ class IntentDetector:
                 suggestions.append(f"modify {obj}")
                 suggestions.append(f"delete {obj}")
         
-        return list(set(suggestions))[:10]  # Limit to 10 unique suggestions
+        return list(set(suggestions)[:10]  # Limit to 10 unique suggestions
     
     def validate_intent(self, intent: Intent) -> bool:
         """

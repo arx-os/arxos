@@ -40,13 +40,11 @@ arx-docs/database/
 
 ## Database Architecture
 
-### Core Design Principles
-
-1. **Hierarchical Organization**: Tables follow a clear dependency hierarchy
-2. **Spatial Integration**: PostGIS integration for BIM and spatial data
-3. **Audit Trail**: Comprehensive change tracking and audit logging
-4. **Performance Optimization**: Strategic indexing and partitioning
-5. **Data Integrity**: NOT NULL and CHECK constraints for data validation
+### **Primary Database**: PostgreSQL with PostGIS
+- **PostgreSQL 17**: Primary relational database for all Arxos applications
+- **PostGIS 3.5.3**: Spatial database extension for BIM and CAD data
+- **Migration Strategy**: All existing databases will be migrated to PostgreSQL 17/PostGIS 3.5.3
+- **Development Standard**: All new development uses PostgreSQL 17/PostGIS 3.5.3 exclusively
 
 ### Table Categories
 
@@ -110,10 +108,10 @@ arx-docs/database/
 ### Database Connection
 ```bash
 # PostgreSQL connection string
-postgresql://username:password@localhost/arxos_db
+postgresql://username:password@localhost/arxos_db_pg17
 
 # Environment variable
-export DATABASE_URL="postgresql://username:password@localhost/arxos_db"
+export DATABASE_URL="postgresql://username:password@localhost/arxos_db_pg17"
 ```
 
 ### Common Operations

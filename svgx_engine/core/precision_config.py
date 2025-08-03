@@ -382,6 +382,22 @@ class PrecisionConfigManager:
     """Manager for precision configurations"""
     
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self._configs: Dict[str, PrecisionConfig] = {}
         self._default_config: Optional[PrecisionConfig] = None
     

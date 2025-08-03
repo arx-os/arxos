@@ -52,6 +52,23 @@ class CacheEntry:
     """Cache entry with TTL support"""
     
     def __init__(self, value: Any, ttl: int = 300):
+    """
+    Perform __init__ operation
+
+Args:
+        value: Description of value
+        ttl: Description of ttl
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.value = value
         self.created_at = time.time()
         self.ttl = ttl
@@ -62,6 +79,23 @@ class CacheEntry:
 
 
 class RateLimiter:
+    """
+    Perform __init__ operation
+
+Args:
+        max_requests: Description of max_requests
+        time_window: Description of time_window
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Rate limiter for API calls"""
     
     def __init__(self, max_requests: int = 100, time_window: int = 60):

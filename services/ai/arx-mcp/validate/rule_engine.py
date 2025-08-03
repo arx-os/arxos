@@ -23,12 +23,17 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, field
 
-from services.models.mcp_models
+from services.models.mcp_models import (
     MCPFile, MCPRule, RuleCondition, RuleAction, BuildingModel, BuildingObject,
     ValidationResult, ValidationViolation, MCPValidationReport, ComplianceReport,
     RuleSeverity, RuleCategory, ConditionType, ActionType,
     serialize_mcp_file, deserialize_mcp_file
 )
+from services.ai.arx_mcp.validate.formula_evaluator import FormulaEvaluator, FormulaEvaluationError
+from services.ai.arx_mcp.validate.spatial_analyzer import SpatialAnalyzer, SpatialAnalysisError, SpatialRelation
+from services.ai.arx_mcp.validate.performance_optimizer import PerformanceOptimizer, OptimizationLevel, PerformanceOptimizationError
+from services.ai.arx_mcp.validate.advanced_conditions import AdvancedConditionEvaluator, AdvancedConditionError
+import html
 
 
 logger = logging.getLogger(__name__)
@@ -48,6 +53,7 @@ class ConditionEvaluator:
     """Evaluates rule conditions against building objects"""
     
     def __init__(self):
+        """Initialize the condition evaluator with supported operators"""
         self.operators = {
             '==': lambda x, y: x == y,
             '!=': lambda x, y: x != y,
@@ -62,10 +68,13 @@ class ConditionEvaluator:
             'ends_with': lambda x, y: str(x).endswith(str(y)),
             'regex': lambda x, y: bool(re.match(y, str(x))) if y else False
         }
+        self.spatial_analyzer = SpatialAnalyzer()
+        self.advanced_condition_evaluator = AdvancedConditionEvaluator()
     
     def evaluate_condition(self, condition: RuleCondition, 
-                          objects: List[BuildingObject]) -> List[BuildingObject]:
-        """Evaluate a condition against building objects"""
+                          objects: List[BuildingObject],
+                          context: Optional[RuleExecutionContext] = None) -> List[BuildingObject]:
+        """Evaluate a condition against building objects with advanced condition support"""
         if condition.type == ConditionType.PROPERTY:
             return self._evaluate_property_condition(condition, objects)
         elif condition.type == ConditionType.SPATIAL:
@@ -76,6 +85,18 @@ class ConditionEvaluator:
             return self._evaluate_system_condition(condition, objects)
         elif condition.type == ConditionType.COMPOSITE:
             return self._evaluate_composite_condition(condition, objects)
+        elif condition.type == ConditionType.TEMPORAL:
+            return self.advanced_condition_evaluator.evaluate_temporal_condition(condition, objects)
+        elif condition.type == ConditionType.DYNAMIC:
+            return self.advanced_condition_evaluator.evaluate_dynamic_condition(condition, objects, context)
+        elif condition.type == ConditionType.STATISTICAL:
+            return self.advanced_condition_evaluator.evaluate_statistical_condition(condition, objects)
+        elif condition.type == ConditionType.PATTERN:
+            return self.advanced_condition_evaluator.evaluate_pattern_condition(condition, objects)
+        elif condition.type == ConditionType.RANGE:
+            return self.advanced_condition_evaluator.evaluate_range_condition(condition, objects)
+        elif condition.type == ConditionType.LOGICAL:
+            return self.advanced_condition_evaluator.evaluate_complex_logical_condition(condition, objects, context)
         else:
             logger.warning(f"Unknown condition type: {condition.type}")
             return []
@@ -114,9 +135,12 @@ class ConditionEvaluator:
     
     def _evaluate_spatial_condition(self, condition: RuleCondition, 
                                   objects: List[BuildingObject]) -> List[BuildingObject]:
-        """Evaluate spatial-based condition"""
+        """Evaluate spatial-based condition using advanced spatial analysis"""
         if not condition.element_type or not condition.property or not condition.operator:
             return []
+        
+        # Build spatial index for performance
+        self.spatial_analyzer.build_spatial_index(objects)
         
         matched_objects = []
         operator_func = self.operators.get(condition.operator)
@@ -129,37 +153,100 @@ class ConditionEvaluator:
             if obj.object_type != condition.element_type:
                 continue
             
-            # Get spatial property value
+            # Get spatial property value using advanced spatial analysis
             if condition.property == 'area':
-                area = self._calculate_object_area(obj)
-                if area is not None and operator_func(area, condition.value):
+                area = self.spatial_analyzer.calculate_area(obj)
+                if operator_func(area, condition.value):
+                    matched_objects.append(obj)
+            elif condition.property == 'volume':
+                volume = self.spatial_analyzer.calculate_volume(obj)
+                if operator_func(volume, condition.value):
                     matched_objects.append(obj)
             elif condition.property == 'distance':
-                distance = self._calculate_object_distance(obj, condition.value)
-                if distance is not None and operator_func(distance, condition.value):
-                    matched_objects.append(obj)
+                # For distance conditions, check against target objects
+                target_objects = [o for o in objects if o.object_type == condition.target_type]
+                for target_obj in target_objects:
+                    distance = self.spatial_analyzer.calculate_3d_distance(obj, target_obj)
+                    if operator_func(distance, condition.value):
+                        matched_objects.append(obj)
+                        break
             elif condition.property == 'height':
                 height = self._get_object_height(obj)
                 if height is not None and operator_func(height, condition.value):
+                    matched_objects.append(obj)
+            elif condition.property == 'intersects':
+                # Check if object intersects with any target objects
+                target_objects = [o for o in objects if o.object_type == condition.target_type]
+                for target_obj in target_objects:
+                    if self.spatial_analyzer._objects_intersect(
+                        self.spatial_analyzer.spatial_objects.get(obj.object_id),
+                        self.spatial_analyzer.spatial_objects.get(target_obj.object_id)
+                    ):
+                        matched_objects.append(obj)
+                        break
+            elif condition.property == 'nearby':
+                # Check if object is near any target objects
+                target_objects = [o for o in objects if o.object_type == condition.target_type]
+                nearby_objects = self.spatial_analyzer.find_nearby_objects(obj, target_objects, condition.value)
+                if nearby_objects:
                     matched_objects.append(obj)
         
         return matched_objects
     
     def _evaluate_relationship_condition(self, condition: RuleCondition, 
                                       objects: List[BuildingObject]) -> List[BuildingObject]:
-        """Evaluate relationship-based condition"""
+        """Evaluate relationship-based condition using spatial analysis"""
         if not condition.element_type or not condition.relationship or not condition.target_type:
             return []
         
+        # Build spatial index for performance
+        self.spatial_analyzer.build_spatial_index(objects)
+        
         matched_objects = []
+        target_objects = [o for o in objects if o.object_type == condition.target_type]
         
         for obj in objects:
             if obj.object_type != condition.element_type:
                 continue
             
-            # Check if object has connections to target type
-            connected_objects = self._get_connected_objects(obj, objects, condition.target_type)
-            if connected_objects:
+            # Check spatial relationships
+            has_relationship = False
+            
+            for target_obj in target_objects:
+                relationships = self.spatial_analyzer.calculate_spatial_relationships(obj, target_obj)
+                
+                if condition.relationship == 'intersects':
+                    if SpatialRelation.INTERSECTS in relationships:
+                        has_relationship = True
+                        break
+                elif condition.relationship == 'contains':
+                    if SpatialRelation.CONTAINS in relationships:
+                        has_relationship = True
+                        break
+                elif condition.relationship == 'adjacent':
+                    if SpatialRelation.ADJACENT in relationships:
+                        has_relationship = True
+                        break
+                elif condition.relationship == 'near':
+                    if SpatialRelation.NEAR in relationships:
+                        has_relationship = True
+                        break
+                elif condition.relationship == 'above':
+                    if SpatialRelation.ABOVE in relationships:
+                        has_relationship = True
+                        break
+                elif condition.relationship == 'below':
+                    if SpatialRelation.BELOW in relationships:
+                        has_relationship = True
+                        break
+                elif condition.relationship == 'connected':
+                    # Check for explicit connections
+                    connected_objects = self._get_connected_objects(obj, objects, condition.target_type)
+                    if connected_objects:
+                        has_relationship = True
+                        break
+            
+            if has_relationship:
                 matched_objects.append(obj)
         
         return matched_objects
@@ -262,6 +349,8 @@ class ActionExecutor:
             'structural_load': self._calculate_structural_load,
             'fire_egress': self._calculate_fire_egress
         }
+        self.formula_evaluator = FormulaEvaluator()
+        self.spatial_analyzer = SpatialAnalyzer()
     
     def execute_actions(self, context: RuleExecutionContext) -> Tuple[List[ValidationViolation], Dict[str, Any]]:
         """Execute rule actions and return violations and calculations"""
@@ -351,37 +440,24 @@ class ActionExecutor:
         return self._execute_validation_action(action, context)
     
     def _evaluate_formula(self, formula: str, context: RuleExecutionContext) -> float:
-        """Evaluate calculation formula"""
-        # Simple formula evaluation - in production, use a proper expression parser
-        formula = formula.replace('area', str(self._get_total_area(context.matched_objects)))
-        formula = formula.replace('count', str(len(context.matched_objects)))
-        
-        # Add more variable substitutions as needed
-        for key, value in context.calculations.items():
-            formula = formula.replace(key, str(value))
-        
+        """Evaluate calculation formula using the FormulaEvaluator"""
         try:
-            return eval(formula)
+            return self.formula_evaluator.evaluate_formula(formula, context)
+        except FormulaEvaluationError as e:
+            logger.error(f"Formula evaluation error: {e}")
+            return 0.0
         except Exception as e:
-            logger.error(f"Error evaluating formula '{formula}': {e}")
+            logger.error(f"Unexpected error evaluating formula '{formula}': {e}")
             return 0.0
     
     def _get_total_area(self, objects: List[BuildingObject]) -> float:
-        """Calculate total area of objects"""
-        total_area = 0.0
-        for obj in objects:
-            area = self._calculate_object_area(obj)
-            if area:
-                total_area += area
-        return total_area
+        """Calculate total area of objects using spatial analysis"""
+        return self.spatial_analyzer.get_total_area(objects)
     
     def _calculate_object_area(self, obj: BuildingObject) -> Optional[float]:
-        """Calculate object area"""
-        if obj.location and 'width' in obj.location and 'height' in obj.location:
-            return obj.location['width'] * obj.location['height']
-        elif 'area' in obj.properties:
-            return obj.properties['area']
-        return None
+        """Calculate object area using spatial analysis"""
+        area = self.spatial_analyzer.calculate_area(obj)
+        return area if area > 0 else None
     
     def _calculate_electrical_load(self, objects: List[BuildingObject]) -> float:
         """Calculate electrical load"""
@@ -463,7 +539,19 @@ class MCPRuleEngine:
         self.total_execution_time = 0.0
         self.average_execution_time = 0.0
         
-        self.logger.info("MCP Rule Engine initialized")
+        # Initialize performance optimizer
+        optimization_config = {
+            'cache_size': self.config.get('optimization_cache_size', 1000),
+            'cache_strategy': self.config.get('optimization_cache_strategy', 'adaptive'),
+            'max_workers': self.config.get('optimization_max_workers', 8),
+            'use_processes': self.config.get('optimization_use_processes', False),
+            'memory_threshold': self.config.get('optimization_memory_threshold', 0.8),
+            'optimization_level': self.config.get('optimization_level', 'advanced'),
+            'enabled': self.config.get('optimization_enabled', True)
+        }
+        self.performance_optimizer = PerformanceOptimizer(optimization_config)
+        
+        self.logger.info("MCP Rule Engine initialized with performance optimization")
     
     def load_mcp_file(self, file_path: str) -> MCPFile:
         """
@@ -579,24 +667,52 @@ class MCPRuleEngine:
     
     def _validate_with_mcp(self, building_model: BuildingModel, 
                           mcp_file: MCPFile) -> MCPValidationReport:
-        """Validate building model with a single MCP file"""
+        """Validate building model with a single MCP file using performance optimization"""
         self.logger.info(f"Validating with MCP: {mcp_file.name}")
         
-        results = []
+        # Use performance optimizer for rule execution
+        def execute_rule_wrapper(rule: MCPRule) -> ValidationResult:
+            if not rule.enabled:
+                return ValidationResult(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    category=rule.category,
+                    passed=True,
+                    violations=[],
+                    calculations={},
+                    execution_time=0.0
+                )
+            
+            try:
+                return self._execute_rule(rule, building_model)
+            except Exception as e:
+                self.logger.error(f"Error executing rule {rule.rule_id}: {e}")
+                return ValidationResult(
+                    rule_id=rule.rule_id,
+                    rule_name=rule.name,
+                    category=rule.category,
+                    passed=False,
+                    violations=[],
+                    calculations={},
+                    execution_time=0.0
+                )
+        
+        # Execute rules with performance optimization
+        enabled_rules = [rule for rule in mcp_file.rules if rule.enabled]
+        results = self.performance_optimizer.optimize_rule_execution(
+            rules=enabled_rules,
+            building_objects=building_model.objects,
+            execution_func=execute_rule_wrapper
+        )
+        
+        # Calculate statistics
         passed_rules = 0
         failed_rules = 0
         total_violations = 0
         total_warnings = 0
         
-        # Execute each rule
-        for rule in mcp_file.rules:
-            if not rule.enabled:
-                continue
-            
-            try:
-                result = self._execute_rule(rule, building_model)
-                results.append(result)
-                
+        for result in results:
+            if result:
                 if result.passed:
                     passed_rules += 1
                 else:
@@ -604,10 +720,6 @@ class MCPRuleEngine:
                 
                 total_violations += len(result.violations)
                 total_warnings += len(result.warnings)
-            
-            except Exception as e:
-                self.logger.error(f"Error executing rule {rule.rule_id}: {e}")
-                continue
         
         # Create validation report
         report = MCPValidationReport(
@@ -615,7 +727,7 @@ class MCPRuleEngine:
             mcp_name=mcp_file.name,
             jurisdiction=mcp_file.jurisdiction,
             validation_date=datetime.now(),
-            total_rules=len([r for r in mcp_file.rules if r.enabled]),
+            total_rules=len(enabled_rules),
             passed_rules=passed_rules,
             failed_rules=failed_rules,
             total_violations=total_violations,
@@ -633,17 +745,19 @@ class MCPRuleEngine:
         # Find objects that match rule conditions
         matched_objects = building_model.objects
         
-        for condition in rule.conditions:
-            matched_objects = self.condition_evaluator.evaluate_condition(
-                condition, matched_objects
-            )
-        
         # Create execution context
         context = RuleExecutionContext(
             building_model=building_model,
             rule=rule,
             matched_objects=matched_objects
         )
+        
+        for condition in rule.conditions:
+            matched_objects = self.condition_evaluator.evaluate_condition(
+                condition, matched_objects, context
+            )
+            # Update context with current matched objects
+            context.matched_objects = matched_objects
         
         # Execute actions
         violations, calculations = self.action_executor.execute_actions(context)
@@ -706,18 +820,40 @@ class MCPRuleEngine:
         self.average_execution_time = self.total_execution_time / self.total_validations
     
     def get_performance_metrics(self) -> Dict[str, Any]:
-        """Get performance metrics"""
-        return {
+        """Get comprehensive performance metrics including optimization stats"""
+        base_metrics = {
             'total_validations': self.total_validations,
             'total_execution_time': self.total_execution_time,
             'average_execution_time': self.average_execution_time,
             'cache_size': len(self.mcp_cache)
         }
+        
+        # Add optimization metrics
+        optimization_stats = self.performance_optimizer.get_optimization_stats()
+        
+        return {
+            **base_metrics,
+            'optimization': optimization_stats
+        }
     
     def clear_cache(self):
-        """Clear MCP file cache"""
+        """Clear all caches including optimization cache"""
         self.mcp_cache.clear()
-        self.logger.info("MCP cache cleared")
+        self.performance_optimizer.clear_cache()
+        self.logger.info("All caches cleared")
+    
+    def optimize_memory(self) -> Dict[str, Any]:
+        """Perform memory optimization"""
+        return self.performance_optimizer.optimize_memory()
+    
+    def set_optimization_level(self, level: OptimizationLevel) -> None:
+        """Set performance optimization level"""
+        self.performance_optimizer.set_optimization_level(level)
+        self.logger.info(f"Optimization level set to: {level.value}")
+    
+    def get_optimization_stats(self) -> Dict[str, Any]:
+        """Get detailed optimization statistics"""
+        return self.performance_optimizer.get_optimization_stats()
     
     def validate_mcp_file(self, file_path: str) -> List[str]:
         """

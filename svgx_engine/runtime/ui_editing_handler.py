@@ -20,6 +20,22 @@ class EditingHandler:
     Supports modular editing actions and feedback.
     """
     def __init__(self):
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         # {canvas_id: {object_id: shadow_model}}
         self.shadow_model: Dict[str, Dict[str, Any]] = {}
         # {canvas_id: list of edit actions}
@@ -208,6 +224,22 @@ editing_handler = EditingHandler()
 
 # Register with the event-driven engine
 def _register_editing_handler():
+    """
+    Handle events or exceptions
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = _register_editing_handler(param)
+        print(result)
+    """
     def handler(event: Event):
         if event.type == EventType.USER_INTERACTION and event.data.get('event_subtype') == 'editing':
             return editing_handler.handle_editing_event(event)

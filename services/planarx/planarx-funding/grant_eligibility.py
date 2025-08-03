@@ -52,6 +52,22 @@ class GrantEligibility:
     review_requirements: Dict
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.required_badges is None:
             self.required_badges = []
         if self.visibility_rules is None:
@@ -107,6 +123,22 @@ class FundingPriority:
 
 
 class GrantEligibilityEngine:
+    """
+    Perform __init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Engine for managing grant eligibility and funding priorities"""
     
     def __init__(self):

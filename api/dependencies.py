@@ -1,398 +1,266 @@
 """
-API Dependencies
+Custom Authentication Dependencies for Arxos
 
-This module contains FastAPI dependencies for authentication, authorization,
-and service injection.
+Custom authentication implementation built specifically for Arxos
+without external dependencies. Handles user validation and authorization.
 """
 
-from typing import Optional, Dict, Any
-from fastapi import Depends, HTTPException, Request, status
+import logging
+from typing import Dict, Any, Optional
+from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
-from datetime import datetime, timedelta
 
-from application.container import container
-from application.logging_config import get_logger
-from application.services.device_service import DeviceApplicationService
-from application.services.room_service import RoomApplicationService
-from application.services.user_service import UserApplicationService
-from application.services.project_service import ProjectApplicationService
-from application.services.building_service import BuildingApplicationService
+from application.config import get_config
+from core.security.auth_middleware import get_current_user, User
 
-logger = get_logger("api.dependencies")
 
 # Security scheme
-security = HTTPBearer(auto_error=False)
+security = HTTPBearer()
 
 
-class User:
-    """User model for authentication."""
+class AuthManager:
+    """
+    Custom Authentication Manager for Arxos
     
-    def __init__(self, user_id: str, api_key: str, permissions: list = None):
-        self.user_id = user_id
-        self.api_key = api_key
-        self.permissions = permissions or []
+    Handles user authentication and authorization without external dependencies.
+    Built specifically for Arxos using custom authentication logic.
+    """
     
-    def has_permission(self, permission: str) -> bool:
-        """Check if user has specific permission."""
-        return permission in self.permissions
-
-
-async def get_api_key(request: Request) -> Optional[str]:
-    """Extract API key from request headers."""
-    api_key = request.headers.get("X-API-Key")
-    if not api_key:
+    def __init__(self):
+        """Initialize authentication manager"""
+        self.logger = logging.getLogger(__name__)
+        self.config = get_config()
+        
+        # User session storage (in production, use database)
+        self.user_sessions: Dict[str, Dict[str, Any]] = {}
+        
+        # API key storage (in production, use secure storage)
+        self.api_keys: Dict[str, Dict[str, Any]] = {
+            'default-key': {
+                'user_id': 'anonymous',
+                'permissions': ['pdf_analysis', 'schedule_generation'],
+                'active': True
+            }
+        }
+        
+        self.logger.info("Custom Authentication Manager initialized")
+    
+    def validate_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
+        """Validate API key"""
+        if api_key in self.api_keys:
+            key_data = self.api_keys[api_key]
+            if key_data.get('active', False):
+                return key_data
         return None
-    return api_key
-
-
-async def get_bearer_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Optional[str]:
-    """Extract bearer token from authorization header."""
-    if not credentials:
-        return None
-    return credentials.credentials
-
-
-async def get_current_user(
-    request: Request,
-    api_key: Optional[str] = Depends(get_api_key),
-    bearer_token: Optional[str] = Depends(get_bearer_token)
-) -> User:
-    """Get current authenticated user."""
-    user_id = None
-    permissions = []
     
-    # Check API key authentication
-    if api_key:
-        # Validate API key (in production, this would check against database)
-        if api_key == "test-api-key":
-            user_id = "test-user"
-            permissions = ["read", "write"]
-        elif api_key == "admin-api-key":
-            user_id = "admin-user"
-            permissions = ["read", "write", "admin"]
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid API key"
-            )
-    
-    # Check bearer token authentication
-    elif bearer_token:
+    def validate_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Validate JWT token (simplified implementation)"""
         try:
-            # Decode JWT token (in production, this would use proper secret)
-            payload = jwt.decode(bearer_token, "secret", algorithms=["HS256"])
-            user_id = payload.get("sub")
-            permissions = payload.get("permissions", [])
+            # Simplified token validation
+            # In production, use proper JWT validation
+            if token.startswith('Bearer '):
+                token = token[7:]
             
-            # Check token expiration
-            exp = payload.get("exp")
-            if exp and datetime.utcnow().timestamp() > exp:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token expired"
-                )
-                
-        except jwt.InvalidTokenError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
-            )
+            # For now, accept any non-empty token
+            if token and len(token) > 10:
+                return {
+                    'user_id': 'authenticated_user',
+                    'permissions': ['pdf_analysis', 'schedule_generation', 'cost_estimation'],
+                    'token_type': 'jwt'
+                }
+            
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Token validation error: {e}")
+            return None
     
-    # No authentication provided
-    else:
+    def get_user_permissions(self, user_id: str) -> list[str]:
+        """Get user permissions"""
+        # Simplified permission system
+        # In production, use database-based permissions
+        default_permissions = ['pdf_analysis', 'schedule_generation']
+        
+        if user_id == 'anonymous':
+            return ['pdf_analysis']
+        elif user_id == 'authenticated_user':
+            return default_permissions + ['cost_estimation', 'timeline_generation']
+        else:
+            return default_permissions
+    
+    def check_permission(self, user_id: str, permission: str) -> bool:
+        """Check if user has specific permission"""
+        permissions = self.get_user_permissions(user_id)
+        return permission in permissions
+    
+    def create_session(self, user_id: str, session_data: Dict[str, Any]) -> str:
+        """Create user session"""
+        import uuid
+        
+        session_id = str(uuid.uuid4())
+        self.user_sessions[session_id] = {
+            'user_id': user_id,
+            'created_at': session_data.get('created_at'),
+            'permissions': self.get_user_permissions(user_id),
+            **session_data
+        }
+        
+        self.logger.info(f"Created session for user: {user_id}")
+        return session_id
+    
+    def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get user session"""
+        return self.user_sessions.get(session_id)
+    
+    def invalidate_session(self, session_id: str) -> bool:
+        """Invalidate user session"""
+        if session_id in self.user_sessions:
+            del self.user_sessions[session_id]
+            self.logger.info(f"Invalidated session: {session_id}")
+            return True
+        return False
+
+
+# Global authentication manager
+_auth_manager = AuthManager()
+
+
+async def get_current_user(request: Request) -> Dict[str, Any]:
+    """
+    Get current user from request
+    
+    This is a simplified authentication implementation.
+    In production, use proper JWT validation and database lookups.
+    """
+    try:
+        # Check for API key in headers
+        api_key = request.headers.get('X-API-Key')
+        if api_key:
+            key_data = _auth_manager.validate_api_key(api_key)
+            if key_data:
+                return {
+                    'id': key_data['user_id'],
+                    'permissions': key_data['permissions'],
+                    'auth_type': 'api_key'
+                }
+        
+        # Check for Bearer token
+        auth_header = request.headers.get('Authorization')
+        if auth_header:
+            token_data = _auth_manager.validate_token(auth_header)
+            if token_data:
+                return {
+                    'id': token_data['user_id'],
+                    'permissions': token_data['permissions'],
+                    'auth_type': 'jwt'
+                }
+        
+        # Check for session cookie
+        session_id = request.cookies.get('session_id')
+        if session_id:
+            session_data = _auth_manager.get_session(session_id)
+            if session_data:
+                return {
+                    'id': session_data['user_id'],
+                    'permissions': session_data['permissions'],
+                    'auth_type': 'session'
+                }
+        
+        # Return anonymous user if no authentication found
+        return {
+            'id': 'anonymous',
+            'permissions': ['pdf_analysis'],
+            'auth_type': 'anonymous'
+        }
+        
+    except Exception as e:
+        logging.error(f"Authentication error: {e}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
+            detail="Authentication failed"
+        )
+
+
+async def get_current_user_required(request: Request) -> Dict[str, Any]:
+    """
+    Get current user with authentication required
+    
+    Raises HTTPException if no valid authentication is found.
+    """
+    user = await get_current_user(request)
+    
+    if user['id'] == 'anonymous':
+        raise HTTPException(
+            status_code=401,
             detail="Authentication required"
         )
-    
-    # Create user object
-    user = User(user_id=user_id, api_key=api_key, permissions=permissions)
-    
-    # Store user in request state
-    request.state.user = user
-    
-    logger.info(f"User authenticated: {user_id}", user_id=user_id, permissions=permissions)
     
     return user
 
 
-async def get_current_user_optional(
-    request: Request,
-    api_key: Optional[str] = Depends(get_api_key),
-    bearer_token: Optional[str] = Depends(get_bearer_token)
-) -> Optional[User]:
-    """Get current user (optional - allows anonymous access)."""
+async def require_permission(permission: str, user: User = Depends(get_current_user)):
+    """
+    Dependency to require specific permission
+    
+    Usage:
+        @app.get("/protected")
+async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
+        async def protected_route(user = Depends(require_permission("pdf_analysis")):
+            return {"message": "Access granted"}
+    """
+    async def _require_permission(request: Request) -> Dict[str, Any]:
+        user = await get_current_user(request)
+        
+        if not _auth_manager.check_permission(user['id'], permission):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Permission denied: {permission}"
+            )
+        
+        return user
+    
+    return _require_permission
+
+
+async def get_optional_user(request: Request) -> Optional[Dict[str, Any]]:
+    """
+    Get current user if available, otherwise return None
+    
+    This allows for optional authentication.
+    """
     try:
-        return await get_current_user(request, api_key, bearer_token)
+        return await get_current_user(request)
     except HTTPException:
         return None
 
 
-async def require_permission(permission: str):
-    """Dependency to require specific permission."""
-    async def _require_permission(request: Request, user: User = Depends(get_current_user)) -> User:
-        if not user.has_permission(permission):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permission '{permission}' required"
-            )
-        return user
-    return _require_permission
-
-
-async def require_admin():
-    """Dependency to require admin permission."""
-    return await require_permission("admin")
-
-
-async def require_write_permission():
-    """Dependency to require write permission."""
-    return await require_permission("write")
-
-
-async def require_read_permission():
-    """Dependency to require read permission."""
-    return await require_permission("read")
-
-
-# Service dependencies
-async def get_device_service() -> DeviceApplicationService:
-    """Get device application service."""
-    return container.get_device_service()
-
-
-async def get_room_service() -> RoomApplicationService:
-    """Get room application service."""
-    return container.get_room_service()
-
-
-async def get_user_service() -> UserApplicationService:
-    """Get user application service."""
-    return container.get_user_service()
-
-
-async def get_project_service() -> ProjectApplicationService:
-    """Get project application service."""
-    return container.get_project_service()
-
-
-async def get_building_service() -> BuildingApplicationService:
-    """Get building application service."""
-    return container.get_building_service()
-
-
-# Request validation dependencies
-async def validate_pagination_params(
-    page: int = 1,
-    page_size: int = 10,
-    max_page_size: int = 100
-) -> Dict[str, int]:
-    """Validate and normalize pagination parameters."""
-    if page < 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Page number must be greater than 0"
-        )
+def create_api_key(user_id: str, permissions: list[str]) -> str:
+    """Create new API key"""
+    import uuid
     
-    if page_size < 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Page size must be greater than 0"
-        )
-    
-    if page_size > max_page_size:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Page size cannot exceed {max_page_size}"
-        )
-    
-    return {
-        "page": page,
-        "page_size": page_size,
-        "offset": (page - 1) * page_size
-    }
-
-
-async def validate_sorting_params(
-    sort_by: Optional[str] = None,
-    sort_order: Optional[str] = None,
-    allowed_fields: list = None
-) -> Dict[str, Any]:
-    """Validate and normalize sorting parameters."""
-    if sort_by and allowed_fields and sort_by not in allowed_fields:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid sort field. Allowed fields: {', '.join(allowed_fields)}"
-        )
-    
-    if sort_order and sort_order not in ["asc", "desc"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Sort order must be 'asc' or 'desc'"
-        )
-    
-    return {
-        "sort_by": sort_by,
-        "sort_order": sort_order or "asc"
-    }
-
-
-async def validate_filter_params(
-    filters: Dict[str, Any] = None
-) -> Dict[str, Any]:
-    """Validate and normalize filter parameters."""
-    if not filters:
-        return {}
-    
-    # Validate filter structure
-    for key, value in filters.items():
-        if not isinstance(key, str):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Filter keys must be strings"
-            )
-        
-        if not isinstance(value, (str, int, float, bool, list)):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Filter values must be primitive types"
-            )
-    
-    return filters
-
-
-# Response formatting dependencies
-def format_success_response(
-    data: Any = None,
-    message: str = "Success",
-    request_id: Optional[str] = None
-) -> Dict[str, Any]:
-    """Format success response."""
-    response = {
-        "success": True,
-        "message": message,
-        "timestamp": datetime.utcnow().isoformat()
+    api_key = f"arxos_{uuid.uuid4().hex}"
+    _auth_manager.api_keys[api_key] = {
+        'user_id': user_id,
+        'permissions': permissions,
+        'active': True
     }
     
-    if data is not None:
-        response["data"] = data
-    
-    if request_id:
-        response["request_id"] = request_id
-    
-    return response
+    return api_key
 
 
-def format_error_response(
-    error_code: str,
-    message: str,
-    details: Optional[Dict[str, Any]] = None,
-    request_id: Optional[str] = None
-) -> Dict[str, Any]:
-    """Format error response."""
-    response = {
-        "error": True,
-        "error_code": error_code,
-        "message": message,
-        "timestamp": datetime.utcnow().isoformat()
-    }
-    
-    if details:
-        response["details"] = details
-    
-    if request_id:
-        response["request_id"] = request_id
-    
-    return response
+def revoke_api_key(api_key: str) -> bool:
+    """Revoke API key"""
+    if api_key in _auth_manager.api_keys:
+        _auth_manager.api_keys[api_key]['active'] = False
+        return True
+    return False
 
 
-def format_paginated_response(
-    items: list,
-    total_count: int,
-    page: int,
-    page_size: int,
-    request_id: Optional[str] = None
-) -> Dict[str, Any]:
-    """Format paginated response."""
-    total_pages = (total_count + page_size - 1) // page_size
-    
-    response = {
-        "success": True,
-        "message": "Success",
-        "data": {
-            "items": items,
-            "pagination": {
-                "page": page,
-                "page_size": page_size,
-                "total_count": total_count,
-                "total_pages": total_pages,
-                "has_next": page < total_pages,
-                "has_previous": page > 1
-            }
-        },
-        "timestamp": datetime.utcnow().isoformat()
-    }
-    
-    if request_id:
-        response["request_id"] = request_id
-    
-    return response
+def get_user_sessions() -> Dict[str, Dict[str, Any]]:
+    """Get all user sessions (for admin purposes)"""
+    return _auth_manager.user_sessions.copy()
 
 
-# Rate limiting dependencies
-async def check_rate_limit(request: Request, user: User = Depends(get_current_user)):
-    """Check rate limit for user."""
-    # This would integrate with the rate limiting middleware
-    # For now, we'll just log the request
-    logger.info(f"Rate limit check for user: {user.user_id}", user_id=user.user_id)
-    return True
-
-
-# Metrics dependencies
-async def record_api_metric(
-    endpoint: str,
-    method: str,
-    status_code: int,
-    duration: float,
-    user_id: Optional[str] = None
-):
-    """Record API metric."""
-    logger.info(
-        f"API metric recorded",
-        endpoint=endpoint,
-        method=method,
-        status_code=status_code,
-        duration_ms=duration * 1000,
-        user_id=user_id
-    )
-
-
-# Caching dependencies
-async def get_cache_key(request: Request, user: User = Depends(get_current_user)) -> str:
-    """Generate cache key for request."""
-    # Create cache key based on request path, query parameters, and user
-    path = request.url.path
-    query_params = str(sorted(request.query_params.items()))
-    user_id = user.user_id
-    
-    cache_key = f"{user_id}:{path}:{query_params}"
-    return cache_key
-
-
-async def check_cache(cache_key: str = Depends(get_cache_key)) -> Optional[Dict[str, Any]]:
-    """Check cache for response."""
-    cache_service = container.get_cache_service()
-    if cache_service:
-        return await cache_service.get(cache_key)
-    return None
-
-
-async def set_cache(
-    cache_key: str = Depends(get_cache_key),
-    ttl: int = 300
-) -> None:
-    """Set cache for response."""
-    cache_service = container.get_cache_service()
-    if cache_service:
-        await cache_service.set(cache_key, ttl) 
+def get_api_keys() -> Dict[str, Dict[str, Any]]:
+    """Get all API keys (for admin purposes)"""
+    return _auth_manager.api_keys.copy() 

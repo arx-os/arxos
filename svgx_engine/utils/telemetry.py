@@ -88,6 +88,23 @@ class TelemetryBuffer:
     """Simple telemetry buffer."""
     
     def __init__(self, max_size: int = 10000, enable_persistence: bool = True):
+    """
+    Perform __init__ operation
+
+Args:
+        max_size: Description of max_size
+        enable_persistence: Description of enable_persistence
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.max_size = max_size
         self.enable_persistence = enable_persistence
         self.records: List[TelemetryRecord] = []
@@ -332,6 +349,25 @@ class TelemetryLogger:
 
 
 class OperationLogger:
+    """
+    Perform __init__ operation
+
+Args:
+        telemetry_logger: Description of telemetry_logger
+        operation_name: Description of operation_name
+        operation_type: Description of operation_type
+        metadata: Description of metadata
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Context manager for logging operations."""
     
     def __init__(self, telemetry_logger: TelemetryLogger, operation_name: str,

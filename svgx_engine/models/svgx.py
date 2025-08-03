@@ -21,6 +21,22 @@ class SVGXDocument:
     updated_at: Optional[datetime] = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.created_at is None:
             self.created_at = datetime.utcnow()
         if self.updated_at is None:

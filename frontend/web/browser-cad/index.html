@@ -61,15 +61,53 @@
                         </button>
                     </div>
                     
-                    <!-- Precision Controls -->
+                    <!-- Enhanced Precision Controls -->
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <label class="text-sm text-gray-400">Precision:</label>
+                            <select id="precision-level" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
+                                <option value="UI">UI (0.01")</option>
+                                <option value="EDIT" selected>Edit (0.001")</option>
+                                <option value="COMPUTE">Compute (0.0001")</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <label class="text-sm text-gray-400">Grid:</label>
+                            <select id="grid-size" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
+                                <option value="0.01">0.01"</option>
+                                <option value="0.1" selected>0.1"</option>
+                                <option value="1">1"</option>
+                                <option value="12">12"</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" id="grid-snap" class="rounded" checked>
+                            <label for="grid-snap" class="text-sm text-gray-400">Snap</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Constraint Tools -->
                     <div class="flex items-center space-x-2">
-                        <label class="text-sm text-gray-400">Precision:</label>
-                        <select id="precision-select" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
-                            <option value="0.001">0.001"</option>
-                            <option value="0.01">0.01"</option>
-                            <option value="0.1">0.1"</option>
-                            <option value="1">1"</option>
-                        </select>
+                        <button id="distance-constraint" class="cad-tool-btn" data-tool="distance-constraint">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/>
+                            </svg>
+                            <span>Distance</span>
+                        </button>
+                        <button id="parallel-constraint" class="cad-tool-btn" data-tool="parallel-constraint">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/>
+                            </svg>
+                            <span>Parallel</span>
+                        </button>
+                        <button id="perpendicular-constraint" class="cad-tool-btn" data-tool="perpendicular-constraint">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/>
+                            </svg>
+                            <span>Perpendicular</span>
+                        </button>
                     </div>
                     
                     <!-- AI Assistant -->
@@ -83,57 +121,68 @@
                     </div>
                 </div>
                 
-                                       <!-- User Controls -->
-                       <div class="flex items-center space-x-4">
-                           <!-- Project Info -->
-                           <div id="project-info" class="text-sm text-gray-400">
-                               <div>No project selected</div>
-                           </div>
-                           
-                           <!-- Collaboration Status -->
-                           <div id="collaboration-status" class="text-sm text-gray-400">
-                               <div>Collaboration: Inactive</div>
-                           </div>
-                           
-                           <!-- AI Status -->
-                           <div id="ai-status" class="text-sm text-gray-400">
-                               <div>AI Assistant: Disconnected</div>
-                           </div>
-                           
-                           <!-- Project Controls -->
-                           <button id="new-project" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium">
-                               New Project
-                           </button>
-                           <button id="save-project" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm font-medium">
-                               Save Project
-                           </button>
-                           <button id="export-drawing" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-sm font-medium">
-                               Export SVGX
-                           </button>
-                       </div>
+                <!-- User Controls -->
+                <div class="flex items-center space-x-4">
+                    <!-- Project Info -->
+                    <div id="project-info" class="text-sm text-gray-400">
+                        <div>No project selected</div>
+                    </div>
+                    
+                    <!-- Collaboration Status -->
+                    <div id="collaboration-status" class="text-sm text-gray-400">
+                        <div>Collaboration: Inactive</div>
+                    </div>
+                    
+                    <!-- AI Status -->
+                    <div id="ai-status" class="text-sm text-gray-400">
+                        <div>AI Assistant: Disconnected</div>
+                    </div>
+                    
+                    <!-- Project Controls -->
+                    <button id="new-project" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium">
+                        New Project
+                    </button>
+                    <button id="save-project" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm font-medium">
+                        Save Project
+                    </button>
+                    <button id="export-drawing" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-sm font-medium">
+                        Export SVGX
+                    </button>
+                </div>
             </div>
         </div>
         
         <!-- CAD Workspace -->
         <div id="cad-workspace" class="flex-1 flex">
-                               <!-- Left Panel - Projects & ArxObjects -->
-                   <div class="w-64 bg-gray-800 border-r border-gray-700">
-                       <!-- Projects Tab -->
-                       <div class="p-4 border-b border-gray-700">
-                           <h3 class="text-lg font-semibold mb-4">Projects</h3>
-                           <div id="project-list" class="space-y-2 max-h-32 overflow-y-auto">
-                               <!-- Projects will be loaded here -->
-                           </div>
-                       </div>
-                       
-                       <!-- ArxObjects Tab -->
-                       <div class="p-4">
-                           <h3 class="text-lg font-semibold mb-4">ArxObjects</h3>
-                           <div id="arx-objects-list" class="space-y-2">
-                               <!-- ArxObjects will be loaded here -->
-                           </div>
-                       </div>
-                   </div>
+            <!-- Left Panel - Projects & ArxObjects -->
+            <div class="w-64 bg-gray-800 border-r border-gray-700">
+                <!-- Projects Tab -->
+                <div class="p-4 border-b border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4">Projects</h3>
+                    <div id="project-list" class="space-y-2 max-h-32 overflow-y-auto">
+                        <!-- Projects will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- ArxObjects Tab -->
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-4">ArxObjects</h3>
+                    <div id="arx-objects-list" class="space-y-2">
+                        <!-- ArxObjects will be loaded here -->
+                    </div>
+                </div>
+                
+                <!-- Constraints Panel -->
+                <div class="p-4 border-t border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4">Constraints</h3>
+                    <div id="constraints-list" class="space-y-2 max-h-32 overflow-y-auto">
+                        <!-- Constraints will be loaded here -->
+                    </div>
+                    <button id="clear-constraints" class="mt-2 w-full bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm">
+                        Clear All
+                    </button>
+                </div>
+            </div>
             
             <!-- Center - Canvas Area -->
             <div id="canvas-container" class="flex-1 relative">
@@ -148,13 +197,13 @@
                 <div id="status-bar" class="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-2">
                     <div class="flex items-center justify-between text-sm">
                         <div id="mouse-coordinates" class="text-gray-400">
-                            X: 0.000" Y: 0.000"
+                            X: 0.000" Y: 0.000" (EDIT)
                         </div>
                         <div id="drawing-info" class="text-gray-400">
-                            Scale: 1:1 | Units: Inches
+                            Scale: 1:1 | Units: Inches | Grid: 0.1"
                         </div>
                         <div id="performance-info" class="text-gray-400">
-                            FPS: 60 | Objects: 0
+                            FPS: 60 | Objects: 0 | Constraints: 0
                         </div>
                     </div>
                 </div>
@@ -230,6 +279,7 @@
     </div>
 
     <!-- CAD Engine Scripts -->
+    <script src="../static/js/cad-constraints.js"></script>
     <script src="../static/js/cad-engine.js"></script>
     <script src="../static/js/cad-workers.js"></script>
     <script src="../static/js/arx-objects.js"></script>
@@ -242,9 +292,81 @@
     <!-- Initialize CAD Application -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize CAD application
-            window.cadApp = new CadApplication();
-            window.cadApp.initialize();
+            // Initialize CAD application with enhanced components
+            window.cadApp = {
+                cadEngine: null,
+                cadUI: null,
+                isInitialized: false
+            };
+            
+            async function initializeCadApplication() {
+                try {
+                    console.log('Initializing Arxos CAD Application...');
+                    
+                    // Initialize CAD Engine with enhanced precision
+                    window.cadApp.cadEngine = new CadEngine();
+                    await window.cadApp.cadEngine.initialize();
+                    
+                    // Initialize CAD UI with enhanced integration
+                    window.cadApp.cadUI = new CadUI(window.cadApp.cadEngine);
+                    await window.cadApp.cadUI.initialize();
+                    
+                    // Set up cross-component communication
+                    window.cadApp.cadEngine.addEventListener('objectSelected', (data) => {
+                        window.cadApp.cadUI.updatePropertiesPanel(data.object);
+                    });
+                    
+                    window.cadApp.cadEngine.addEventListener('constraintAdded', (data) => {
+                        window.cadApp.cadUI.updateConstraintsList();
+                    });
+                    
+                    window.cadApp.cadEngine.addEventListener('precisionChanged', (data) => {
+                        window.cadApp.cadUI.updatePrecisionDisplay(data);
+                    });
+                    
+                    // Initialize additional components
+                    if (typeof ArxObjectSystem !== 'undefined') {
+                        window.cadApp.arxObjectSystem = new ArxObjectSystem();
+                    }
+                    
+                    if (typeof CadApiClient !== 'undefined') {
+                        window.cadApp.apiClient = new CadApiClient();
+                    }
+                    
+                    if (typeof AiAssistant !== 'undefined') {
+                        window.cadApp.aiAssistant = new AiAssistant();
+                    }
+                    
+                    window.cadApp.isInitialized = true;
+                    console.log('Arxos CAD Application initialized successfully');
+                    
+                    // Hide loading indicator
+                    const loadingIndicator = document.getElementById('loading');
+                    if (loadingIndicator) {
+                        loadingIndicator.classList.add('hidden');
+                    }
+                    
+                } catch (error) {
+                    console.error('Failed to initialize CAD Application:', error);
+                    
+                    // Show error message
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'fixed inset-0 bg-red-900 bg-opacity-75 flex items-center justify-center z-50';
+                    errorMessage.innerHTML = `
+                        <div class="bg-gray-800 rounded-lg p-6 max-w-md">
+                            <div class="text-red-400 text-xl font-semibold mb-4">Initialization Error</div>
+                            <div class="text-white mb-4">${error.message}</div>
+                            <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
+                                Reload Application
+                            </button>
+                        </div>
+                    `;
+                    document.body.appendChild(errorMessage);
+                }
+            }
+            
+            // Start initialization
+            initializeCadApplication();
         });
     </script>
 </body>

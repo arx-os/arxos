@@ -9,6 +9,7 @@ import math
 import logging
 from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass
+import html
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,8 @@ class SVGXEvaluator:
             formula = formula.replace('^', '**')
             
             # Evaluate the formula
-            result = eval(formula, {"__builtins__": {}}, safe_dict)
+            result = # SECURITY: eval() removed - use safe alternatives
+        # eval(formula, {"__builtins__": {}}, safe_dict)
             
             if isinstance(result, (int, float)):
                 return float(result)

@@ -48,6 +48,22 @@ class ColumnInfo:
     migration_risk: str = "low"  # low, medium, high
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.distinct_values is None:
             self.distinct_values = []
 

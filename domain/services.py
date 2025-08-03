@@ -32,6 +32,22 @@ class BuildingDomainService:
     """Domain service for building-related business logic."""
     
     def __init__(self, building_repository: BuildingRepository):
+    """
+    Perform __init__ operation
+
+Args:
+        building_repository: Description of building_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
         self.building_repository = building_repository
     
     def create_building(
@@ -167,6 +183,22 @@ class BuildingDomainService:
 
 
 class FloorDomainService:
+    """
+    Perform __init__ operation
+
+Args:
+        floor_repository: Description of floor_repository
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __init__(param)
+        print(result)
+    """
     """Domain service for floor-related business logic."""
     
     def __init__(self, floor_repository: FloorRepository):

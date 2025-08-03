@@ -88,6 +88,22 @@ class BuildEvent:
     timestamp: datetime = None
     
     def __post_init__(self):
+    """
+    Perform __post_init__ operation
+
+Args:
+        None
+
+Returns:
+        Description of return value
+
+Raises:
+        Exception: Description of exception
+
+Example:
+        result = __post_init__(param)
+        print(result)
+    """
         if self.timestamp is None:
             self.timestamp = datetime.utcnow()
         if self.build_data is None:

@@ -13,9 +13,9 @@ The ArxIDE Design Marketplace is a decentralized creator platform that allows ar
    - Create your Arxos account
    - Complete your profile with professional information
 
-2. **Link Your ARX Wallet**
+2. **Link Your BILT Wallet**
    - Navigate to Settings → Wallet
-   - Create or import your ARX wallet
+   - Create or import your BILT wallet
    - Verify your wallet address
    - Set up two-factor authentication for security
 
@@ -31,7 +31,7 @@ The marketplace is integrated directly into ArxIDE with these main sections:
 - **Browse**: Discover and search for designs
 - **Publish**: Upload and manage your designs
 - **Dashboard**: Track your sales and analytics
-- **Wallet**: Manage your ARX transactions
+- **Wallet**: Manage your BILT transactions
 
 ## Publishing Your Designs
 

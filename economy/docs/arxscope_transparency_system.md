@@ -1,8 +1,8 @@
-# ARX Transparency & Performance Visualization System (ArxScope)
+# BILT Transparency & Performance Visualization System (ArxScope)
 
 ## 🧭 Overview
 
-The ArxScope dashboard system is designed to make the performance of ARX visible and verifiable to all stakeholders — including contributors, token holders, contractors, and outside observers. This mimics the transparency of a publicly traded company while protecting sensitive buyer data.
+The ArxScope dashboard system is designed to make the performance of BILT (Building Infrastructure Link Token) visible and verifiable to all stakeholders — including contributors, token holders, contractors, and outside observers. This mimics the transparency of a publicly traded company while protecting sensitive buyer data.
 
 ---
 
@@ -21,7 +21,7 @@ The ArxScope dashboard system is designed to make the performance of ARX visible
 
 ### 📍 Location
 - `dashboard.arxos.xyz` (main dashboard)
-- Optional public mirror: `arxcoin.io`
+- Optional public mirror: `biltcoin.io`
 - Embedded in ArxIDE and ArxCLI
 
 ---
@@ -30,14 +30,14 @@ The ArxScope dashboard system is designed to make the performance of ARX visible
 
 | Module | Description |
 |--------|-------------|
-| 📈 **ARX Supply Tracker** | Live total supply, mint rate, burn (if any), staked %, circulating supply |
+| 📈 **BILT Supply Tracker** | Live total supply, mint rate, burn (if any), staked %, circulating supply |
 | 💰 **Dividend Pool Ledger** | Real-time view of funds flowing into dividend pool from data/service transactions |
-| 🧠 **ARX Payouts Explorer** | All past dividend distributions with timestamps, amount, eligible holders, contract hash |
+| 🧠 **BILT Payouts Explorer** | All past dividend distributions with timestamps, amount, eligible holders, contract hash |
 | 🏗️ **Top Performing Buildings (Anonymous)** | Top 10 contributing buildings by revenue, without showing address or owner |
 | 🔁 **Revenue Flow Breakdown** | % from data sales, % from service fees, % held in treasury |
-| 🪙 **ARX Market Metrics** | Price, 24h/7d/30d volume, # of holders, wallet concentration |
-| 🛠️ **Mint Activity Feed** | Real-time display of new ARX mints tied to object types (e.g. "🚨 Fire Alarm Panel in Houston") |
-| 🧭 **Contribution Index** | Leaderboard for contributors by minted ARX, earnings, building coverage (opt-in public names) |
+| 🪙 **BILT Market Metrics** | Price, 24h/7d/30d volume, # of holders, wallet concentration |
+| 🛠️ **Mint Activity Feed** | Real-time display of new BILT mints tied to object types (e.g. "🚨 Fire Alarm Panel in Houston") |
+| 🧭 **Contribution Index** | Leaderboard for contributors by minted BILT, earnings, building coverage (opt-in public names) |
 
 ---
 
@@ -67,7 +67,7 @@ The ArxScope dashboard system is designed to make the performance of ARX visible
 ## 🧠 Optional Advanced Features
 
 ### 🧪 Simulation Portal
-> "If ARX volume = X and service revenue grows Y% monthly, what will dividends look like?"
+> "If BILT volume = X and service revenue grows Y% monthly, what will dividends look like?"
 
 Used by contributors or investors to forecast token returns.
 
@@ -93,6 +93,6 @@ If governance is enabled, display proposals, vote breakdowns, and treasury movem
 ## 🚀 Next Steps
 
 - [ ] Define frontend spec and data feeds
-- [ ] Build MVP dashboard using testnet ARX and mock data
+- [ ] Build MVP dashboard using testnet BILT and mock data
 - [ ] Publish live metrics with disclaimers and roadmap
-- [ ] Integrate into ArxIDE and public-facing arxcoin.io 
+- [ ] Integrate into ArxIDE and public-facing biltcoin.io 

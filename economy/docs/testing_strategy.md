@@ -1,8 +1,8 @@
-# ARX Testing Strategy
+# BILT Testing Strategy
 
 ## 🎯 **Overview**
 
-This document defines the comprehensive testing strategy for ARX cryptocurrency functionality, integrating with existing Arxos testing infrastructure while adding blockchain-specific testing capabilities.
+This document defines the comprehensive testing strategy for BILT (Building Infrastructure Link Token) cryptocurrency functionality, integrating with existing Arxos testing infrastructure while adding blockchain-specific testing capabilities.
 
 ---
 
@@ -29,9 +29,9 @@ Frontend:
   - CI: GitHub Actions
 ```
 
-#### **B. ARX Testing Additions**
+#### **B. BILT Testing Additions**
 ```yaml
-# ARX Blockchain Testing Stack
+# BILT Blockchain Testing Stack
 Smart Contracts:
   - Framework: `Hardhat` + `Chai`
   - Coverage: 95%+ target
@@ -56,12 +56,12 @@ Security Testing:
 
 #### **A. Core Contract Tests**
 ```javascript
-// arxos/cryptocurrency/tests/contracts/ARXToken.test.js
+// arxos/cryptocurrency/tests/contracts/BILTToken.test.js
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("ARXToken", function () {
-    let arxToken;
+describe("BILTToken", function () {
+    let biltToken;
     let owner;
     let contributor;
     let verifier;
@@ -71,9 +71,9 @@ describe("ARXToken", function () {
     beforeEach(async function () {
         [owner, contributor, verifier, addr1, addr2] = await ethers.getSigners();
         
-        const ARXToken = await ethers.getContractFactory("ARXToken");
-        arxToken = await ARXToken.deploy();
-        await arxToken.deployed();
+        const BILTToken = await ethers.getContractFactory("BILTToken");
+        biltToken = await BILTToken.deploy();
+        await biltToken.deployed();
     });
 
     describe("Deployment", function () {

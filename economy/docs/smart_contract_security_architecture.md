@@ -1,8 +1,8 @@
-# ARX Smart Contract Security Architecture
+# BILT Smart Contract Security Architecture
 
 ## 🛡️ **Security Overview**
 
-This document defines the security architecture for ARX smart contracts, ensuring safe deployment and operation of the cryptocurrency system. Security is paramount for a financial system handling real value and user assets.
+This document defines the security architecture for BILT smart contracts, ensuring safe deployment and operation of the cryptocurrency system. Security is paramount for a financial system handling real value and user assets.
 
 ---
 
@@ -26,7 +26,7 @@ This document defines the security architecture for ARX smart contracts, ensurin
 ### **4. Legal Compliance**
 - Ensure token structure complies with securities law
 - Implement KYC/AML requirements for institutional holders
-- Maintain clear separation between ARX tokens and Arxos equity
+- Maintain clear separation between BILT tokens and Arxos equity
 - Support regulatory audit trails and reporting
 
 ### **5. Immutable Audit Trail**
@@ -41,7 +41,7 @@ This document defines the security architecture for ARX smart contracts, ensurin
 ### **A. Multi-Signature Treasury Management**
 
 ```solidity
-contract ARXTreasury {
+contract BILTTreasury {
     mapping(address => bool) public authorizedSigners;
     uint256 public requiredSignatures;
     uint256 public treasuryBalance;

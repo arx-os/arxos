@@ -1,28 +1,28 @@
 
-# ARX Integration Development Plan for Arxos
+# BILT Integration Development Plan for Arxos
 ### Version 1.1 — July 21, 2025
 
 ---
 
 ## 🎯 Objective
 
-Integrate the ARX token into the Arxos platform as:
+Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform as:
 1. A mintable token through verified work contributions
 2. A fungible utility token used for payments, access, and staking
-3. A dividend-bearing asset distributed pro-rata to ARX holders from platform revenue
+3. A dividend-bearing asset distributed pro-rata to BILT holders from platform revenue
 
 ---
 
 ## 🧱 Phase 1: Foundations (Weeks 1–3)
 
 ### 🔹 Tasks
-- [ ] Define ARX token contract (ERC-20 or equivalent)
-- [ ] Design ARX minting engine for verified contributions
+- [ ] Define BILT token contract (ERC-20 or equivalent)
+- [ ] Design BILT minting engine for verified contributions
 - [ ] Create contribution registry system with:
     - Contributor ID
     - Contribution type & metadata
-    - ARX mint logic per action
-- [ ] Build ARX ledger module in Arxos backend
+    - BILT mint logic per action
+- [ ] Build BILT ledger module in Arxos backend
 
 ---
 

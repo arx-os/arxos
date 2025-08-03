@@ -1,27 +1,27 @@
-# ARX Tokenomics Mathematical Model
+# BILT Tokenomics Mathematical Model
 
 ## 🎯 **Overview**
 
-This document defines the mathematical framework for ARX token economics, integrating with existing ArxLogic validation scores and platform revenue streams to create a sustainable and fair token ecosystem. ARX is structured as a revenue-sharing token, legally distinct from Arxos equity, providing holders with pro-rata shares of platform revenue from data sales and service transactions.
+This document defines the mathematical framework for BILT (Building Infrastructure Link Token) economics, integrating with existing ArxLogic validation scores and platform revenue streams to create a sustainable and fair token ecosystem. BILT is structured as a revenue-sharing token, legally distinct from Arxos equity, providing holders with pro-rata shares of platform revenue from data sales and service transactions.
 
 ---
 
 ## 🧮 **Core Tokenomics Formulas**
 
-### **1. ARX Minting Formula**
+### **1. BILT Minting Formula**
 
 ```python
-def calculate_arx_mint(validation_score: float, complexity_multiplier: float, base_amount: float = 1.0) -> float:
+def calculate_bilt_mint(validation_score: float, complexity_multiplier: float, base_amount: float = 1.0) -> float:
     """
-    Calculate ARX tokens to mint for a validated contribution.
+    Calculate BILT tokens to mint for a validated contribution.
     
     Args:
         validation_score: ArxLogic validation score (0.0 to 1.0)
         complexity_multiplier: System complexity multiplier
-        base_amount: Base ARX amount for standard object (default: 1.0)
+        base_amount: Base BILT amount for standard object (default: 1.0)
     
     Returns:
-        float: ARX tokens to mint
+        float: BILT tokens to mint
     """
     return base_amount * validation_score * complexity_multiplier
 ```

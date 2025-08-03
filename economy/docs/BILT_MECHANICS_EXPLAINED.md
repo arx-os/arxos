@@ -1,6 +1,6 @@
-# ARX Token Mechanics Explained
+# BILT Token Mechanics Explained
 
-## 🏗️ **How ARX Actually Works**
+## 🏗️ **How BILT Actually Works**
 
 ### **1. Token Creation (Minting)**
 
@@ -8,32 +8,32 @@
 1. **Engineer uploads** building objects (HVAC systems, lighting, etc.) to Arxos
 2. **AI validation** using ArxLogic checks if the design is valid
 3. **Secondary user verification** - another user must verify the object is useful
-4. **ARX tokens minted** to the contributor's wallet
+4. **BILT tokens minted** to the contributor's wallet
 5. **Unlimited supply** - tokens created based on number of objects, not fixed cap
 
 **Example:**
 ```
-Sarah uploads HVAC system design → AI validates → John verifies → Sarah gets 100 ARX
+Sarah uploads HVAC system design → AI validates → John verifies → Sarah gets 100 BILT
 ```
 
 ### **2. Dividend Distribution**
 
-**Key Point:** All ARX holders receive equal dividends, regardless of how they got their tokens.
+**Key Point:** All BILT holders receive equal dividends, regardless of how they got their tokens.
 
 **Process:**
 1. **Platform generates revenue** from data sales and service transactions
 2. **Revenue goes to dividend pool** (not tied to specific objects)
-3. **Equal distribution** to all ARX holders based on their token amount
+3. **Equal distribution** to all BILT holders based on their token amount
 4. **No distinction** between contributor-minted tokens and secondary market tokens
 
 **Example:**
 ```
 Platform revenue: $10,000
-Total ARX supply: 100,000 tokens
+Total BILT supply: 100,000 tokens
 Dividend per token: $0.10
-Sarah (100 ARX) gets: $10
-John (50 ARX) gets: $5
-Mike (bought 200 ARX on exchange) gets: $20
+Sarah (100 BILT) gets: $10
+John (50 BILT) gets: $5
+Mike (bought 200 BILT on exchange) gets: $20
 ```
 
 ### **3. Verification System**
@@ -57,10 +57,10 @@ Mike (bought 200 ARX on exchange) gets: $20
 - Engineer Alice uploads building HVAC design
 - AI validates it's code-compliant
 - Engineer Bob verifies it's useful for his projects
-- Alice receives 150 ARX tokens
-- Alice sells 50 ARX to Charlie on an exchange
+- Alice receives 150 BILT tokens
+- Alice sells 50 BILT to Charlie on an exchange
 - Platform generates $5,000 in revenue
-- All three get dividends: Alice (100 ARX) = $5, Bob (0 ARX) = $0, Charlie (50 ARX) = $2.50
+- All three get dividends: Alice (100 BILT) = $5, Bob (0 BILT) = $0, Charlie (50 BILT) = $2.50
 
 ### **6. Key Differences from Previous Documentation**
 
@@ -93,7 +93,7 @@ Mike (bought 200 ARX on exchange) gets: $20
 
 **Public Dashboard:**
 - Real-time metrics at `dashboard.arxos.xyz`
-- Live ARX supply, dividend pool, and market data
+- Live BILT supply, dividend pool, and market data
 - Anonymous building performance rankings
 - Contributor leaderboards (opt-in public names)
 - Mint activity feed with object types and locations
@@ -108,12 +108,12 @@ Mike (bought 200 ARX on exchange) gets: $20
 
 **Worker Classification:**
 - Contributors are workers earning for labor
-- ARX holders are currency participants
+- BILT holders are currency participants
 - Dividends are platform revenue sharing
 - No speculative promises
 
 **Tax Treatment:**
-- Contributors: Report ARX as work income
+- Contributors: Report BILT as work income
 - Holders: Report dividends as income
 - No capital gains treatment for work-minted tokens
 

@@ -1,4 +1,4 @@
-# ARX Cryptocurrency Framework Review and Design
+# BILT Cryptocurrency Framework Review and Design
 
 ## 📋 Current State Analysis
 
@@ -51,7 +51,7 @@
 #### **A. Smart Contract Architecture**
 ```solidity
 // Core Contracts Structure
-├── ARXToken.sol                    // ERC-20 implementation
+├── BILTToken.sol                   // ERC-20 implementation
 ├── ArxMintRegistry.sol             // Contribution tracking
 ├── RevenueRouter.sol               // Revenue distribution
 ├── DividendVault.sol               // Dividend management
@@ -62,9 +62,9 @@
 
 #### **B. Backend Integration Points**
 ```
-arxos/arx-backend/
+arxos/bilt-backend/
 ├── services/
-│   ├── arx_token/
+│   ├── bilt_token/
 │   │   ├── minting_engine.py      // Contribution verification
 │   │   ├── dividend_calculator.py  // Revenue attribution
 │   │   ├── fraud_detector.py      // AI + rule-based checks
@@ -78,18 +78,18 @@ arxos/arx-backend/
 #### **C. Database Schema Design**
 ```sql
 -- Core Tables
-arx_contributions
+bilt_contributions
 ├── id (UUID)
 ├── contributor_wallet (VARCHAR)
 ├── arxobject_hash (VARCHAR)
 ├── contribution_type (ENUM)
-├── arx_minted (DECIMAL)
+├── bilt_minted (DECIMAL)
 ├── verification_status (ENUM)
 ├── fraud_score (DECIMAL)
 ├── created_at (TIMESTAMP)
 └── verified_at (TIMESTAMP)
 
-arx_revenue_attribution
+bilt_revenue_attribution
 ├── id (UUID)
 ├── arxobject_hash (VARCHAR)
 ├── revenue_amount (DECIMAL)
@@ -97,7 +97,7 @@ arx_revenue_attribution
 ├── attribution_date (TIMESTAMP)
 └── dividend_paid (BOOLEAN)
 
-arx_dividend_distributions
+bilt_dividend_distributions
 ├── id (UUID)
 ├── distribution_period (VARCHAR)
 ├── total_amount (DECIMAL)
@@ -109,9 +109,9 @@ arx_dividend_distributions
 
 ### **Phase 1: Core Smart Contract Development (Weeks 3-6)**
 
-#### **A. ARX Token Contract**
+#### **A. BILT Token Contract**
 ```solidity
-contract ARXToken is ERC20, Ownable {
+contract BILTToken is ERC20, Ownable {
     // Minting controls
     mapping(address => bool) public authorizedMinters;
     mapping(bytes32 => uint256) public objectMintAmounts;

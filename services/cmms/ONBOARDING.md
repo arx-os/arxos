@@ -104,7 +104,7 @@ NOTIFICATION_SMS_ENABLED=false
 NOTIFICATION_PUSH_ENABLED=false
 
 # External Services
-ARX_BACKEND_URL=http://localhost:8080
+BILT_BACKEND_URL=http://localhost:8080
 SVG_PARSER_SERVICE_URL=http://localhost:8082
 ```
 

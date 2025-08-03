@@ -40,7 +40,7 @@ type WalletService struct {
 type WalletInfo struct {
     UserID            string    `json:"user_id"`
     WalletAddress     string    `json:"wallet_address"`
-    ARXBalance        float64   `json:"arx_balance"`
+    BILTBalance       float64   `json:"bilt_balance"`
     WalletType        string    `json:"wallet_type"`
     KYCVerified       bool      `json:"kyc_verified"`
     AMLCleared        bool      `json:"aml_cleared"`
@@ -61,7 +61,7 @@ func (ws *WalletService) CreateWalletForUser(userID string) (*WalletInfo, error)
     wallet := &WalletInfo{
         UserID:        userID,
         WalletAddress: walletAddress,
-        ARXBalance:    0.0,
+        BILTBalance:   0.0,
         WalletType:    "auto_generated",
         CreatedAt:     time.Now(),
     }
@@ -78,10 +78,10 @@ func (ws *WalletService) CreateWalletForUser(userID string) (*WalletInfo, error)
 func (ws *WalletService) GetUserWallet(userID string) (*WalletInfo, error) {
     var wallet WalletInfo
     err := ws.db.QueryRow(`
-        SELECT id, wallet_address, arx_balance, wallet_type, created_at
+        SELECT id, wallet_address, bilt_balance, wallet_type, created_at
         FROM users 
         WHERE id = ?
-    `, userID).Scan(&wallet.UserID, &wallet.WalletAddress, &wallet.ARXBalance, &wallet.WalletType, &wallet.CreatedAt)
+    `, userID).Scan(&wallet.UserID, &wallet.WalletAddress, &wallet.BILTBalance, &wallet.WalletType, &wallet.CreatedAt)
     
     return &wallet, err
 }
@@ -270,8 +270,8 @@ func (cs *ComplianceService) RegisterEquityHolder(userID string) error {
 
 #### **A. ARX Tables Schema**
 ```sql
--- ARX Wallets table
-CREATE TABLE arx_wallets (
+-- BILT Wallets table
+CREATE TABLE bilt_wallets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     wallet_address VARCHAR(42) UNIQUE NOT NULL,

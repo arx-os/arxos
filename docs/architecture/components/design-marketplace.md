@@ -21,7 +21,7 @@ The ArxIDE Design Marketplace is a decentralized creator platform embedded withi
 - **Core API**: Go (Chi framework)
 - **Logic Services**:
   - Design metadata storage (PostgreSQL + PostGIS)
-  - ARX wallet payment integration
+  - BILT wallet payment integration
   - License enforcement and tracking
   - Design minting service for provenance
 
@@ -31,7 +31,7 @@ The ArxIDE Design Marketplace is a decentralized creator platform embedded withi
 - **Version Control**: Git-style repository tracking per design
 
 #### **Blockchain Integration**
-- **Token**: ARX cryptocurrency
+- **Token**: BILT (Building Infrastructure Link Token)
 - **Features**:
   - Creator wallet linking
   - Revenue sharing from purchases

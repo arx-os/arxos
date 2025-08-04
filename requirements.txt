@@ -1,8 +1,8 @@
 # Core Framework
-fastapi~=0.104.1
-uvicorn[standard]~=0.24.0
-pydantic~=2.5.0
-pydantic-settings~=2.1.0
+fastapi>=0.116.0
+uvicorn[standard]>=0.35.0
+pydantic>=2.11.0
+pydantic-settings>=2.1.0
 
 # Database and Storage
 redis~=5.0.1
@@ -27,8 +27,8 @@ asyncio
 aiofiles~=23.2.1
 
 # Data Processing
-pickle5~=0.0.12
-hashlib
+# pickle5~=0.0.12  # Removed - incompatible with Python 3.13
+# hashlib  # Built-in module, no need to install
 
 # Logging and Error Handling
 structlog~=23.2.0

@@ -1,4 +1,4 @@
-# ARX Cryptocurrency - Current State Summary
+# BILT Cryptocurrency - Current State Summary
 
 ## 📊 **Documentation Review Status**
 
@@ -24,8 +24,8 @@
 - [ ] **Establish testing infrastructure**
 
 ### **2. Core Development (Weeks 2-6)**
-- [ ] **Implement ARXToken.sol** (ERC-20 with minting controls)
-- [ ] **Build ArxMintRegistry.sol** (contribution tracking)
+- [ ] **Implement BILTToken.sol** (ERC-20 with minting controls)
+- [ ] **Build BiltMintRegistry.sol** (contribution tracking)
 - [ ] **Create RevenueRouter.sol** (dividend distribution)
 - [ ] **Develop fraud detection algorithms**
 
@@ -47,8 +47,8 @@
 
 ### **Smart Contract Suite**
 ```
-ARXToken.sol          // ERC-20 with unlimited supply
-ArxMintRegistry.sol   // Contribution tracking with verification
+BILTToken.sol         // ERC-20 with unlimited supply
+BiltMintRegistry.sol  // Contribution tracking with verification
 RevenueRouter.sol     // Equal dividend distribution
 DividendVault.sol     // Dividend management
 StakingVault.sol      // Staking mechanics
@@ -57,13 +57,13 @@ FraudPrevention.sol   // Anti-fraud mechanisms
 
 ### **Backend Services**
 ```
-arxos/arx-backend/services/arx_token/
+arxos/bilt-backend/services/bilt_token/
 ├── minting_engine.py      // Contribution verification
 ├── dividend_calculator.py // Revenue attribution
 ├── fraud_detector.py     // AI + rule-based checks
 └── wallet_manager.py     // User wallet management
 
-arxos/arx-backend/services/arxscope/
+arxos/bilt-backend/services/biltscope/
 ├── dashboard_service.py   // Real-time metrics
 ├── transparency_logger.py // Audit trail
 └── privacy_layer.py      // Data anonymization
@@ -71,11 +71,11 @@ arxos/arx-backend/services/arxscope/
 
 ### **Database Schema**
 ```sql
-arx_contributions      // Track all contributions
-arx_revenue_attribution // Revenue attribution to objects
-arx_dividend_distributions // Dividend distribution history
-arxscope_metrics       // Dashboard metrics and transparency data
-arxscope_audit_logs    // Audit trail for transparency
+bilt_contributions      // Track all contributions
+bilt_revenue_attribution // Revenue attribution to objects
+bilt_dividend_distributions // Dividend distribution history
+biltscope_metrics       // Dashboard metrics and transparency data
+biltscope_audit_logs    // Audit trail for transparency
 ```
 
 ---
@@ -88,8 +88,8 @@ arxscope_audit_logs    // Audit trail for transparency
 - Database schema implementation
 
 ### **Phase 1: Core Contracts (Weeks 3-6)**
-- ARXToken implementation
-- ArxMintRegistry development
+- BILTToken implementation
+- BiltMintRegistry development
 - RevenueRouter creation
 
 ### **Phase 2: Backend Integration (Weeks 7-10)**
@@ -120,7 +120,7 @@ arxscope_audit_logs    // Audit trail for transparency
 ### **Economic KPIs**
 - **Contributor Retention**: > 80% monthly active
 - **Revenue Growth**: > 20% monthly platform growth
-- **Token Distribution**: > 60% ARX held by contributors
+- **Token Distribution**: > 60% BILT held by contributors
 - **Dividend Yield**: > 5% annual yield for all holders
 
 ---
@@ -133,4 +133,4 @@ arxscope_audit_logs    // Audit trail for transparency
 4. **Integrate with existing Arxos backend** systems
 5. **Implement security and compliance** measures
 
-The ARX cryptocurrency system has a solid foundation and is ready for structured development following the comprehensive framework provided. 
+The BILT cryptocurrency system has a solid foundation and is ready for structured development following the comprehensive framework provided. 

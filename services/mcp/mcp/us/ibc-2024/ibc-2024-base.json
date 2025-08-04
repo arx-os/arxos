@@ -1,0 +1,400 @@
+{
+  "mcp_id": "ibc-2024-base",
+  "name": "IBC 2024 Base",
+  "description": "International Building Code 2024 - Base Rules",
+  "jurisdiction": {
+    "country": "US",
+    "state": null,
+    "city": null,
+    "county": null
+  },
+  "version": "2024",
+  "effective_date": "2024-01-01",
+  "rules": [
+    {
+      "rule_id": "ibc_1003_1_2024",
+      "name": "Means of Egress - General",
+      "description": "General requirements for means of egress",
+      "category": "fire_safety_egress",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "occupancy",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Every room or space must have access to a means of egress per IBC 1003.1",
+          "severity": "error",
+          "code_reference": "IBC 1003.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1004_1_2024",
+      "name": "Occupant Load Calculation",
+      "description": "Occupant load calculation for assembly spaces",
+      "category": "fire_safety_egress",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "type",
+          "operator": "in",
+          "value": ["assembly", "dining", "conference", "meeting"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "area / 15",
+          "message": "Occupant load calculation: {result} persons (15 sq ft per person)",
+          "severity": "info",
+          "code_reference": "IBC 1004.1.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1005_1_2024",
+      "name": "Exit Access Width",
+      "description": "Exit access width requirements based on occupant load",
+      "category": "fire_safety_egress",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "exit_access",
+          "property": "width",
+          "operator": "<",
+          "value": 44
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Exit access width must be at least 44 inches per IBC 1005.1",
+          "severity": "error",
+          "code_reference": "IBC 1005.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1006_1_2024",
+      "name": "Exit Discharge",
+      "description": "Exit discharge requirements",
+      "category": "fire_safety_egress",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "exit_discharge",
+          "property": "distance_to_public_way",
+          "operator": ">",
+          "value": 50
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Exit discharge must be within 50 feet of public way per IBC 1006.1",
+          "severity": "error",
+          "code_reference": "IBC 1006.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1607_1_2024",
+      "name": "Live Load Requirements",
+      "description": "Minimum live load requirements for different occupancies",
+      "category": "structural_loads",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "floor",
+          "property": "occupancy_type",
+          "operator": "in",
+          "value": ["office", "residential", "assembly", "storage"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Live load must meet minimum requirements per IBC 1607.1",
+          "severity": "error",
+          "code_reference": "IBC 1607.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1608_1_2024",
+      "name": "Snow Load Requirements",
+      "description": "Snow load requirements for roof design",
+      "category": "structural_loads",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "roof",
+          "property": "slope",
+          "operator": "<",
+          "value": 70
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Snow load must be considered for roofs with slope less than 70 degrees per IBC 1608.1",
+          "severity": "error",
+          "code_reference": "IBC 1608.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1609_1_2024",
+      "name": "Wind Load Requirements",
+      "description": "Wind load requirements for building design",
+      "category": "structural_loads",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "height",
+          "operator": ">",
+          "value": 30
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Wind load must be calculated for buildings over 30 feet per IBC 1609.1",
+          "severity": "error",
+          "code_reference": "IBC 1609.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1705_1_2024",
+      "name": "Special Inspections",
+      "description": "Special inspection requirements for structural elements",
+      "category": "structural_materials",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "type",
+          "operator": "in",
+          "value": ["high_rise", "essential_facility", "hazardous"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Special inspections required for high-rise and essential facilities per IBC 1705.1",
+          "severity": "error",
+          "code_reference": "IBC 1705.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1803_1_2024",
+      "name": "Foundation Requirements",
+      "description": "Foundation investigation and design requirements",
+      "category": "structural_materials",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "foundation",
+          "property": "soil_bearing_capacity",
+          "operator": "<",
+          "value": 1500
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Foundation must be designed for actual soil conditions per IBC 1803.1",
+          "severity": "error",
+          "code_reference": "IBC 1803.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_1905_1_2024",
+      "name": "Concrete Requirements",
+      "description": "Concrete strength and design requirements",
+      "category": "structural_materials",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "concrete_element",
+          "property": "compressive_strength",
+          "operator": "<",
+          "value": 2500
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Concrete must have minimum compressive strength of 2500 psi per IBC 1905.1",
+          "severity": "error",
+          "code_reference": "IBC 1905.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_2205_1_2024",
+      "name": "Steel Construction",
+      "description": "Steel construction requirements",
+      "category": "structural_materials",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "steel_element",
+          "property": "grade",
+          "operator": "not_in",
+          "value": ["A36", "A572", "A992", "A913"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Steel must meet ASTM specifications per IBC 2205.1",
+          "severity": "error",
+          "code_reference": "IBC 2205.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_2304_1_2024",
+      "name": "Wood Construction",
+      "description": "Wood construction requirements",
+      "category": "structural_materials",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "wood_element",
+          "property": "grade",
+          "operator": "not_in",
+          "value": ["No. 1", "No. 2", "No. 3", "Stud", "Select Structural"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Wood must meet grading requirements per IBC 2304.1",
+          "severity": "error",
+          "code_reference": "IBC 2304.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_2403_1_2024",
+      "name": "Glass and Glazing",
+      "description": "Glass and glazing safety requirements",
+      "category": "structural_materials",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "glass_panel",
+          "property": "area",
+          "operator": ">",
+          "value": 9
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Glass panels over 9 sq ft must be safety glazing per IBC 2403.1",
+          "severity": "error",
+          "code_reference": "IBC 2403.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_3001_1_2024",
+      "name": "Elevator Requirements",
+      "description": "Elevator accessibility requirements",
+      "category": "accessibility",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "floors",
+          "operator": ">",
+          "value": 3
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Buildings over 3 stories must have accessible elevator per IBC 3001.1",
+          "severity": "error",
+          "code_reference": "IBC 3001.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_3002_1_2024",
+      "name": "Escalator Requirements",
+      "description": "Escalator safety requirements",
+      "category": "accessibility",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "escalator",
+          "property": "clearance",
+          "operator": "<",
+          "value": 40
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Escalator must have minimum 40-inch clearance per IBC 3002.1",
+          "severity": "warning",
+          "code_reference": "IBC 3002.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ibc_3103_1_2024",
+      "name": "Temporary Structures",
+      "description": "Temporary structure requirements",
+      "category": "general",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "temporary_structure",
+          "property": "duration",
+          "operator": ">",
+          "value": 180
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Temporary structures over 180 days require permanent structure permits per IBC 3103.1",
+          "severity": "warning",
+          "code_reference": "IBC 3103.1"
+        }
+      ]
+    }
+  ]
+} 

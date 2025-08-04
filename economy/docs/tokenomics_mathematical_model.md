@@ -101,7 +101,7 @@ def calculate_revenue_pool(
     Calculate total revenue pool for dividend distribution.
     
     IMPORTANT: Only platform revenue from data sales and service transactions
-    is eligible for ARX dividends. Arxos equity profits, IP licensing,
+    is eligible for BILT dividends. Arxos equity profits, IP licensing,
     or VC funding are NOT included in the dividend pool.
     
     Args:
@@ -122,28 +122,28 @@ def calculate_revenue_pool(
 ### **5. Dividend Per Token Calculation**
 
 ```python
-def calculate_dividend_per_token(total_revenue_pool: float, total_arx_supply: float) -> float:
+def calculate_dividend_per_token(total_revenue_pool: float, total_bilt_supply: float) -> float:
     """
-    Calculate dividend amount per ARX token.
+    Calculate dividend amount per BILT token.
     
     Args:
         total_revenue_pool: Total revenue available for dividends
-        total_arx_supply: Total circulating ARX supply
+        total_bilt_supply: Total circulating BILT supply
     
     Returns:
         float: Dividend amount per token
     """
-    if total_arx_supply <= 0:
+    if total_bilt_supply <= 0:
         return 0.0
     
-    return total_revenue_pool / total_arx_supply
+    return total_revenue_pool / total_bilt_supply
 ```
 
 ### **6. Individual Dividend Calculation**
 
 ```python
 def calculate_user_dividend(
-    user_arx_balance: float,
+    user_bilt_balance: float,
     dividend_per_token: float,
     minimum_payout_threshold: float = 0.01
 ) -> float:
@@ -151,14 +151,14 @@ def calculate_user_dividend(
     Calculate dividend payout for a specific user.
     
     Args:
-        user_arx_balance: User's ARX token balance
+        user_bilt_balance: User's BILT token balance
         dividend_per_token: Dividend amount per token
         minimum_payout_threshold: Minimum payout amount (default: $0.01)
     
     Returns:
         float: Dividend payout amount
     """
-    dividend_amount = user_arx_balance * dividend_per_token
+    dividend_amount = user_bilt_balance * dividend_per_token
     
     # Only pay out if above minimum threshold
     if dividend_amount < minimum_payout_threshold:
@@ -185,7 +185,7 @@ def calculate_token_value_equilibrium(
     
     Args:
         total_revenue: Annual platform revenue
-        total_supply: Total ARX supply
+        total_supply: Total BILT supply
         market_demand_multiplier: Market demand factor
         volatility_factor: Price volatility factor
     
@@ -225,7 +225,7 @@ def calculate_supply_adjustment(
     Calculate supply adjustment based on revenue growth and target inflation.
     
     Args:
-        current_supply: Current total ARX supply
+        current_supply: Current total BILT supply
         target_inflation_rate: Target annual inflation rate
         revenue_growth_rate: Annual revenue growth rate
         time_period_months: Time period in months
@@ -351,7 +351,7 @@ def calculate_economic_kpis(
     Calculate key economic performance indicators.
     
     Args:
-        total_supply: Total ARX supply
+        total_supply: Total BILT supply
         total_revenue: Platform revenue
         dividend_pool: Dividend pool amount
         active_holders: Number of active token holders
@@ -388,7 +388,7 @@ def calculate_economic_kpis(
 ### **Example 1: Standard HVAC VAV Object**
 
 ```python
-# ArxLogic validation results
+# BiltLogic validation results
 validation_metrics = {
     'simulation_pass_rate': 0.95,
     'ai_accuracy_rate': 0.92,
@@ -400,10 +400,10 @@ validation_metrics = {
 validation_score = calculate_validation_score(**validation_metrics)
 # Result: 0.91
 
-# Calculate ARX mint
+# Calculate BILT mint
 complexity_multiplier = get_complexity_multiplier('hvac')
-arx_minted = calculate_arx_mint(validation_score, complexity_multiplier)
-# Result: 1.365 ARX (1.0 * 0.91 * 1.5)
+bilt_minted = calculate_bilt_mint(validation_score, complexity_multiplier)
+# Result: 1.365 BILT (1.0 * 0.91 * 1.5)
 ```
 
 ### **Example 2: Dividend Distribution**
@@ -421,9 +421,9 @@ dividend_pool = calculate_revenue_pool(**revenue_data)
 # Result: $150,000
 
 # Calculate dividend per token
-total_supply = 1000000.0  # 1M ARX
+total_supply = 1000000.0  # 1M BILT
 dividend_per_token = calculate_dividend_per_token(dividend_pool, total_supply)
-# Result: $0.15 per ARX
+# Result: $0.15 per BILT
 
 # Calculate user dividend
 user_balance = 100.0
@@ -453,10 +453,10 @@ user_dividend = calculate_user_dividend(user_balance, dividend_per_token)
 
 ### **Legal Compliance Integration**
 
-- **Securities Law Compliance**: ARX structured as revenue-sharing token, not equity
+- **Securities Law Compliance**: BILT structured as revenue-sharing token, not equity
 - **KYC/AML Requirements**: Integration with compliance services for institutional holders
-- **Equity Separation**: Clear distinction between ARX tokens and Arxos equity
+- **Equity Separation**: Clear distinction between BILT tokens and Arxos equity
 - **Regulatory Reporting**: Automated reporting for compliance requirements
 - **Jurisdiction Handling**: Support for different regulatory requirements by region
 
-This mathematical model provides a comprehensive framework for ARX tokenomics that integrates seamlessly with the existing Arxos infrastructure while maintaining economic stability, transparency, and legal compliance. 
+This mathematical model provides a comprehensive framework for BILT tokenomics that integrates seamlessly with the existing Arxos infrastructure while maintaining economic stability, transparency, and legal compliance. 

@@ -33,6 +33,8 @@ from api.routes import (
     building_router,
     health_router
 )
+from api.routes.svgx_routes import router as svgx_router
+from api.routes.infrastructure_routes import router as infrastructure_router
 from api.middleware import (
     RequestLoggingMiddleware,
     ErrorHandlingMiddleware,
@@ -427,6 +429,8 @@ app.include_router(room_router, prefix="/api/v1/rooms", tags=["Rooms"])
 app.include_router(user_router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(project_router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(building_router, prefix="/api/v1/buildings", tags=["Buildings"])
+app.include_router(svgx_router, prefix="/api/v1", tags=["SVGX Engine"])
+app.include_router(infrastructure_router, prefix="/api/v1", tags=["Infrastructure as Code"])
 
 
 if __name__ == "__main__":

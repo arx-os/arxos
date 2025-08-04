@@ -1,0 +1,42 @@
+# BILT Token System Dependencies
+
+# Web3 and Blockchain
+web3>=6.0.0
+eth-account>=0.8.0
+eth-utils>=2.0.0
+
+# FastAPI and Web Framework
+fastapi>=0.100.0
+uvicorn>=0.20.0
+pydantic>=2.0.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+alembic>=1.10.0
+
+# Async Support
+asyncio
+aiohttp>=3.8.0
+
+# Utilities
+python-dotenv>=1.0.0
+cryptography>=3.4.0
+hashlib
+json
+logging
+datetime
+decimal
+typing
+dataclasses
+enum
+
+# Testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.10.0
+
+# Development
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0 

@@ -1,85 +1,103 @@
 
-# ARX Hybrid Model: Open Currency with Equal Dividend Distribution
+# BILT Hybrid Model: Open Currency with Equal Dividend Distribution
 
-## 🌐 Overview
+## 🎯 **Overview**
 
-ARX is a freely tradable cryptocurrency issued through contributions to the Arxos ecosystem. It is minted only through verified work tied to specific `arxobject`s. All ARX holders receive equal dividend payouts as a percentage from all data sales and service transactions across the platform.
-
-This model ensures contributors are rewarded for their work while enabling broad secondary market participation with equal dividend rights.
+BILT is a freely tradable cryptocurrency issued through contributions to the Arxos ecosystem. It is minted only through verified work tied to specific `arxobject`s. All BILT holders receive equal dividend payouts as a percentage from all data sales and service transactions across the platform.
 
 ---
 
-## 🔗 1. On-Chain Dividend Routing: Technical Model
+## 🏗️ **Core Architecture**
 
-### 🧱 Structure
+### **A. Object-Based Minting**
 Each `arxobject` has:
-- A **unique hash ID**
-- A **mint record** tied to contributor wallet(s)
-- A **verification record** from secondary user approval
+- **Unique Hash**: Cryptographic identifier
+- **Contributor Wallet**: Address that created the object
+- **Validation Score**: ArxLogic AI validation (0.0 to 1.0)
+- **Complexity Multiplier**: System type complexity factor
+- **Mint Amount**: BILT tokens minted for this object
 
-### 🔄 Smart Contracts
-
-- `ARXToken`: Standard ERC-20 token
+### **B. Smart Contract Layer**
+- `BILTToken`: Standard ERC-20 token
 - `ArxMintRegistry`: Records the contributor and their associated `arxobject` hash on mint
-- `RevenueRouter`: Routes incoming payments (data access/service txs) to the dividend pool
-- `DividendVault`: Periodically distributes funds equally to all ARX holders
+- `RevenueRouter`: Routes platform revenue to dividend pool
+- `DividendVault`: Periodically distributes funds equally to all BILT holders
 
-### 🔐 Key Enforcement Logic
-- When ARX is minted, the contributor wallet is bound to the `arxobject` ID
-- Secondary user verification is required for minting to proceed
-- All platform revenue flows into a single dividend pool
-- Dividend payout is distributed equally to all ARX holders regardless of ownership source
-
----
-
-## 🎯 2. Maintaining Fungibility with Equal Dividend Rights
-
-ARX remains fungible by:
-- Ensuring all tokens are **interchangeable** for payment, access, and trade
-- All holders receive **equal dividend rights** regardless of how they acquired their tokens
-- No distinction between contributor-minted tokens and secondary market tokens
-
-This preserves:
-- 🔁 **Free market exchangeability**
-- 🧾 **Tax/accounting simplicity**
-- 💰 **Equal dividend participation for all holders**
+### **C. Dividend Distribution**
+- When BILT is minted, the contributor wallet is bound to the `arxobject` ID
+- Platform revenue from data sales and service transactions flows to dividend pool
+- Dividend payout is distributed equally to all BILT holders regardless of ownership source
+- No distinction between contributor-minted and secondary market tokens
 
 ---
 
-## ⚖️ 3. Legal and Investor Viability
+## 💰 **Economic Model**
 
-### ✅ Benefits
-- Contributors are **workers**, not investors
-- ARX holders are **currency participants**, not equity holders
-- Dividends are framed as **platform revenue sharing**, not profit distributions
-- Equal treatment of all token holders
+### **A. Fungibility with Attribution**
+BILT remains fungible by:
+- **Equal Dividend Rights**: All tokens receive same dividend percentage
+- **Free Trading**: Tokens trade freely on open markets
+- **No Ownership Tiers**: No special rights for contributor-minted tokens
+- **Transparent Attribution**: Public record of which objects contributed to revenue
 
-### 🔍 Regulatory Mitigations
-- Contributions mint tokens via **provable work**
-- Revenue flows are **decentralized and usage-based**
-- DAO can be established for platform-wide revenue (if needed)
-- No speculative promise: token value derives from **utility + verified work**
-
----
-
-## 🧩 Summary
-
-| Feature | Description |
-|--------|-------------|
-| Minting | Only from work tied to `arxobject`s with secondary verification |
-| Token | Fully fungible ERC-20 |
-| Supply | Unlimited based on objects created |
-| Dividends | Equal distribution to all ARX holders |
-| Exchangeable | Yes — ARX trades freely on open markets |
-| Governance | Optional DAO for treasury/protocol votes |
-| Risk Mitigation | Clear separation of labor/reward vs investor/speculation |
+### **B. Legal Classification**
+- BILT holders are **currency participants**, not equity holders
+- Contributors are **workers earning for labor**
+- Dividends are **platform revenue sharing**
+- Clear separation from Arxos equity
 
 ---
 
-## ✅ Next Steps
+## 🔄 **Operational Flow**
 
+| Stage | Process | Outcome |
+|-------|---------|---------|
+| Contribution | User uploads building object | Object gets unique hash |
+| Validation | ArxLogic AI + peer verification | Validation score assigned |
+| Minting | Only from work tied to `arxobject`s with secondary verification | BILT minted to contributor |
+| Revenue | Platform generates revenue from data/service sales | Funds flow to dividend pool |
+| Dividends | Equal distribution to all BILT holders | Pro-rata payout to all holders |
+| Exchangeable | Yes — BILT trades freely on open markets | Market-driven price discovery |
+
+---
+
+## 🛠️ **Implementation Requirements**
+
+### **A. Smart Contract Development**
 - [ ] Design `ArxMintRegistry` + object hash format
-- [ ] Prototype `RevenueRouter` smart contract with equal dividend distribution
-- [ ] Define dividend vault payout intervals + mechanisms
-- [ ] Implement secondary user verification system
-- [ ] Conduct legal review under SEC, EU MiCA, and commodity law
+- [ ] Implement `BILTToken` with minting controls
+- [ ] Create `RevenueRouter` for dividend distribution
+- [ ] Deploy `DividendVault` for periodic payouts
+
+### **B. Backend Integration**
+- [ ] ArxLogic validation score integration
+- [ ] Object hash generation and tracking
+- [ ] Revenue attribution algorithms
+- [ ] Dividend calculation engine
+
+### **C. Legal Compliance**
+- [ ] Worker classification documentation
+- [ ] Tax treatment guidelines
+- [ ] Regulatory compliance framework
+- [ ] Terms of service and risk disclosure
+
+---
+
+## 🎯 **Benefits**
+
+### **For Contributors**
+- Immediate reward for quality work
+- Ongoing dividends from platform success
+- No discrimination based on contribution size
+
+### **For Token Holders**
+- Equal dividend rights regardless of source
+- Free market trading
+- Simple tax treatment
+
+### **For Platform**
+- Quality control through AI + verification
+- Sustainable economics based on real usage
+- Clear regulatory compliance
+
+This hybrid model creates a fair and sustainable ecosystem where quality work is rewarded with both immediate tokens and ongoing platform revenue sharing, while maintaining equal rights for all token holders.

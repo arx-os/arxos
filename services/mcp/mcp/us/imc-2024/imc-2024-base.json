@@ -1,0 +1,402 @@
+{
+  "mcp_id": "imc-2024-base",
+  "name": "IMC 2024 Base",
+  "description": "International Mechanical Code 2024 - Base Rules",
+  "jurisdiction": {
+    "country": "US",
+    "state": null,
+    "city": null,
+    "county": null
+  },
+  "version": "2024",
+  "effective_date": "2024-01-01",
+  "rules": [
+    {
+      "rule_id": "imc_401_1_2024",
+      "name": "Ventilation Requirements",
+      "description": "General ventilation requirements for occupied spaces",
+      "category": "mechanical_ventilation",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "occupancy",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "All occupied spaces must have adequate ventilation per IMC 401.1",
+          "severity": "error",
+          "code_reference": "IMC 401.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_401_2_2024",
+      "name": "Natural Ventilation",
+      "description": "Natural ventilation requirements for habitable spaces",
+      "category": "mechanical_ventilation",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "type",
+          "operator": "in",
+          "value": ["bedroom", "living_room", "dining_room", "kitchen"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "area * 0.05",
+          "message": "Natural ventilation area required: {result} sq ft (5% of floor area)",
+          "severity": "info",
+          "code_reference": "IMC 401.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_403_1_2024",
+      "name": "Kitchen Ventilation",
+      "description": "Kitchen ventilation requirements",
+      "category": "mechanical_ventilation",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "type",
+          "operator": "==",
+          "value": "kitchen"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Kitchens must have mechanical ventilation per IMC 403.1",
+          "severity": "error",
+          "code_reference": "IMC 403.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_403_2_2024",
+      "name": "Bathroom Ventilation",
+      "description": "Bathroom ventilation requirements",
+      "category": "mechanical_ventilation",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "type",
+          "operator": "in",
+          "value": ["bathroom", "toilet_room", "shower_room"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Bathrooms must have mechanical ventilation per IMC 403.2",
+          "severity": "error",
+          "code_reference": "IMC 403.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_403_3_2024",
+      "name": "Laundry Ventilation",
+      "description": "Laundry room ventilation requirements",
+      "category": "mechanical_ventilation",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "type",
+          "operator": "==",
+          "value": "laundry"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Laundry rooms should have mechanical ventilation per IMC 403.3",
+          "severity": "warning",
+          "code_reference": "IMC 403.3"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_501_1_2024",
+      "name": "Duct System Design",
+      "description": "Duct system design requirements",
+      "category": "mechanical_hvac",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "duct_system",
+          "property": "material",
+          "operator": "not_in",
+          "value": ["galvanized_steel", "aluminum", "flexible_metal", "flexible_non_metal"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Duct systems must use approved materials per IMC 501.1",
+          "severity": "error",
+          "code_reference": "IMC 501.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_502_1_2024",
+      "name": "Duct Sizing",
+      "description": "Duct sizing requirements based on airflow",
+      "category": "mechanical_hvac",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "duct",
+          "property": "airflow",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "airflow * 0.1",
+          "message": "Duct cross-sectional area required: {result} sq ft",
+          "severity": "info",
+          "code_reference": "IMC 502.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_503_1_2024",
+      "name": "Duct Insulation",
+      "description": "Duct insulation requirements",
+      "category": "mechanical_hvac",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "duct",
+          "property": "location",
+          "operator": "in",
+          "value": ["unconditioned_space", "exterior", "crawlspace", "attic"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Ducts in unconditioned spaces must be insulated per IMC 503.1",
+          "severity": "warning",
+          "code_reference": "IMC 503.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_601_1_2024",
+      "name": "HVAC Equipment",
+      "description": "HVAC equipment requirements",
+      "category": "mechanical_hvac",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "hvac_equipment",
+          "property": "type",
+          "operator": "not_in",
+          "value": ["air_handler", "furnace", "heat_pump", "chiller", "boiler"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "HVAC equipment must be approved type per IMC 601.1",
+          "severity": "error",
+          "code_reference": "IMC 601.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_602_1_2024",
+      "name": "Equipment Location",
+      "description": "HVAC equipment location requirements",
+      "category": "mechanical_hvac",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "hvac_equipment",
+          "property": "location",
+          "operator": "in",
+          "value": ["bedroom", "bathroom", "closet"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "HVAC equipment must not be installed in bedrooms, bathrooms, or closets per IMC 602.1",
+          "severity": "error",
+          "code_reference": "IMC 602.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_603_1_2024",
+      "name": "Equipment Sizing",
+      "description": "HVAC equipment sizing requirements",
+      "category": "mechanical_hvac",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "hvac_equipment",
+          "property": "capacity",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "capacity * 1.2",
+          "message": "Equipment capacity should be 20% larger than calculated load: {result} BTU/hr",
+          "severity": "info",
+          "code_reference": "IMC 603.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_701_1_2024",
+      "name": "Combustion Air",
+      "description": "Combustion air requirements for fuel-burning equipment",
+      "category": "mechanical_hvac",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "fuel_burning_equipment",
+          "property": "type",
+          "operator": "in",
+          "value": ["furnace", "boiler", "water_heater", "fireplace"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Fuel-burning equipment must have adequate combustion air per IMC 701.1",
+          "severity": "error",
+          "code_reference": "IMC 701.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_801_1_2024",
+      "name": "Vent Connectors",
+      "description": "Vent connector requirements",
+      "category": "mechanical_hvac",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "vent_connector",
+          "property": "material",
+          "operator": "not_in",
+          "value": ["galvanized_steel", "stainless_steel", "aluminum", "type_b_vent"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Vent connectors must use approved materials per IMC 801.1",
+          "severity": "error",
+          "code_reference": "IMC 801.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_802_1_2024",
+      "name": "Chimney Requirements",
+      "description": "Chimney requirements for fuel-burning equipment",
+      "category": "mechanical_hvac",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "chimney",
+          "property": "height",
+          "operator": "<",
+          "value": 3
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Chimney must extend at least 3 feet above roof per IMC 802.1",
+          "severity": "error",
+          "code_reference": "IMC 802.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_901_1_2024",
+      "name": "Energy Efficiency",
+      "description": "Energy efficiency requirements for HVAC systems",
+      "category": "energy_efficiency",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "hvac_equipment",
+          "property": "efficiency_rating",
+          "operator": "<",
+          "value": 80
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "HVAC equipment should have minimum 80% efficiency per IMC 901.1",
+          "severity": "warning",
+          "code_reference": "IMC 901.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "imc_1001_1_2024",
+      "name": "Refrigeration Systems",
+      "description": "Refrigeration system requirements",
+      "category": "mechanical_hvac",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "refrigeration_system",
+          "property": "refrigerant_type",
+          "operator": "not_in",
+          "value": ["r410a", "r134a", "r22", "r407c"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Refrigeration systems must use approved refrigerants per IMC 1001.1",
+          "severity": "error",
+          "code_reference": "IMC 1001.1"
+        }
+      ]
+    }
+  ]
+} 

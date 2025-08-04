@@ -1,0 +1,314 @@
+{
+  "mcp_id": "ncc-2022",
+  "name": "Australian National Construction Code 2022",
+  "description": "National Construction Code of Australia 2022 - Comprehensive building code for Australia",
+  "jurisdiction": {
+    "country": "AU",
+    "state": null,
+    "city": null
+  },
+  "version": "2022",
+  "effective_date": "2022-01-01",
+  "rules": [
+    {
+      "rule_id": "ncc_a1_1",
+      "name": "Building Classification",
+      "description": "Buildings shall be classified according to NCC",
+      "category": "building_classification",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "building_class",
+          "operator": "in",
+          "value": ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8", "Class 9", "Class 10"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Building must have valid classification per NCC A1.1",
+          "severity": "error",
+          "code_reference": "NCC A1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_b1_1",
+      "name": "Structural Provisions - General",
+      "description": "Buildings shall be structurally adequate",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "structural_adequacy",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural elements must be adequate per NCC B1.1",
+          "severity": "error",
+          "code_reference": "NCC B1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_b1_2",
+      "name": "Structural Provisions - Loads",
+      "description": "Structural loads shall be considered",
+      "category": "structural_loads",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "loads_considered",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural loads must be considered per NCC B1.2",
+          "severity": "error",
+          "code_reference": "NCC B1.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_c1_1",
+      "name": "Fire Resistance - General",
+      "description": "Fire resistance shall be provided where required",
+      "category": "fire_safety_resistance",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "fire_element",
+          "property": "fire_resistance_provided",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Fire resistance must be provided per NCC C1.1",
+          "severity": "error",
+          "code_reference": "NCC C1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_d1_1",
+      "name": "Access and Egress - General",
+      "description": "Access and egress shall be provided",
+      "category": "fire_safety_egress",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "access_egress_provided",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Access and egress must be provided per NCC D1.1",
+          "severity": "error",
+          "code_reference": "NCC D1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_d2_1",
+      "name": "Access and Egress - Number of Exits",
+      "description": "Adequate number of exits shall be provided",
+      "category": "fire_safety_egress",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "exit_count",
+          "operator": ">=",
+          "value": 2
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Adequate number of exits must be provided per NCC D2.1",
+          "severity": "error",
+          "code_reference": "NCC D2.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_e1_1",
+      "name": "Services and Equipment - General",
+      "description": "Services and equipment shall be safe",
+      "category": "electrical_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "safety_verified",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Electrical equipment must be safe per NCC E1.1",
+          "severity": "error",
+          "code_reference": "NCC E1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_e2_1",
+      "name": "Services and Equipment - Electrical",
+      "description": "Electrical installations shall comply with AS/NZS 3000",
+      "category": "electrical_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_installation",
+          "property": "as_nzs_3000_compliant",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Electrical installations must comply with AS/NZS 3000 per NCC E2.1",
+          "severity": "error",
+          "code_reference": "NCC E2.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_f1_1",
+      "name": "Health and Amenity - General",
+      "description": "Health and amenity shall be provided",
+      "category": "health_amenity",
+      "severity": "warning",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "health_amenity_provided",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Health and amenity must be provided per NCC F1.1",
+          "severity": "warning",
+          "code_reference": "NCC F1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_f2_1",
+      "name": "Health and Amenity - Sanitary Facilities",
+      "description": "Sanitary facilities shall be provided",
+      "category": "plumbing_water_supply",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "sanitary_facilities_provided",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Sanitary facilities must be provided per NCC F2.1",
+          "severity": "error",
+          "code_reference": "NCC F2.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_g1_1",
+      "name": "Energy Efficiency - General",
+      "description": "Energy efficiency shall be provided",
+      "category": "energy_efficiency",
+      "severity": "warning",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "energy_efficiency_provided",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Energy efficiency must be provided per NCC G1.1",
+          "severity": "warning",
+          "code_reference": "NCC G1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ncc_h1_1",
+      "name": "Energy Efficiency - Building Fabric",
+      "description": "Building fabric shall meet energy efficiency requirements",
+      "category": "energy_efficiency",
+      "severity": "warning",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building_envelope",
+          "property": "energy_efficiency_verified",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Building fabric must meet energy efficiency requirements per NCC H1.1",
+          "severity": "warning",
+          "code_reference": "NCC H1.1"
+        }
+      ]
+    }
+  ]
+} 

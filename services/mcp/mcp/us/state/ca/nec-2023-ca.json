@@ -1,0 +1,184 @@
+{
+  "mcp_id": "nec-2023-ca",
+  "name": "NEC 2023 California Amendments",
+  "description": "National Electrical Code 2023 - California Amendments",
+  "jurisdiction": {
+    "country": "US",
+    "state": "CA",
+    "city": null,
+    "county": null
+  },
+  "version": "2023",
+  "effective_date": "2023-01-01",
+  "rules": [
+    {
+      "rule_id": "nec_210_8_ca_2023",
+      "name": "Enhanced GFCI Protection - California",
+      "description": "Enhanced GFCI protection requirements for California",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_outlet",
+          "property": "location",
+          "operator": "in",
+          "value": ["bathroom", "kitchen", "outdoor", "garage", "basement", "crawlspace", "unfinished_basement", "laundry", "utility_room"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced GFCI protection required for all wet locations in California per NEC 210.8(A) CA",
+          "severity": "error",
+          "code_reference": "NEC 210.8(A) CA"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_220_14_ca_2023",
+      "name": "California Lighting Load",
+      "description": "California-specific lighting load calculation",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "area",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "area * 2.5",
+          "message": "California lighting load calculation: {result} VA per square foot (reduced for energy efficiency)",
+          "severity": "info",
+          "code_reference": "NEC 220.14(J) CA"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_310_16_ca_2023",
+      "name": "Conductor Derating - California",
+      "description": "California-specific conductor derating requirements",
+      "category": "electrical_design",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_conductor",
+          "property": "ambient_temperature",
+          "operator": ">",
+          "value": 86
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Conductor derating required for high ambient temperatures in California per NEC 310.16 CA",
+          "severity": "error",
+          "code_reference": "NEC 310.16 CA"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_700_12_ca_2023",
+      "name": "Enhanced Emergency Lighting - California",
+      "description": "Enhanced emergency lighting requirements for California",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "occupancy",
+          "operator": ">",
+          "value": 30
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced emergency lighting required for occupancies over 30 persons in California per NEC 700.12 CA",
+          "severity": "error",
+          "code_reference": "NEC 700.12 CA"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_800_25_ca_2023",
+      "name": "Communications Cable - California",
+      "description": "California-specific communications cable requirements",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "communications_cable",
+          "property": "type",
+          "operator": "not_in",
+          "value": ["cat6", "cat6a", "cat7", "fiber_optic"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "High-speed communications cable required for California buildings per NEC 800.25 CA",
+          "severity": "warning",
+          "code_reference": "NEC 800.25 CA"
+        }
+      ]
+    },
+    {
+      "rule_id": "title24_ca_2023",
+      "name": "California Energy Code Integration",
+      "description": "Integration with California Title 24 Energy Code",
+      "category": "energy_efficiency",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_system",
+          "property": "energy_efficiency_rating",
+          "operator": "<",
+          "value": 85
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Electrical systems must meet California Title 24 energy efficiency requirements",
+          "severity": "error",
+          "code_reference": "Title 24 CA"
+        }
+      ]
+    },
+    {
+      "rule_id": "seismic_ca_2023",
+      "name": "Seismic Requirements - California",
+      "description": "California seismic requirements for electrical equipment",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "weight",
+          "operator": ">",
+          "value": 400
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Electrical equipment over 400 lbs must be seismically restrained in California",
+          "severity": "error",
+          "code_reference": "CBC 1613A.1.1"
+        }
+      ]
+    }
+  ]
+} 

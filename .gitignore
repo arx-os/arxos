@@ -80,4 +80,5 @@ MANIFEST
 
 # Arxos specific
 arxos_dev.db 
-svgx_engine/cache/ 
+svgx_engine/cache/
+svgx_engine/svgx_cache/ 

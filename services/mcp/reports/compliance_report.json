@@ -1,0 +1,575 @@
+{
+  "report_metadata": {
+    "report_type": "MCP Compliance Report",
+    "generated_date": "2025-08-04T15:05:47.127163",
+    "version": "1.0",
+    "generator": "Arxos MCP Report Generator"
+  },
+  "building_information": {
+    "building_id": "office_building_001",
+    "building_name": "Downtown Office Building"
+  },
+  "compliance_summary": {
+    "overall_compliance_score": 42.857142857142854,
+    "critical_violations": 9,
+    "total_violations": 9,
+    "total_warnings": 0,
+    "total_mcps_evaluated": 3
+  },
+  "mcp_validation_reports": [
+    {
+      "mcp_information": {
+        "mcp_id": "us_fl_nec_2020",
+        "mcp_name": "Florida NEC 2020",
+        "jurisdiction": {
+          "country": "US",
+          "state": "FL",
+          "city": null,
+          "county": null
+        },
+        "validation_date": "2025-08-04T15:05:47.127097"
+      },
+      "validation_summary": {
+        "total_rules": 3,
+        "passed_rules": 1,
+        "failed_rules": 2,
+        "total_violations": 5,
+        "total_warnings": 0,
+        "compliance_percentage": 33.33333333333333
+      },
+      "rule_results": [
+        {
+          "rule_information": {
+            "rule_id": "nec_210_8",
+            "rule_name": "GFCI Protection",
+            "category": "electrical_safety"
+          },
+          "execution_summary": {
+            "passed": false,
+            "execution_time": 1.2159347534179688e-05,
+            "timestamp": "2025-08-04T15:05:47.127053"
+          },
+          "violations": [
+            {
+              "rule_id": "nec_210_8",
+              "rule_name": "GFCI Protection",
+              "category": "electrical_safety",
+              "severity": "error",
+              "message": "GFCI protection required for outlets in wet locations",
+              "code_reference": "NEC 210.8",
+              "element_information": {
+                "element_id": "outlet_bathroom_001",
+                "element_type": "electrical_outlet",
+                "location": {
+                  "x": 100,
+                  "y": 200,
+                  "width": 8,
+                  "height": 8
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127048"
+            },
+            {
+              "rule_id": "nec_210_8",
+              "rule_name": "GFCI Protection",
+              "category": "electrical_safety",
+              "severity": "error",
+              "message": "GFCI protection required for outlets in wet locations",
+              "code_reference": "NEC 210.8",
+              "element_information": {
+                "element_id": "outlet_kitchen_001",
+                "element_type": "electrical_outlet",
+                "location": {
+                  "x": 150,
+                  "y": 250,
+                  "width": 8,
+                  "height": 8
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127050"
+            }
+          ],
+          "warnings": [],
+          "calculations": {}
+        },
+        {
+          "rule_information": {
+            "rule_id": "nec_220_12",
+            "rule_name": "Branch Circuit Load Calculations",
+            "category": "electrical_design"
+          },
+          "execution_summary": {
+            "passed": true,
+            "execution_time": 3.314018249511719e-05,
+            "timestamp": "2025-08-04T15:05:47.127088"
+          },
+          "violations": [],
+          "warnings": [],
+          "calculations": {
+            "area * 3.0": {
+              "formula": "area * 3.0",
+              "result": 202200.0,
+              "unit": "VA",
+              "description": "General lighting load calculation"
+            }
+          }
+        },
+        {
+          "rule_information": {
+            "rule_id": "nec_700_12",
+            "rule_name": "Emergency Lighting",
+            "category": "electrical_safety"
+          },
+          "execution_summary": {
+            "passed": false,
+            "execution_time": 6.198883056640625e-06,
+            "timestamp": "2025-08-04T15:05:47.127096"
+          },
+          "violations": [
+            {
+              "rule_id": "nec_700_12",
+              "rule_name": "Emergency Lighting",
+              "category": "electrical_safety",
+              "severity": "error",
+              "message": "Emergency lighting required for occupied spaces",
+              "code_reference": "NEC 700.12",
+              "element_information": {
+                "element_id": "room_bathroom_001",
+                "element_type": "room",
+                "location": {
+                  "x": 50,
+                  "y": 150,
+                  "width": 100,
+                  "height": 80
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127093"
+            },
+            {
+              "rule_id": "nec_700_12",
+              "rule_name": "Emergency Lighting",
+              "category": "electrical_safety",
+              "severity": "error",
+              "message": "Emergency lighting required for occupied spaces",
+              "code_reference": "NEC 700.12",
+              "element_information": {
+                "element_id": "room_kitchen_001",
+                "element_type": "room",
+                "location": {
+                  "x": 150,
+                  "y": 200,
+                  "width": 120,
+                  "height": 120
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127094"
+            },
+            {
+              "rule_id": "nec_700_12",
+              "rule_name": "Emergency Lighting",
+              "category": "electrical_safety",
+              "severity": "error",
+              "message": "Emergency lighting required for occupied spaces",
+              "code_reference": "NEC 700.12",
+              "element_information": {
+                "element_id": "room_office_001",
+                "element_type": "room",
+                "location": {
+                  "x": 200,
+                  "y": 300,
+                  "width": 200,
+                  "height": 150
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127094"
+            }
+          ],
+          "warnings": [],
+          "calculations": {}
+        }
+      ],
+      "violations_by_category": {
+        "electrical_safety": 5
+      },
+      "warnings_by_category": {}
+    },
+    {
+      "mcp_information": {
+        "mcp_id": "us_fl_ipc_2021",
+        "mcp_name": "Florida IPC 2021",
+        "jurisdiction": {
+          "country": "US",
+          "state": "FL",
+          "city": null,
+          "county": null
+        },
+        "validation_date": "2025-08-04T15:05:47.127128"
+      },
+      "validation_summary": {
+        "total_rules": 2,
+        "passed_rules": 1,
+        "failed_rules": 1,
+        "total_violations": 1,
+        "total_warnings": 0,
+        "compliance_percentage": 50.0
+      },
+      "rule_results": [
+        {
+          "rule_information": {
+            "rule_id": "ipc_709_1",
+            "rule_name": "Fixture Unit Calculations",
+            "category": "plumbing_water_supply"
+          },
+          "execution_summary": {
+            "passed": true,
+            "execution_time": 1.3828277587890625e-05,
+            "timestamp": "2025-08-04T15:05:47.127123"
+          },
+          "violations": [],
+          "warnings": [],
+          "calculations": {
+            "1.0": {
+              "formula": "1.0",
+              "result": 1.0,
+              "unit": "fixture_units",
+              "description": "Bathroom sink fixture unit calculation"
+            }
+          }
+        },
+        {
+          "rule_information": {
+            "rule_id": "ipc_403_1",
+            "rule_name": "Water Heater Requirements",
+            "category": "plumbing_water_supply"
+          },
+          "execution_summary": {
+            "passed": false,
+            "execution_time": 2.86102294921875e-06,
+            "timestamp": "2025-08-04T15:05:47.127128"
+          },
+          "violations": [
+            {
+              "rule_id": "ipc_403_1",
+              "rule_name": "Water Heater Requirements",
+              "category": "plumbing_water_supply",
+              "severity": "error",
+              "message": "Water heater must have temperature and pressure relief valve",
+              "code_reference": "IPC 403.1",
+              "element_information": {
+                "element_id": "water_heater_001",
+                "element_type": "water_heater",
+                "location": {
+                  "x": 550,
+                  "y": 200,
+                  "width": 30,
+                  "height": 40
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127127"
+            }
+          ],
+          "warnings": [],
+          "calculations": {}
+        }
+      ],
+      "violations_by_category": {
+        "plumbing_water_supply": 1
+      },
+      "warnings_by_category": {}
+    },
+    {
+      "mcp_information": {
+        "mcp_id": "us_fl_imc_2021",
+        "mcp_name": "Florida IMC 2021",
+        "jurisdiction": {
+          "country": "US",
+          "state": "FL",
+          "city": null,
+          "county": null
+        },
+        "validation_date": "2025-08-04T15:05:47.127154"
+      },
+      "validation_summary": {
+        "total_rules": 2,
+        "passed_rules": 1,
+        "failed_rules": 1,
+        "total_violations": 3,
+        "total_warnings": 0,
+        "compliance_percentage": 50.0
+      },
+      "rule_results": [
+        {
+          "rule_information": {
+            "rule_id": "imc_401_1",
+            "rule_name": "Ventilation Requirements",
+            "category": "mechanical_ventilation"
+          },
+          "execution_summary": {
+            "passed": false,
+            "execution_time": 4.76837158203125e-06,
+            "timestamp": "2025-08-04T15:05:47.127143"
+          },
+          "violations": [
+            {
+              "rule_id": "imc_401_1",
+              "rule_name": "Ventilation Requirements",
+              "category": "mechanical_ventilation",
+              "severity": "error",
+              "message": "Mechanical ventilation required for occupied spaces",
+              "code_reference": "IMC 401.1",
+              "element_information": {
+                "element_id": "room_bathroom_001",
+                "element_type": "room",
+                "location": {
+                  "x": 50,
+                  "y": 150,
+                  "width": 100,
+                  "height": 80
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127140"
+            },
+            {
+              "rule_id": "imc_401_1",
+              "rule_name": "Ventilation Requirements",
+              "category": "mechanical_ventilation",
+              "severity": "error",
+              "message": "Mechanical ventilation required for occupied spaces",
+              "code_reference": "IMC 401.1",
+              "element_information": {
+                "element_id": "room_kitchen_001",
+                "element_type": "room",
+                "location": {
+                  "x": 150,
+                  "y": 200,
+                  "width": 120,
+                  "height": 120
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127141"
+            },
+            {
+              "rule_id": "imc_401_1",
+              "rule_name": "Ventilation Requirements",
+              "category": "mechanical_ventilation",
+              "severity": "error",
+              "message": "Mechanical ventilation required for occupied spaces",
+              "code_reference": "IMC 401.1",
+              "element_information": {
+                "element_id": "room_office_001",
+                "element_type": "room",
+                "location": {
+                  "x": 200,
+                  "y": 300,
+                  "width": 200,
+                  "height": 150
+                }
+              },
+              "validation_details": {
+                "calculated_value": null,
+                "expected_value": null
+              },
+              "timestamp": "2025-08-04T15:05:47.127142"
+            }
+          ],
+          "warnings": [],
+          "calculations": {}
+        },
+        {
+          "rule_information": {
+            "rule_id": "imc_502_1",
+            "rule_name": "HVAC System Sizing",
+            "category": "mechanical_hvac"
+          },
+          "execution_summary": {
+            "passed": true,
+            "execution_time": 1.0013580322265625e-05,
+            "timestamp": "2025-08-04T15:05:47.127153"
+          },
+          "violations": [],
+          "warnings": [],
+          "calculations": {
+            "capacity * 0.85": {
+              "formula": "capacity * 0.85",
+              "result": 6800.0,
+              "unit": "BTU/hr",
+              "description": "Effective cooling capacity calculation"
+            }
+          }
+        }
+      ],
+      "violations_by_category": {
+        "mechanical_ventilation": 3
+      },
+      "warnings_by_category": {}
+    }
+  ],
+  "violation_analysis": {
+    "violation_statistics": {
+      "total_violations": 9,
+      "critical_violations": 9,
+      "warning_violations": 0,
+      "info_violations": 0
+    },
+    "violations_by_category": {
+      "electrical_safety": 5,
+      "plumbing_water_supply": 1,
+      "mechanical_ventilation": 3
+    },
+    "violations_by_severity": {
+      "error": 9
+    },
+    "most_common_violations": [
+      {
+        "rule_name": "Emergency Lighting (electrical_safety)",
+        "count": 3,
+        "category": "electrical_safety"
+      },
+      {
+        "rule_name": "Ventilation Requirements (mechanical_ventilation)",
+        "count": 3,
+        "category": "mechanical_ventilation"
+      },
+      {
+        "rule_name": "GFCI Protection (electrical_safety)",
+        "count": 2,
+        "category": "electrical_safety"
+      },
+      {
+        "rule_name": "Water Heater Requirements (plumbing_water_supply)",
+        "count": 1,
+        "category": "plumbing_water_supply"
+      }
+    ],
+    "warnings_by_category": {}
+  },
+  "recommendations": [
+    "Address 5 electrical_safety violations to improve compliance.",
+    "Address 1 plumbing_water_supply violations to improve compliance.",
+    "Address 3 mechanical_ventilation violations to improve compliance."
+  ],
+  "priority_actions": [
+    {
+      "priority": "HIGH",
+      "category": "electrical_safety",
+      "action": "Address 5 critical violations in electrical_safety",
+      "violations": [
+        "GFCI Protection",
+        "GFCI Protection",
+        "Emergency Lighting"
+      ],
+      "estimated_effort": "HIGH (Few violations)"
+    },
+    {
+      "priority": "HIGH",
+      "category": "plumbing_water_supply",
+      "action": "Address 1 critical violations in plumbing_water_supply",
+      "violations": [
+        "Water Heater Requirements"
+      ],
+      "estimated_effort": "MEDIUM (Few violations)"
+    },
+    {
+      "priority": "HIGH",
+      "category": "mechanical_ventilation",
+      "action": "Address 3 critical violations in mechanical_ventilation",
+      "violations": [
+        "Ventilation Requirements",
+        "Ventilation Requirements",
+        "Ventilation Requirements"
+      ],
+      "estimated_effort": "MEDIUM (Few violations)"
+    }
+  ],
+  "detailed_results": {
+    "performance_metrics": {
+      "total_execution_time": 8.296966552734375e-05,
+      "average_rule_execution_time": 1.1852809361049107e-05,
+      "total_rules_evaluated": 7
+    },
+    "jurisdiction_analysis": {
+      "US_FL": {
+        "jurisdiction": {
+          "country": "US",
+          "state": "FL",
+          "city": null,
+          "county": null
+        },
+        "total_rules": 7,
+        "passed_rules": 3,
+        "failed_rules": 4,
+        "violations": 9,
+        "warnings": 0
+      }
+    },
+    "category_performance": {
+      "electrical_safety": {
+        "total_rules": 2,
+        "passed_rules": 0,
+        "failed_rules": 2,
+        "violations": 5,
+        "warnings": 0
+      },
+      "electrical_design": {
+        "total_rules": 1,
+        "passed_rules": 1,
+        "failed_rules": 0,
+        "violations": 0,
+        "warnings": 0
+      },
+      "plumbing_water_supply": {
+        "total_rules": 2,
+        "passed_rules": 1,
+        "failed_rules": 1,
+        "violations": 1,
+        "warnings": 0
+      },
+      "mechanical_ventilation": {
+        "total_rules": 1,
+        "passed_rules": 0,
+        "failed_rules": 1,
+        "violations": 3,
+        "warnings": 0
+      },
+      "mechanical_hvac": {
+        "total_rules": 1,
+        "passed_rules": 1,
+        "failed_rules": 0,
+        "violations": 0,
+        "warnings": 0
+      }
+    }
+  }
+}

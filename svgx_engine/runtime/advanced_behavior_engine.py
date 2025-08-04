@@ -31,6 +31,8 @@ from svgx_engine.runtime.behavior.ui_event_schemas import EditingEvent
 from svgx_engine.services.telemetry_logger import telemetry_instrumentation
 import threading
 
+logger = logging.getLogger(__name__)
+
 # Import physics integration service
 try:
     from svgx_engine.services.physics_integration_service import (
@@ -41,8 +43,6 @@ try:
 except ImportError:
     PHYSICS_INTEGRATION_AVAILABLE = False
     logger.warning("Physics integration service not available")
-
-logger = logging.getLogger(__name__)
 
 
 class BehaviorType(Enum):

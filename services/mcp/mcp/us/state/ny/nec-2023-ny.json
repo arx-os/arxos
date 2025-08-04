@@ -1,0 +1,184 @@
+{
+  "mcp_id": "nec-2023-ny",
+  "name": "NEC 2023 New York Amendments",
+  "description": "National Electrical Code 2023 - New York State Amendments",
+  "jurisdiction": {
+    "country": "US",
+    "state": "NY",
+    "city": null,
+    "county": null
+  },
+  "version": "2023",
+  "effective_date": "2023-01-01",
+  "rules": [
+    {
+      "rule_id": "nec_210_8_ny_2023",
+      "name": "Enhanced GFCI Protection - New York",
+      "description": "Enhanced GFCI protection requirements for New York",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_outlet",
+          "property": "location",
+          "operator": "in",
+          "value": ["bathroom", "kitchen", "outdoor", "garage", "basement", "crawlspace", "unfinished_basement", "laundry_room", "utility_room"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced GFCI protection required for outlets in additional locations per NY NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 210.8 NY"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_220_14_ny_2023",
+      "name": "Enhanced Lighting Load - New York",
+      "description": "Enhanced lighting load calculation for New York",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "area",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "area * 3.5",
+          "message": "Enhanced lighting load calculation for NY: {result} VA per square foot",
+          "severity": "info",
+          "code_reference": "NEC 220.14 NY"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_310_16_ny_2023",
+      "name": "Conductor Derating - New York",
+      "description": "Enhanced conductor derating requirements for New York",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_conductor",
+          "property": "ambient_temperature",
+          "operator": ">",
+          "value": 30
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced conductor derating required for high ambient temperatures per NY NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 310.16 NY"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_700_12_ny_2023",
+      "name": "Enhanced Emergency Lighting - New York",
+      "description": "Enhanced emergency lighting requirements for New York",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "emergency_lighting",
+          "property": "battery_duration",
+          "operator": ">=",
+          "value": 120
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced emergency lighting with 2-hour battery duration required per NY NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 700.12 NY"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_800_25_ny_2023",
+      "name": "Communications Cable - New York",
+      "description": "Enhanced communications cable requirements for New York",
+      "category": "electrical_safety",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "communications_cable",
+          "property": "fire_rating",
+          "operator": "==",
+          "value": "plenum"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Plenum-rated communications cables required in certain locations per NY NEC amendments",
+          "severity": "warning",
+          "code_reference": "NEC 800.25 NY"
+        }
+      ]
+    },
+    {
+      "rule_id": "ny_energy_code_2023",
+      "name": "New York Energy Code Integration",
+      "description": "Integration with New York State Energy Code",
+      "category": "energy_efficiency",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "energy_efficiency_verified",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Energy efficiency requirements must comply with NY State Energy Code",
+          "severity": "warning",
+          "code_reference": "NY Energy Code 2023"
+        }
+      ]
+    },
+    {
+      "rule_id": "nyc_building_code_2023",
+      "name": "NYC Building Code Integration",
+      "description": "Integration with NYC Building Code requirements",
+      "category": "structural_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "location",
+          "operator": "==",
+          "value": "nyc"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Additional NYC Building Code requirements must be considered",
+          "severity": "error",
+          "code_reference": "NYC Building Code 2023"
+        }
+      ]
+    }
+  ]
+} 

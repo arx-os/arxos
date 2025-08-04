@@ -4,7 +4,7 @@
 
 ### **✅ Strengths of the Framework**
 
-1. **Pure Revenue Model**: USD-based rewards keep ARX token economics clean
+1. **Pure Revenue Model**: USD-based rewards keep BILT token economics clean
 2. **Long-term Alignment**: 10-year duration creates sustained evangelist engagement
 3. **Comprehensive Revenue Capture**: Covers all major revenue streams (data, services, CMMS)
 4. **Scalable Tiers**: Tiered bonuses encourage evangelist growth and retention
@@ -371,7 +371,7 @@ Year 1 Targets:
 
 ## ✅ **Conclusion**
 
-This evangelist revenue share framework is strategically sound and well-designed. The USD-based approach keeps ARX token economics clean while creating powerful incentives for grassroots growth. The 10-year duration ensures long-term alignment, and the comprehensive fraud prevention system protects the program's integrity.
+This evangelist revenue share framework is strategically sound and well-designed. The USD-based approach keeps BILT token economics clean while creating powerful incentives for grassroots growth. The 10-year duration ensures long-term alignment, and the comprehensive fraud prevention system protects the program's integrity.
 
 **Key Success Factors:**
 1. **Clear value proposition** for evangelists

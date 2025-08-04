@@ -1,0 +1,377 @@
+{
+  "mcp_id": "ipc-2024-base",
+  "name": "IPC 2024 Base",
+  "description": "International Plumbing Code 2024 - Base Rules",
+  "jurisdiction": {
+    "country": "US",
+    "state": null,
+    "city": null,
+    "county": null
+  },
+  "version": "2024",
+  "effective_date": "2024-01-01",
+  "rules": [
+    {
+      "rule_id": "ipc_403_1_2024",
+      "name": "Water Heater Requirements",
+      "description": "Water heater installation and safety requirements",
+      "category": "plumbing_water_supply",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "water_heater",
+          "property": "capacity",
+          "operator": ">",
+          "value": 120
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Water heaters over 120 gallons must have temperature and pressure relief valve per IPC 403.1",
+          "severity": "error",
+          "code_reference": "IPC 403.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_403_2_2024",
+      "name": "Water Heater Location",
+      "description": "Water heater location and accessibility requirements",
+      "category": "plumbing_water_supply",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "water_heater",
+          "property": "location",
+          "operator": "in",
+          "value": ["bedroom", "bathroom", "closet"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Water heaters must not be installed in bedrooms, bathrooms, or closets per IPC 403.2",
+          "severity": "error",
+          "code_reference": "IPC 403.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_709_1_2024",
+      "name": "Fixture Unit Calculations",
+      "description": "Fixture unit calculations for drainage systems",
+      "category": "plumbing_drainage",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "plumbing_fixture",
+          "property": "type",
+          "operator": "in",
+          "value": ["toilet", "urinal", "lavatory", "shower", "bathtub", "kitchen_sink"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "fixture_units * 8",
+          "message": "Drainage fixture unit calculation: {result} DFU",
+          "severity": "info",
+          "code_reference": "IPC 709.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_709_2_2024",
+      "name": "Drainage Fixture Units",
+      "description": "Drainage fixture unit values for different fixtures",
+      "category": "plumbing_drainage",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "plumbing_fixture",
+          "property": "type",
+          "operator": "==",
+          "value": "toilet"
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "6",
+          "message": "Toilet fixture unit value: {result} DFU",
+          "severity": "info",
+          "code_reference": "IPC 709.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_601_1_2024",
+      "name": "Water Supply System",
+      "description": "Water supply system requirements",
+      "category": "plumbing_water_supply",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "water_supply_system",
+          "property": "pressure",
+          "operator": "<",
+          "value": 15
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Water supply system must maintain minimum 15 psi pressure per IPC 601.1",
+          "severity": "error",
+          "code_reference": "IPC 601.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_601_2_2024",
+      "name": "Water Supply Pressure",
+      "description": "Maximum water supply pressure requirements",
+      "category": "plumbing_water_supply",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "water_supply_system",
+          "property": "pressure",
+          "operator": ">",
+          "value": 80
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Water supply pressure must not exceed 80 psi per IPC 601.2",
+          "severity": "error",
+          "code_reference": "IPC 601.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_602_1_2024",
+      "name": "Water Supply Piping",
+      "description": "Water supply piping material requirements",
+      "category": "plumbing_water_supply",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "water_pipe",
+          "property": "material",
+          "operator": "not_in",
+          "value": ["copper", "galvanized_steel", "cpvc", "pex", "polybutylene"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Water supply piping must use approved materials per IPC 602.1",
+          "severity": "error",
+          "code_reference": "IPC 602.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_701_1_2024",
+      "name": "Drainage System",
+      "description": "Drainage system requirements",
+      "category": "plumbing_drainage",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "drainage_system",
+          "property": "slope",
+          "operator": "<",
+          "value": 0.02
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Drainage piping must have minimum 2% slope per IPC 701.1",
+          "severity": "error",
+          "code_reference": "IPC 701.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_702_1_2024",
+      "name": "Drainage Piping",
+      "description": "Drainage piping material requirements",
+      "category": "plumbing_drainage",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "drainage_pipe",
+          "property": "material",
+          "operator": "not_in",
+          "value": ["cast_iron", "pvc", "abs", "galvanized_steel", "copper"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Drainage piping must use approved materials per IPC 702.1",
+          "severity": "error",
+          "code_reference": "IPC 702.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_703_1_2024",
+      "name": "Drainage Pipe Slope",
+      "description": "Drainage pipe slope requirements",
+      "category": "plumbing_drainage",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "drainage_pipe",
+          "property": "diameter",
+          "operator": "==",
+          "value": 3
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "3-inch drainage pipe must have 1/4 inch per foot slope per IPC 703.1",
+          "severity": "error",
+          "code_reference": "IPC 703.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_801_1_2024",
+      "name": "Vent System",
+      "description": "Vent system requirements",
+      "category": "plumbing_drainage",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "plumbing_fixture",
+          "property": "vented",
+          "operator": "==",
+          "value": false
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "All plumbing fixtures must be properly vented per IPC 801.1",
+          "severity": "error",
+          "code_reference": "IPC 801.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_802_1_2024",
+      "name": "Vent Pipe Sizing",
+      "description": "Vent pipe sizing requirements",
+      "category": "plumbing_drainage",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "vent_pipe",
+          "property": "diameter",
+          "operator": "<",
+          "value": 1.25
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Vent pipes must be at least 1.25 inches diameter per IPC 802.1",
+          "severity": "warning",
+          "code_reference": "IPC 802.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_1001_1_2024",
+      "name": "Traps",
+      "description": "Trap requirements for plumbing fixtures",
+      "category": "plumbing_drainage",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "plumbing_fixture",
+          "property": "trapped",
+          "operator": "==",
+          "value": false
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "All plumbing fixtures must have traps per IPC 1001.1",
+          "severity": "error",
+          "code_reference": "IPC 1001.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_1201_1_2024",
+      "name": "Gas Piping",
+      "description": "Gas piping requirements",
+      "category": "plumbing_water_supply",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "gas_pipe",
+          "property": "material",
+          "operator": "not_in",
+          "value": ["steel", "copper", "csst", "polyethylene"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Gas piping must use approved materials per IPC 1201.1",
+          "severity": "error",
+          "code_reference": "IPC 1201.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "ipc_1301_1_2024",
+      "name": "Storm Drainage",
+      "description": "Storm drainage system requirements",
+      "category": "plumbing_drainage",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "roof",
+          "property": "area",
+          "operator": ">",
+          "value": 1000
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Roofs over 1000 sq ft must have storm drainage system per IPC 1301.1",
+          "severity": "warning",
+          "code_reference": "IPC 1301.1"
+        }
+      ]
+    }
+  ]
+} 

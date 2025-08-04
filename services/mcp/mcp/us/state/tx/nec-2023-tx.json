@@ -1,0 +1,184 @@
+{
+  "mcp_id": "nec-2023-tx",
+  "name": "NEC 2023 Texas Amendments",
+  "description": "National Electrical Code 2023 - Texas State Amendments",
+  "jurisdiction": {
+    "country": "US",
+    "state": "TX",
+    "city": null,
+    "county": null
+  },
+  "version": "2023",
+  "effective_date": "2023-01-01",
+  "rules": [
+    {
+      "rule_id": "nec_210_8_tx_2023",
+      "name": "Enhanced GFCI Protection - Texas",
+      "description": "Enhanced GFCI protection requirements for Texas",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_outlet",
+          "property": "location",
+          "operator": "in",
+          "value": ["bathroom", "kitchen", "outdoor", "garage", "basement", "crawlspace", "unfinished_basement", "pool_area", "spa_area"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced GFCI protection required for outlets in pool and spa areas per TX NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 210.8 TX"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_220_14_tx_2023",
+      "name": "Enhanced Lighting Load - Texas",
+      "description": "Enhanced lighting load calculation for Texas",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "area",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "area * 3.2",
+          "message": "Enhanced lighting load calculation for TX: {result} VA per square foot",
+          "severity": "info",
+          "code_reference": "NEC 220.14 TX"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_310_16_tx_2023",
+      "name": "Conductor Derating - Texas",
+      "description": "Enhanced conductor derating requirements for Texas",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_conductor",
+          "property": "ambient_temperature",
+          "operator": ">",
+          "value": 35
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced conductor derating required for high ambient temperatures per TX NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 310.16 TX"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_680_25_tx_2023",
+      "name": "Pool Equipment - Texas",
+      "description": "Enhanced pool equipment requirements for Texas",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "pool_equipment",
+          "property": "equipment_grounding",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced equipment grounding required for pool equipment per TX NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 680.25 TX"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_700_12_tx_2023",
+      "name": "Enhanced Emergency Lighting - Texas",
+      "description": "Enhanced emergency lighting requirements for Texas",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "emergency_lighting",
+          "property": "battery_duration",
+          "operator": ">=",
+          "value": 90
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced emergency lighting with 1.5-hour battery duration required per TX NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 700.12 TX"
+        }
+      ]
+    },
+    {
+      "rule_id": "tx_energy_code_2023",
+      "name": "Texas Energy Code Integration",
+      "description": "Integration with Texas State Energy Code",
+      "category": "energy_efficiency",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "energy_efficiency_verified",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Energy efficiency requirements must comply with TX State Energy Code",
+          "severity": "warning",
+          "code_reference": "TX Energy Code 2023"
+        }
+      ]
+    },
+    {
+      "rule_id": "tx_wind_requirements_2023",
+      "name": "Texas Wind Load Requirements",
+      "description": "Enhanced wind load requirements for Texas",
+      "category": "structural_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "wind_zone",
+          "operator": "in",
+          "value": ["zone_1", "zone_2", "zone_3", "zone_4"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced wind load requirements must be considered for electrical equipment per TX amendments",
+          "severity": "error",
+          "code_reference": "TX Wind Requirements 2023"
+        }
+      ]
+    }
+  ]
+} 

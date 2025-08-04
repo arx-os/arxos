@@ -2,7 +2,7 @@
 
 ## 🎯 **Context**
 
-Arxos data exports (e.g., SVGX plans, BIM logic, object metadata) are valuable assets. The risk was identified that **bad actors could purchase Arxos data and resell it at higher prices**, undermining the value of the ARX economy and depriving contributors of rightful dividends.
+Arxos data exports (e.g., SVGX plans, BIM logic, object metadata) are valuable assets. The risk was identified that **bad actors could purchase Arxos data and resell it at higher prices**, undermining the value of the BILT economy and depriving contributors of rightful dividends.
 
 ---
 
@@ -13,7 +13,7 @@ Arxos data exports (e.g., SVGX plans, BIM logic, object metadata) are valuable a
 | **Undisclosed Resale**        | Buyers resell Arxos data without disclosure or compensation                 |
 | **White-labeling**            | Buyers rebrand Arxos data as proprietary internal solutions                 |
 | **Bulk Purchases for Resale** | Buyers exploit API or chat portals to mass-purchase and repackage content   |
-| **Token Price Abuse**         | Buyers artificially stimulate ARX demand through inorganic activity         |
+| **Token Price Abuse**         | Buyers artificially stimulate BILT demand through inorganic activity         |
 
 ---
 
@@ -42,7 +42,7 @@ Arxos data exports (e.g., SVGX plans, BIM logic, object metadata) are valuable a
 ### **5. Tiered License Model**
 | Tier         | Rights                              | Pricing           | ARX Impact                  |
 |--------------|-------------------------------------|--------------------|-----------------------------|
-| Basic        | Internal use only                   | Low price          | ARX dividend (direct)      |
+| Basic        | Internal use only                   | Low price          | BILT dividend (direct)      |
 | Commercial   | Client usage allowed, no resale     | Higher price       | API + watermarking         |
 | Reseller     | Authorized redistribution allowed   | Royalty/Rev-share  | Royalties → ARX pool       |
 
@@ -473,7 +473,7 @@ class PatternDetector:
     "user_id": "0xArxosContributorAddress",
     "license_type": "commercial",
     "purchase_amount": 500,
-    "purchase_currency": "ARX"
+    "purchase_currency": "BILT"
   },
   "content_info": {
     "file_size": 2048576,
@@ -623,7 +623,7 @@ class ResellerPartnershipSystem:
 ### **Decentralized Storage**
 - **Arweave/IPFS storage** for full decentralization
 - **Public license explorer** for transparency
-- **Automated ARX minting** tied to verified export contributions
+- **Automated BILT minting** tied to verified export contributions
 
 ### **NFT-Backed Exports**
 - **NFT-backed exports** with tracked resale markets

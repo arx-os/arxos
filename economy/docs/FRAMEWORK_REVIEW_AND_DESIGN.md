@@ -17,7 +17,7 @@
 - **Realistic timeline** of 5 months with parallelization potential
 
 #### 3. **Hybrid Model** (`hybrid_model.md`)
-- **Innovative dividend routing** tied to specific `arxobject` hashes
+- **Innovative dividend routing** tied to specific `biltobject` hashes
 - **Maintains fungibility** while preserving contributor earnings
 - **Legal compliance considerations** with clear worker vs. investor distinction
 - **Smart contract architecture** with proper separation of concerns
@@ -52,7 +52,7 @@
 ```solidity
 // Core Contracts Structure
 ├── BILTToken.sol                   // ERC-20 implementation
-├── ArxMintRegistry.sol             // Contribution tracking
+├── BiltMintRegistry.sol            // Contribution tracking
 ├── RevenueRouter.sol               // Revenue distribution
 ├── DividendVault.sol               // Dividend management
 ├── StakingVault.sol                // Staking mechanics
@@ -81,7 +81,7 @@ arxos/bilt-backend/
 bilt_contributions
 ├── id (UUID)
 ├── contributor_wallet (VARCHAR)
-├── arxobject_hash (VARCHAR)
+├── biltobject_hash (VARCHAR)
 ├── contribution_type (ENUM)
 ├── bilt_minted (DECIMAL)
 ├── verification_status (ENUM)
@@ -91,7 +91,7 @@ bilt_contributions
 
 bilt_revenue_attribution
 ├── id (UUID)
-├── arxobject_hash (VARCHAR)
+├── biltobject_hash (VARCHAR)
 ├── revenue_amount (DECIMAL)
 ├── revenue_type (ENUM)
 ├── attribution_date (TIMESTAMP)
@@ -102,7 +102,7 @@ bilt_dividend_distributions
 ├── distribution_period (VARCHAR)
 ├── total_amount (DECIMAL)
 ├── contributor_wallet (VARCHAR)
-├── arxobject_hash (VARCHAR)
+├── biltobject_hash (VARCHAR)
 ├── dividend_amount (DECIMAL)
 └── distributed_at (TIMESTAMP)
 ```
@@ -127,7 +127,7 @@ contract BILTToken is ERC20, Ownable {
     
     function mintForContribution(
         address contributor,
-        bytes32 arxobjectHash,
+        bytes32 biltobjectHash,
         uint256 amount,
         address verifier
     ) external onlyAuthorizedMinter;
@@ -164,7 +164,7 @@ contract FraudPrevention {
     
     function reportFraud(
         address contributor,
-        bytes32 arxobjectHash,
+        bytes32 biltobjectHash,
         string memory reason
     ) external;
     
@@ -184,15 +184,15 @@ contract FraudPrevention {
 
 #### **A. Contribution Verification Engine**
 ```python
-# arxos/arx-backend/services/arx_token/verification_engine.py
+# arxos/bilt-backend/services/bilt_token/verification_engine.py
 class ContributionVerificationEngine:
     def __init__(self):
-        self.ai_validator = ArxLogicValidator()
+        self.ai_validator = BiltLogicValidator()
         self.secondary_verifier = SecondaryVerificationSystem()
         self.fraud_detector = FraudDetectionEngine()
     
     async def verify_contribution(self, contribution_data: dict) -> VerificationResult:
-        # 1. AI validation using ArxLogic
+        # 1. AI validation using BiltLogic
         ai_result = await self.ai_validator.validate(contribution_data)
         
         # 2. Secondary user verification (required for all contributions)
@@ -201,7 +201,7 @@ class ContributionVerificationEngine:
         # 3. Fraud detection
         fraud_score = await self.fraud_detector.analyze(contribution_data)
         
-        # 4. Calculate ARX mint amount
+        # 4. Calculate BILT mint amount
         mint_amount = self.calculate_mint_amount(contribution_data, ai_result, fraud_score)
         
         return VerificationResult(
@@ -218,7 +218,7 @@ class ContributionVerificationEngine:
 
 #### **B. Dividend Calculation Engine**
 ```python
-# arxos/arx-backend/services/arx_token/dividend_calculator.py
+# arxos/bilt-backend/services/bilt_token/dividend_calculator.py
 class DividendCalculator:
     def __init__(self):
         self.revenue_tracker = RevenueTrackingService()
@@ -228,15 +228,15 @@ class DividendCalculator:
         # 1. Get all revenue for the period
         total_revenue = await self.revenue_tracker.get_period_revenue(period)
         
-        # 2. Calculate dividend per ARX token
-        total_arx_supply = await self.blockchain_service.get_total_arx_supply()
-        dividend_per_token = total_revenue / total_arx_supply if total_arx_supply > 0 else 0
+        # 2. Calculate dividend per BILT token
+        total_bilt_supply = await self.blockchain_service.get_total_bilt_supply()
+        dividend_per_token = total_revenue / total_bilt_supply if total_bilt_supply > 0 else 0
         
         return DividendDistribution(
             period=period,
             total_revenue=total_revenue,
             dividend_per_token=dividend_per_token,
-            total_arx_supply=total_arx_supply
+            total_bilt_supply=total_bilt_supply
         )
     
     async def distribute_dividends(self, distribution: DividendDistribution):
@@ -290,24 +290,24 @@ class ArxScopeService:
 
 #### **B. REST API Design**
 ```python
-# arxos/arx-backend/handlers/arx_token_handlers.py
-@router.post("/arx/contribute")
+# arxos/bilt-backend/handlers/bilt_token_handlers.py
+@router.post("/bilt/contribute")
 async def submit_contribution(contribution: ContributionSubmission):
-    """Submit a new contribution for ARX minting"""
+    """Submit a new contribution for BILT minting"""
     verification_result = await verification_engine.verify_contribution(contribution)
     
     if verification_result.is_valid:
-        # Mint ARX tokens
-        mint_tx = await blockchain_service.mint_arx(
+        # Mint BILT tokens
+        mint_tx = await blockchain_service.mint_bilt(
             contributor=contribution.contributor_wallet,
-            arxobject_hash=contribution.arxobject_hash,
+            biltobject_hash=contribution.biltobject_hash,
             amount=verification_result.mint_amount
         )
         
         return {
             "status": "success",
             "mint_transaction": mint_tx.hash,
-            "arx_minted": verification_result.mint_amount,
+            "bilt_minted": verification_result.mint_amount,
             "fraud_score": verification_result.fraud_score
         }
     else:
@@ -317,22 +317,22 @@ async def submit_contribution(contribution: ContributionSubmission):
             "fraud_score": verification_result.fraud_score
         }
 
-@router.get("/arx/wallet/{wallet_address}")
+@router.get("/bilt/wallet/{wallet_address}")
 async def get_wallet_info(wallet_address: str):
-    """Get ARX wallet information including balance, dividends, and contributions"""
-    balance = await blockchain_service.get_arx_balance(wallet_address)
+    """Get BILT wallet information including balance, dividends, and contributions"""
+    balance = await blockchain_service.get_bilt_balance(wallet_address)
     dividends = await dividend_calculator.get_pending_dividends(wallet_address)
     contributions = await contribution_service.get_user_contributions(wallet_address)
     
     return {
         "wallet_address": wallet_address,
-        "arx_balance": balance,
+        "bilt_balance": balance,
         "pending_dividends": dividends,
         "contributions": contributions,
         "reputation_score": await fraud_prevention.get_reputation_score(wallet_address)
     }
 
-@router.get("/arx/dividends/{period}")
+@router.get("/bilt/dividends/{period}")
 async def get_dividend_history(period: str):
     """Get dividend distribution history for a specific period"""
     distributions = await dividend_calculator.get_period_distributions(period)
@@ -345,8 +345,8 @@ async def get_dividend_history(period: str):
 
 #### **B. Frontend Dashboard Components**
 ```typescript
-// arxos/frontend/src/components/arx/
-interface ARXWallet {
+// arxos/frontend/src/components/bilt/
+interface BILTWallet {
   balance: number;
   pendingDividends: number;
   reputationScore: number;
@@ -355,17 +355,17 @@ interface ARXWallet {
 }
 
 interface Contribution {
-  id: string;
-  arxobjectHash: string;
-  contributionType: string;
-  arxMinted: number;
+    id: string;
+    biltobjectHash: string;
+    contributionType: string;
+    biltMinted: number;
   verificationStatus: string;
   createdAt: Date;
 }
 
 interface DividendDistribution {
   period: string;
-  arxobjectHash: string;
+  biltobjectHash: string;
   dividendAmount: number;
   distributedAt: Date;
 }
@@ -383,7 +383,7 @@ interface MintActivity {
   timestamp: Date;
   objectType: string;
   location: string;
-  arxMinted: number;
+  biltMinted: number;
   contributorWallet: string;
 }
 
@@ -433,7 +433,7 @@ class ComplianceEngine:
         )
     
     async def generate_tax_report(self, wallet_address: str, year: int) -> TaxReport:
-        """Generate tax report for ARX earnings"""
+        """Generate tax report for BILT earnings"""
         dividends = await dividend_calculator.get_user_dividends(wallet_address, year)
         minting_events = await contribution_service.get_user_minting_events(wallet_address, year)
         
@@ -451,7 +451,7 @@ class ComplianceEngine:
 #### **A. Testing Framework**
 ```python
 # arxos/tests/cryptocurrency/
-class TestARXIntegration:
+class TestBILTIntegration:
     async def test_contribution_verification(self):
         """Test the complete contribution verification flow"""
         contribution = self.create_test_contribution()
@@ -473,7 +473,7 @@ class TestARXIntegration:
         
         # Verify distributions on blockchain
         for distribution in distributions:
-            balance = await blockchain_service.get_arx_balance(distribution.contributor_wallet)
+            balance = await blockchain_service.get_bilt_balance(distribution.contributor_wallet)
             assert balance >= distribution.dividend_amount
 ```
 
@@ -497,8 +497,8 @@ class TestARXIntegration:
 ### **Economic Metrics**
 - **Contributor Retention**: > 80% monthly active contributors
 - **Revenue Growth**: > 20% monthly platform revenue growth
-- **Token Distribution**: > 60% ARX held by contributors at launch
-- **Dividend Yield**: > 5% annual yield for all ARX holders
+- **Token Distribution**: > 60% BILT held by contributors at launch
+- **Dividend Yield**: > 5% annual yield for all BILT holders
 
 ### **Security Metrics**
 - **Fraud Prevention**: < 0.01% successful fraud attempts
@@ -516,7 +516,7 @@ class TestARXIntegration:
 4. **Establish testing infrastructure** with comprehensive test cases
 
 ### **Short-term Goals (Weeks 2-4)**
-1. **Implement core smart contracts** (ARXToken, ArxMintRegistry)
+1. **Implement core smart contracts** (BILTToken, BiltMintRegistry)
 2. **Build contribution verification engine** with AI integration
 3. **Create basic API endpoints** for wallet management
 4. **Develop fraud detection algorithms**
@@ -552,4 +552,4 @@ class TestARXIntegration:
 - [ ] Deployment and monitoring tools
 - [ ] Legal and regulatory review framework
 
-This framework provides a comprehensive roadmap for implementing the ARX cryptocurrency system while maintaining the integrity and security of the Arxos platform. 
+This framework provides a comprehensive roadmap for implementing the BILT cryptocurrency system while maintaining the integrity and security of the Arxos platform. 

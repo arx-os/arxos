@@ -1,156 +1,124 @@
-# ARX Tokenomics & Infrastructure Integration — Design Clarifications
-### Version 1.0 — July 28, 2025
+# BILT Tokenomics & Infrastructure Integration — Design Clarifications
+
+## 🎯 **Objective**
+
+Clarify the integration points between BILT tokenomics and existing Arxos infrastructure components, ensuring seamless operation while maintaining legal compliance and technical robustness.
 
 ---
 
 ## 1. ArxLogic Integration Points
 
-### ✅ Validation Scores
+### **A. Validation Score Integration**
 - ArxLogic currently calculates validation scores using:
-  - **Simulation Pass Rate** (% of objects passing behavioral simulation)
-  - **AI Accuracy Rate** (correct label validation by system vs. peer-reviewed ground truth)
-  - **System Completion Score** (how many objects are required to complete a system’s behavior)
-  - **Error Propagation Score** (how many downstream dependencies are affected)
+  - Simulation pass rate (0.0 to 1.0)
+  - AI accuracy rate (0.0 to 1.0) 
+  - System completion score (0.0 to 1.0)
+  - Error propagation score (0.0 to 1.0)
 
-### 🔢 Complexity Metrics (examples)
-| System       | Baseline Complexity Score |
-|--------------|---------------------------|
-| Electrical   | 1.0                       |
-| Plumbing     | 1.2                       |
-| HVAC         | 1.5                       |
-| Fire Alarm   | 1.7                       |
-| Security     | 2.0                       |
-
-### 💰 ARX Minting Logic
-- Mint formula proposal:  
-  `ARX_minted = BaseAmount * ValidationScore * ComplexityMultiplier`
-- Example:
-  - A fully validated HVAC VAV object (ValidationScore = 1.0, Complexity = 1.5) → mints 1.5 ARX
-  - A partially validated electrical outlet (ValidationScore = 0.6, Complexity = 1.0) → mints 0.6 ARX
+### **B. BILT Minting Integration**
+- ArxLogic validation scores feed directly into BILT minting
+- No changes needed to ArxLogic core functionality
+- BILT minting is additive layer on top of existing validation
 
 ---
 
-## 2. User Authentication & Wallet Integration
+## 2. Role-Based Access Control (RBAC)
 
-### 👤 Existing User System
-- JWT auth + role-based access
+### **A. Existing Arxos Roles**
 - Roles: `contractor`, `school_staff`, `district_admin`, `arxos_support`
-- Each user already has a profile and tracked reputation
+- These roles already exist in Arxos Auth system
+- No changes needed to existing role structure
 
-### 🪙 Wallet Integration Strategy
-- Wallets should be integrated into current user profiles (1:1 mapping)
-- Each user receives a default wallet on login or onboarding
-- Add optional ability to **link external wallets (MetaMask, Ledger)** for advanced users
+### **B. BILT Contributor Types**
+| Existing Role   | BILT Contributor Type |
+|----------------|----------------------|
+| contractor     | contributor          |
+| school_staff   | validator            |
+| district_admin | validator_auditor    |
+| arxos_support  | validator_auditor    |
 
-### 🔄 Role Mapping for Contributors
-| Existing Role   | ARX Contributor Type |
-|------------------|----------------------|
-| contractor       | object_minter        |
-| school_staff     | building_uploader    |
-| district_admin   | organizational_owner |
-| arxos_support    | validator_auditor    |
-
----
-
-## 3. Revenue Tracking & Payment System
-
-### 💵 Current Revenue Streams
-- API usage fees (external vendors)
-- CMMS Pro accounts ($30/user/month)
-- Future: building data sales, contractor service transaction fees
-
-### 🧮 Categorization for Dividends
-| Source                 | Dividend Eligible? | Notes                             |
-|------------------------|--------------------|-----------------------------------|
-| API Usage              | ✅                 | Counted as institutional access   |
-| Data Downloads         | ✅                 | Key dividend pool source          |
-| Contractor Services    | ✅                 | Only for on-platform engagements  |
-| CMMS Subscription Fees | ❌ (Operational)    | Considered platform revenue       |
-
-### 💳 Current Pricing Models
-- Pro CMMS: $30/user/mo
-- API data: $0.02/call
-- Simulation access: Tiered ($10–$100/mo planned)
+### **C. Integration Strategy**
+- Map existing Arxos roles to BILT contributor types
+- Maintain existing permissions and access controls
+- Add BILT-specific permissions as needed
 
 ---
 
-## 4. Database Migration Strategy
+## 3. Database Integration
 
-### 🛠️ Current DB
-- PostgreSQL (w/ PostGIS extensions)
-- Auth, users, buildings, assets, reputation
+### **A. BILT DB Integration**
+- Add BILT-related tables to same PostgreSQL instance:
+- `wallets`, `bilt_transactions`, `dividend_ledger`, `contributions`
+- Use blockchain-indexed keys for BILT events
 
-### 🔗 ARX DB Integration
-- Add ARX-related tables to same PostgreSQL instance:
-  - `wallets`, `arx_transactions`, `dividend_ledger`, `contributions`
-- Use blockchain-indexed keys for ARX events
-- Smart contract triggers sync to DB with off-chain indexer
-
-### 🔄 Migration Strategy
-- Add wallet address field to `users` table
-- Backfill with auto-generated keys for existing users
+### **B. Schema Compatibility**
+- Existing Arxos tables remain unchanged
+- BILT tables are additive, not modifying
+- Shared user authentication and profiles
 
 ---
 
-## 5. Testing Infrastructure
+## 4. Revenue Attribution
 
-### 🧪 Current Stack
-- Go: native `testing` package
-- Python (SVGX): `pytest`
-- Frontend: `Playwright`, `Vitest`
+### **A. Data Sales Attribution**
+- When building data is sold, revenue flows to BILT dividend pool
+- Attribution based on `arxobject` hashes that contributed to sale
+- No changes to existing data sales process
 
-### 🔍 Smart Contract Testing Plan
-- Use `Hardhat` + `Chai` for smart contract tests
-- Deploy smart contract test runner in **parallel** to main test pipeline
-- Use `Ganache`/`Foundry` for local chain simulations
-- Add blockchain test outputs to existing CI reports
-
----
-
-## 6. Deployment Architecture
-
-### ☁️ Current Stack
-- Go backend (REST API) on DigitalOcean
-- Python SVGX microservices
-- PostgreSQL database
-- HTMX frontend (HTML/X + Tailwind)
-
-### 🚀 Blockchain Integration Plan
-- Deploy smart contracts to:
-  - Testnet (Polygon Mumbai / Sepolia)
-  - Mainnet (Polygon, Avalanche, or Ethereum L2)
-- Run blockchain indexer alongside existing backend
-- Add Prometheus/Grafana dashboard for blockchain sync status
-- Monitor smart contract events using webhooks + JSON-RPC polling
+### **B. Service Transaction Attribution**
+- Contractor service fees contribute to BILT dividend pool
+- Attribution based on service type and building context
+- Maintains existing service transaction flow
 
 ---
 
-## 🔍 Specific Design Answers
+## 5. Technical Implementation
 
-### 🔢 Tokenomics: Base ARX Mint Value
-- Start with 1.0 ARX for a fully validated standard object (complexity = 1.0)
-- Multiply based on system complexity and validation fidelity
+### **A. Smart Contract Integration**
+- BILT contracts deployed on same blockchain as Arxos
+- Integration through web3.js/ethers.js libraries
+- No changes to existing Arxos blockchain operations
 
-### 👛 Integration Architecture: Wallet Creation
-- Auto-create wallet for each user upon login or onboarding
-- Allow opt-out or external linking for power users
-
-### 🔬 Testing: Smart Contracts
-- Smart contract tests should run in **parallel** CI jobs
-- Tagged as `blockchain` test suite
-
-### 🔐 Security: User Auth & Wallets
-- Current JWT auth stays intact
-- Store wallet private keys **encrypted server-side** (for auto-minted users)
-- Allow advanced users to export or bring their own wallets
+### **B. API Integration**
+- Add BILT endpoints to existing Arxos API
+- Maintain existing API structure and authentication
+- BILT endpoints follow same patterns as existing endpoints
 
 ---
 
-## ✅ Summary
+## 6. Legal Compliance
 
-This document ensures the ARX system:
+### **A. Worker Classification**
+- Contributors remain classified as workers
+- BILT holders are currency participants
+- Clear separation maintained between equity and tokens
+
+### **B. Tax Treatment**
+- Contributors report BILT as work income
+- Holders report dividends as income
+- No changes to existing Arxos tax structure
+
+---
+
+## 7. Tokenomics Parameters
+
+### **A. Base BILT Mint Value**
+- Start with 1.0 BILT for a fully validated standard object (complexity = 1.0)
+- Adjustable through governance or admin controls
+- Tied to validation score and complexity multiplier
+
+### **B. Dividend Distribution**
+- Monthly or quarterly distribution to all BILT holders
+- Equal distribution regardless of token source
+- Transparent and auditable process
+
+---
+
+## 8. Integration Benefits
+
+This document ensures the BILT system:
 - Integrates cleanly with existing Arxos components
-- Stays legally and financially compliant
-- Maintains developer and contributor trust through transparency
-- Enables rapid prototyping without isolating systems
+- Maintains legal compliance and worker classification
+- Preserves existing user experience and workflows
+- Adds value without disrupting current operations
 

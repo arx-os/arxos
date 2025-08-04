@@ -1,0 +1,306 @@
+{
+  "mcp_id": "nec-2023-base",
+  "name": "NEC 2023 Base",
+  "description": "National Electrical Code 2023 - Base Rules",
+  "jurisdiction": {
+    "country": "US",
+    "state": null,
+    "city": null,
+    "county": null
+  },
+  "version": "2023",
+  "effective_date": "2023-01-01",
+  "rules": [
+    {
+      "rule_id": "nec_210_8_2023",
+      "name": "GFCI Protection for Personnel",
+      "description": "Ground-fault circuit interrupter protection for personnel in wet locations",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_outlet",
+          "property": "location",
+          "operator": "in",
+          "value": ["bathroom", "kitchen", "outdoor", "garage", "basement", "crawlspace", "unfinished_basement"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "GFCI protection required for outlets in wet or damp locations per NEC 210.8(A)",
+          "severity": "error",
+          "code_reference": "NEC 210.8(A)"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_210_12_2023",
+      "name": "AFCI Protection",
+      "description": "Arc-fault circuit interrupter protection for dwelling unit bedrooms",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_outlet",
+          "property": "location",
+          "operator": "in",
+          "value": ["bedroom", "dining_room", "living_room", "family_room", "library", "den", "sunroom", "recreation_room", "closet", "hallway"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "AFCI protection required for outlets in dwelling unit bedrooms per NEC 210.12(A)",
+          "severity": "error",
+          "code_reference": "NEC 210.12(A)"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_220_14_2023",
+      "name": "Lighting Load Calculation",
+      "description": "Minimum lighting load calculation for dwelling units",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "area",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "area * 3.0",
+          "message": "Lighting load calculation: {result} VA per square foot",
+          "severity": "info",
+          "code_reference": "NEC 220.14(J)"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_220_52_2023",
+      "name": "Small Appliance Load",
+      "description": "Small appliance branch circuit load calculation",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "type",
+          "operator": "==",
+          "value": "kitchen"
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "1500 * 2",
+          "message": "Small appliance load: {result} VA minimum for kitchen",
+          "severity": "info",
+          "code_reference": "NEC 220.52(A)"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_220_54_2023",
+      "name": "Laundry Load",
+      "description": "Laundry circuit load calculation",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "type",
+          "operator": "==",
+          "value": "laundry"
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "1500",
+          "message": "Laundry load: {result} VA minimum",
+          "severity": "info",
+          "code_reference": "NEC 220.54"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_250_118_2023",
+      "name": "Equipment Grounding Conductor",
+      "description": "Equipment grounding conductor requirements",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_panel",
+          "property": "type",
+          "operator": "==",
+          "value": "main_panel"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Equipment grounding conductor required for main panel per NEC 250.118",
+          "severity": "error",
+          "code_reference": "NEC 250.118"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_310_16_2023",
+      "name": "Conductor Ampacity",
+      "description": "Conductor ampacity requirements based on load",
+      "category": "electrical_design",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_circuit",
+          "property": "load",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Conductor ampacity must be sufficient for calculated load per NEC 310.16",
+          "severity": "error",
+          "code_reference": "NEC 310.16"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_408_4_2023",
+      "name": "Panelboard Directory",
+      "description": "Panelboard directory requirements",
+      "category": "electrical_safety",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_panel",
+          "property": "type",
+          "operator": "in",
+          "value": ["main_panel", "sub_panel"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Panelboard directory required per NEC 408.4",
+          "severity": "warning",
+          "code_reference": "NEC 408.4"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_700_12_2023",
+      "name": "Emergency Lighting",
+      "description": "Emergency lighting requirements for means of egress",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "occupancy",
+          "operator": ">",
+          "value": 50
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Emergency lighting required for means of egress per NEC 700.12",
+          "severity": "error",
+          "code_reference": "NEC 700.12"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_701_11_2023",
+      "name": "Legally Required Standby Systems",
+      "description": "Legally required standby systems for life safety",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "type",
+          "operator": "in",
+          "value": ["hospital", "nursing_home", "emergency_facility"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Legally required standby system required per NEC 701.11",
+          "severity": "error",
+          "code_reference": "NEC 701.11"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_408_36_2023",
+      "name": "Panelboard Accessibility",
+      "description": "Panelboard accessibility and working space requirements",
+      "category": "electrical_safety",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_panel",
+          "property": "accessibility",
+          "operator": "==",
+          "value": "blocked"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Panelboard must be accessible with proper working space per NEC 408.36",
+          "severity": "error",
+          "code_reference": "NEC 408.36"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_210_52_2023",
+      "name": "Receptacle Spacing",
+      "description": "Receptacle outlet spacing requirements",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "spatial",
+          "element_type": "electrical_outlet",
+          "property": "distance_to_next",
+          "operator": ">",
+          "value": 12
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Receptacle outlets must be spaced no more than 12 feet apart per NEC 210.52(A)",
+          "severity": "warning",
+          "code_reference": "NEC 210.52(A)"
+        }
+      ]
+    }
+  ]
+} 

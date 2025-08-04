@@ -1,11 +1,11 @@
-# Comprehensive ARX Integration Mapping
+# Comprehensive BILT Integration Mapping
 ### Complete Arxos Ecosystem Integration Plan
 
 ---
 
 ## 🎯 Executive Summary
 
-This document provides a comprehensive, detailed mapping of every single point where ARX will integrate with the Arxos ecosystem. It covers all components, services, modules, and integration points to ensure complete planning before development begins.
+This document provides a comprehensive, detailed mapping of every single point where BILT will integrate with the Arxos ecosystem. It covers all components, services, modules, and integration points to ensure complete planning before development begins.
 
 ---
 
@@ -59,16 +59,16 @@ arxos/
 #### 1.1 SVGX Engine (`svgx_engine/`)
 **Purpose**: SVG parsing, BIM processing, object behavior simulation
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 svgx_engine_integration:
   contribution_mechanisms:
-    - object_creation: ARX minting for new building objects
-    - symbol_validation: ARX rewards for symbol verification
-    - behavior_profiles: ARX for behavior profile contributions
-    - compliance_checks: ARX for building code compliance
-    - parser_improvements: ARX for SVGX parser enhancements
-    - simulation_optimization: ARX for performance improvements
+    - object_creation: BILT minting for new building objects
+    - symbol_validation: BILT rewards for symbol verification
+    - behavior_profiles: BILT for behavior profile contributions
+    - compliance_checks: BILT for building code compliance
+    - parser_improvements: BILT for SVGX parser enhancements
+    - simulation_optimization: BILT for performance improvements
   
   revenue_attribution:
     - object_licensing: Revenue from object library usage
@@ -88,16 +88,16 @@ svgx_engine_integration:
 #### 1.2 Arx Backend (`arx-backend/`)
 **Purpose**: Go-based backend services, API endpoints, business logic
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 arx_backend_integration:
   contribution_mechanisms:
-    - api_development: ARX for API endpoint development
-    - business_logic: ARX for business logic improvements
-    - performance_optimization: ARX for backend optimizations
-    - security_enhancements: ARX for security improvements
-    - integration_work: ARX for third-party integrations
-    - testing_contributions: ARX for comprehensive testing
+    - api_development: BILT for API endpoint development
+    - business_logic: BILT for business logic improvements
+    - performance_optimization: BILT for backend optimizations
+    - security_enhancements: BILT for security improvements
+    - integration_work: BILT for third-party integrations
+    - testing_contributions: BILT for comprehensive testing
   
   revenue_attribution:
     - api_usage: Revenue from API usage fees
@@ -107,25 +107,25 @@ arx_backend_integration:
     - support_services: Revenue from technical support
   
   technical_integration:
-    - handlers: HTTP handlers for ARX operations
+    - handlers: HTTP handlers for BILT operations
     - middleware: Authentication and authorization middleware
-    - services: Business logic services for ARX
-    - models: Database models for ARX data
-    - migrations: Database migrations for ARX tables
+    - services: Business logic services for BILT
+    - models: Database models for BILT data
+    - migrations: Database migrations for BILT tables
 ```
 
 #### 1.3 Arx Common (`arx_common/`)
 **Purpose**: Shared utilities, models, and common functionality
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 arx_common_integration:
   contribution_mechanisms:
-    - utility_development: ARX for utility function development
-    - model_improvements: ARX for data model enhancements
-    - error_handling: ARX for error handling improvements
-    - validation_logic: ARX for validation enhancements
-    - documentation: ARX for documentation improvements
+    - utility_development: BILT for utility function development
+    - model_improvements: BILT for data model enhancements
+    - error_handling: BILT for error handling improvements
+    - validation_logic: BILT for validation enhancements
+    - documentation: BILT for documentation improvements
   
   revenue_attribution:
     - library_licensing: Revenue from common library licensing
@@ -133,10 +133,10 @@ arx_common_integration:
     - consulting: Revenue from common library consulting
   
   technical_integration:
-    - models: ARX-related data models
-    - utilities: ARX utility functions
-    - validators: ARX validation logic
-    - error_handlers: ARX error handling
+    - models: BILT-related data models
+    - utilities: BILT utility functions
+    - validators: BILT validation logic
+    - error_handlers: BILT error handling
 ```
 
 ### 2. Frontend Applications Integration
@@ -144,16 +144,16 @@ arx_common_integration:
 #### 2.1 Web Frontend (`frontend/web/`)
 **Purpose**: HTMX-based web interface for viewing and markup
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 web_frontend_integration:
   contribution_mechanisms:
-    - ui_improvements: ARX for user interface enhancements
-    - feature_development: ARX for new feature development
-    - accessibility: ARX for accessibility improvements
-    - performance_optimization: ARX for frontend optimizations
-    - responsive_design: ARX for responsive design improvements
-    - user_experience: ARX for UX enhancements
+    - ui_improvements: BILT for user interface enhancements
+    - feature_development: BILT for new feature development
+    - accessibility: BILT for accessibility improvements
+    - performance_optimization: BILT for frontend optimizations
+    - responsive_design: BILT for responsive design improvements
+    - user_experience: BILT for UX enhancements
   
   revenue_attribution:
     - premium_features: Revenue from premium web features
@@ -162,26 +162,26 @@ web_frontend_integration:
     - training_services: Revenue from web training services
   
   technical_integration:
-    - components: ARX-related UI components
-    - pages: ARX dashboard and management pages
-    - api_integration: Frontend API integration for ARX
-    - state_management: ARX state management
-    - routing: ARX-specific routing
+    - components: BILT-related UI components
+    - pages: BILT dashboard and management pages
+    - api_integration: Frontend API integration for BILT
+    - state_management: BILT state management
+    - routing: BILT-specific routing
 ```
 
 #### 2.2 iOS Mobile App (`frontend/ios/`)
 **Purpose**: Native iOS app with AR capabilities
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 ios_app_integration:
   contribution_mechanisms:
-    - ar_features: ARX for AR feature development
-    - mobile_optimization: ARX for mobile optimizations
-    - offline_functionality: ARX for offline capabilities
-    - performance_improvements: ARX for performance enhancements
-    - user_interface: ARX for mobile UI improvements
-    - accessibility: ARX for mobile accessibility
+    - ar_features: BILT for AR feature development
+    - mobile_optimization: BILT for mobile optimizations
+    - offline_functionality: BILT for offline capabilities
+    - performance_improvements: BILT for performance enhancements
+    - user_interface: BILT for mobile UI improvements
+    - accessibility: BILT for mobile accessibility
   
   revenue_attribution:
     - app_sales: Revenue from iOS app sales
@@ -190,25 +190,25 @@ ios_app_integration:
     - premium_features: Revenue from premium mobile features
   
   technical_integration:
-    - ar_integration: AR features for ARX visualization
-    - offline_sync: Offline ARX data synchronization
-    - push_notifications: ARX-related notifications
-    - local_storage: Local ARX data storage
-    - camera_integration: ARX-related camera features
+    - ar_integration: AR features for BILT visualization
+    - offline_sync: Offline BILT data synchronization
+    - push_notifications: BILT-related notifications
+    - local_storage: Local BILT data storage
+    - camera_integration: BILT-related camera features
 ```
 
 #### 2.3 Android Mobile App (`frontend/android/`)
 **Purpose**: Android mobile application
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 android_app_integration:
   contribution_mechanisms:
-    - android_development: ARX for Android feature development
-    - cross_platform: ARX for cross-platform improvements
-    - mobile_optimization: ARX for Android optimizations
-    - user_interface: ARX for Android UI improvements
-    - performance: ARX for Android performance enhancements
+    - android_development: BILT for Android feature development
+    - cross_platform: BILT for cross-platform improvements
+    - mobile_optimization: BILT for Android optimizations
+    - user_interface: BILT for Android UI improvements
+    - performance: BILT for Android performance enhancements
   
   revenue_attribution:
     - app_sales: Revenue from Android app sales
@@ -216,10 +216,10 @@ android_app_integration:
     - premium_features: Revenue from premium Android features
   
   technical_integration:
-    - android_components: ARX Android components
-    - offline_sync: Android offline ARX sync
-    - notifications: Android ARX notifications
-    - local_storage: Android ARX local storage
+    - android_components: BILT Android components
+    - offline_sync: Android offline BILT sync
+    - notifications: Android BILT notifications
+    - local_storage: Android BILT local storage
 ```
 
 ### 3. Specialized Services Integration
@@ -227,16 +227,16 @@ android_app_integration:
 #### 3.1 AI Services (`services/ai/`)
 **Purpose**: Machine learning, NLP, predictive analytics
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 ai_services_integration:
   contribution_mechanisms:
-    - model_development: ARX for AI model development
-    - data_labeling: ARX for training data preparation
-    - algorithm_improvements: ARX for algorithm enhancements
-    - validation_work: ARX for AI model validation
-    - feature_engineering: ARX for feature engineering
-    - model_optimization: ARX for model performance improvements
+    - model_development: BILT for AI model development
+    - data_labeling: BILT for training data preparation
+    - algorithm_improvements: BILT for algorithm enhancements
+    - validation_work: BILT for AI model validation
+    - feature_engineering: BILT for feature engineering
+    - model_optimization: BILT for model performance improvements
   
   revenue_attribution:
     - prediction_services: Revenue from AI predictions
@@ -247,26 +247,22 @@ ai_services_integration:
     - training_services: Revenue from AI training services
   
   technical_integration:
-    - ml_models: ARX-related machine learning models
-    - prediction_apis: ARX prediction APIs
-    - data_pipelines: ARX data processing pipelines
-    - model_serving: ARX model serving infrastructure
-    - monitoring: ARX AI model monitoring
+    - ml_models: BILT-related machine learning models
 ```
 
 #### 3.2 IoT Services (`services/iot/`)
 **Purpose**: Building automation, device management, telemetry
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 iot_services_integration:
   contribution_mechanisms:
-    - hardware_drivers: ARX for device driver contributions
-    - protocol_implementations: ARX for communication protocols
-    - firmware_development: ARX for open-source firmware
-    - device_discovery: ARX for new device integrations
-    - telemetry_optimization: ARX for telemetry improvements
-    - security_enhancements: ARX for IoT security improvements
+    - hardware_drivers: BILT for device driver contributions
+    - protocol_implementations: BILT for communication protocols
+    - firmware_development: BILT for open-source firmware
+    - device_discovery: BILT for new device integrations
+    - telemetry_optimization: BILT for telemetry improvements
+    - security_enhancements: BILT for IoT security improvements
   
   revenue_attribution:
     - data_sales: Revenue from telemetry data sales
@@ -277,26 +273,26 @@ iot_services_integration:
     - support_services: Revenue from IoT support services
   
   technical_integration:
-    - device_registry: ARX device registry integration
-    - telemetry_api: ARX telemetry data integration
-    - protocol_handlers: ARX protocol integration
-    - firmware_management: ARX firmware management
-    - security_layer: ARX IoT security integration
+    - device_registry: BILT device registry integration
+    - telemetry_api: BILT telemetry data integration
+    - protocol_handlers: BILT protocol integration
+    - firmware_management: BILT firmware management
+    - security_layer: BILT IoT security integration
 ```
 
 #### 3.3 CMMS Services (`services/cmms/`)
 **Purpose**: Maintenance management, work orders, asset tracking
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 cmms_services_integration:
   contribution_mechanisms:
-    - work_order_templates: ARX for maintenance templates
-    - asset_tracking: ARX for asset management improvements
-    - maintenance_analytics: ARX for maintenance insights
-    - integration_connectors: ARX for CMMS integrations
-    - automation_workflows: ARX for workflow automation
-    - reporting_enhancements: ARX for reporting improvements
+    - work_order_templates: BILT for maintenance templates
+    - asset_tracking: BILT for asset management improvements
+    - maintenance_analytics: BILT for maintenance insights
+    - integration_connectors: BILT for CMMS integrations
+    - automation_workflows: BILT for workflow automation
+    - reporting_enhancements: BILT for reporting improvements
   
   revenue_attribution:
     - maintenance_services: Revenue from maintenance management
@@ -307,26 +303,26 @@ cmms_services_integration:
     - training_services: Revenue from CMMS training
   
   technical_integration:
-    - work_order_api: ARX work order integration
-    - asset_tracking: ARX asset tracking integration
-    - maintenance_scheduling: ARX maintenance scheduling
-    - reporting_engine: ARX reporting integration
-    - integration_framework: ARX CMMS integration framework
+    - work_order_api: BILT work order integration
+    - asset_tracking: BILT asset tracking integration
+    - maintenance_scheduling: BILT maintenance scheduling
+    - reporting_engine: BILT reporting integration
+    - integration_framework: BILT CMMS integration framework
 ```
 
 #### 3.4 Data Vendor Services (`services/data-vendor/`)
 **Purpose**: Third-party data integrations, external APIs
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 data_vendor_integration:
   contribution_mechanisms:
-    - api_integrations: ARX for API integration development
-    - data_transformation: ARX for data transformation work
-    - connector_development: ARX for connector development
-    - data_validation: ARX for data validation improvements
-    - performance_optimization: ARX for data processing optimization
-    - error_handling: ARX for error handling improvements
+    - api_integrations: BILT for API integration development
+    - data_transformation: BILT for data transformation work
+    - connector_development: BILT for connector development
+    - data_validation: BILT for data validation improvements
+    - performance_optimization: BILT for data processing optimization
+    - error_handling: BILT for error handling improvements
   
   revenue_attribution:
     - data_services: Revenue from data services
@@ -336,26 +332,26 @@ data_vendor_integration:
     - support_services: Revenue from data support services
   
   technical_integration:
-    - api_clients: ARX API client integration
-    - data_pipelines: ARX data processing pipelines
-    - transformation_engine: ARX data transformation
-    - validation_framework: ARX data validation
-    - error_handling: ARX error handling integration
+    - api_clients: BILT API client integration
+    - data_pipelines: BILT data processing pipelines
+    - transformation_engine: BILT data transformation
+    - validation_framework: BILT data validation
+    - error_handling: BILT error handling integration
 ```
 
 #### 3.5 Partner Services (`services/partners/`)
 **Purpose**: Partner API management, integration workflows
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 partner_services_integration:
   contribution_mechanisms:
-    - partner_integrations: ARX for partner integration development
-    - api_development: ARX for partner API development
-    - workflow_automation: ARX for workflow automation
-    - documentation: ARX for partner documentation
-    - testing: ARX for partner integration testing
-    - support: ARX for partner support services
+    - partner_integrations: BILT for partner integration development
+    - api_development: BILT for partner API development
+    - workflow_automation: BILT for workflow automation
+    - documentation: BILT for partner documentation
+    - testing: BILT for partner integration testing
+    - support: BILT for partner support services
   
   revenue_attribution:
     - partnership_revenue: Revenue from partner relationships
@@ -365,26 +361,26 @@ partner_services_integration:
     - support_services: Revenue from partner support
   
   technical_integration:
-    - partner_apis: ARX partner API integration
-    - workflow_engine: ARX workflow automation
-    - authentication: ARX partner authentication
-    - data_exchange: ARX partner data exchange
-    - monitoring: ARX partner integration monitoring
+    - partner_apis: BILT partner API integration
+    - workflow_engine: BILT workflow automation
+    - authentication: BILT partner authentication
+    - data_exchange: BILT partner data exchange
+    - monitoring: BILT partner integration monitoring
 ```
 
 #### 3.6 PlanarX Services (`services/planarx/`)
 **Purpose**: Community and funding platform integration
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 planarx_services_integration:
   contribution_mechanisms:
-    - community_management: ARX for community management tools
-    - funding_workflows: ARX for funding workflow development
-    - api_integration: ARX for PlanarX API integration
-    - feature_development: ARX for PlanarX feature development
-    - user_experience: ARX for UX improvements
-    - analytics: ARX for community analytics
+    - community_management: BILT for community management tools
+    - funding_workflows: BILT for funding workflow development
+    - api_integration: BILT for PlanarX API integration
+    - feature_development: BILT for PlanarX feature development
+    - user_experience: BILT for UX improvements
+    - analytics: BILT for community analytics
   
   revenue_attribution:
     - platform_fees: Revenue from platform transaction fees
@@ -393,11 +389,11 @@ planarx_services_integration:
     - training_services: Revenue from community training
   
   technical_integration:
-    - community_api: ARX community API integration
-    - funding_engine: ARX funding workflow integration
-    - user_management: ARX user management integration
-    - analytics_engine: ARX community analytics
-    - notification_system: ARX notification integration
+    - community_api: BILT community API integration
+    - funding_engine: BILT funding workflow integration
+    - user_management: BILT user management integration
+    - analytics_engine: BILT community analytics
+    - notification_system: BILT notification integration
 ```
 
 ### 4. Infrastructure Integration
@@ -405,16 +401,16 @@ planarx_services_integration:
 #### 4.1 Database Layer (`infrastructure/database/`)
 **Purpose**: Database schemas, migrations, data management
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 database_integration:
   contribution_mechanisms:
-    - schema_design: ARX for database schema design
-    - migration_development: ARX for migration development
-    - performance_optimization: ARX for database optimization
-    - backup_strategies: ARX for backup strategy development
-    - security_enhancements: ARX for database security
-    - monitoring: ARX for database monitoring
+    - schema_design: BILT for database schema design
+    - migration_development: BILT for migration development
+    - performance_optimization: BILT for database optimization
+    - backup_strategies: BILT for backup strategy development
+    - security_enhancements: BILT for database security
+    - monitoring: BILT for database monitoring
   
   revenue_attribution:
     - data_services: Revenue from data services
@@ -423,26 +419,26 @@ database_integration:
     - support_services: Revenue from database support
   
   technical_integration:
-    - arx_tables: ARX-specific database tables
-    - migrations: ARX database migrations
-    - indexes: ARX database indexes
-    - views: ARX database views
-    - stored_procedures: ARX stored procedures
+    - arx_tables: BILT-specific database tables
+    - migrations: BILT database migrations
+    - indexes: BILT database indexes
+    - views: BILT database views
+    - stored_procedures: BILT stored procedures
 ```
 
 #### 4.2 Deployment (`infrastructure/deploy/`)
 **Purpose**: Deployment configurations, Kubernetes, Docker
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 deployment_integration:
   contribution_mechanisms:
-    - deployment_automation: ARX for deployment automation
-    - configuration_management: ARX for configuration management
-    - monitoring_setup: ARX for monitoring setup
-    - security_configuration: ARX for security configuration
-    - scaling_strategies: ARX for scaling strategy development
-    - disaster_recovery: ARX for disaster recovery planning
+    - deployment_automation: BILT for deployment automation
+    - configuration_management: BILT for configuration management
+    - monitoring_setup: BILT for monitoring setup
+    - security_configuration: BILT for security configuration
+    - scaling_strategies: BILT for scaling strategy development
+    - disaster_recovery: BILT for disaster recovery planning
   
   revenue_attribution:
     - deployment_services: Revenue from deployment services
@@ -450,26 +446,26 @@ deployment_integration:
     - support_services: Revenue from deployment support
   
   technical_integration:
-    - kubernetes_configs: ARX Kubernetes configurations
-    - docker_configs: ARX Docker configurations
-    - monitoring_setup: ARX monitoring integration
-    - security_configs: ARX security configurations
-    - backup_configs: ARX backup configurations
+    - kubernetes_configs: BILT Kubernetes configurations
+    - docker_configs: BILT Docker configurations
+    - monitoring_setup: BILT monitoring integration
+    - security_configs: BILT security configurations
+    - backup_configs: BILT backup configurations
 ```
 
 #### 4.3 Monitoring (`infrastructure/monitoring/`)
 **Purpose**: Observability, logging, alerting
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 monitoring_integration:
   contribution_mechanisms:
-    - monitoring_setup: ARX for monitoring setup
-    - alert_development: ARX for alert development
-    - dashboard_creation: ARX for dashboard creation
-    - log_analysis: ARX for log analysis improvements
-    - performance_monitoring: ARX for performance monitoring
-    - security_monitoring: ARX for security monitoring
+    - monitoring_setup: BILT for monitoring setup
+    - alert_development: BILT for alert development
+    - dashboard_creation: BILT for dashboard creation
+    - log_analysis: BILT for log analysis improvements
+    - performance_monitoring: BILT for performance monitoring
+    - security_monitoring: BILT for security monitoring
   
   revenue_attribution:
     - monitoring_services: Revenue from monitoring services
@@ -477,11 +473,11 @@ monitoring_integration:
     - support_services: Revenue from monitoring support
   
   technical_integration:
-    - arx_metrics: ARX-specific metrics
-    - arx_alerts: ARX-specific alerts
-    - arx_dashboards: ARX monitoring dashboards
-    - arx_logs: ARX log integration
-    - arx_traces: ARX tracing integration
+    - arx_metrics: BILT-specific metrics
+    - arx_alerts: BILT-specific alerts
+    - arx_dashboards: BILT monitoring dashboards
+    - arx_logs: BILT log integration
+    - arx_traces: BILT tracing integration
 ```
 
 ### 5. Development Tools Integration
@@ -489,16 +485,16 @@ monitoring_integration:
 #### 5.1 CLI Tools (`tools/cli/`)
 **Purpose**: Command-line interface tools
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 cli_integration:
   contribution_mechanisms:
-    - command_development: ARX for CLI command development
-    - automation_scripts: ARX for automation script development
-    - documentation: ARX for CLI documentation
-    - testing: ARX for CLI testing
-    - performance_optimization: ARX for CLI performance
-    - user_experience: ARX for CLI UX improvements
+    - command_development: BILT for CLI command development
+    - automation_scripts: BILT for automation script development
+    - documentation: BILT for CLI documentation
+    - testing: BILT for CLI testing
+    - performance_optimization: BILT for CLI performance
+    - user_experience: BILT for CLI UX improvements
   
   revenue_attribution:
     - cli_licensing: Revenue from CLI tool licensing
@@ -507,26 +503,26 @@ cli_integration:
     - training_services: Revenue from CLI training
   
   technical_integration:
-    - arx_commands: ARX-specific CLI commands
-    - arx_scripts: ARX automation scripts
-    - arx_configs: ARX CLI configurations
-    - arx_plugins: ARX CLI plugins
-    - arx_help: ARX CLI help system
+    - arx_commands: BILT-specific CLI commands
+    - arx_scripts: BILT automation scripts
+    - arx_configs: BILT CLI configurations
+    - arx_plugins: BILT CLI plugins
+    - arx_help: BILT CLI help system
 ```
 
 #### 5.2 Symbol Library (`tools/symbols/`)
 **Purpose**: Symbol library and BIM definitions
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 symbol_library_integration:
   contribution_mechanisms:
-    - symbol_creation: ARX for symbol creation
-    - symbol_validation: ARX for symbol validation
-    - library_organization: ARX for library organization
-    - documentation: ARX for symbol documentation
-    - testing: ARX for symbol testing
-    - quality_assurance: ARX for symbol quality assurance
+    - symbol_creation: BILT for symbol creation
+    - symbol_validation: BILT for symbol validation
+    - library_organization: BILT for library organization
+    - documentation: BILT for symbol documentation
+    - testing: BILT for symbol testing
+    - quality_assurance: BILT for symbol quality assurance
   
   revenue_attribution:
     - symbol_licensing: Revenue from symbol licensing
@@ -535,26 +531,26 @@ symbol_library_integration:
     - training_services: Revenue from symbol training
   
   technical_integration:
-    - arx_symbols: ARX-specific symbols
-    - symbol_validation: ARX symbol validation
-    - library_management: ARX library management
-    - symbol_export: ARX symbol export functionality
-    - symbol_import: ARX symbol import functionality
+    - arx_symbols: BILT-specific symbols
+    - symbol_validation: BILT symbol validation
+    - library_management: BILT library management
+    - symbol_export: BILT symbol export functionality
+    - symbol_import: BILT symbol import functionality
 ```
 
 #### 5.3 Documentation (`tools/docs/`)
 **Purpose**: Documentation and guides
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 documentation_integration:
   contribution_mechanisms:
-    - documentation_writing: ARX for documentation writing
-    - guide_creation: ARX for guide creation
-    - tutorial_development: ARX for tutorial development
-    - api_documentation: ARX for API documentation
-    - user_guides: ARX for user guide development
-    - technical_writing: ARX for technical writing
+    - documentation_writing: BILT for documentation writing
+    - guide_creation: BILT for guide creation
+    - tutorial_development: BILT for tutorial development
+    - api_documentation: BILT for API documentation
+    - user_guides: BILT for user guide development
+    - technical_writing: BILT for technical writing
   
   revenue_attribution:
     - documentation_services: Revenue from documentation services
@@ -562,11 +558,11 @@ documentation_integration:
     - consulting_services: Revenue from documentation consulting
   
   technical_integration:
-    - arx_docs: ARX-specific documentation
-    - api_docs: ARX API documentation
-    - user_guides: ARX user guides
-    - tutorials: ARX tutorials
-    - technical_specs: ARX technical specifications
+    - arx_docs: BILT-specific documentation
+    - api_docs: BILT API documentation
+    - user_guides: BILT user guides
+    - tutorials: BILT tutorials
+    - technical_specs: BILT technical specifications
 ```
 
 ### 6. Additional Components Integration
@@ -574,16 +570,16 @@ documentation_integration:
 #### 6.1 SDK (`sdk/`)
 **Purpose**: Software development kit
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 sdk_integration:
   contribution_mechanisms:
-    - sdk_development: ARX for SDK development
-    - api_wrappers: ARX for API wrapper development
-    - examples: ARX for SDK examples
-    - documentation: ARX for SDK documentation
-    - testing: ARX for SDK testing
-    - performance: ARX for SDK performance improvements
+    - sdk_development: BILT for SDK development
+    - api_wrappers: BILT for API wrapper development
+    - examples: BILT for SDK examples
+    - documentation: BILT for SDK documentation
+    - testing: BILT for SDK testing
+    - performance: BILT for SDK performance improvements
   
   revenue_attribution:
     - sdk_licensing: Revenue from SDK licensing
@@ -591,26 +587,26 @@ sdk_integration:
     - support_services: Revenue from SDK support
   
   technical_integration:
-    - arx_sdk: ARX SDK components
-    - api_wrappers: ARX API wrappers
-    - examples: ARX SDK examples
-    - documentation: ARX SDK documentation
-    - testing: ARX SDK testing framework
+    - arx_sdk: BILT SDK components
+    - api_wrappers: BILT API wrappers
+    - examples: BILT SDK examples
+    - documentation: BILT SDK documentation
+    - testing: BILT SDK testing framework
 ```
 
 #### 6.2 Plugins (`plugins/`)
 **Purpose**: Plugin system
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 plugin_integration:
   contribution_mechanisms:
-    - plugin_development: ARX for plugin development
-    - api_development: ARX for plugin API development
-    - documentation: ARX for plugin documentation
-    - testing: ARX for plugin testing
-    - examples: ARX for plugin examples
-    - quality_assurance: ARX for plugin quality assurance
+    - plugin_development: BILT for plugin development
+    - api_development: BILT for plugin API development
+    - documentation: BILT for plugin documentation
+    - testing: BILT for plugin testing
+    - examples: BILT for plugin examples
+    - quality_assurance: BILT for plugin quality assurance
   
   revenue_attribution:
     - plugin_licensing: Revenue from plugin licensing
@@ -619,26 +615,26 @@ plugin_integration:
     - support_services: Revenue from plugin support
   
   technical_integration:
-    - arx_plugins: ARX-specific plugins
-    - plugin_api: ARX plugin API
-    - plugin_manager: ARX plugin management
-    - plugin_marketplace: ARX plugin marketplace
-    - plugin_documentation: ARX plugin documentation
+    - arx_plugins: BILT-specific plugins
+    - plugin_api: BILT plugin API
+    - plugin_manager: BILT plugin management
+    - plugin_marketplace: BILT plugin marketplace
+    - plugin_documentation: BILT plugin documentation
 ```
 
 #### 6.3 Scripts (`scripts/`)
 **Purpose**: Utility scripts
 
-**ARX Integration Points**:
+**BILT Integration Points**:
 ```yaml
 scripts_integration:
   contribution_mechanisms:
-    - script_development: ARX for script development
-    - automation: ARX for automation script development
-    - testing: ARX for script testing
-    - documentation: ARX for script documentation
-    - optimization: ARX for script optimization
-    - error_handling: ARX for script error handling
+    - script_development: BILT for script development
+    - automation: BILT for automation script development
+    - testing: BILT for script testing
+    - documentation: BILT for script documentation
+    - optimization: BILT for script optimization
+    - error_handling: BILT for script error handling
   
   revenue_attribution:
     - automation_services: Revenue from automation services
@@ -646,11 +642,11 @@ scripts_integration:
     - support_services: Revenue from scripting support
   
   technical_integration:
-    - arx_scripts: ARX-specific scripts
-    - automation_scripts: ARX automation scripts
-    - utility_scripts: ARX utility scripts
-    - testing_scripts: ARX testing scripts
-    - deployment_scripts: ARX deployment scripts
+    - arx_scripts: BILT-specific scripts
+    - automation_scripts: BILT automation scripts
+    - utility_scripts: BILT utility scripts
+    - testing_scripts: BILT testing scripts
+    - deployment_scripts: BILT deployment scripts
 ```
 
 ---
@@ -690,11 +686,11 @@ scripts_integration:
 ## 🚀 Implementation Priority Matrix
 
 ### Phase 1: Core Platform (Months 1-3)
-**Priority**: Critical for ARX foundation
+**Priority**: Critical for BILT foundation
 - **SVGX Engine**: Core contribution and revenue attribution
-- **Arx Backend**: Essential for ARX operations
-- **Database Layer**: Required for ARX data storage
-- **Web Frontend**: Primary user interface for ARX
+- **Arx Backend**: Essential for BILT operations
+- **Database Layer**: Required for BILT data storage
+- **Web Frontend**: Primary user interface for BILT
 
 ### Phase 2: Revenue-Generating Services (Months 4-6)
 **Priority**: High revenue potential
@@ -730,57 +726,57 @@ scripts_integration:
 
 ### Phase 1: Core Platform Integration
 - [ ] **SVGX Engine Integration**
-  - [ ] ARX contribution tracking for object creation
+  - [ ] BILT contribution tracking for object creation
   - [ ] Revenue attribution for symbol licensing
   - [ ] Technical integration with SVGX API
   - [ ] Audit trail for SVGX contributions
   - [ ] Performance monitoring for SVGX operations
 
 - [ ] **Arx Backend Integration**
-  - [ ] ARX HTTP handlers and middleware
-  - [ ] Database models for ARX data
-  - [ ] Business logic services for ARX
-  - [ ] Authentication and authorization for ARX
-  - [ ] API endpoints for ARX operations
+  - [ ] BILT HTTP handlers and middleware
+  - [ ] Database models for BILT data
+  - [ ] Business logic services for BILT
+  - [ ] Authentication and authorization for BILT
+  - [ ] API endpoints for BILT operations
 
 - [ ] **Database Layer Integration**
-  - [ ] ARX-specific database tables
-  - [ ] Database migrations for ARX
+  - [ ] BILT-specific database tables
+  - [ ] Database migrations for BILT
   - [ ] Indexes and performance optimization
   - [ ] Backup and recovery procedures
   - [ ] Data retention policies
 
 - [ ] **Web Frontend Integration**
-  - [ ] ARX dashboard and management UI
-  - [ ] ARX wallet integration
+  - [ ] BILT dashboard and management UI
+  - [ ] BILT wallet integration
   - [ ] Contribution tracking interface
   - [ ] Revenue visualization components
   - [ ] User authentication and authorization
 
 ### Phase 2: Revenue-Generating Services Integration
 - [ ] **AI Services Integration**
-  - [ ] ARX rewards for AI model contributions
+  - [ ] BILT rewards for AI model contributions
   - [ ] Revenue attribution for AI predictions
   - [ ] AI model licensing revenue tracking
   - [ ] AI consulting revenue attribution
   - [ ] AI training revenue tracking
 
 - [ ] **IoT Services Integration**
-  - [ ] ARX rewards for hardware driver contributions
+  - [ ] BILT rewards for hardware driver contributions
   - [ ] Telemetry data revenue attribution
   - [ ] Device management service revenue
   - [ ] IoT consulting revenue tracking
   - [ ] IoT support service revenue
 
 - [ ] **CMMS Services Integration**
-  - [ ] ARX rewards for maintenance template contributions
+  - [ ] BILT rewards for maintenance template contributions
   - [ ] Maintenance service revenue attribution
   - [ ] Asset analytics revenue tracking
   - [ ] CMMS consulting revenue
   - [ ] CMMS support service revenue
 
 - [ ] **Data Vendor Services Integration**
-  - [ ] ARX rewards for API integration work
+  - [ ] BILT rewards for API integration work
   - [ ] Data service revenue attribution
   - [ ] API licensing revenue tracking
   - [ ] Integration consulting revenue
@@ -788,21 +784,21 @@ scripts_integration:
 
 ### Phase 3: User-Facing Applications Integration
 - [ ] **Mobile Applications Integration**
-  - [ ] ARX wallet mobile integration
+  - [ ] BILT wallet mobile integration
   - [ ] Mobile contribution tracking
   - [ ] In-app purchase revenue attribution
   - [ ] Mobile premium features revenue
   - [ ] AR features revenue tracking
 
 - [ ] **CLI Tools Integration**
-  - [ ] ARX CLI commands and automation
+  - [ ] BILT CLI commands and automation
   - [ ] CLI contribution tracking
   - [ ] CLI licensing revenue
   - [ ] CLI automation service revenue
   - [ ] CLI consulting revenue
 
 - [ ] **Symbol Library Integration**
-  - [ ] ARX rewards for symbol contributions
+  - [ ] BILT rewards for symbol contributions
   - [ ] Symbol licensing revenue attribution
   - [ ] Library access revenue tracking
   - [ ] Symbol consulting revenue
@@ -810,28 +806,28 @@ scripts_integration:
 
 ### Phase 4: Ecosystem Services Integration
 - [ ] **Partner Services Integration**
-  - [ ] ARX rewards for partner integrations
+  - [ ] BILT rewards for partner integrations
   - [ ] Partnership revenue attribution
   - [ ] API licensing revenue tracking
   - [ ] Integration consulting revenue
   - [ ] Partner support revenue
 
 - [ ] **PlanarX Services Integration**
-  - [ ] ARX rewards for community management
+  - [ ] BILT rewards for community management
   - [ ] Platform fee revenue attribution
   - [ ] Premium feature revenue tracking
   - [ ] Community consulting revenue
   - [ ] Training service revenue
 
 - [ ] **SDK Integration**
-  - [ ] ARX rewards for SDK development
+  - [ ] BILT rewards for SDK development
   - [ ] SDK licensing revenue attribution
   - [ ] SDK consulting revenue tracking
   - [ ] SDK support revenue
   - [ ] SDK training revenue
 
 - [ ] **Plugin System Integration**
-  - [ ] ARX rewards for plugin development
+  - [ ] BILT rewards for plugin development
   - [ ] Plugin licensing revenue attribution
   - [ ] Marketplace fee revenue tracking
   - [ ] Plugin consulting revenue
@@ -839,25 +835,25 @@ scripts_integration:
 
 ### Phase 5: Infrastructure and Tools Integration
 - [ ] **Deployment Integration**
-  - [ ] ARX rewards for deployment automation
+  - [ ] BILT rewards for deployment automation
   - [ ] Deployment service revenue attribution
   - [ ] Deployment consulting revenue
   - [ ] Deployment support revenue
 
 - [ ] **Monitoring Integration**
-  - [ ] ARX rewards for monitoring setup
+  - [ ] BILT rewards for monitoring setup
   - [ ] Monitoring service revenue attribution
   - [ ] Monitoring consulting revenue
   - [ ] Monitoring support revenue
 
 - [ ] **Documentation Integration**
-  - [ ] ARX rewards for documentation writing
+  - [ ] BILT rewards for documentation writing
   - [ ] Documentation service revenue attribution
   - [ ] Training material revenue
   - [ ] Documentation consulting revenue
 
 - [ ] **Scripts Integration**
-  - [ ] ARX rewards for script development
+  - [ ] BILT rewards for script development
   - [ ] Automation service revenue attribution
   - [ ] Scripting consulting revenue
   - [ ] Scripting support revenue
@@ -873,16 +869,16 @@ scripts_integration:
 - **Technical Areas**: 100+ technical integration points completed
 
 ### Revenue Attribution Metrics
-- **Revenue Tracking**: 100% of platform revenue attributable to ARX
+- **Revenue Tracking**: 100% of platform revenue attributable to BILT
 - **Contribution Tracking**: 100% of contributions tracked and rewarded
-- **Audit Trail**: Complete audit trail for all ARX transactions
-- **Transparency**: Real-time visibility into ARX operations
+- **Audit Trail**: Complete audit trail for all BILT transactions
+- **Transparency**: Real-time visibility into BILT operations
 
 ### Technical Integration Metrics
-- **API Coverage**: All Arxos APIs integrated with ARX
-- **Database Integration**: Complete ARX data model implementation
-- **Security Integration**: Comprehensive ARX security implementation
-- **Performance**: ARX operations meet performance requirements
+- **API Coverage**: All Arxos APIs integrated with BILT
+- **Database Integration**: Complete BILT data model implementation
+- **Security Integration**: Comprehensive BILT security implementation
+- **Performance**: BILT operations meet performance requirements
 
 ---
 
@@ -902,4 +898,4 @@ scripts_integration:
 
 ---
 
-*This comprehensive integration mapping ensures that ARX will touch every single point of the Arxos ecosystem, providing complete coverage for contributions, revenue attribution, and technical integration across all platform components.*
+*This comprehensive integration mapping ensures that BILT will touch every single point of the Arxos ecosystem, providing complete coverage for contributions, revenue attribution, and technical integration across all platform components.*

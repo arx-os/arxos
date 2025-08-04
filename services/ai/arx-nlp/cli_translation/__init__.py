@@ -5,7 +5,7 @@ This package provides CLI command generation functionality to convert
 NLP intents and slots into structured ArxCLI commands.
 """
 
-from services.cli_translator
+from .cli_translator import CLITranslator, translate_to_cli
 
 __all__ = [
     "CLITranslator",

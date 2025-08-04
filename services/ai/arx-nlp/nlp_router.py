@@ -21,11 +21,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
-from services.intent_detection.intent_detector
-from services.slot_filling.slot_filler
-from services.cli_translation.cli_translator
-from services.models.nlp_models
-from services.utils.context_manager
+from .intent_detection.intent_detector import IntentDetector
+from .slot_filling.slot_filler import SlotFiller
+from .cli_translation.cli_translator import CLITranslator
+from .models.nlp_models import NLPResponse, CLICommand
+from .utils.context_manager import ContextManager
 
 
 class IntentType(Enum):

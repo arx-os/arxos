@@ -1,0 +1,264 @@
+{
+  "mcp_id": "en-1991-1-1",
+  "name": "Eurocode 1: Actions on Structures - Part 1-1: General Actions",
+  "version": "2021",
+  "jurisdiction": {
+    "country": "EU",
+    "region": "European Union",
+    "authority": "CEN",
+    "effective_date": "2021-01-01"
+  },
+  "description": "Eurocode 1 Part 1-1 provides general rules for actions on structures including dead loads, live loads, and environmental actions.",
+  "rules": [
+    {
+      "rule_id": "EN1991-1-1-3.1.1",
+      "name": "Dead Loads - Self Weight",
+      "description": "Self-weight of structural and non-structural elements shall be considered",
+      "category": "structural_loads",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "self_weight_calculated",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Self-weight of structural elements must be calculated and considered per EN 1991-1-1-3.1.1",
+          "severity": "error",
+          "code_reference": "EN 1991-1-1-3.1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-3.2.1",
+      "name": "Imposed Loads - Floor Areas",
+      "description": "Imposed loads for floor areas shall be determined according to use",
+      "category": "structural_loads",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "floor",
+          "property": "imposed_load",
+          "operator": ">=",
+          "value": 2.0
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Floor areas must have minimum imposed load of 2.0 kN/m² per EN 1991-1-1-3.2.1",
+          "severity": "error",
+          "code_reference": "EN 1991-1-1-3.2.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-3.3.1",
+      "name": "Roof Loads - Snow Loads",
+      "description": "Snow loads on roofs shall be determined according to location and roof geometry",
+      "category": "structural_loads",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "roof",
+          "property": "snow_load_calculated",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Snow loads on roofs must be calculated according to location and geometry per EN 1991-1-1-3.3.1",
+          "severity": "error",
+          "code_reference": "EN 1991-1-1-3.3.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-3.4.1",
+      "name": "Wind Loads - Basic Wind Velocity",
+      "description": "Basic wind velocity shall be determined for the site location",
+      "category": "structural_loads",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "wind_velocity_determined",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Basic wind velocity must be determined for the site location per EN 1991-1-1-3.4.1",
+          "severity": "error",
+          "code_reference": "EN 1991-1-1-3.4.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-3.5.1",
+      "name": "Thermal Actions - Temperature Changes",
+      "description": "Thermal actions due to temperature changes shall be considered",
+      "category": "structural_loads",
+      "severity": "warning",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "thermal_actions_considered",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Thermal actions due to temperature changes should be considered per EN 1991-1-1-3.5.1",
+          "severity": "warning",
+          "code_reference": "EN 1991-1-1-3.5.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-4.1.1",
+      "name": "Combination of Actions - Fundamental Combination",
+      "description": "Actions shall be combined according to fundamental combination rules",
+      "category": "structural_loads",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "action_combination_verified",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Actions must be combined according to fundamental combination rules per EN 1991-1-1-4.1.1",
+          "severity": "error",
+          "code_reference": "EN 1991-1-1-4.1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-5.1.1",
+      "name": "Load Reduction - Large Floor Areas",
+      "description": "Load reduction for large floor areas shall be applied",
+      "category": "structural_loads",
+      "severity": "warning",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "floor",
+          "property": "area",
+          "operator": ">",
+          "value": 50.0
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Load reduction should be applied for floor areas larger than 50 m² per EN 1991-1-1-5.1.1",
+          "severity": "warning",
+          "code_reference": "EN 1991-1-1-5.1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-6.1.1",
+      "name": "Dynamic Effects - Vibration",
+      "description": "Dynamic effects due to vibration shall be considered",
+      "category": "structural_loads",
+      "severity": "warning",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "dynamic_effects_considered",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Dynamic effects due to vibration should be considered per EN 1991-1-1-6.1.1",
+          "severity": "warning",
+          "code_reference": "EN 1991-1-1-6.1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-7.1.1",
+      "name": "Accidental Actions - Impact Loads",
+      "description": "Accidental actions such as impact loads shall be considered",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "accidental_actions_considered",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Accidental actions such as impact loads must be considered per EN 1991-1-1-7.1.1",
+          "severity": "error",
+          "code_reference": "EN 1991-1-1-7.1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1991-1-1-8.1.1",
+      "name": "Seismic Actions - Earthquake Loads",
+      "description": "Seismic actions shall be determined according to seismic zone",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "building",
+          "property": "seismic_zone",
+          "operator": "!=",
+          "value": "none"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Seismic actions must be determined for buildings in seismic zones per EN 1991-1-1-8.1.1",
+          "severity": "error",
+          "code_reference": "EN 1991-1-1-8.1.1"
+        }
+      ]
+    }
+  ]
+} 

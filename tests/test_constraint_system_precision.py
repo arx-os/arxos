@@ -578,7 +578,6 @@ class TestPrecisionConstraintHooks:
     def test_constraint_validation_hooks(self):
         """Test constraint validation hooks."""
         def test_hook(context: HookContext) -> HookContext:
-            nonlocal self.hook_called, self.hook_context
             self.hook_called = True
             self.hook_context = context
             assert context.operation_name == "constraint_validation"
@@ -612,7 +611,6 @@ class TestPrecisionConstraintHooks:
     def test_constraint_solving_hooks(self):
         """Test constraint solving hooks."""
         def test_hook(context: HookContext) -> HookContext:
-            nonlocal self.hook_called, self.hook_context
             self.hook_called = True
             self.hook_context = context
             assert context.operation_name == "constraint_solving"

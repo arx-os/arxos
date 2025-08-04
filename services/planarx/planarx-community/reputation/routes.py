@@ -9,8 +9,8 @@ from typing import List, Dict, Optional
 from datetime import datetime
 import logging
 
-from services.scoring_engine
-from services.badges
+from .scoring_engine import reputation_engine, ContributionType
+from .badges import badge_system
 from ..auth.auth_utils import get_current_user
 from ..models.user import User
 

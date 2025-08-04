@@ -5,7 +5,7 @@ This package provides utility functions for NLP processing including
 context management and other helper functions.
 """
 
-from services.context_manager
+from .context_manager import ContextManager, resolve_context
 
 __all__ = [
     "ContextManager",

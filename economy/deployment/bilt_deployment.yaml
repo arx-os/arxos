@@ -1,0 +1,541 @@
+# BILT Token System Deployment Configuration
+# This file defines the complete deployment setup for the BILT cryptocurrency system
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bilt-config
+  namespace: arxos-economy
+data:
+  # Blockchain Configuration
+  WEB3_PROVIDER: "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+  BILT_CONTRACT_ADDRESS: "0x0000000000000000000000000000000000000000"  # To be deployed
+  REVENUE_ROUTER_ADDRESS: "0x0000000000000000000000000000000000000000"  # To be deployed
+  
+  # Database Configuration
+  DATABASE_URL: "postgresql://bilt_user:bilt_password@bilt-db:5432/bilt_db"
+  
+  # API Configuration
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  
+  # Security Configuration
+  JWT_SECRET: "your-jwt-secret-key"
+  PRIVATE_KEY_PATH: "/secrets/bilt-private-key"
+  
+  # Monitoring Configuration
+  PROMETHEUS_ENDPOINT: "http://prometheus:9090"
+  GRAFANA_ENDPOINT: "http://grafana:3000"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bilt-secrets
+  namespace: arxos-economy
+type: Opaque
+data:
+  # Base64 encoded secrets
+  private-key: "eW91ci1wcml2YXRlLWtleS1oZXJl"  # your-private-key-here
+  database-password: "YmlsdF9wYXNzd29yZA=="  # bilt_password
+  jwt-secret: "eW91ci1qd3Qtc2VjcmV0LWtleQ=="  # your-jwt-secret-key
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bilt-backend
+  namespace: arxos-economy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bilt-backend
+  template:
+    metadata:
+      labels:
+        app: bilt-backend
+    spec:
+      containers:
+      - name: bilt-api
+        image: arxos/bilt-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: WEB3_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: bilt-config
+              key: WEB3_PROVIDER
+        - name: BILT_CONTRACT_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: bilt-config
+              key: BILT_CONTRACT_ADDRESS
+        - name: REVENUE_ROUTER_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: bilt-config
+              key: REVENUE_ROUTER_ADDRESS
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: bilt-config
+              key: DATABASE_URL
+        - name: API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: bilt-config
+              key: API_HOST
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: bilt-config
+              key: API_PORT
+        volumeMounts:
+        - name: bilt-secrets
+          mountPath: /secrets
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/v1/bilt/health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/bilt/health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: bilt-secrets
+        secret:
+          secretName: bilt-secrets
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bilt-api-service
+  namespace: arxos-economy
+spec:
+  selector:
+    app: bilt-backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bilt-api-ingress
+  namespace: arxos-economy
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - bilt-api.arxos.xyz
+    secretName: bilt-api-tls
+  rules:
+  - host: bilt-api.arxos.xyz
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bilt-api-service
+            port:
+              number: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bilt-dashboard
+  namespace: arxos-economy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bilt-dashboard
+  template:
+    metadata:
+      labels:
+        app: bilt-dashboard
+    spec:
+      containers:
+      - name: bilt-dashboard
+        image: arxos/bilt-dashboard:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: REACT_APP_API_URL
+          value: "https://bilt-api.arxos.xyz"
+        - name: REACT_APP_BLOCKCHAIN_EXPLORER
+          value: "https://etherscan.io"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bilt-dashboard-service
+  namespace: arxos-economy
+spec:
+  selector:
+    app: bilt-dashboard
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bilt-dashboard-ingress
+  namespace: arxos-economy
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - dashboard.arxos.xyz
+    secretName: bilt-dashboard-tls
+  rules:
+  - host: dashboard.arxos.xyz
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bilt-dashboard-service
+            port:
+              number: 80
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: bilt-database
+  namespace: arxos-economy
+spec:
+  serviceName: bilt-db-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bilt-database
+  template:
+    metadata:
+      labels:
+        app: bilt-database
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "bilt_db"
+        - name: POSTGRES_USER
+          value: "bilt_user"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bilt-secrets
+              key: database-password
+        volumeMounts:
+        - name: bilt-db-data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: bilt-db-data
+        persistentVolumeClaim:
+          claimName: bilt-db-pvc
+  volumeClaimTemplates:
+  - metadata:
+      name: bilt-db-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bilt-db-service
+  namespace: arxos-economy
+spec:
+  selector:
+    app: bilt-database
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bilt-db-pvc
+  namespace: arxos-economy
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bilt-monitoring
+  namespace: arxos-economy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bilt-monitoring
+  template:
+    metadata:
+      labels:
+        app: bilt-monitoring
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-data
+          mountPath: /prometheus
+        command:
+        - /bin/prometheus
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --web.console.libraries=/etc/prometheus/console_libraries
+        - --web.console.templates=/etc/prometheus/consoles
+        - --storage.tsdb.retention.time=200h
+        - --web.enable-lifecycle
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin"
+        volumeMounts:
+        - name: grafana-data
+          mountPath: /var/lib/grafana
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-data
+        emptyDir: {}
+      - name: grafana-data
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: arxos-economy
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+    - job_name: 'bilt-backend'
+      static_configs:
+      - targets: ['bilt-api-service:8000']
+      metrics_path: /metrics
+    - job_name: 'prometheus'
+      static_configs:
+      - targets: ['localhost:9090']
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bilt-monitoring-service
+  namespace: arxos-economy
+spec:
+  selector:
+    app: bilt-monitoring
+  ports:
+  - name: prometheus
+    protocol: TCP
+    port: 9090
+    targetPort: 9090
+  - name: grafana
+    protocol: TCP
+    port: 3000
+    targetPort: 3000
+  type: ClusterIP
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: bilt-dividend-distributor
+  namespace: arxos-economy
+spec:
+  schedule: "0 0 * * 0"  # Weekly on Sunday at midnight
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: dividend-distributor
+            image: arxos/bilt-dividend-distributor:latest
+            env:
+            - name: WEB3_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: bilt-config
+                  key: WEB3_PROVIDER
+            - name: BILT_CONTRACT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: bilt-config
+                  key: BILT_CONTRACT_ADDRESS
+            - name: REVENUE_ROUTER_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: bilt-config
+                  key: REVENUE_ROUTER_ADDRESS
+            volumeMounts:
+            - name: bilt-secrets
+              mountPath: /secrets
+              readOnly: true
+          volumes:
+          - name: bilt-secrets
+            secret:
+              secretName: bilt-secrets
+          restartPolicy: OnFailure
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: bilt-fraud-monitor
+  namespace: arxos-economy
+spec:
+  schedule: "*/30 * * * *"  # Every 30 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: fraud-monitor
+            image: arxos/bilt-fraud-monitor:latest
+            env:
+            - name: WEB3_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: bilt-config
+                  key: WEB3_PROVIDER
+            - name: BILT_CONTRACT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: bilt-config
+                  key: BILT_CONTRACT_ADDRESS
+            volumeMounts:
+            - name: bilt-secrets
+              mountPath: /secrets
+              readOnly: true
+          volumes:
+          - name: bilt-secrets
+            secret:
+              secretName: bilt-secrets
+          restartPolicy: OnFailure
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bilt-backend-hpa
+  namespace: arxos-economy
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bilt-backend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: bilt-backend-pdb
+  namespace: arxos-economy
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: bilt-backend 

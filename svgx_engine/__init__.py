@@ -30,6 +30,23 @@ from svgx_engine.runtime.animation_behavior_system import animation_behavior_sys
 # Custom Behavior Plugin System
 from svgx_engine.runtime.custom_behavior_plugin_system import custom_behavior_plugin_system, CustomBehaviorPluginSystem
 
+# Services
+try:
+    from svgx_engine.services import (
+        CurveSystem, BezierCurve, BSplineCurve, CurveFitter,
+        ControlPoint, CurvePoint, KnotVector, CurveType, CurveDegree,
+        create_curve_system, create_bezier_curve, create_bspline_curve,
+        ConstraintSystem, ConstraintSolver, ConstraintType, ConstraintStatus,
+        DistanceConstraint, AngleConstraint, ParallelConstraint, PerpendicularConstraint,
+        HorizontalConstraint, VerticalConstraint, CoincidentConstraint, TangentConstraint,
+        SymmetricConstraint, CurveTangentConstraint, CurvatureContinuousConstraint,
+        CurvePositionConstraint, CurveLengthConstraint,
+        create_constraint_system, create_constraint_solver
+    )
+except ImportError:
+    # Services not available
+    pass
+
 # Core Classes and Types
 from svgx_engine.runtime.event_driven_behavior_engine import Event, EventType, EventPriority
 from svgx_engine.runtime.advanced_state_machine import State, StateType, StatePriority, StateTransition

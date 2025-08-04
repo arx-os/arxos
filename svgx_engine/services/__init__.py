@@ -99,6 +99,52 @@ try:
 except ImportError:
     AdvancedExportService = None
 
+# CAD Services
+try:
+    from svgx_engine.services.cad import (
+        CurveSystem, BezierCurve, BSplineCurve, CurveFitter,
+        ControlPoint, CurvePoint, KnotVector, CurveType, CurveDegree,
+        create_curve_system, create_bezier_curve, create_bspline_curve,
+        ConstraintSystem, ConstraintSolver, ConstraintType, ConstraintStatus,
+        DistanceConstraint, AngleConstraint, ParallelConstraint, PerpendicularConstraint,
+        HorizontalConstraint, VerticalConstraint, CoincidentConstraint, TangentConstraint,
+        SymmetricConstraint, CurveTangentConstraint, CurvatureContinuousConstraint,
+        CurvePositionConstraint, CurveLengthConstraint,
+        create_constraint_system, create_constraint_solver
+    )
+except ImportError:
+    CurveSystem = None
+    BezierCurve = None
+    BSplineCurve = None
+    CurveFitter = None
+    ControlPoint = None
+    CurvePoint = None
+    KnotVector = None
+    CurveType = None
+    CurveDegree = None
+    create_curve_system = None
+    create_bezier_curve = None
+    create_bspline_curve = None
+    ConstraintSystem = None
+    ConstraintSolver = None
+    ConstraintType = None
+    ConstraintStatus = None
+    DistanceConstraint = None
+    AngleConstraint = None
+    ParallelConstraint = None
+    PerpendicularConstraint = None
+    HorizontalConstraint = None
+    VerticalConstraint = None
+    CoincidentConstraint = None
+    TangentConstraint = None
+    SymmetricConstraint = None
+    CurveTangentConstraint = None
+    CurvatureContinuousConstraint = None
+    CurvePositionConstraint = None
+    CurveLengthConstraint = None
+    create_constraint_system = None
+    create_constraint_solver = None
+
 try:
     from svgx_engine.services.export_interoperability import SVGXExportInteroperabilityService as ExportInteroperabilityService
 except ImportError:

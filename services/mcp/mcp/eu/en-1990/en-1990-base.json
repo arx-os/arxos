@@ -1,0 +1,302 @@
+{
+  "mcp_id": "en-1990-base",
+  "name": "Eurocode 0: Basis of Structural Design",
+  "version": "2021",
+  "jurisdiction": {
+    "country": "EU",
+    "region": "European Union",
+    "authority": "CEN",
+    "effective_date": "2021-01-01"
+  },
+  "description": "Eurocode 0 establishes the basis of structural design for buildings and civil engineering works. It provides the fundamental requirements and principles for structural safety, serviceability, and durability.",
+  "rules": [
+    {
+      "rule_id": "EN1990-2.1.1",
+      "name": "Structural Safety - Ultimate Limit State",
+      "description": "Structures shall be designed to have adequate resistance against ultimate limit states",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "design_resistance",
+          "operator": ">=",
+          "value": "design_actions"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural element must have adequate design resistance against ultimate limit states per EN 1990-2.1.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.1.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.1.2",
+      "name": "Structural Safety - Serviceability Limit State",
+      "description": "Structures shall be designed to have adequate resistance against serviceability limit states",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "serviceability_resistance",
+          "operator": ">=",
+          "value": "serviceability_actions"
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural element must have adequate resistance against serviceability limit states per EN 1990-2.1.2",
+          "severity": "error",
+          "code_reference": "EN 1990-2.1.2"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.2.1",
+      "name": "Reliability - Target Reliability",
+      "description": "Structures shall be designed to achieve target reliability levels",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "reliability_index",
+          "operator": ">=",
+          "value": 3.8
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural element must achieve target reliability index of 3.8 per EN 1990-2.2.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.2.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.3.1",
+      "name": "Durability - Design Working Life",
+      "description": "Structures shall be designed for specified design working life",
+      "category": "durability",
+      "severity": "warning",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "design_working_life",
+          "operator": ">=",
+          "value": 50
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural element must be designed for minimum 50-year working life per EN 1990-2.3.1",
+          "severity": "warning",
+          "code_reference": "EN 1990-2.3.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.4.1",
+      "name": "Robustness - Structural Integrity",
+      "description": "Structures shall be designed to have adequate robustness",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "robustness_level",
+          "operator": ">=",
+          "value": 2
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural element must have adequate robustness level per EN 1990-2.4.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.4.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.5.1",
+      "name": "Design Situations - Persistent and Transient",
+      "description": "Design shall consider persistent and transient design situations",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "composite",
+          "composite_operator": "AND",
+          "conditions": [
+            {
+              "type": "property",
+              "element_type": "structural_element",
+              "property": "persistent_design_verified",
+              "operator": "==",
+              "value": true
+            },
+            {
+              "type": "property",
+              "element_type": "structural_element",
+              "property": "transient_design_verified",
+              "operator": "==",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Structural element must be verified for both persistent and transient design situations per EN 1990-2.5.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.5.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.6.1",
+      "name": "Combination of Actions - Fundamental Combination",
+      "description": "Actions shall be combined according to fundamental combination rules",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "action_combination_verified",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Actions must be combined according to fundamental combination rules per EN 1990-2.6.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.6.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.7.1",
+      "name": "Partial Factors - Material Properties",
+      "description": "Partial factors for material properties shall be applied",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "partial_factors_applied",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Partial factors for material properties must be applied per EN 1990-2.7.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.7.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.8.1",
+      "name": "Partial Factors - Actions",
+      "description": "Partial factors for actions shall be applied",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "action_partial_factors_applied",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Partial factors for actions must be applied per EN 1990-2.8.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.8.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.9.1",
+      "name": "Design Values - Characteristic Values",
+      "description": "Design values shall be derived from characteristic values",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "design_values_derived",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Design values must be derived from characteristic values per EN 1990-2.9.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.9.1"
+        }
+      ]
+    },
+    {
+      "rule_id": "EN1990-2.10.1",
+      "name": "Verification - Ultimate Limit States",
+      "description": "Verification of ultimate limit states shall be performed",
+      "category": "structural_safety",
+      "severity": "error",
+      "enabled": true,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "structural_element",
+          "property": "uls_verification_completed",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Verification of ultimate limit states must be completed per EN 1990-2.10.1",
+          "severity": "error",
+          "code_reference": "EN 1990-2.10.1"
+        }
+      ]
+    }
+  ]
+} 

@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 
-from services.models.nlp_models
+from ..models.nlp_models import Intent, Slot, SlotResult, CLICommand, IntentType, SlotType
 
 
 @dataclass

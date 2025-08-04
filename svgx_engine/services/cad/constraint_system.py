@@ -21,6 +21,10 @@ from svgx_engine.core.precision_validator import PrecisionValidator, ValidationL
 from svgx_engine.core.precision_config import PrecisionConfig, config_manager
 from svgx_engine.core.precision_hooks import hook_manager, HookType, HookContext
 from svgx_engine.core.precision_errors import handle_precision_error, PrecisionErrorType, PrecisionErrorSeverity
+from .curve_constraints import (
+    CurveTangentConstraint, CurvatureContinuousConstraint,
+    CurvePositionConstraint, CurveLengthConstraint
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +39,18 @@ class ConstraintType(Enum):
     ANGLE = "angle"
     PARALLEL = "parallel"
     PERPENDICULAR = "perpendicular"
-    HORIZONTAL = "horizontal"
-    VERTICAL = "vertical"
     
     # Geometric constraints
     COINCIDENT = "coincident"
     TANGENT = "tangent"
     SYMMETRIC = "symmetric"
     EQUAL = "equal"
+    
+    # Curve constraints
+    CURVE_TANGENT = "curve_tangent"
+    CURVATURE_CONTINUOUS = "curvature_continuous"
+    CURVE_POSITION = "curve_position"
+    CURVE_LENGTH = "curve_length"
     
     # Advanced constraints
     FIXED = "fixed"
@@ -1159,6 +1167,94 @@ class ConstraintSystem:
             )
             raise
     
+    def add_curve_tangent_constraint(self, curve1: Any, curve2: Any) -> CurveTangentConstraint:
+        """Add curve tangent constraint with precision validation"""
+        try:
+            constraint = CurveTangentConstraint(curve1, curve2)
+            self.constraints.append(constraint)
+            self.solver.add_constraint(constraint)
+            
+            logger.info("Added precision curve tangent constraint")
+            return constraint
+            
+        except Exception as e:
+            # Handle constraint creation error
+            handle_precision_error(
+                error_type=PrecisionErrorType.VALIDATION_ERROR,
+                message=f"Curve tangent constraint creation failed: {str(e)}",
+                operation="curve_tangent_constraint_creation",
+                coordinates=[],
+                context={'curve1': str(curve1), 'curve2': str(curve2)},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            raise
+    
+    def add_curvature_continuous_constraint(self, curve1: Any, curve2: Any) -> CurvatureContinuousConstraint:
+        """Add curvature continuous constraint with precision validation"""
+        try:
+            constraint = CurvatureContinuousConstraint(curve1, curve2)
+            self.constraints.append(constraint)
+            self.solver.add_constraint(constraint)
+            
+            logger.info("Added precision curvature continuous constraint")
+            return constraint
+            
+        except Exception as e:
+            # Handle constraint creation error
+            handle_precision_error(
+                error_type=PrecisionErrorType.VALIDATION_ERROR,
+                message=f"Curvature continuous constraint creation failed: {str(e)}",
+                operation="curvature_continuous_constraint_creation",
+                coordinates=[],
+                context={'curve1': str(curve1), 'curve2': str(curve2)},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            raise
+    
+    def add_curve_position_constraint(self, curve: Any, target_position: Any) -> CurvePositionConstraint:
+        """Add curve position constraint with precision validation"""
+        try:
+            constraint = CurvePositionConstraint(curve, target_position)
+            self.constraints.append(constraint)
+            self.solver.add_constraint(constraint)
+            
+            logger.info("Added precision curve position constraint")
+            return constraint
+            
+        except Exception as e:
+            # Handle constraint creation error
+            handle_precision_error(
+                error_type=PrecisionErrorType.VALIDATION_ERROR,
+                message=f"Curve position constraint creation failed: {str(e)}",
+                operation="curve_position_constraint_creation",
+                coordinates=[],
+                context={'curve': str(curve), 'target_position': str(target_position)},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            raise
+    
+    def add_curve_length_constraint(self, curve: Any, target_length: Union[float, decimal.Decimal]) -> CurveLengthConstraint:
+        """Add curve length constraint with precision validation"""
+        try:
+            constraint = CurveLengthConstraint(curve, target_length)
+            self.constraints.append(constraint)
+            self.solver.add_constraint(constraint)
+            
+            logger.info("Added precision curve length constraint")
+            return constraint
+            
+        except Exception as e:
+            # Handle constraint creation error
+            handle_precision_error(
+                error_type=PrecisionErrorType.VALIDATION_ERROR,
+                message=f"Curve length constraint creation failed: {str(e)}",
+                operation="curve_length_constraint_creation",
+                coordinates=[],
+                context={'curve': str(curve), 'target_length': str(target_length)},
+                severity=PrecisionErrorSeverity.ERROR
+            )
+            raise
+    
     def solve_constraints(self) -> bool:
         """Solve all constraints with precision validation"""
         return self.solver.solve_all()
@@ -1217,6 +1313,9 @@ class ConstraintSystem:
             logger.info(f"Removed precision constraint: {constraint.constraint_type.value}")
 
 
+
+
+
 class ConstraintFactory:
     """Factory for creating constraints with precision support"""
     
@@ -1260,6 +1359,30 @@ class ConstraintFactory:
                 if len(entities) != 3:
                     raise ValueError("Symmetric constraint requires exactly 3 entities")
                 return SymmetricConstraint(entities[0], entities[1], entities[2])
+                
+            elif constraint_type == ConstraintType.CURVE_TANGENT:
+                if len(entities) != 2:
+                    raise ValueError("Curve tangent constraint requires exactly 2 entities")
+                return CurveTangentConstraint(entities[0], entities[1])
+                
+            elif constraint_type == ConstraintType.CURVATURE_CONTINUOUS:
+                if len(entities) != 2:
+                    raise ValueError("Curvature continuous constraint requires exactly 2 entities")
+                return CurvatureContinuousConstraint(entities[0], entities[1])
+                
+            elif constraint_type == ConstraintType.CURVE_POSITION:
+                if len(entities) != 1:
+                    raise ValueError("Curve position constraint requires exactly 1 entity")
+                target_position = kwargs.get('target_position')
+                if not target_position:
+                    raise ValueError("Curve position constraint requires target_position parameter")
+                return CurvePositionConstraint(entities[0], target_position)
+                
+            elif constraint_type == ConstraintType.CURVE_LENGTH:
+                if len(entities) != 1:
+                    raise ValueError("Curve length constraint requires exactly 1 entity")
+                target_length = kwargs.get('target_length', 0.0)
+                return CurveLengthConstraint(entities[0], target_length)
                 
             else:
                 raise ValueError(f"Unknown constraint type: {constraint_type}")

@@ -29,11 +29,11 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 ## 🚀 Phase 2: Contribution Minting Engine (Weeks 4–6)
 
 ### 🔹 Tasks
-- [ ] Implement ARX Mint function in backend:
+- [ ] Implement BILT Mint function in backend:
     - Triggered upon AI + peer-verified contribution
 - [ ] Rate-limited + anti-spam validation checks
-- [ ] Contributor-facing ARX wallet dashboard
-- [ ] Contribution explorer with ARX mint history
+- [ ] Contributor-facing BILT wallet dashboard
+- [ ] Contribution explorer with BILT mint history
 
 ---
 
@@ -41,10 +41,10 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 
 ### 🔹 Tasks
 - [ ] Create revenue pool router
-    - Allocate % to treasury, ops, ARX pool
+    - Allocate % to treasury, ops, BILT pool
 - [ ] Develop Dividend Smart Contract
     - Time-based distribution (monthly/quarterly)
-    - Pro-rata per ARX held
+    - Pro-rata per BILT held
 - [ ] Staking contract for optional long-term reward bonuses
 - [ ] Dashboard to visualize dividend history and forecast
 
@@ -53,9 +53,9 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 ## 🛒 Phase 4: Payments & Platform Utility (Weeks 11–13)
 
 ### 🔹 Tasks
-- [ ] Accept ARX for simulation fees, Planarx proposals, premium tools
-- [ ] ArxCLI & ArxIDE integration with ARX payment hooks
-- [ ] Pricing engine (in ARX or USD equivalent)
+- [ ] Accept BILT for simulation fees, Planarx proposals, premium tools
+- [ ] ArxCLI & ArxIDE integration with BILT payment hooks
+- [ ] Pricing engine (in BILT or USD equivalent)
 - [ ] ArxScope dashboard development and integration
 
 ---
@@ -75,7 +75,7 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 ### 🔹 Tasks
 - [ ] Simulate early contributor earnings
 - [ ] Backtest against building data usage
-- [ ] Optimize ARX issuance and revenue flow models
+- [ ] Optimize BILT issuance and revenue flow models
 
 ---
 
@@ -91,8 +91,8 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 
 ### 🔹 Revenue Router + Dividends
 - Platform revenue deposited in contract
-- Equal distribution to all ARX holders (pro-rata)
-- Paid in ARX or stablecoins
+- Equal distribution to all BILT holders (pro-rata)
+- Paid in BILT or stablecoins
 - No distinction between contributor-minted and secondary market tokens
 
 ### 🔹 Contribution Registry
@@ -101,9 +101,9 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 - Separate from token (does not affect fungibility)
 
 ### 🔹 Payment Middleware
-- Enables ARX payments for platform features
+- Enables BILT payments for platform features
 - HTMX-based frontend
-- CLI and IDE integrated with ARX logic
+- CLI and IDE integrated with BILT logic
 
 ### 🔹 Transparency Dashboard (ArxScope)
 - Real-time metrics and performance visualization
@@ -123,9 +123,9 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 
 | Milestone | Description |
 |----------|-------------|
-| M1 | ARX token contract + contribution mint engine live |
+| M1 | BILT token contract + contribution mint engine live |
 | M2 | Platform revenue routing + dividend module online |
-| M3 | Platform services accept ARX |
+| M3 | Platform services accept BILT |
 | M4 | Contributor dashboard and payout visualizer |
 | M5 | DAO setup + public token interface |
 
@@ -133,10 +133,10 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 
 ## 🧠 Success Metrics
 
-- Time to mint ARX after verified contribution < 10 seconds
+- Time to mint BILT after verified contribution < 10 seconds
 - Dividend payout accuracy: 100%
-- Contributor ARX ownership ≥ 60% at launch
-- Platform ARX payment acceptance across all major services
+- Contributor BILT ownership ≥ 60% at launch
+- Platform BILT payment acceptance across all major services
 
 ---
 
@@ -145,7 +145,7 @@ Integrate the BILT (Building Infrastructure Link Token) into the Arxos platform 
 | Role | Responsibilities |
 |------|------------------|
 | Tokenomics Lead | Finalize mint curves, payout schedules |
-| Smart Contract Dev | Build & audit ARX contracts |
+| Smart Contract Dev | Build & audit BILT contracts |
 | Backend Engineer | Integrate minting + dividend logic |
 | Frontend Dev | Build wallets, dashboards, UX |
 | Growth Ops | FM onboarding, contributor education |

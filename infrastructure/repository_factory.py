@@ -12,12 +12,15 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from domain.repositories import (
     RepositoryFactory, UnitOfWork, BuildingRepository, FloorRepository, RoomRepository,
-    DeviceRepository, UserRepository, ProjectRepository
+    DeviceRepository, UserRepository, ProjectRepository, ContributionRepository,
+    RevenueRepository, DividendRepository, VerificationRepository
 )
 
 from .repositories import (
     SQLAlchemyBuildingRepository, SQLAlchemyFloorRepository, SQLAlchemyRoomRepository,
-    SQLAlchemyDeviceRepository, SQLAlchemyUserRepository, SQLAlchemyProjectRepository
+    SQLAlchemyDeviceRepository, SQLAlchemyUserRepository, SQLAlchemyProjectRepository,
+    SQLAlchemyContributionRepository, SQLAlchemyRevenueRepository, SQLAlchemyDividendRepository,
+    SQLAlchemyVerificationRepository
 )
 from .unit_of_work import SQLAlchemyUnitOfWork
 
@@ -59,6 +62,22 @@ class SQLAlchemyRepositoryFactory(RepositoryFactory):
     def create_project_repository(self) -> ProjectRepository:
         """Create a project repository instance."""
         return SQLAlchemyProjectRepository(self._get_session())
+    
+    def create_contribution_repository(self) -> ContributionRepository:
+        """Create a contribution repository instance."""
+        return SQLAlchemyContributionRepository(self._get_session())
+    
+    def create_revenue_repository(self) -> RevenueRepository:
+        """Create a revenue repository instance."""
+        return SQLAlchemyRevenueRepository(self._get_session())
+    
+    def create_dividend_repository(self) -> DividendRepository:
+        """Create a dividend repository instance."""
+        return SQLAlchemyDividendRepository(self._get_session())
+    
+    def create_verification_repository(self) -> VerificationRepository:
+        """Create a verification repository instance."""
+        return SQLAlchemyVerificationRepository(self._get_session())
     
     def create_unit_of_work(self) -> UnitOfWork:
         """Create a unit of work instance."""

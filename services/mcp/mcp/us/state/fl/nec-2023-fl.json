@@ -1,0 +1,208 @@
+{
+  "mcp_id": "nec-2023-fl",
+  "name": "NEC 2023 Florida Amendments",
+  "description": "National Electrical Code 2023 - Florida State Amendments",
+  "jurisdiction": {
+    "country": "US",
+    "state": "FL",
+    "city": null,
+    "county": null
+  },
+  "version": "2023",
+  "effective_date": "2023-01-01",
+  "rules": [
+    {
+      "rule_id": "nec_210_8_fl_2023",
+      "name": "Enhanced GFCI Protection - Florida",
+      "description": "Enhanced GFCI protection requirements for Florida",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_outlet",
+          "property": "location",
+          "operator": "in",
+          "value": ["bathroom", "kitchen", "outdoor", "garage", "basement", "crawlspace", "unfinished_basement", "pool_area", "spa_area", "boat_dock", "marina"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced GFCI protection required for outlets in marine environments per FL NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 210.8 FL"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_220_14_fl_2023",
+      "name": "Enhanced Lighting Load - Florida",
+      "description": "Enhanced lighting load calculation for Florida",
+      "category": "electrical_design",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "room",
+          "property": "area",
+          "operator": ">",
+          "value": 0
+        }
+      ],
+      "actions": [
+        {
+          "type": "calculation",
+          "formula": "area * 3.3",
+          "message": "Enhanced lighting load calculation for FL: {result} VA per square foot",
+          "severity": "info",
+          "code_reference": "NEC 220.14 FL"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_310_16_fl_2023",
+      "name": "Conductor Derating - Florida",
+      "description": "Enhanced conductor derating requirements for Florida",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_conductor",
+          "property": "ambient_temperature",
+          "operator": ">",
+          "value": 32
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced conductor derating required for high ambient temperatures per FL NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 310.16 FL"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_680_25_fl_2023",
+      "name": "Pool Equipment - Florida",
+      "description": "Enhanced pool equipment requirements for Florida",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "pool_equipment",
+          "property": "equipment_grounding",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced equipment grounding required for pool equipment per FL NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 680.25 FL"
+        }
+      ]
+    },
+    {
+      "rule_id": "nec_700_12_fl_2023",
+      "name": "Enhanced Emergency Lighting - Florida",
+      "description": "Enhanced emergency lighting requirements for Florida",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "emergency_lighting",
+          "property": "battery_duration",
+          "operator": ">=",
+          "value": 180
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced emergency lighting with 3-hour battery duration required per FL NEC amendments",
+          "severity": "error",
+          "code_reference": "NEC 700.12 FL"
+        }
+      ]
+    },
+    {
+      "rule_id": "fl_hurricane_requirements_2023",
+      "name": "Florida Hurricane Requirements",
+      "description": "Enhanced hurricane resistance requirements for Florida",
+      "category": "structural_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "hurricane_zone",
+          "operator": "in",
+          "value": ["zone_1", "zone_2", "zone_3", "zone_4", "zone_5"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced hurricane resistance requirements must be considered for electrical equipment per FL amendments",
+          "severity": "error",
+          "code_reference": "FL Hurricane Requirements 2023"
+        }
+      ]
+    },
+    {
+      "rule_id": "fl_energy_code_2023",
+      "name": "Florida Energy Code Integration",
+      "description": "Integration with Florida State Energy Code",
+      "category": "energy_efficiency",
+      "priority": 2,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "energy_efficiency_verified",
+          "operator": "==",
+          "value": true
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Energy efficiency requirements must comply with FL State Energy Code",
+          "severity": "warning",
+          "code_reference": "FL Energy Code 2023"
+        }
+      ]
+    },
+    {
+      "rule_id": "fl_marine_requirements_2023",
+      "name": "Florida Marine Environment Requirements",
+      "description": "Enhanced requirements for marine environments in Florida",
+      "category": "electrical_safety",
+      "priority": 1,
+      "conditions": [
+        {
+          "type": "property",
+          "element_type": "electrical_equipment",
+          "property": "environment",
+          "operator": "in",
+          "value": ["marine", "coastal", "salt_air"]
+        }
+      ],
+      "actions": [
+        {
+          "type": "validation",
+          "message": "Enhanced corrosion protection required for marine environments per FL amendments",
+          "severity": "error",
+          "code_reference": "FL Marine Requirements 2023"
+        }
+      ]
+    }
+  ]
+} 

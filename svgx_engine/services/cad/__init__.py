@@ -35,6 +35,10 @@ from .constraint_system import (
     CoincidentConstraint,
     TangentConstraint,
     SymmetricConstraint,
+    CurveTangentConstraint,
+    CurvatureContinuousConstraint,
+    CurvePositionConstraint,
+    CurveLengthConstraint,
     create_constraint_system,
     create_constraint_solver
 )
@@ -92,6 +96,28 @@ from .assembly_management import (
     create_assembly,
     create_component,
     create_assembly_constraint
+)
+
+from .curve_system import (
+    CurveSystem,
+    BezierCurve,
+    BSplineCurve,
+    CurveFitter,
+    ControlPoint,
+    CurvePoint,
+    KnotVector,
+    CurveType,
+    CurveDegree,
+    create_curve_system,
+    create_bezier_curve,
+    create_bspline_curve
+)
+
+from .curve_constraints import (
+    CurveTangentConstraint,
+    CurvatureContinuousConstraint,
+    CurvePositionConstraint,
+    CurveLengthConstraint
 )
 
 from .drawing_views import (

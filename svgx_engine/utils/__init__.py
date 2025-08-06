@@ -15,7 +15,7 @@ from svgx_engine.utils.errors import (
     LogicError,
     ConditionError,
     CacheError,
-    TransitionError
+    TransitionError,
 )
 
 # Version and metadata
@@ -33,5 +33,5 @@ __all__ = [
     "LogicError",
     "ConditionError",
     "CacheError",
-    "TransitionError"
-] 
+    "TransitionError",
+]

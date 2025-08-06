@@ -12,6 +12,4 @@ __version__ = "1.0.0"
 __description__ = "Domain aggregates for SVGX Engine"
 
 # Export all aggregates
-__all__ = [
-    "BuildingAggregate"
-] 
+__all__ = ["BuildingAggregate"]

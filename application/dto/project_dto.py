@@ -13,7 +13,7 @@ from datetime import datetime
 @dataclass
 class CreateProjectRequest:
     """Request DTO for creating a project."""
-    
+
     name: str
     building_id: str
     description: Optional[str] = None
@@ -26,7 +26,7 @@ class CreateProjectRequest:
 @dataclass
 class CreateProjectResponse:
     """Response DTO for project creation."""
-    
+
     success: bool
     project_id: Optional[str] = None
     message: Optional[str] = None
@@ -37,7 +37,7 @@ class CreateProjectResponse:
 @dataclass
 class UpdateProjectRequest:
     """Request DTO for updating a project."""
-    
+
     project_id: str
     name: Optional[str] = None
     description: Optional[str] = None
@@ -51,7 +51,7 @@ class UpdateProjectRequest:
 @dataclass
 class UpdateProjectResponse:
     """Response DTO for project updates."""
-    
+
     success: bool
     project_id: Optional[str] = None
     message: Optional[str] = None
@@ -62,7 +62,7 @@ class UpdateProjectResponse:
 @dataclass
 class GetProjectResponse:
     """Response DTO for getting a project."""
-    
+
     success: bool
     project: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
@@ -71,7 +71,7 @@ class GetProjectResponse:
 @dataclass
 class ListProjectsResponse:
     """Response DTO for listing projects."""
-    
+
     success: bool
     projects: List[Dict[str, Any]] = None
     total_count: int = 0
@@ -83,9 +83,9 @@ class ListProjectsResponse:
 @dataclass
 class DeleteProjectResponse:
     """Response DTO for deleting a project."""
-    
+
     success: bool
     project_id: Optional[str] = None
     message: Optional[str] = None
     error_message: Optional[str] = None
-    deleted_at: Optional[datetime] = None 
+    deleted_at: Optional[datetime] = None

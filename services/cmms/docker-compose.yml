@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  cmms-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      - DATABASE_URL=postgres://arxos:arxos@postgres:5432/arxos?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=debug
+      - DEFAULT_SYNC_INTERVAL=60
+      - MAX_RETRY_ATTEMPTS=3
+      - REQUEST_TIMEOUT=15s
+      - METRICS_ENABLED=true
+      - JWT_SECRET=your-development-jwt-secret-change-in-production
+    depends_on:
+      - postgres
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - arxos-network
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=arxos
+      - POSTGRES_USER=arxos
+      - POSTGRES_PASSWORD=arxos
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    networks:
+      - arxos-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - arxos-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  arxos-network:
+    driver: bridge 

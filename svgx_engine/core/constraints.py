@@ -13,6 +13,7 @@ from enum import Enum
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
 
+
 class ConstraintType(Enum):
     PARALLEL = "parallel"
     PERPENDICULAR = "perpendicular"
@@ -25,13 +26,14 @@ class ConstraintType(Enum):
     DISTANCE = "distance"
     ANGLE = "angle"
 
+
 @dataclass
 class Constraint:
     constraint_type: ConstraintType
     target_ids: list
     parameters: Dict[str, Any] = field(default_factory=dict)
     enabled: bool = True
-    
+
     def validate(self, elements: Dict[str, Any]) -> bool:
         """Validate the constraint against the given elements."""
         # Placeholder for actual validation logic
@@ -41,20 +43,24 @@ class Constraint:
         # For now, always return True
         return True
 
+
 @dataclass
 class ParallelConstraint(Constraint):
     def __init__(self, target_ids, parameters=None):
         super().__init__(ConstraintType.PARALLEL, target_ids, parameters or {})
+
 
 @dataclass
 class PerpendicularConstraint(Constraint):
     def __init__(self, target_ids, parameters=None):
         super().__init__(ConstraintType.PERPENDICULAR, target_ids, parameters or {})
 
+
 @dataclass
 class EqualConstraint(Constraint):
     def __init__(self, target_ids, parameters=None):
         super().__init__(ConstraintType.EQUAL, target_ids, parameters or {})
+
 
 @dataclass
 class FixedConstraint(Constraint):

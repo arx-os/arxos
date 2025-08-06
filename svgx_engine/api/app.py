@@ -28,29 +28,29 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     logger.info("Starting Arxos Clean Architecture API...")
-    
+
     # Initialize dependency injection container
     app.state.container = Container()
     logger.info("Dependency injection container initialized")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Arxos Clean Architecture API...")
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    
+
     app = FastAPI(
         title="Arxos Clean Architecture API",
         description="Enterprise-grade API following Clean Architecture principles",
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
-        lifespan=lifespan
+        lifespan=lifespan,
     )
-    
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -59,13 +59,13 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Add Gzip compression middleware
     app.add_middleware(GZipMiddleware, minimum_size=1000)
-    
+
     # Include API routers
     app.include_router(building_router, prefix="/api/v1/buildings", tags=["buildings"])
-    
+
     # Global exception handlers
     @app.exception_handler(SVGXError)
     async def svgx_exception_handler(request, exc: SVGXError):
@@ -75,10 +75,10 @@ def create_app() -> FastAPI:
             content={
                 "error": "SVGX Error",
                 "message": str(exc),
-                "context": exc.context
-            }
+                "context": exc.context,
+            },
         )
-    
+
     @app.exception_handler(ValidationError)
     async def validation_exception_handler(request, exc: ValidationError):
         """Handle validation exceptions."""
@@ -87,10 +87,10 @@ def create_app() -> FastAPI:
             content={
                 "error": "Validation Error",
                 "message": str(exc),
-                "field": exc.field
-            }
+                "field": exc.field,
+            },
         )
-    
+
     @app.exception_handler(ResourceNotFoundError)
     async def not_found_exception_handler(request, exc: ResourceNotFoundError):
         """Handle resource not found exceptions."""
@@ -100,10 +100,10 @@ def create_app() -> FastAPI:
                 "error": "Resource Not Found",
                 "message": str(exc),
                 "resource_type": exc.resource_type,
-                "resource_id": exc.resource_id
-            }
+                "resource_id": exc.resource_id,
+            },
         )
-    
+
     @app.exception_handler(Exception)
     async def general_exception_handler(request, exc: Exception):
         """Handle general exceptions."""
@@ -112,10 +112,10 @@ def create_app() -> FastAPI:
             status_code=500,
             content={
                 "error": "Internal Server Error",
-                "message": "An unexpected error occurred"
-            }
+                "message": "An unexpected error occurred",
+            },
         )
-    
+
     # Health check endpoint
     @app.get("/health", tags=["health"])
     async def health_check():
@@ -123,9 +123,9 @@ def create_app() -> FastAPI:
         return {
             "status": "healthy",
             "service": "Arxos Clean Architecture API",
-            "version": "1.0.0"
+            "version": "1.0.0",
         }
-    
+
     # Root endpoint
     @app.get("/", tags=["root"])
     async def root():
@@ -134,9 +134,9 @@ def create_app() -> FastAPI:
             "message": "Welcome to Arxos Clean Architecture API",
             "version": "1.0.0",
             "docs": "/docs",
-            "health": "/health"
+            "health": "/health",
         }
-    
+
     return app
 
 
@@ -144,6 +144,7 @@ def create_app() -> FastAPI:
 def get_container() -> Container:
     """Get the dependency injection container."""
     from fastapi import Request
+
     request = Request()
     return request.app.state.container
 
@@ -158,5 +159,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level="info"
-    ) 
+        log_level="info",
+    )

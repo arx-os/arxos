@@ -19,11 +19,7 @@ def run_command(command, description, check=True):
     print(f"🔍 {description}...")
     try:
         result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=check
+            command, shell=True, capture_output=True, text=True, check=check
         )
         print(f"✅ {description} - SUCCESS")
         return result.stdout.strip()
@@ -111,7 +107,10 @@ def check_linting():
 
 def check_build():
     """Check if the application can be built."""
-    return run_command("go build -o arx-cmms cmd/server/main.go", "Building application") is not None
+    return (
+        run_command("go build -o arx-cmms cmd/server/main.go", "Building application")
+        is not None
+    )
 
 
 def check_cmms_configuration():
@@ -121,14 +120,14 @@ def check_cmms_configuration():
         "CMMS_WORK_ORDER_AUTO_ASSIGN",
         "CMMS_PREVENTIVE_MAINTENANCE_ENABLED",
         "CMMS_ASSET_TRACKING_ENABLED",
-        "CMMS_INVENTORY_MANAGEMENT_ENABLED"
+        "CMMS_INVENTORY_MANAGEMENT_ENABLED",
     ]
-    
+
     configured_vars = 0
     for var in cmms_vars:
         if os.getenv(var):
             configured_vars += 1
-    
+
     if configured_vars >= 2:
         print("✅ CMMS configuration is set up")
         return True
@@ -140,17 +139,13 @@ def check_cmms_configuration():
 
 def check_notification_config():
     """Check if notification configuration exists."""
-    notification_vars = [
-        "NOTIFICATION_EMAIL_ENABLED",
-        "SMTP_HOST",
-        "SMTP_USERNAME"
-    ]
-    
+    notification_vars = ["NOTIFICATION_EMAIL_ENABLED", "SMTP_HOST", "SMTP_USERNAME"]
+
     configured_vars = 0
     for var in notification_vars:
         if os.getenv(var):
             configured_vars += 1
-    
+
     if configured_vars >= 2:
         print("✅ Notification configuration is set up")
         return True
@@ -164,7 +159,7 @@ def main():
     """Run all onboarding checks."""
     print("🚀 Arx CMMS Onboarding Test")
     print("=" * 50)
-    
+
     checks = [
         ("Go Version", check_go_version),
         ("Dependencies", check_dependencies),
@@ -178,28 +173,28 @@ def main():
         ("Build Test", check_build),
         ("Test Suite", run_tests),
     ]
-    
+
     results = []
     for name, check_func in checks:
         print(f"\n📋 {name}")
         print("-" * 30)
         result = check_func()
         results.append((name, result))
-    
+
     # Summary
     print("\n" + "=" * 50)
     print("📊 ONBOARDING TEST SUMMARY")
     print("=" * 50)
-    
+
     passed = sum(1 for _, result in results if result)
     total = len(results)
-    
+
     for name, result in results:
         status = "✅ PASS" if result else "❌ FAIL"
         print(f"{name:<25} {status}")
-    
+
     print(f"\nOverall: {passed}/{total} checks passed")
-    
+
     if passed == total:
         print("\n🎉 All checks passed! Your development environment is ready.")
         print("\nNext steps:")
@@ -216,9 +211,9 @@ def main():
         print("3. Run 'go mod tidy' to install dependencies")
         print("4. Configure CMMS-specific environment variables")
         print("5. Check the ONBOARDING.md file for detailed instructions")
-    
+
     return 0 if passed == total else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())

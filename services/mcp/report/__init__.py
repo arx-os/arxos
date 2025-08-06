@@ -5,8 +5,6 @@ This package contains the report generation functionality for MCP validation res
 including JSON and PDF audit reports with detailed compliance information.
 """
 
-from .generate_report import ReportGenerator
+from .report_generator import ReportGenerator
 
-__all__ = [
-    'ReportGenerator'
-] 
+__all__ = ["ReportGenerator"]

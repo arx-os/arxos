@@ -19,11 +19,7 @@ def run_command(command, description, check=True):
     print(f"🔍 {description}...")
     try:
         result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=check
+            command, shell=True, capture_output=True, text=True, check=check
         )
         print(f"✅ {description} - SUCCESS")
         return result.stdout.strip()
@@ -48,7 +44,9 @@ def check_python_version():
 
 def check_virtual_environment():
     """Check if virtual environment is activated."""
-    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+    if hasattr(sys, "real_prefix") or (
+        hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix
+    ):
         print("✅ Virtual environment is activated")
         return True
     else:
@@ -59,7 +57,12 @@ def check_virtual_environment():
 
 def check_dependencies():
     """Check if Python dependencies are properly installed."""
-    return run_command("pip install -r requirements.txt", "Installing/checking Python dependencies") is not None
+    return (
+        run_command(
+            "pip install -r requirements.txt", "Installing/checking Python dependencies"
+        )
+        is not None
+    )
 
 
 def check_database_connection():
@@ -111,14 +114,14 @@ def check_tools_directory():
             "generate_docs.py",
             "validate_schema.py",
             "performance_analysis.py",
-            "health_check.py"
+            "health_check.py",
         ]
-        
+
         missing_tools = []
         for tool in required_tools:
             if not (tools_dir / tool).exists():
                 missing_tools.append(tool)
-        
+
         if not missing_tools:
             print("✅ All required tools are present")
             return True
@@ -137,14 +140,14 @@ def check_documentation_templates():
         required_templates = [
             "schema_template.md",
             "migration_template.md",
-            "performance_template.md"
+            "performance_template.md",
         ]
-        
+
         missing_templates = []
         for template in required_templates:
             if not (templates_dir / template).exists():
                 missing_templates.append(template)
-        
+
         if not missing_templates:
             print("✅ All documentation templates are present")
             return True
@@ -163,24 +166,39 @@ def check_linting():
 
 def check_documentation_generation():
     """Check if documentation can be generated."""
-    return run_command("python tools/generate_docs.py --help", "Checking documentation generation") is not None
+    return (
+        run_command(
+            "python tools/generate_docs.py --help", "Checking documentation generation"
+        )
+        is not None
+    )
 
 
 def check_schema_validation():
     """Check if schema validation tools work."""
-    return run_command("python tools/validate_schema.py --help", "Checking schema validation") is not None
+    return (
+        run_command(
+            "python tools/validate_schema.py --help", "Checking schema validation"
+        )
+        is not None
+    )
 
 
 def check_performance_tools():
     """Check if performance analysis tools work."""
-    return run_command("python tools/performance_analysis.py --help", "Checking performance tools") is not None
+    return (
+        run_command(
+            "python tools/performance_analysis.py --help", "Checking performance tools"
+        )
+        is not None
+    )
 
 
 def main():
     """Run all onboarding checks."""
     print("🚀 Arx Database Infrastructure Onboarding Test")
     print("=" * 50)
-    
+
     checks = [
         ("Python Version", check_python_version),
         ("Virtual Environment", check_virtual_environment),
@@ -196,28 +214,28 @@ def main():
         ("Performance Tools", check_performance_tools),
         ("Test Suite", run_tests),
     ]
-    
+
     results = []
     for name, check_func in checks:
         print(f"\n📋 {name}")
         print("-" * 30)
         result = check_func()
         results.append((name, result))
-    
+
     # Summary
     print("\n" + "=" * 50)
     print("📊 ONBOARDING TEST SUMMARY")
     print("=" * 50)
-    
+
     passed = sum(1 for _, result in results if result)
     total = len(results)
-    
+
     for name, result in results:
         status = "✅ PASS" if result else "❌ FAIL"
         print(f"{name:<25} {status}")
-    
+
     print(f"\nOverall: {passed}/{total} checks passed")
-    
+
     if passed == total:
         print("\n🎉 All checks passed! Your development environment is ready.")
         print("\nNext steps:")
@@ -234,9 +252,9 @@ def main():
         print("3. Copy env.example to .env and configure it")
         print("4. Run 'pip install -r requirements.txt' to install dependencies")
         print("5. Check the ONBOARDING.md file for detailed instructions")
-    
+
     return 0 if passed == total else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())

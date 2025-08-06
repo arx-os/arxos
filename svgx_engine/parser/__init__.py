@@ -12,6 +12,6 @@ from svgx_engine.parser.geometry import SVGXGeometry
 __all__ = [
     "SVGXParser",
     "SVGXElement",
-    "SVGXSymbolManager", 
+    "SVGXSymbolManager",
     "SVGXGeometry",
-] 
+]

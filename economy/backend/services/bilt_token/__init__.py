@@ -14,7 +14,4 @@ except ImportError:
     # Allow package to be imported even if components aren't available
     pass
 
-__all__ = [
-    "MockBiltMintingEngine",
-    "MockBiltDividendCalculator"
-] 
+__all__ = ["MockBiltMintingEngine", "MockBiltDividendCalculator"]

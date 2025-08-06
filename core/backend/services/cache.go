@@ -386,7 +386,6 @@ func (c *CacheService) Expire(key string, ttl time.Duration) error {
 
 // Clear removes all cache entries
 func (c *CacheService) Clear() error {
-	pattern := c.buildKey("*")
 	return c.InvalidatePattern("*")
 }
 
@@ -424,8 +423,8 @@ func (c *CacheService) GetStats() (*CacheStats, error) {
 	}
 
 	stats := &CacheStats{
-		Hits:      poolStats.Hits,
-		Misses:    poolStats.Misses,
+		Hits:      int64(poolStats.Hits),
+		Misses:    int64(poolStats.Misses),
 		HitRate:   hitRate,
 		TotalKeys: totalKeys,
 	}

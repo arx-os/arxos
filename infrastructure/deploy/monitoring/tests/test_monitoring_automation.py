@@ -38,7 +38,8 @@ import yaml
 # Import the monitoring workflows
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from alerting_workflows import (
     MonitoringAlertingWorkflows,
     AlertSeverity,
@@ -46,7 +47,7 @@ from alerting_workflows import (
     IncidentStatus,
     Alert,
     Incident,
-    MetricData
+    MetricData,
 )
 
 # Configure logging
@@ -77,22 +78,22 @@ class TestMonitoringAutomation(unittest.TestCase):
                 "value": 85.0,
                 "threshold": 80.0,
                 "severity": AlertSeverity.WARNING,
-                "expected_status": AlertStatus.ACTIVE
+                "expected_status": AlertStatus.ACTIVE,
             },
             {
                 "name": "memory_usage",
                 "value": 95.0,
                 "threshold": 90.0,
                 "severity": AlertSeverity.CRITICAL,
-                "expected_status": AlertStatus.ACTIVE
+                "expected_status": AlertStatus.ACTIVE,
             },
             {
                 "name": "disk_usage",
                 "value": 75.0,
                 "threshold": 80.0,
                 "severity": AlertSeverity.LOW,
-                "expected_status": None  # Should not create alert
-            }
+                "expected_status": None,  # Should not create alert
+            },
         ]
 
         for test_case in test_cases:
@@ -104,7 +105,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                     value=test_case["value"],
                     unit="percent",
                     timestamp=datetime.now(),
-                    source="test-system"
+                    source="test-system",
                 )
 
                 # Check if alert should be created
@@ -121,7 +122,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                         metric_value=test_case["value"],
                         threshold=test_case["threshold"],
                         created_at=datetime.now(),
-                        updated_at=datetime.now()
+                        updated_at=datetime.now(),
                     )
 
                     self.assertEqual(alert.severity, test_case["severity"])
@@ -146,7 +147,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             metric_value=90.0,
             threshold=80.0,
             created_at=datetime.now() - timedelta(minutes=10),
-            updated_at=datetime.now() - timedelta(minutes=10)
+            updated_at=datetime.now() - timedelta(minutes=10),
         )
 
         # Test escalation logic
@@ -174,7 +175,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             metric_value=95.0,
             threshold=90.0,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         # Create incident from alert
@@ -186,7 +187,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             status=IncidentStatus.OPEN,
             alerts=[alert.alert_id],
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         self.assertEqual(incident.severity, AlertSeverity.CRITICAL)
@@ -200,20 +201,20 @@ class TestMonitoringAutomation(unittest.TestCase):
                 "name": "cpu_usage",
                 "value": 75.0,
                 "unit": "percent",
-                "source": "test-system-1"
+                "source": "test-system-1",
             },
             {
                 "name": "memory_usage",
                 "value": 80.0,
                 "unit": "percent",
-                "source": "test-system-1"
+                "source": "test-system-1",
             },
             {
                 "name": "cpu_usage",
                 "value": 85.0,
                 "unit": "percent",
-                "source": "test-system-2"
-            }
+                "source": "test-system-2",
+            },
         ]
 
         collected_metrics = []
@@ -225,13 +226,13 @@ class TestMonitoringAutomation(unittest.TestCase):
                 unit=metric_data["unit"],
                 timestamp=datetime.now(),
                 source=metric_data["source"],
-                tags={"environment": "test"}
+                tags={"environment": "test"},
             )
             collected_metrics.append(metric)
 
         # Verify metric collection
         self.assertEqual(len(collected_metrics), 3)
-        
+
         # Test aggregation
         cpu_metrics = [m for m in collected_metrics if m.name == "cpu_usage"]
         avg_cpu = sum(m.value for m in cpu_metrics) / len(cpu_metrics)
@@ -250,25 +251,27 @@ class TestMonitoringAutomation(unittest.TestCase):
             metric_value=95.0,
             threshold=90.0,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         # Test Slack notification
-        with patch.object(self.monitoring, '_send_slack_notification') as mock_slack:
+        with patch.object(self.monitoring, "_send_slack_notification") as mock_slack:
             mock_slack.return_value = True
             result = self.monitoring._send_slack_notification(alert)
             self.assertTrue(result)
             mock_slack.assert_called_once_with(alert)
 
         # Test email notification
-        with patch.object(self.monitoring, '_send_email_notification') as mock_email:
+        with patch.object(self.monitoring, "_send_email_notification") as mock_email:
             mock_email.return_value = True
             result = self.monitoring._send_email_notification(alert)
             self.assertTrue(result)
             mock_email.assert_called_once_with(alert)
 
         # Test PagerDuty notification
-        with patch.object(self.monitoring, '_send_pagerduty_notification') as mock_pagerduty:
+        with patch.object(
+            self.monitoring, "_send_pagerduty_notification"
+        ) as mock_pagerduty:
             mock_pagerduty.return_value = True
             result = self.monitoring._send_pagerduty_notification(alert)
             self.assertTrue(result)
@@ -287,7 +290,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             metric_value=85.0,
             threshold=80.0,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         # Acknowledge alert
@@ -312,7 +315,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             threshold=80.0,
             created_at=datetime.now(),
             updated_at=datetime.now(),
-            acknowledged_at=datetime.now()
+            acknowledged_at=datetime.now(),
         )
 
         # Resolve alert
@@ -331,20 +334,20 @@ class TestMonitoringAutomation(unittest.TestCase):
                 "metric_name": "cpu_usage",
                 "metric_value": 85.0,
                 "threshold": 80.0,
-                "expected_violation": True
+                "expected_violation": True,
             },
             {
                 "metric_name": "memory_usage",
                 "metric_value": 75.0,
                 "threshold": 80.0,
-                "expected_violation": False
+                "expected_violation": False,
             },
             {
                 "metric_name": "disk_usage",
                 "metric_value": 95.0,
                 "threshold": 90.0,
-                "expected_violation": True
-            }
+                "expected_violation": True,
+            },
         ]
 
         for test_case in test_cases:
@@ -355,7 +358,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                     value=test_case["metric_value"],
                     unit="percent",
                     timestamp=datetime.now(),
-                    source="test-system"
+                    source="test-system",
                 )
 
                 # Check threshold violation
@@ -366,10 +369,10 @@ class TestMonitoringAutomation(unittest.TestCase):
         """Test performance metrics tracking."""
         # Simulate performance metrics
         start_time = time.time()
-        
+
         # Simulate alert processing
         time.sleep(0.1)  # Simulate processing time
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
 
@@ -391,7 +394,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                 value=-1,  # Invalid negative value
                 unit="percent",
                 timestamp=datetime.now(),
-                source="test-system"
+                source="test-system",
             )
 
         # Test invalid alert data
@@ -407,7 +410,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                 metric_value=-1,
                 threshold=0,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
 
     def test_data_persistence(self):
@@ -424,7 +427,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             metric_value=85.0,
             threshold=80.0,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         # Save alert
@@ -457,7 +460,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                     metric_value=85.0,
                     threshold=80.0,
                     created_at=datetime.now(),
-                    updated_at=datetime.now()
+                    updated_at=datetime.now(),
                 )
                 self.monitoring.alerts[alert_id] = alert
                 results.put(alert_id)
@@ -485,17 +488,13 @@ class TestMonitoringAutomation(unittest.TestCase):
         # Test valid alert rule
         valid_rule = {
             "alert": "HighCPUUsage",
-            "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) > 80",
+            "expr": '100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80',
             "for": "5m",
-            "labels": {
-                "severity": "warning",
-                "team": "platform",
-                "service": "system"
-            },
+            "labels": {"severity": "warning", "team": "platform", "service": "system"},
             "annotations": {
                 "summary": "High CPU usage on {{ $labels.instance }}",
-                "description": "CPU usage is above 80% for more than 5 minutes"
-            }
+                "description": "CPU usage is above 80% for more than 5 minutes",
+            },
         }
 
         # Validate required fields
@@ -508,7 +507,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             "alert": "InvalidRule",
             "expr": "",  # Empty expression
             "labels": {},
-            "annotations": {}
+            "annotations": {},
         }
 
         with self.assertRaises(ValueError):
@@ -522,7 +521,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             MetricData("m2", "cpu_usage", 80.0, "percent", datetime.now(), "system1"),
             MetricData("m3", "cpu_usage", 85.0, "percent", datetime.now(), "system2"),
             MetricData("m4", "cpu_usage", 90.0, "percent", datetime.now(), "system2"),
-            MetricData("m5", "cpu_usage", 95.0, "percent", datetime.now(), "system3")
+            MetricData("m5", "cpu_usage", 95.0, "percent", datetime.now(), "system3"),
         ]
 
         # Calculate statistics
@@ -542,7 +541,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             AlertSeverity.LOW: timedelta(minutes=30),
             AlertSeverity.MEDIUM: timedelta(minutes=15),
             AlertSeverity.HIGH: timedelta(minutes=5),
-            AlertSeverity.CRITICAL: timedelta(minutes=2)
+            AlertSeverity.CRITICAL: timedelta(minutes=2),
         }
 
         for severity, expected_time in escalation_times.items():
@@ -567,13 +566,9 @@ class TestMonitoringAutomation(unittest.TestCase):
             "components": {
                 "database": "healthy",
                 "api": "healthy",
-                "monitoring": "healthy"
+                "monitoring": "healthy",
             },
-            "metrics": {
-                "cpu_usage": 45.0,
-                "memory_usage": 60.0,
-                "disk_usage": 70.0
-            }
+            "metrics": {"cpu_usage": 45.0, "memory_usage": 60.0, "disk_usage": 70.0},
         }
 
         # Verify health status
@@ -589,20 +584,20 @@ class TestMonitoringAutomation(unittest.TestCase):
                 "event_type": "auth_failure",
                 "severity": "high",
                 "source_ip": "192.168.1.100",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             },
             {
                 "event_type": "rate_limit_exceeded",
                 "severity": "medium",
                 "source_ip": "192.168.1.101",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             },
             {
                 "event_type": "suspicious_activity",
                 "severity": "critical",
                 "source_ip": "192.168.1.102",
-                "timestamp": datetime.now().isoformat()
-            }
+                "timestamp": datetime.now().isoformat(),
+            },
         ]
 
         # Verify security events
@@ -623,7 +618,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             "export_jobs_completed": 25,
             "api_requests_per_minute": 1200,
             "error_rate_percent": 2.5,
-            "average_response_time_ms": 250
+            "average_response_time_ms": 250,
         }
 
         # Verify business metrics
@@ -645,12 +640,12 @@ class TestMonitoringAutomation(unittest.TestCase):
                     "type": "stat",
                     "targets": [
                         {
-                            "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-                            "legendFormat": "CPU Usage"
+                            "expr": '100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)',
+                            "legendFormat": "CPU Usage",
                         }
-                    ]
+                    ],
                 }
-            ]
+            ],
         }
 
         # Validate dashboard configuration
@@ -662,21 +657,14 @@ class TestMonitoringAutomation(unittest.TestCase):
     def test_prometheus_configuration(self):
         """Test Prometheus configuration validation."""
         prometheus_config = {
-            "global": {
-                "scrape_interval": "15s",
-                "evaluation_interval": "15s"
-            },
+            "global": {"scrape_interval": "15s", "evaluation_interval": "15s"},
             "rule_files": ["alert_rules.yml"],
             "scrape_configs": [
                 {
                     "job_name": "arxos-api",
-                    "static_configs": [
-                        {
-                            "targets": ["arxos-api:8000"]
-                        }
-                    ]
+                    "static_configs": [{"targets": ["arxos-api:8000"]}],
                 }
-            ]
+            ],
         }
 
         # Validate Prometheus configuration
@@ -690,14 +678,14 @@ class TestMonitoringAutomation(unittest.TestCase):
         alertmanager_config = {
             "global": {
                 "resolve_timeout": "5m",
-                "slack_api_url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK"
+                "slack_api_url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
             },
             "route": {
                 "group_by": ["alertname", "cluster", "service"],
                 "group_wait": "10s",
                 "group_interval": "10s",
                 "repeat_interval": "1h",
-                "receiver": "slack-notifications"
+                "receiver": "slack-notifications",
             },
             "receivers": [
                 {
@@ -705,12 +693,12 @@ class TestMonitoringAutomation(unittest.TestCase):
                     "slack_configs": [
                         {
                             "channel": "#arxos-alerts",
-                            "title": "{{ template \"slack.title\" . }}",
-                            "text": "{{ template \"slack.text\" . }}"
+                            "title": '{{ template "slack.title" . }}',
+                            "text": '{{ template "slack.text" . }}',
                         }
-                    ]
+                    ],
                 }
-            ]
+            ],
         }
 
         # Validate AlertManager configuration
@@ -723,7 +711,7 @@ class TestMonitoringAutomation(unittest.TestCase):
         """Test performance benchmarks and stress testing."""
         # Test alert processing performance
         start_time = time.time()
-        
+
         # Create 100 test alerts
         for i in range(100):
             alert = Alert(
@@ -737,7 +725,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                 metric_value=85.0,
                 threshold=80.0,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
             self.monitoring.alerts[alert.alert_id] = alert
 
@@ -757,7 +745,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             value=90.0,
             unit="percent",
             timestamp=datetime.now(),
-            source="production-system"
+            source="production-system",
         )
 
         # Check threshold violation
@@ -774,7 +762,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                 metric_value=cpu_metric.value,
                 threshold=self.monitoring.thresholds["cpu_usage"],
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
 
             # Verify alert creation
@@ -788,9 +776,9 @@ class TestMonitoringAutomation(unittest.TestCase):
     def test_error_recovery(self):
         """Test error recovery and resilience mechanisms."""
         # Test recovery from failed notification
-        with patch.object(self.monitoring, '_send_slack_notification') as mock_slack:
+        with patch.object(self.monitoring, "_send_slack_notification") as mock_slack:
             mock_slack.side_effect = Exception("Network error")
-            
+
             alert = Alert(
                 alert_id="recovery_test",
                 title="Recovery Test Alert",
@@ -802,7 +790,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                 metric_value=85.0,
                 threshold=80.0,
                 created_at=datetime.now(),
-                updated_at=datetime.now()
+                updated_at=datetime.now(),
             )
 
             # Attempt notification (should handle error gracefully)
@@ -824,7 +812,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             value=75.0,
             unit="percent",
             timestamp=datetime.now(),
-            source="test-system"
+            source="test-system",
         )
 
         # Validate metric data
@@ -842,7 +830,7 @@ class TestMonitoringAutomation(unittest.TestCase):
                 value=-1,  # Invalid negative value
                 unit="percent",
                 timestamp=datetime.now(),
-                source=""
+                source="",
             )
 
     def test_monitoring_completeness(self):
@@ -854,19 +842,29 @@ class TestMonitoringAutomation(unittest.TestCase):
             "metrics",
             "thresholds",
             "escalation_rules",
-            "notification_channels"
+            "notification_channels",
         ]
 
         for component in required_components:
             self.assertTrue(hasattr(self.monitoring, component))
 
         # Verify alert severity levels
-        severity_levels = [AlertSeverity.LOW, AlertSeverity.MEDIUM, AlertSeverity.HIGH, AlertSeverity.CRITICAL]
+        severity_levels = [
+            AlertSeverity.LOW,
+            AlertSeverity.MEDIUM,
+            AlertSeverity.HIGH,
+            AlertSeverity.CRITICAL,
+        ]
         for severity in severity_levels:
             self.assertIsInstance(severity, AlertSeverity)
 
         # Verify alert status levels
-        status_levels = [AlertStatus.ACTIVE, AlertStatus.ACKNOWLEDGED, AlertStatus.RESOLVED, AlertStatus.ESCALATED]
+        status_levels = [
+            AlertStatus.ACTIVE,
+            AlertStatus.ACKNOWLEDGED,
+            AlertStatus.RESOLVED,
+            AlertStatus.ESCALATED,
+        ]
         for status in status_levels:
             self.assertIsInstance(status, AlertStatus)
 
@@ -887,7 +885,7 @@ class TestMonitoringIntegration(unittest.TestCase):
             value=95.0,
             unit="percent",
             timestamp=datetime.now(),
-            source="production-system"
+            source="production-system",
         )
 
         # Step 2: Check threshold violation
@@ -906,7 +904,7 @@ class TestMonitoringIntegration(unittest.TestCase):
             metric_value=metric.value,
             threshold=self.monitoring.thresholds["cpu_usage"],
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         # Step 4: Send notification
@@ -922,7 +920,7 @@ class TestMonitoringIntegration(unittest.TestCase):
             status=IncidentStatus.OPEN,
             alerts=[alert.alert_id],
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         # Step 6: Acknowledge alert
@@ -946,4 +944,4 @@ class TestMonitoringIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     # Run the test suite
-    unittest.main(verbosity=2) 
+    unittest.main(verbosity=2)

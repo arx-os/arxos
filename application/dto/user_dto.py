@@ -13,7 +13,7 @@ from datetime import datetime
 @dataclass
 class CreateUserRequest:
     """Request DTO for creating a user."""
-    
+
     email: str
     first_name: str
     last_name: str
@@ -27,7 +27,7 @@ class CreateUserRequest:
 @dataclass
 class CreateUserResponse:
     """Response DTO for user creation."""
-    
+
     success: bool
     user_id: Optional[str] = None
     message: Optional[str] = None
@@ -38,7 +38,7 @@ class CreateUserResponse:
 @dataclass
 class UpdateUserRequest:
     """Request DTO for updating a user."""
-    
+
     user_id: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -52,7 +52,7 @@ class UpdateUserRequest:
 @dataclass
 class UpdateUserResponse:
     """Response DTO for user updates."""
-    
+
     success: bool
     user_id: Optional[str] = None
     message: Optional[str] = None
@@ -63,7 +63,7 @@ class UpdateUserResponse:
 @dataclass
 class GetUserResponse:
     """Response DTO for getting a user."""
-    
+
     success: bool
     user: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
@@ -72,7 +72,7 @@ class GetUserResponse:
 @dataclass
 class ListUsersResponse:
     """Response DTO for listing users."""
-    
+
     success: bool
     users: List[Dict[str, Any]] = None
     total_count: int = 0
@@ -84,9 +84,9 @@ class ListUsersResponse:
 @dataclass
 class DeleteUserResponse:
     """Response DTO for deleting a user."""
-    
+
     success: bool
     user_id: Optional[str] = None
     message: Optional[str] = None
     error_message: Optional[str] = None
-    deleted_at: Optional[datetime] = None 
+    deleted_at: Optional[datetime] = None

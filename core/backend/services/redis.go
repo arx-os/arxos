@@ -66,7 +66,7 @@ func NewRedisService(config *RedisConfig, logger *zap.Logger) (*RedisService, er
 		WriteTimeout: config.WriteTimeout,
 		IdleTimeout:  config.IdleTimeout,
 		// Enable connection pooling metrics
-		OnConnect: func(cn *redis.Conn) error {
+		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
 			logger.Debug("Redis connection established", zap.String("addr", config.Addr))
 			return nil
 		},
@@ -397,14 +397,14 @@ func (r *RedisService) FlushDB() error {
 func (r *RedisService) GetStats() *redis.PoolStats {
 	stats := r.client.PoolStats()
 	r.logger.Debug("Redis pool stats",
-		zap.Int("hits", stats.Hits),
-		zap.Int("misses", stats.Misses),
-		zap.Int("timeouts", stats.Timeouts),
-		zap.Int("total_conns", stats.TotalConns),
-		zap.Int("idle_conns", stats.IdleConns),
-		zap.Int("stale_conns", stats.StaleConns),
+		zap.Int("hits", int(stats.Hits)),
+		zap.Int("misses", int(stats.Misses)),
+		zap.Int("timeouts", int(stats.Timeouts)),
+		zap.Int("total_conns", int(stats.TotalConns)),
+		zap.Int("idle_conns", int(stats.IdleConns)),
+		zap.Int("stale_conns", int(stats.StaleConns)),
 	)
-	return &stats
+	return stats
 }
 
 // HealthCheck performs a comprehensive health check on the Redis service

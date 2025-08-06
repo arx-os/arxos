@@ -16,6 +16,21 @@ import (
 	"gorm.io/gorm"
 )
 
+// getUserRoleFromToken extracts user role from JWT token
+func getUserRoleFromToken(r *http.Request) (string, error) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		return "", err
+	}
+
+	var user models.User
+	if err := db.DB.Select("role").Where("id = ?", userID).First(&user).Error; err != nil {
+		return "", err
+	}
+
+	return user.Role, nil
+}
+
 // GetBuildingAssets retrieves assets for a building with optimized queries and eager loading
 func GetBuildingAssets(w http.ResponseWriter, r *http.Request) {
 	_, err := getUserIDFromToken(r)

@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 
 class DatabaseSession:
     """Database session manager with transaction handling."""
-    
+
     def __init__(self, session_factory: sessionmaker):
         """Initialize session manager with session factory."""
         self.session_factory = session_factory
         self._current_session: Optional[Session] = None
-    
+
     @contextmanager
     def transaction(self):
         """Context manager for database transactions."""
@@ -38,7 +38,7 @@ class DatabaseSession:
             raise
         finally:
             session.close()
-    
+
     @contextmanager
     def session(self):
         """Context manager for database sessions without automatic commit."""
@@ -51,33 +51,37 @@ class DatabaseSession:
             raise
         finally:
             session.close()
-    
+
     def with_transaction(self, func: Callable) -> Callable:
         """Decorator to wrap functions with database transaction."""
+
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             with self.transaction() as session:
                 return func(session, *args, **kwargs)
+
         return wrapper
-    
+
     def with_session(self, func: Callable) -> Callable:
         """Decorator to wrap functions with database session."""
+
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             with self.session() as session:
                 return func(session, *args, **kwargs)
+
         return wrapper
-    
+
     def execute_in_transaction(self, operation: Callable, *args, **kwargs) -> Any:
         """Execute an operation within a transaction."""
         with self.transaction() as session:
             return operation(session, *args, **kwargs)
-    
+
     def execute_in_session(self, operation: Callable, *args, **kwargs) -> Any:
         """Execute an operation within a session."""
         with self.session() as session:
             return operation(session, *args, **kwargs)
-    
+
     def health_check(self) -> dict:
         """Perform database health check."""
         try:
@@ -87,39 +91,36 @@ class DatabaseSession:
                 if row and row[0] == 1:
                     return {
                         "status": "healthy",
-                        "message": "Database connection is working"
+                        "message": "Database connection is working",
                     }
                 else:
                     return {
                         "status": "unhealthy",
-                        "message": "Database health check failed"
+                        "message": "Database health check failed",
                     }
         except SQLAlchemyError as e:
             logger.error(f"Database health check failed: {e}")
             return {
                 "status": "unhealthy",
-                "message": f"Database connection error: {str(e)}"
+                "message": f"Database connection error: {str(e)}",
             }
         except Exception as e:
             logger.error(f"Unexpected error during health check: {e}")
-            return {
-                "status": "unhealthy",
-                "message": f"Unexpected error: {str(e)}"
-            }
+            return {"status": "unhealthy", "message": f"Unexpected error: {str(e)}"}
 
 
 class SessionScope:
     """Session scope manager for dependency injection."""
-    
+
     def __init__(self, session_factory: sessionmaker):
         """Initialize session scope."""
         self.session_factory = session_factory
         self._session_stack: list[Session] = []
-    
+
     def get_current_session(self) -> Optional[Session]:
         """Get the current session from the stack."""
         return self._session_stack[-1] if self._session_stack else None
-    
+
     @contextmanager
     def session_scope(self):
         """Create a session scope for dependency injection."""
@@ -134,13 +135,15 @@ class SessionScope:
         finally:
             session.close()
             self._session_stack.pop()
-    
+
     def require_session(self, func: Callable) -> Callable:
         """Decorator to require an active session."""
+
         @wraps(func)
         def wrapper(*args, **kwargs) -> Any:
             session = self.get_current_session()
             if session is None:
                 raise RuntimeError("No active database session")
             return func(session, *args, **kwargs)
-        return wrapper 
+
+        return wrapper

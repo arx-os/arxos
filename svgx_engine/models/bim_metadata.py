@@ -14,11 +14,13 @@ from enum import Enum
 from datetime import datetime
 import uuid
 
+
 class ClassificationSystem(Enum):
     IFC = "IFC"
     UNIFORMAT = "Uniformat"
     OMNICLASS = "Omniclass"
     CUSTOM = "Custom"
+
 
 @dataclass
 class ClassificationReference:
@@ -27,6 +29,7 @@ class ClassificationReference:
     name: Optional[str] = None
     description: Optional[str] = None
     uri: Optional[str] = None
+
 
 @dataclass
 class PropertySet:
@@ -44,6 +47,7 @@ class PropertySet:
     def get_property(self, key: str, default: Any = None) -> Any:
         return self.properties.get(key, default)
 
+
 @dataclass
 class VersionControlEntry:
     version: str = ""
@@ -51,6 +55,7 @@ class VersionControlEntry:
     timestamp: datetime = field(default_factory=datetime.now)
     change_note: Optional[str] = None
     changes: Optional[Dict[str, Any]] = None
+
 
 @dataclass
 class BIMObjectMetadata:
@@ -78,4 +83,4 @@ class BIMObjectMetadata:
 
     def add_custom_metadata(self, key: str, value: Any):
         self.custom[key] = value
-        self.updated_at = datetime.now() 
+        self.updated_at = datetime.now()

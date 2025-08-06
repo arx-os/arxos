@@ -13,7 +13,7 @@ from datetime import datetime
 @dataclass
 class CreateBuildingRequest:
     """Request DTO for creating a building."""
-    
+
     name: str
     address: str
     description: Optional[str] = None
@@ -26,7 +26,7 @@ class CreateBuildingRequest:
 @dataclass
 class CreateBuildingResponse:
     """Response DTO for building creation."""
-    
+
     success: bool
     building_id: Optional[str] = None
     message: Optional[str] = None
@@ -37,7 +37,7 @@ class CreateBuildingResponse:
 @dataclass
 class UpdateBuildingRequest:
     """Request DTO for updating a building."""
-    
+
     building_id: str
     name: Optional[str] = None
     address: Optional[str] = None
@@ -52,7 +52,7 @@ class UpdateBuildingRequest:
 @dataclass
 class UpdateBuildingResponse:
     """Response DTO for building updates."""
-    
+
     success: bool
     building_id: Optional[str] = None
     message: Optional[str] = None
@@ -63,7 +63,7 @@ class UpdateBuildingResponse:
 @dataclass
 class GetBuildingResponse:
     """Response DTO for getting a building."""
-    
+
     success: bool
     building: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
@@ -72,7 +72,7 @@ class GetBuildingResponse:
 @dataclass
 class ListBuildingsResponse:
     """Response DTO for listing buildings."""
-    
+
     success: bool
     buildings: List[Dict[str, Any]] = None
     total_count: int = 0
@@ -84,9 +84,9 @@ class ListBuildingsResponse:
 @dataclass
 class DeleteBuildingResponse:
     """Response DTO for deleting a building."""
-    
+
     success: bool
     building_id: Optional[str] = None
     message: Optional[str] = None
     error_message: Optional[str] = None
-    deleted_at: Optional[datetime] = None 
+    deleted_at: Optional[datetime] = None

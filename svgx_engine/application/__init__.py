@@ -6,29 +6,15 @@ data transfer objects (DTOs), and application services that orchestrate
 domain logic and handle external interfaces.
 """
 
-from svgx_engine.application.use_cases import (
-    CreateBuildingUseCase, UpdateBuildingUseCase, DeleteBuildingUseCase,
-    GetBuildingUseCase, ListBuildingsUseCase
-)
-from svgx_engine.application.dto import (
-    CreateBuildingRequest, UpdateBuildingRequest, BuildingResponse,
-    BuildingListResponse
-)
+# Application Services
+from application.services.engineering_logic_engine import EngineeringLogicEngine
 
 # Version and metadata
-__version__ = "1.0.0"
-__description__ = "Application layer for SVGX Engine"
+__version__ = "2.0.0"
+__description__ = "Application layer for SVGX Engine with embedded engineering logic"
 
 # Export all application components
 __all__ = [
-    # Use Cases
-    "CreateBuildingUseCase", "UpdateBuildingUseCase", "GetBuildingUseCase",
-    "DeleteBuildingUseCase", "ListBuildingsUseCase",
-    
-    # DTOs
-    "CreateBuildingRequest", "UpdateBuildingRequest", "BuildingResponse",
-    "BuildingSearchRequest", "BuildingListResponse",
-    "AddressDTO", "CoordinatesDTO", "DimensionsDTO", "StatusDTO", "MoneyDTO",
-    "BuildingResponseDTO", "CreateBuildingRequestDTO", "UpdateBuildingRequestDTO",
-    "BuildingListResponseDTO", "BuildingSearchRequestDTO"
-] 
+    # Application Services
+    "EngineeringLogicEngine"
+]

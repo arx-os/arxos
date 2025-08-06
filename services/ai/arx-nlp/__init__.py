@@ -15,9 +15,17 @@ Key Components:
 from .nlp_router import NLPRouter
 from .intent_mapper import IntentMapper
 from .models.nlp_models import (
-    NLPRequest, NLPResponse, Intent, Slot, SlotResult, CLICommand,
-    NLPContext, ValidationResult, ProcessingStats,
-    IntentType, SlotType
+    NLPRequest,
+    NLPResponse,
+    Intent,
+    Slot,
+    SlotResult,
+    CLICommand,
+    NLPContext,
+    ValidationResult,
+    ProcessingStats,
+    IntentType,
+    SlotType,
 )
 
 __version__ = "1.0.0"
@@ -27,11 +35,11 @@ __description__ = "NLP Integration for Arxos Platform"
 # Main classes for easy import
 __all__ = [
     "NLPRouter",
-    "IntentMapper", 
+    "IntentMapper",
     "process_nlp_input",
     "detect_intent",
     "NLPRequest",
-    "NLPResponse", 
+    "NLPResponse",
     "Intent",
     "Slot",
     "SlotResult",
@@ -40,5 +48,5 @@ __all__ = [
     "ValidationResult",
     "ProcessingStats",
     "IntentType",
-    "SlotType"
-] 
+    "SlotType",
+]

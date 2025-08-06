@@ -20,20 +20,20 @@ from .advanced_thermal_analysis import (
     BoundaryConditionType,
     MaterialPhase,
     NonLinearSolverSettings,
-    AdaptiveMeshSettings
+    AdaptiveMeshSettings,
 )
 
 from .thermal_analysis import (
     ThermalAnalysisService,
     ThermalAnalysisRequest,
     ThermalAnalysisResult,
-    HeatTransferType
+    HeatTransferType,
 )
 
 from .thermal_integration import (
     ThermalIntegrationService,
     ThermalAnalysisMode,
-    ThermalAnalysisConfig
+    ThermalAnalysisConfig,
 )
 
 from .fluid_dynamics import FluidDynamicsService
@@ -43,29 +43,26 @@ from .signal_propagation import SignalPropagationService
 
 __all__ = [
     # Advanced Thermal Analysis
-    'AdvancedThermalAnalysisService',
-    'PhaseChangeMaterial',
-    'TemperatureDependentProperty',
-    'AdvancedBoundaryCondition',
-    'BoundaryConditionType',
-    'MaterialPhase',
-    'NonLinearSolverSettings',
-    'AdaptiveMeshSettings',
-    
+    "AdvancedThermalAnalysisService",
+    "PhaseChangeMaterial",
+    "TemperatureDependentProperty",
+    "AdvancedBoundaryCondition",
+    "BoundaryConditionType",
+    "MaterialPhase",
+    "NonLinearSolverSettings",
+    "AdaptiveMeshSettings",
     # Basic Thermal Analysis
-    'ThermalAnalysisService',
-    'ThermalAnalysisRequest',
-    'ThermalAnalysisResult',
-    'HeatTransferType',
-    
+    "ThermalAnalysisService",
+    "ThermalAnalysisRequest",
+    "ThermalAnalysisResult",
+    "HeatTransferType",
     # Thermal Integration
-    'ThermalIntegrationService',
-    'ThermalAnalysisMode',
-    'ThermalAnalysisConfig',
-    
+    "ThermalIntegrationService",
+    "ThermalAnalysisMode",
+    "ThermalAnalysisConfig",
     # Other Physics Services
-    'FluidDynamicsService',
-    'StructuralAnalysisService',
-    'ElectricalAnalysisService',
-    'SignalPropagationService'
-] 
+    "FluidDynamicsService",
+    "StructuralAnalysisService",
+    "ElectricalAnalysisService",
+    "SignalPropagationService",
+]

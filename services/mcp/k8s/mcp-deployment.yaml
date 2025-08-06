@@ -1,0 +1,225 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-service
+  namespace: arxos
+  labels:
+    app: mcp-service
+    version: v1.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mcp-service
+  template:
+    metadata:
+      labels:
+        app: mcp-service
+        version: v1.0.0
+    spec:
+      containers:
+      - name: mcp-service
+        image: arxos/mcp-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+          name: http
+        env:
+        - name: REDIS_URL
+          value: "redis://redis-prod:6379"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: database-url
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: jwt-secret
+        - name: MCP_HOST
+          value: "0.0.0.0"
+        - name: MCP_PORT
+          value: "8001"
+        - name: MCP_RELOAD
+          value: "false"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: SMTP_HOST
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: smtp-host
+        - name: SMTP_PORT
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: smtp-port
+        - name: SMTP_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: smtp-username
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: smtp-password
+        - name: FROM_EMAIL
+          value: "noreply@arxos.com"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: aws-access-key
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mcp-secrets
+              key: aws-secret-key
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AWS_S3_BUCKET
+          value: "arxos-mcp-reports"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: mcp-config
+          mountPath: /app/config
+        - name: mcp-reports
+          mountPath: /app/reports
+      volumes:
+      - name: mcp-config
+        configMap:
+          name: mcp-config
+      - name: mcp-reports
+        persistentVolumeClaim:
+          claimName: mcp-reports-pvc
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-service
+  namespace: arxos
+  labels:
+    app: mcp-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8001
+    targetPort: 8001
+    protocol: TCP
+    name: http
+  selector:
+    app: mcp-service
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-ingress
+  namespace: arxos
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  tls:
+  - hosts:
+    - mcp.arxos.com
+    secretName: mcp-tls
+  rules:
+  - host: mcp.arxos.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: mcp-service
+            port:
+              number: 8001
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-config
+  namespace: arxos
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+    - job_name: 'mcp-service'
+      static_configs:
+      - targets: ['mcp-service:8001']
+  nginx.conf: |
+    upstream mcp_backend {
+        server mcp-service:8001;
+    }
+    server {
+        listen 80;
+        server_name mcp.arxos.com;
+        location / {
+            proxy_pass http://mcp_backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mcp-reports-pvc
+  namespace: arxos
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mcp-secrets
+  namespace: arxos
+type: Opaque
+data:
+  # These should be base64 encoded values
+  database-url: cG9zdGdyZXNxbDovL21jcF91c2VyOiR7UFJPRF9EQl9QQVNTV09SRH1AbWNwLWRiOjU0MzIvbWNwX2Ri
+  jwt-secret: ${PROD_JWT_SECRET_BASE64}
+  smtp-host: c210cC5nbWFpbC5jb20=
+  smtp-port: NTg3
+  smtp-username: ${PROD_SMTP_USER_BASE64}
+  smtp-password: ${PROD_SMTP_PASS_BASE64}
+  aws-access-key: ${PROD_AWS_KEY_BASE64}
+  aws-secret-key: ${PROD_AWS_SECRET_BASE64} 

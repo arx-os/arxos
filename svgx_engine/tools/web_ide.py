@@ -24,47 +24,47 @@ logger = logging.getLogger(__name__)
 
 class SVGXWebIDE(BaseHTTPRequestHandler):
     """Simple web IDE for SVGX development."""
-    
+
     def do_GET(self):
         """Handle GET requests."""
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
-        
-        if path == '/':
+
+        if path == "/":
             self._serve_index()
-        elif path == '/api/parse':
+        elif path == "/api/parse":
             self._handle_parse_request()
-        elif path == '/api/compile':
+        elif path == "/api/compile":
             self._handle_compile_request()
-        elif path == '/api/lint':
+        elif path == "/api/lint":
             self._handle_lint_request()
-        elif path.startswith('/static/'):
+        elif path.startswith("/static/"):
             self._serve_static_file(path[8:])  # Remove /static/ prefix
         else:
             self._serve_404()
-    
+
     def do_POST(self):
         """Handle POST requests."""
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
-        
-        if path == '/api/parse':
+
+        if path == "/api/parse":
             self._handle_parse_request()
-        elif path == '/api/compile':
+        elif path == "/api/compile":
             self._handle_compile_request()
-        elif path == '/api/lint':
+        elif path == "/api/lint":
             self._handle_lint_request()
         else:
             self._serve_404()
-    
+
     def _serve_index(self):
         """Serve the main IDE page."""
         html = self._get_index_html()
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
+        self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write(html.encode('utf-8'))
-    
+        self.wfile.write(html.encode("utf-8"))
+
     def _get_index_html(self) -> str:
         """Get the main IDE HTML."""
         return """
@@ -441,113 +441,101 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
     </script>
 </body>
 </html>"""
-    
+
     def _handle_parse_request(self):
         """Handle SVGX parsing requests."""
         try:
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            
-            content = data.get('content', '')
+            data = json.loads(post_data.decode("utf-8"))
+
+            content = data.get("content", "")
             parser = SVGXParser()
-            
+
             try:
                 elements = parser.parse(content)
                 result = {
-                    'success': True,
-                    'message': f'Successfully parsed {len(elements)} elements',
-                    'elements': [str(elem) for elem in elements]
+                    "success": True,
+                    "message": f"Successfully parsed {len(elements)} elements",
+                    "elements": [str(elem) for elem in elements],
                 }
             except Exception as e:
-                result = {
-                    'success': False,
-                    'message': f'Parse error: {str(e)}'
-                }
-            
+                result = {"success": False, "message": f"Parse error: {str(e)}"}
+
         except Exception as e:
-            result = {
-                'success': False,
-                'message': f'Request error: {str(e)}'
-            }
-        
+            result = {"success": False, "message": f"Request error: {str(e)}"}
+
         self._send_json_response(result)
-    
+
     def _handle_compile_request(self):
         """Handle SVGX compilation requests."""
         try:
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            
-            content = data.get('content', '')
+            data = json.loads(post_data.decode("utf-8"))
+
+            content = data.get("content", "")
             compiler = SVGXToSVGCompiler()
-            
+
             try:
                 svg_output = compiler.compile(content)
                 result = {
-                    'success': True,
-                    'message': 'Successfully compiled to SVG',
-                    'svg': svg_output
+                    "success": True,
+                    "message": "Successfully compiled to SVG",
+                    "svg": svg_output,
                 }
             except Exception as e:
-                result = {
-                    'success': False,
-                    'message': f'Compilation error: {str(e)}'
-                }
-            
+                result = {"success": False, "message": f"Compilation error: {str(e)}"}
+
         except Exception as e:
-            result = {
-                'success': False,
-                'message': f'Request error: {str(e)}'
-            }
-        
+            result = {"success": False, "message": f"Request error: {str(e)}"}
+
         self._send_json_response(result)
-    
+
     def _handle_lint_request(self):
         """Handle SVGX linting requests."""
         try:
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
-            
-            content = data.get('content', '')
+            data = json.loads(post_data.decode("utf-8"))
+
+            content = data.get("content", "")
             linter = SVGXLinter()
-            
+
             try:
                 is_valid = linter.lint_content(content)
                 result = {
-                    'valid': is_valid,
-                    'errors': linter.errors,
-                    'warnings': linter.warnings,
-                    'info': linter.info
+                    "valid": is_valid,
+                    "errors": linter.errors,
+                    "warnings": linter.warnings,
+                    "info": linter.info,
                 }
             except Exception as e:
                 result = {
-                    'valid': False,
-                    'errors': [f'Linting error: {str(e)}'],
-                    'warnings': [],
-                    'info': []
+                    "valid": False,
+                    "errors": [f"Linting error: {str(e)}"],
+                    "warnings": [],
+                    "info": [],
                 }
-            
+
         except Exception as e:
             result = {
-                'valid': False,
-                'errors': [f'Request error: {str(e)}'],
-                'warnings': [],
-                'info': []
+                "valid": False,
+                "errors": [f"Request error: {str(e)}"],
+                "warnings": [],
+                "info": [],
             }
-        
+
         self._send_json_response(result)
-    
+
     def _send_json_response(self, data: Dict[str, Any]):
         """Send JSON response."""
         self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header("Content-type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        self.wfile.write(json.dumps(data).encode('utf-8'))
-    
+        self.wfile.write(json.dumps(data).encode("utf-8"))
+
     def _serve_static_file(self, filename: str):
         """Serve static files."""
         try:
@@ -555,18 +543,18 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
             self._serve_404()
         except Exception as e:
             self._serve_404()
-    
+
     def _serve_404(self):
         """Serve 404 error page."""
         self.send_response(404)
-        self.send_header('Content-type', 'text/plain')
+        self.send_header("Content-type", "text/plain")
         self.end_headers()
-        self.wfile.write(b'404 Not Found')
+        self.wfile.write(b"404 Not Found")
 
 
 def run_web_ide(port: int = 8080):
     """Run the SVGX Web IDE server."""
-    server_address = ('', port)
+    server_address = ("", port)
     httpd = HTTPServer(server_address, SVGXWebIDE)
     print(f"SVGX Web IDE running at http://localhost:{port}")
     print("Press Ctrl+C to stop")
@@ -579,13 +567,13 @@ def run_web_ide(port: int = 8080):
 def main():
     """Main function for command-line usage."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="SVGX Web IDE")
     parser.add_argument("--port", "-p", type=int, default=8080, help="Port to run on")
-    
+
     args = parser.parse_args()
     run_web_ide(args.port)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

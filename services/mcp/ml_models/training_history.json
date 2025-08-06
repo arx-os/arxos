@@ -1,0 +1,13 @@
+[
+  {
+    "model_id": "classification_1754351529",
+    "model_name": "Compliance Classifier Demo",
+    "training_time": 0.04020404815673828,
+    "accuracy": 0.5,
+    "validation_accuracy": 0.5,
+    "loss": null,
+    "model_version": "1.0.0",
+    "status": "active",
+    "timestamp": "2025-08-04T23:52:09.793978"
+  }
+]

@@ -1,121 +1,174 @@
 # Arxos Platform
 
-A comprehensive infrastructure platform for building information modeling, featuring CAD-level precision, AI assistance, and cloud synchronization.
+End-to-end infrastructure platform for buildings, providing comprehensive building information modeling, IoT integration, and intelligent automation.
 
-## 🚀 Quick Start with GitHub Codespaces
+## 🚀 Quick Start
 
-### Option 1: One-Click Setup (Recommended)
-1. Click the green **"Code"** button above
-2. Select the **"Codespaces"** tab
-3. Click **"Create codespace on main"**
-4. Wait for the environment to build (2-3 minutes)
-5. Run `make dev` to start all services
+### Prerequisites
+- Python 3.8+ (3.13 recommended)
+- PostgreSQL 12+
+- Redis 6+
+- Docker (optional)
 
-### Option 2: Manual Setup
+### Installation
+
+#### Option 1: Modern Development Setup (Recommended)
 ```bash
 # Clone the repository
-git clone https://github.com/[your-username]/arxos.git
+git clone https://github.com/arxos/arxos.git
 cd arxos
 
-# Start development environment
-make dev
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install with development dependencies
+pip install -e ".[dev]"
 ```
 
-## 📋 Development Environment
+#### Option 2: Production Setup
+```bash
+# Install production dependencies only
+pip install -e .
 
-The Arxos platform includes:
+# Or use requirements.txt for Docker deployments
+pip install -r requirements.txt
+```
 
-- **Go Backend** (Chi framework) - Core API and business logic
-- **Python GUS Agent** - AI assistance and natural language processing
-- **Browser CAD** - Web-based CAD interface with Canvas 2D
-- **ArxIDE** - Desktop CAD IDE built with Tauri
-- **PostgreSQL/PostGIS** - Spatial database for CAD/BIM data
-- **Redis** - Caching and real-time features
+#### Option 3: Development Tools Only
+```bash
+# Install development tools separately
+pip install -r requirements-dev.txt
+```
 
-## 🛠️ Available Commands
+### Running the Application
 
 ```bash
-# Development
-make dev          # Start all services
-make build        # Build all services
-make test         # Run all tests
-make clean        # Clean build artifacts
+# Start the API server
+python -m uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
-# Dependencies
-make install      # Install all dependencies
-make deps         # Install development tools
+# Run tests
+pytest
 
-# Code Quality
-make lint         # Run linting
-make format       # Format code
-
-# Docker
-make docker-up    # Start Docker services
-make docker-down  # Stop Docker services
-
-# Database
-make db-migrate   # Run migrations
-make db-seed      # Seed database
-
-# Health Check
-make health       # Check service health
+# Run with coverage
+pytest --cov=application --cov=api --cov=domain --cov=infrastructure
 ```
 
-## 🌐 Service URLs
+## 📁 Project Structure
 
-Once running, services are available at:
+```
+arxos/
+├── application/           # Application layer (Clean Architecture)
+│   ├── config/          # Configuration management
+│   ├── services/        # Business services
+│   ├── use_cases/       # Business use cases
+│   └── dto/            # Data transfer objects
+├── api/                 # API layer (FastAPI)
+│   ├── routes/         # API routes
+│   └── middleware/     # API middleware
+├── domain/             # Domain layer (Core business logic)
+├── infrastructure/     # Infrastructure layer
+│   ├── database/      # Database models and migrations
+│   ├── repositories/  # Data access layer
+│   └── services/      # External service integrations
+├── services/           # External microservices
+│   ├── ai/           # AI/ML services
+│   ├── mcp/          # MCP-Engineering services
+│   └── iot/          # IoT services
+└── tests/             # Test suite
+```
 
-- **Browser CAD**: http://localhost:3000
-- **ArxIDE**: http://localhost:3001
-- **Backend API**: http://localhost:8080
-- **GUS Agent**: http://localhost:8000
-- **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
+## 🛠️ Development
 
-## 🏗️ Architecture
+### Code Quality
+```bash
+# Format code
+black .
 
-### Core Components
+# Sort imports
+isort .
 
-- **SVGX Engine** - High-precision SVG processing with CAD capabilities
-- **GUS Agent** - AI-powered assistance for design and compliance
-- **Cloud Sync** - Real-time file synchronization across platforms
-- **Design Marketplace** - Component library and collaboration platform
+# Lint code
+flake8
 
-### Technology Stack
+# Type checking
+mypy .
 
-- **Backend**: Go with Chi framework
-- **AI Services**: Python with FastAPI
-- **Frontend**: HTML/HTMX/CSS/JS + Canvas 2D
-- **Desktop**: Tauri (Rust + WebView)
-- **Database**: PostgreSQL with PostGIS
-- **Cache**: Redis
-- **Development**: Docker Compose
+# Security scanning
+bandit -r .
+safety check
+```
+
+### Pre-commit Hooks
+```bash
+# Install pre-commit hooks
+pre-commit install
+
+# Run all hooks
+pre-commit run --all-files
+```
+
+### Testing
+```bash
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest -m unit
+pytest -m integration
+pytest -m slow
+
+# Run with coverage
+pytest --cov=application --cov=api --cov=domain --cov=infrastructure
+```
+
+## 🐳 Docker
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Build production image
+docker build -t arxos:latest .
+```
+
+## 📊 Monitoring
+
+The platform includes comprehensive monitoring:
+- **Health Checks**: `/health` endpoint
+- **Metrics**: Prometheus metrics
+- **Logging**: Structured logging with structlog
+- **Tracing**: Distributed tracing support
+
+## 🔧 Configuration
+
+Configuration is managed through:
+- **Environment Variables**: `.env` files
+- **YAML Files**: `application/config/` directory
+- **Pydantic Settings**: Type-safe configuration
 
 ## 📚 Documentation
 
-- [Architecture Overview](docs/architecture/README.md)
-- [Development Guide](docs/development/README.md)
-- [User Guides](docs/user-guides/README.md)
-- [API Reference](docs/api/README.md)
+- [API Documentation](docs/api/)
+- [Architecture Guide](docs/architecture/)
+- [Development Guide](docs/developer/)
+- [User Guides](docs/user-guides/)
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run tests: `make test`
-5. Submit a pull request
+4. Add tests
+5. Run the test suite
+6. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🆘 Support
 
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/[your-username]/arxos/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/[your-username]/arxos/discussions)
-
----
-
-**Note**: This platform is designed for development and prototyping. Production deployment requires additional security and performance considerations. 
+- **Issues**: [GitHub Issues](https://github.com/arxos/arxos/issues)
+- **Documentation**: [docs.arxos.com](https://docs.arxos.com)
+- **Discord**: [Arxos Community](https://discord.gg/arxos) 

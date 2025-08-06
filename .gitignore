@@ -69,6 +69,13 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Coverage files
+.coverage
+.coverage.*
+
+# Pytest cache
+.pytest_cache/
+
 # Go (for backend services)
 *.exe
 *.exe~

@@ -61,7 +61,33 @@ func AdminCreateDevice(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ADMIN] Validation failed for user %d: %s (object %s)", req.UserID, errMsg, req.ID)
 		return
 	}
-	// TODO: Save device to DB
+	// Create device in database
+	device := models.Device{
+		ID:        req.ID,
+		Type:      req.Type,
+		System:    req.System,
+		ProjectID: 1, // Default project ID - should be configurable
+		CreatedBy: uint(req.UserID),
+		Status:    "active",
+		// Add geometry and other fields as needed
+	}
+
+	if err := db.DB.Create(&device).Error; err != nil {
+		log.Printf("[ADMIN] Failed to create device: %v", err)
+		http.Error(w, "Failed to create device", http.StatusInternalServerError)
+		return
+	}
+
+	// Log the change
+	_ = models.LogChange(db.DB, uint(req.UserID), "Device", req.ID, "created", map[string]interface{}{
+		"device": device,
+		"user":   req.UserID,
+	})
+
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"status":"created"}`))
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "created",
+		"device":  device,
+		"message": "Device created successfully",
+	})
 }

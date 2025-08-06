@@ -3,6 +3,7 @@ module arx-cmms
 go 1.21
 
 require (
+	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/driver/sqlite v1.6.0

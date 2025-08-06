@@ -34,7 +34,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -47,6 +47,7 @@ logger = structlog.get_logger()
 
 class AIQueryRequest(BaseModel):
     """Request model for AI queries"""
+
     query: str
     user_id: str
     context: Dict[str, Any] = {}
@@ -56,6 +57,7 @@ class AIQueryRequest(BaseModel):
 
 class GeometryValidationRequest(BaseModel):
     """Request model for geometry validation"""
+
     geometry_data: Dict[str, Any]
     validation_type: str = "comprehensive"
     user_id: str
@@ -63,6 +65,7 @@ class GeometryValidationRequest(BaseModel):
 
 class VoiceInputRequest(BaseModel):
     """Request model for voice input processing"""
+
     audio_data: str  # Base64 encoded audio
     user_id: str
     language: str = "en"
@@ -70,6 +73,7 @@ class VoiceInputRequest(BaseModel):
 
 class AgentTaskRequest(BaseModel):
     """Request model for AI agent task execution"""
+
     task: str
     parameters: Dict[str, Any]
     user_id: str
@@ -84,22 +88,22 @@ ai_agent: AIAgent = None
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     global ai_agent
-    
+
     # Startup
     logger.info("Starting Arx AI Services...")
-    
+
     try:
         # Initialize AI agent
         settings = get_settings()
         ai_agent = AIAgent(settings.model_dump())
         logger.info("AI Agent initialized successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"Failed to initialize AI Agent: {e}")
         raise
-    
+
     finally:
         # Shutdown
         logger.info("Shutting down Arx AI Services...")
@@ -112,7 +116,7 @@ app = FastAPI(
     title="Arx AI Services",
     description="AI/ML microservices for the Arxos platform",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -135,7 +139,7 @@ async def health_check():
         "status": "healthy",
         "service": "arx-ai-services",
         "version": "1.0.0",
-        "ai_agent_ready": ai_agent is not None
+        "ai_agent_ready": ai_agent is not None,
     }
 
 
@@ -145,11 +149,7 @@ async def root():
     return {
         "message": "Arx AI Services",
         "version": "1.0.0",
-        "endpoints": {
-            "health": "/health",
-            "api": "/api/v1",
-            "docs": "/docs"
-        }
+        "endpoints": {"health": "/health", "api": "/api/v1", "docs": "/docs"},
     }
 
 
@@ -159,17 +159,17 @@ async def process_ai_query(request: AIQueryRequest):
     try:
         if not ai_agent:
             raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
+
         response = await ai_agent.process_query(
             query=request.query,
             user_id=request.user_id,
             context=request.context,
             session_id=request.session_id,
-            model=request.model
+            model=request.model,
         )
-        
+
         return response.model_dump()
-        
+
     except Exception as e:
         logger.error(f"Error processing AI query: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -181,15 +181,15 @@ async def validate_geometry(request: GeometryValidationRequest):
     try:
         if not ai_agent:
             raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
+
         response = await ai_agent.validate_geometry(
             geometry_data=request.geometry_data,
             validation_type=request.validation_type,
-            user_id=request.user_id
+            user_id=request.user_id,
         )
-        
+
         return response.model_dump()
-        
+
     except Exception as e:
         logger.error(f"Error validating geometry: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -201,15 +201,15 @@ async def process_voice_input(request: VoiceInputRequest):
     try:
         if not ai_agent:
             raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
+
         response = await ai_agent.process_voice_input(
             audio_data=request.audio_data,
             user_id=request.user_id,
-            language=request.language
+            language=request.language,
         )
-        
+
         return response.model_dump()
-        
+
     except Exception as e:
         logger.error(f"Error processing voice input: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -221,16 +221,16 @@ async def execute_agent_task(request: AgentTaskRequest):
     try:
         if not ai_agent:
             raise HTTPException(status_code=503, detail="AI Agent not initialized")
-        
+
         response = await ai_agent.execute_task(
             task=request.task,
             parameters=request.parameters,
             user_id=request.user_id,
-            agent_type=request.agent_type
+            agent_type=request.agent_type,
         )
-        
+
         return response.model_dump()
-        
+
     except Exception as e:
         logger.error(f"Error executing agent task: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -240,17 +240,8 @@ async def execute_agent_task(request: AgentTaskRequest):
 async def global_exception_handler(request, exc):
     """Global exception handler"""
     logger.error(f"Unhandled exception: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8001,
-        reload=True,
-        log_level="info"
-    ) 
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True, log_level="info")

@@ -11,78 +11,127 @@ from typing import Optional
 from sqlalchemy.orm import Session, sessionmaker
 
 from domain.repositories import (
-    RepositoryFactory, UnitOfWork, BuildingRepository, FloorRepository, RoomRepository,
-    DeviceRepository, UserRepository, ProjectRepository, ContributionRepository,
-    RevenueRepository, DividendRepository, VerificationRepository
+    RepositoryFactory,
+    UnitOfWork,
+    BuildingRepository,
+    FloorRepository,
+    RoomRepository,
+    DeviceRepository,
+    UserRepository,
+    ProjectRepository,
+    ContributionRepository,
+    RevenueRepository,
+    DividendRepository,
+    VerificationRepository,
+)
+from .repositories.mcp_engineering_repository import (
+    ValidationRepository,
+    ReportRepository,
+    KnowledgeRepository,
+    MLRepository,
+    ActivityRepository,
+    PostgreSQLValidationRepository,
+    PostgreSQLReportRepository,
+    RedisKnowledgeRepository,
+    PostgreSQLMLRepository,
+    PostgreSQLActivityRepository,
 )
 
 from .repositories import (
-    SQLAlchemyBuildingRepository, SQLAlchemyFloorRepository, SQLAlchemyRoomRepository,
-    SQLAlchemyDeviceRepository, SQLAlchemyUserRepository, SQLAlchemyProjectRepository,
-    SQLAlchemyContributionRepository, SQLAlchemyRevenueRepository, SQLAlchemyDividendRepository,
-    SQLAlchemyVerificationRepository
+    SQLAlchemyBuildingRepository,
+    SQLAlchemyFloorRepository,
+    SQLAlchemyRoomRepository,
+    SQLAlchemyDeviceRepository,
+    SQLAlchemyUserRepository,
+    SQLAlchemyProjectRepository,
+    SQLAlchemyContributionRepository,
+    SQLAlchemyRevenueRepository,
+    SQLAlchemyDividendRepository,
+    SQLAlchemyVerificationRepository,
 )
 from .unit_of_work import SQLAlchemyUnitOfWork
 
 
 class SQLAlchemyRepositoryFactory(RepositoryFactory):
     """SQLAlchemy implementation of RepositoryFactory."""
-    
+
     def __init__(self, session_factory: sessionmaker):
         """Initialize repository factory with session factory."""
         self.session_factory = session_factory
         self._session: Optional[Session] = None
-    
+
     def _get_session(self) -> Session:
         """Get or create a database session."""
         if self._session is None:
             self._session = self.session_factory()
         return self._session
-    
+
     def create_building_repository(self) -> BuildingRepository:
         """Create a building repository instance."""
         return SQLAlchemyBuildingRepository(self._get_session())
-    
+
     def create_floor_repository(self) -> FloorRepository:
         """Create a floor repository instance."""
         return SQLAlchemyFloorRepository(self._get_session())
-    
+
     def create_room_repository(self) -> RoomRepository:
         """Create a room repository instance."""
         return SQLAlchemyRoomRepository(self._get_session())
-    
+
     def create_device_repository(self) -> DeviceRepository:
         """Create a device repository instance."""
         return SQLAlchemyDeviceRepository(self._get_session())
-    
+
     def create_user_repository(self) -> UserRepository:
         """Create a user repository instance."""
         return SQLAlchemyUserRepository(self._get_session())
-    
+
     def create_project_repository(self) -> ProjectRepository:
         """Create a project repository instance."""
         return SQLAlchemyProjectRepository(self._get_session())
-    
+
     def create_contribution_repository(self) -> ContributionRepository:
         """Create a contribution repository instance."""
         return SQLAlchemyContributionRepository(self._get_session())
-    
+
     def create_revenue_repository(self) -> RevenueRepository:
         """Create a revenue repository instance."""
         return SQLAlchemyRevenueRepository(self._get_session())
-    
+
     def create_dividend_repository(self) -> DividendRepository:
         """Create a dividend repository instance."""
         return SQLAlchemyDividendRepository(self._get_session())
-    
+
     def create_verification_repository(self) -> VerificationRepository:
         """Create a verification repository instance."""
         return SQLAlchemyVerificationRepository(self._get_session())
-    
+
+    def create_validation_repository(self) -> ValidationRepository:
+        """Create a validation repository instance."""
+        return PostgreSQLValidationRepository(self._get_session())
+
+    def create_report_repository(self) -> ReportRepository:
+        """Create a report repository instance."""
+        return PostgreSQLReportRepository(self._get_session())
+
+    def create_knowledge_repository(self) -> KnowledgeRepository:
+        """Create a knowledge repository instance."""
+        # TODO: Get Redis connection from configuration
+        redis_connection = None
+        return RedisKnowledgeRepository(redis_connection)
+
+    def create_ml_repository(self) -> MLRepository:
+        """Create an ML repository instance."""
+        return PostgreSQLMLRepository(self._get_session())
+
+    def create_activity_repository(self) -> ActivityRepository:
+        """Create an activity repository instance."""
+        return PostgreSQLActivityRepository(self._get_session())
+
     def create_unit_of_work(self) -> UnitOfWork:
         """Create a unit of work instance."""
         return SQLAlchemyUnitOfWork(self.session_factory)
-    
+
     def close_session(self):
         """Close the current session."""
         if self._session:
@@ -92,21 +141,23 @@ class SQLAlchemyRepositoryFactory(RepositoryFactory):
 
 class RepositoryFactoryManager:
     """Manager for repository factory instances."""
-    
+
     def __init__(self):
         """Initialize repository factory manager."""
         self._factory: Optional[SQLAlchemyRepositoryFactory] = None
-    
+
     def initialize(self, session_factory: sessionmaker):
         """Initialize the repository factory with a session factory."""
         self._factory = SQLAlchemyRepositoryFactory(session_factory)
-    
+
     def get_factory(self) -> SQLAlchemyRepositoryFactory:
         """Get the repository factory instance."""
         if self._factory is None:
-            raise RuntimeError("Repository factory not initialized. Call initialize() first.")
+            raise RuntimeError(
+                "Repository factory not initialized. Call initialize() first."
+            )
         return self._factory
-    
+
     def close(self):
         """Close all sessions and cleanup."""
         if self._factory:
@@ -129,4 +180,4 @@ def initialize_repository_factory(session_factory: sessionmaker):
 
 def close_repository_factory():
     """Close the global repository factory."""
-    repository_factory_manager.close() 
+    repository_factory_manager.close()

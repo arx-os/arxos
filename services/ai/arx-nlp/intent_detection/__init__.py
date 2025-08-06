@@ -7,7 +7,4 @@ and pattern matching for building operations.
 
 from .intent_detector import IntentDetector, detect_intent
 
-__all__ = [
-    "IntentDetector",
-    "detect_intent"
-] 
+__all__ = ["IntentDetector", "detect_intent"]

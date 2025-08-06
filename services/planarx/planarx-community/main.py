@@ -20,8 +20,7 @@ from funding.routes.init_escrow import router as escrow_router
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,7 @@ app = FastAPI(
     description="A comprehensive community platform for building design and collaboration",
     version="1.0.0",
     docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    redoc_url="/api/redoc",
 )
 
 # Add CORS middleware
@@ -53,6 +52,7 @@ app.include_router(mod_router, prefix="/api/mod")
 app.include_router(onboarding_router, prefix="/api/onboarding")
 app.include_router(escrow_router, prefix="/api/funding")
 
+
 # Frontend routes
 @app.get("/", response_class=HTMLResponse)
 async def homepage():
@@ -63,6 +63,7 @@ async def homepage():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Homepage not found")
 
+
 @app.get("/submit", response_class=HTMLResponse)
 async def submit_page():
     """Serve the project submission page"""
@@ -71,6 +72,7 @@ async def submit_page():
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Submit page not found")
+
 
 @app.get("/my-drafts", response_class=HTMLResponse)
 async def my_drafts_page():
@@ -81,6 +83,7 @@ async def my_drafts_page():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Drafts page not found")
 
+
 @app.get("/mod-dashboard", response_class=HTMLResponse)
 async def mod_dashboard_page():
     """Serve the moderator dashboard page"""
@@ -90,6 +93,7 @@ async def mod_dashboard_page():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Moderator dashboard not found")
 
+
 @app.get("/funding/{project_id}", response_class=HTMLResponse)
 async def funding_page(project_id: str):
     """Serve the funding escrow panel for a specific project"""
@@ -97,10 +101,11 @@ async def funding_page(project_id: str):
         with open("funding/frontend/escrow_panel.html", "r", encoding="utf-8") as f:
             content = f.read()
             # Inject project ID into the page
-            content = content.replace('esc-123456', f'esc-{project_id}')
+            content = content.replace("esc-123456", f"esc-{project_id}")
             return HTMLResponse(content=content)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Funding page not found")
+
 
 # Health check endpoint
 @app.get("/health")
@@ -111,19 +116,22 @@ async def health_check():
         "version": "1.0.0",
         "components": {
             "home": "active",
-            "drafts": "active", 
+            "drafts": "active",
             "moderation": "active",
             "onboarding": "active",
-            "funding": "active"
-        }
+            "funding": "active",
+        },
     }
+
 
 # API documentation redirect
 @app.get("/docs")
 async def docs_redirect():
     """Redirect to API documentation"""
     from fastapi.responses import RedirectResponse
+
     return RedirectResponse(url="/api/docs")
+
 
 # Error handlers
 @app.exception_handler(404)
@@ -132,31 +140,31 @@ async def not_found_handler(request, exc):
     return {
         "error": "Not found",
         "message": "The requested resource was not found",
-        "path": str(request.url.path)
+        "path": str(request.url.path),
     }
+
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
     """Handle 500 errors"""
     logger.error(f"Internal server error: {exc}")
-    return {
-        "error": "Internal server error",
-        "message": "An unexpected error occurred"
-    }
+    return {"error": "Internal server error", "message": "An unexpected error occurred"}
+
 
 # Startup event
 @app.on_event("startup")
 async def startup_event():
     """Application startup event"""
     logger.info("Planarx Community Platform starting up...")
-    
+
     # Create necessary directories
     os.makedirs("data/projects", exist_ok=True)
     os.makedirs("data/drafts", exist_ok=True)
     os.makedirs("data/funding", exist_ok=True)
     os.makedirs("data/uploads", exist_ok=True)
-    
+
     logger.info("Planarx Community Platform started successfully")
+
 
 # Shutdown event
 @app.on_event("shutdown")
@@ -164,12 +172,8 @@ async def shutdown_event():
     """Application shutdown event"""
     logger.info("Planarx Community Platform shutting down...")
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    ) 
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

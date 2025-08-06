@@ -1626,22 +1626,325 @@ func ExportBIMAsJSON(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(bimModel)
 }
 
-// Stub: Export as IFC-lite
 func ExportBIMAsIFC(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	w.Write([]byte("IFC-lite export not implemented yet"))
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get project data
+	var project models.Project
+	if err := db.DB.First(&project, projectID).Error; err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	// Get all floors for the project
+	var floors []models.Floor
+	if err := db.DB.Where("project_id = ?", projectID).Find(&floors).Error; err != nil {
+		http.Error(w, "Failed to fetch floors", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate IFC content
+	ifcContent := generateProjectIFCContent(project, floors)
+
+	w.Header().Set("Content-Type", "application/ifc")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+project.Name+"_bim.ifc\"")
+	w.Write([]byte(ifcContent))
 }
 
-// Stub: Export as DXF
 func ExportBIMAsDXF(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	w.Write([]byte("DXF export not implemented yet"))
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get project data
+	var project models.Project
+	if err := db.DB.First(&project, projectID).Error; err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	// Get all floors for the project
+	var floors []models.Floor
+	if err := db.DB.Where("project_id = ?", projectID).Find(&floors).Error; err != nil {
+		http.Error(w, "Failed to fetch floors", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate DXF content
+	dxfContent := generateProjectDXFContent(project, floors)
+
+	w.Header().Set("Content-Type", "application/dxf")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+project.Name+"_bim.dxf\"")
+	w.Write([]byte(dxfContent))
 }
 
-// Stub: Export as SVG
 func ExportBIMAsSVG(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-	w.Write([]byte("SVG export not implemented yet"))
+	projectID, err := extractProjectID(r)
+	if err != nil {
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get project data
+	var project models.Project
+	if err := db.DB.First(&project, projectID).Error; err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	// Get all floors for the project
+	var floors []models.Floor
+	if err := db.DB.Where("project_id = ?", projectID).Find(&floors).Error; err != nil {
+		http.Error(w, "Failed to fetch floors", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate SVG content
+	svgContent := generateProjectSVGContent(project, floors)
+
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+project.Name+"_bim.svg\"")
+	w.Write([]byte(svgContent))
+}
+
+// Helper functions for project export generation
+
+func generateProjectIFCContent(project models.Project, floors []models.Floor) string {
+	// IFC header
+	ifcContent := `ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Arxos BIM Export'),'2;1');
+FILE_NAME('` + project.Name + `','` + project.CreatedAt.Format("2006-01-02T15:04:05") + `',('Arxos User'),('Arxos Platform'),'Arxos BIM Export','Arxos Platform','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+
+DATA;
+#1=IFCPROJECT('` + strconv.FormatUint(uint64(project.ID), 10) + `',#2,'` + project.Name + `','Description',#3,#4,$,$,$);
+#2=IFCOWNERHISTORY(#5,$,.ADDED.,$,$,$,$,0);
+#3=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.00000000000000E-005,#6,$);
+#4=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Plan',2,1.00000000000000E-005,#6,$);
+#5=IFCPERSONANDORGANIZATION(#7,#8,$);
+#6=IFCAXIS2PLACEMENT3D(#9,#10,#11);
+#7=IFCPERSON($,'Arxos','User',$,$,$,$,$);
+#8=IFCORGANIZATION($,'Arxos Platform',$,$,$);
+#9=IFCCARTESIANPOINT((0.,0.,0.));
+#10=IFCDIRECTION((0.,0.,1.));
+#11=IFCDIRECTION((1.,0.,0.));`
+
+	// Add floors
+	for i, floor := range floors {
+		floorNum := i + 2
+		ifcContent += `
+#` + strconv.Itoa(floorNum) + `=IFCBUILDINGSTOREY('` + strconv.FormatUint(uint64(floor.ID), 10) + `',#2,'` + floor.Name + `','Description',#` + strconv.Itoa(floorNum+1) + `,$,$,$,$,.ELEMENT.,$);`
+	}
+
+	ifcContent += `
+ENDSEC;
+END-ISO-10303-21;`
+
+	return ifcContent
+}
+
+func generateProjectDXFContent(project models.Project, floors []models.Floor) string {
+	// DXF header
+	dxfContent := `0
+SECTION
+2
+HEADER
+9
+$ACADVER
+1
+AC1021
+9
+$DWGCODEPAGE
+3
+ANSI_1252
+9
+$INSBASE
+10
+0.0
+20
+0.0
+30
+0.0
+9
+$EXTMIN
+10
+0.0
+20
+0.0
+30
+0.0
+9
+$EXTMAX
+10
+1000.0
+20
+1000.0
+30
+100.0
+9
+$LIMMIN
+10
+0.0
+20
+0.0
+9
+$LIMMAX
+10
+1000.0
+20
+1000.0
+9
+$ORTHOMODE
+70
+0
+9
+$LTSCALE
+40
+1.0
+9
+$TEXTSTYLE
+7
+STANDARD
+9
+$CLAYER
+8
+0
+0
+ENDSEC
+0
+SECTION
+2
+TABLES
+0
+TABLE
+2
+LAYER
+70
+1
+0
+LAYER
+2
+0
+70
+0
+62
+7
+6
+CONTINUOUS
+0
+ENDTAB
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES`
+
+	// Add project title
+	dxfContent += `
+0
+TEXT
+8
+0
+10
+100.0
+20
+950.0
+30
+0.0
+40
+20.0
+1
+` + project.Name + `
+50
+0.0`
+
+	// Add floors as layers and entities
+	for i, floor := range floors {
+		layerName := fmt.Sprintf("FLOOR_%d", i+1)
+		dxfContent += `
+0
+LAYER
+2
+` + layerName + `
+70
+0
+62
+7
+6
+CONTINUOUS
+0
+TEXT
+8
+` + layerName + `
+10
+100.0
+20
+` + fmt.Sprintf("%.1f", 900.0-float64(i*50)) + `
+30
+0.0
+40
+15.0
+1
+` + floor.Name + `
+50
+0.0`
+	}
+
+	dxfContent += `
+0
+ENDSEC
+0
+SECTION
+2
+OBJECTS
+0
+ENDSEC
+0
+EOF`
+
+	return dxfContent
+}
+
+func generateProjectSVGContent(project models.Project, floors []models.Floor) string {
+	// SVG header
+	svgContent := `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <style>
+      .floor { fill: #f0f0f0; stroke: #333; stroke-width: 2; }
+      .floor-text { font-family: Arial, sans-serif; font-size: 14px; fill: #333; }
+      .project-title { font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; fill: #000; }
+    </style>
+  </defs>
+  
+  <!-- Project Title -->
+  <text x="50" y="50" class="project-title">` + project.Name + `</text>
+  
+  <!-- Floors -->
+  <g id="floors">`
+
+	// Add floors
+	for i, floor := range floors {
+		y := 100 + i*80
+		svgContent += fmt.Sprintf(`
+    <rect x="50" y="%d" width="1100" height="60" class="floor" rx="5"/>
+    <text x="70" y="%d" class="floor-text">%s</text>`, y, y+35, floor.Name)
+	}
+
+	svgContent += `
+  </g>
+</svg>`
+
+	return svgContent
 }
 
 // Device Catalog for HTMX

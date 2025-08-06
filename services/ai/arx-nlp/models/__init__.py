@@ -6,16 +6,28 @@ request/response handling, intent detection, slot filling, and CLI command gener
 """
 
 from .nlp_models import (
-    NLPRequest, NLPResponse, Intent, Slot, SlotResult, CLICommand,
-    NLPContext, ValidationResult, ProcessingStats,
-    IntentType, SlotType,
-    intent_from_dict, slot_from_dict, cli_command_from_dict,
-    nlp_context_from_dict, nlp_response_from_dict, nlp_response_from_json
+    NLPRequest,
+    NLPResponse,
+    Intent,
+    Slot,
+    SlotResult,
+    CLICommand,
+    NLPContext,
+    ValidationResult,
+    ProcessingStats,
+    IntentType,
+    SlotType,
+    intent_from_dict,
+    slot_from_dict,
+    cli_command_from_dict,
+    nlp_context_from_dict,
+    nlp_response_from_dict,
+    nlp_response_from_json,
 )
 
 __all__ = [
     "NLPRequest",
-    "NLPResponse", 
+    "NLPResponse",
     "Intent",
     "Slot",
     "SlotResult",
@@ -30,5 +42,5 @@ __all__ = [
     "cli_command_from_dict",
     "nlp_context_from_dict",
     "nlp_response_from_dict",
-    "nlp_response_from_json"
-] 
+    "nlp_response_from_json",
+]

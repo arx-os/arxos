@@ -1,28 +1,72 @@
 """
-Domain Value Objects - Immutable Domain Concepts
+SVGX Engine - Value Objects Package
 
-This module contains value objects that represent immutable domain concepts
-such as addresses, coordinates, dimensions, identifiers, money, and status.
-These objects encapsulate business rules and validation logic.
+This package contains value objects for engineering parameters and code compliance.
 """
 
-from svgx_engine.domain.value_objects.address import Address
-from svgx_engine.domain.value_objects.coordinates import Coordinates
-from svgx_engine.domain.value_objects.dimensions import Dimensions
-from svgx_engine.domain.value_objects.identifier import Identifier
-from svgx_engine.domain.value_objects.money import Money
-from svgx_engine.domain.value_objects.status import Status
+from .engineering_parameters import (
+    ParameterType,
+    EngineeringParameter,
+    ElectricalParameter,
+    HVACParameter,
+    PlumbingParameter,
+    StructuralParameter,
+    VoltageParameter,
+    CurrentParameter,
+    PowerParameter,
+    CapacityParameter,
+    AirflowParameter,
+    FlowRateParameter,
+    PressureParameter,
+    LoadParameter,
+    LengthParameter,
+)
 
-# Version and metadata
-__version__ = "1.0.0"
-__description__ = "Domain value objects for SVGX Engine"
+from .code_compliance import (
+    CodeStandard,
+    ComplianceStatus,
+    CodeRequirement,
+    ComplianceCheck,
+    CodeCompliance,
+    NECRequirement,
+    ASHRAERequirement,
+    IPCRequirement,
+    IBCRequirement,
+    NECOutletRequirement,
+    ASHRAEThermostatRequirement,
+    IPCFixtureRequirement,
+    IBCStructuralRequirement,
+)
 
-# Export all value objects
 __all__ = [
-    "Address",
-    "Coordinates", 
-    "Dimensions",
-    "Identifier",
-    "Money",
-    "Status"
-] 
+    # Engineering parameters
+    "ParameterType",
+    "EngineeringParameter",
+    "ElectricalParameter",
+    "HVACParameter",
+    "PlumbingParameter",
+    "StructuralParameter",
+    "VoltageParameter",
+    "CurrentParameter",
+    "PowerParameter",
+    "CapacityParameter",
+    "AirflowParameter",
+    "FlowRateParameter",
+    "PressureParameter",
+    "LoadParameter",
+    "LengthParameter",
+    # Code compliance
+    "CodeStandard",
+    "ComplianceStatus",
+    "CodeRequirement",
+    "ComplianceCheck",
+    "CodeCompliance",
+    "NECRequirement",
+    "ASHRAERequirement",
+    "IPCRequirement",
+    "IBCRequirement",
+    "NECOutletRequirement",
+    "ASHRAEThermostatRequirement",
+    "IPCFixtureRequirement",
+    "IBCStructuralRequirement",
+]

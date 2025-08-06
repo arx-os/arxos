@@ -15,20 +15,15 @@ from .project_service import *
 
 __all__ = [
     # Building Services
-    'BuildingApplicationService',
-    
+    "BuildingApplicationService",
     # Floor Services
-    'FloorApplicationService',
-    
+    "FloorApplicationService",
     # Room Services
-    'RoomApplicationService',
-    
+    "RoomApplicationService",
     # Device Services
-    'DeviceApplicationService',
-    
+    "DeviceApplicationService",
     # User Services
-    'UserApplicationService',
-    
+    "UserApplicationService",
     # Project Services
-    'ProjectApplicationService',
-] 
+    "ProjectApplicationService",
+]

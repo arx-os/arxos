@@ -14,14 +14,14 @@ from svgx_engine.application.use_cases.building_use_cases import (
     UpdateBuildingUseCase,
     GetBuildingUseCase,
     ListBuildingsUseCase,
-    DeleteBuildingUseCase
+    DeleteBuildingUseCase,
 )
 from svgx_engine.application.dto.building_dto import (
     BuildingDTO,
     CreateBuildingRequest,
     UpdateBuildingRequest,
     BuildingListResponse,
-    BuildingSearchRequest
+    BuildingSearchRequest,
 )
 from svgx_engine.infrastructure.container import Container
 from svgx_engine.utils.errors import ResourceNotFoundError, ValidationError
@@ -34,50 +34,61 @@ router = APIRouter()
 def get_container() -> Container:
     """Get the dependency injection container."""
     from fastapi import Request
+
     request = Request()
     return request.app.state.container
 
 
-def get_create_use_case(container: Container = Depends(get_container)) -> CreateBuildingUseCase:
+def get_create_use_case(
+    container: Container = Depends(get_container),
+) -> CreateBuildingUseCase:
     """Get the create building use case."""
-    return container.get('create_building_use_case')
+    return container.get("create_building_use_case")
 
 
-def get_update_use_case(container: Container = Depends(get_container)) -> UpdateBuildingUseCase:
+def get_update_use_case(
+    container: Container = Depends(get_container),
+) -> UpdateBuildingUseCase:
     """Get the update building use case."""
-    return container.get('update_building_use_case')
+    return container.get("update_building_use_case")
 
 
-def get_get_use_case(container: Container = Depends(get_container)) -> GetBuildingUseCase:
+def get_get_use_case(
+    container: Container = Depends(get_container),
+) -> GetBuildingUseCase:
     """Get the get building use case."""
-    return container.get('get_building_use_case')
+    return container.get("get_building_use_case")
 
 
-def get_list_use_case(container: Container = Depends(get_container)) -> ListBuildingsUseCase:
+def get_list_use_case(
+    container: Container = Depends(get_container),
+) -> ListBuildingsUseCase:
     """Get the list buildings use case."""
-    return container.get('list_buildings_use_case')
+    return container.get("list_buildings_use_case")
 
 
-def get_delete_use_case(container: Container = Depends(get_container)) -> DeleteBuildingUseCase:
+def get_delete_use_case(
+    container: Container = Depends(get_container),
+) -> DeleteBuildingUseCase:
     """Get the delete building use case."""
-    return container.get('delete_building_use_case')
+    return container.get("delete_building_use_case")
 
 
 @router.post("/", response_model=BuildingDTO, status_code=201)
 async def create_building(
     request: CreateBuildingRequest,
-    use_case: CreateBuildingUseCase = Depends(get_create_use_case)
+    use_case: CreateBuildingUseCase = Depends(get_create_use_case),
 ):
     """
     Create a new building.
-    
+
     Args:
         request: Building creation request
         use_case: Create building use case
-        
+
     Returns:
         Created building DTO
-        
+
     Raises:
         HTTPException: If creation fails
     """
@@ -96,19 +107,18 @@ async def create_building(
 
 @router.get("/{building_id}", response_model=BuildingDTO)
 async def get_building(
-    building_id: str,
-    use_case: GetBuildingUseCase = Depends(get_get_use_case)
+    building_id: str, use_case: GetBuildingUseCase = Depends(get_get_use_case)
 ):
     """
     Get a building by ID.
-    
+
     Args:
         building_id: Building identifier
         use_case: Get building use case
-        
+
     Returns:
         Building DTO
-        
+
     Raises:
         HTTPException: If building not found
     """
@@ -126,16 +136,18 @@ async def get_building(
 
 @router.get("/", response_model=BuildingListResponse)
 async def list_buildings(
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of buildings to return"),
+    limit: int = Query(
+        100, ge=1, le=1000, description="Maximum number of buildings to return"
+    ),
     offset: int = Query(0, ge=0, description="Number of buildings to skip"),
     name: Optional[str] = Query(None, description="Filter by building name"),
     building_type: Optional[str] = Query(None, description="Filter by building type"),
     city: Optional[str] = Query(None, description="Filter by city"),
-    use_case: ListBuildingsUseCase = Depends(get_list_use_case)
+    use_case: ListBuildingsUseCase = Depends(get_list_use_case),
 ):
     """
     List buildings with optional filtering and pagination.
-    
+
     Args:
         limit: Maximum number of buildings to return
         offset: Number of buildings to skip
@@ -143,22 +155,24 @@ async def list_buildings(
         building_type: Filter by building type
         city: Filter by city
         use_case: List buildings use case
-        
+
     Returns:
         List of building DTOs with pagination info
     """
     try:
-        logger.info(f"Listing buildings with filters: name={name}, type={building_type}, city={city}")
-        
+        logger.info(
+            f"Listing buildings with filters: name={name}, type={building_type}, city={city}"
+        )
+
         # Build search criteria
         criteria = {}
         if name:
-            criteria['name'] = name
+            criteria["name"] = name
         if building_type:
-            criteria['building_type'] = building_type
+            criteria["building_type"] = building_type
         if city:
-            criteria['city'] = city
-        
+            criteria["city"] = city
+
         result = use_case.execute(limit=limit, offset=offset, criteria=criteria)
         return result
     except Exception as e:
@@ -170,19 +184,19 @@ async def list_buildings(
 async def update_building(
     building_id: str,
     request: UpdateBuildingRequest,
-    use_case: UpdateBuildingUseCase = Depends(get_update_use_case)
+    use_case: UpdateBuildingUseCase = Depends(get_update_use_case),
 ):
     """
     Update a building.
-    
+
     Args:
         building_id: Building identifier
         request: Building update request
         use_case: Update building use case
-        
+
     Returns:
         Updated building DTO
-        
+
     Raises:
         HTTPException: If building not found or update fails
     """
@@ -204,16 +218,15 @@ async def update_building(
 
 @router.delete("/{building_id}", status_code=204)
 async def delete_building(
-    building_id: str,
-    use_case: DeleteBuildingUseCase = Depends(get_delete_use_case)
+    building_id: str, use_case: DeleteBuildingUseCase = Depends(get_delete_use_case)
 ):
     """
     Delete a building.
-    
+
     Args:
         building_id: Building identifier
         use_case: Delete building use case
-        
+
     Raises:
         HTTPException: If building not found or deletion fails
     """
@@ -235,37 +248,36 @@ async def delete_building(
 
 @router.get("/{building_id}/events")
 async def get_building_events(
-    building_id: str,
-    use_case: GetBuildingUseCase = Depends(get_get_use_case)
+    building_id: str, use_case: GetBuildingUseCase = Depends(get_get_use_case)
 ):
     """
     Get domain events for a building.
-    
+
     Args:
         building_id: Building identifier
         use_case: Get building use case
-        
+
     Returns:
         List of domain events
-        
+
     Raises:
         HTTPException: If building not found
     """
     try:
         logger.info(f"Getting events for building: {building_id}")
         building = use_case.execute(building_id)
-        
+
         # Get domain events from the building entity
         events = building.get_domain_events()
-        
+
         return {
             "building_id": building_id,
             "events": [event.to_dict() for event in events],
-            "total_events": len(events)
+            "total_events": len(events),
         }
     except ResourceNotFoundError as e:
         logger.warning(f"Building not found for events: {building_id}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error getting building events: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error") 
+        raise HTTPException(status_code=500, detail="Internal server error")

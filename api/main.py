@@ -22,7 +22,7 @@ from pydantic import BaseModel, ValidationError
 import structlog
 
 from application.container import container
-from application.config import get_config
+from application.config import get_settings
 from application.logging_config import setup_logging, get_logger
 from application.exceptions import ApplicationError, ValidationError, BusinessRuleError
 from api.routes import (
@@ -31,15 +31,24 @@ from api.routes import (
     user_router,
     project_router,
     building_router,
-    health_router
+    health_router,
 )
 from api.routes.svgx_routes import router as svgx_router
 from api.routes.infrastructure_routes import router as infrastructure_router
+from api.routes.mcp_engineering_routes import router as mcp_engineering_router
+
+# BILT Token routes
+try:
+    from api.routes.bilt_routes import router as bilt_router
+except ImportError:
+    # Create a mock router if import fails
+    from fastapi import APIRouter
+    bilt_router = APIRouter(prefix="/api/v1/bilt", tags=["BILT Token"])
 from api.middleware import (
     RequestLoggingMiddleware,
     ErrorHandlingMiddleware,
     AuthenticationMiddleware,
-    RateLimitingMiddleware
+    RateLimitingMiddleware,
 )
 from api.dependencies import get_current_user, get_api_key
 
@@ -51,14 +60,18 @@ logger = get_logger("api.main")
 
 class APIInfo(BaseModel):
     """API information model"""
+
     name: str = "Arxos Platform API"
     version: str = "1.0.0"
-    description: str = "Comprehensive API for Arxos building information modeling platform"
+    description: str = (
+        "Comprehensive API for Arxos building information modeling platform"
+    )
     environment: str = os.getenv("ENVIRONMENT", "development")
 
 
 class ErrorResponse(BaseModel):
     """Standard error response model"""
+
     error: bool = True
     error_code: str
     message: str
@@ -69,6 +82,7 @@ class ErrorResponse(BaseModel):
 
 class SuccessResponse(BaseModel):
     """Standard success response model"""
+
     success: bool = True
     message: str
     data: Optional[Dict[str, Any]] = None
@@ -85,27 +99,27 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info("Starting Arxos Platform API...")
-    
+
     try:
         # Initialize application container
-        config = get_config()
+        config = get_settings()
         container.initialize(config)
         app_state["config"] = config
         app_state["startup_time"] = datetime.utcnow()
-        
+
         logger.info("Application container initialized successfully")
-        
+
         # Initialize services
         await _initialize_services()
-        
+
         logger.info("Arxos Platform API started successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"Failed to start Arxos Platform API: {e}")
         raise
-    
+
     finally:
         # Shutdown
         logger.info("Shutting down Arxos Platform API...")
@@ -118,31 +132,31 @@ async def _initialize_services():
         # Initialize database connections
         await container.get_database_session()
         logger.info("Database connection initialized")
-        
+
         # Initialize cache service
         cache_service = container.get_cache_service()
         if cache_service:
             await cache_service.initialize()
             logger.info("Cache service initialized")
-        
+
         # Initialize event store
         event_store = container.get_event_store()
         if event_store:
             await event_store.initialize()
             logger.info("Event store initialized")
-        
+
         # Initialize message queue
         message_queue = container.get_message_queue()
         if message_queue:
             await message_queue.initialize()
             logger.info("Message queue initialized")
-        
+
         # Initialize metrics service
         metrics_service = container.get_metrics_service()
         if metrics_service:
             await metrics_service.initialize()
             logger.info("Metrics service initialized")
-        
+
     except Exception as e:
         logger.error(f"Failed to initialize services: {e}")
         raise
@@ -154,31 +168,31 @@ async def _cleanup_services():
         # Cleanup database connections
         await container.cleanup_database()
         logger.info("Database connections cleaned up")
-        
+
         # Cleanup cache service
         cache_service = container.get_cache_service()
         if cache_service:
             await cache_service.cleanup()
             logger.info("Cache service cleaned up")
-        
+
         # Cleanup event store
         event_store = container.get_event_store()
         if event_store:
             await event_store.cleanup()
             logger.info("Event store cleaned up")
-        
+
         # Cleanup message queue
         message_queue = container.get_message_queue()
         if message_queue:
             await message_queue.cleanup()
             logger.info("Message queue cleaned up")
-        
+
         # Cleanup metrics service
         metrics_service = container.get_metrics_service()
         if metrics_service:
             await metrics_service.cleanup()
             logger.info("Metrics service cleaned up")
-        
+
     except Exception as e:
         logger.error(f"Error during cleanup: {e}")
 
@@ -187,7 +201,7 @@ def custom_openapi():
     """Custom OpenAPI schema generator"""
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title="Arxos Platform API",
         version="1.0.0",
@@ -218,32 +232,19 @@ def custom_openapi():
         """,
         routes=app.routes,
     )
-    
+
     # Add custom info
-    openapi_schema["info"]["x-logo"] = {
-        "url": "https://arxos.com/logo.png"
-    }
-    
+    openapi_schema["info"]["x-logo"] = {"url": "https://arxos.com/logo.png"}
+
     # Add security schemes
     openapi_schema["components"]["securitySchemes"] = {
-        "ApiKeyAuth": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "X-API-Key"
-        },
-        "BearerAuth": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT"
-        }
+        "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": "X-API-Key"},
+        "BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"},
     }
-    
+
     # Add global security
-    openapi_schema["security"] = [
-        {"ApiKeyAuth": []},
-        {"BearerAuth": []}
-    ]
-    
+    openapi_schema["security"] = [{"ApiKeyAuth": []}, {"BearerAuth": []}]
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -256,7 +257,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Set custom OpenAPI schema
@@ -284,8 +285,12 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 @app.exception_handler(ApplicationError)
 async def application_error_handler(request: Request, exc: ApplicationError):
     """Handle application-specific errors"""
-    logger.error(f"Application error: {exc.message}", error_code=exc.error_code, details=exc.details)
-    
+    logger.error(
+        f"Application error: {exc.message}",
+        error_code=exc.error_code,
+        details=exc.details,
+    )
+
     return JSONResponse(
         status_code=400,
         content=ErrorResponse(
@@ -293,8 +298,12 @@ async def application_error_handler(request: Request, exc: ApplicationError):
             message=exc.message,
             details=exc.details,
             timestamp=datetime.utcnow().isoformat(),
-            request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
-        ).dict()
+            request_id=(
+                request.state.request_id
+                if hasattr(request.state, "request_id")
+                else None
+            ),
+        ).dict(),
     )
 
 
@@ -302,7 +311,7 @@ async def application_error_handler(request: Request, exc: ApplicationError):
 async def validation_error_handler(request: Request, exc: ValidationError):
     """Handle validation errors"""
     logger.error(f"Validation error: {exc.message}", field=exc.field, value=exc.value)
-    
+
     return JSONResponse(
         status_code=422,
         content=ErrorResponse(
@@ -310,16 +319,22 @@ async def validation_error_handler(request: Request, exc: ValidationError):
             message=exc.message,
             details={"field": exc.field, "value": exc.value},
             timestamp=datetime.utcnow().isoformat(),
-            request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
-        ).dict()
+            request_id=(
+                request.state.request_id
+                if hasattr(request.state, "request_id")
+                else None
+            ),
+        ).dict(),
     )
 
 
 @app.exception_handler(BusinessRuleError)
 async def business_rule_error_handler(request: Request, exc: BusinessRuleError):
     """Handle business rule errors"""
-    logger.error(f"Business rule error: {exc.message}", rule=exc.rule, context=exc.context)
-    
+    logger.error(
+        f"Business rule error: {exc.message}", rule=exc.rule, context=exc.context
+    )
+
     return JSONResponse(
         status_code=400,
         content=ErrorResponse(
@@ -327,8 +342,12 @@ async def business_rule_error_handler(request: Request, exc: BusinessRuleError):
             message=exc.message,
             details={"rule": exc.rule, "context": exc.context},
             timestamp=datetime.utcnow().isoformat(),
-            request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
-        ).dict()
+            request_id=(
+                request.state.request_id
+                if hasattr(request.state, "request_id")
+                else None
+            ),
+        ).dict(),
     )
 
 
@@ -336,7 +355,7 @@ async def business_rule_error_handler(request: Request, exc: BusinessRuleError):
 async def global_exception_handler(request: Request, exc: Exception):
     """Handle all other exceptions"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    
+
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
@@ -344,8 +363,12 @@ async def global_exception_handler(request: Request, exc: Exception):
             message="An unexpected error occurred",
             details={"exception_type": type(exc).__name__},
             timestamp=datetime.utcnow().isoformat(),
-            request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
-        ).dict()
+            request_id=(
+                request.state.request_id
+                if hasattr(request.state, "request_id")
+                else None
+            ),
+        ).dict(),
     )
 
 
@@ -358,7 +381,9 @@ async def root():
         "version": "1.0.0",
         "description": "Comprehensive REST API for building information modeling",
         "status": "running",
-        "uptime": (datetime.utcnow() - app_state.get("startup_time", datetime.utcnow())).total_seconds(),
+        "uptime": (
+            datetime.utcnow() - app_state.get("startup_time", datetime.utcnow())
+        ).total_seconds(),
         "endpoints": {
             "/docs": "API documentation (Swagger UI)",
             "/redoc": "API documentation (ReDoc)",
@@ -367,9 +392,10 @@ async def root():
             "/api/v1/rooms": "Room management",
             "/api/v1/users": "User management",
             "/api/v1/projects": "Project management",
-            "/api/v1/buildings": "Building management"
+            "/api/v1/buildings": "Building management",
+            "/api/v1/bilt": "BILT token operations",
         },
-        "environment": app_state.get("config", {}).get("environment", "development")
+        "environment": app_state.get("config", {}).get("environment", "development"),
     }
 
 
@@ -381,18 +407,18 @@ async def health_check():
         # Check database connection
         db_session = container.get_database_session()
         db_healthy = db_session is not None
-        
+
         # Check cache service
         cache_service = container.get_cache_service()
         cache_healthy = cache_service is not None
-        
+
         # Check event store
         event_store = container.get_event_store()
         event_store_healthy = event_store is not None
-        
+
         # Overall health
         overall_healthy = db_healthy and cache_healthy and event_store_healthy
-        
+
         return {
             "status": "healthy" if overall_healthy else "unhealthy",
             "service": "arxos-api",
@@ -401,11 +427,13 @@ async def health_check():
             "checks": {
                 "database": "healthy" if db_healthy else "unhealthy",
                 "cache": "healthy" if cache_healthy else "unhealthy",
-                "event_store": "healthy" if event_store_healthy else "unhealthy"
+                "event_store": "healthy" if event_store_healthy else "unhealthy",
             },
-            "uptime": (datetime.utcnow() - app_state.get("startup_time", datetime.utcnow())).total_seconds()
+            "uptime": (
+                datetime.utcnow() - app_state.get("startup_time", datetime.utcnow())
+            ).total_seconds(),
         }
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return {
@@ -417,8 +445,8 @@ async def health_check():
             "checks": {
                 "database": "unhealthy",
                 "cache": "unhealthy",
-                "event_store": "unhealthy"
-            }
+                "event_store": "unhealthy",
+            },
         }
 
 
@@ -430,18 +458,22 @@ app.include_router(user_router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(project_router, prefix="/api/v1/projects", tags=["Projects"])
 app.include_router(building_router, prefix="/api/v1/buildings", tags=["Buildings"])
 app.include_router(svgx_router, prefix="/api/v1", tags=["SVGX Engine"])
-app.include_router(infrastructure_router, prefix="/api/v1", tags=["Infrastructure as Code"])
+app.include_router(
+    infrastructure_router, prefix="/api/v1", tags=["Infrastructure as Code"]
+)
+app.include_router(mcp_engineering_router, prefix="/api/v1", tags=["MCP Engineering"])
+app.include_router(bilt_router, prefix="/api/v1", tags=["BILT Token"])
 
 
 if __name__ == "__main__":
     # Get configuration
-    config = get_config()
-    
+    config = get_settings()
+
     # Run the application
     uvicorn.run(
         "api.main:app",
-        host=config.api.host,
-        port=config.api.port,
+        host=config.api_host,
+        port=config.api_port,
         reload=config.environment == "development",
-        log_level=config.logging.level.lower()
-    ) 
+        log_level=config.logging.level.lower(),
+    )

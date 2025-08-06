@@ -21,7 +21,7 @@ def setup_logging():
     """Set up logging for the example"""
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
 
@@ -38,25 +38,27 @@ def print_nlp_result(result):
     print(f"Intent: {result.intent.intent_type.value}")
     print(f"Confidence: {result.confidence:.2f}")
     print(f"CLI Command: {result.cli_command.to_string()}")
-    
+
     if result.slots:
         print("Extracted Slots:")
         for slot in result.slots:
-            print(f"  - {slot.slot_type.value}: '{slot.value}' (confidence: {slot.confidence:.2f})")
-    
+            print(
+                f"  - {slot.slot_type.value}: '{slot.value}' (confidence: {slot.confidence:.2f})"
+            )
+
     if result.error:
         print(f"Error: {result.error}")
-    
+
     print("-" * 40)
 
 
 def basic_example():
     """Basic NLP processing example"""
     print_section("Basic NLP Processing Example")
-    
+
     # Initialize the NLP router
     router = NLPRouter()
-    
+
     # Test cases
     test_cases = [
         "create a bedroom",
@@ -67,9 +69,9 @@ def basic_example():
         "sync the building data",
         "annotate the wall with a note",
         "inspect the HVAC system",
-        "generate a report for the building"
+        "generate a report for the building",
     ]
-    
+
     print("Processing natural language commands:")
     for i, text in enumerate(test_cases, 1):
         print(f"\n{i}. Input: '{text}'")
@@ -80,43 +82,40 @@ def basic_example():
 def advanced_example():
     """Advanced NLP processing with context"""
     print_section("Advanced NLP Processing with Context")
-    
+
     # Create context with user and building information
     context = NLPContext(
         user_id="architect_001",
         building_id="office_building_123",
         floor_id="floor_2",
         permissions=["create", "modify", "query", "export"],
-        object_context={
-            "current_location": "floor_2",
-            "building_type": "office"
-        }
+        object_context={"current_location": "floor_2", "building_type": "office"},
     )
-    
+
     # Initialize router with configuration
     config = {
         "intent_detection": {"confidence_threshold": 0.6},
         "slot_filling": {"enable_validation": True},
-        "cli_translation": {"validate_commands": True}
+        "cli_translation": {"validate_commands": True},
     }
-    
+
     router = NLPRouter(config)
-    
+
     # Test complex commands with context
     complex_commands = [
         "create a conference room with a door and window",
         "modify the kitchen color to blue and size to 20x15",
         "find all electrical outlets on this floor",
         "export the floor plan as SVG format",
-        "add a note to the main entrance about access control"
+        "add a note to the main entrance about access control",
     ]
-    
+
     print("Processing complex commands with context:")
     for i, text in enumerate(complex_commands, 1):
         print(f"\n{i}. Input: '{text}'")
         result = router.parse_natural_language(text, context)
         print_nlp_result(result)
-        
+
         # Show context information
         print(f"Context - User: {result.context.user_id}")
         print(f"Context - Building: {result.context.building_id}")
@@ -127,10 +126,10 @@ def advanced_example():
 def batch_processing_example():
     """Batch processing example"""
     print_section("Batch Processing Example")
-    
+
     router = NLPRouter()
     context = NLPContext(user_id="batch_user", building_id="test_building")
-    
+
     # Batch of commands
     commands = [
         "create a bedroom",
@@ -142,27 +141,29 @@ def batch_processing_example():
         "modify the kitchen color to white",
         "find all rooms on floor 1",
         "export the building layout",
-        "validate the electrical system"
+        "validate the electrical system",
     ]
-    
+
     print("Processing batch of commands:")
     results = router.batch_process(commands, context)
-    
+
     # Summary statistics
     intent_counts = {}
     total_confidence = 0
     successful_commands = 0
-    
+
     for i, result in enumerate(results, 1):
         intent_type = result.intent.intent_type.value
         intent_counts[intent_type] = intent_counts.get(intent_type, 0) + 1
         total_confidence += result.confidence
-        
+
         if result.confidence > 0.5:
             successful_commands += 1
-        
-        print(f"{i:2d}. {result.intent.intent_type.value:8s} - {result.cli_command.to_string()}")
-    
+
+        print(
+            f"{i:2d}. {result.intent.intent_type.value:8s} - {result.cli_command.to_string()}"
+        )
+
     print(f"\nBatch Processing Summary:")
     print(f"Total commands: {len(results)}")
     print(f"Successful commands: {successful_commands}")
@@ -173,9 +174,9 @@ def batch_processing_example():
 def suggestions_example():
     """Command suggestions example"""
     print_section("Command Suggestions Example")
-    
+
     router = NLPRouter()
-    
+
     # Test partial inputs
     partial_inputs = [
         "create",
@@ -185,9 +186,9 @@ def suggestions_example():
         "room",
         "kitchen",
         "door",
-        "window"
+        "window",
     ]
-    
+
     print("Getting suggestions for partial inputs:")
     for partial in partial_inputs:
         suggestions = router.get_suggestions(partial)
@@ -197,9 +198,9 @@ def suggestions_example():
 def error_handling_example():
     """Error handling example"""
     print_section("Error Handling Example")
-    
+
     router = NLPRouter()
-    
+
     # Test invalid or ambiguous inputs
     invalid_inputs = [
         "abracadabra foo bar",
@@ -208,9 +209,9 @@ def error_handling_example():
         "",
         "   ",
         "create something that doesn't exist",
-        "modify the impossible object"
+        "modify the impossible object",
     ]
-    
+
     print("Testing error handling with invalid inputs:")
     for i, text in enumerate(invalid_inputs, 1):
         print(f"\n{i}. Input: '{text}'")
@@ -221,9 +222,9 @@ def error_handling_example():
 def validation_example():
     """Command validation example"""
     print_section("Command Validation Example")
-    
+
     router = NLPRouter()
-    
+
     # Test various commands and validate them
     test_commands = [
         "create a bedroom",
@@ -237,30 +238,32 @@ def validation_example():
         "sync data",
         "annotate wall",
         "inspect room",
-        "report building"
+        "report building",
     ]
-    
+
     print("Validating generated commands:")
     for i, text in enumerate(test_commands, 1):
         result = router.parse_natural_language(text)
         is_valid = router.validate_command(result.cli_command)
-        
-        print(f"{i:2d}. '{text}' -> {result.cli_command.to_string()} -> Valid: {is_valid}")
+
+        print(
+            f"{i:2d}. '{text}' -> {result.cli_command.to_string()} -> Valid: {is_valid}"
+        )
 
 
 def help_example():
     """Help functionality example"""
     print_section("Help Functionality Example")
-    
+
     router = NLPRouter()
-    
+
     # Get general help
     print("General Help:")
     print(router.get_help())
-    
+
     # Get specific help topics
     help_topics = ["create", "modify", "query", "export", "sync"]
-    
+
     print("\nSpecific Help Topics:")
     for topic in help_topics:
         help_text = router.get_help(topic)
@@ -272,10 +275,10 @@ def main():
     """Main function to run all examples"""
     print("🎯 Arxos NLP Integration Examples")
     print("=" * 60)
-    
+
     # Set up logging
     setup_logging()
-    
+
     try:
         # Run all examples
         basic_example()
@@ -285,7 +288,7 @@ def main():
         error_handling_example()
         validation_example()
         help_example()
-        
+
         print_section("Example Execution Complete")
         print("✅ All examples executed successfully!")
         print("\nKey Features Demonstrated:")
@@ -297,12 +300,13 @@ def main():
         print("  ✓ Command suggestions and autocomplete")
         print("  ✓ Error handling and validation")
         print("  ✓ Help system and documentation")
-        
+
     except Exception as e:
         print(f"❌ Error during example execution: {e}")
         import traceback
+
         traceback.print_exc()
 
 
 if __name__ == "__main__":
-    main() 
+    main()

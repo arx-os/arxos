@@ -8,7 +8,11 @@ Follows Arxos engineering standards: absolute imports, global instances, modular
 """
 
 from typing import Dict, Any, List, Optional, Callable, Union
-from svgx_engine.runtime.event_driven_behavior_engine import Event, EventType, EventPriority
+from svgx_engine.runtime.event_driven_behavior_engine import (
+    Event,
+    EventType,
+    EventPriority,
+)
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -21,25 +25,31 @@ import pytz
 
 logger = logging.getLogger(__name__)
 
+
 class TriggerType(Enum):
     """Types of time-based triggers supported by the system."""
+
     ONE_TIME = "one_time"
     PERIODIC = "periodic"
     SCHEDULED = "scheduled"
     INTERVAL = "interval"
     CRON = "cron"
 
+
 class TriggerStatus(Enum):
     """Status states for triggers."""
+
     ACTIVE = "active"
     PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
 @dataclass
 class Trigger:
     """Represents a time-based trigger."""
+
     id: str
     type: TriggerType
     name: str
@@ -55,7 +65,7 @@ class Trigger:
     last_executed: Optional[datetime] = None
     next_execution: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self):
         if self.next_execution is None:
             self.next_execution = self._calculate_next_execution()
@@ -83,16 +93,18 @@ class Trigger:
         # Simplified cron parsing - in production, use a proper cron library
         if not self.cron_expression:
             return None
-        
+
         # Basic cron format: minute hour day month weekday
         # For now, return a placeholder - implement full cron parsing
         return datetime.utcnow() + timedelta(minutes=1)
+
 
 class TimeBasedTriggerSystem:
     """
     Handles time-based trigger scheduling, execution, and management for SVGX elements.
     Supports various trigger types with timezone awareness and calendar integration.
     """
+
     def __init__(self):
         # {trigger_id: Trigger}
         self.triggers: Dict[str, Trigger] = {}
@@ -109,7 +121,7 @@ class TimeBasedTriggerSystem:
         if self.running:
             logger.warning("Trigger system is already running")
             return
-        
+
         self.running = True
         self.monitor_task = asyncio.create_task(self._monitor_triggers())
         logger.info("Time-based trigger system started")
@@ -119,7 +131,7 @@ class TimeBasedTriggerSystem:
         if not self.running:
             logger.warning("Trigger system is not running")
             return
-        
+
         self.running = False
         if self.monitor_task:
             self.monitor_task.cancel()
@@ -135,19 +147,21 @@ class TimeBasedTriggerSystem:
             try:
                 current_time = datetime.utcnow()
                 triggers_to_execute = []
-                
+
                 for trigger in self.triggers.values():
-                    if (trigger.status == TriggerStatus.ACTIVE and 
-                        trigger.next_execution and 
-                        current_time >= trigger.next_execution):
+                    if (
+                        trigger.status == TriggerStatus.ACTIVE
+                        and trigger.next_execution
+                        and current_time >= trigger.next_execution
+                    ):
                         triggers_to_execute.append(trigger)
-                
+
                 # Execute triggers
                 for trigger in triggers_to_execute:
                     await self._execute_trigger(trigger)
-                
+
                 await asyncio.sleep(self.monitor_interval)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -169,50 +183,67 @@ class TimeBasedTriggerSystem:
                     "trigger_type": trigger.type.value,
                     "trigger_name": trigger.name,
                     "execution_time": datetime.utcnow().isoformat(),
-                    "metadata": trigger.metadata
-                }
+                    "metadata": trigger.metadata,
+                },
             )
-            
+
             # Process event through the behavior engine
             # Import here to avoid circular imports
-            from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
+            from svgx_engine.runtime.event_driven_behavior_engine import (
+                event_driven_behavior_engine,
+            )
+
             result = event_driven_behavior_engine.process_event(event)
-            if hasattr(result, '__await__'):
+            if hasattr(result, "__await__"):
                 await result
-            
+
             # Update trigger state
             trigger.last_executed = datetime.utcnow()
             trigger.current_executions += 1
-            
+
             # Check if trigger should be completed
-            if (trigger.max_executions and 
-                trigger.current_executions >= trigger.max_executions):
+            if (
+                trigger.max_executions
+                and trigger.current_executions >= trigger.max_executions
+            ):
                 trigger.status = TriggerStatus.COMPLETED
                 trigger.next_execution = None
             else:
                 trigger.next_execution = trigger._calculate_next_execution()
-            
+
             # Record execution
-            self._record_execution(trigger.id, {
-                "execution_time": trigger.last_executed,
-                "success": True,
-                "event_id": event.id
-            })
-            
+            self._record_execution(
+                trigger.id,
+                {
+                    "execution_time": trigger.last_executed,
+                    "success": True,
+                    "event_id": event.id,
+                },
+            )
+
             logger.info(f"Trigger {trigger.id} executed successfully")
-            
+
         except Exception as e:
             logger.error(f"Error executing trigger {trigger.id}: {e}")
             trigger.status = TriggerStatus.FAILED
-            self._record_execution(trigger.id, {
-                "execution_time": datetime.utcnow(),
-                "success": False,
-                "error": str(e)
-            })
+            self._record_execution(
+                trigger.id,
+                {
+                    "execution_time": datetime.utcnow(),
+                    "success": False,
+                    "error": str(e),
+                },
+            )
 
-    def create_one_time_trigger(self, trigger_id: str, name: str, target_time: datetime,
-                               description: str = "", timezone: str = "UTC",
-                               metadata: Optional[Dict[str, Any]] = None) -> Trigger:
+    def create_one_time_trigger(
+        self,
+        trigger_id: str,
+        name: str,
+        target_time: datetime,
+        description: str = "",
+        timezone: str = "UTC",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Trigger:
         """Create a one-time trigger."""
         trigger = Trigger(
             id=trigger_id,
@@ -221,16 +252,23 @@ class TimeBasedTriggerSystem:
             description=description,
             target_time=target_time,
             timezone=timezone,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.triggers[trigger_id] = trigger
         logger.info(f"Created one-time trigger: {trigger_id}")
         return trigger
 
-    def create_periodic_trigger(self, trigger_id: str, name: str, start_time: datetime,
-                               interval_seconds: float, description: str = "",
-                               timezone: str = "UTC", max_executions: Optional[int] = None,
-                               metadata: Optional[Dict[str, Any]] = None) -> Trigger:
+    def create_periodic_trigger(
+        self,
+        trigger_id: str,
+        name: str,
+        start_time: datetime,
+        interval_seconds: float,
+        description: str = "",
+        timezone: str = "UTC",
+        max_executions: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Trigger:
         """Create a periodic trigger."""
         trigger = Trigger(
             id=trigger_id,
@@ -241,16 +279,22 @@ class TimeBasedTriggerSystem:
             interval_seconds=interval_seconds,
             timezone=timezone,
             max_executions=max_executions,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.triggers[trigger_id] = trigger
         logger.info(f"Created periodic trigger: {trigger_id}")
         return trigger
 
-    def create_interval_trigger(self, trigger_id: str, name: str, interval_seconds: float,
-                               description: str = "", timezone: str = "UTC",
-                               max_executions: Optional[int] = None,
-                               metadata: Optional[Dict[str, Any]] = None) -> Trigger:
+    def create_interval_trigger(
+        self,
+        trigger_id: str,
+        name: str,
+        interval_seconds: float,
+        description: str = "",
+        timezone: str = "UTC",
+        max_executions: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Trigger:
         """Create an interval trigger."""
         trigger = Trigger(
             id=trigger_id,
@@ -260,16 +304,22 @@ class TimeBasedTriggerSystem:
             interval_seconds=interval_seconds,
             timezone=timezone,
             max_executions=max_executions,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.triggers[trigger_id] = trigger
         logger.info(f"Created interval trigger: {trigger_id}")
         return trigger
 
-    def create_cron_trigger(self, trigger_id: str, name: str, cron_expression: str,
-                           description: str = "", timezone: str = "UTC",
-                           max_executions: Optional[int] = None,
-                           metadata: Optional[Dict[str, Any]] = None) -> Trigger:
+    def create_cron_trigger(
+        self,
+        trigger_id: str,
+        name: str,
+        cron_expression: str,
+        description: str = "",
+        timezone: str = "UTC",
+        max_executions: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Trigger:
         """Create a cron-based trigger."""
         trigger = Trigger(
             id=trigger_id,
@@ -279,7 +329,7 @@ class TimeBasedTriggerSystem:
             cron_expression=cron_expression,
             timezone=timezone,
             max_executions=max_executions,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self.triggers[trigger_id] = trigger
         logger.info(f"Created cron trigger: {trigger_id}")
@@ -291,7 +341,7 @@ class TimeBasedTriggerSystem:
         if not trigger:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         trigger.status = TriggerStatus.PAUSED
         logger.info(f"Paused trigger: {trigger_id}")
         return True
@@ -302,11 +352,11 @@ class TimeBasedTriggerSystem:
         if not trigger:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         if trigger.status != TriggerStatus.PAUSED:
             logger.warning(f"Trigger {trigger_id} is not paused")
             return False
-        
+
         trigger.status = TriggerStatus.ACTIVE
         trigger.next_execution = trigger._calculate_next_execution()
         logger.info(f"Resumed trigger: {trigger_id}")
@@ -318,7 +368,7 @@ class TimeBasedTriggerSystem:
         if not trigger:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         trigger.status = TriggerStatus.CANCELLED
         trigger.next_execution = None
         logger.info(f"Cancelled trigger: {trigger_id}")
@@ -329,7 +379,7 @@ class TimeBasedTriggerSystem:
         if trigger_id not in self.triggers:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         del self.triggers[trigger_id]
         if trigger_id in self.execution_history:
             del self.execution_history[trigger_id]
@@ -351,10 +401,13 @@ class TimeBasedTriggerSystem:
         """Get triggers that are due for execution."""
         current_time = datetime.utcnow()
         return [
-            trigger for trigger in self.triggers.values()
-            if (trigger.status == TriggerStatus.ACTIVE and
-                trigger.next_execution and
-                current_time >= trigger.next_execution)
+            trigger
+            for trigger in self.triggers.values()
+            if (
+                trigger.status == TriggerStatus.ACTIVE
+                and trigger.next_execution
+                and current_time >= trigger.next_execution
+            )
         ]
 
     def get_execution_history(self, trigger_id: str) -> List[Dict[str, Any]]:
@@ -365,7 +418,7 @@ class TimeBasedTriggerSystem:
         """Record trigger execution in history."""
         if trigger_id not in self.execution_history:
             self.execution_history[trigger_id] = []
-        
+
         self.execution_history[trigger_id].append(execution_data)
 
     def clear_execution_history(self, trigger_id: str):
@@ -376,11 +429,19 @@ class TimeBasedTriggerSystem:
     def get_system_status(self) -> Dict[str, Any]:
         """Get system status and statistics."""
         total_triggers = len(self.triggers)
-        active_triggers = len([t for t in self.triggers.values() if t.status == TriggerStatus.ACTIVE])
-        paused_triggers = len([t for t in self.triggers.values() if t.status == TriggerStatus.PAUSED])
-        completed_triggers = len([t for t in self.triggers.values() if t.status == TriggerStatus.COMPLETED])
-        failed_triggers = len([t for t in self.triggers.values() if t.status == TriggerStatus.FAILED])
-        
+        active_triggers = len(
+            [t for t in self.triggers.values() if t.status == TriggerStatus.ACTIVE]
+        )
+        paused_triggers = len(
+            [t for t in self.triggers.values() if t.status == TriggerStatus.PAUSED]
+        )
+        completed_triggers = len(
+            [t for t in self.triggers.values() if t.status == TriggerStatus.COMPLETED]
+        )
+        failed_triggers = len(
+            [t for t in self.triggers.values() if t.status == TriggerStatus.FAILED]
+        )
+
         return {
             "running": self.running,
             "total_triggers": total_triggers,
@@ -388,27 +449,33 @@ class TimeBasedTriggerSystem:
             "paused_triggers": paused_triggers,
             "completed_triggers": completed_triggers,
             "failed_triggers": failed_triggers,
-            "due_triggers": len(self.get_due_triggers())
+            "due_triggers": len(self.get_due_triggers()),
         }
+
 
 # Global instance
 time_based_trigger_system = TimeBasedTriggerSystem()
 
+
 # Register with the event-driven engine
 def _register_time_based_trigger_system():
     def handler(event: Event):
-        if event.type == EventType.SYSTEM and event.data.get('trigger_id'):
+        if event.type == EventType.SYSTEM and event.data.get("trigger_id"):
             # Trigger events are handled internally by the system
             return None
         return None
-    
+
     # Import here to avoid circular imports
-    from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
-    event_driven_behavior_engine.register_handler(
-        event_type=EventType.SYSTEM,
-        handler_id='time_based_trigger_system',
-        handler=handler,
-        priority=0
+    from svgx_engine.runtime.event_driven_behavior_engine import (
+        event_driven_behavior_engine,
     )
 
-_register_time_based_trigger_system() 
+    event_driven_behavior_engine.register_handler(
+        event_type=EventType.SYSTEM,
+        handler_id="time_based_trigger_system",
+        handler=handler,
+        priority=0,
+    )
+
+
+_register_time_based_trigger_system()

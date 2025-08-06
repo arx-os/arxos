@@ -8,11 +8,15 @@
 package main
 
 import (
+	"arx-cmms/internal/server"
 	"arx-cmms/pkg/cmms"
+	"context"
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -37,8 +41,26 @@ func main() {
 	// Create CMMS client
 	client := cmms.NewClient(db)
 
-	// Start sync scheduler
-	client.StartSyncScheduler()
+	// Start sync scheduler (commented out for testing to avoid external API calls)
+	// client.StartSyncScheduler()
+
+	// Get port from environment or use default
+	port := 8080
+	if portStr := os.Getenv("PORT"); portStr != "" {
+		if p, err := strconv.Atoi(portStr); err == nil {
+			port = p
+		}
+	}
+
+	// Create and start HTTP server
+	httpServer := server.NewServer(client, port)
+	
+	// Start server in a goroutine
+	go func() {
+		if err := httpServer.Start(); err != nil {
+			log.Fatalf("Failed to start HTTP server: %v", err)
+		}
+	}()
 
 	log.Println("🚀 CMMS Service started")
 
@@ -48,4 +70,12 @@ func main() {
 	<-sig
 
 	log.Println("Shutting down CMMS Service...")
+	
+	// Gracefully shutdown the server
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("Error shutting down server: %v", err)
+	}
 }

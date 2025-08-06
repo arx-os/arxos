@@ -10,13 +10,13 @@ from svgx_engine.performance import (
     get_performance_monitor,
     monitor_operation,
     get_performance_report,
-    clear_performance_data
+    clear_performance_data,
 )
 
 __all__ = [
-    'PerformanceMonitor',
-    'get_performance_monitor',
-    'monitor_operation',
-    'get_performance_report',
-    'clear_performance_data'
-] 
+    "PerformanceMonitor",
+    "get_performance_monitor",
+    "monitor_operation",
+    "get_performance_report",
+    "clear_performance_data",
+]

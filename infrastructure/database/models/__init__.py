@@ -12,13 +12,36 @@ from .room import RoomModel
 from .device import DeviceModel
 from .user import UserModel
 from .project import ProjectModel
+from .mcp_engineering import (
+    MCPBuildingData,
+    MCPComplianceIssue,
+    MCPAIRecommendation,
+    MCPValidationResult,
+    MCPValidationSession,
+    MCPKnowledgeSearchResult,
+    MCPMLPrediction,
+    MCPComplianceReport,
+    MCPReportValidationResult,
+    MCPValidationStatistics,
+)
 
 __all__ = [
-    'Base',
-    'BuildingModel',
-    'FloorModel', 
-    'RoomModel',
-    'DeviceModel',
-    'UserModel',
-    'ProjectModel',
-] 
+    "Base",
+    "BuildingModel",
+    "FloorModel",
+    "RoomModel",
+    "DeviceModel",
+    "UserModel",
+    "ProjectModel",
+    # MCP-Engineering Models
+    "MCPBuildingData",
+    "MCPComplianceIssue",
+    "MCPAIRecommendation",
+    "MCPValidationResult",
+    "MCPValidationSession",
+    "MCPKnowledgeSearchResult",
+    "MCPMLPrediction",
+    "MCPComplianceReport",
+    "MCPReportValidationResult",
+    "MCPValidationStatistics",
+]

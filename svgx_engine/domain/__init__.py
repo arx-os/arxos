@@ -6,61 +6,144 @@ aggregates, repositories, services, and events that implement the
 business logic and rules of the SVGX Engine.
 """
 
-# Domain Entities
-from svgx_engine.domain.entities import (
-    Building,
+# Domain Entities - BIM Objects with Embedded Engineering Logic
+from domain.entities.bim_objects import (
+    # Electrical BIM Objects
+    ElectricalObjectType,
+    ElectricalBIMObject,
+    ElectricalOutlet,
+    ElectricalPanel,
+    ElectricalSwitch,
+    ElectricalTransformer,
+    ElectricalBreaker,
+    ElectricalLight,
+    # HVAC BIM Objects
+    HVACObjectType,
+    HVACBIMObject,
+    HVACDuct,
+    HVACDamper,
+    HVACDiffuser,
+    HVACFan,
+    HVACThermostat,
+    # Plumbing BIM Objects
+    PlumbingObjectType,
+    PlumbingBIMObject,
+    PlumbingPipe,
+    PlumbingValve,
+    PlumbingFixture,
+    PlumbingPump,
+    PlumbingDrain,
+    # Structural BIM Objects
+    StructuralObjectType,
+    StructuralBIMObject,
+    StructuralBeam,
+    StructuralColumn,
+    StructuralWall,
+    StructuralSlab,
+    StructuralFoundation,
 )
 
-# Domain Value Objects
-from svgx_engine.domain.value_objects import (
-    Address, Coordinates, Dimensions, Identifier, Money, Status,
-)
-
-# Domain Aggregates
-from svgx_engine.domain.aggregates import (
-    BuildingAggregate,
-)
-
-# Domain Repositories
-from svgx_engine.domain.repositories import (
-    BuildingRepository,
-)
-
-# Domain Services
-from svgx_engine.domain.services import (
-    BuildingService,
-)
-
-# Domain Events
-from svgx_engine.domain.events import (
-    BuildingCreatedEvent, BuildingUpdatedEvent, BuildingDeletedEvent,
-    BuildingStatusChangedEvent, BuildingLocationChangedEvent, BuildingCostUpdatedEvent,
-    building_event_publisher
+# Domain Value Objects - Engineering Parameters and Code Compliance
+from domain.value_objects import (
+    # Engineering Parameters
+    ParameterType,
+    EngineeringParameter,
+    ElectricalParameter,
+    HVACParameter,
+    PlumbingParameter,
+    StructuralParameter,
+    VoltageParameter,
+    CurrentParameter,
+    PowerParameter,
+    CapacityParameter,
+    AirflowParameter,
+    FlowRateParameter,
+    PressureParameter,
+    LoadParameter,
+    LengthParameter,
+    # Code Compliance
+    CodeStandard,
+    ComplianceStatus,
+    CodeRequirement,
+    ComplianceCheck,
+    CodeCompliance,
+    NECRequirement,
+    ASHRAERequirement,
+    IPCRequirement,
+    IBCRequirement,
+    NECOutletRequirement,
+    ASHRAEThermostatRequirement,
+    IPCFixtureRequirement,
+    IBCStructuralRequirement,
 )
 
 # Version and metadata
-__version__ = "1.0.0"
-__description__ = "Domain layer for SVGX Engine"
+__version__ = "2.0.0"
+__description__ = "Domain layer for SVGX Engine with embedded engineering logic"
 
 # Export all domain components
 __all__ = [
-    # Entities
-    "Building",
-    
-    # Value Objects
-    "Address", "Coordinates", "Dimensions", "Identifier", "Money", "Status",
-    
-    # Aggregates
-    "BuildingAggregate",
-    
-    # Repositories
-    "BuildingRepository",
-    
-    # Services
-    "BuildingService",
-    
-    # Events
-    "BuildingCreatedEvent", "BuildingUpdatedEvent", "BuildingDeletedEvent",
-    "BuildingStatusChangedEvent", "BuildingLocationChangedEvent", "BuildingCostUpdatedEvent",
-    "building_event_publisher"
-] 
+    # Electrical BIM Objects
+    "ElectricalObjectType",
+    "ElectricalBIMObject",
+    "ElectricalOutlet",
+    "ElectricalPanel",
+    "ElectricalSwitch",
+    "ElectricalTransformer",
+    "ElectricalBreaker",
+    "ElectricalLight",
+    # HVAC BIM Objects
+    "HVACObjectType",
+    "HVACBIMObject",
+    "HVACDuct",
+    "HVACDamper",
+    "HVACDiffuser",
+    "HVACFan",
+    "HVACThermostat",
+    # Plumbing BIM Objects
+    "PlumbingObjectType",
+    "PlumbingBIMObject",
+    "PlumbingPipe",
+    "PlumbingValve",
+    "PlumbingFixture",
+    "PlumbingPump",
+    "PlumbingDrain",
+    # Structural BIM Objects
+    "StructuralObjectType",
+    "StructuralBIMObject",
+    "StructuralBeam",
+    "StructuralColumn",
+    "StructuralWall",
+    "StructuralSlab",
+    "StructuralFoundation",
+    # Engineering Parameters
+    "ParameterType",
+    "EngineeringParameter",
+    "ElectricalParameter",
+    "HVACParameter",
+    "PlumbingParameter",
+    "StructuralParameter",
+    "VoltageParameter",
+    "CurrentParameter",
+    "PowerParameter",
+    "CapacityParameter",
+    "AirflowParameter",
+    "FlowRateParameter",
+    "PressureParameter",
+    "LoadParameter",
+    "LengthParameter",
+    # Code Compliance
+    "CodeStandard",
+    "ComplianceStatus",
+    "CodeRequirement",
+    "ComplianceCheck",
+    "CodeCompliance",
+    "NECRequirement",
+    "ASHRAERequirement",
+    "IPCRequirement",
+    "IBCRequirement",
+    "NECOutletRequirement",
+    "ASHRAEThermostatRequirement",
+    "IPCFixtureRequirement",
+    "IBCStructuralRequirement",
+]

@@ -6,24 +6,28 @@ import (
 
 // CMMSConnection represents a connection to an external CMMS system
 type CMMSConnection struct {
-	ID              int        `json:"id" db:"id"`
-	Name            string     `json:"name" db:"name"`
-	Type            string     `json:"type" db:"type"` // e.g. "upkeep", "fiix", "custom"
-	BaseURL         string     `json:"base_url" db:"base_url"`
-	APIKey          string     `json:"api_key" db:"api_key"`
-	Username        string     `json:"username" db:"username"`
-	Password        string     `json:"password" db:"password"`
-	OAuth2ClientID  string     `json:"oauth2_client_id" db:"oauth2_client_id"`
-	OAuth2Secret    string     `json:"oauth2_secret" db:"oauth2_secret"`
-	OAuth2TokenURL  string     `json:"oauth2_token_url" db:"oauth2_token_url"`
-	OAuth2Scope     string     `json:"oauth2_scope" db:"oauth2_scope"`
-	SyncIntervalMin int        `json:"sync_interval_min" db:"sync_interval_min"` // minutes
-	IsActive        bool       `json:"is_active" db:"is_active"`
-	LastSync        *time.Time `json:"last_sync" db:"last_sync"`
-	LastSyncStatus  string     `json:"last_sync_status" db:"last_sync_status"`
-	LastSyncError   string     `json:"last_sync_error" db:"last_sync_error"`
-	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	ID              int        `json:"id" gorm:"primaryKey;column:id"`
+	Name            string     `json:"name" gorm:"column:name"`
+	Type            string     `json:"type" gorm:"column:type"` // e.g. "upkeep", "fiix", "custom"
+	BaseURL         string     `json:"base_url" gorm:"column:base_url"`
+	APIKey          string     `json:"api_key" gorm:"column:api_key"`
+	Username        string     `json:"username" gorm:"column:username"`
+	Password        string     `json:"password" gorm:"column:password"`
+	OAuth2ClientID  *string    `json:"oauth2_client_id" gorm:"column:oauth2_client_id"`
+	OAuth2Secret    *string    `json:"oauth2_secret" gorm:"column:oauth2_secret"`
+	OAuth2TokenURL  *string    `json:"oauth2_token_url" gorm:"column:oauth2_token_url"`
+	OAuth2Scope     *string    `json:"oauth2_scope" gorm:"column:oauth2_scope"`
+	SyncIntervalMin int        `json:"sync_interval_min" gorm:"column:sync_interval_min"` // minutes
+	IsActive        bool       `json:"is_active" gorm:"column:is_active"`
+	LastSync        *time.Time `json:"last_sync" gorm:"column:last_sync"`
+	LastSyncStatus  string     `json:"last_sync_status" gorm:"column:last_sync_status"`
+	LastSyncError   string     `json:"last_sync_error" gorm:"column:last_sync_error"`
+	CreatedAt       time.Time  `json:"created_at" gorm:"column:created_at"`
+	UpdatedAt       time.Time  `json:"updated_at" gorm:"column:updated_at"`
+}
+
+func (CMMSConnection) TableName() string {
+	return "cmms_connections"
 }
 
 // CMMSMapping represents field mappings between Arxos and CMMS systems

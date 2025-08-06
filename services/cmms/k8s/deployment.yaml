@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cmms-service
+  namespace: arxos
+  labels:
+    app: cmms-service
+    version: v1.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cmms-service
+  template:
+    metadata:
+      labels:
+        app: cmms-service
+        version: v1.0.0
+    spec:
+      containers:
+      - name: cmms-service
+        image: arxos/cmms-service:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: cmms-secrets
+              key: database-url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: cmms-secrets
+              key: jwt-secret
+        - name: LOG_LEVEL
+          value: "info"
+        - name: DEFAULT_SYNC_INTERVAL
+          value: "60"
+        - name: MAX_RETRY_ATTEMPTS
+          value: "3"
+        - name: REQUEST_TIMEOUT
+          value: "15s"
+        - name: METRICS_ENABLED
+          value: "true"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cmms-service
+  namespace: arxos
+  labels:
+    app: cmms-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
+  selector:
+    app: cmms-service
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cmms-secrets
+  namespace: arxos
+type: Opaque
+data:
+  database-url: <base64-encoded-database-url>
+  jwt-secret: <base64-encoded-jwt-secret>
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cmms-service-ingress
+  namespace: arxos
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  rules:
+  - host: cmms.arxos.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cmms-service
+            port:
+              number: 8080
+  tls:
+  - hosts:
+    - cmms.arxos.local
+    secretName: cmms-tls-secret 

@@ -23,16 +23,26 @@ from fastapi.security import HTTPBearer
 from models.mcp_models import BuildingModel, ValidationRequest, ValidationResponse
 from validate.rule_engine import MCPRuleEngine
 from websocket.websocket_routes import websocket_router
-from auth.authentication import auth_manager, get_current_user, require_permission, Permission
+from auth.authentication import (
+    auth_manager,
+    get_current_user,
+    require_permission,
+    Permission,
+)
 from cache.redis_manager import redis_manager
-from monitoring.prometheus_metrics import metrics_collector, MetricsMiddleware, ValidationMetrics
+from monitoring.prometheus_metrics import (
+    metrics_collector,
+    MetricsMiddleware,
+    ValidationMetrics,
+)
+from knowledge.knowledge_routes import router as knowledge_router
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 # Application lifespan manager
 @asynccontextmanager
@@ -40,7 +50,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info("Starting MCP Service...")
-    
+
     # Initialize components
     try:
         # Test Redis connection
@@ -48,48 +58,52 @@ async def lifespan(app: FastAPI):
         if redis_health["status"] == "healthy":
             logger.info("✅ Redis connection established")
         else:
-            logger.warning("⚠️ Redis connection issues: %s", redis_health.get("error", "Unknown"))
-        
+            logger.warning(
+                "⚠️ Redis connection issues: %s", redis_health.get("error", "Unknown")
+            )
+
         # Initialize rule engine
         rule_engine = MCPRuleEngine()
         logger.info("✅ Rule engine initialized")
-        
+
         # Store components in app state
         app.state.rule_engine = rule_engine
         app.state.redis_manager = redis_manager
         app.state.metrics_collector = metrics_collector
-        
+
         logger.info("🚀 MCP Service started successfully")
-        
+
     except Exception as e:
         logger.error(f"❌ Failed to start MCP Service: {e}")
         raise
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down MCP Service...")
-    
+
     try:
         # Close WebSocket connections
         from websocket.websocket_manager import websocket_manager
+
         await websocket_manager.close_all_connections()
         logger.info("✅ WebSocket connections closed")
-        
+
         # Close Redis connections
         # Redis client will handle cleanup automatically
-        
+
         logger.info("✅ MCP Service shutdown complete")
-        
+
     except Exception as e:
         logger.error(f"❌ Error during shutdown: {e}")
+
 
 # Create FastAPI application
 app = FastAPI(
     title="MCP Service",
     description="Model Context Protocol Service for Building Code Validation",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add middleware
@@ -100,22 +114,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-# Add metrics middleware
-app = MetricsMiddleware(app)
 
 # Security
 security = HTTPBearer()
 
 # Include routers
 app.include_router(websocket_router, prefix="/api/v1")
-
-# Include report routes
 from report.report_routes import router as report_router
-app.include_router(report_router, prefix="/api/v1")
 
+app.include_router(report_router, prefix="/api/v1")
+app.include_router(knowledge_router, prefix="/api/v1")
+from intelligence.intelligence_routes import router as intelligence_router
+
+app.include_router(intelligence_router, prefix="/api/v1")
+from ml.ml_routes import router as ml_router
+
+app.include_router(ml_router, prefix="/api/v1")
+
+
+# All routers and route decorators go here
 # Health check endpoint
 @app.get("/health")
 async def health_check():
@@ -123,37 +141,34 @@ async def health_check():
     try:
         # Check Redis health
         redis_health = await redis_manager.health_check()
-        
+
         # Check rule engine
         rule_engine = app.state.rule_engine
-        
+
         health_status = {
             "status": "healthy",
             "timestamp": time.time(),
             "components": {
                 "redis": redis_health,
                 "rule_engine": "operational",
-                "websocket": "operational"
-            }
+                "websocket": "operational",
+            },
         }
-        
+
         # Determine overall status
         if redis_health["status"] != "healthy":
             health_status["status"] = "degraded"
             health_status["issues"] = ["Redis connection issues"]
-        
+
         return health_status
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return JSONResponse(
             status_code=503,
-            content={
-                "status": "unhealthy",
-                "error": str(e),
-                "timestamp": time.time()
-            }
+            content={"status": "unhealthy", "error": str(e), "timestamp": time.time()},
         )
+
 
 # Metrics endpoint
 @app.get("/metrics")
@@ -161,33 +176,33 @@ async def metrics_endpoint():
     """Prometheus metrics endpoint"""
     return metrics_collector.generate_metrics_response()
 
+
 # Authentication endpoints
 @app.post("/api/v1/auth/login")
 async def login(username: str, password: str):
     """User login endpoint"""
     try:
         user = auth_manager.authenticate_user(username, password)
-        
+
         if not user:
             metrics_collector.record_login_attempt("failed", "unknown")
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid credentials"
-            )
-        
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
         # Create access token
         token_data = {
             "sub": user.user_id,
             "username": user.username,
             "roles": [role.value for role in user.roles],
-            "permissions": [perm.value for perm in user.permissions]
+            "permissions": [perm.value for perm in user.permissions],
         }
-        
+
         access_token = auth_manager.create_access_token(token_data)
         refresh_token = auth_manager.create_refresh_token(token_data)
-        
-        metrics_collector.record_login_attempt("success", user.roles[0].value if user.roles else "unknown")
-        
+
+        metrics_collector.record_login_attempt(
+            "success", user.roles[0].value if user.roles else "unknown"
+        )
+
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
@@ -196,13 +211,14 @@ async def login(username: str, password: str):
                 "user_id": user.user_id,
                 "username": user.username,
                 "email": user.email,
-                "roles": [role.value for role in user.roles]
-            }
+                "roles": [role.value for role in user.roles],
+            },
         }
-        
+
     except Exception as e:
         logger.error(f"Login error: {e}")
         raise HTTPException(status_code=500, detail="Login failed")
+
 
 @app.post("/api/v1/auth/refresh")
 async def refresh_token(refresh_token: str):
@@ -210,178 +226,185 @@ async def refresh_token(refresh_token: str):
     try:
         # Verify refresh token
         payload = auth_manager.verify_token(refresh_token)
-        
+
         # Create new access token
         token_data = {
             "sub": payload.user_id,
             "username": payload.username,
             "roles": payload.roles,
-            "permissions": payload.permissions
+            "permissions": payload.permissions,
         }
-        
+
         new_access_token = auth_manager.create_access_token(token_data)
-        
-        return {
-            "access_token": new_access_token,
-            "token_type": "bearer"
-        }
-        
+
+        return {"access_token": new_access_token, "token_type": "bearer"}
+
     except Exception as e:
         logger.error(f"Token refresh error: {e}")
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
+
 # Validation endpoints
 @app.post("/api/v1/validate", response_model=ValidationResponse)
 async def validate_building(
-    request: ValidationRequest,
-    current_user = Depends(get_current_user)
+    request: ValidationRequest, current_user=Depends(get_current_user)
 ):
     """Validate building model against applicable codes"""
     try:
         start_time = time.time()
-        
+
         # Check permissions
         if not auth_manager.has_permission(current_user, Permission.READ_VALIDATION):
             raise HTTPException(
-                status_code=403,
-                detail="Permission denied: read_validation required"
+                status_code=403, detail="Permission denied: read_validation required"
             )
-        
+
         # Check cache first
-        cached_result = await redis_manager.get_cached_validation(request.building_model.building_id)
-        
+        cached_result = await redis_manager.get_cached_validation(
+            request.building_model.building_id
+        )
+
         if cached_result:
             # Return cached result
-            metrics_collector.record_cache_operation("validation_lookup", "validation_result", "hit")
-            logger.info(f"Returning cached validation for building {request.building_model.building_id}")
+            metrics_collector.record_cache_operation(
+                "validation_lookup", "validation_result", "hit"
+            )
+            logger.info(
+                f"Returning cached validation for building {request.building_model.building_id}"
+            )
             return ValidationResponse(**cached_result)
-        
+
         # Perform validation
         rule_engine = app.state.rule_engine
-        
+
         # Auto-detect applicable codes if not provided
         mcp_files = request.mcp_files
         if not mcp_files:
-            jurisdiction_info = rule_engine.get_jurisdiction_info(request.building_model)
-            mcp_files = [f"mcp/{code}.json" for code in jurisdiction_info.get("applicable_codes", [])]
-        
+            jurisdiction_info = rule_engine.get_jurisdiction_info(
+                request.building_model
+            )
+            mcp_files = [
+                f"mcp/{code}.json"
+                for code in jurisdiction_info.get("applicable_codes", [])
+            ]
+
         # Run validation
-        validation_report = rule_engine.validate_building_model(request.building_model, mcp_files)
-        
+        validation_report = rule_engine.validate_building_model(
+            request.building_model, mcp_files
+        )
+
         # Cache result
         await redis_manager.cache_validation(
-            request.building_model.building_id,
-            validation_report.dict()
+            request.building_model.building_id, validation_report.dict()
         )
-        
+
         # Record metrics
         duration = time.time() - start_time
         metrics = ValidationMetrics(
             building_id=request.building_model.building_id,
             jurisdiction="unknown",  # Could be extracted from building model
             total_rules=validation_report.total_rules,
-            passed_rules=validation_report.total_rules - validation_report.total_violations,
+            passed_rules=validation_report.total_rules
+            - validation_report.total_violations,
             failed_rules=validation_report.total_violations,
             violations_count=validation_report.total_violations,
             warnings_count=validation_report.total_warnings,
             duration_seconds=duration,
             cache_hit=False,
-            user_id=current_user.user_id
+            user_id=current_user.user_id,
         )
         metrics_collector.record_validation(metrics)
-        
+
         # Broadcast to WebSocket if real-time updates are enabled
-        if hasattr(request, 'enable_realtime') and request.enable_realtime:
+        if hasattr(request, "enable_realtime") and request.enable_realtime:
             from websocket.websocket_manager import websocket_manager
+
             await websocket_manager.broadcast_validation(
-                request.building_model.building_id,
-                validation_report.dict()
+                request.building_model.building_id, validation_report.dict()
             )
-        
+
         return validation_report
-        
+
     except Exception as e:
         logger.error(f"Validation error: {e}")
         metrics_collector.record_validation_error("validation_failed", "unknown")
         raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
 
+
 @app.get("/api/v1/validate/{building_id}")
 async def get_validation_result(
-    building_id: str,
-    current_user = Depends(get_current_user)
+    building_id: str, current_user=Depends(get_current_user)
 ):
     """Get cached validation result for a building"""
     try:
         # Check permissions
         if not auth_manager.has_permission(current_user, Permission.READ_VALIDATION):
             raise HTTPException(
-                status_code=403,
-                detail="Permission denied: read_validation required"
+                status_code=403, detail="Permission denied: read_validation required"
             )
-        
+
         # Get cached result
         cached_result = await redis_manager.get_cached_validation(building_id)
-        
+
         if not cached_result:
-            raise HTTPException(
-                status_code=404,
-                detail="Validation result not found"
-            )
-        
+            raise HTTPException(status_code=404, detail="Validation result not found")
+
         return cached_result
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting validation result: {e}")
         raise HTTPException(status_code=500, detail="Failed to get validation result")
 
+
 # Jurisdiction endpoints
 @app.get("/api/v1/jurisdiction/{building_id}")
 async def get_jurisdiction_info(
-    building_id: str,
-    current_user = Depends(get_current_user)
+    building_id: str, current_user=Depends(get_current_user)
 ):
     """Get jurisdiction information for a building"""
     try:
         # Check permissions
-        if not auth_manager.has_permission(current_user, Permission.READ_BUILDING_MODELS):
+        if not auth_manager.has_permission(
+            current_user, Permission.READ_BUILDING_MODELS
+        ):
             raise HTTPException(
                 status_code=403,
-                detail="Permission denied: read_building_models required"
+                detail="Permission denied: read_building_models required",
             )
-        
+
         # Get cached jurisdiction info
         cached_info = await redis_manager.get_cached_jurisdiction_match(building_id)
-        
+
         if cached_info:
             return cached_info
-        
+
         # Get from rule engine
         rule_engine = app.state.rule_engine
-        
+
         # Create a minimal building model for jurisdiction lookup
         building_model = BuildingModel(
-            building_id=building_id,
-            building_name="Unknown",
-            objects=[],
-            metadata={}
+            building_id=building_id, building_name="Unknown", objects=[], metadata={}
         )
-        
+
         jurisdiction_info = rule_engine.get_jurisdiction_info(building_model)
-        
+
         # Cache the result
         await redis_manager.cache_jurisdiction_match(building_id, jurisdiction_info)
-        
+
         return jurisdiction_info
-        
+
     except Exception as e:
         logger.error(f"Error getting jurisdiction info: {e}")
         raise HTTPException(status_code=500, detail="Failed to get jurisdiction info")
 
+
 # Cache management endpoints (admin only)
 @app.get("/api/v1/cache/stats")
-async def get_cache_stats(current_user = Depends(require_permission(Permission.SYSTEM_ADMIN))):
+async def get_cache_stats(
+    current_user=Depends(require_permission(Permission.SYSTEM_ADMIN)),
+):
     """Get cache statistics"""
     try:
         stats = await redis_manager.get_cache_stats()
@@ -390,10 +413,10 @@ async def get_cache_stats(current_user = Depends(require_permission(Permission.S
         logger.error(f"Error getting cache stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to get cache stats")
 
+
 @app.delete("/api/v1/cache/{building_id}")
 async def invalidate_building_cache(
-    building_id: str,
-    current_user = Depends(require_permission(Permission.SYSTEM_ADMIN))
+    building_id: str, current_user=Depends(require_permission(Permission.SYSTEM_ADMIN))
 ):
     """Invalidate cache for a building"""
     try:
@@ -408,8 +431,11 @@ async def invalidate_building_cache(
         logger.error(f"Error invalidating cache: {e}")
         raise HTTPException(status_code=500, detail="Failed to invalidate cache")
 
+
 @app.delete("/api/v1/cache")
-async def clear_all_cache(current_user = Depends(require_permission(Permission.SYSTEM_ADMIN))):
+async def clear_all_cache(
+    current_user=Depends(require_permission(Permission.SYSTEM_ADMIN)),
+):
     """Clear all cache"""
     try:
         success = await redis_manager.clear_all_cache()
@@ -423,9 +449,12 @@ async def clear_all_cache(current_user = Depends(require_permission(Permission.S
         logger.error(f"Error clearing cache: {e}")
         raise HTTPException(status_code=500, detail="Failed to clear cache")
 
+
 # Monitoring endpoints
 @app.get("/api/v1/monitoring/metrics")
-async def get_metrics_summary(current_user = Depends(require_permission(Permission.SYSTEM_ADMIN))):
+async def get_metrics_summary(
+    current_user=Depends(require_permission(Permission.SYSTEM_ADMIN)),
+):
     """Get metrics summary"""
     try:
         summary = metrics_collector.get_metrics_summary()
@@ -434,8 +463,11 @@ async def get_metrics_summary(current_user = Depends(require_permission(Permissi
         logger.error(f"Error getting metrics summary: {e}")
         raise HTTPException(status_code=500, detail="Failed to get metrics summary")
 
+
 @app.get("/api/v1/monitoring/redis")
-async def get_redis_metrics(current_user = Depends(require_permission(Permission.SYSTEM_ADMIN))):
+async def get_redis_metrics(
+    current_user=Depends(require_permission(Permission.SYSTEM_ADMIN)),
+):
     """Get Redis performance metrics"""
     try:
         metrics = await redis_manager.get_performance_metrics()
@@ -444,9 +476,10 @@ async def get_redis_metrics(current_user = Depends(require_permission(Permission
         logger.error(f"Error getting Redis metrics: {e}")
         raise HTTPException(status_code=500, detail="Failed to get Redis metrics")
 
+
 # User management endpoints (admin only)
 @app.get("/api/v1/users")
-async def get_users(current_user = Depends(require_permission(Permission.MANAGE_USERS))):
+async def get_users(current_user=Depends(require_permission(Permission.MANAGE_USERS))):
     """Get all users"""
     try:
         users = auth_manager.get_all_users()
@@ -458,8 +491,12 @@ async def get_users(current_user = Depends(require_permission(Permission.MANAGE_
                     "email": user.email,
                     "roles": [role.value for role in user.roles],
                     "is_active": user.is_active,
-                    "created_at": user.created_at.isoformat() if user.created_at else None,
-                    "last_login": user.last_login.isoformat() if user.last_login else None
+                    "created_at": (
+                        user.created_at.isoformat() if user.created_at else None
+                    ),
+                    "last_login": (
+                        user.last_login.isoformat() if user.last_login else None
+                    ),
                 }
                 for user in users
             ]
@@ -468,8 +505,11 @@ async def get_users(current_user = Depends(require_permission(Permission.MANAGE_
         logger.error(f"Error getting users: {e}")
         raise HTTPException(status_code=500, detail="Failed to get users")
 
+
 @app.get("/api/v1/users/stats")
-async def get_user_stats(current_user = Depends(require_permission(Permission.MANAGE_USERS))):
+async def get_user_stats(
+    current_user=Depends(require_permission(Permission.MANAGE_USERS)),
+):
     """Get user statistics"""
     try:
         stats = auth_manager.get_user_stats()
@@ -478,17 +518,20 @@ async def get_user_stats(current_user = Depends(require_permission(Permission.MA
         logger.error(f"Error getting user stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to get user stats")
 
+
 # WebSocket status endpoints
 @app.get("/api/v1/websocket/status")
-async def get_websocket_status(current_user = Depends(get_current_user)):
+async def get_websocket_status(current_user=Depends(get_current_user)):
     """Get WebSocket connection status"""
     try:
         from websocket.websocket_manager import websocket_manager
+
         stats = websocket_manager.get_connection_stats()
         return stats
     except Exception as e:
         logger.error(f"Error getting WebSocket status: {e}")
         raise HTTPException(status_code=500, detail="Failed to get WebSocket status")
+
 
 # Root endpoint
 @app.get("/")
@@ -504,9 +547,10 @@ async def root():
             "api_docs": "/docs",
             "validation": "/api/v1/validate",
             "websocket": "/api/v1/ws/validation/{building_id}",
-            "authentication": "/api/v1/auth/login"
-        }
+            "authentication": "/api/v1/auth/login",
+        },
     }
+
 
 # Error handlers
 @app.exception_handler(404)
@@ -514,32 +558,28 @@ async def not_found_handler(request: Request, exc: HTTPException):
     """Handle 404 errors"""
     return JSONResponse(
         status_code=404,
-        content={"error": "Endpoint not found", "path": str(request.url)}
+        content={"error": "Endpoint not found", "path": str(request.url)},
     )
+
 
 @app.exception_handler(500)
 async def internal_error_handler(request: Request, exc: HTTPException):
     """Handle 500 errors"""
     logger.error(f"Internal server error: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"error": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+
+# Only now wrap with MetricsMiddleware (at the end, after all routes and routers)
+app = MetricsMiddleware(app)
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     # Get configuration from environment
     host = os.getenv("MCP_HOST", "0.0.0.0")
     port = int(os.getenv("MCP_PORT", "8001"))
     reload = os.getenv("MCP_RELOAD", "false").lower() == "true"
-    
+
     logger.info(f"Starting MCP Service on {host}:{port}")
-    
-    uvicorn.run(
-        "main:app",
-        host=host,
-        port=port,
-        reload=reload,
-        log_level="info"
-    ) 
+
+    uvicorn.run("main:app", host=host, port=port, reload=reload, log_level="info")

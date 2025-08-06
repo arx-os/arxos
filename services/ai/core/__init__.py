@@ -10,10 +10,4 @@ from .geometry_validator import GeometryValidator
 from .voice_processor import VoiceProcessor
 from .nlp_engine import NLPEngine
 
-__all__ = [
-    "AIAgent",
-    "AIResponse", 
-    "GeometryValidator",
-    "VoiceProcessor",
-    "NLPEngine"
-] 
+__all__ = ["AIAgent", "AIResponse", "GeometryValidator", "VoiceProcessor", "NLPEngine"]

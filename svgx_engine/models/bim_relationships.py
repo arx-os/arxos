@@ -14,12 +14,14 @@ from enum import Enum
 from datetime import datetime
 import uuid
 
+
 class SpatialRelationshipType(str, Enum):
     CONTAINS = "contains"
     ADJACENT = "adjacent"
     CONNECTED = "connected"
     OVERLAPS = "overlaps"
     WITHIN = "within"
+
 
 class SystemRelationshipType(str, Enum):
     MECHANICAL = "mechanical"
@@ -30,12 +32,14 @@ class SystemRelationshipType(str, Enum):
     DATA = "data"
     GENERIC = "generic"
 
+
 class DependencyType(str, Enum):
     PARENT = "parent"
     CHILD = "child"
     UPSTREAM = "upstream"
     DOWNSTREAM = "downstream"
     REFERENCE = "reference"
+
 
 @dataclass
 class BIMRelationship:
@@ -50,7 +54,10 @@ class BIMRelationship:
 
     def __post_init__(self):
         if self.source_id == self.target_id:
-            raise ValueError("Relationship cannot be self-referential (source == target)")
+            raise ValueError(
+                "Relationship cannot be self-referential (source == target)"
+            )
+
 
 @dataclass
 class BIMRelationshipSet:
@@ -59,11 +66,11 @@ class BIMRelationshipSet:
     dependency: List[BIMRelationship] = field(default_factory=list)
 
     def add_relationship(self, rel: BIMRelationship):
-        if rel.relationship_type == 'spatial':
+        if rel.relationship_type == "spatial":
             self.spatial.append(rel)
-        elif rel.relationship_type == 'system':
+        elif rel.relationship_type == "system":
             self.system.append(rel)
-        elif rel.relationship_type == 'dependency':
+        elif rel.relationship_type == "dependency":
             self.dependency.append(rel)
         else:
             raise ValueError(f"Unknown relationship type: {rel.relationship_type}")
@@ -87,14 +94,18 @@ class BIMRelationshipSet:
         dep_graph = {}
         for rel in self.dependency:
             dep_graph.setdefault(rel.source_id, []).append(rel.target_id)
+
         def visit(node, stack):
             if node in stack:
-                errors.append(f"Cycle detected in dependencies: {' -> '.join(stack + [node])}")
+                errors.append(
+                    f"Cycle detected in dependencies: {' -> '.join(stack + [node])}"
+                )
                 return
             stack.append(node)
             for neighbor in dep_graph.get(node, []):
                 visit(neighbor, stack)
             stack.pop()
+
         for node in dep_graph:
             visit(node, [])
-        return errors 
+        return errors

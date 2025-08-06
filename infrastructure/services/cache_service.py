@@ -15,9 +15,15 @@ logger = logging.getLogger(__name__)
 
 class RedisCacheService:
     """Redis-based cache service implementation."""
-    
-    def __init__(self, host: str = "localhost", port: int = 6379, db: int = 0, 
-                 password: Optional[str] = None, max_connections: int = 10):
+
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 6379,
+        db: int = 0,
+        password: Optional[str] = None,
+        max_connections: int = 10,
+    ):
         """Initialize Redis cache service."""
         self.redis_client = redis.Redis(
             host=host,
@@ -25,10 +31,10 @@ class RedisCacheService:
             db=db,
             password=password,
             max_connections=max_connections,
-            decode_responses=True
+            decode_responses=True,
         )
         self.default_ttl = 3600  # 1 hour default
-    
+
     def get(self, key: str) -> Optional[Any]:
         """Get a value from cache."""
         try:
@@ -39,7 +45,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error getting cache key {key}: {e}")
             return None
-    
+
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set a value in cache with optional TTL."""
         try:
@@ -49,7 +55,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error setting cache key {key}: {e}")
             return False
-    
+
     def delete(self, key: str) -> bool:
         """Delete a key from cache."""
         try:
@@ -57,7 +63,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error deleting cache key {key}: {e}")
             return False
-    
+
     def exists(self, key: str) -> bool:
         """Check if a key exists in cache."""
         try:
@@ -65,7 +71,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error checking cache key {key}: {e}")
             return False
-    
+
     def expire(self, key: str, ttl: int) -> bool:
         """Set expiration for a key."""
         try:
@@ -73,7 +79,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error setting expiration for key {key}: {e}")
             return False
-    
+
     def get_many(self, keys: List[str]) -> Dict[str, Any]:
         """Get multiple values from cache."""
         try:
@@ -86,7 +92,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error getting multiple cache keys: {e}")
             return {}
-    
+
     def set_many(self, data: Dict[str, Any], ttl: Optional[int] = None) -> bool:
         """Set multiple values in cache."""
         try:
@@ -100,7 +106,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error setting multiple cache keys: {e}")
             return False
-    
+
     def clear_pattern(self, pattern: str) -> int:
         """Clear all keys matching a pattern."""
         try:
@@ -111,7 +117,7 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"Error clearing cache pattern {pattern}: {e}")
             return 0
-    
+
     def health_check(self) -> Dict[str, Any]:
         """Perform health check on Redis connection."""
         try:
@@ -121,11 +127,8 @@ class RedisCacheService:
                 "redis_version": info.get("redis_version"),
                 "connected_clients": info.get("connected_clients"),
                 "used_memory_human": info.get("used_memory_human"),
-                "uptime_in_seconds": info.get("uptime_in_seconds")
+                "uptime_in_seconds": info.get("uptime_in_seconds"),
             }
         except Exception as e:
             logger.error(f"Redis health check failed: {e}")
-            return {
-                "status": "unhealthy",
-                "error": str(e)
-            } 
+            return {"status": "unhealthy", "error": str(e)}

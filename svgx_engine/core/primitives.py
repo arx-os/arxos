@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 import xml.etree.ElementTree as ET
 from svgx_engine.core.precision import precision_manager, PrecisionLevel
 
+
 @dataclass
 class Line:
     start_x: Decimal
@@ -22,7 +23,7 @@ class Line:
     end_x: Decimal
     end_y: Decimal
     precision_level: PrecisionLevel = PrecisionLevel.MICRON
-    
+
     def to_svgx(self) -> ET.Element:
         el = ET.Element("line")
         el.set("start_x", str(self.start_x))
@@ -32,6 +33,7 @@ class Line:
         el.set("precision_level", self.precision_level.name)
         return el
 
+
 @dataclass
 class Arc:
     center_x: Decimal
@@ -40,7 +42,7 @@ class Arc:
     start_angle: Decimal
     end_angle: Decimal
     precision_level: PrecisionLevel = PrecisionLevel.MICRON
-    
+
     def to_svgx(self) -> ET.Element:
         el = ET.Element("arc")
         el.set("center_x", str(self.center_x))
@@ -51,13 +53,14 @@ class Arc:
         el.set("precision_level", self.precision_level.name)
         return el
 
+
 @dataclass
 class Circle:
     center_x: Decimal
     center_y: Decimal
     radius: Decimal
     precision_level: PrecisionLevel = PrecisionLevel.MICRON
-    
+
     def to_svgx(self) -> ET.Element:
         el = ET.Element("circle")
         el.set("center_x", str(self.center_x))
@@ -66,6 +69,7 @@ class Circle:
         el.set("precision_level", self.precision_level.name)
         return el
 
+
 @dataclass
 class Rectangle:
     x: Decimal
@@ -73,7 +77,7 @@ class Rectangle:
     width: Decimal
     height: Decimal
     precision_level: PrecisionLevel = PrecisionLevel.MICRON
-    
+
     def to_svgx(self) -> ET.Element:
         el = ET.Element("rectangle")
         el.set("x", str(self.x))
@@ -83,12 +87,13 @@ class Rectangle:
         el.set("precision_level", self.precision_level.name)
         return el
 
+
 @dataclass
 class Polyline:
     points: List[Dict[str, Decimal]] = field(default_factory=list)
     closed: bool = False
     precision_level: PrecisionLevel = PrecisionLevel.MICRON
-    
+
     def to_svgx(self) -> ET.Element:
         el = ET.Element("polyline")
         el.set("closed", str(self.closed))

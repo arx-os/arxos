@@ -7,8 +7,18 @@ Follows Arxos engineering standards: absolute imports, global instances, modular
 """
 
 from typing import Dict, Any, List, Optional, Set, Callable, Type
-from svgx_engine.runtime.event_driven_behavior_engine import Event, EventType, EventPriority
-from svgx_engine.runtime.behavior_management_system import behavior_management_system, Behavior, BehaviorType, BehaviorStatus, BehaviorMetadata
+from svgx_engine.runtime.event_driven_behavior_engine import (
+    Event,
+    EventType,
+    EventPriority,
+)
+from svgx_engine.runtime.behavior_management_system import (
+    behavior_management_system,
+    Behavior,
+    BehaviorType,
+    BehaviorStatus,
+    BehaviorMetadata,
+)
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -24,12 +34,14 @@ import inspect
 
 logger = logging.getLogger(__name__)
 
+
 class PluginStatus(Enum):
     LOADED = "loaded"
     UNLOADED = "unloaded"
     ERROR = "error"
     INVALID = "invalid"
     DISABLED = "disabled"
+
 
 @dataclass
 class PluginMetadata:
@@ -44,6 +56,7 @@ class PluginMetadata:
     error: Optional[str] = None
     performance_metrics: Dict[str, Any] = field(default_factory=dict)
 
+
 @dataclass
 class BehaviorPlugin:
     id: str
@@ -53,10 +66,12 @@ class BehaviorPlugin:
     last_loaded: Optional[datetime] = None
     last_error: Optional[str] = None
 
+
 class CustomBehaviorPluginSystem:
     """
     Extensible plugin system for custom behaviors, supporting dynamic loading, registration, validation, security, and monitoring.
     """
+
     def __init__(self):
         # {plugin_id: BehaviorPlugin}
         self.plugins: Dict[str, BehaviorPlugin] = {}
@@ -88,16 +103,20 @@ class CustomBehaviorPluginSystem:
                     module = sys.modules[module_path]
                 else:
                     module = importlib.import_module(module_path)
-                
+
                 # Validate plugin structure
                 if not hasattr(module, "register"):
-                    raise ImportError(f"Plugin {plugin_name} missing required 'register' function.")
-                
+                    raise ImportError(
+                        f"Plugin {plugin_name} missing required 'register' function."
+                    )
+
                 # Extract metadata
                 meta = getattr(module, "PLUGIN_METADATA", None)
                 if not meta or not isinstance(meta, dict):
-                    raise ImportError(f"Plugin {plugin_name} missing or invalid PLUGIN_METADATA.")
-                
+                    raise ImportError(
+                        f"Plugin {plugin_name} missing or invalid PLUGIN_METADATA."
+                    )
+
                 plugin_metadata = PluginMetadata(
                     name=meta.get("name", plugin_name),
                     version=meta.get("version", "0.1.0"),
@@ -106,16 +125,16 @@ class CustomBehaviorPluginSystem:
                     entry_point=module_path,
                     dependencies=meta.get("dependencies", []),
                     loaded_at=datetime.utcnow(),
-                    status=PluginStatus.LOADED
+                    status=PluginStatus.LOADED,
                 )
-                
+
                 plugin = BehaviorPlugin(
                     id=plugin_name,
                     metadata=plugin_metadata,
                     module=module,
-                    last_loaded=datetime.utcnow()
+                    last_loaded=datetime.utcnow(),
                 )
-                
+
                 # Register plugin behaviors
                 registered_behaviors = module.register(behavior_management_system)
                 if not isinstance(registered_behaviors, list):
@@ -123,12 +142,14 @@ class CustomBehaviorPluginSystem:
                 plugin.registered_behaviors = registered_behaviors
                 for behavior_id in registered_behaviors:
                     self.behavior_to_plugin[behavior_id] = plugin_name
-                
+
                 self.plugins[plugin_name] = plugin
                 logger.info(f"Loaded plugin: {plugin_name}")
                 return plugin
         except Exception as e:
-            logger.error(f"Error loading plugin {plugin_name}: {e}\n{traceback.format_exc()}")
+            logger.error(
+                f"Error loading plugin {plugin_name}: {e}\n{traceback.format_exc()}"
+            )
             plugin_metadata = PluginMetadata(
                 name=plugin_name,
                 version="0.0.0",
@@ -137,12 +158,10 @@ class CustomBehaviorPluginSystem:
                 entry_point=plugin_name,
                 loaded_at=datetime.utcnow(),
                 status=PluginStatus.ERROR,
-                error=str(e)
+                error=str(e),
             )
             plugin = BehaviorPlugin(
-                id=plugin_name,
-                metadata=plugin_metadata,
-                last_error=str(e)
+                id=plugin_name, metadata=plugin_metadata, last_error=str(e)
             )
             self.plugins[plugin_name] = plugin
             return None
@@ -182,7 +201,14 @@ class CustomBehaviorPluginSystem:
                     return False
                 # Check for forbidden imports (basic security)
                 source = inspect.getsource(module)
-                forbidden = ["os.system", "subprocess", "eval", "exec", "open(", "importlib.import_module"]
+                forbidden = [
+                    "os.system",
+                    "subprocess",
+                    "eval",
+                    "exec",
+                    "open(",
+                    "importlib.import_module",
+                ]
                 for bad in forbidden:
                     if bad in source:
                         logger.error(f"Plugin {plugin_name} uses forbidden code: {bad}")
@@ -208,7 +234,9 @@ class CustomBehaviorPluginSystem:
     def get_plugin(self, plugin_name: str) -> Optional[BehaviorPlugin]:
         return self.plugins.get(plugin_name)
 
-    def get_plugins(self, status: Optional[PluginStatus] = None) -> List[BehaviorPlugin]:
+    def get_plugins(
+        self, status: Optional[PluginStatus] = None
+    ) -> List[BehaviorPlugin]:
         if status:
             return [p for p in self.plugins.values() if p.metadata.status == status]
         return list(self.plugins.values())
@@ -221,24 +249,30 @@ class CustomBehaviorPluginSystem:
         self.unload_plugin(plugin_name)
         return self.load_plugin(plugin_name)
 
+
 # Global instance
 custom_behavior_plugin_system = CustomBehaviorPluginSystem()
+
 
 # Register with the event-driven engine
 def _register_custom_behavior_plugin_system():
     def handler(event: Event):
-        if event.type == EventType.SYSTEM and event.data.get('plugin'):
+        if event.type == EventType.SYSTEM and event.data.get("plugin"):
             # Plugin events are handled internally
             return None
         return None
-    
+
     # Import here to avoid circular imports
-    from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
-    event_driven_behavior_engine.register_handler(
-        event_type=EventType.SYSTEM,
-        handler_id='custom_behavior_plugin_system',
-        handler=handler,
-        priority=4
+    from svgx_engine.runtime.event_driven_behavior_engine import (
+        event_driven_behavior_engine,
     )
 
-_register_custom_behavior_plugin_system() 
+    event_driven_behavior_engine.register_handler(
+        event_type=EventType.SYSTEM,
+        handler_id="custom_behavior_plugin_system",
+        handler=handler,
+        priority=4,
+    )
+
+
+_register_custom_behavior_plugin_system()

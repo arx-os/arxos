@@ -34,7 +34,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -47,6 +47,7 @@ logger = structlog.get_logger()
 
 class QueryRequest(BaseModel):
     """Request model for GUS queries"""
+
     query: str
     user_id: str
     context: Dict[str, Any] = {}
@@ -55,6 +56,7 @@ class QueryRequest(BaseModel):
 
 class TaskRequest(BaseModel):
     """Request model for GUS task execution"""
+
     task: str
     parameters: Dict[str, Any]
     user_id: str
@@ -62,6 +64,7 @@ class TaskRequest(BaseModel):
 
 class KnowledgeRequest(BaseModel):
     """Request model for knowledge queries"""
+
     topic: str
     context: Dict[str, Any] = {}
 
@@ -74,22 +77,22 @@ gus_agent: GUSAgent = None
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     global gus_agent
-    
+
     # Startup
     logger.info("Starting GUS Agent service...")
-    
+
     try:
         # Initialize GUS agent
         settings = get_settings()
         gus_agent = GUSAgent(settings.dict())
         logger.info("GUS Agent initialized successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"Failed to initialize GUS Agent: {e}")
         raise
-    
+
     finally:
         # Shutdown
         logger.info("Shutting down GUS Agent service...")
@@ -102,7 +105,7 @@ app = FastAPI(
     title="GUS (General User Support) Agent",
     description="AI agent for Arxos platform providing CAD assistance and knowledge management",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -119,11 +122,7 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "service": "gus-agent",
-        "version": "1.0.0"
-    }
+    return {"status": "healthy", "service": "gus-agent", "version": "1.0.0"}
 
 
 # Root endpoint
@@ -139,8 +138,8 @@ async def root():
             "/docs": "API documentation",
             "/api/v1/query": "Process natural language queries",
             "/api/v1/task": "Execute specific tasks",
-            "/api/v1/knowledge": "Query knowledge base"
-        }
+            "/api/v1/knowledge": "Query knowledge base",
+        },
     }
 
 
@@ -151,22 +150,20 @@ async def process_query(request: QueryRequest):
     try:
         if not gus_agent:
             raise HTTPException(status_code=503, detail="GUS Agent not initialized")
-        
+
         response = await gus_agent.process_query(
-            query=request.query,
-            user_id=request.user_id,
-            context=request.context
+            query=request.query, user_id=request.user_id, context=request.context
         )
-        
+
         return {
             "message": response.message,
             "confidence": response.confidence,
             "intent": response.intent,
             "entities": response.entities,
             "actions": response.actions,
-            "timestamp": response.timestamp.isoformat()
+            "timestamp": response.timestamp.isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error processing query: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -179,22 +176,20 @@ async def execute_task(request: TaskRequest):
     try:
         if not gus_agent:
             raise HTTPException(status_code=503, detail="GUS Agent not initialized")
-        
+
         response = await gus_agent.execute_task(
-            task=request.task,
-            parameters=request.parameters,
-            user_id=request.user_id
+            task=request.task, parameters=request.parameters, user_id=request.user_id
         )
-        
+
         return {
             "message": response.message,
             "confidence": response.confidence,
             "intent": response.intent,
             "entities": response.entities,
             "actions": response.actions,
-            "timestamp": response.timestamp.isoformat()
+            "timestamp": response.timestamp.isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error executing task: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -207,21 +202,20 @@ async def query_knowledge(request: KnowledgeRequest):
     try:
         if not gus_agent:
             raise HTTPException(status_code=503, detail="GUS Agent not initialized")
-        
+
         response = await gus_agent.get_knowledge(
-            topic=request.topic,
-            context=request.context
+            topic=request.topic, context=request.context
         )
-        
+
         return {
             "message": response.message,
             "confidence": response.confidence,
             "intent": response.intent,
             "entities": response.entities,
             "actions": response.actions,
-            "timestamp": response.timestamp.isoformat()
+            "timestamp": response.timestamp.isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Error querying knowledge: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -236,21 +230,18 @@ app.include_router(api_router, prefix="/api/v1")
 async def global_exception_handler(request, exc):
     """Global exception handler"""
     logger.error(f"Unhandled exception: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 if __name__ == "__main__":
     # Get configuration
     settings = get_settings()
-    
+
     # Run the application
     uvicorn.run(
         "main:app",
         host=settings.gus_api_host,
         port=settings.gus_api_port,
         reload=settings.gus_dev_mode,
-        log_level=settings.gus_log_level.lower()
-    ) 
+        log_level=settings.gus_log_level.lower(),
+    )

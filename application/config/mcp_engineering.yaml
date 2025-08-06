@@ -1,0 +1,142 @@
+# MCP-Engineering Configuration File
+# This file contains configuration for external MCP-Engineering service integration
+
+mcp_engineering:
+  # Environment settings
+  environment: development  # development, staging, production
+  
+  # API Keys for external services
+  # These should be set via environment variables in production
+  api_keys:
+    building_validation: ${MCP_BUILDING_VALIDATION_API_KEY}
+    compliance_checking: ${MCP_COMPLIANCE_CHECKING_API_KEY}
+    ai_recommendations: ${MCP_AI_RECOMMENDATIONS_API_KEY}
+    knowledge_base: ${MCP_KNOWLEDGE_BASE_API_KEY}
+    ml_predictions: ${MCP_ML_PREDICTIONS_API_KEY}
+  
+  # Service endpoints for external APIs
+  service_endpoints:
+    building_validation: https://api.mcp-engineering.com/v1/validation
+    compliance_checking: https://api.mcp-engineering.com/v1/compliance
+    ai_recommendations: https://api.mcp-engineering.com/v1/ai
+    knowledge_base: https://api.mcp-engineering.com/v1/knowledge
+    ml_predictions: https://api.mcp-engineering.com/v1/ml
+  
+  # gRPC service endpoints for real-time communication
+  grpc_services:
+    validation_streaming: grpc://mcp-engineering-streaming:50051
+    real_time_updates: grpc://mcp-engineering-realtime:50051
+  
+  # Rate limiting configuration
+  rate_limits:
+    requests_per_minute: 100
+    burst_limit: 20
+  
+  # Monitoring and metrics configuration
+  monitoring:
+    enabled: true
+    metrics_interval: 60  # seconds
+    health_check_interval: 30  # seconds
+    log_level: INFO
+  
+  # Security configuration
+  security:
+    api_key_encryption: true
+    ssl_verify: true
+    certificate_path: null  # Path to SSL certificate if needed
+    private_key_path: null  # Path to private key if needed
+  
+  # Circuit breaker configuration
+  circuit_breaker:
+    failure_threshold: 5
+    timeout: 60  # seconds
+    max_retries: 3
+    retry_delay: 1.0  # seconds
+  
+  # HTTP client configuration
+  http_client:
+    timeout: 30  # seconds
+    max_retries: 3
+    retry_delay: 1.0  # seconds
+    keepalive_timeout: 30  # seconds
+  
+  # gRPC client configuration
+  grpc_client:
+    timeout: 30  # seconds
+    max_reconnect_attempts: 5
+    reconnect_delay: 1.0  # seconds
+    keepalive_time: 30  # seconds
+    keepalive_timeout: 10  # seconds
+  
+  # Service discovery configuration
+  service_discovery:
+    consul_enabled: false
+    consul_host: localhost
+    consul_port: 8500
+    service_refresh_interval: 60  # seconds
+  
+  # Load balancing configuration
+  load_balancing:
+    strategy: round_robin  # round_robin, least_connections, weighted
+    health_check_enabled: true
+    health_check_interval: 30  # seconds
+  
+  # Caching configuration
+  caching:
+    enabled: true
+    ttl: 3600  # seconds
+    max_size: 1000
+    redis_host: localhost
+    redis_port: 6379
+    redis_db: 0
+  
+  # Logging configuration
+  logging:
+    level: INFO
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    file_enabled: false
+    file_path: logs/mcp_engineering.log
+    max_file_size: 10485760  # 10MB
+    backup_count: 5
+  
+  # Performance configuration
+  performance:
+    max_concurrent_requests: 100
+    connection_pool_size: 20
+    request_timeout: 30  # seconds
+    response_timeout: 60  # seconds
+  
+  # Error handling configuration
+  error_handling:
+    retry_on_failure: true
+    max_retry_attempts: 3
+    exponential_backoff: true
+    circuit_breaker_enabled: true
+  
+  # Metrics and monitoring
+  metrics:
+    prometheus_enabled: true
+    prometheus_port: 9090
+    custom_metrics_enabled: true
+    performance_tracking: true
+  
+  # Development settings (only used in development environment)
+  development:
+    mock_services_enabled: true
+    mock_response_delay: 0.5  # seconds
+    debug_mode: true
+    verbose_logging: true
+  
+  # Staging settings (only used in staging environment)
+  staging:
+    mock_services_enabled: false
+    debug_mode: false
+    verbose_logging: false
+  
+  # Production settings (only used in production environment)
+  production:
+    mock_services_enabled: false
+    debug_mode: false
+    verbose_logging: false
+    strict_ssl_verification: true
+    enhanced_security: true 

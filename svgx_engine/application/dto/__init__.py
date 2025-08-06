@@ -20,7 +20,7 @@ from svgx_engine.application.dto.building_dto import (
     CreateBuildingRequestDTO,
     UpdateBuildingRequestDTO,
     BuildingListResponseDTO,
-    BuildingSearchRequestDTO
+    BuildingSearchRequestDTO,
 )
 
 # Version and metadata
@@ -30,7 +30,7 @@ __description__ = "Data transfer objects for SVGX Engine"
 # Export all DTOs
 __all__ = [
     "CreateBuildingRequest",
-    "UpdateBuildingRequest", 
+    "UpdateBuildingRequest",
     "BuildingResponse",
     "BuildingSearchRequest",
     "BuildingListResponse",
@@ -43,5 +43,5 @@ __all__ = [
     "CreateBuildingRequestDTO",
     "UpdateBuildingRequestDTO",
     "BuildingListResponseDTO",
-    "BuildingSearchRequestDTO"
-] 
+    "BuildingSearchRequestDTO",
+]

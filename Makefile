@@ -1,228 +1,198 @@
-# Arxos Monorepo Makefile
-# Provides unified build, test, and deployment commands for the entire platform
+# Arxos Platform Makefile
+# Modern dependency management with pyproject.toml
 
-.PHONY: help dev build test clean install deps docker-up docker-down lint format
+.PHONY: help install install-dev install-prod test test-cov lint format type-check security-check clean setup-dev run-api run-tests docker-build docker-up docker-down
 
 # Default target
 help:
-	@echo "🚀 Arxos Development Commands"
+	@echo "🚀 Arxos Platform - Available Commands"
+	@echo "======================================"
 	@echo ""
-	@echo "📋 Available commands:"
-	@echo "  make dev          # Start all services in development mode"
-	@echo "  make build        # Build all services"
-	@echo "  make test         # Run all tests"
-	@echo "  make clean        # Clean build artifacts"
-	@echo "  make install      # Install all dependencies"
-	@echo "  make deps         # Install development dependencies"
-	@echo "  make docker-up    # Start Docker services"
-	@echo "  make docker-down  # Stop Docker services"
-	@echo "  make lint         # Run linting on all code"
-	@echo "  make format       # Format all code"
-	@echo "  make help         # Show this help message"
-
-# Development environment
-dev: docker-up
-	@echo "🚀 Starting Arxos development environment..."
-	@echo "📊 Services starting on:"
-	@echo "  - Browser CAD:      http://localhost:3000"
-	@echo "  - ArxIDE:           http://localhost:3001"
-	@echo "  - Backend API:      http://localhost:8080"
-	@echo "  - GUS Agent:        http://localhost:8000"
-	@echo "  - PostgreSQL:       localhost:5432"
-	@echo "  - Redis:            localhost:6379"
+	@echo "📦 Installation:"
+	@echo "  install        - Install production dependencies"
+	@echo "  install-dev    - Install with development dependencies (recommended)"
+	@echo "  install-prod   - Install production dependencies only"
+	@echo "  setup-dev      - Complete development environment setup"
 	@echo ""
-	@echo "⏳ Starting services in parallel..."
-	@make -j4 dev-backend dev-gus dev-cad dev-arxide
+	@echo "🧪 Testing:"
+	@echo "  test           - Run all tests"
+	@echo "  test-cov       - Run tests with coverage"
+	@echo "  test-unit      - Run unit tests only"
+	@echo "  test-integration - Run integration tests only"
+	@echo ""
+	@echo "🔧 Code Quality:"
+	@echo "  lint           - Run linting (flake8)"
+	@echo "  format         - Format code (black + isort)"
+	@echo "  type-check     - Run type checking (mypy)"
+	@echo "  security-check - Run security scanning"
+	@echo ""
+	@echo "🚀 Development:"
+	@echo "  run-api        - Start the API server"
+	@echo "  run-tests      - Run tests in watch mode"
+	@echo ""
+	@echo "🐳 Docker:"
+	@echo "  docker-build   - Build Docker image"
+	@echo "  docker-up      - Start Docker services"
+	@echo "  docker-down    - Stop Docker services"
+	@echo ""
+	@echo "🧹 Maintenance:"
+	@echo "  clean          - Clean build artifacts"
+	@echo "  clean-cache    - Clean cache files and temporary data"
+	@echo "  update-deps    - Update dependencies"
 
-# Start individual services
-dev-backend:
-	@echo "🔧 Starting Go Backend..."
-	cd arx-backend && go run main.go
+# Installation targets
+install: install-prod
 
-dev-gus:
-	@echo "🤖 Starting GUS Agent..."
-	cd services/gus && python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+install-dev:
+	@echo "📦 Installing with development dependencies..."
+	pip install -e ".[dev]"
+	@echo "✅ Development dependencies installed"
 
-dev-cad:
-	@echo "🎨 Starting Browser CAD..."
-	cd frontend/web && npm run dev
+install-prod:
+	@echo "📦 Installing production dependencies..."
+	pip install -e .
+	@echo "✅ Production dependencies installed"
 
-dev-arxide:
-	@echo "🖥️  Starting ArxIDE..."
-	cd arxide && npm run dev
+setup-dev:
+	@echo "🚀 Setting up development environment..."
+	python scripts/setup_dev.py
 
-# Build all services
-build: build-backend build-gus build-cad build-arxide
-	@echo "✅ All services built successfully!"
+# Testing targets
+test:
+	@echo "🧪 Running all tests..."
+	pytest
 
-build-backend:
-	@echo "🔧 Building Go Backend..."
-	cd arx-backend && go build -o bin/arx-backend .
+test-cov:
+	@echo "🧪 Running tests with coverage..."
+	pytest --cov=application --cov=api --cov=domain --cov=infrastructure --cov-report=term-missing --cov-report=html
 
-build-gus:
-	@echo "🤖 Building GUS Agent..."
-	cd services/gus && python setup.py build
+test-unit:
+	@echo "🧪 Running unit tests..."
+	pytest -m unit
 
-build-cad:
-	@echo "🎨 Building Browser CAD..."
-	cd frontend/web && npm run build
+test-integration:
+	@echo "🧪 Running integration tests..."
+	pytest -m integration
 
-build-arxide:
-	@echo "🖥️  Building ArxIDE..."
-	cd arxide && npm run build
+# Code quality targets
+lint:
+	@echo "🔍 Running linting..."
+	flake8 application api domain infrastructure tests
 
-# Testing
-test: test-backend test-gus test-cad test-arxide
-	@echo "✅ All tests passed!"
+format:
+	@echo "🎨 Formatting code..."
+	black .
+	isort .
 
-test-backend:
-	@echo "🧪 Testing Go Backend..."
-	cd arx-backend && go test ./...
+type-check:
+	@echo "🔍 Running type checking..."
+	mypy application api domain infrastructure
 
-test-gus:
-	@echo "🧪 Testing GUS Agent..."
-	cd services/gus && python -m pytest
+security-check:
+	@echo "🔒 Running security checks..."
+	bandit -r application api domain infrastructure
+	safety check
 
-test-cad:
-	@echo "🧪 Testing Browser CAD..."
-	cd frontend/web && npm test
+# Development targets
+run-api:
+	@echo "🚀 Starting API server..."
+	uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
-test-arxide:
-	@echo "🧪 Testing ArxIDE..."
-	cd arxide && npm test
+run-tests:
+	@echo "🧪 Running tests in watch mode..."
+	pytest-watch
 
-# Code quality
-lint: lint-backend lint-gus lint-cad lint-arxide lint-standards
-	@echo "✅ All linting passed!"
+# Docker targets
+docker-build:
+	@echo "🐳 Building Docker image..."
+	docker build -t arxos:latest .
 
-lint-backend:
-	@echo "🔍 Linting Go Backend..."
-	cd arx-backend && golangci-lint run
-
-lint-gus:
-	@echo "🔍 Linting GUS Agent..."
-	cd services/gus && flake8 . && mypy .
-
-lint-cad:
-	@echo "🔍 Linting Browser CAD..."
-	cd frontend/web && npm run lint
-
-lint-arxide:
-	@echo "🔍 Linting ArxIDE..."
-	cd arxide && npm run lint
-
-lint-standards:
-	@echo "🔍 Enforcing Development Standards..."
-	python scripts/enforce_development_standards.py --report --output reports/standards_analysis.txt
-
-# Code formatting
-format: format-backend format-gus format-cad format-arxide
-	@echo "✅ All code formatted!"
-
-format-backend:
-	@echo "🎨 Formatting Go Backend..."
-	cd arx-backend && goimports -w .
-
-format-gus:
-	@echo "🎨 Formatting GUS Agent..."
-	cd services/gus && black . && isort .
-
-format-cad:
-	@echo "🎨 Formatting Browser CAD..."
-	cd frontend/web && npm run format
-
-format-arxide:
-	@echo "🎨 Formatting ArxIDE..."
-	cd arxide && npm run format
-
-# Dependencies
-install: install-backend install-gus install-cad install-arxide install-svgx
-	@echo "✅ All dependencies installed!"
-
-install-backend:
-	@echo "📦 Installing Go Backend dependencies..."
-	cd arx-backend && go mod download
-
-install-gus:
-	@echo "📦 Installing GUS Agent dependencies..."
-	cd services/gus && pip install -r requirements.txt
-
-install-cad:
-	@echo "📦 Installing Browser CAD dependencies..."
-	cd frontend/web && npm install
-
-install-arxide:
-	@echo "📦 Installing ArxIDE dependencies..."
-	cd arxide && npm install
-
-install-svgx:
-	@echo "📦 Installing SVGX Engine dependencies..."
-	cd svgx_engine && pip install -e .
-
-
-# Development dependencies
-deps: deps-backend deps-gus deps-cad deps-arxide
-	@echo "✅ All development dependencies installed!"
-
-deps-backend:
-	@echo "📦 Installing Go development tools..."
-	go install golang.org/x/tools/cmd/goimports@latest
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
-deps-gus:
-	@echo "📦 Installing Python development tools..."
-	pip install black flake8 mypy pytest pre-commit
-
-deps-cad:
-	@echo "📦 Installing Node.js development tools..."
-	npm install -g eslint prettier typescript
-
-deps-arxide:
-	@echo "📦 Installing Rust development tools..."
-	rustup component add rustfmt clippy
-
-# Docker commands
 docker-up:
 	@echo "🐳 Starting Docker services..."
-	docker-compose -f dev/docker-compose.yml up -d
+	docker-compose up -d
 
 docker-down:
 	@echo "🐳 Stopping Docker services..."
-	docker-compose -f dev/docker-compose.yml down
+	docker-compose down
 
-# Cleanup
-clean: clean-backend clean-gus clean-cad clean-arxide
-	@echo "🧹 Cleaned all build artifacts!"
+# Maintenance targets
+clean:
+	@echo "🧹 Cleaning build artifacts..."
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	find . -type f -name "*.pyd" -delete
+	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	find . -type d -name ".pytest_cache" -exec rm -rf {} +
+	find . -type d -name ".mypy_cache" -exec rm -rf {} +
+	rm -rf htmlcov/
+	rm -rf .coverage*
+	@echo "✅ Cleanup complete"
 
-clean-backend:
-	@echo "🧹 Cleaning Go Backend..."
-	cd arx-backend && rm -rf bin/ && go clean
+clean-cache:
+	@echo "🧹 Cleaning cache files..."
+	rm -rf .pytest_cache/
+	rm -rf .mypy_cache/
+	rm -rf htmlcov/
+	rm -f .coverage*
+	rm -rf *.egg-info/
+	@echo "✅ Cache cleanup complete"
 
-clean-gus:
-	@echo "🧹 Cleaning GUS Agent..."
-	cd services/gus && rm -rf build/ dist/ *.egg-info/
+update-deps:
+	@echo "📦 Updating dependencies..."
+	pip install --upgrade pip
+	pip install --upgrade -e ".[dev]"
+	@echo "✅ Dependencies updated"
 
-clean-cad:
-	@echo "🧹 Cleaning Browser CAD..."
-	cd frontend/web && rm -rf dist/ node_modules/
+# Pre-commit hooks
+pre-commit-install:
+	@echo "🔧 Installing pre-commit hooks..."
+	pre-commit install
 
-clean-arxide:
-	@echo "🧹 Cleaning ArxIDE..."
-	cd arxide && rm -rf dist/ node_modules/
+pre-commit-run:
+	@echo "🔧 Running pre-commit hooks..."
+	pre-commit run --all-files
 
-# Database
+# Database targets
 db-migrate:
-	@echo "🗄️  Running database migrations..."
-	cd arx-backend && go run cmd/migrate/main.go
+	@echo "🗄️ Running database migrations..."
+	alembic upgrade head
 
 db-seed:
 	@echo "🌱 Seeding database..."
-	cd arx-backend && go run cmd/seed/main.go
+	python scripts/seed_database.py
 
-# Health checks
+# Health check
 health:
 	@echo "🏥 Checking service health..."
-	@curl -f http://localhost:8080/health || echo "❌ Backend not responding"
-	@curl -f http://localhost:8000/health || echo "❌ GUS not responding"
-	@curl -f http://localhost:3000/health || echo "❌ CAD not responding"
-	@curl -f http://localhost:3001/health || echo "❌ ArxIDE not responding" 
+	curl -f http://localhost:8000/health || echo "❌ API server not responding"
+	curl -f http://localhost:6379 || echo "❌ Redis not responding"
+
+# Development shortcuts
+dev: install-dev run-api
+
+test-all: test-cov lint type-check security-check
+
+ci: install-dev test-all
+
+# Help for specific targets
+help-install:
+	@echo "📦 Installation Options:"
+	@echo "  make install-dev    - Install with all development tools"
+	@echo "  make install-prod   - Install production dependencies only"
+	@echo "  make setup-dev      - Complete development environment setup"
+
+help-test:
+	@echo "🧪 Testing Options:"
+	@echo "  make test           - Run all tests"
+	@echo "  make test-cov       - Run tests with coverage report"
+	@echo "  make test-unit      - Run unit tests only"
+	@echo "  make test-integration - Run integration tests only"
+
+help-quality:
+	@echo "🔧 Code Quality Options:"
+	@echo "  make lint           - Run flake8 linting"
+	@echo "  make format         - Format code with black and isort"
+	@echo "  make type-check     - Run mypy type checking"
+	@echo "  make security-check - Run security scanning"
+	@echo "  make test-all       - Run all quality checks" 

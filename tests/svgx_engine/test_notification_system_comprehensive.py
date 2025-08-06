@@ -37,7 +37,7 @@ from svgx_engine.services.notifications.go_client import (
     NotificationType,
     NotificationStatus,
     create_go_notification_client,
-    create_go_notification_wrapper
+    create_go_notification_wrapper,
 )
 
 from svgx_engine.services.advanced_monitoring import (
@@ -47,7 +47,7 @@ from svgx_engine.services.advanced_monitoring import (
     MonitoringMetric,
     AlertRule,
     AlertEvent,
-    create_advanced_monitoring_service
+    create_advanced_monitoring_service,
 )
 
 
@@ -57,10 +57,7 @@ class TestGoNotificationClient(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.client = GoNotificationClient(
-            base_url="http://localhost:8080",
-            timeout=5,
-            max_retries=2,
-            retry_delay=0.1
+            base_url="http://localhost:8080", timeout=5, max_retries=2, retry_delay=0.1
         )
         self.test_user_id = 1
         self.test_recipient_id = 2
@@ -73,7 +70,7 @@ class TestGoNotificationClient(unittest.TestCase):
             notification_type=NotificationType.SYSTEM,
             channels=[NotificationChannelType.EMAIL],
             recipient_id=self.test_recipient_id,
-            priority=NotificationPriority.NORMAL
+            priority=NotificationPriority.NORMAL,
         )
 
         self.assertEqual(request.title, "Test Notification")
@@ -85,10 +82,7 @@ class TestGoNotificationClient(unittest.TestCase):
 
     def test_create_notification_request_with_template(self):
         """Test creating notification requests with template variables"""
-        template_data = {
-            "user_name": "John Doe",
-            "company": "Arxos"
-        }
+        template_data = {"user_name": "John Doe", "company": "Arxos"}
 
         request = self.client.create_notification_request(
             title="Welcome {{user_name}}",
@@ -96,7 +90,7 @@ class TestGoNotificationClient(unittest.TestCase):
             notification_type=NotificationType.USER,
             channels=[NotificationChannelType.EMAIL],
             recipient_id=self.test_recipient_id,
-            template_data=template_data
+            template_data=template_data,
         )
 
         self.assertEqual(request.title, "Welcome John Doe")
@@ -106,10 +100,7 @@ class TestGoNotificationClient(unittest.TestCase):
     def test_substitute_template_variables(self):
         """Test template variable substitution"""
         template = "Hello {{name}}, your order {{order_id}} is ready."
-        variables = {
-            "name": "Alice",
-            "order_id": "12345"
-        }
+        variables = {"name": "Alice", "order_id": "12345"}
 
         result = self.client.substitute_template_variables(template, variables)
         expected = "Hello Alice, your order 12345 is ready."
@@ -127,7 +118,7 @@ class TestGoNotificationClient(unittest.TestCase):
         expected = "Hello Alice, your order {{order_id}} is ready."
         self.assertEqual(result, expected)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_send_notification_success(self, mock_request):
         """Test successful notification sending"""
         # Mock successful response
@@ -136,7 +127,7 @@ class TestGoNotificationClient(unittest.TestCase):
             "success": True,
             "notification_id": 123,
             "message": "Notification sent successfully",
-            "created_at": "2024-12-19T10:00:00Z"
+            "created_at": "2024-12-19T10:00:00Z",
         }
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
@@ -146,7 +137,7 @@ class TestGoNotificationClient(unittest.TestCase):
             message="This is a test",
             type=NotificationType.SYSTEM,
             channels=[NotificationChannelType.EMAIL],
-            recipient_id=self.test_recipient_id
+            recipient_id=self.test_recipient_id,
         )
 
         response = self.client.send_notification(request)
@@ -155,7 +146,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertEqual(response.notification_id, 123)
         self.assertEqual(response.message, "Notification sent successfully")
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_send_notification_failure(self, mock_request):
         """Test notification sending failure"""
         # Mock failed response
@@ -166,7 +157,7 @@ class TestGoNotificationClient(unittest.TestCase):
             message="This is a test",
             type=NotificationType.SYSTEM,
             channels=[NotificationChannelType.EMAIL],
-            recipient_id=self.test_recipient_id
+            recipient_id=self.test_recipient_id,
         )
 
         response = self.client.send_notification(request)
@@ -174,7 +165,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertFalse(response.success)
         self.assertIsNotNone(response.error)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_get_notification_history(self, mock_request):
         """Test getting notification history"""
         # Mock successful response
@@ -187,20 +178,18 @@ class TestGoNotificationClient(unittest.TestCase):
                     "message": "This is a test",
                     "type": "system",
                     "status": "sent",
-                    "created_at": "2024-12-19T10:00:00Z"
+                    "created_at": "2024-12-19T10:00:00Z",
                 }
             ],
             "total": 1,
             "page": 1,
-            "page_size": 20
+            "page_size": 20,
         }
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
 
         request = NotificationHistoryRequest(
-            recipient_id=self.test_recipient_id,
-            page=1,
-            page_size=20
+            recipient_id=self.test_recipient_id, page=1, page_size=20
         )
 
         response = self.client.get_notification_history(request)
@@ -209,7 +198,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertEqual(response["total"], 1)
         self.assertEqual(len(response["notifications"]), 1)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_get_notification_statistics(self, mock_request):
         """Test getting notification statistics"""
         # Mock successful response
@@ -221,7 +210,7 @@ class TestGoNotificationClient(unittest.TestCase):
             "success_rate": 95.0,
             "avg_delivery_time": 2.5,
             "period": "7d",
-            "generated_at": "2024-12-19T10:00:00Z"
+            "generated_at": "2024-12-19T10:00:00Z",
         }
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
@@ -233,14 +222,14 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertEqual(stats.total_delivered, 95)
         self.assertEqual(stats.success_rate, 95.0)
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_health_check(self, mock_request):
         """Test health check functionality"""
         # Mock successful response
         mock_response = Mock()
         mock_response.json.return_value = {
             "status": "healthy",
-            "timestamp": "2024-12-19T10:00:00Z"
+            "timestamp": "2024-12-19T10:00:00Z",
         }
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
@@ -251,17 +240,15 @@ class TestGoNotificationClient(unittest.TestCase):
 
     def test_send_simple_notification(self):
         """Test simple notification sending convenience method"""
-        with patch.object(self.client, 'send_notification') as mock_send:
+        with patch.object(self.client, "send_notification") as mock_send:
             mock_send.return_value = NotificationResponse(
-                success=True,
-                notification_id=123,
-                message="Sent successfully"
+                success=True, notification_id=123, message="Sent successfully"
             )
 
             response = self.client.send_simple_notification(
                 title="Simple Test",
                 message="This is a simple test",
-                recipient_id=self.test_recipient_id
+                recipient_id=self.test_recipient_id,
             )
 
             self.assertTrue(response.success)
@@ -279,15 +266,14 @@ class TestGoNotificationWrapper(unittest.TestCase):
     def test_send_email(self):
         """Test email sending via wrapper"""
         self.mock_client.send_notification.return_value = NotificationResponse(
-            success=True,
-            notification_id=123
+            success=True, notification_id=123
         )
 
         result = self.wrapper.send_email(
             to_email="test@example.com",
             subject="Test Subject",
             body="Test Body",
-            recipient_id=1
+            recipient_id=1,
         )
 
         self.assertTrue(result["success"])
@@ -297,14 +283,11 @@ class TestGoNotificationWrapper(unittest.TestCase):
     def test_send_slack(self):
         """Test Slack sending via wrapper"""
         self.mock_client.send_notification.return_value = NotificationResponse(
-            success=True,
-            notification_id=124
+            success=True, notification_id=124
         )
 
         result = self.wrapper.send_slack(
-            channel="#test",
-            message="Test Slack message",
-            recipient_id=1
+            channel="#test", message="Test Slack message", recipient_id=1
         )
 
         self.assertTrue(result["success"])
@@ -314,14 +297,11 @@ class TestGoNotificationWrapper(unittest.TestCase):
     def test_send_sms(self):
         """Test SMS sending via wrapper"""
         self.mock_client.send_notification.return_value = NotificationResponse(
-            success=True,
-            notification_id=125
+            success=True, notification_id=125
         )
 
         result = self.wrapper.send_sms(
-            phone_number="+1234567890",
-            message="Test SMS",
-            recipient_id=1
+            phone_number="+1234567890", message="Test SMS", recipient_id=1
         )
 
         self.assertTrue(result["success"])
@@ -331,14 +311,11 @@ class TestGoNotificationWrapper(unittest.TestCase):
     def test_send_webhook(self):
         """Test webhook sending via wrapper"""
         self.mock_client.send_notification.return_value = NotificationResponse(
-            success=True,
-            notification_id=126
+            success=True, notification_id=126
         )
 
         result = self.wrapper.send_webhook(
-            url="https://example.com/webhook",
-            payload={"test": "data"},
-            recipient_id=1
+            url="https://example.com/webhook", payload={"test": "data"}, recipient_id=1
         )
 
         self.assertTrue(result["success"])
@@ -357,7 +334,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
             monitoring_interval=1,
             alert_cooldown=60,
             enable_system_metrics=False,  # Disable for testing
-            enable_custom_metrics=False
+            enable_custom_metrics=False,
         )
 
     def test_add_alert_rule(self):
@@ -371,7 +348,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
             level=MonitoringLevel.WARNING,
             channels=[NotificationChannelType.EMAIL],
             recipients=[1, 2],
-            message_template="CPU usage is {{current_value}}%"
+            message_template="CPU usage is {{current_value}}%",
         )
 
         self.monitoring_service.add_alert_rule(rule)
@@ -389,7 +366,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
             level=MonitoringLevel.WARNING,
             channels=[NotificationChannelType.EMAIL],
             recipients=[1],
-            message_template="CPU usage is {{current_value}}%"
+            message_template="CPU usage is {{current_value}}%",
         )
 
         self.monitoring_service.add_alert_rule(rule)
@@ -400,6 +377,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
 
     def test_add_custom_metric(self):
         """Test adding custom metrics"""
+
         def custom_metric():
             return 42.0
 
@@ -408,6 +386,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
 
     def test_remove_custom_metric(self):
         """Test removing custom metrics"""
+
         def custom_metric():
             return 42.0
 
@@ -425,14 +404,14 @@ class TestAdvancedMonitoringService(unittest.TestCase):
             value=50.0,
             unit="%",
             timestamp=datetime.now(),
-            metric_type=MetricType.CPU_USAGE
+            metric_type=MetricType.CPU_USAGE,
         )
         metric2 = MonitoringMetric(
             name="test_metric_2",
             value=75.0,
             unit="%",
             timestamp=datetime.now(),
-            metric_type=MetricType.MEMORY_USAGE
+            metric_type=MetricType.MEMORY_USAGE,
         )
 
         self.monitoring_service.metrics_history = [metric1, metric2]
@@ -454,7 +433,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
             threshold=80.0,
             level=MonitoringLevel.WARNING,
             timestamp=datetime.now(),
-            message="CPU usage is high"
+            message="CPU usage is high",
         )
         alert2 = AlertEvent(
             rule_name="test_rule",
@@ -463,7 +442,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
             threshold=85.0,
             level=MonitoringLevel.ERROR,
             timestamp=datetime.now() - timedelta(hours=2),
-            message="Memory usage is critical"
+            message="Memory usage is critical",
         )
 
         self.monitoring_service.alert_history = [alert1, alert2]
@@ -478,7 +457,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
         # Mock Go client health check
         self.mock_go_client.health_check.return_value = {
             "status": "healthy",
-            "timestamp": "2024-12-19T10:00:00Z"
+            "timestamp": "2024-12-19T10:00:00Z",
         }
 
         health = self.monitoring_service.health_check()
@@ -493,9 +472,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
     def test_set_thresholds(self):
         """Test setting monitoring thresholds"""
         self.monitoring_service.set_thresholds(
-            cpu_threshold=90.0,
-            memory_threshold=95.0,
-            disk_threshold=85.0
+            cpu_threshold=90.0, memory_threshold=95.0, disk_threshold=85.0
         )
 
         self.assertEqual(self.monitoring_service.cpu_threshold, 90.0)
@@ -510,33 +487,27 @@ class TestAdvancedMonitoringService(unittest.TestCase):
                 value=85.0,
                 unit="%",
                 timestamp=datetime.now(),
-                metric_type=MetricType.CPU_USAGE
+                metric_type=MetricType.CPU_USAGE,
             ),
             MonitoringMetric(
                 name="cpu_usage",
                 value=90.0,
                 unit="%",
                 timestamp=datetime.now(),
-                metric_type=MetricType.CPU_USAGE
-            )
+                metric_type=MetricType.CPU_USAGE,
+            ),
         ]
 
         # Test greater than operator
-        exceeded = self.monitoring_service._check_threshold_exceeded(
-            metrics, 80.0, ">"
-        )
+        exceeded = self.monitoring_service._check_threshold_exceeded(metrics, 80.0, ">")
         self.assertTrue(exceeded)
 
         # Test less than operator
-        exceeded = self.monitoring_service._check_threshold_exceeded(
-            metrics, 95.0, "<"
-        )
+        exceeded = self.monitoring_service._check_threshold_exceeded(metrics, 95.0, "<")
         self.assertTrue(exceeded)
 
         # Test not exceeded
-        exceeded = self.monitoring_service._check_threshold_exceeded(
-            metrics, 95.0, ">"
-        )
+        exceeded = self.monitoring_service._check_threshold_exceeded(metrics, 95.0, ">")
         self.assertFalse(exceeded)
 
 
@@ -546,14 +517,13 @@ class TestNotificationIntegration(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.go_client = GoNotificationClient(
-            base_url="http://localhost:8080",
-            timeout=5
+            base_url="http://localhost:8080", timeout=5
         )
         self.monitoring_service = AdvancedMonitoringService(
             go_notification_client=self.go_client
         )
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_monitoring_service_with_go_notifications(self, mock_request):
         """Test monitoring service integration with Go notifications"""
         # Mock successful Go API response
@@ -561,7 +531,7 @@ class TestNotificationIntegration(unittest.TestCase):
         mock_response.json.return_value = {
             "success": True,
             "notification_id": 123,
-            "message": "Alert sent successfully"
+            "message": "Alert sent successfully",
         }
         mock_response.raise_for_status.return_value = None
         mock_request.return_value = mock_response
@@ -576,7 +546,7 @@ class TestNotificationIntegration(unittest.TestCase):
             level=MonitoringLevel.WARNING,
             channels=[NotificationChannelType.EMAIL],
             recipients=[1],
-            message_template="CPU usage is {{current_value}}%"
+            message_template="CPU usage is {{current_value}}%",
         )
         self.monitoring_service.add_alert_rule(rule)
 
@@ -586,7 +556,7 @@ class TestNotificationIntegration(unittest.TestCase):
             value=85.0,
             unit="%",
             timestamp=datetime.now(),
-            metric_type=MetricType.CPU_USAGE
+            metric_type=MetricType.CPU_USAGE,
         )
         self.monitoring_service.metrics_history = [metric]
 
@@ -604,7 +574,7 @@ class TestNotificationIntegration(unittest.TestCase):
         template_data = {
             "user_name": "Alice",
             "system_name": "SVGX Engine",
-            "error_count": 5
+            "error_count": 5,
         }
 
         request = self.go_client.create_notification_request(
@@ -613,7 +583,7 @@ class TestNotificationIntegration(unittest.TestCase):
             notification_type=NotificationType.ALERT,
             channels=[NotificationChannelType.EMAIL, NotificationChannelType.SLACK],
             recipient_id=1,
-            template_data=template_data
+            template_data=template_data,
         )
 
         expected_title = "Alert: SVGX Engine - 5 errors"
@@ -632,10 +602,10 @@ class TestNotificationIntegration(unittest.TestCase):
             channels=[
                 NotificationChannelType.EMAIL,
                 NotificationChannelType.SLACK,
-                NotificationChannelType.SMS
+                NotificationChannelType.SMS,
             ],
             recipient_id=1,
-            priority=NotificationPriority.HIGH
+            priority=NotificationPriority.HIGH,
         )
 
         self.assertEqual(len(request.channels), 3)
@@ -651,13 +621,10 @@ class TestNotificationErrorHandling(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         self.client = GoNotificationClient(
-            base_url="http://localhost:8080",
-            timeout=1,
-            max_retries=1,
-            retry_delay=0.1
+            base_url="http://localhost:8080", timeout=1, max_retries=1, retry_delay=0.1
         )
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_network_timeout(self, mock_request):
         """Test handling of network timeouts"""
         mock_request.side_effect = requests.Timeout("Request timeout")
@@ -667,7 +634,7 @@ class TestNotificationErrorHandling(unittest.TestCase):
             message="Test",
             type=NotificationType.SYSTEM,
             channels=[NotificationChannelType.EMAIL],
-            recipient_id=1
+            recipient_id=1,
         )
 
         response = self.client.send_notification(request)
@@ -676,7 +643,7 @@ class TestNotificationErrorHandling(unittest.TestCase):
         self.assertIsNotNone(response.error)
         self.assertIn("timeout", response.error.lower())
 
-    @patch('requests.Session.request')
+    @patch("requests.Session.request")
     def test_server_error(self, mock_request):
         """Test handling of server errors"""
         mock_request.side_effect = requests.HTTPError("500 Internal Server Error")
@@ -686,7 +653,7 @@ class TestNotificationErrorHandling(unittest.TestCase):
             message="Test",
             type=NotificationType.SYSTEM,
             channels=[NotificationChannelType.EMAIL],
-            recipient_id=1
+            recipient_id=1,
         )
 
         response = self.client.send_notification(request)
@@ -700,7 +667,7 @@ class TestNotificationErrorHandling(unittest.TestCase):
         variables = None  # Invalid variables
 
         result = self.client.substitute_template_variables(template, variables)
-        
+
         # Should return original template when variables are invalid
         self.assertEqual(result, template)
 
@@ -711,7 +678,7 @@ class TestNotificationErrorHandling(unittest.TestCase):
             message="",
             type=NotificationType.SYSTEM,
             channels=[],
-            recipient_id=0
+            recipient_id=0,
         )
 
         # Should not raise an exception
@@ -726,15 +693,12 @@ class TestNotificationPerformance(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
-        self.client = GoNotificationClient(
-            base_url="http://localhost:8080",
-            timeout=5
-        )
+        self.client = GoNotificationClient(base_url="http://localhost:8080", timeout=5)
 
     def test_bulk_notification_creation(self):
         """Test creating multiple notifications efficiently"""
         start_time = time.time()
-        
+
         requests = []
         for i in range(100):
             request = NotificationRequest(
@@ -742,12 +706,12 @@ class TestNotificationPerformance(unittest.TestCase):
                 message=f"This is bulk test notification {i}",
                 type=NotificationType.SYSTEM,
                 channels=[NotificationChannelType.EMAIL],
-                recipient_id=1
+                recipient_id=1,
             )
             requests.append(request)
 
         creation_time = time.time() - start_time
-        
+
         # Should create 100 requests quickly
         self.assertLess(creation_time, 1.0)
         self.assertEqual(len(requests), 100)
@@ -755,38 +719,33 @@ class TestNotificationPerformance(unittest.TestCase):
     def test_template_substitution_performance(self):
         """Test template substitution performance"""
         template = "Hello {{name}}, your order {{order_id}} is ready. Total: {{total}}."
-        variables = {
-            "name": "Alice",
-            "order_id": "12345",
-            "total": "$99.99"
-        }
+        variables = {"name": "Alice", "order_id": "12345", "total": "$99.99"}
 
         start_time = time.time()
-        
+
         for _ in range(1000):
             result = self.client.substitute_template_variables(template, variables)
 
         substitution_time = time.time() - start_time
-        
+
         # Should handle 1000 substitutions quickly
         self.assertLess(substitution_time, 1.0)
-        self.assertEqual(result, "Hello Alice, your order 12345 is ready. Total: $99.99.")
+        self.assertEqual(
+            result, "Hello Alice, your order 12345 is ready. Total: $99.99."
+        )
 
     def test_large_template_variables(self):
         """Test performance with large template variables"""
         template = "Hello {{name}}, here is your data: {{data}}"
-        variables = {
-            "name": "User",
-            "data": "x" * 10000  # Large data
-        }
+        variables = {"name": "User", "data": "x" * 10000}  # Large data
 
         start_time = time.time()
-        
+
         for _ in range(100):
             result = self.client.substitute_template_variables(template, variables)
 
         substitution_time = time.time() - start_time
-        
+
         # Should handle large variables efficiently
         self.assertLess(substitution_time, 1.0)
         self.assertIn("User", result)
@@ -795,4 +754,4 @@ class TestNotificationPerformance(unittest.TestCase):
 
 if __name__ == "__main__":
     # Run all tests
-    unittest.main(verbosity=2) 
+    unittest.main(verbosity=2)

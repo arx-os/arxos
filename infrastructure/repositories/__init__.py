@@ -15,18 +15,18 @@ from .bilt_repositories import (
     SQLAlchemyContributionRepository,
     SQLAlchemyRevenueRepository,
     SQLAlchemyDividendRepository,
-    SQLAlchemyVerificationRepository
+    SQLAlchemyVerificationRepository,
 )
 
 __all__ = [
-    'SQLAlchemyBuildingRepository',
-    'SQLAlchemyFloorRepository',
-    'SQLAlchemyRoomRepository',
-    'SQLAlchemyDeviceRepository',
-    'SQLAlchemyUserRepository',
-    'SQLAlchemyProjectRepository',
-    'SQLAlchemyContributionRepository',
-    'SQLAlchemyRevenueRepository',
-    'SQLAlchemyDividendRepository',
-    'SQLAlchemyVerificationRepository'
-] 
+    "SQLAlchemyBuildingRepository",
+    "SQLAlchemyFloorRepository",
+    "SQLAlchemyRoomRepository",
+    "SQLAlchemyDeviceRepository",
+    "SQLAlchemyUserRepository",
+    "SQLAlchemyProjectRepository",
+    "SQLAlchemyContributionRepository",
+    "SQLAlchemyRevenueRepository",
+    "SQLAlchemyDividendRepository",
+    "SQLAlchemyVerificationRepository",
+]

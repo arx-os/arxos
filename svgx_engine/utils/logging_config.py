@@ -16,6 +16,7 @@ from pathlib import Path
 
 try:
     import structlog
+
     STRUCTLOG_AVAILABLE = True
 except ImportError:
     STRUCTLOG_AVAILABLE = False
@@ -23,6 +24,7 @@ except ImportError:
 
 class LogLevel:
     """Log levels for SVGX Engine."""
+
     DEBUG = "DEBUG"
     INFO = "INFO"
     WARNING = "WARNING"
@@ -32,6 +34,7 @@ class LogLevel:
 
 class LogCategory:
     """Log categories for SVGX Engine."""
+
     GENERAL = "general"
     PARSER = "parser"
     RUNTIME = "runtime"
@@ -45,84 +48,84 @@ class LogCategory:
 
 class StructuredFormatter(logging.Formatter):
     """Structured JSON formatter for logs."""
-    
+
     def format(self, record):
         """Format log record as structured JSON."""
         log_entry = {
-            'timestamp': datetime.fromtimestamp(record.created).isoformat(),
-            'level': record.levelname,
-            'logger': record.name,
-            'message': record.getMessage(),
-            'module': record.module,
-            'function': record.funcName,
-            'line': record.lineno
+            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
         }
-        
+
         # Add extra fields if present
-        if hasattr(record, 'extra_fields'):
+        if hasattr(record, "extra_fields"):
             log_entry.update(record.extra_fields)
-        
+
         # Add exception info if present
         if record.exc_info:
-            log_entry['exception'] = self.formatException(record.exc_info)
-        
+            log_entry["exception"] = self.formatException(record.exc_info)
+
         return json.dumps(log_entry)
 
 
 class PerformanceFormatter(logging.Formatter):
     """Performance-specific formatter."""
-    
+
     def format(self, record):
         """Format performance log record."""
         log_entry = {
-            'timestamp': datetime.fromtimestamp(record.created).isoformat(),
-            'level': record.levelname,
-            'category': 'performance',
-            'operation': getattr(record, 'operation', 'unknown'),
-            'duration_ms': getattr(record, 'duration_ms', 0),
-            'memory_mb': getattr(record, 'memory_mb', 0),
-            'cpu_percent': getattr(record, 'cpu_percent', 0),
-            'message': record.getMessage()
+            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "category": "performance",
+            "operation": getattr(record, "operation", "unknown"),
+            "duration_ms": getattr(record, "duration_ms", 0),
+            "memory_mb": getattr(record, "memory_mb", 0),
+            "cpu_percent": getattr(record, "cpu_percent", 0),
+            "message": record.getMessage(),
         }
-        
+
         return json.dumps(log_entry)
 
 
 class SecurityFormatter(logging.Formatter):
     """Security-specific formatter."""
-    
+
     def format(self, record):
         """Format security log record."""
         log_entry = {
-            'timestamp': datetime.fromtimestamp(record.created).isoformat(),
-            'level': record.levelname,
-            'category': 'security',
-            'event_type': getattr(record, 'event_type', 'unknown'),
-            'user_id': getattr(record, 'user_id', None),
-            'ip_address': getattr(record, 'ip_address', None),
-            'action': getattr(record, 'action', 'unknown'),
-            'resource': getattr(record, 'resource', None),
-            'message': record.getMessage()
+            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "category": "security",
+            "event_type": getattr(record, "event_type", "unknown"),
+            "user_id": getattr(record, "user_id", None),
+            "ip_address": getattr(record, "ip_address", None),
+            "action": getattr(record, "action", "unknown"),
+            "resource": getattr(record, "resource", None),
+            "message": record.getMessage(),
         }
-        
+
         return json.dumps(log_entry)
 
 
 class SVGXLogger:
     """Enhanced logger for SVGX Engine."""
-    
+
     def __init__(self, name: str, category: str = LogCategory.GENERAL):
         self.name = name
         self.category = category
         self.logger = logging.getLogger(name)
         self._setup_logger()
-    
+
     def _setup_logger(self):
         """Setup the logger with appropriate handlers."""
         # Don't add handlers if they already exist
         if self.logger.handlers:
             return
-        
+
         # Create handlers based on category
         if self.category == LogCategory.PERFORMANCE:
             handler = logging.StreamHandler(sys.stdout)
@@ -133,45 +136,50 @@ class SVGXLogger:
         else:
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(StructuredFormatter())
-        
+
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)
-    
+
     def debug(self, message: str, **kwargs):
         """Log debug message with extra fields."""
         self._log(logging.DEBUG, message, **kwargs)
-    
+
     def info(self, message: str, **kwargs):
         """Log info message with extra fields."""
         self._log(logging.INFO, message, **kwargs)
-    
+
     def warning(self, message: str, **kwargs):
         """Log warning message with extra fields."""
         self._log(logging.WARNING, message, **kwargs)
-    
+
     def error(self, message: str, **kwargs):
         """Log error message with extra fields."""
         self._log(logging.ERROR, message, **kwargs)
-    
+
     def critical(self, message: str, **kwargs):
         """Log critical message with extra fields."""
         self._log(logging.CRITICAL, message, **kwargs)
-    
+
     def _log(self, level: int, message: str, **kwargs):
         """Log message with extra fields."""
         record = self.logger.makeRecord(
             self.name, level, __file__, 0, message, (), None
         )
-        
+
         # Add extra fields to record
         if kwargs:
             record.extra_fields = kwargs
-        
+
         self.logger.handle(record)
-    
-    def log_performance(self, operation: str, duration_ms: float, 
-                       memory_mb: Optional[float] = None, cpu_percent: Optional[float] = None,
-                       **kwargs):
+
+    def log_performance(
+        self,
+        operation: str,
+        duration_ms: float,
+        memory_mb: Optional[float] = None,
+        cpu_percent: Optional[float] = None,
+        **kwargs,
+    ):
         """Log performance metric."""
         self.info(
             f"Performance: {operation} completed in {duration_ms:.2f}ms",
@@ -179,12 +187,18 @@ class SVGXLogger:
             duration_ms=duration_ms,
             memory_mb=memory_mb,
             cpu_percent=cpu_percent,
-            **kwargs
+            **kwargs,
         )
-    
-    def log_security(self, event_type: str, action: str, resource: Optional[str] = None,
-                     user_id: Optional[str] = None, ip_address: Optional[str] = None,
-                     **kwargs):
+
+    def log_security(
+        self,
+        event_type: str,
+        action: str,
+        resource: Optional[str] = None,
+        user_id: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        **kwargs,
+    ):
         """Log security event."""
         self.warning(
             f"Security event: {event_type} - {action}",
@@ -193,82 +207,76 @@ class SVGXLogger:
             resource=resource,
             user_id=user_id,
             ip_address=ip_address,
-            **kwargs
+            **kwargs,
         )
 
 
 class LoggingManager:
     """Centralized logging manager for SVGX Engine."""
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or self._get_default_config()
         self.loggers: Dict[str, SVGXLogger] = {}
         self._setup_logging()
-    
+
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default logging configuration."""
         return {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'formatters': {
-                'structured': {
-                    '()': StructuredFormatter
-                },
-                'performance': {
-                    '()': PerformanceFormatter
-                },
-                'security': {
-                    '()': SecurityFormatter
-                }
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "structured": {"()": StructuredFormatter},
+                "performance": {"()": PerformanceFormatter},
+                "security": {"()": SecurityFormatter},
             },
-            'handlers': {
-                'console': {
-                    'class': 'logging.StreamHandler',
-                    'level': 'INFO',
-                    'formatter': 'structured',
-                    'stream': 'ext://sys.stdout'
+            "handlers": {
+                "console": {
+                    "class": "logging.StreamHandler",
+                    "level": "INFO",
+                    "formatter": "structured",
+                    "stream": "ext://sys.stdout",
                 },
-                'file': {
-                    'class': 'logging.FileHandler',
-                    'level': 'DEBUG',
-                    'formatter': 'structured',
-                    'filename': 'svgx_engine.log',
-                    'mode': 'a'
+                "file": {
+                    "class": "logging.FileHandler",
+                    "level": "DEBUG",
+                    "formatter": "structured",
+                    "filename": "svgx_engine.log",
+                    "mode": "a",
                 },
-                'performance': {
-                    'class': 'logging.FileHandler',
-                    'level': 'INFO',
-                    'formatter': 'performance',
-                    'filename': 'svgx_performance.log',
-                    'mode': 'a'
+                "performance": {
+                    "class": "logging.FileHandler",
+                    "level": "INFO",
+                    "formatter": "performance",
+                    "filename": "svgx_performance.log",
+                    "mode": "a",
                 },
-                'security': {
-                    'class': 'logging.FileHandler',
-                    'level': 'WARNING',
-                    'formatter': 'security',
-                    'filename': 'svgx_security.log',
-                    'mode': 'a'
-                }
+                "security": {
+                    "class": "logging.FileHandler",
+                    "level": "WARNING",
+                    "formatter": "security",
+                    "filename": "svgx_security.log",
+                    "mode": "a",
+                },
             },
-            'loggers': {
-                'svgx_engine': {
-                    'level': 'INFO',
-                    'handlers': ['console', 'file'],
-                    'propagate': False
+            "loggers": {
+                "svgx_engine": {
+                    "level": "INFO",
+                    "handlers": ["console", "file"],
+                    "propagate": False,
                 },
-                'svgx_engine.performance': {
-                    'level': 'INFO',
-                    'handlers': ['performance'],
-                    'propagate': False
+                "svgx_engine.performance": {
+                    "level": "INFO",
+                    "handlers": ["performance"],
+                    "propagate": False,
                 },
-                'svgx_engine.security': {
-                    'level': 'WARNING',
-                    'handlers': ['security'],
-                    'propagate': False
-                }
-            }
+                "svgx_engine.security": {
+                    "level": "WARNING",
+                    "handlers": ["security"],
+                    "propagate": False,
+                },
+            },
         }
-    
+
     def _setup_logging(self):
         """Setup logging configuration."""
         try:
@@ -277,44 +285,44 @@ class LoggingManager:
             # Fallback to basic logging if config fails
             logging.basicConfig(
                 level=logging.INFO,
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             )
             print(f"Warning: Failed to setup structured logging: {e}")
-    
+
     def get_logger(self, name: str, category: str = LogCategory.GENERAL) -> SVGXLogger:
         """Get a logger instance."""
         if name not in self.loggers:
             self.loggers[name] = SVGXLogger(name, category)
         return self.loggers[name]
-    
+
     def get_performance_logger(self, name: str) -> SVGXLogger:
         """Get a performance logger."""
         return self.get_logger(f"{name}.performance", LogCategory.PERFORMANCE)
-    
+
     def get_security_logger(self, name: str) -> SVGXLogger:
         """Get a security logger."""
         return self.get_logger(f"{name}.security", LogCategory.SECURITY)
-    
+
     def get_parser_logger(self, name: str) -> SVGXLogger:
         """Get a parser logger."""
         return self.get_logger(f"{name}.parser", LogCategory.PARSER)
-    
+
     def get_runtime_logger(self, name: str) -> SVGXLogger:
         """Get a runtime logger."""
         return self.get_logger(f"{name}.runtime", LogCategory.RUNTIME)
-    
+
     def get_compiler_logger(self, name: str) -> SVGXLogger:
         """Get a compiler logger."""
         return self.get_logger(f"{name}.compiler", LogCategory.COMPILER)
-    
+
     def get_api_logger(self, name: str) -> SVGXLogger:
         """Get an API logger."""
         return self.get_logger(f"{name}.api", LogCategory.API)
-    
+
     def get_database_logger(self, name: str) -> SVGXLogger:
         """Get a database logger."""
         return self.get_logger(f"{name}.database", LogCategory.DATABASE)
-    
+
     def get_telemetry_logger(self, name: str) -> SVGXLogger:
         """Get a telemetry logger."""
         return self.get_logger(f"{name}.telemetry", LogCategory.TELEMETRY)
@@ -375,24 +383,39 @@ def setup_logging(config: Optional[Dict[str, Any]] = None):
     _logging_manager = LoggingManager(config)
 
 
-def log_performance_metric(operation: str, duration_ms: float, 
-                          memory_mb: Optional[float] = None, cpu_percent: Optional[float] = None,
-                          **kwargs):
+def log_performance_metric(
+    operation: str,
+    duration_ms: float,
+    memory_mb: Optional[float] = None,
+    cpu_percent: Optional[float] = None,
+    **kwargs,
+):
     """Log a performance metric."""
     logger = get_performance_logger("svgx_engine")
     logger.log_performance(operation, duration_ms, memory_mb, cpu_percent, **kwargs)
 
 
-def log_security_event(event_type: str, action: str, resource: Optional[str] = None,
-                       user_id: Optional[str] = None, ip_address: Optional[str] = None,
-                       **kwargs):
+def log_security_event(
+    event_type: str,
+    action: str,
+    resource: Optional[str] = None,
+    user_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    **kwargs,
+):
     """Log a security event."""
     logger = get_security_logger("svgx_engine")
     logger.log_security(event_type, action, resource, user_id, ip_address, **kwargs)
 
 
-def log_api_request(method: str, path: str, status_code: int, duration_ms: float,
-                    user_id: Optional[str] = None, ip_address: Optional[str] = None):
+def log_api_request(
+    method: str,
+    path: str,
+    status_code: int,
+    duration_ms: float,
+    user_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
+):
     """Log an API request."""
     logger = get_api_logger("svgx_engine")
     logger.info(
@@ -402,12 +425,17 @@ def log_api_request(method: str, path: str, status_code: int, duration_ms: float
         status_code=status_code,
         duration_ms=duration_ms,
         user_id=user_id,
-        ip_address=ip_address
+        ip_address=ip_address,
     )
 
 
-def log_database_operation(operation: str, table: str, duration_ms: float,
-                          rows_affected: Optional[int] = None, **kwargs):
+def log_database_operation(
+    operation: str,
+    table: str,
+    duration_ms: float,
+    rows_affected: Optional[int] = None,
+    **kwargs,
+):
     """Log a database operation."""
     logger = get_database_logger("svgx_engine")
     logger.info(
@@ -416,7 +444,7 @@ def log_database_operation(operation: str, table: str, duration_ms: float,
         table=table,
         duration_ms=duration_ms,
         rows_affected=rows_affected,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -427,5 +455,5 @@ def log_telemetry_event(event_type: str, message: str, **kwargs):
         f"Telemetry: {event_type} - {message}",
         event_type=event_type,
         message=message,
-        **kwargs
-    ) 
+        **kwargs,
+    )

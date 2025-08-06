@@ -15,19 +15,19 @@ from typing import Any, Dict
 @dataclass
 class DomainEvent(ABC):
     """Base class for all domain events."""
-    
+
     @property
     @abstractmethod
     def event_type(self) -> str:
         """Get the event type."""
         pass
-    
+
     @property
     @abstractmethod
     def event_version(self) -> str:
         """Get the event version."""
         pass
-    
+
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
         """Convert event to dictionary."""
@@ -41,7 +41,7 @@ from svgx_engine.domain.events.building_events import (
     BuildingStatusChangedEvent,
     BuildingLocationChangedEvent,
     BuildingCostUpdatedEvent,
-    building_event_publisher
+    building_event_publisher,
 )
 
 # Version and metadata
@@ -51,10 +51,10 @@ __description__ = "Domain events for SVGX Engine"
 # Export all events
 __all__ = [
     "BuildingCreatedEvent",
-    "BuildingUpdatedEvent", 
+    "BuildingUpdatedEvent",
     "BuildingDeletedEvent",
     "BuildingStatusChangedEvent",
     "BuildingLocationChangedEvent",
     "BuildingCostUpdatedEvent",
-    "building_event_publisher"
-] 
+    "building_event_publisher",
+]

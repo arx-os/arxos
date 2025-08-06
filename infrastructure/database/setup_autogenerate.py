@@ -10,9 +10,10 @@ import os
 import sys
 from pathlib import Path
 
+
 def create_models_file():
     """Create a models.py file with SQLAlchemy model definitions."""
-    
+
     models_content = '''"""
 SQLAlchemy models for Arxos database
 
@@ -128,15 +129,16 @@ if __name__ == "__main__":
     print("You can now use 'alembic revision --autogenerate -m \"description\"'")
     print("to automatically generate migration files based on model changes.")
 '''
-    
-    with open('models.py', 'w') as f:
+
+    with open("models.py", "w") as f:
         f.write(models_content)
-    
+
     print("✅ Created models.py file")
+
 
 def update_env_py():
     """Update the env.py file to include model imports for autogeneration."""
-    
+
     env_py_content = '''from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -220,33 +222,37 @@ if context.is_offline_mode():
 else:
     run_migrations_online()
 '''
-    
-    with open('alembic/env.py', 'w') as f:
+
+    with open("alembic/env.py", "w") as f:
         f.write(env_py_content)
-    
+
     print("✅ Updated alembic/env.py for autogeneration")
+
 
 def main():
     """Main setup function."""
     print("🔧 Setting up Alembic autogeneration...")
-    
+
     # Check if we're in the right directory
-    if not os.path.exists('alembic'):
-        print("❌ Error: alembic directory not found. Run 'alembic init alembic' first.")
+    if not os.path.exists("alembic"):
+        print(
+            "❌ Error: alembic directory not found. Run 'alembic init alembic' first."
+        )
         sys.exit(1)
-    
+
     # Create models file
     create_models_file()
-    
+
     # Update env.py
     update_env_py()
-    
+
     print("\n🎉 Setup complete!")
     print("\nNext steps:")
     print("1. Add your SQLAlchemy models to models.py")
-    print("2. Run: alembic revision --autogenerate -m \"your migration description\"")
+    print('2. Run: alembic revision --autogenerate -m "your migration description"')
     print("3. Review the generated migration file")
     print("4. Run: alembic upgrade head")
 
+
 if __name__ == "__main__":
-    main() 
+    main()

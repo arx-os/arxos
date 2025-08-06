@@ -24,7 +24,7 @@ from .go_client import (
     NotificationType,
     NotificationStatus,
     create_go_notification_client,
-    create_go_notification_wrapper
+    create_go_notification_wrapper,
 )
 
 # Import optimized client and monitoring
@@ -35,7 +35,7 @@ try:
         RateLimiter,
         CacheEntry,
         BackgroundJobProcessor,
-        create_optimized_go_notification_client
+        create_optimized_go_notification_client,
     )
 except ImportError:
     OptimizedGoNotificationClient = None
@@ -58,7 +58,7 @@ try:
         ChannelHealth,
         NotificationMetrics,
         create_notification_monitoring,
-        create_structured_logger
+        create_structured_logger,
     )
 except ImportError:
     NotificationMonitoring = None
@@ -76,38 +76,36 @@ except ImportError:
 
 __all__ = [
     # Go notification client (primary interface)
-    'GoNotificationClient',
-    'GoNotificationWrapper',
-    'NotificationRequest',
-    'NotificationResponse',
-    'NotificationHistoryRequest',
-    'NotificationStatistics',
-    'NotificationChannelType',
-    'NotificationPriority',
-    'NotificationType',
-    'NotificationStatus',
-    'create_go_notification_client',
-    'create_go_notification_wrapper',
-    
+    "GoNotificationClient",
+    "GoNotificationWrapper",
+    "NotificationRequest",
+    "NotificationResponse",
+    "NotificationHistoryRequest",
+    "NotificationStatistics",
+    "NotificationChannelType",
+    "NotificationPriority",
+    "NotificationType",
+    "NotificationStatus",
+    "create_go_notification_client",
+    "create_go_notification_wrapper",
     # Optimized client and components
-    'OptimizedGoNotificationClient',
-    'ConnectionPool',
-    'RateLimiter',
-    'CacheEntry',
-    'BackgroundJobProcessor',
-    'create_optimized_go_notification_client',
-    
+    "OptimizedGoNotificationClient",
+    "ConnectionPool",
+    "RateLimiter",
+    "CacheEntry",
+    "BackgroundJobProcessor",
+    "create_optimized_go_notification_client",
     # Monitoring and observability
-    'NotificationMonitoring',
-    'StructuredLogger',
-    'PrometheusMetrics',
-    'HealthChecker',
-    'AlertManager',
-    'NotificationDashboard',
-    'AlertEvent',
-    'AlertSeverity',
-    'ChannelHealth',
-    'NotificationMetrics',
-    'create_notification_monitoring',
-    'create_structured_logger'
-] 
+    "NotificationMonitoring",
+    "StructuredLogger",
+    "PrometheusMetrics",
+    "HealthChecker",
+    "AlertManager",
+    "NotificationDashboard",
+    "AlertEvent",
+    "AlertSeverity",
+    "ChannelHealth",
+    "NotificationMetrics",
+    "create_notification_monitoring",
+    "create_structured_logger",
+]

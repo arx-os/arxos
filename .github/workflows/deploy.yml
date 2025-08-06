@@ -1,0 +1,425 @@
+name: MCP Engineering - CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Security and Code Quality
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Bandit security scan
+        run: |
+          pip install bandit
+          bandit -r . -f json -o security-report.json || true
+
+      - name: Run Safety dependency check
+        run: |
+          pip install safety
+          safety check --json --output safety-report.json || true
+
+      - name: Run OWASP ZAP scan
+        uses: zaproxy/action-full-scan@v0.8.0
+        with:
+          target: 'http://localhost:8000'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-a'
+
+  # Code Quality and Testing
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black isort flake8 mypy pytest pytest-cov
+
+      - name: Run Black code formatter
+        run: black --check --diff .
+
+      - name: Run isort import sorting
+        run: isort --check-only --diff .
+
+      - name: Run Flake8 linting
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run MyPy type checking
+        run: mypy . --ignore-missing-imports
+
+  # Unit and Integration Testing
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        run: |
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
+          python -m alembic upgrade head
+
+      - name: Run unit tests
+        run: |
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
+          export REDIS_URL="redis://localhost:6379"
+          pytest tests/ -v --cov=. --cov-report=xml --cov-report=html
+
+      - name: Run integration tests
+        run: |
+          export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/test_db"
+          export REDIS_URL="redis://localhost:6379"
+          pytest tests/test_phase5_production_deployment.py -v
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Performance Testing
+  performance-test:
+    name: Performance Test
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install locust
+
+      - name: Run performance tests
+        run: |
+          locust -f tests/performance/locustfile.py --headless --users 100 --spawn-rate 10 --run-time 60s
+
+  # Build and Push Docker Image
+  build:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    if: github.event_name == 'push' || github.event_name == 'release'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy to staging
+        run: |
+          # Update image tag in deployment
+          sed -i 's|image: mcp-engineering:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g' k8s/deployment.yaml
+          
+          # Apply Kubernetes manifests
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+          
+          # Wait for deployment to be ready
+          kubectl rollout status deployment/mcp-engineering-api -n staging --timeout=300s
+
+      - name: Run smoke tests
+        run: |
+          # Wait for service to be ready
+          kubectl wait --for=condition=ready pod -l app=mcp-engineering-api -n staging --timeout=300s
+          
+          # Run basic health checks
+          kubectl port-forward svc/mcp-engineering-service 8000:80 -n staging &
+          sleep 10
+          curl -f http://localhost:8000/health || exit 1
+          curl -f http://localhost:8000/ready || exit 1
+
+  # Deploy to Production (Blue-Green)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Blue-Green Deployment
+        run: |
+          # Create blue deployment
+          cp k8s/deployment.yaml k8s/deployment-blue.yaml
+          sed -i 's|name: mcp-engineering-api|name: mcp-engineering-api-blue|g' k8s/deployment-blue.yaml
+          sed -i 's|app: mcp-engineering-api|app: mcp-engineering-api-blue|g' k8s/deployment-blue.yaml
+          sed -i 's|image: mcp-engineering:latest|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g' k8s/deployment-blue.yaml
+          
+          # Deploy blue version
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/deployment-blue.yaml
+          kubectl rollout status deployment/mcp-engineering-api-blue -n production --timeout=300s
+          
+          # Update service to point to blue
+          kubectl patch svc mcp-engineering-service -n production -p '{"spec":{"selector":{"app":"mcp-engineering-api-blue"}}}'
+          
+          # Wait for blue to be healthy
+          kubectl wait --for=condition=ready pod -l app=mcp-engineering-api-blue -n production --timeout=300s
+          
+          # Run health checks
+          kubectl port-forward svc/mcp-engineering-service 8000:80 -n production &
+          sleep 10
+          curl -f http://localhost:8000/health || exit 1
+          curl -f http://localhost:8000/ready || exit 1
+          
+          # If healthy, remove old deployment
+          kubectl delete deployment mcp-engineering-api -n production --ignore-not-found=true
+          
+          # Update deployment name back
+          kubectl patch deployment mcp-engineering-api-blue -n production -p '{"metadata":{"name":"mcp-engineering-api"}}'
+          kubectl patch svc mcp-engineering-service -n production -p '{"spec":{"selector":{"app":"mcp-engineering-api"}}}'
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/mcp-engineering-api -n production --timeout=300s
+          kubectl get pods -n production -l app=mcp-engineering-api
+
+  # Rollback (Manual trigger)
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: github.event.inputs.rollback == 'true'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Rollback deployment
+        run: |
+          # Get previous deployment
+          PREVIOUS_DEPLOYMENT=$(kubectl rollout history deployment/mcp-engineering-api -n production --output=jsonpath='{.items[1].metadata.name}')
+          
+          # Rollback to previous version
+          kubectl rollout undo deployment/mcp-engineering-api -n production
+          kubectl rollout status deployment/mcp-engineering-api -n production --timeout=300s
+          
+          # Verify rollback
+          kubectl get pods -n production -l app=mcp-engineering-api
+
+  # Monitoring and Alerting
+  monitoring:
+    name: Setup Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Deploy monitoring stack
+        run: |
+          # Deploy Prometheus
+          kubectl apply -f k8s/monitoring/prometheus.yaml -n monitoring
+          
+          # Deploy Grafana
+          kubectl apply -f k8s/monitoring/grafana.yaml -n monitoring
+          
+          # Deploy AlertManager
+          kubectl apply -f k8s/monitoring/alertmanager.yaml -n monitoring
+          
+          # Wait for monitoring stack to be ready
+          kubectl wait --for=condition=ready pod -l app=prometheus -n monitoring --timeout=300s
+          kubectl wait --for=condition=ready pod -l app=grafana -n monitoring --timeout=300s
+
+  # Post-deployment verification
+  verify:
+    name: Post-deployment Verification
+    runs-on: ubuntu-latest
+    needs: [deploy-production, monitoring]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+
+      - name: Run post-deployment tests
+        run: |
+          # Health checks
+          kubectl port-forward svc/mcp-engineering-service 8000:80 -n production &
+          sleep 10
+          curl -f http://localhost:8000/health || exit 1
+          curl -f http://localhost:8000/ready || exit 1
+          curl -f http://localhost:8000/metrics || exit 1
+          
+          # Performance checks
+          curl -w "@curl-format.txt" -o /dev/null -s http://localhost:8000/health
+          
+          # Load test
+          ab -n 100 -c 10 http://localhost:8000/health
+
+      - name: Send notification
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi 

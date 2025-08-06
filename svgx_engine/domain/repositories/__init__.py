@@ -12,6 +12,4 @@ __version__ = "1.0.0"
 __description__ = "Domain repositories for SVGX Engine"
 
 # Export all repositories
-__all__ = [
-    "BuildingRepository"
-] 
+__all__ = ["BuildingRepository"]

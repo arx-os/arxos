@@ -7,7 +7,4 @@ from natural language input for building operations.
 
 from .slot_filler import SlotFiller, extract_slots
 
-__all__ = [
-    "SlotFiller",
-    "extract_slots"
-] 
+__all__ = ["SlotFiller", "extract_slots"]

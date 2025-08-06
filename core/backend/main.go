@@ -231,12 +231,14 @@ func main() {
 			r.Get("/labels", handlers.ListLabels)
 			r.Get("/zones", handlers.ListZones)
 
-			// BIM Export endpoints
-			r.Get("/bim/export/json", handlers.ExportBIMAsJSON)
-			// r.Get("/bim/export/geojson", handlers.ExportBIMAsGeoJSON)
-			r.Get("/bim/export/ifc", handlers.ExportBIMAsIFC)
-			r.Get("/bim/export/dxf", handlers.ExportBIMAsDXF)
-			r.Get("/bim/export/svg", handlers.ExportBIMAsSVG)
+				// BIM Export endpoints
+	r.Get("/export/formats", handlers.GetExportFormats)
+	r.Post("/export/bim", handlers.ExportBIM)
+	r.Get("/bim/export/json", handlers.ExportBIMAsJSON)
+	// r.Get("/bim/export/geojson", handlers.ExportBIMAsGeoJSON)
+	r.Get("/bim/export/ifc", handlers.ExportBIMAsIFC)
+	r.Get("/bim/export/dxf", handlers.ExportBIMAsDXF)
+	r.Get("/bim/export/svg", handlers.ExportBIMAsSVG)
 
 			// Category admin endpoints (admin only)
 			r.Group(func(r chi.Router) {

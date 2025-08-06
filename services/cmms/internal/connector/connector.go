@@ -45,7 +45,7 @@ func (c *CMMSConnector) GetClient() *http.Client {
 }
 
 func (c *CMMSConnector) getAuthType() AuthType {
-	if c.conn.OAuth2ClientID != "" && c.conn.OAuth2Secret != "" {
+	if c.conn.OAuth2ClientID != nil && *c.conn.OAuth2ClientID != "" && c.conn.OAuth2Secret != nil && *c.conn.OAuth2Secret != "" {
 		return AuthOAuth2
 	}
 	if c.conn.APIKey != "" {
@@ -79,12 +79,20 @@ func (c *CMMSConnector) addAuthHeaders(req *http.Request) error {
 
 func (c *CMMSConnector) getOAuth2Token() (string, error) {
 	// Simple client credentials grant
-	if c.conn.OAuth2TokenURL == "" || c.conn.OAuth2ClientID == "" || c.conn.OAuth2Secret == "" {
+	if c.conn.OAuth2TokenURL == nil || *c.conn.OAuth2TokenURL == "" || 
+	   c.conn.OAuth2ClientID == nil || *c.conn.OAuth2ClientID == "" || 
+	   c.conn.OAuth2Secret == nil || *c.conn.OAuth2Secret == "" {
 		return "", errors.New("OAuth2 credentials missing")
 	}
+	
+	scope := ""
+	if c.conn.OAuth2Scope != nil {
+		scope = *c.conn.OAuth2Scope
+	}
+	
 	data := fmt.Sprintf("grant_type=client_credentials&client_id=%s&client_secret=%s&scope=%s",
-		c.conn.OAuth2ClientID, c.conn.OAuth2Secret, c.conn.OAuth2Scope)
-	resp, err := http.Post(c.conn.OAuth2TokenURL, "application/x-www-form-urlencoded", strings.NewReader(data))
+		*c.conn.OAuth2ClientID, *c.conn.OAuth2Secret, scope)
+	resp, err := http.Post(*c.conn.OAuth2TokenURL, "application/x-www-form-urlencoded", strings.NewReader(data))
 	if err != nil {
 		return "", err
 	}

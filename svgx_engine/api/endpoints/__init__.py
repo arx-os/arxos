@@ -13,7 +13,4 @@ __version__ = "1.0.0"
 __description__ = "API endpoints for SVGX Engine"
 
 # Export all endpoints
-__all__ = [
-    "BuildingAPI",
-    "HealthAPI"
-] 
+__all__ = ["BuildingAPI", "HealthAPI"]

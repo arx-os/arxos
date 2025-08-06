@@ -33,7 +33,7 @@ from .notifications.go_client import (
     NotificationRequest,
     NotificationType,
     NotificationPriority,
-    NotificationChannelType
+    NotificationChannelType,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 class MonitoringLevel(str, Enum):
     """Monitoring levels for different types of alerts"""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -49,6 +50,7 @@ class MonitoringLevel(str, Enum):
 
 class MetricType(str, Enum):
     """Types of metrics that can be monitored"""
+
     CPU_USAGE = "cpu_usage"
     MEMORY_USAGE = "memory_usage"
     DISK_USAGE = "disk_usage"
@@ -63,6 +65,7 @@ class MetricType(str, Enum):
 @dataclass
 class MonitoringMetric:
     """Represents a monitoring metric"""
+
     name: str
     value: float
     unit: str
@@ -74,13 +77,14 @@ class MonitoringMetric:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
         data = asdict(self)
-        data['timestamp'] = self.timestamp.isoformat()
+        data["timestamp"] = self.timestamp.isoformat()
         return data
 
 
 @dataclass
 class AlertRule:
     """Defines an alert rule for monitoring"""
+
     name: str
     metric_type: MetricType
     threshold: float
@@ -96,13 +100,14 @@ class AlertRule:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
         data = asdict(self)
-        data['channels'] = [channel.value for channel in self.channels]
+        data["channels"] = [channel.value for channel in self.channels]
         return data
 
 
 @dataclass
 class AlertEvent:
     """Represents an alert event"""
+
     rule_name: str
     metric_name: str
     current_value: float
@@ -115,15 +120,15 @@ class AlertEvent:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
         data = asdict(self)
-        data['timestamp'] = self.timestamp.isoformat()
-        data['level'] = self.level.value
+        data["timestamp"] = self.timestamp.isoformat()
+        data["level"] = self.level.value
         return data
 
 
 class AdvancedMonitoringService:
     """
     Advanced monitoring service with Go notification integration
-    
+
     Provides comprehensive system monitoring, metric collection,
     and automated alerting via the Go notification API.
     """
@@ -134,11 +139,11 @@ class AdvancedMonitoringService:
         monitoring_interval: int = 60,
         alert_cooldown: int = 300,
         enable_system_metrics: bool = True,
-        enable_custom_metrics: bool = True
+        enable_custom_metrics: bool = True,
     ):
         """
         Initialize the advanced monitoring service
-        
+
         Args:
             go_notification_client: Go notification client instance
             monitoring_interval: Monitoring interval in seconds
@@ -151,7 +156,7 @@ class AdvancedMonitoringService:
         self.alert_cooldown = alert_cooldown
         self.enable_system_metrics = enable_system_metrics
         self.enable_custom_metrics = enable_custom_metrics
-        
+
         # Monitoring state
         self.is_running = False
         self.monitoring_thread = None
@@ -160,16 +165,16 @@ class AdvancedMonitoringService:
         self.alert_history: List[AlertEvent] = []
         self.last_alert_times: Dict[str, datetime] = {}
         self.custom_metrics: Dict[str, Callable] = {}
-        
+
         # System metrics
         self.cpu_threshold = 80.0
         self.memory_threshold = 85.0
         self.disk_threshold = 90.0
-        
+
         # Performance tracking
         self.metrics_lock = threading.Lock()
         self.max_history_size = 1000
-        
+
         logger.info("Advanced monitoring service initialized")
 
     def start_monitoring(self) -> None:
@@ -177,11 +182,10 @@ class AdvancedMonitoringService:
         if self.is_running:
             logger.warning("Monitoring service is already running")
             return
-        
+
         self.is_running = True
         self.monitoring_thread = threading.Thread(
-            target=self._monitoring_loop,
-            daemon=True
+            target=self._monitoring_loop, daemon=True
         )
         self.monitoring_thread.start()
         logger.info("Advanced monitoring service started")
@@ -191,7 +195,7 @@ class AdvancedMonitoringService:
         if not self.is_running:
             logger.warning("Monitoring service is not running")
             return
-        
+
         self.is_running = False
         if self.monitoring_thread:
             self.monitoring_thread.join(timeout=5)
@@ -204,20 +208,20 @@ class AdvancedMonitoringService:
                 # Collect system metrics
                 if self.enable_system_metrics:
                     self._collect_system_metrics()
-                
+
                 # Collect custom metrics
                 if self.enable_custom_metrics:
                     self._collect_custom_metrics()
-                
+
                 # Check alert rules
                 self._check_alert_rules()
-                
+
                 # Clean up old metrics
                 self._cleanup_old_metrics()
-                
+
                 # Wait for next monitoring cycle
                 time.sleep(self.monitoring_interval)
-                
+
             except Exception as e:
                 logger.error(f"Error in monitoring loop: {e}")
                 time.sleep(self.monitoring_interval)
@@ -226,7 +230,7 @@ class AdvancedMonitoringService:
         """Collect system metrics"""
         try:
             timestamp = datetime.now()
-            
+
             # CPU usage
             cpu_percent = psutil.cpu_percent(interval=1)
             self._add_metric(
@@ -234,9 +238,9 @@ class AdvancedMonitoringService:
                 value=cpu_percent,
                 unit="%",
                 metric_type=MetricType.CPU_USAGE,
-                timestamp=timestamp
+                timestamp=timestamp,
             )
-            
+
             # Memory usage
             memory = psutil.virtual_memory()
             memory_percent = memory.percent
@@ -249,12 +253,12 @@ class AdvancedMonitoringService:
                 metadata={
                     "total": memory.total,
                     "available": memory.available,
-                    "used": memory.used
-                }
+                    "used": memory.used,
+                },
             )
-            
+
             # Disk usage
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             disk_percent = (disk.used / disk.total) * 100
             self._add_metric(
                 name="disk_usage",
@@ -262,13 +266,9 @@ class AdvancedMonitoringService:
                 unit="%",
                 metric_type=MetricType.DISK_USAGE,
                 timestamp=timestamp,
-                metadata={
-                    "total": disk.total,
-                    "used": disk.used,
-                    "free": disk.free
-                }
+                metadata={"total": disk.total, "used": disk.used, "free": disk.free},
             )
-            
+
             # Network I/O
             network = psutil.net_io_counters()
             self._add_metric(
@@ -277,7 +277,7 @@ class AdvancedMonitoringService:
                 unit="bytes",
                 metric_type=MetricType.NETWORK_IO,
                 timestamp=timestamp,
-                metadata={"direction": "sent"}
+                metadata={"direction": "sent"},
             )
             self._add_metric(
                 name="network_bytes_recv",
@@ -285,9 +285,9 @@ class AdvancedMonitoringService:
                 unit="bytes",
                 metric_type=MetricType.NETWORK_IO,
                 timestamp=timestamp,
-                metadata={"direction": "received"}
+                metadata={"direction": "received"},
             )
-            
+
             # Process count
             process_count = len(psutil.pids())
             self._add_metric(
@@ -295,16 +295,16 @@ class AdvancedMonitoringService:
                 value=process_count,
                 unit="processes",
                 metric_type=MetricType.PROCESS_COUNT,
-                timestamp=timestamp
+                timestamp=timestamp,
             )
-            
+
         except Exception as e:
             logger.error(f"Error collecting system metrics: {e}")
 
     def _collect_custom_metrics(self) -> None:
         """Collect custom metrics"""
         timestamp = datetime.now()
-        
+
         for metric_name, metric_func in self.custom_metrics.items():
             try:
                 value = metric_func()
@@ -313,7 +313,7 @@ class AdvancedMonitoringService:
                     value=value,
                     unit="custom",
                     metric_type=MetricType.CUSTOM,
-                    timestamp=timestamp
+                    timestamp=timestamp,
                 )
             except Exception as e:
                 logger.error(f"Error collecting custom metric {metric_name}: {e}")
@@ -321,89 +321,85 @@ class AdvancedMonitoringService:
     def _add_metric(self, **kwargs) -> None:
         """Add a metric to the history"""
         metric = MonitoringMetric(**kwargs)
-        
+
         with self.metrics_lock:
             self.metrics_history.append(metric)
-            
+
             # Limit history size
             if len(self.metrics_history) > self.max_history_size:
-                self.metrics_history = self.metrics_history[-self.max_history_size:]
+                self.metrics_history = self.metrics_history[-self.max_history_size :]
 
     def _check_alert_rules(self) -> None:
         """Check all alert rules and trigger alerts if needed"""
         current_time = datetime.now()
-        
+
         for rule_name, rule in self.alert_rules.items():
             if not rule.enabled:
                 continue
-            
+
             # Check cooldown
             last_alert_time = self.last_alert_times.get(rule_name)
-            if last_alert_time and (current_time - last_alert_time).seconds < rule.cooldown:
+            if (
+                last_alert_time
+                and (current_time - last_alert_time).seconds < rule.cooldown
+            ):
                 continue
-            
+
             # Get recent metrics for this rule
             recent_metrics = self._get_recent_metrics(rule.metric_type, rule.duration)
-            
+
             if not recent_metrics:
                 continue
-            
+
             # Check if threshold is exceeded for the required duration
             threshold_exceeded = self._check_threshold_exceeded(
                 recent_metrics, rule.threshold, rule.operator
             )
-            
+
             if threshold_exceeded:
                 self._trigger_alert(rule, recent_metrics[-1], current_time)
 
     def _get_recent_metrics(
-        self,
-        metric_type: MetricType,
-        duration_seconds: int
+        self, metric_type: MetricType, duration_seconds: int
     ) -> List[MonitoringMetric]:
         """Get recent metrics of a specific type"""
         cutoff_time = datetime.now() - timedelta(seconds=duration_seconds)
-        
+
         with self.metrics_lock:
             return [
-                metric for metric in self.metrics_history
+                metric
+                for metric in self.metrics_history
                 if metric.metric_type == metric_type and metric.timestamp >= cutoff_time
             ]
 
     def _check_threshold_exceeded(
-        self,
-        metrics: List[MonitoringMetric],
-        threshold: float,
-        operator: str
+        self, metrics: List[MonitoringMetric], threshold: float, operator: str
     ) -> bool:
         """Check if threshold is exceeded for all metrics in the list"""
         if not metrics:
             return False
-        
+
         for metric in metrics:
-            if operator == '>':
+            if operator == ">":
                 if metric.value <= threshold:
                     return False
-            elif operator == '<':
+            elif operator == "<":
                 if metric.value >= threshold:
                     return False
-            elif operator == '>=':
+            elif operator == ">=":
                 if metric.value < threshold:
                     return False
-            elif operator == '<=':
+            elif operator == "<=":
                 if metric.value > threshold:
                     return False
-            elif operator == '==':
+            elif operator == "==":
                 if metric.value != threshold:
                     return False
-        
+
         return True
 
     def _trigger_alert(
-        self,
-        rule: AlertRule,
-        metric: MonitoringMetric,
-        timestamp: datetime
+        self, rule: AlertRule, metric: MonitoringMetric, timestamp: datetime
     ) -> None:
         """Trigger an alert via Go notification API"""
         try:
@@ -412,9 +408,9 @@ class AdvancedMonitoringService:
                 metric_name=metric.name,
                 current_value=metric.value,
                 threshold=rule.threshold,
-                unit=metric.unit
+                unit=metric.unit,
             )
-            
+
             # Create alert event
             alert_event = AlertEvent(
                 rule_name=rule.name,
@@ -427,15 +423,15 @@ class AdvancedMonitoringService:
                 metadata={
                     "metric_type": metric.metric_type.value,
                     "unit": metric.unit,
-                    "tags": metric.tags
-                }
+                    "tags": metric.tags,
+                },
             )
-            
+
             # Add to alert history
             with self.metrics_lock:
                 self.alert_history.append(alert_event)
                 self.last_alert_times[rule.name] = timestamp
-            
+
             # Send notification via Go API
             for recipient_id in rule.recipients:
                 notification_request = NotificationRequest(
@@ -450,10 +446,10 @@ class AdvancedMonitoringService:
                         "metric_name": metric.name,
                         "current_value": metric.value,
                         "threshold": rule.threshold,
-                        "level": rule.level.value
-                    }
+                        "level": rule.level.value,
+                    },
                 )
-                
+
                 # Send notification (async if possible)
                 try:
                     response = self.go_client.send_notification(notification_request)
@@ -463,7 +459,7 @@ class AdvancedMonitoringService:
                         logger.error(f"Failed to send alert: {response.error}")
                 except Exception as e:
                     logger.error(f"Error sending alert notification: {e}")
-            
+
         except Exception as e:
             logger.error(f"Error triggering alert: {e}")
 
@@ -481,10 +477,11 @@ class AdvancedMonitoringService:
     def _cleanup_old_metrics(self) -> None:
         """Clean up old metrics from history"""
         cutoff_time = datetime.now() - timedelta(hours=24)  # Keep 24 hours
-        
+
         with self.metrics_lock:
             self.metrics_history = [
-                metric for metric in self.metrics_history
+                metric
+                for metric in self.metrics_history
                 if metric.timestamp >= cutoff_time
             ]
 
@@ -515,31 +512,35 @@ class AdvancedMonitoringService:
         with self.metrics_lock:
             if not self.metrics_history:
                 return {"error": "No metrics available"}
-            
+
             latest_metrics = {}
             for metric in self.metrics_history[-100:]:  # Last 100 metrics
                 if metric.name not in latest_metrics:
                     latest_metrics[metric.name] = metric
-            
+
             return {
                 "timestamp": datetime.now().isoformat(),
                 "metrics": [metric.to_dict() for metric in latest_metrics.values()],
                 "total_metrics": len(self.metrics_history),
                 "alert_rules": len(self.alert_rules),
-                "recent_alerts": len([a for a in self.alert_history if 
-                                    (datetime.now() - a.timestamp).seconds < 3600])
+                "recent_alerts": len(
+                    [
+                        a
+                        for a in self.alert_history
+                        if (datetime.now() - a.timestamp).seconds < 3600
+                    ]
+                ),
             }
 
     def get_alert_history(self, hours: int = 24) -> List[Dict[str, Any]]:
         """Get alert history for the specified number of hours"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
-        
+
         with self.metrics_lock:
             recent_alerts = [
-                alert for alert in self.alert_history
-                if alert.timestamp >= cutoff_time
+                alert for alert in self.alert_history if alert.timestamp >= cutoff_time
             ]
-            
+
             return [alert.to_dict() for alert in recent_alerts]
 
     def health_check(self) -> Dict[str, Any]:
@@ -547,16 +548,16 @@ class AdvancedMonitoringService:
         try:
             # Check if monitoring is running
             status = "healthy" if self.is_running else "stopped"
-            
+
             # Check Go notification client
             go_client_health = self.go_client.health_check()
-            
+
             # Get basic metrics
             with self.metrics_lock:
                 metrics_count = len(self.metrics_history)
                 alerts_count = len(self.alert_history)
                 rules_count = len(self.alert_rules)
-            
+
             return {
                 "status": status,
                 "monitoring_running": self.is_running,
@@ -564,21 +565,21 @@ class AdvancedMonitoringService:
                 "alerts_count": alerts_count,
                 "rules_count": rules_count,
                 "go_client_health": go_client_health,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "error": str(e),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
 
     def set_thresholds(
         self,
         cpu_threshold: Optional[float] = None,
         memory_threshold: Optional[float] = None,
-        disk_threshold: Optional[float] = None
+        disk_threshold: Optional[float] = None,
     ) -> None:
         """Set monitoring thresholds"""
         if cpu_threshold is not None:
@@ -587,9 +588,11 @@ class AdvancedMonitoringService:
             self.memory_threshold = memory_threshold
         if disk_threshold is not None:
             self.disk_threshold = disk_threshold
-        
-        logger.info(f"Updated thresholds: CPU={self.cpu_threshold}%, "
-                   f"Memory={self.memory_threshold}%, Disk={self.disk_threshold}%")
+
+        logger.info(
+            f"Updated thresholds: CPU={self.cpu_threshold}%, "
+            f"Memory={self.memory_threshold}%, Disk={self.disk_threshold}%"
+        )
 
 
 # Factory function for easy instantiation
@@ -598,18 +601,18 @@ def create_advanced_monitoring_service(
     monitoring_interval: int = 60,
     alert_cooldown: int = 300,
     enable_system_metrics: bool = True,
-    enable_custom_metrics: bool = True
+    enable_custom_metrics: bool = True,
 ) -> AdvancedMonitoringService:
     """
     Create an advanced monitoring service
-    
+
     Args:
         go_notification_client: Go notification client instance
         monitoring_interval: Monitoring interval in seconds
         alert_cooldown: Cooldown period between alerts in seconds
         enable_system_metrics: Enable system metrics collection
         enable_custom_metrics: Enable custom metrics collection
-        
+
     Returns:
         Advanced monitoring service instance
     """
@@ -618,17 +621,17 @@ def create_advanced_monitoring_service(
         monitoring_interval=monitoring_interval,
         alert_cooldown=alert_cooldown,
         enable_system_metrics=enable_system_metrics,
-        enable_custom_metrics=enable_custom_metrics
+        enable_custom_metrics=enable_custom_metrics,
     )
 
 
 # Export main classes and functions
 __all__ = [
-    'AdvancedMonitoringService',
-    'MonitoringLevel',
-    'MetricType',
-    'MonitoringMetric',
-    'AlertRule',
-    'AlertEvent',
-    'create_advanced_monitoring_service'
-] 
+    "AdvancedMonitoringService",
+    "MonitoringLevel",
+    "MetricType",
+    "MonitoringMetric",
+    "AlertRule",
+    "AlertEvent",
+    "create_advanced_monitoring_service",
+]

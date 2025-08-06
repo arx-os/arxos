@@ -39,6 +39,7 @@ python main.py
 - **Authentication System**: JWT-based security with RBAC
 - **Performance Monitoring**: Prometheus metrics
 - **PDF Report Generation**: Professional compliance reports
+- **Knowledge Base System**: Building codes database with search and jurisdiction management
 
 ### Technology Stack
 - **Backend**: FastAPI (Python 3.11)
@@ -47,6 +48,184 @@ python main.py
 - **Monitoring**: Prometheus + Grafana
 - **PDF Generation**: ReportLab with custom templates
 - **Deployment**: Docker with health checks
+
+## 🧠 Knowledge Base System
+
+The MCP Service includes a comprehensive knowledge base system for building codes, standards, and compliance management.
+
+### Features
+- **Building Codes Database**: IBC, NEC, IFC, ADA, NFPA, ASHRAE
+- **Advanced Search**: Semantic search with relevance scoring
+- **Jurisdiction Management**: Local amendments and compliance
+- **Version Control**: Code version tracking and rollback
+- **Code References**: Cross-references and citations
+- **REST API**: Complete API for all knowledge base operations
+
+### API Endpoints
+```
+GET  /api/v1/knowledge/codes                    # Get supported codes
+GET  /api/v1/knowledge/codes/{code}/{section}   # Get code section
+POST /api/v1/knowledge/search                   # Search building codes
+GET  /api/v1/knowledge/jurisdictions            # Get jurisdictions
+GET  /api/v1/knowledge/versions                 # Get code versions
+GET  /api/v1/knowledge/references/{code}/{section} # Get references
+```
+
+### Usage Examples
+```python
+# Search for occupant load requirements
+search_request = {
+    "query": "occupant load calculation",
+    "code_standard": "IBC",
+    "max_results": 5
+}
+
+# Check jurisdiction compliance
+compliance = await jurisdiction_manager.check_jurisdiction_compliance(
+    "California", "IBC", "1004.1.1"
+)
+
+# Get code references
+references = await code_reference.get_cross_references("IBC", "1004.1.1")
+```
+
+### Testing and Demo
+```bash
+# Run tests
+python test_knowledge_base.py
+
+# Run demo
+python demo_knowledge_base.py
+```
+
+## 🤖 ML Integration System
+
+The MCP Service includes a comprehensive ML integration system for AI-powered building code validation and analysis.
+
+### Features
+- **AI-Powered Validation**: Machine learning models for building code compliance
+- **Predictive Analytics**: Risk assessment, cost estimation, timeline prediction
+- **Pattern Recognition**: Design patterns, violation patterns, optimization opportunities
+- **Model Management**: Training, versioning, and lifecycle management
+- **Real-time Processing**: Fast response times with confidence scoring
+- **Comprehensive API**: Complete REST API for all ML capabilities
+
+### AI Validation Types
+- **Structural**: Building structure and foundation compliance
+- **Electrical**: Electrical system and load requirements
+- **Fire Protection**: Fire safety and suppression systems
+- **Accessibility**: ADA compliance and accessibility features
+- **Mechanical**: HVAC and mechanical system requirements
+- **Plumbing**: Plumbing system and fixture requirements
+- **Energy**: Energy efficiency and sustainability standards
+- **General**: Overall building code compliance
+
+### Prediction Types
+- **Compliance Risk**: Likelihood of code violations
+- **Cost Estimate**: Construction cost predictions
+- **Construction Time**: Project timeline estimates
+- **Maintenance Needs**: Future maintenance requirements
+- **Energy Efficiency**: Energy performance predictions
+- **Safety Risk**: Safety and risk assessments
+
+### Pattern Types
+- **Design Patterns**: Recognized architectural and design patterns
+- **Violation Patterns**: Common code violation patterns
+- **Optimization Patterns**: Efficiency and cost optimization opportunities
+- **Cost Patterns**: Cost analysis and trending patterns
+- **Time Patterns**: Project timeline and scheduling patterns
+
+### API Endpoints
+
+#### AI Validation
+- `POST /api/v1/ml/validate` - Perform AI-powered validation
+- `GET /api/v1/ml/validate/types` - Get available validation types
+- `GET /api/v1/ml/validate/statistics` - Get validation statistics
+
+#### Predictive Analytics
+- `POST /api/v1/ml/predict` - Perform predictive analytics
+- `GET /api/v1/ml/predict/types` - Get available prediction types
+- `GET /api/v1/ml/predict/statistics` - Get prediction statistics
+
+#### Pattern Recognition
+- `POST /api/v1/ml/patterns` - Perform pattern recognition
+- `GET /api/v1/ml/patterns/types` - Get available pattern types
+
+#### Model Management
+- `POST /api/v1/ml/models/train` - Train new model
+- `GET /api/v1/ml/models` - List all models
+- `GET /api/v1/ml/models/{model_id}` - Get model information
+- `POST /api/v1/ml/models/{model_id}/activate` - Activate model
+- `POST /api/v1/ml/models/{model_id}/deactivate` - Deactivate model
+- `DELETE /api/v1/ml/models/{model_id}` - Delete model
+- `GET /api/v1/ml/models/statistics` - Get model statistics
+
+#### Service Status
+- `GET /api/v1/ml/status` - Get ML service status
+- `GET /api/v1/ml/statistics` - Get comprehensive statistics
+- `GET /api/v1/ml/health` - Health check
+
+### Usage Examples
+
+#### AI Validation
+```bash
+curl -X POST "http://localhost:8001/api/v1/ml/validate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "building_data": {
+      "area": 8000,
+      "height": 25,
+      "type": "commercial",
+      "occupancy": "B",
+      "floors": 3
+    },
+    "validation_type": "structural",
+    "jurisdiction": "New York City",
+    "include_suggestions": true,
+    "confidence_threshold": 0.7
+  }'
+```
+
+#### Predictive Analytics
+```bash
+curl -X POST "http://localhost:8001/api/v1/ml/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "building_data": {
+      "area": 12000,
+      "height": 30,
+      "type": "commercial",
+      "occupancy": "B"
+    },
+    "prediction_type": "compliance_risk",
+    "include_confidence": true
+  }'
+```
+
+#### Pattern Recognition
+```bash
+curl -X POST "http://localhost:8001/api/v1/ml/patterns" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "building_data": {
+      "area": 20000,
+      "height": 35,
+      "type": "commercial",
+      "occupancy": "B"
+    },
+    "pattern_type": "design_pattern",
+    "similarity_threshold": 0.8
+  }'
+```
+
+### Testing and Demo
+```bash
+# Run tests
+python test_ml_integration.py
+
+# Run demo
+python demo_ml_integration.py
+```
 
 ## 📁 Project Structure
 
@@ -84,6 +263,15 @@ services/mcp/
 │
 ├── validate/            # Rule engine and validation
 │   ├── rule_engine.py   # MCP rule processing
+│   └── __init__.py
+│
+├── knowledge/           # Knowledge base system
+│   ├── knowledge_base.py      # Core knowledge base
+│   ├── search_engine.py       # Advanced search capabilities
+│   ├── jurisdiction_manager.py # Jurisdiction management
+│   ├── version_control.py     # Version control system
+│   ├── code_reference.py      # Code references and citations
+│   ├── knowledge_routes.py    # API endpoints
 │   └── __init__.py
 │
 ├── models/              # Data models

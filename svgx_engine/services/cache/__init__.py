@@ -8,14 +8,19 @@ Provides caching functionality for SVGX Engine including:
 """
 
 try:
-    from svgx_engine.services.cache.redis_client import RedisCacheClient, get_cache_client, initialize_cache, close_cache
+    from svgx_engine.services.cache.redis_client import (
+        RedisCacheClient,
+        get_cache_client,
+        initialize_cache,
+        close_cache,
+    )
 except ImportError:
     # Fallback for direct execution
-    from svgx_engine.services.cache.redis_client import RedisCacheClient, get_cache_client, initialize_cache, close_cache
+    from svgx_engine.services.cache.redis_client import (
+        RedisCacheClient,
+        get_cache_client,
+        initialize_cache,
+        close_cache,
+    )
 
-__all__ = [
-    'RedisCacheClient',
-    'get_cache_client',
-    'initialize_cache',
-    'close_cache'
-] 
+__all__ = ["RedisCacheClient", "get_cache_client", "initialize_cache", "close_cache"]

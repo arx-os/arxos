@@ -11,14 +11,16 @@ from .project_routes import router as project_router
 from .building_routes import router as building_router
 from .floor_routes import router as floor_router
 from .health_routes import router as health_router
+from .mcp_engineering_routes import router as mcp_engineering_router
 
 # Export all routers
 __all__ = [
     "device_router",
-    "room_router", 
+    "room_router",
     "user_router",
     "project_router",
     "building_router",
     "floor_router",
-    "health_router"
-] 
+    "health_router",
+    "mcp_engineering_router",
+]

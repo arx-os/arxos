@@ -11,15 +11,16 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
 
 from api.dependencies import (
-    User, require_read_permission, require_write_permission,
-    format_success_response, format_error_response
+    User,
+    require_read_permission,
+    require_write_permission,
+    format_success_response,
+    format_error_response,
 )
 from application.logging import get_logger
 from infrastructure import get_repository_factory
 from application.factory import get_user_service
-from application.dto import (
-    CreateUserRequest, UpdateUserRequest, GetUserRequest
-)
+from application.dto import CreateUserRequest, UpdateUserRequest, GetUserRequest
 
 logger = get_logger("api.user_routes")
 router = APIRouter(prefix="/users", tags=["users"])
@@ -28,6 +29,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 # Request/Response Models
 class UserCreateRequest(BaseModel):
     """Request model for creating a user."""
+
     username: str = Field(..., description="Username", min_length=3, max_length=50)
     email: str = Field(..., description="Email address", max_length=255)
     first_name: str = Field(..., description="First name", min_length=1, max_length=100)
@@ -41,10 +43,17 @@ class UserCreateRequest(BaseModel):
 
 class UserUpdateRequest(BaseModel):
     """Request model for updating a user."""
-    username: Optional[str] = Field(None, description="Username", min_length=3, max_length=50)
+
+    username: Optional[str] = Field(
+        None, description="Username", min_length=3, max_length=50
+    )
     email: Optional[str] = Field(None, description="Email address", max_length=255)
-    first_name: Optional[str] = Field(None, description="First name", min_length=1, max_length=100)
-    last_name: Optional[str] = Field(None, description="Last name", min_length=1, max_length=100)
+    first_name: Optional[str] = Field(
+        None, description="First name", min_length=1, max_length=100
+    )
+    last_name: Optional[str] = Field(
+        None, description="Last name", min_length=1, max_length=100
+    )
     role: Optional[str] = Field(None, description="User role")
     phone: Optional[str] = Field(None, description="Phone number", max_length=20)
     department: Optional[str] = Field(None, description="Department", max_length=100)
@@ -65,12 +74,12 @@ def get_user_application_service():
     response_model=Dict[str, Any],
     status_code=status.HTTP_201_CREATED,
     summary="Create a new user",
-    description="Create a new user with the specified properties."
+    description="Create a new user with the specified properties.",
 )
 async def create_user(
     request: UserCreateRequest,
     user: User = Depends(require_write_permission),
-    user_service = Depends(get_user_application_service)
+    user_service=Depends(get_user_application_service),
 ) -> Dict[str, Any]:
     """Create a new user."""
     try:
@@ -84,9 +93,9 @@ async def create_user(
             phone=request.phone,
             department=request.department,
             status=request.status,
-            created_by=user.user_id
+            created_by=user.user_id,
         )
-        
+
         # Use application service to create user
         result = user_service.create_user(
             username=create_request.username,
@@ -96,9 +105,9 @@ async def create_user(
             role=create_request.role,
             phone=create_request.phone,
             department=create_request.department,
-            created_by=create_request.created_by
+            created_by=create_request.created_by,
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -112,23 +121,27 @@ async def create_user(
                     "department": result.department,
                     "status": result.status,
                     "created_by": result.created_by,
-                    "created_at": result.created_at.isoformat() if result.created_at else datetime.utcnow().isoformat()
+                    "created_at": (
+                        result.created_at.isoformat()
+                        if result.created_at
+                        else datetime.utcnow().isoformat()
+                    ),
                 },
-                message="User created successfully"
+                message="User created successfully",
             )
         else:
             return format_error_response(
                 error_code="USER_CREATION_ERROR",
                 message=result.error_message or "Failed to create user",
-                details={"error": result.error_message}
+                details={"error": result.error_message},
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to create user: {str(e)}")
         return format_error_response(
             error_code="USER_CREATION_ERROR",
             message="Failed to create user",
-            details={"error": str(e)}
+            details={"error": str(e)},
         )
 
 
@@ -136,7 +149,7 @@ async def create_user(
     "/",
     response_model=Dict[str, Any],
     summary="List users",
-    description="Retrieve a list of users with optional filtering and pagination."
+    description="Retrieve a list of users with optional filtering and pagination.",
 )
 async def list_users(
     role: Optional[str] = Query(None, description="Filter by user role"),
@@ -145,7 +158,7 @@ async def list_users(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Page size"),
     user: User = Depends(require_read_permission),
-    user_service = Depends(get_user_application_service)
+    user_service=Depends(get_user_application_service),
 ) -> Dict[str, Any]:
     """List users with filtering and pagination."""
     try:
@@ -155,9 +168,9 @@ async def list_users(
             status=status,
             department=department,
             page=page,
-            page_size=page_size
+            page_size=page_size,
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -173,7 +186,9 @@ async def list_users(
                             "department": user.department,
                             "status": user.status,
                             "created_by": user.created_by,
-                            "created_at": user.created_at.isoformat() if user.created_at else None
+                            "created_at": (
+                                user.created_at.isoformat() if user.created_at else None
+                            ),
                         }
                         for user in result.users
                     ],
@@ -181,24 +196,24 @@ async def list_users(
                         "page": result.page,
                         "page_size": result.page_size,
                         "total_count": result.total_count,
-                        "total_pages": result.total_pages
-                    }
+                        "total_pages": result.total_pages,
+                    },
                 },
-                message="Users retrieved successfully"
+                message="Users retrieved successfully",
             )
         else:
             return format_error_response(
                 error_code="USER_LIST_ERROR",
                 message=result.error_message or "Failed to retrieve users",
-                details={"error": result.error_message}
+                details={"error": result.error_message},
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to list users: {str(e)}")
         return format_error_response(
             error_code="USER_LIST_ERROR",
             message="Failed to retrieve users",
-            details={"error": str(e)}
+            details={"error": str(e)},
         )
 
 
@@ -206,18 +221,18 @@ async def list_users(
     "/{user_id}",
     response_model=Dict[str, Any],
     summary="Get user details",
-    description="Retrieve detailed information about a specific user."
+    description="Retrieve detailed information about a specific user.",
 )
 async def get_user(
     user_id: str,
     user: User = Depends(require_read_permission),
-    user_service = Depends(get_user_application_service)
+    user_service=Depends(get_user_application_service),
 ) -> Dict[str, Any]:
     """Get user details by ID."""
     try:
         # Use application service to get user
         result = user_service.get_user(user_id=user_id)
-        
+
         if result.success and result.user:
             user_data = result.user
             return format_success_response(
@@ -232,24 +247,32 @@ async def get_user(
                     "department": user_data.department,
                     "status": user_data.status,
                     "created_by": user_data.created_by,
-                    "created_at": user_data.created_at.isoformat() if user_data.created_at else None,
-                    "updated_at": user_data.updated_at.isoformat() if user_data.updated_at else None
+                    "created_at": (
+                        user_data.created_at.isoformat()
+                        if user_data.created_at
+                        else None
+                    ),
+                    "updated_at": (
+                        user_data.updated_at.isoformat()
+                        if user_data.updated_at
+                        else None
+                    ),
                 },
-                message="User retrieved successfully"
+                message="User retrieved successfully",
             )
         else:
             return format_error_response(
                 error_code="USER_NOT_FOUND",
                 message=result.error_message or "User not found",
-                details={"user_id": user_id}
+                details={"user_id": user_id},
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get user {user_id}: {str(e)}")
         return format_error_response(
             error_code="USER_RETRIEVAL_ERROR",
             message="Failed to retrieve user",
-            details={"error": str(e), "user_id": user_id}
+            details={"error": str(e), "user_id": user_id},
         )
 
 
@@ -257,13 +280,13 @@ async def get_user(
     "/{user_id}",
     response_model=Dict[str, Any],
     summary="Update user",
-    description="Update an existing user with new information."
+    description="Update an existing user with new information.",
 )
 async def update_user(
     user_id: str,
     request: UserUpdateRequest,
     user: User = Depends(require_write_permission),
-    user_service = Depends(get_user_application_service)
+    user_service=Depends(get_user_application_service),
 ) -> Dict[str, Any]:
     """Update user by ID."""
     try:
@@ -278,9 +301,9 @@ async def update_user(
             phone=request.phone,
             department=request.department,
             status=request.status,
-            updated_by=user.user_id
+            updated_by=user.user_id,
         )
-        
+
         # Use application service to update user
         result = user_service.update_user(
             user_id=user_id,
@@ -292,9 +315,9 @@ async def update_user(
             phone=update_request.phone,
             department=update_request.department,
             status=update_request.status,
-            updated_by=update_request.updated_by
+            updated_by=update_request.updated_by,
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -308,23 +331,27 @@ async def update_user(
                     "department": result.department,
                     "status": result.status,
                     "updated_by": result.updated_by,
-                    "updated_at": result.updated_at.isoformat() if result.updated_at else datetime.utcnow().isoformat()
+                    "updated_at": (
+                        result.updated_at.isoformat()
+                        if result.updated_at
+                        else datetime.utcnow().isoformat()
+                    ),
                 },
-                message="User updated successfully"
+                message="User updated successfully",
             )
         else:
             return format_error_response(
                 error_code="USER_UPDATE_ERROR",
                 message=result.error_message or "Failed to update user",
-                details={"error": result.error_message, "user_id": user_id}
+                details={"error": result.error_message, "user_id": user_id},
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to update user {user_id}: {str(e)}")
         return format_error_response(
             error_code="USER_UPDATE_ERROR",
             message="Failed to update user",
-            details={"error": str(e), "user_id": user_id}
+            details={"error": str(e), "user_id": user_id},
         )
 
 
@@ -332,43 +359,40 @@ async def update_user(
     "/{user_id}",
     response_model=Dict[str, Any],
     summary="Delete user",
-    description="Delete a user and all associated data."
+    description="Delete a user and all associated data.",
 )
 async def delete_user(
     user_id: str,
     user: User = Depends(require_write_permission),
-    user_service = Depends(get_user_application_service)
+    user_service=Depends(get_user_application_service),
 ) -> Dict[str, Any]:
     """Delete user by ID."""
     try:
         # Use application service to delete user
-        result = user_service.delete_user(
-            user_id=user_id,
-            deleted_by=user.user_id
-        )
-        
+        result = user_service.delete_user(user_id=user_id, deleted_by=user.user_id)
+
         if result.success:
             return format_success_response(
                 data={
                     "user_id": user_id,
                     "deleted_by": user.user_id,
-                    "deleted_at": datetime.utcnow().isoformat()
+                    "deleted_at": datetime.utcnow().isoformat(),
                 },
-                message="User deleted successfully"
+                message="User deleted successfully",
             )
         else:
             return format_error_response(
                 error_code="USER_DELETE_ERROR",
                 message=result.error_message or "Failed to delete user",
-                details={"error": result.error_message, "user_id": user_id}
+                details={"error": result.error_message, "user_id": user_id},
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to delete user {user_id}: {str(e)}")
         return format_error_response(
             error_code="USER_DELETE_ERROR",
             message="Failed to delete user",
-            details={"error": str(e), "user_id": user_id}
+            details={"error": str(e), "user_id": user_id},
         )
 
 
@@ -376,18 +400,18 @@ async def delete_user(
     "/{user_id}/statistics",
     response_model=Dict[str, Any],
     summary="Get user statistics",
-    description="Retrieve statistics and metrics for a specific user."
+    description="Retrieve statistics and metrics for a specific user.",
 )
 async def get_user_statistics(
     user_id: str,
     user: User = Depends(require_read_permission),
-    user_service = Depends(get_user_application_service)
+    user_service=Depends(get_user_application_service),
 ) -> Dict[str, Any]:
     """Get user statistics."""
     try:
         # Use application service to get user statistics
         result = user_service.get_user_statistics(user_id=user_id)
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -399,23 +423,23 @@ async def get_user_statistics(
                         "role_distribution": result.role_distribution,
                         "department_distribution": result.department_distribution,
                         "status_distribution": result.status_distribution,
-                        "recent_activity": result.recent_activity
+                        "recent_activity": result.recent_activity,
                     },
-                    "last_updated": datetime.utcnow().isoformat()
+                    "last_updated": datetime.utcnow().isoformat(),
                 },
-                message="User statistics retrieved successfully"
+                message="User statistics retrieved successfully",
             )
         else:
             return format_error_response(
                 error_code="USER_STATISTICS_ERROR",
                 message=result.error_message or "Failed to retrieve user statistics",
-                details={"error": result.error_message, "user_id": user_id}
+                details={"error": result.error_message, "user_id": user_id},
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get statistics for user {user_id}: {str(e)}")
         return format_error_response(
             error_code="USER_STATISTICS_ERROR",
             message="Failed to retrieve user statistics",
-            details={"error": str(e), "user_id": user_id}
-        ) 
+            details={"error": str(e), "user_id": user_id},
+        )

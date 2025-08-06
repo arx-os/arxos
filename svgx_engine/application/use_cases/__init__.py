@@ -10,7 +10,7 @@ from svgx_engine.application.use_cases.building_use_cases import (
     UpdateBuildingUseCase,
     GetBuildingUseCase,
     DeleteBuildingUseCase,
-    ListBuildingsUseCase
+    ListBuildingsUseCase,
 )
 
 # Version and metadata
@@ -21,7 +21,7 @@ __description__ = "Use cases for SVGX Engine"
 __all__ = [
     "CreateBuildingUseCase",
     "UpdateBuildingUseCase",
-    "GetBuildingUseCase", 
+    "GetBuildingUseCase",
     "DeleteBuildingUseCase",
-    "ListBuildingsUseCase"
-] 
+    "ListBuildingsUseCase",
+]

@@ -10,7 +10,7 @@ from .event_store import EventStoreService
 from .message_queue import MessageQueueService
 
 __all__ = [
-    'RedisCacheService',
-    'EventStoreService', 
-    'MessageQueueService',
-] 
+    "RedisCacheService",
+    "EventStoreService",
+    "MessageQueueService",
+]

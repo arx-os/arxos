@@ -19,20 +19,40 @@ from unittest.mock import Mock, patch, AsyncMock
 
 # Import notification services
 from svgx_engine.services.notifications.email_notification_service import (
-    EmailNotificationService, SMTPConfig, EmailMessage, EmailPriority, EmailStatus
+    EmailNotificationService,
+    SMTPConfig,
+    EmailMessage,
+    EmailPriority,
+    EmailStatus,
 )
 from svgx_engine.services.notifications.slack_notification_service import (
-    SlackNotificationService, SlackWebhookConfig, SlackMessage, SlackMessageType, SlackMessageStatus
+    SlackNotificationService,
+    SlackWebhookConfig,
+    SlackMessage,
+    SlackMessageType,
+    SlackMessageStatus,
 )
 from svgx_engine.services.notifications.sms_notification_service import (
-    SMSNotificationService, SMSProviderConfig, SMSMessage, SMSProvider, SMSMessageStatus
+    SMSNotificationService,
+    SMSProviderConfig,
+    SMSMessage,
+    SMSProvider,
+    SMSMessageStatus,
 )
 from svgx_engine.services.notifications.webhook_notification_service import (
-    WebhookNotificationService, WebhookConfig, WebhookMessage, WebhookMethod, WebhookStatus
+    WebhookNotificationService,
+    WebhookConfig,
+    WebhookMessage,
+    WebhookMethod,
+    WebhookStatus,
 )
 from svgx_engine.services.notifications.notification_system import (
-    UnifiedNotificationSystem, NotificationChannel, NotificationPriority, NotificationConfig,
-    NotificationResult, UnifiedNotification
+    UnifiedNotificationSystem,
+    NotificationChannel,
+    NotificationPriority,
+    NotificationConfig,
+    NotificationResult,
+    UnifiedNotification,
 )
 
 # Configure logging for tests
@@ -53,7 +73,7 @@ class TestEmailNotificationService(unittest.TestCase):
             password="test_password",
             use_tls=True,
             timeout=30,
-            max_retries=3
+            max_retries=3,
         )
 
     def test_email_service_initialization(self):
@@ -76,12 +96,12 @@ class TestEmailNotificationService(unittest.TestCase):
             to="recipient@example.com",
             subject="Test Subject",
             body="Test Body",
-            priority=EmailPriority.HIGH
+            priority=EmailPriority.HIGH,
         )
-        
+
         self.assertIsNotNone(message_id)
         self.assertIn(message_id, self.email_service.messages)
-        
+
         message = self.email_service.messages[message_id]
         self.assertEqual(message.to, "recipient@example.com")
         self.assertEqual(message.subject, "Test Subject")
@@ -96,54 +116,50 @@ class TestEmailNotificationService(unittest.TestCase):
             subject_template="Subject: {{title}}",
             body_template="Body: {{message}}",
             html_template="<h1>{{title}}</h1><p>{{message}}</p>",
-            variables=["title", "message"]
+            variables=["title", "message"],
         )
-        
+
         template = self.email_service.get_template("test_template")
         self.assertIsNotNone(template)
         self.assertEqual(template.name, "Test Template")
         self.assertEqual(template.subject_template, "Subject: {{title}}")
         self.assertEqual(template.variables, ["title", "message"])
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     async def test_send_email_success(self, mock_smtp):
         """Test successful email sending."""
         # Configure mock SMTP
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
-        
+
         # Configure service
         self.email_service.configure_smtp(self.smtp_config)
-        
+
         # Send email
         result = await self.email_service.send_email(
-            to="recipient@example.com",
-            subject="Test Subject",
-            body="Test Body"
+            to="recipient@example.com", subject="Test Subject", body="Test Body"
         )
-        
+
         # Verify result
         self.assertTrue(result.success)
         self.assertEqual(result.status, EmailStatus.SENT)
         self.assertIsNotNone(result.sent_at)
         self.assertEqual(self.email_service.statistics["successful_emails"], 1)
 
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     async def test_send_email_failure(self, mock_smtp):
         """Test email sending failure."""
         # Configure mock SMTP to raise exception
         mock_smtp.side_effect = Exception("SMTP connection failed")
-        
+
         # Configure service
         self.email_service.configure_smtp(self.smtp_config)
-        
+
         # Send email
         result = await self.email_service.send_email(
-            to="recipient@example.com",
-            subject="Test Subject",
-            body="Test Body"
+            to="recipient@example.com", subject="Test Subject", body="Test Body"
         )
-        
+
         # Verify result
         self.assertFalse(result.success)
         self.assertEqual(result.status, EmailStatus.FAILED)
@@ -180,7 +196,7 @@ class TestSlackNotificationService(unittest.TestCase):
             channel="#test",
             timeout=30,
             max_retries=3,
-            rate_limit_delay=1
+            rate_limit_delay=1,
         )
 
     def test_slack_service_initialization(self):
@@ -193,7 +209,10 @@ class TestSlackNotificationService(unittest.TestCase):
     def test_webhook_configuration(self):
         """Test webhook configuration."""
         self.slack_service.configure_webhook(self.webhook_config)
-        self.assertEqual(self.slack_service.webhook_config.webhook_url, "https://hooks.slack.com/services/test")
+        self.assertEqual(
+            self.slack_service.webhook_config.webhook_url,
+            "https://hooks.slack.com/services/test",
+        )
         self.assertEqual(self.slack_service.webhook_config.username, "Test Bot")
         self.assertEqual(self.slack_service.webhook_config.channel, "#test")
 
@@ -203,12 +222,12 @@ class TestSlackNotificationService(unittest.TestCase):
             text="Test message",
             channel="#test",
             username="Test Bot",
-            icon_emoji=":test:"
+            icon_emoji=":test:",
         )
-        
+
         self.assertIsNotNone(message_id)
         self.assertIn(message_id, self.slack_service.messages)
-        
+
         message = self.slack_service.messages[message_id]
         self.assertEqual(message.text, "Test message")
         self.assertEqual(message.channel, "#test")
@@ -221,9 +240,9 @@ class TestSlackNotificationService(unittest.TestCase):
             text="Test Text",
             color="good",
             fields=[{"title": "Field", "value": "Value", "short": True}],
-            footer="Test Footer"
+            footer="Test Footer",
         )
-        
+
         self.assertEqual(attachment["title"], "Test Title")
         self.assertEqual(attachment["text"], "Test Text")
         self.assertEqual(attachment["color"], "good")
@@ -234,15 +253,18 @@ class TestSlackNotificationService(unittest.TestCase):
         """Test Slack block section creation."""
         block = self.slack_service.create_block_section(
             text="Test section text",
-            accessory={"type": "button", "text": {"type": "plain_text", "text": "Click me"}}
+            accessory={
+                "type": "button",
+                "text": {"type": "plain_text", "text": "Click me"},
+            },
         )
-        
+
         self.assertEqual(block["type"], "section")
         self.assertEqual(block["text"]["type"], "mrkdwn")
         self.assertEqual(block["text"]["text"], "Test section text")
         self.assertIn("accessory", block)
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_slack_message_success(self, mock_session):
         """Test successful Slack message sending."""
         # Configure mock session
@@ -250,40 +272,38 @@ class TestSlackNotificationService(unittest.TestCase):
         mock_response.status = 200
         mock_response.__aenter__.return_value = mock_response
         mock_response.__aexit__.return_value = None
-        
+
         mock_session.return_value.__aenter__.return_value = mock_session.return_value
         mock_session.return_value.post.return_value = mock_response
-        
+
         # Configure service
         self.slack_service.configure_webhook(self.webhook_config)
-        
+
         # Send message
         result = await self.slack_service.send_message(
-            text="Test message",
-            channel="#test"
+            text="Test message", channel="#test"
         )
-        
+
         # Verify result
         self.assertTrue(result.success)
         self.assertEqual(result.status, SlackMessageStatus.SENT)
         self.assertIsNotNone(result.sent_at)
         self.assertEqual(self.slack_service.statistics["successful_messages"], 1)
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_slack_message_failure(self, mock_session):
         """Test Slack message sending failure."""
         # Configure mock session to raise exception
         mock_session.side_effect = Exception("Network error")
-        
+
         # Configure service
         self.slack_service.configure_webhook(self.webhook_config)
-        
+
         # Send message
         result = await self.slack_service.send_message(
-            text="Test message",
-            channel="#test"
+            text="Test message", channel="#test"
         )
-        
+
         # Verify result
         self.assertFalse(result.success)
         self.assertEqual(result.status, SlackMessageStatus.FAILED)
@@ -319,7 +339,7 @@ class TestSMSNotificationService(unittest.TestCase):
             from_number="+1234567890",
             timeout=30,
             max_retries=3,
-            rate_limit_delay=1
+            rate_limit_delay=1,
         )
 
     def test_sms_service_initialization(self):
@@ -339,20 +359,18 @@ class TestSMSNotificationService(unittest.TestCase):
     def test_create_sms_message(self):
         """Test SMS message creation."""
         message_id = self.sms_service.create_message(
-            to="+1987654321",
-            body="Test SMS message",
-            from_number="+1234567890"
+            to="+1987654321", body="Test SMS message", from_number="+1234567890"
         )
-        
+
         self.assertIsNotNone(message_id)
         self.assertIn(message_id, self.sms_service.messages)
-        
+
         message = self.sms_service.messages[message_id]
         self.assertEqual(message.to, "+1987654321")
         self.assertEqual(message.body, "Test SMS message")
         self.assertEqual(message.from_number, "+1234567890")
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_sms_twilio_success(self, mock_session):
         """Test successful SMS sending via Twilio."""
         # Configure mock session
@@ -361,26 +379,25 @@ class TestSMSNotificationService(unittest.TestCase):
         mock_response.json.return_value = {"sid": "test_sid"}
         mock_response.__aenter__.return_value = mock_response
         mock_response.__aexit__.return_value = None
-        
+
         mock_session.return_value.__aenter__.return_value = mock_session.return_value
         mock_session.return_value.post.return_value = mock_response
-        
+
         # Configure service
         self.sms_service.configure_provider(self.provider_config)
-        
+
         # Send message
         result = await self.sms_service.send_message(
-            to="+1987654321",
-            body="Test SMS message"
+            to="+1987654321", body="Test SMS message"
         )
-        
+
         # Verify result
         self.assertTrue(result.success)
         self.assertEqual(result.status, SMSMessageStatus.SENT)
         self.assertIsNotNone(result.sent_at)
         self.assertEqual(self.sms_service.statistics["successful_messages"], 1)
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_sms_aws_sns_success(self, mock_session):
         """Test successful SMS sending via AWS SNS."""
         # Configure mock session
@@ -388,10 +405,10 @@ class TestSMSNotificationService(unittest.TestCase):
         mock_response.status = 200
         mock_response.__aenter__.return_value = mock_response
         mock_response.__aexit__.return_value = None
-        
+
         mock_session.return_value.__aenter__.return_value = mock_session.return_value
         mock_session.return_value.post.return_value = mock_response
-        
+
         # Configure service for AWS SNS
         aws_config = SMSProviderConfig(
             provider=SMSProvider.AWS_SNS,
@@ -400,22 +417,21 @@ class TestSMSNotificationService(unittest.TestCase):
             from_number="+1234567890",
             timeout=30,
             max_retries=3,
-            rate_limit_delay=1
+            rate_limit_delay=1,
         )
         self.sms_service.configure_provider(aws_config)
-        
+
         # Send message
         result = await self.sms_service.send_message(
-            to="+1987654321",
-            body="Test SMS message"
+            to="+1987654321", body="Test SMS message"
         )
-        
+
         # Verify result
         self.assertTrue(result.success)
         self.assertEqual(result.status, SMSMessageStatus.SENT)
         self.assertIsNotNone(result.sent_at)
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_sms_custom_success(self, mock_session):
         """Test successful SMS sending via custom provider."""
         # Configure mock session
@@ -423,10 +439,10 @@ class TestSMSNotificationService(unittest.TestCase):
         mock_response.status = 200
         mock_response.__aenter__.return_value = mock_response
         mock_response.__aexit__.return_value = None
-        
+
         mock_session.return_value.__aenter__.return_value = mock_session.return_value
         mock_session.return_value.post.return_value = mock_response
-        
+
         # Configure service for custom provider
         custom_config = SMSProviderConfig(
             provider=SMSProvider.CUSTOM,
@@ -436,16 +452,15 @@ class TestSMSNotificationService(unittest.TestCase):
             webhook_url="https://api.custom-sms.com/send",
             timeout=30,
             max_retries=3,
-            rate_limit_delay=1
+            rate_limit_delay=1,
         )
         self.sms_service.configure_provider(custom_config)
-        
+
         # Send message
         result = await self.sms_service.send_message(
-            to="+1987654321",
-            body="Test SMS message"
+            to="+1987654321", body="Test SMS message"
         )
-        
+
         # Verify result
         self.assertTrue(result.success)
         self.assertEqual(result.status, SMSMessageStatus.SENT)
@@ -480,7 +495,7 @@ class TestWebhookNotificationService(unittest.TestCase):
             timeout=30,
             max_retries=3,
             rate_limit_delay=1,
-            auth_token="test_token"
+            auth_token="test_token",
         )
 
     def test_webhook_service_initialization(self):
@@ -493,7 +508,9 @@ class TestWebhookNotificationService(unittest.TestCase):
     def test_webhook_configuration(self):
         """Test webhook configuration."""
         self.webhook_service.configure_webhook(self.webhook_config)
-        self.assertEqual(self.webhook_service.webhook_config.url, "https://api.example.com/webhook")
+        self.assertEqual(
+            self.webhook_service.webhook_config.url, "https://api.example.com/webhook"
+        )
         self.assertEqual(self.webhook_service.webhook_config.method, WebhookMethod.POST)
         self.assertEqual(self.webhook_service.webhook_config.auth_token, "test_token")
 
@@ -504,12 +521,12 @@ class TestWebhookNotificationService(unittest.TestCase):
             url="https://api.example.com/webhook",
             payload=payload,
             method=WebhookMethod.POST,
-            headers={"Content-Type": "application/json"}
+            headers={"Content-Type": "application/json"},
         )
-        
+
         self.assertIsNotNone(message_id)
         self.assertIn(message_id, self.webhook_service.messages)
-        
+
         message = self.webhook_service.messages[message_id]
         self.assertEqual(message.url, "https://api.example.com/webhook")
         self.assertEqual(message.method, WebhookMethod.POST)
@@ -521,9 +538,9 @@ class TestWebhookNotificationService(unittest.TestCase):
             title="Test Title",
             message="Test Message",
             priority="high",
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
-        
+
         self.assertEqual(payload["title"], "Test Title")
         self.assertEqual(payload["message"], "Test Message")
         self.assertEqual(payload["priority"], "high")
@@ -531,7 +548,7 @@ class TestWebhookNotificationService(unittest.TestCase):
         self.assertEqual(payload["source"], "arxos")
         self.assertEqual(payload["version"], "1.0")
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_webhook_post_success(self, mock_session):
         """Test successful webhook sending via POST."""
         # Configure mock session
@@ -539,28 +556,28 @@ class TestWebhookNotificationService(unittest.TestCase):
         mock_response.status = 200
         mock_response.__aenter__.return_value = mock_response
         mock_response.__aexit__.return_value = None
-        
+
         mock_session.return_value.__aenter__.return_value = mock_session.return_value
         mock_session.return_value.post.return_value = mock_response
-        
+
         # Configure service
         self.webhook_service.configure_webhook(self.webhook_config)
-        
+
         # Send webhook
         payload = {"message": "Test webhook"}
         result = await self.webhook_service.send_webhook(
             url="https://api.example.com/webhook",
             payload=payload,
-            method=WebhookMethod.POST
+            method=WebhookMethod.POST,
         )
-        
+
         # Verify result
         self.assertTrue(result.success)
         self.assertEqual(result.status, WebhookStatus.SENT)
         self.assertIsNotNone(result.sent_at)
         self.assertEqual(self.webhook_service.statistics["successful_webhooks"], 1)
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_webhook_get_success(self, mock_session):
         """Test successful webhook sending via GET."""
         # Configure mock session
@@ -568,43 +585,43 @@ class TestWebhookNotificationService(unittest.TestCase):
         mock_response.status = 200
         mock_response.__aenter__.return_value = mock_response
         mock_response.__aexit__.return_value = None
-        
+
         mock_session.return_value.__aenter__.return_value = mock_session.return_value
         mock_session.return_value.get.return_value = mock_response
-        
+
         # Configure service
         self.webhook_service.configure_webhook(self.webhook_config)
-        
+
         # Send webhook
         payload = {"message": "Test webhook"}
         result = await self.webhook_service.send_webhook(
             url="https://api.example.com/webhook",
             payload=payload,
-            method=WebhookMethod.GET
+            method=WebhookMethod.GET,
         )
-        
+
         # Verify result
         self.assertTrue(result.success)
         self.assertEqual(result.status, WebhookStatus.SENT)
         self.assertIsNotNone(result.sent_at)
 
-    @patch('aiohttp.ClientSession')
+    @patch("aiohttp.ClientSession")
     async def test_send_webhook_failure(self, mock_session):
         """Test webhook sending failure."""
         # Configure mock session to raise exception
         mock_session.side_effect = Exception("Network error")
-        
+
         # Configure service
         self.webhook_service.configure_webhook(self.webhook_config)
-        
+
         # Send webhook
         payload = {"message": "Test webhook"}
         result = await self.webhook_service.send_webhook(
             url="https://api.example.com/webhook",
             payload=payload,
-            method=WebhookMethod.POST
+            method=WebhookMethod.POST,
         )
-        
+
         # Verify result
         self.assertFalse(result.success)
         self.assertEqual(result.status, WebhookStatus.FAILED)
@@ -649,9 +666,9 @@ class TestUnifiedNotificationSystem(unittest.TestCase):
             message="Test Message",
             channels=[NotificationChannel.EMAIL, NotificationChannel.SLACK],
             priority=NotificationPriority.HIGH,
-            template_data={"key": "value"}
+            template_data={"key": "value"},
         )
-        
+
         self.assertIsNotNone(notification)
         self.assertEqual(notification.title, "Test Title")
         self.assertEqual(notification.message, "Test Message")
@@ -659,8 +676,8 @@ class TestUnifiedNotificationSystem(unittest.TestCase):
         self.assertEqual(notification.priority, NotificationPriority.HIGH)
         self.assertEqual(notification.template_data["key"], "value")
 
-    @patch.object(UnifiedNotificationSystem, '_send_email')
-    @patch.object(UnifiedNotificationSystem, '_send_slack')
+    @patch.object(UnifiedNotificationSystem, "_send_email")
+    @patch.object(UnifiedNotificationSystem, "_send_slack")
     async def test_send_notification_success(self, mock_send_slack, mock_send_email):
         """Test successful notification sending."""
         # Configure mocks
@@ -669,26 +686,28 @@ class TestUnifiedNotificationSystem(unittest.TestCase):
             notification_id="test_id",
             channel=NotificationChannel.EMAIL,
             status=NotificationStatus.SENT,
-            sent_at=datetime.now()
+            sent_at=datetime.now(),
         )
         mock_send_slack.return_value = NotificationResult(
             success=True,
             notification_id="test_id",
             channel=NotificationChannel.SLACK,
             status=NotificationStatus.SENT,
-            sent_at=datetime.now()
+            sent_at=datetime.now(),
         )
-        
+
         # Create and send notification
         notification = self.unified_system.create_notification(
             title="Test Title",
             message="Test Message",
             channels=[NotificationChannel.EMAIL, NotificationChannel.SLACK],
-            priority=NotificationPriority.HIGH
+            priority=NotificationPriority.HIGH,
         )
-        
-        results = await self.unified_system.send_notification(notification.notification_id)
-        
+
+        results = await self.unified_system.send_notification(
+            notification.notification_id
+        )
+
         # Verify results
         self.assertEqual(len(results), 2)
         self.assertTrue(all(result.success for result in results))
@@ -723,31 +742,30 @@ class TestNotificationSystemIntegration(unittest.TestCase):
             port=587,
             username="test@arxos.com",
             password="test_password",
-            use_tls=True
+            use_tls=True,
         )
         self.email_service.configure_smtp(smtp_config)
-        
+
         webhook_config = SlackWebhookConfig(
             webhook_url="https://hooks.slack.com/services/test",
             username="Test Bot",
-            channel="#test"
+            channel="#test",
         )
         self.slack_service.configure_webhook(webhook_config)
-        
+
         provider_config = SMSProviderConfig(
             provider=SMSProvider.TWILIO,
             api_key="test_sid",
             api_secret="test_token",
-            from_number="+1234567890"
+            from_number="+1234567890",
         )
         self.sms_service.configure_provider(provider_config)
-        
+
         webhook_config_webhook = WebhookConfig(
-            url="https://api.example.com/webhook",
-            method=WebhookMethod.POST
+            url="https://api.example.com/webhook", method=WebhookMethod.POST
         )
         self.webhook_service.configure_webhook(webhook_config_webhook)
-        
+
         # Verify all services are configured
         self.assertIsNotNone(self.email_service.smtp_config)
         self.assertIsNotNone(self.slack_service.webhook_config)
@@ -761,15 +779,15 @@ class TestNotificationSystemIntegration(unittest.TestCase):
             title="Integration Test",
             message="This is an integration test",
             channels=[NotificationChannel.EMAIL, NotificationChannel.SLACK],
-            priority=NotificationPriority.NORMAL
+            priority=NotificationPriority.NORMAL,
         )
-        
+
         # Verify notification creation
         self.assertIsNotNone(notification)
         self.assertEqual(notification.title, "Integration Test")
         self.assertEqual(notification.message, "This is an integration test")
         self.assertEqual(len(notification.channels), 2)
-        
+
         # Verify notification is stored
         self.assertIn(notification.notification_id, self.unified_system.notifications)
 
@@ -778,15 +796,15 @@ class TestNotificationSystemIntegration(unittest.TestCase):
         # Test email service error handling
         with self.assertRaises(ValueError):
             self.email_service.send_message_by_id("nonexistent_id")
-        
+
         # Test Slack service error handling
         with self.assertRaises(ValueError):
             self.slack_service.send_message_by_id("nonexistent_id")
-        
+
         # Test SMS service error handling
         with self.assertRaises(ValueError):
             self.sms_service.send_message_by_id("nonexistent_id")
-        
+
         # Test webhook service error handling
         with self.assertRaises(ValueError):
             self.webhook_service.send_webhook_by_id("nonexistent_id")
@@ -795,32 +813,23 @@ class TestNotificationSystemIntegration(unittest.TestCase):
         """Test statistics aggregation across all services."""
         # Create test messages in all services
         self.email_service.create_email_message(
-            to="test@example.com",
-            subject="Test",
-            body="Test"
+            to="test@example.com", subject="Test", body="Test"
         )
-        
-        self.slack_service.create_message(
-            text="Test message",
-            channel="#test"
-        )
-        
-        self.sms_service.create_message(
-            to="+1234567890",
-            body="Test SMS"
-        )
-        
+
+        self.slack_service.create_message(text="Test message", channel="#test")
+
+        self.sms_service.create_message(to="+1234567890", body="Test SMS")
+
         self.webhook_service.create_webhook_message(
-            url="https://api.example.com/webhook",
-            payload={"test": "data"}
+            url="https://api.example.com/webhook", payload={"test": "data"}
         )
-        
+
         # Verify statistics
         email_stats = self.email_service.get_email_statistics()
         slack_stats = self.slack_service.get_slack_statistics()
         sms_stats = self.sms_service.get_sms_statistics()
         webhook_stats = self.webhook_service.get_webhook_statistics()
-        
+
         self.assertEqual(email_stats["total_emails"], 1)
         self.assertEqual(slack_stats["total_messages"], 1)
         self.assertEqual(sms_stats["total_messages"], 1)
@@ -831,7 +840,7 @@ def run_notification_tests():
     """Run all notification system tests."""
     # Create test suite
     test_suite = unittest.TestSuite()
-    
+
     # Add test classes
     test_classes = [
         TestEmailNotificationService,
@@ -839,17 +848,17 @@ def run_notification_tests():
         TestSMSNotificationService,
         TestWebhookNotificationService,
         TestUnifiedNotificationSystem,
-        TestNotificationSystemIntegration
+        TestNotificationSystemIntegration,
     ]
-    
+
     for test_class in test_classes:
         tests = unittest.TestLoader().loadTestsFromTestCase(test_class)
         test_suite.addTests(tests)
-    
+
     # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(test_suite)
-    
+
     # Print summary
     print(f"\n{'='*60}")
     print(f"NOTIFICATION SYSTEM TEST SUMMARY")
@@ -857,24 +866,26 @@ def run_notification_tests():
     print(f"Tests run: {result.testsRun}")
     print(f"Failures: {len(result.failures)}")
     print(f"Errors: {len(result.errors)}")
-    print(f"Success rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%")
-    
+    print(
+        f"Success rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%"
+    )
+
     if result.failures:
         print(f"\nFAILURES:")
         for test, traceback in result.failures:
             print(f"- {test}: {traceback}")
-    
+
     if result.errors:
         print(f"\nERRORS:")
         for test, traceback in result.errors:
             print(f"- {test}: {traceback}")
-    
+
     return result.wasSuccessful()
 
 
 if __name__ == "__main__":
     # Run tests
     success = run_notification_tests()
-    
+
     # Exit with appropriate code
-    exit(0 if success else 1) 
+    exit(0 if success else 1)

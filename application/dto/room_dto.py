@@ -13,7 +13,7 @@ from datetime import datetime
 @dataclass
 class CreateRoomRequest:
     """Request DTO for creating a room."""
-    
+
     floor_id: str
     room_number: str
     room_type: str
@@ -25,7 +25,7 @@ class CreateRoomRequest:
 @dataclass
 class CreateRoomResponse:
     """Response DTO for room creation."""
-    
+
     success: bool
     room_id: Optional[str] = None
     message: Optional[str] = None
@@ -36,7 +36,7 @@ class CreateRoomResponse:
 @dataclass
 class UpdateRoomRequest:
     """Request DTO for updating a room."""
-    
+
     room_id: str
     room_number: Optional[str] = None
     room_type: Optional[str] = None
@@ -49,7 +49,7 @@ class UpdateRoomRequest:
 @dataclass
 class UpdateRoomResponse:
     """Response DTO for room updates."""
-    
+
     success: bool
     room_id: Optional[str] = None
     message: Optional[str] = None
@@ -60,7 +60,7 @@ class UpdateRoomResponse:
 @dataclass
 class GetRoomResponse:
     """Response DTO for getting a room."""
-    
+
     success: bool
     room: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
@@ -69,7 +69,7 @@ class GetRoomResponse:
 @dataclass
 class ListRoomsResponse:
     """Response DTO for listing rooms."""
-    
+
     success: bool
     rooms: List[Dict[str, Any]] = None
     total_count: int = 0
@@ -81,9 +81,9 @@ class ListRoomsResponse:
 @dataclass
 class DeleteRoomResponse:
     """Response DTO for deleting a room."""
-    
+
     success: bool
     room_id: Optional[str] = None
     message: Optional[str] = None
     error_message: Optional[str] = None
-    deleted_at: Optional[datetime] = None 
+    deleted_at: Optional[datetime] = None

@@ -7,7 +7,8 @@ persistence, external APIs, and technical concerns.
 """
 
 from svgx_engine.infrastructure.repositories import (
-    PostgresBuildingRepository, InMemoryBuildingRepository
+    PostgresBuildingRepository,
+    InMemoryBuildingRepository,
 )
 
 # Version and metadata
@@ -17,8 +18,8 @@ __description__ = "Infrastructure layer for SVGX Engine"
 # Export all infrastructure components
 __all__ = [
     # Repository Implementations
-    "InMemoryBuildingRepository", "PostgreSQLBuildingRepository",
-    
+    "InMemoryBuildingRepository",
+    "PostgreSQLBuildingRepository",
     # Container
-    "container"
-] 
+    "container",
+]

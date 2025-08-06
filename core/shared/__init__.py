@@ -27,9 +27,9 @@ from . import config
 
 __all__ = [
     "date_utils",
-    "object_utils", 
+    "object_utils",
     "request_utils",
     "handlers",
     "models",
-    "config"
-] 
+    "config",
+]

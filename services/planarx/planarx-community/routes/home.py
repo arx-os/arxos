@@ -42,6 +42,7 @@ engagement_service = EngagementService()
 
 # Pydantic Models for API
 
+
 class HomepageStats(BaseModel):
     total_projects: int = Field(..., description="Total number of projects")
     active_projects: int = Field(..., description="Number of active projects")
@@ -49,8 +50,12 @@ class HomepageStats(BaseModel):
     total_funding_raised: float = Field(..., description="Total funding raised")
     projects_this_month: int = Field(..., description="Projects created this month")
     top_contributors: List[Dict[str, Any]] = Field(..., description="Top contributors")
-    trending_projects: List[Dict[str, Any]] = Field(..., description="Trending projects")
-    featured_projects: List[Dict[str, Any]] = Field(..., description="Featured projects")
+    trending_projects: List[Dict[str, Any]] = Field(
+        ..., description="Trending projects"
+    )
+    featured_projects: List[Dict[str, Any]] = Field(
+        ..., description="Featured projects"
+    )
 
 
 class ProjectSearchParams(BaseModel):
@@ -73,6 +78,7 @@ class ProjectDiscoveryResponse(BaseModel):
 
 # Homepage Routes
 
+
 @router.get("/", response_class=HTMLResponse)
 async def homepage():
     """Render the main homepage."""
@@ -82,15 +88,15 @@ async def homepage():
         featured_projects = await get_featured_projects()
         trending_projects = await get_trending_projects()
         recent_projects = await get_recent_projects()
-        
+
         # Render homepage template
         return render_homepage_template(
             stats=stats,
             featured_projects=featured_projects,
             trending_projects=trending_projects,
-            recent_projects=recent_projects
+            recent_projects=recent_projects,
         )
-        
+
     except Exception as e:
         logger.error(f"Error rendering homepage: {e}")
         raise HTTPException(status_code=500, detail="Failed to load homepage")
@@ -106,16 +112,16 @@ async def get_homepage_stats():
         total_users = await user_service.get_total_users()
         total_funding = await project_service.get_total_funding_raised()
         projects_this_month = await project_service.get_projects_this_month()
-        
+
         # Get top contributors
         top_contributors = await reputation_service.get_top_contributors(limit=10)
-        
+
         # Get trending projects
         trending_projects = await project_service.get_trending_projects(limit=6)
-        
+
         # Get featured projects
         featured_projects = await project_service.get_featured_projects(limit=6)
-        
+
         return HomepageStats(
             total_projects=total_projects,
             active_projects=active_projects,
@@ -124,9 +130,9 @@ async def get_homepage_stats():
             projects_this_month=projects_this_month,
             top_contributors=top_contributors,
             trending_projects=trending_projects,
-            featured_projects=featured_projects
+            featured_projects=featured_projects,
         )
-        
+
     except Exception as e:
         logger.error(f"Error getting homepage stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to get homepage stats")
@@ -142,13 +148,13 @@ async def discover_projects(
     sort_by: str = Query("created_at", description="Sort field"),
     sort_order: str = Query("desc", description="Sort order"),
     page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(12, ge=1, le=50, description="Page size")
+    page_size: int = Query(12, ge=1, le=50, description="Page size"),
 ):
     """Discover and browse projects with filtering and pagination."""
     try:
         # Parse tags
         tag_list = tags.split(",") if tags else None
-        
+
         # Build search parameters
         search_params = ProjectSearchParams(
             category=category,
@@ -157,28 +163,28 @@ async def discover_projects(
             funding_max=funding_max,
             tags=tag_list,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
         )
-        
+
         # Get pagination parameters
         pagination = PaginationParams(page=page, page_size=page_size)
-        
+
         # Search projects
         projects, total_count = await project_service.search_projects(
             search_params, pagination
         )
-        
+
         # Calculate total pages
         total_pages = (total_count + page_size - 1) // page_size
-        
+
         return ProjectDiscoveryResponse(
             projects=projects,
             total_count=total_count,
             page=page,
             page_size=page_size,
-            total_pages=total_pages
+            total_pages=total_pages,
         )
-        
+
     except Exception as e:
         logger.error(f"Error discovering projects: {e}")
         raise HTTPException(status_code=500, detail="Failed to discover projects")
@@ -190,7 +196,7 @@ async def get_featured_projects():
     try:
         featured_projects = await project_service.get_featured_projects(limit=6)
         return {"featured_projects": featured_projects}
-        
+
     except Exception as e:
         logger.error(f"Error getting featured projects: {e}")
         raise HTTPException(status_code=500, detail="Failed to get featured projects")
@@ -202,7 +208,7 @@ async def get_trending_projects():
     try:
         trending_projects = await project_service.get_trending_projects(limit=6)
         return {"trending_projects": trending_projects}
-        
+
     except Exception as e:
         logger.error(f"Error getting trending projects: {e}")
         raise HTTPException(status_code=500, detail="Failed to get trending projects")
@@ -214,7 +220,7 @@ async def get_recent_projects():
     try:
         recent_projects = await project_service.get_recent_projects(limit=8)
         return {"recent_projects": recent_projects}
-        
+
     except Exception as e:
         logger.error(f"Error getting recent projects: {e}")
         raise HTTPException(status_code=500, detail="Failed to get recent projects")
@@ -226,7 +232,7 @@ async def get_project_categories():
     try:
         categories = await project_service.get_project_categories()
         return {"categories": categories}
-        
+
     except Exception as e:
         logger.error(f"Error getting project categories: {e}")
         raise HTTPException(status_code=500, detail="Failed to get project categories")
@@ -238,7 +244,7 @@ async def get_popular_tags():
     try:
         popular_tags = await project_service.get_popular_tags(limit=20)
         return {"popular_tags": popular_tags}
-        
+
     except Exception as e:
         logger.error(f"Error getting popular tags: {e}")
         raise HTTPException(status_code=500, detail="Failed to get popular tags")
@@ -248,36 +254,37 @@ async def get_popular_tags():
 async def search_projects(
     q: str = Query(..., description="Search query"),
     page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(12, ge=1, le=50, description="Page size")
+    page_size: int = Query(12, ge=1, le=50, description="Page size"),
 ):
     """Search projects by title, description, and tags."""
     try:
         # Get pagination parameters
         pagination = PaginationParams(page=page, page_size=page_size)
-        
+
         # Search projects
         projects, total_count = await project_service.search_projects_by_text(
             q, pagination
         )
-        
+
         # Calculate total pages
         total_pages = (total_count + page_size - 1) // page_size
-        
+
         return {
             "projects": projects,
             "total_count": total_count,
             "page": page,
             "page_size": page_size,
             "total_pages": total_pages,
-            "query": q
+            "query": q,
         }
-        
+
     except Exception as e:
         logger.error(f"Error searching projects: {e}")
         raise HTTPException(status_code=500, detail="Failed to search projects")
 
 
 # Helper Functions
+
 
 async def get_homepage_stats() -> Dict[str, Any]:
     """Get homepage statistics."""
@@ -288,15 +295,15 @@ async def get_homepage_stats() -> Dict[str, Any]:
         total_users = await user_service.get_total_users()
         total_funding = await project_service.get_total_funding_raised()
         projects_this_month = await project_service.get_projects_this_month()
-        
+
         return {
             "total_projects": total_projects,
             "active_projects": active_projects,
             "total_users": total_users,
             "total_funding_raised": total_funding,
-            "projects_this_month": projects_this_month
+            "projects_this_month": projects_this_month,
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting homepage stats: {e}")
         return {
@@ -304,7 +311,7 @@ async def get_homepage_stats() -> Dict[str, Any]:
             "active_projects": 0,
             "total_users": 0,
             "total_funding_raised": 0.0,
-            "projects_this_month": 0
+            "projects_this_month": 0,
         }
 
 
@@ -339,7 +346,7 @@ def render_homepage_template(
     stats: Dict[str, Any],
     featured_projects: List[Dict[str, Any]],
     trending_projects: List[Dict[str, Any]],
-    recent_projects: List[Dict[str, Any]]
+    recent_projects: List[Dict[str, Any]],
 ) -> str:
     """Render the homepage HTML template."""
     # This would typically use a template engine like Jinja2
@@ -485,10 +492,11 @@ def render_project_cards(projects: List[Dict[str, Any]]) -> str:
     """Render project cards HTML."""
     if not projects:
         return '<div class="col-span-full text-center text-gray-500">No projects found</div>'
-    
+
     cards = []
     for project in projects:
-        cards.append(f"""
+        cards.append(
+            f"""
         <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
             <div class="aspect-w-16 aspect-h-9 bg-gray-200">
                 <img src="{project.get('image_url', '/static/placeholder.jpg')}" alt="{project.get('title', 'Project')}" class="w-full h-full object-cover">
@@ -502,9 +510,10 @@ def render_project_cards(projects: List[Dict[str, Any]]) -> str:
                 </div>
             </div>
         </div>
-        """)
-    
-    return ''.join(cards)
+        """
+        )
+
+    return "".join(cards)
 
 
 # Error handling middleware
@@ -517,6 +526,6 @@ async def homepage_exception_handler(request, exc):
         content={
             "status": "error",
             "message": "Internal server error in homepage",
-            "timestamp": datetime.now().isoformat()
-        }
-    ) 
+            "timestamp": datetime.now().isoformat(),
+        },
+    )

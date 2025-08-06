@@ -1,0 +1,555 @@
+{
+  "mcp_performance": {
+    "dashboard": {
+      "id": null,
+      "title": "MCP Performance Dashboard",
+      "tags": [
+        "mcp",
+        "performance",
+        "monitoring"
+      ],
+      "style": "dark",
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "title": "API Response Time",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, rate(mcp_api_request_duration_seconds_bucket[5m]))",
+              "legendFormat": "95th Percentile"
+            },
+            {
+              "expr": "histogram_quantile(0.50, rate(mcp_api_request_duration_seconds_bucket[5m]))",
+              "legendFormat": "50th Percentile"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "s",
+              "min": 0
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "id": 2,
+          "title": "API Request Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_api_requests_total[5m])",
+              "legendFormat": "Requests/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "reqps"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          }
+        },
+        {
+          "id": 3,
+          "title": "Validation Duration",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, rate(mcp_validation_duration_seconds_bucket[5m]))",
+              "legendFormat": "95th Percentile"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "s"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 8
+          }
+        },
+        {
+          "id": 4,
+          "title": "Cache Hit Ratio",
+          "type": "gauge",
+          "targets": [
+            {
+              "expr": "mcp_cache_hit_ratio",
+              "legendFormat": "Hit Ratio"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 70
+                  },
+                  {
+                    "color": "green",
+                    "value": 90
+                  }
+                ]
+              }
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 8
+          }
+        }
+      ]
+    }
+  },
+  "mcp_validation": {
+    "dashboard": {
+      "id": null,
+      "title": "MCP Validation Dashboard",
+      "tags": [
+        "mcp",
+        "validation",
+        "compliance"
+      ],
+      "style": "dark",
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Validation Requests",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_validation_requests_total[5m])",
+              "legendFormat": "Requests/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "reqps"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "id": 2,
+          "title": "Violations Found",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_violations_found_total[5m])",
+              "legendFormat": "Violations/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          }
+        },
+        {
+          "id": 3,
+          "title": "Compliance Scores",
+          "type": "heatmap",
+          "targets": [
+            {
+              "expr": "mcp_compliance_scores",
+              "legendFormat": "Compliance Score"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 8
+          }
+        },
+        {
+          "id": 4,
+          "title": "Rules Checked",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "sum(rate(mcp_rules_checked_total[5m]))",
+              "legendFormat": "Rules/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 16
+          }
+        },
+        {
+          "id": 5,
+          "title": "Warnings Found",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_warnings_found_total[5m])",
+              "legendFormat": "Warnings/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          }
+        }
+      ]
+    }
+  },
+  "mcp_business": {
+    "dashboard": {
+      "id": null,
+      "title": "MCP Business Intelligence",
+      "tags": [
+        "mcp",
+        "business",
+        "analytics"
+      ],
+      "style": "dark",
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Active Users",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "sum(mcp_active_users)",
+              "legendFormat": "Active Users"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "id": 2,
+          "title": "Login Success Rate",
+          "type": "gauge",
+          "targets": [
+            {
+              "expr": "rate(mcp_login_attempts_total{result=\"success\"}[5m]) / rate(mcp_login_attempts_total[5m]) * 100",
+              "legendFormat": "Success Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 80
+                  },
+                  {
+                    "color": "green",
+                    "value": 95
+                  }
+                ]
+              }
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 6,
+            "y": 0
+          }
+        },
+        {
+          "id": 3,
+          "title": "Jurisdiction Matches",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_jurisdiction_matches_total[5m])",
+              "legendFormat": "Matches/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 0
+          }
+        },
+        {
+          "id": 4,
+          "title": "MCP Files Loaded",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_files_loaded_total[5m])",
+              "legendFormat": "Files/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 8
+          }
+        }
+      ]
+    }
+  },
+  "mcp_system": {
+    "dashboard": {
+      "id": null,
+      "title": "MCP System Health",
+      "tags": [
+        "mcp",
+        "system",
+        "health"
+      ],
+      "style": "dark",
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "title": "System Uptime",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "mcp_system_uptime_seconds",
+              "legendFormat": "Uptime"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "s"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "id": 2,
+          "title": "Memory Usage",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "mcp_system_memory_bytes",
+              "legendFormat": "Memory Usage"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "bytes"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 6,
+            "y": 0
+          }
+        },
+        {
+          "id": 3,
+          "title": "CPU Usage",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "mcp_system_cpu_percent",
+              "legendFormat": "CPU Usage"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "percent"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 6,
+            "x": 18,
+            "y": 0
+          }
+        },
+        {
+          "id": 4,
+          "title": "Error Rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_errors_total[5m])",
+              "legendFormat": "Errors/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 8
+          }
+        },
+        {
+          "id": 5,
+          "title": "WebSocket Connections",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(mcp_websocket_connections_total[5m])",
+              "legendFormat": "Connections/sec"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "unit": "short"
+            }
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 8
+          }
+        }
+      ]
+    }
+  }
+}

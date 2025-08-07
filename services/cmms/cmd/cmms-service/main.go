@@ -8,11 +8,12 @@
 package main
 
 import (
-	"arx-cmms/pkg/cmms"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/arx-os/cmms/pkg/cmms"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"

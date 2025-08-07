@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"arx-cmms/pkg/models"
+	"github.com/arx-os/cmms/pkg/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -308,4 +308,4 @@ func TestGetSyncLogs(t *testing.T) {
 	if len(logs) != 2 {
 		t.Errorf("Expected 2 sync logs, got %d", len(logs))
 	}
-} 
+}

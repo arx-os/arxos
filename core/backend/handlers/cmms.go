@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"arx-cmms/pkg/cmms"
-	"arx-cmms/pkg/models"
+	"arx/cmms"
+	"arx/models"
 
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"

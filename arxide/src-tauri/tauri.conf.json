@@ -1,7 +1,7 @@
 {
   "build": {
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:frontend",
     "devPath": "http://localhost:1420",
     "distDir": "../dist",
     "withGlobalTauri": false
@@ -61,4 +61,4 @@
       }
     ]
   }
-} 
+}

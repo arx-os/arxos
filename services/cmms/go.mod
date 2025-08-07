@@ -1,4 +1,4 @@
-module arx-cmms
+module github.com/arx-os/cmms
 
 go 1.21
 

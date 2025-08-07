@@ -23,31 +23,31 @@ import (
 
 var (
 	DB *gorm.DB
-	
+
 	// Connection pool statistics
 	poolStats struct {
 		sync.RWMutex
-		MaxOpenConnections     int           `json:"max_open_connections"`
-		OpenConnections        int           `json:"open_connections"`
-		InUseConnections       int           `json:"in_use_connections"`
-		IdleConnections        int           `json:"idle_connections"`
-		WaitCount              int64         `json:"wait_count"`
-		WaitDuration           time.Duration `json:"wait_duration"`
-		MaxIdleClosed          int64         `json:"max_idle_closed"`
-		MaxLifetimeClosed      int64         `json:"max_lifetime_closed"`
-		LastStatsUpdate        time.Time     `json:"last_stats_update"`
+		MaxOpenConnections int           `json:"max_open_connections"`
+		OpenConnections    int           `json:"open_connections"`
+		InUseConnections   int           `json:"in_use_connections"`
+		IdleConnections    int           `json:"idle_connections"`
+		WaitCount          int64         `json:"wait_count"`
+		WaitDuration       time.Duration `json:"wait_duration"`
+		MaxIdleClosed      int64         `json:"max_idle_closed"`
+		MaxLifetimeClosed  int64         `json:"max_lifetime_closed"`
+		LastStatsUpdate    time.Time     `json:"last_stats_update"`
 	}
-	
+
 	// Configuration
 	config struct {
-		MaxOpenConns        int           `json:"max_open_conns"`
-		MaxIdleConns        int           `json:"max_idle_conns"`
-		ConnMaxLifetime     time.Duration `json:"conn_max_lifetime"`
-		ConnMaxIdleTime     time.Duration `json:"conn_max_idle_time"`
-		PrepareStmt         bool          `json:"prepare_stmt"`
-		SlowThreshold       time.Duration `json:"slow_threshold"`
-		LogLevel            logger.LogLevel `json:"log_level"`
-		EnableMetrics       bool          `json:"enable_metrics"`
+		MaxOpenConns    int             `json:"max_open_conns"`
+		MaxIdleConns    int             `json:"max_idle_conns"`
+		ConnMaxLifetime time.Duration   `json:"conn_max_lifetime"`
+		ConnMaxIdleTime time.Duration   `json:"conn_max_idle_time"`
+		PrepareStmt     bool            `json:"prepare_stmt"`
+		SlowThreshold   time.Duration   `json:"slow_threshold"`
+		LogLevel        logger.LogLevel `json:"log_level"`
+		EnableMetrics   bool            `json:"enable_metrics"`
 	}
 )
 
@@ -55,7 +55,7 @@ var (
 func Connect() {
 	// Load environment variables
 	viper.AutomaticEnv()
-	
+
 	// Get database configuration
 	dsn := viper.GetString("DATABASE_URL")
 	if dsn == "" {
@@ -214,16 +214,16 @@ func monitorConnectionPool(sqlDB *sql.DB) {
 		select {
 		case <-ticker.C:
 			updatePoolStats(sqlDB)
-			
+
 			// Log warnings for high connection usage
 			stats := sqlDB.Stats()
 			usagePercent := float64(stats.InUse) / float64(stats.MaxOpenConnections) * 100
-			
+
 			if usagePercent > 80 {
 				log.Printf("⚠️  High connection pool usage: %.1f%% (%d/%d connections in use)",
 					usagePercent, stats.InUse, stats.MaxOpenConnections)
 			}
-			
+
 			if stats.WaitCount > 0 {
 				log.Printf("⚠️  Connection pool wait detected: %d waits, total duration: %v",
 					stats.WaitCount, stats.WaitDuration)
@@ -286,10 +286,8 @@ func Migrate() {
 		log.Fatal("Database connection is not initialized")
 	}
 
-	// Disable foreign key constraints during migration for better performance
-	err := DB.Session(&gorm.Session{
-		DisableForeignKeyConstraintWhenMigrating: true,
-	}).AutoMigrate(
+	// Run database migrations
+	err := DB.AutoMigrate(
 		&models.User{},
 		&models.Project{},
 		&models.Drawing{},
@@ -393,8 +391,8 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  "unhealthy",
-			"error":   err.Error(),
+			"status":     "unhealthy",
+			"error":      err.Error(),
 			"pool_stats": GetPoolStats(),
 		})
 		return

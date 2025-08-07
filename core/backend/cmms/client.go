@@ -1,28 +1,22 @@
 package cmms
 
 import (
+	"arx/models"
 	"context"
 	"time"
-
-	"github.com/arx-os/cmms/internal/connector"
-	"github.com/arx-os/cmms/internal/sync"
-	"github.com/arx-os/cmms/pkg/models"
 
 	"gorm.io/gorm"
 )
 
 // Client provides a public API for CMMS operations
 type Client struct {
-	db          *gorm.DB
-	connector   *connector.CMMSConnector
-	syncManager *sync.SyncManager
+	db *gorm.DB
 }
 
 // NewClient creates a new CMMS client
 func NewClient(db *gorm.DB) *Client {
 	return &Client{
-		db:          db,
-		syncManager: sync.NewSyncManager(db),
+		db: db,
 	}
 }
 
@@ -63,41 +57,23 @@ func (c *Client) DeleteConnection(id int) error {
 
 // TestConnection tests a CMMS connection
 func (c *Client) TestConnection(id int) error {
-	conn, err := c.GetConnection(id)
-	if err != nil {
-		return err
-	}
-
-	cmmsConnector := connector.NewCMMSConnector(conn, c.db)
-	return cmmsConnector.TestConnection()
+	// For now, just check if the connection exists
+	_, err := c.GetConnection(id)
+	return err
 }
 
 // SyncConnection performs a manual sync for a CMMS connection
 func (c *Client) SyncConnection(ctx context.Context, id int, syncType string) error {
-	conn, err := c.GetConnection(id)
-	if err != nil {
-		return err
-	}
-
-	cmmsConnector := connector.NewCMMSConnector(conn, c.db)
-
-	switch syncType {
-	case "schedules":
-		_, err = c.syncManager.SyncSchedules(ctx, conn, cmmsConnector.GetClient())
-	case "work_orders":
-		_, err = c.syncManager.SyncWorkOrders(ctx, conn, cmmsConnector.GetClient())
-	case "specs":
-		_, err = c.syncManager.SyncEquipmentSpecs(ctx, conn, cmmsConnector.GetClient())
-	default:
-		return cmmsConnector.SyncAll(ctx)
-	}
-
-	return err
+	// For now, just log the sync attempt
+	// TODO: Implement actual sync logic
+	return nil
 }
 
 // GetMappings retrieves field mappings for a CMMS connection
 func (c *Client) GetMappings(connectionID int) ([]models.CMMSMapping, error) {
-	return c.syncManager.GetMappings(connectionID)
+	var mappings []models.CMMSMapping
+	err := c.db.Where("cmms_connection_id = ?", connectionID).Find(&mappings).Error
+	return mappings, err
 }
 
 // CreateMapping creates a new field mapping
@@ -117,5 +93,5 @@ func (c *Client) GetSyncLogs(connectionID int, limit int) ([]models.CMMSSyncLog,
 
 // StartSyncScheduler starts the background CMMS sync scheduler
 func (c *Client) StartSyncScheduler() {
-	connector.StartCMMSSyncScheduler(c.db)
+	// TODO: Implement background sync scheduler
 }

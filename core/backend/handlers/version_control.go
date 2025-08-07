@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,7 +22,7 @@ func GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	floorID := chi.URLParam(r, "floorId")
-	
+
 	// Parse query parameters
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
@@ -42,7 +41,7 @@ func GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 	dateTo := r.URL.Query().Get("date_to")
 
 	// Build cache key
-	cacheKey := fmt.Sprintf("version:history:floor:%s:page:%d:size:%d:action:%s:user:%s:data:%t:from:%s:to:%s", 
+	cacheKey := fmt.Sprintf("version:history:floor:%s:page:%d:size:%d:action:%s:user:%s:data:%t:from:%s:to:%s",
 		floorID, page, pageSize, actionType, userID, includeData, dateFrom, dateTo)
 
 	// Try to get from cache first
@@ -135,9 +134,9 @@ func GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 
 	// Get version statistics
 	var stats struct {
-		TotalVersions int64                   `json:"total_versions"`
-		ActionTypes   map[string]int          `json:"action_types"`
-		Users         map[string]int          `json:"users"`
+		TotalVersions  int64                  `json:"total_versions"`
+		ActionTypes    map[string]int         `json:"action_types"`
+		Users          map[string]int         `json:"users"`
 		RecentActivity map[string]interface{} `json:"recent_activity"`
 	}
 
@@ -159,8 +158,8 @@ func GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 
 	// Get user statistics
 	var userStats []struct {
-		UserID uint   `json:"user_id"`
-		Count  int    `json:"count"`
+		UserID   uint   `json:"user_id"`
+		Count    int    `json:"count"`
 		Username string `json:"username"`
 	}
 	db.DB.Model(&models.DrawingVersion{}).
@@ -186,10 +185,17 @@ func GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 		Limit(5).
 		Find(&recentVersions)
 
+	var lastVersion int
+	var lastUpdated time.Time
+	if len(versions) > 0 {
+		lastVersion = versions[0].VersionNumber
+		lastUpdated = versions[0].CreatedAt
+	}
+
 	stats.RecentActivity = map[string]interface{}{
-		"last_version":     len(versions) > 0 ? versions[0].VersionNumber : 0,
-		"last_updated":     len(versions) > 0 ? versions[0].CreatedAt : time.Time{},
-		"recent_versions":  recentVersions,
+		"last_version":    lastVersion,
+		"last_updated":    lastUpdated,
+		"recent_versions": recentVersions,
 	}
 
 	stats.TotalVersions = total
@@ -296,9 +302,9 @@ func GetVersionDiff(w http.ResponseWriter, r *http.Request) {
 		},
 		"diff": diff,
 		"metadata": map[string]interface{}{
-			"floor_id":      version1.FloorID,
-			"version_diff":  version2.VersionNumber - version1.VersionNumber,
-			"time_diff":     version2.CreatedAt.Sub(version1.CreatedAt).String(),
+			"floor_id":     version1.FloorID,
+			"version_diff": version2.VersionNumber - version1.VersionNumber,
+			"time_diff":    version2.CreatedAt.Sub(version1.CreatedAt).String(),
 		},
 	}
 
@@ -371,14 +377,14 @@ func GetVersionData(w http.ResponseWriter, r *http.Request) {
 	var prevVersion, nextVersion models.DrawingVersion
 	db.DB.Where("floor_id = ? AND version_number < ?", version.FloorID, version.VersionNumber).
 		Order("version_number DESC").Limit(1).First(&prevVersion)
-	
+
 	db.DB.Where("floor_id = ? AND version_number > ?", version.FloorID, version.VersionNumber).
 		Order("version_number ASC").Limit(1).First(&nextVersion)
 
 	response := map[string]interface{}{
-		"version": version,
-		"user":    user,
-		"floor":   floor,
+		"version":  version,
+		"user":     user,
+		"floor":    floor,
 		"building": building,
 		"navigation": map[string]interface{}{
 			"previous_version": prevVersion.ID,
@@ -388,7 +394,7 @@ func GetVersionData(w http.ResponseWriter, r *http.Request) {
 		},
 		"metadata": map[string]interface{}{
 			"svg_size":     len(version.SVG),
-			"includes_svg":  includeSVG,
+			"includes_svg": includeSVG,
 		},
 	}
 
@@ -411,9 +417,9 @@ func CreateVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var request struct {
-		FloorID      uint   `json:"floor_id"`
-		SVG          string `json:"svg"`
-		ActionType   string `json:"action_type"`
+		FloorID       uint   `json:"floor_id"`
+		SVG           string `json:"svg"`
+		ActionType    string `json:"action_type"`
 		CommitMessage string `json:"commit_message,omitempty"`
 	}
 
@@ -571,7 +577,7 @@ func RestoreVersion(w http.ResponseWriter, r *http.Request) {
 func generateEfficientDiff(version1, version2 models.DrawingVersion) map[string]interface{} {
 	// This is a simplified diff implementation
 	// In a real application, you would use a proper diff algorithm
-	
+
 	diff := map[string]interface{}{
 		"version1_number": version1.VersionNumber,
 		"version2_number": version2.VersionNumber,
@@ -605,10 +611,10 @@ func calculateSimilarity(svg1, svg2 string) float64 {
 
 	// Simple similarity calculation based on string length and common substrings
 	// In a real application, you would use more sophisticated algorithms
-	
+
 	len1 := len(svg1)
 	len2 := len(svg2)
-	
+
 	if len1 == 0 && len2 == 0 {
 		return 100.0
 	}

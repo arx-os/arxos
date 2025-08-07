@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"arx-cmms/pkg/models"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/arx-os/cmms/pkg/models"
 
 	"gorm.io/gorm"
 )

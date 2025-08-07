@@ -1,7 +1,6 @@
 package connector
 
 import (
-	"arx-cmms/pkg/models"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/arx-os/cmms/pkg/models"
 
 	"gorm.io/gorm"
 )

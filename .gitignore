@@ -88,3 +88,37 @@ svgx_engine/cache/
 # Rust build artifacts
 target/
 **/target/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+
+# Node.js build artifacts
+node_modules/
+dist/
+build/
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.backup
+*~
+*.swp
+*.swo
+
+# Cache files
+*.cache
+.cache/
+
+# Log files
+*.log
+logs/
+
+# Test artifacts
+*.test
+*.out

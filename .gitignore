@@ -82,6 +82,11 @@ MANIFEST
 arxos_dev.db
 svgx_engine/cache/
 
+# Service-specific virtual environments and models
+services/*/venv/
+services/*/ml_models/
+services/*/*.db
+
 # IDE and Development Tools
 .cursor/
 

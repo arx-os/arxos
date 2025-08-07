@@ -79,5 +79,12 @@ MANIFEST
 *.out
 
 # Arxos specific
-arxos_dev.db 
-svgx_engine/cache/ 
+arxos_dev.db
+svgx_engine/cache/
+
+# IDE and Development Tools
+.cursor/
+
+# Rust build artifacts
+target/
+**/target/

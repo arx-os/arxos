@@ -93,6 +93,7 @@ Once running, services are available at:
 
 ## 📚 Documentation
 
+- **[Development Tracker](ARXOS_DEVELOPMENT_TRACKER.md)** - Single source of truth for development progress
 - [Architecture Overview](docs/architecture/README.md)
 - [Development Guide](docs/development/README.md)
 - [User Guides](docs/user-guides/README.md)
@@ -118,4 +119,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note**: This platform is designed for development and prototyping. Production deployment requires additional security and performance considerations. 
+**Note**: This platform is designed for development and prototyping. Production deployment requires additional security and performance considerations.

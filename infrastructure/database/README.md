@@ -204,6 +204,6 @@ CREATE TABLE cad_objects (
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 2.0.0  
+**Last Updated**: December 2024
+**Version**: 2.0.0
 **Status**: PostgreSQL/PostGIS Standardization

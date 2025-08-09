@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in improving the Arxos platform!  
+Thank you for your interest in improving the Arxos platform!
 Please follow the guidelines below to ensure a smooth contribution process.
 
 ---

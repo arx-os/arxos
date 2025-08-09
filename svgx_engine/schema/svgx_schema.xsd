@@ -6,11 +6,11 @@
            attributeFormDefault="unqualified">
 
   <!-- Import SVG namespace -->
-  <xs:import namespace="http://www.w3.org/2000/svg" 
+  <xs:import namespace="http://www.w3.org/2000/svg"
               schemaLocation="http://www.w3.org/2000/svg.xsd"/>
 
   <!-- SVGX Extensions -->
-  
+
   <!-- Precision attribute for geometric elements -->
   <xs:attribute name="precision" type="xs:string" default="1mm">
     <xs:annotation>
@@ -161,4 +161,4 @@
     </xs:complexType>
   </xs:element>
 
-</xs:schema> 
+</xs:schema>

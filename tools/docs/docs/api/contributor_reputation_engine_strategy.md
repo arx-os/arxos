@@ -210,4 +210,4 @@ CREATE TABLE revenue_distributions (
 
 ## Conclusion
 
-The Contributor Reputation Engine will create a merit-based ecosystem that rewards quality contributions, encourages peer collaboration, and ensures fair revenue distribution. This system will be fundamental to building a sustainable and high-quality building data community. 
+The Contributor Reputation Engine will create a merit-based ecosystem that rewards quality contributions, encourages peer collaboration, and ensures fair revenue distribution. This system will be fundamental to building a sustainable and high-quality building data community.

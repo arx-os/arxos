@@ -123,7 +123,7 @@
     <div id="quick-start" class="content-section">
         <div class="quick-start">
             <h2>Quick Start Guide</h2>
-            
+
             <h3>Authentication</h3>
             <p>Most API endpoints require authentication using JWT tokens. Include the token in the Authorization header:</p>
             <div class="code-block">
@@ -228,7 +228,7 @@ Production: https://api.arxos.io
     <div id="examples" class="content-section">
         <div class="quick-start">
             <h2>Code Examples</h2>
-            
+
             <h3>JavaScript/Node.js</h3>
             <div class="code-block">
 const axios = require('axios');
@@ -305,7 +305,7 @@ curl -X POST http://localhost:8080/api/bim/devices \
     <div id="changelog" class="content-section">
         <div class="quick-start">
             <h2>API Changelog</h2>
-            
+
             <h3>Version 1.0.0 (Current)</h3>
             <ul>
                 <li>Initial API release</li>
@@ -342,15 +342,15 @@ curl -X POST http://localhost:8080/api/bim/devices \
             document.querySelectorAll('.content-section').forEach(section => {
                 section.classList.remove('active');
             });
-            
+
             // Remove active class from all tabs
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             // Show selected section
             document.getElementById(sectionId).classList.add('active');
-            
+
             // Add active class to clicked tab
             event.target.classList.add('active');
         }
@@ -373,4 +373,4 @@ curl -X POST http://localhost:8080/api/bim/devices \
         };
     </script>
 </body>
-</html> 
+</html>

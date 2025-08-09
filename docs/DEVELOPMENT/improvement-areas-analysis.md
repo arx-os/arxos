@@ -99,7 +99,7 @@ frontend/web/static/js/
 ```
 Services Found:
 ├── services/ai/           # AI services
-├── services/iot/          # IoT services  
+├── services/iot/          # IoT services
 ├── services/planarx/      # PlanarX services
 ├── services/cmms/         # CMMS services
 ├── services/construction/ # Construction services
@@ -237,4 +237,4 @@ The codebase has **good foundations** but needs **targeted improvements** in spe
 - **Service Communication**: Needs standardization and event bus
 - **Database**: Good progress, needs consolidation
 
-**Priority**: Focus on **Frontend Architecture** first, then **Code Organization**, followed by **Service Communication** and **Database Architecture**. 
+**Priority**: Focus on **Frontend Architecture** first, then **Code Organization**, followed by **Service Communication** and **Database Architecture**.

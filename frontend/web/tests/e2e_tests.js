@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Arxos Data Library Frontend
- * 
+ *
  * These tests cover the complete user workflows for:
  * - Security management
  * - Compliance reporting
@@ -130,7 +130,7 @@ const mockAPIResponses = {
 class SecurityTests {
     static async testSecurityDashboard(page) {
         console.log('Testing Security Dashboard...');
-        
+
         // Navigate to security page
         await page.goto(`${TEST_CONFIG.baseUrl}/security.html`);
         await TestUtils.wait(1000);
@@ -153,8 +153,8 @@ class SecurityTests {
         // Test tab switching
         await page.click('[data-tab="alerts"]');
         await TestUtils.wait(500);
-        
-        const alertsTabActive = await page.$eval('[data-tab="alerts"]', el => 
+
+        const alertsTabActive = await page.$eval('[data-tab="alerts"]', el =>
             el.classList.contains('active')
         );
         if (!alertsTabActive) {
@@ -259,12 +259,12 @@ class ComplianceTests {
 
         // Test tab switching
         const tabs = ['data-access-logs', 'change-history', 'export-activity', 'data-retention'];
-        
+
         for (const tab of tabs) {
             await page.click(`[data-tab="${tab}"]`);
             await TestUtils.wait(500);
 
-            const tabActive = await page.$eval(`[data-tab="${tab}"]`, el => 
+            const tabActive = await page.$eval(`[data-tab="${tab}"]`, el =>
                 el.classList.contains('active')
             );
             if (!tabActive) {
@@ -442,7 +442,7 @@ class NavigationTests {
 
         // Test login
         await TestUtils.login(page);
-        
+
         // Check if user is logged in
         const logoutButton = await page.$('button[onclick="logout()"]');
         if (!logoutButton) {
@@ -451,7 +451,7 @@ class NavigationTests {
 
         // Test logout
         await TestUtils.logout(page);
-        
+
         // Check if redirected to login page
         const currentUrl = page.url();
         if (!currentUrl.includes('login.html')) {
@@ -714,4 +714,4 @@ if (typeof module !== 'undefined' && module.exports) {
 // Run tests if this file is executed directly
 if (typeof window === 'undefined') {
     E2ETestRunner.runAllTests().catch(console.error);
-} 
+}

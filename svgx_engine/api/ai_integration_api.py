@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Union, Any
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 
 from svgx_engine.services.ai.user_pattern_learning import (
@@ -28,12 +28,12 @@ from svgx_engine.services.ai.ai_frontend_integration import (
     AIComponentType
 )
 from svgx_engine.services.ai.advanced_ai_analytics import (
-from core.security.auth_middleware import get_current_user, User
     AdvancedAIAnalyticsService,
     AnalyticsType,
     PredictionModel,
     InsightType
 )
+from core.security.auth_middleware import get_current_user, User
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ async def record_user_action(request: UserActionRequest, user: User = Depends(ge
     try:
         # Convert location to tuple if provided
         location_tuple = tuple(request.location) if request.location else None
-        
+
         action = await user_pattern_service.record_user_action(
             user_id=request.user_id,
             session_id=request.session_id,
@@ -137,7 +137,7 @@ async def record_user_action(request: UserActionRequest, user: User = Depends(ge
             user_agent=request.user_agent,
             location=location_tuple
         )
-        
+
         return {
             "success": True,
             "action_id": str(action.id),
@@ -146,15 +146,13 @@ async def record_user_action(request: UserActionRequest, user: User = Depends(ge
     except Exception as e:
         logger.error(f"Failed to record user action: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/user-sessions/start", response_model=Dict)
 async def start_user_session(request: UserSessionRequest, user: User = Depends(get_current_user)):
     """Start a new user session"""
     try:
         # Convert location to tuple if provided
         location_tuple = tuple(request.location) if request.location else None
-        
+
         session = await user_pattern_service.start_user_session(
             user_id=request.user_id,
             session_id=request.session_id,
@@ -163,7 +161,7 @@ async def start_user_session(request: UserSessionRequest, user: User = Depends(g
             location=location_tuple,
             device_info=request.device_info
         )
-        
+
         return {
             "success": True,
             "session_id": session.id,
@@ -172,8 +170,6 @@ async def start_user_session(request: UserSessionRequest, user: User = Depends(g
     except Exception as e:
         logger.error(f"Failed to start user session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/user-sessions/{session_id}/end", response_model=Dict)
 async def end_user_session(session_id: str, user: User = Depends(get_current_user)):
     """End a user session"""
@@ -181,7 +177,7 @@ async def end_user_session(session_id: str, user: User = Depends(get_current_use
         session = await user_pattern_service.end_user_session(session_id)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
-        
+
         return {
             "success": True,
             "session_duration": session.duration,
@@ -192,27 +188,25 @@ async def end_user_session(session_id: str, user: User = Depends(get_current_use
     except Exception as e:
         logger.error(f"Failed to end user session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/user-patterns/{user_id}", response_model=Dict)
 async def get_user_patterns(
     user_id: str,
     pattern_type: Optional[str] = None,
     context: Optional[str] = None,
-    active_only: bool = True
-, user: User = Depends(get_current_user)):
+    active_only: bool = True,
+    user: User = Depends(get_current_user)):
     """Get user patterns"""
     try:
         pattern_type_enum = PatternType(pattern_type) if pattern_type else None
         context_enum = UserContext(context) if context else None
-        
+
         patterns = await user_pattern_service.get_user_patterns(
             user_id=user_id,
             pattern_type=pattern_type_enum,
             context=context_enum,
             active_only=active_only
         )
-        
+
         return {
             "success": True,
             "patterns": [p.dict() for p in patterns],
@@ -221,14 +215,12 @@ async def get_user_patterns(
     except Exception as e:
         logger.error(f"Failed to get user patterns: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/user-recommendations/{user_id}", response_model=Dict)
 async def get_user_recommendations(
     user_id: str,
     recommendation_type: Optional[str] = None,
-    active_only: bool = True
-, user: User = Depends(get_current_user)):
+    active_only: bool = True,
+    user: User = Depends(get_current_user)):
     """Get user recommendations"""
     try:
         recommendations = await user_pattern_service.get_user_recommendations(
@@ -236,7 +228,7 @@ async def get_user_recommendations(
             recommendation_type=recommendation_type,
             active_only=active_only
         )
-        
+
         return {
             "success": True,
             "recommendations": [r.dict() for r in recommendations],
@@ -245,8 +237,6 @@ async def get_user_recommendations(
     except Exception as e:
         logger.error(f"Failed to get user recommendations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/user-analytics/{user_id}", response_model=Dict)
 async def get_user_analytics(user_id: str, user: User = Depends(get_current_user)):
     """Get user analytics"""
@@ -254,7 +244,7 @@ async def get_user_analytics(user_id: str, user: User = Depends(get_current_user
         analytics = await user_pattern_service.get_user_analytics(user_id)
         if not analytics:
             raise HTTPException(status_code=404, detail="User analytics not found")
-        
+
         return {
             "success": True,
             "analytics": analytics.dict()
@@ -264,14 +254,12 @@ async def get_user_analytics(user_id: str, user: User = Depends(get_current_user
     except Exception as e:
         logger.error(f"Failed to get user analytics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/user-insights/{user_id}", response_model=Dict)
 async def get_user_insights(user_id: str, user: User = Depends(get_current_user)):
     """Get comprehensive user insights"""
     try:
         insights = await user_pattern_service.get_user_insights(user_id)
-        
+
         return {
             "success": True,
             "insights": insights
@@ -279,8 +267,6 @@ async def get_user_insights(user_id: str, user: User = Depends(get_current_user)
     except Exception as e:
         logger.error(f"Failed to get user insights: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 # HTMX AI Frontend Integration Endpoints
 @app.post("/htmx/process", response_model=Dict)
 async def process_htmx_request(request: HTMXRequestModel, user: User = Depends(get_current_user)):
@@ -288,7 +274,7 @@ async def process_htmx_request(request: HTMXRequestModel, user: User = Depends(g
     try:
         # Convert location to tuple if provided
         location_tuple = tuple(request.context.get("location", [])) if request.context.get("location") else None
-        
+
         response = await ai_frontend_service.process_htmx_request(
             user_id=request.user_id,
             session_id=request.session_id,
@@ -300,7 +286,7 @@ async def process_htmx_request(request: HTMXRequestModel, user: User = Depends(g
             ip_address=request.ip_address,
             user_agent=request.user_agent
         )
-        
+
         return {
             "success": True,
             "response_id": str(response.id),
@@ -312,8 +298,6 @@ async def process_htmx_request(request: HTMXRequestModel, user: User = Depends(g
     except Exception as e:
         logger.error(f"Failed to process HTMX request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/ai-components", response_model=Dict)
 async def create_ai_component(
     component_type: str,
@@ -321,8 +305,8 @@ async def create_ai_component(
     description: str,
     target_selector: str,
     htmx_config: Dict[str, Any] = None,
-    ai_config: Dict[str, Any] = None
-, user: User = Depends(get_current_user)):
+    ai_config: Dict[str, Any] = None,
+    user: User = Depends(get_current_user)):
     """Create a new AI component"""
     try:
         component = await ai_frontend_service.create_ai_component(
@@ -333,7 +317,7 @@ async def create_ai_component(
             htmx_config=htmx_config or {},
             ai_config=ai_config or {}
         )
-        
+
         return {
             "success": True,
             "component_id": str(component.id),
@@ -342,22 +326,20 @@ async def create_ai_component(
     except Exception as e:
         logger.error(f"Failed to create AI component: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/ai-components", response_model=Dict)
 async def get_ai_components(
     component_type: Optional[str] = None,
-    active_only: bool = True
-, user: User = Depends(get_current_user)):
+    active_only: bool = True,
+    user: User = Depends(get_current_user)):
     """Get AI components"""
     try:
         component_type_enum = AIComponentType(component_type) if component_type else None
-        
+
         components = await ai_frontend_service.get_ai_components(
             component_type=component_type_enum,
             active_only=active_only
         )
-        
+
         return {
             "success": True,
             "components": [c.dict() for c in components],
@@ -366,8 +348,6 @@ async def get_ai_components(
     except Exception as e:
         logger.error(f"Failed to get AI components: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 # Advanced AI Analytics Endpoints
 @app.post("/predictions", response_model=Dict)
 async def generate_prediction(request: PredictionRequest, user: User = Depends(get_current_user)):
@@ -379,7 +359,7 @@ async def generate_prediction(request: PredictionRequest, user: User = Depends(g
             model_type=PredictionModel(request.model_type),
             prediction_horizon=request.prediction_horizon
         )
-        
+
         return {
             "success": True,
             "prediction": prediction.dict(),
@@ -388,8 +368,6 @@ async def generate_prediction(request: PredictionRequest, user: User = Depends(g
     except Exception as e:
         logger.error(f"Failed to generate prediction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/analytics/datasets", response_model=Dict)
 async def create_analytics_dataset(request: AnalyticsRequest, user: User = Depends(get_current_user)):
     """Create analytics dataset"""
@@ -401,7 +379,7 @@ async def create_analytics_dataset(request: AnalyticsRequest, user: User = Depen
             data_points=request.data_points,
             metadata=request.metadata
         )
-        
+
         return {
             "success": True,
             "dataset_id": str(dataset.id),
@@ -410,8 +388,6 @@ async def create_analytics_dataset(request: AnalyticsRequest, user: User = Depen
     except Exception as e:
         logger.error(f"Failed to create analytics dataset: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/analytics/trends/{dataset_id}", response_model=Dict)
 async def analyze_trends(dataset_id: UUID, variable_name: str, user: User = Depends(get_current_user)):
     """Analyze trends in dataset"""
@@ -420,7 +396,7 @@ async def analyze_trends(dataset_id: UUID, variable_name: str, user: User = Depe
             dataset_id=dataset_id,
             variable_name=variable_name
         )
-        
+
         return {
             "success": True,
             "trend": trend.dict(),
@@ -429,14 +405,12 @@ async def analyze_trends(dataset_id: UUID, variable_name: str, user: User = Depe
     except Exception as e:
         logger.error(f"Failed to analyze trends: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/analytics/correlations/{dataset_id}", response_model=Dict)
 async def analyze_correlations(
     dataset_id: UUID,
     variable1: str,
-    variable2: str
-, user: User = Depends(get_current_user)):
+    variable2: str,
+    user: User = Depends(get_current_user)):
     """Analyze correlations between variables"""
     try:
         correlation = await ai_analytics_service.analyze_correlations(
@@ -444,7 +418,7 @@ async def analyze_correlations(
             variable1=variable1,
             variable2=variable2
         )
-        
+
         return {
             "success": True,
             "correlation": correlation.dict(),
@@ -453,14 +427,12 @@ async def analyze_correlations(
     except Exception as e:
         logger.error(f"Failed to analyze correlations: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/analytics/anomalies/{dataset_id}", response_model=Dict)
 async def detect_anomalies(
     dataset_id: UUID,
     variable_name: str,
-    threshold: float = 2.0
-, user: User = Depends(get_current_user)):
+    threshold: float = 2.0,
+    user: User = Depends(get_current_user)):
     """Detect anomalies in dataset"""
     try:
         anomalies = await ai_analytics_service.detect_anomalies(
@@ -468,7 +440,7 @@ async def detect_anomalies(
             variable_name=variable_name,
             threshold=threshold
         )
-        
+
         return {
             "success": True,
             "anomalies": [a.dict() for a in anomalies],
@@ -478,19 +450,17 @@ async def detect_anomalies(
     except Exception as e:
         logger.error(f"Failed to detect anomalies: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/analytics/insights", response_model=Dict)
 async def generate_insights(request: InsightRequest, user: User = Depends(get_current_user)):
     """Generate AI insights"""
     try:
         insight_types = [InsightType(it) for it in request.insight_types] if request.insight_types else None
-        
+
         insights = await ai_analytics_service.generate_insights(
             user_id=request.user_id,
             insight_types=insight_types
         )
-        
+
         return {
             "success": True,
             "insights": [i.dict() for i in insights],
@@ -500,16 +470,14 @@ async def generate_insights(request: InsightRequest, user: User = Depends(get_cu
     except Exception as e:
         logger.error(f"Failed to generate insights: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/analytics/metrics", response_model=Dict)
 async def track_performance_metrics(
     metric_name: str,
     metric_value: float,
     unit: str,
     benchmark: Optional[float] = None,
-    target: Optional[float] = None
-, user: User = Depends(get_current_user)):
+    target: Optional[float] = None,
+    user: User = Depends(get_current_user)):
     """Track performance metrics"""
     try:
         metric = await ai_analytics_service.track_performance_metrics(
@@ -519,7 +487,7 @@ async def track_performance_metrics(
             benchmark=benchmark,
             target=target
         )
-        
+
         return {
             "success": True,
             "metric": metric.dict(),
@@ -528,14 +496,12 @@ async def track_performance_metrics(
     except Exception as e:
         logger.error(f"Failed to track performance metric: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/analytics/summary/{user_id}", response_model=Dict)
 async def get_analytics_summary(
     user_id: str,
     start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
-, user: User = Depends(get_current_user)):
+    end_date: Optional[datetime] = None,
+    user: User = Depends(get_current_user)):
     """Get comprehensive analytics summary"""
     try:
         summary = await ai_analytics_service.get_analytics_summary(
@@ -543,7 +509,7 @@ async def get_analytics_summary(
             start_date=start_date,
             end_date=end_date
         )
-        
+
         return {
             "success": True,
             "summary": summary
@@ -551,8 +517,6 @@ async def get_analytics_summary(
     except Exception as e:
         logger.error(f"Failed to get analytics summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 # Recommendation Management Endpoints
 @app.post("/recommendations/{recommendation_id}/dismiss", response_model=Dict)
 async def dismiss_recommendation(recommendation_id: UUID, user: User = Depends(get_current_user)):
@@ -561,7 +525,7 @@ async def dismiss_recommendation(recommendation_id: UUID, user: User = Depends(g
         success = await user_pattern_service.dismiss_recommendation(recommendation_id)
         if not success:
             raise HTTPException(status_code=404, detail="Recommendation not found")
-        
+
         return {
             "success": True,
             "message": "Recommendation dismissed successfully"
@@ -571,8 +535,6 @@ async def dismiss_recommendation(recommendation_id: UUID, user: User = Depends(g
     except Exception as e:
         logger.error(f"Failed to dismiss recommendation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.post("/recommendations/{recommendation_id}/apply", response_model=Dict)
 async def apply_recommendation(recommendation_id: UUID, user: User = Depends(get_current_user)):
     """Apply a user recommendation"""
@@ -580,7 +542,7 @@ async def apply_recommendation(recommendation_id: UUID, user: User = Depends(get
         success = await user_pattern_service.apply_recommendation(recommendation_id)
         if not success:
             raise HTTPException(status_code=404, detail="Recommendation not found")
-        
+
         return {
             "success": True,
             "message": "Recommendation applied successfully"
@@ -590,8 +552,6 @@ async def apply_recommendation(recommendation_id: UUID, user: User = Depends(get
     except Exception as e:
         logger.error(f"Failed to apply recommendation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 # Health check endpoint
 @app.get("/health", response_model=Dict)
 async def health_check(user: User = Depends(get_current_user)):
@@ -606,4 +566,4 @@ async def health_check(user: User = Depends(get_current_user)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8004) 
+    uvicorn.run(app, host="0.0.0.0", port=8004)

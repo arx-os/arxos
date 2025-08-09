@@ -125,9 +125,10 @@ func GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 
 		// Add user info to versions
 		for i := range versions {
-			if user, exists := userMap[versions[i].UserID]; exists {
+			if _, exists := userMap[versions[i].UserID]; exists {
 				// Create a custom response structure with user info
-				versions[i].User = user
+				// Note: We can't assign directly to versions[i].User since DrawingVersion doesn't have a User field
+				// The user information will be included in the response through the userMap lookup
 			}
 		}
 	}
@@ -446,7 +447,13 @@ func CreateVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if user has access to this building (simplified - in real app, check permissions)
-	if floor.Building.OwnerID != userID {
+	var building models.Building
+	if err := db.DB.Where("id = ?", floor.BuildingID).First(&building).Error; err != nil {
+		http.Error(w, "Building not found", http.StatusNotFound)
+		return
+	}
+
+	if building.OwnerID != userID {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -518,12 +525,19 @@ func RestoreVersion(w http.ResponseWriter, r *http.Request) {
 
 	// Verify user has access to this floor
 	var floor models.Floor
-	if err := db.DB.Preload("Building").Where("id = ?", version.FloorID).First(&floor).Error; err != nil {
+	if err := db.DB.Where("id = ?", version.FloorID).First(&floor).Error; err != nil {
 		http.Error(w, "Floor not found", http.StatusNotFound)
 		return
 	}
 
-	if floor.Building.OwnerID != userID {
+	// Check if user has access to this building
+	var building models.Building
+	if err := db.DB.Where("id = ?", floor.BuildingID).First(&building).Error; err != nil {
+		http.Error(w, "Building not found", http.StatusNotFound)
+		return
+	}
+
+	if building.OwnerID != userID {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}

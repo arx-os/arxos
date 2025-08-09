@@ -225,15 +225,15 @@ class DisplayBehavior:
     def __init__(self):
         self.power_state = "off"
         self.brightness = 50
-    
+
     def power_on(self):
         self.power_state = "on"
         return {"status": "powered_on", "brightness": self.brightness}
-    
+
     def set_brightness(self, level):
         self.brightness = max(0, min(100, level))
         return {"status": "brightness_set", "level": self.brightness}
-    
+
     def validate_connections(self, connections):
         required = ["power", "control"]
         return all(conn in connections for conn in required)
@@ -607,4 +607,4 @@ tail -f logs/pipeline.log | grep DEBUG
 
 ---
 
-*This guide covers all aspects of using the Arxos Pipeline. For additional help, refer to the documentation or contact support.* 
+*This guide covers all aspects of using the Arxos Pipeline. For additional help, refer to the documentation or contact support.*

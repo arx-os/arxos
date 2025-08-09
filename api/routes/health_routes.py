@@ -58,32 +58,32 @@ async def detailed_health_check() -> Dict[str, Any]:
         # Check database connection
         db_session = container.get_database_session()
         db_healthy = db_session is not None
-        
+
         # Check cache service
         cache_service = container.get_cache_service()
         cache_healthy = cache_service is not None
-        
+
         # Check event store
         event_store = container.get_event_store()
         event_store_healthy = event_store is not None
-        
+
         # Check message queue
         message_queue = container.get_message_queue()
         message_queue_healthy = message_queue is not None
-        
+
         # Check metrics service
         metrics_service = container.get_metrics_service()
         metrics_healthy = metrics_service is not None
-        
+
         # Overall health
         overall_healthy = (
-            db_healthy and 
-            cache_healthy and 
-            event_store_healthy and 
-            message_queue_healthy and 
+            db_healthy and
+            cache_healthy and
+            event_store_healthy and
+            message_queue_healthy and
             metrics_healthy
         )
-        
+
         return format_success_response(
             data={
                 "status": "healthy" if overall_healthy else "unhealthy",
@@ -101,7 +101,7 @@ async def detailed_health_check() -> Dict[str, Any]:
             },
             message="Detailed health check completed"
         )
-        
+
     except Exception as e:
         logger.error(f"Detailed health check failed: {str(e)}")
         return format_error_response(
@@ -123,9 +123,9 @@ async def readiness_probe() -> Dict[str, Any]:
         # Check if all required services are ready
         db_session = container.get_database_session()
         cache_service = container.get_cache_service()
-        
+
         ready = db_session is not None and cache_service is not None
-        
+
         return format_success_response(
             data={
                 "ready": ready,
@@ -134,7 +134,7 @@ async def readiness_probe() -> Dict[str, Any]:
             },
             message="Readiness check completed"
         )
-        
+
     except Exception as e:
         logger.error(f"Readiness probe failed: {str(e)}")
         return format_error_response(
@@ -162,7 +162,7 @@ async def liveness_probe() -> Dict[str, Any]:
             },
             message="Service is alive"
         )
-        
+
     except Exception as e:
         logger.error(f"Liveness probe failed: {str(e)}")
         return format_error_response(
@@ -192,12 +192,12 @@ async def health_metrics() -> Dict[str, Any]:
             "cpu_usage": "0%",  # Would be calculated
             "active_connections": 0
         }
-        
+
         return format_success_response(
             data=metrics,
             message="Health metrics retrieved successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Health metrics failed: {str(e)}")
         return format_error_response(
@@ -219,7 +219,7 @@ async def service_status() -> Dict[str, Any]:
         status_info = {
             "service": "arxos-api",
             "version": "1.0.0",
-            "environment": "development",  # Would be from config
+            "environment": "development",  # Would be from config import config
             "startup_time": datetime.utcnow().isoformat(),
             "current_time": datetime.utcnow().isoformat(),
             "status": "running",
@@ -238,16 +238,16 @@ async def service_status() -> Dict[str, Any]:
                 "metrics": "connected"
             }
         }
-        
+
         return format_success_response(
             data=status_info,
             message="Service status retrieved successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Service status failed: {str(e)}")
         return format_error_response(
             error_code="SERVICE_STATUS_FAILED",
             message="Failed to retrieve service status",
             details={"error": str(e)}
-        ) 
+        )

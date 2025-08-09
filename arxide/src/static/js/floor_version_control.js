@@ -8,7 +8,7 @@ class FloorVersionControl {
         this.redoStack = [];
         this.isProcessing = false;
         this.apiBaseUrl = 'http://localhost:8080/api';
-        
+
         this.initializeEventListeners();
         this.loadFloors();
         this.setupKeyboardShortcuts();
@@ -124,7 +124,7 @@ class FloorVersionControl {
                 const floors = await response.json();
                 const select = document.getElementById('floor-select');
                 select.innerHTML = '<option value="">Select a floor...</option>';
-                
+
                 floors.forEach(floor => {
                     const option = document.createElement('option');
                     option.value = floor.id;
@@ -144,7 +144,7 @@ class FloorVersionControl {
         try {
             this.showProgress('Loading versions...');
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions`);
-            
+
             if (response.ok) {
                 this.versions = await response.json();
                 this.renderVersionList();
@@ -161,7 +161,7 @@ class FloorVersionControl {
     // Render version list
     renderVersionList() {
         const container = document.getElementById('version-list');
-        
+
         if (this.versions.length === 0) {
             container.innerHTML = `
                 <div class="p-4 text-center text-gray-500">
@@ -173,7 +173,7 @@ class FloorVersionControl {
         }
 
         container.innerHTML = this.versions.map(version => this.createVersionItem(version)).join('');
-        
+
         // Add event listeners to version items
         container.querySelectorAll('.version-item').forEach((item, index) => {
             item.addEventListener('click', () => this.selectVersion(this.versions[index]));
@@ -184,7 +184,7 @@ class FloorVersionControl {
     createVersionItem(version) {
         const date = new Date(version.created_at).toLocaleString();
         const tags = this.getVersionTags(version);
-        
+
         return `
             <div class="version-item p-4 cursor-pointer ${version.type}" data-version-id="${version.id}">
                 <div class="flex justify-between items-start">
@@ -200,7 +200,7 @@ class FloorVersionControl {
                             ${version.changes_count || 0} changes • ${version.size || '0 KB'}
                         </div>
                     </div>
-                    
+
                     <div class="version-actions">
                         <button class="compare-button" onclick="event.stopPropagation(); floorVersionControl.compareVersion('${version.id}')">
                             <i class="fas fa-exchange-alt"></i>
@@ -223,7 +223,7 @@ class FloorVersionControl {
     // Get version tags HTML
     getVersionTags(version) {
         const tags = [];
-        
+
         if (version.type === 'auto-save') {
             tags.push('<span class="version-tag tag-auto-save">Auto-save</span>');
         }
@@ -233,24 +233,24 @@ class FloorVersionControl {
         if (version.is_restored) {
             tags.push('<span class="version-tag tag-restored">Restored</span>');
         }
-        
+
         return tags.join('');
     }
 
     // Select version
     selectVersion(version) {
         this.selectedVersion = version;
-        
+
         // Update UI
         document.querySelectorAll('.version-item').forEach(item => {
             item.classList.remove('selected');
         });
-        
+
         const selectedItem = document.querySelector(`[data-version-id="${version.id}"]`);
         if (selectedItem) {
             selectedItem.classList.add('selected');
         }
-        
+
         this.renderVersionDetails(version);
     }
 
@@ -258,7 +258,7 @@ class FloorVersionControl {
     renderVersionDetails(version) {
         const container = document.getElementById('version-details');
         const date = new Date(version.created_at).toLocaleString();
-        
+
         container.innerHTML = `
             <div class="space-y-4">
                 <div>
@@ -266,7 +266,7 @@ class FloorVersionControl {
                     <p class="text-sm text-gray-600">${version.created_by}</p>
                     <p class="text-sm text-gray-600">${date}</p>
                 </div>
-                
+
                 <div class="bg-gray-50 p-3 rounded-md">
                     <h5 class="font-medium text-gray-900 mb-2">Version Information</h5>
                     <div class="space-y-1 text-sm">
@@ -288,7 +288,7 @@ class FloorVersionControl {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="space-y-2">
                     <button class="w-full restore-button py-2 px-4 rounded-md" onclick="floorVersionControl.showRestoreModal('${version.id}')">
                         <i class="fas fa-undo mr-2"></i>Restore This Version
@@ -319,7 +319,7 @@ class FloorVersionControl {
     filterVersions(searchTerm) {
         const items = document.querySelectorAll('.version-item');
         const term = searchTerm.toLowerCase();
-        
+
         items.forEach(item => {
             const text = item.textContent.toLowerCase();
             item.style.display = text.includes(term) ? 'block' : 'none';
@@ -329,7 +329,7 @@ class FloorVersionControl {
     // Filter versions by type
     filterVersionsByType(type) {
         const items = document.querySelectorAll('.version-item');
-        
+
         items.forEach(item => {
             if (type === 'all' || item.classList.contains(type)) {
                 item.style.display = 'block';
@@ -358,7 +358,7 @@ class FloorVersionControl {
 
         try {
             this.showProgress('Creating snapshot...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions`, {
                 method: 'POST',
                 headers: {
@@ -377,7 +377,7 @@ class FloorVersionControl {
                 this.renderVersionList();
                 this.hideModal('snapshot-modal');
                 this.showToast('Snapshot created successfully', 'success');
-                
+
                 // Reset form
                 document.getElementById('snapshot-form').reset();
             } else {
@@ -397,7 +397,7 @@ class FloorVersionControl {
 
         // Check for conflicts
         const conflicts = await this.checkConflicts(versionId);
-        
+
         document.getElementById('restore-version-info').innerHTML = `
             <div class="font-medium">${version.description || 'Untitled Version'}</div>
             <div class="text-sm text-gray-600">${version.created_by} • ${new Date(version.created_at).toLocaleString()}</div>
@@ -407,7 +407,7 @@ class FloorVersionControl {
         const warning = document.getElementById('restore-warning');
         if (conflicts.length > 0) {
             warning.style.display = 'block';
-            document.getElementById('conflict-list').innerHTML = conflicts.map(conflict => 
+            document.getElementById('conflict-list').innerHTML = conflicts.map(conflict =>
                 `<li>${conflict}</li>`
             ).join('');
         } else {
@@ -438,7 +438,7 @@ class FloorVersionControl {
         try {
             this.hideModal('restore-modal');
             this.showProgress('Restoring version...', 'This may take a few moments...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions/${this.selectedVersion.id}/restore`, {
                 method: 'POST'
             });
@@ -446,7 +446,7 @@ class FloorVersionControl {
             if (response.ok) {
                 this.showToast('Version restored successfully', 'success');
                 this.loadVersions(); // Reload versions
-                
+
                 // Add to undo stack
                 this.undoStack.push({
                     action: 'restore',
@@ -468,7 +468,7 @@ class FloorVersionControl {
     async compareVersion(versionId) {
         try {
             this.showProgress('Loading comparison...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions/${versionId}/compare`);
             if (response.ok) {
                 const comparison = await response.json();
@@ -486,11 +486,11 @@ class FloorVersionControl {
     // Show comparison view
     showComparisonView(comparison) {
         document.getElementById('comparison-view').style.display = 'block';
-        
+
         // Update labels
         document.getElementById('from-version-label').textContent = `From: ${comparison.from_version.description || 'Current'}`;
         document.getElementById('to-version-label').textContent = `To: ${comparison.to_version.description || 'Selected Version'}`;
-        
+
         // Render comparison content
         this.renderComparisonContent(comparison);
     }
@@ -499,7 +499,7 @@ class FloorVersionControl {
     renderComparisonContent(comparison) {
         const fromContent = document.getElementById('from-version-content');
         const toContent = document.getElementById('to-version-content');
-        
+
         fromContent.innerHTML = this.renderDiffContent(comparison.from_data, comparison.changes, 'from');
         toContent.innerHTML = this.renderDiffContent(comparison.to_data, comparison.changes, 'to');
     }
@@ -507,13 +507,13 @@ class FloorVersionControl {
     // Render diff content
     renderDiffContent(data, changes, side) {
         if (!data) return '<div class="text-gray-500">No data available</div>';
-        
+
         let html = '<div class="space-y-2">';
-        
+
         changes.forEach(change => {
             const changeClass = this.getChangeClass(change.type);
             const indicator = `<span class="change-indicator ${changeClass}"></span>`;
-            
+
             if (side === 'from' && change.type === 'removed') {
                 html += `<div class="diff-removed p-2 rounded">${indicator}${change.key}: ${change.old_value}</div>`;
             } else if (side === 'to' && change.type === 'added') {
@@ -525,7 +525,7 @@ class FloorVersionControl {
                 html += `<div class="p-2">${change.key}: ${change.value}</div>`;
             }
         });
-        
+
         html += '</div>';
         return html;
     }
@@ -549,7 +549,7 @@ class FloorVersionControl {
     async exportComparisonReport() {
         try {
             this.showProgress('Generating report...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions/export-comparison`, {
                 method: 'POST',
                 headers: {
@@ -568,7 +568,7 @@ class FloorVersionControl {
                 a.download = `version-comparison-${Date.now()}.pdf`;
                 a.click();
                 window.URL.revokeObjectURL(url);
-                
+
                 this.showToast('Comparison report exported successfully', 'success');
             } else {
                 throw new Error('Failed to export report');
@@ -584,7 +584,7 @@ class FloorVersionControl {
     async exportVersion(versionId) {
         try {
             this.showProgress('Exporting version...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions/${versionId}/export`);
             if (response.ok) {
                 const blob = await response.blob();
@@ -594,7 +594,7 @@ class FloorVersionControl {
                 a.download = `version-${versionId}-${Date.now()}.json`;
                 a.click();
                 window.URL.revokeObjectURL(url);
-                
+
                 this.showToast('Version exported successfully', 'success');
             } else {
                 throw new Error('Failed to export version');
@@ -614,7 +614,7 @@ class FloorVersionControl {
 
         try {
             this.showProgress('Deleting version...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions/${versionId}`, {
                 method: 'DELETE'
             });
@@ -636,30 +636,30 @@ class FloorVersionControl {
     // Undo functionality
     undo() {
         if (this.undoStack.length === 0) return;
-        
+
         const lastAction = this.undoStack.pop();
         this.redoStack.push(lastAction);
-        
+
         // Perform undo action
         if (lastAction.action === 'restore') {
             this.undoRestore(lastAction);
         }
-        
+
         this.updateUndoRedoButtons();
     }
 
     // Redo functionality
     redo() {
         if (this.redoStack.length === 0) return;
-        
+
         const nextAction = this.redoStack.pop();
         this.undoStack.push(nextAction);
-        
+
         // Perform redo action
         if (nextAction.action === 'restore') {
             this.redoRestore(nextAction);
         }
-        
+
         this.updateUndoRedoButtons();
     }
 
@@ -667,7 +667,7 @@ class FloorVersionControl {
     async undoRestore(action) {
         try {
             this.showProgress('Undoing restore...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions/${action.versionId}/undo-restore`, {
                 method: 'POST'
             });
@@ -689,7 +689,7 @@ class FloorVersionControl {
     async redoRestore(action) {
         try {
             this.showProgress('Redoing restore...');
-            
+
             const response = await fetch(`${this.apiBaseUrl}/floors/${this.currentFloor}/versions/${action.versionId}/restore`, {
                 method: 'POST'
             });
@@ -711,7 +711,7 @@ class FloorVersionControl {
     updateUndoRedoButtons() {
         const undoBtn = document.getElementById('undo-btn');
         const redoBtn = document.getElementById('redo-btn');
-        
+
         undoBtn.disabled = this.undoStack.length === 0;
         redoBtn.disabled = this.redoStack.length === 0;
     }
@@ -744,7 +744,7 @@ class FloorVersionControl {
     showToast(message, type = 'info', duration = 5000) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
-        
+
         toast.className = `toast ${type} p-4 rounded-md shadow-lg`;
         toast.innerHTML = `
             <div class="flex items-center justify-between">
@@ -757,9 +757,9 @@ class FloorVersionControl {
                 </button>
             </div>
         `;
-        
+
         container.appendChild(toast);
-        
+
         // Auto remove after duration
         setTimeout(() => {
             if (toast.parentElement) {

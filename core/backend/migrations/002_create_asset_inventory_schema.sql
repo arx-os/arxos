@@ -11,7 +11,7 @@ CREATE TABLE building_assets (
     asset_type VARCHAR(255) NOT NULL,
     system VARCHAR(255) NOT NULL,
     subsystem VARCHAR(255),
-    
+
     -- Location details
     location_floor VARCHAR(255),
     location_room VARCHAR(255),
@@ -19,27 +19,27 @@ CREATE TABLE building_assets (
     location_x DOUBLE,
     location_y DOUBLE,
     location_coordinates VARCHAR(255),
-    
+
     -- Specifications and metadata
     specifications JSON,
     metadata JSON,
-    
+
     -- Calculated fields
     age INT,
     efficiency_rating VARCHAR(255),
     lifecycle_stage VARCHAR(255),
-    
+
     -- Valuation
     estimated_value DOUBLE,
     replacement_cost DOUBLE,
-    
+
     -- Status and tracking
     status VARCHAR(255) DEFAULT 'active',
     created_by BIGINT UNSIGNED NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL,
-    
+
     INDEX idx_building_assets_building_id (building_id),
     INDEX idx_building_assets_floor_id (floor_id),
     INDEX idx_building_assets_room_id (room_id),
@@ -49,7 +49,7 @@ CREATE TABLE building_assets (
     INDEX idx_building_assets_status (status),
     INDEX idx_building_assets_created_by (created_by),
     INDEX idx_building_assets_deleted_at (deleted_at),
-    
+
     FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE,
     FOREIGN KEY (floor_id) REFERENCES floors(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
@@ -68,12 +68,12 @@ CREATE TABLE asset_history (
     documents JSON,
     created_by BIGINT UNSIGNED NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     INDEX idx_asset_history_asset_id (asset_id),
     INDEX idx_asset_history_event_type (event_type),
     INDEX idx_asset_history_event_date (event_date),
     INDEX idx_asset_history_created_by (created_by),
-    
+
     FOREIGN KEY (asset_id) REFERENCES building_assets(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -94,13 +94,13 @@ CREATE TABLE asset_maintenance (
     created_by BIGINT UNSIGNED NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     INDEX idx_asset_maintenance_asset_id (asset_id),
     INDEX idx_asset_maintenance_maintenance_type (maintenance_type),
     INDEX idx_asset_maintenance_status (status),
     INDEX idx_asset_maintenance_scheduled_date (scheduled_date),
     INDEX idx_asset_maintenance_created_by (created_by),
-    
+
     FOREIGN KEY (asset_id) REFERENCES building_assets(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -117,12 +117,12 @@ CREATE TABLE asset_valuations (
     notes TEXT,
     created_by BIGINT UNSIGNED NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     INDEX idx_asset_valuations_asset_id (asset_id),
     INDEX idx_asset_valuations_valuation_type (valuation_type),
     INDEX idx_asset_valuations_valuation_date (valuation_date),
     INDEX idx_asset_valuations_created_by (created_by),
-    
+
     FOREIGN KEY (asset_id) REFERENCES building_assets(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -138,11 +138,11 @@ CREATE TABLE building_asset_inventories (
     export_data JSON,
     created_by BIGINT UNSIGNED NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     INDEX idx_building_asset_inventories_building_id (building_id),
     INDEX idx_building_asset_inventories_inventory_date (inventory_date),
     INDEX idx_building_asset_inventories_created_by (created_by),
-    
+
     FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -159,7 +159,7 @@ CREATE TABLE industry_benchmarks (
     year INT,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     INDEX idx_industry_benchmarks_equipment_type (equipment_type),
     INDEX idx_industry_benchmarks_system (system),
     INDEX idx_industry_benchmarks_metric (metric),
@@ -190,7 +190,7 @@ CREATE TABLE data_vendor_api_keys (
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     INDEX idx_data_vendor_api_keys_key (`key`),
     INDEX idx_data_vendor_api_keys_vendor_name (vendor_name),
     INDEX idx_data_vendor_api_keys_access_level (access_level),
@@ -209,12 +209,12 @@ CREATE TABLE data_vendor_requests (
     user_agent TEXT,
     status VARCHAR(50) DEFAULT 'completed',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     INDEX idx_data_vendor_requests_api_key_id (api_key_id),
     INDEX idx_data_vendor_requests_request_type (request_type),
     INDEX idx_data_vendor_requests_building_id (building_id),
     INDEX idx_data_vendor_requests_created_at (created_at),
-    
+
     FOREIGN KEY (api_key_id) REFERENCES data_vendor_api_keys(id) ON DELETE CASCADE,
     FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE SET NULL
-); 
+);

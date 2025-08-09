@@ -117,4 +117,4 @@ Mike (bought 200 ARX on exchange) gets: $20
 - Holders: Report dividends as income
 - No capital gains treatment for work-minted tokens
 
-This model creates a **fair and sustainable ecosystem** where quality work is rewarded with both immediate tokens and ongoing platform revenue sharing, while maintaining equal rights for all token holders and complete transparency through ArxScope. 
+This model creates a **fair and sustainable ecosystem** where quality work is rewarded with both immediate tokens and ongoing platform revenue sharing, while maintaining equal rights for all token holders and complete transparency through ArxScope.

@@ -12,7 +12,7 @@ This document contains scripts for creating comprehensive video tutorials coveri
 #### Opening (0:00-0:30)
 **Narration**: "Welcome to the Arxos SVG-BIM viewport manager tutorial. In this video, you'll learn the basics of navigating 2D building models efficiently."
 
-**Screen Action**: 
+**Screen Action**:
 - Show Arxos interface
 - Highlight viewport area
 - Point to toolbar controls
@@ -369,4 +369,4 @@ This document contains scripts for creating comprehensive video tutorials coveri
 **Script Version**: 1.0.0
 **Last Updated**: [Current Date]
 **Target Audience**: Beginner to Advanced Users
-**Total Duration**: 32-42 minutes (5 tutorials) 
+**Total Duration**: 32-42 minutes (5 tutorials)

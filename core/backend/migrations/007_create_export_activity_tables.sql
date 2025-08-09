@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS export_activities (
     expires_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     -- Indexes for performance
     INDEX idx_export_activities_user_id (user_id),
     INDEX idx_export_activities_building_id (building_id),
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS export_activities (
     INDEX idx_export_activities_status (status),
     INDEX idx_export_activities_requested_at (requested_at),
     INDEX idx_export_activities_created_at (created_at),
-    
+
     -- Foreign key constraints
     CONSTRAINT fk_export_activities_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_export_activities_building_id FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE SET NULL
@@ -44,32 +44,32 @@ CREATE TABLE IF NOT EXISTS export_analytics (
     total_downloads INTEGER DEFAULT 0,
     total_file_size BIGINT DEFAULT 0,
     avg_processing_time INTEGER DEFAULT 0,
-    
+
     -- Format breakdown
     csv_count INTEGER DEFAULT 0,
     json_count INTEGER DEFAULT 0,
     xml_count INTEGER DEFAULT 0,
     pdf_count INTEGER DEFAULT 0,
-    
+
     -- Export type breakdown
     asset_inventory_count INTEGER DEFAULT 0,
     building_data_count INTEGER DEFAULT 0,
     maintenance_count INTEGER DEFAULT 0,
     other_count INTEGER DEFAULT 0,
-    
+
     -- User activity
     active_users INTEGER DEFAULT 0,
     top_user_id BIGINT,
     top_user_exports INTEGER DEFAULT 0,
-    
+
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     -- Indexes
     INDEX idx_export_analytics_date (date),
     INDEX idx_export_analytics_period (period),
     UNIQUE INDEX idx_export_analytics_date_period (date, period),
-    
+
     -- Foreign key constraints
     CONSTRAINT fk_export_analytics_top_user_id FOREIGN KEY (top_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS data_vendor_usage (
     user_agent TEXT,
     rate_limit_hit BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     -- Indexes
     INDEX idx_data_vendor_usage_api_key_id (api_key_id),
     INDEX idx_data_vendor_usage_vendor_name (vendor_name),
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS data_vendor_usage (
     INDEX idx_data_vendor_usage_building_id (building_id),
     INDEX idx_data_vendor_usage_status (status),
     INDEX idx_data_vendor_usage_created_at (created_at),
-    
+
     -- Foreign key constraints
     CONSTRAINT fk_data_vendor_usage_api_key_id FOREIGN KEY (api_key_id) REFERENCES data_vendor_api_keys(id) ON DELETE CASCADE,
     CONSTRAINT fk_data_vendor_usage_building_id FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE SET NULL
@@ -111,24 +111,24 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_object_type_export ON audit_logs(objec
 
 -- Create a view for export dashboard statistics
 CREATE OR REPLACE VIEW export_dashboard_stats AS
-SELECT 
+SELECT
     -- Today's stats
     (SELECT COUNT(*) FROM export_activities WHERE DATE(created_at) = CURRENT_DATE) as today_exports,
     (SELECT COALESCE(SUM(download_count), 0) FROM export_activities WHERE DATE(created_at) = CURRENT_DATE) as today_downloads,
     (SELECT COALESCE(SUM(file_size), 0) FROM export_activities WHERE DATE(created_at) = CURRENT_DATE) as today_file_size,
-    
+
     -- Week's stats
     (SELECT COUNT(*) FROM export_activities WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as week_exports,
     (SELECT COALESCE(SUM(download_count), 0) FROM export_activities WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as week_downloads,
-    
+
     -- Month's stats
     (SELECT COUNT(*) FROM export_activities WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') as month_exports,
     (SELECT COALESCE(SUM(download_count), 0) FROM export_activities WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') as month_downloads,
-    
+
     -- Active and failed exports
     (SELECT COUNT(*) FROM export_activities WHERE status IN ('requested', 'processing')) as active_exports,
     (SELECT COUNT(*) FROM export_activities WHERE status = 'failed') as failed_exports,
-    
+
     -- Average processing time
     (SELECT COALESCE(AVG(processing_time), 0) FROM export_activities WHERE processing_time IS NOT NULL) as avg_processing_time;
 
@@ -143,7 +143,7 @@ BEGIN
         asset_inventory_count, building_data_count, maintenance_count, other_count,
         active_users, top_user_id, top_user_exports
     )
-    SELECT 
+    SELECT
         CURRENT_DATE,
         'daily',
         COUNT(*),
@@ -163,7 +163,7 @@ BEGIN
         (SELECT COUNT(*) FROM export_activities WHERE DATE(created_at) = CURRENT_DATE AND user_id = (
             SELECT user_id FROM export_activities WHERE DATE(created_at) = CURRENT_DATE GROUP BY user_id ORDER BY COUNT(*) DESC LIMIT 1
         ))
-    FROM export_activities 
+    FROM export_activities
     WHERE DATE(created_at) = CURRENT_DATE
     ON CONFLICT (date, period) DO UPDATE SET
         total_exports = EXCLUDED.total_exports,
@@ -197,4 +197,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER export_analytics_trigger
     AFTER INSERT OR UPDATE OR DELETE ON export_activities
     FOR EACH STATEMENT
-    EXECUTE FUNCTION trigger_update_export_analytics(); 
+    EXECUTE FUNCTION trigger_update_export_analytics();

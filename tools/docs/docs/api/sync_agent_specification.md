@@ -210,18 +210,18 @@ class CommandProcessor:
     def execute_chain(self, commands: List[Command]):
         """Execute a chain of commands"""
         results = []
-        
+
         for command in commands:
             try:
                 result = self.execute_command(command)
                 results.append(result)
-                
+
                 if command.required and not result.success:
                     raise CommandError(f"Required command failed: {command.name}")
-                    
+
             except TimeoutError:
                 raise CommandError(f"Command timed out: {command.name}")
-                
+
         return results
 
     def execute_command(self, command: Command):
@@ -258,7 +258,7 @@ class StatusReporter:
         """Report sync progress"""
         print(f"Syncing files: {progress.files_synced}/{progress.total_files}")
         print(f"Progress: {progress.percentage}%")
-        
+
         if progress.current_file:
             print(f"Current file: {progress.current_file}")
 ```
@@ -436,4 +436,3 @@ class WebhookNotifier:
         }
         self.send_webhook(payload)
 ```
-

@@ -1,17 +1,17 @@
-"""
+("""
 MCP Data Models Package
 
 This package contains all data models for the MCP (Model Context Protocol) system,
 including models for MCP files, rules, validation results, and compliance reports.
 """
 
-from services.mcp_models
+from services.mcp_models import services.mcp_models
     # Enums
     RuleSeverity,
     RuleCategory,
     ConditionType,
     ActionType,
-    
+
     # Core models
     Jurisdiction,
     RuleCondition,
@@ -19,17 +19,17 @@ from services.mcp_models
     MCPRule,
     MCPMetadata,
     MCPFile,
-    
+
     # Validation models
     ValidationViolation,
     ValidationResult,
     MCPValidationReport,
     ComplianceReport,
-    
+
     # Building models
     BuildingObject,
     BuildingModel,
-    
+
     # Utility functions
     serialize_mcp_file,
     deserialize_mcp_file
@@ -37,7 +37,7 @@ from services.mcp_models
 
 __all__ = [
     'RuleSeverity',
-    'RuleCategory', 
+    'RuleCategory',
     'ConditionType',
     'ActionType',
     'Jurisdiction',
@@ -54,4 +54,4 @@ __all__ = [
     'BuildingModel',
     'serialize_mcp_file',
     'deserialize_mcp_file'
-] 
+]

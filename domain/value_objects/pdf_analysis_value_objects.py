@@ -27,20 +27,21 @@ class TaskStatus(Enum):
 class TaskId(ValueObject):
     """Task identifier value object."""
     value: str
-    
+
     def __post_init__(self):
         """Validate task ID."""
         if not self.value:
             raise_validation_error("Task ID cannot be empty")
         if len(self.value) < 3:
             raise_validation_error("Task ID must be at least 3 characters")
-    
+
     @classmethod
-    def generate(cls) -> 'TaskId':
+def generate(cls) -> 'TaskId':
         """Generate a new task ID."""
         return cls(str(uuid.uuid4()))
-    
+
     def __str__(self) -> str:
+        pass
     """
     Perform __str__ operation
 
@@ -64,37 +65,37 @@ Example:
 class ConfidenceScore(ValueObject):
     """Confidence score value object."""
     value: float
-    
+
     def __post_init__(self):
         """Validate confidence score."""
         if not isinstance(self.value, (int, float)):
             raise_validation_error("Confidence score must be a number")
         if self.value < 0.0 or self.value > 1.0:
             raise_validation_error("Confidence score must be between 0.0 and 1.0")
-    
+
     @classmethod
-    def from_percentage(cls, percentage: float) -> 'ConfidenceScore':
+def from_percentage(cls, percentage: float) -> 'ConfidenceScore':
         """Create from percentage (0-100)."""
         if percentage < 0 or percentage > 100:
             raise_validation_error("Percentage must be between 0 and 100")
         return cls(percentage / 100.0)
-    
+
     def to_percentage(self) -> float:
         """Convert to percentage."""
         return self.value * 100.0
-    
+
     def is_high(self) -> bool:
         """Check if confidence is high (>= 0.8)."""
         return self.value >= 0.8
-    
+
     def is_medium(self) -> bool:
         """Check if confidence is medium (0.5-0.8)."""
         return 0.5 <= self.value < 0.8
-    
+
     def is_low(self) -> bool:
         """Check if confidence is low (< 0.5)."""
         return self.value < 0.5
-    
+
     def __float__(self) -> float:
         return self.value
 
@@ -103,7 +104,7 @@ class ConfidenceScore(ValueObject):
 class FileName(ValueObject):
     """File name value object."""
     value: str
-    
+
     def __post_init__(self):
         """Validate file name."""
         if not self.value:
@@ -112,23 +113,23 @@ class FileName(ValueObject):
             raise_validation_error("File name too long")
         if '/' in self.value or '\\' in self.value:
             raise_validation_error("File name cannot contain path separators")
-    
+
     def get_extension(self) -> str:
         """Get file extension."""
         if '.' not in self.value:
             return ""
         return self.value.split('.')[-1].lower()
-    
+
     def is_pdf(self) -> bool:
         """Check if file is PDF."""
         return self.get_extension() == 'pdf'
-    
+
     def get_name_without_extension(self) -> str:
         """Get file name without extension."""
         if '.' not in self.value:
             return self.value
         return self.value.rsplit('.', 1)[0]
-    
+
     def __str__(self) -> str:
         return self.value
 
@@ -137,18 +138,18 @@ class FileName(ValueObject):
 class FilePath(ValueObject):
     """File path value object."""
     value: str
-    
+
     def __post_init__(self):
         """Validate file path."""
         if not self.value:
             raise_validation_error("File path cannot be empty")
         if len(self.value) > 1000:
             raise_validation_error("File path too long")
-    
+
     def get_filename(self) -> str:
         """Get filename from path."""
         return self.value.split('/')[-1].split('\\')[-1]
-    
+
     def get_directory(self) -> str:
         """Get directory from path."""
         if '/' in self.value:
@@ -156,7 +157,7 @@ class FilePath(ValueObject):
         elif '\\' in self.value:
             return '\\'.join(self.value.split('\\')[:-1])
         return ""
-    
+
     def __str__(self) -> str:
         return self.value
 
@@ -172,7 +173,7 @@ class AnalysisResult(ValueObject):
     confidence: ConfidenceScore
     metadata: Dict[str, Any]
     created_at: datetime
-    
+
     def __post_init__(self):
         """Validate analysis result."""
         if not isinstance(self.project_info, dict):
@@ -191,23 +192,21 @@ class AnalysisResult(ValueObject):
             raise_validation_error("Metadata must be a dictionary")
         if not isinstance(self.created_at, datetime):
             raise_validation_error("Created at must be a datetime")
-    
+
     def get_total_cost(self) -> float:
         """Get total cost from estimates."""
-        return sum(self.cost_estimates.values())
-    
+        return sum(self.cost_estimates.values()
     def get_system_count(self) -> int:
         """Get number of systems found."""
         return len(self.systems)
-    
+
     def get_total_components(self) -> int:
         """Get total number of components."""
         return self.quantities.get('total_components', 0)
-    
+
     def get_system_names(self) -> List[str]:
         """Get list of system names."""
-        return list(self.systems.keys())
-    
+        return list(self.systems.keys()
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -220,9 +219,9 @@ class AnalysisResult(ValueObject):
             'metadata': self.metadata,
             'created_at': self.created_at.isoformat()
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'AnalysisResult':
+def from_dict(cls, data: Dict[str, Any]) -> 'AnalysisResult':
         """Create from dictionary."""
         return cls(
             project_info=data['project_info'],
@@ -233,9 +232,6 @@ class AnalysisResult(ValueObject):
             confidence=ConfidenceScore(data['confidence']),
             metadata=data['metadata'],
             created_at=datetime.fromisoformat(data['created_at'])
-        )
-
-
 @dataclass(frozen=True)
 class AnalysisRequirements(ValueObject):
     """Analysis requirements value object."""
@@ -243,14 +239,14 @@ class AnalysisRequirements(ValueObject):
     include_timeline: bool = True
     include_quantities: bool = True
     custom_requirements: Dict[str, Any] = None
-    
+
     def __post_init__(self):
         """Validate requirements."""
         if self.custom_requirements is None:
             object.__setattr__(self, 'custom_requirements', {})
         if not isinstance(self.custom_requirements, dict):
             raise_validation_error("Custom requirements must be a dictionary")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -259,13 +255,12 @@ class AnalysisRequirements(ValueObject):
             'include_quantities': self.include_quantities,
             'custom_requirements': self.custom_requirements
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'AnalysisRequirements':
+def from_dict(cls, data: Dict[str, Any]) -> 'AnalysisRequirements':
         """Create from dictionary."""
         return cls(
             include_cost_estimation=data.get('include_cost_estimation', True),
             include_timeline=data.get('include_timeline', True),
             include_quantities=data.get('include_quantities', True),
             custom_requirements=data.get('custom_requirements', {})
-        ) 

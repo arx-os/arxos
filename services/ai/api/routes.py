@@ -199,4 +199,4 @@ async def list_service_capabilities():
                 "agent_types": ["general", "geometry", "voice", "nlp"]
             }
         }
-    } 
+    }

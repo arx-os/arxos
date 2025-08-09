@@ -270,11 +270,11 @@ curl -X POST http://localhost:8001/parse \
 #### Sample Buildings
 ```sql
 -- Insert test building
-INSERT INTO buildings (name, address, created_at) 
+INSERT INTO buildings (name, address, created_at)
 VALUES ('Test Building', '123 Test St', NOW());
 
 -- Insert test floor
-INSERT INTO floors (building_id, name, svg_content) 
+INSERT INTO floors (building_id, name, svg_content)
 VALUES (1, 'Ground Floor', '<svg>...</svg>');
 ```
 
@@ -482,4 +482,4 @@ After successful local setup:
 
 ---
 
-**Note**: This setup guide assumes you're running on a Unix-like system (Linux/macOS). For Windows, use WSL2 or adjust paths and commands accordingly. 
+**Note**: This setup guide assumes you're running on a Unix-like system (Linux/macOS). For Windows, use WSL2 or adjust paths and commands accordingly.

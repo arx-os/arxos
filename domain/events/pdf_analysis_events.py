@@ -297,4 +297,4 @@ class PDFAnalysisAuditLogCreated:
     audit_action: str
     audit_details: Dict[str, Any]
     audit_timestamp: datetime
-    timestamp: datetime 
+    timestamp: datetime

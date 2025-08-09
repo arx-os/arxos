@@ -2,8 +2,8 @@
 
 ## 📋 **Task Overview**
 
-**Task ID**: DOC-ONBOARD-025  
-**Title**: Write Developer Onboarding Documentation Per Repo  
+**Task ID**: DOC-ONBOARD-025
+**Title**: Write Developer Onboarding Documentation Per Repo
 **Goal**: Reduce onboarding friction and ensure consistent setup across all major Arxos repositories.
 
 ## ✅ **Completed Action Items**
@@ -304,4 +304,4 @@
 
 ---
 
-*This implementation summary is maintained by the Arxos development team. Last updated: 2024-01-15* 
+*This implementation summary is maintained by the Arxos development team. Last updated: 2024-01-15*

@@ -66,46 +66,46 @@ security__jwt_secret_key=os.environ.get("JWT_SECRET_KEY", "test_secret_for_testi
 ```python
 class TestJWTSecretEnvironmentEnforcement:
     """Test that JWT secrets are properly loaded from environment variables."""
-    
+
     def test_jwt_secret_environment_loading(self):
         """Test that JWT_SECRET_KEY is loaded from environment."""
-    
+
     def test_jwt_secret_fail_fast_behavior(self):
         """Test that the module fails fast if JWT_SECRET_KEY is not set."""
 
 class TestHardcodedSecretDetection:
     """Test that no hardcoded secrets exist in the codebase."""
-    
+
     def test_no_hardcoded_jwt_secrets_in_auth_module(self):
         """Test that auth.py doesn't contain hardcoded JWT secrets."""
-    
+
     def test_environment_variable_usage_in_auth_module(self):
         """Test that auth.py uses environment variables for JWT secrets."""
 
 class TestJWTTokenCreationWithEnvironmentSecrets:
     """Test that JWT token creation works with environment-loaded secrets."""
-    
+
     def test_access_token_creation_with_env_secret(self):
         """Test that access tokens can be created with environment secret."""
-    
+
     def test_refresh_token_creation_with_env_secret(self):
         """Test that refresh tokens can be created with environment secret."""
 
 class TestEnvironmentVariableSecurity:
     """Test security aspects of environment variable usage."""
-    
+
     def test_secret_not_in_source_code(self):
         """Test that actual secrets are not in source code."""
-    
+
     def test_environment_variable_documentation(self):
         """Test that environment variables are properly documented."""
 
 class TestProductionSecurity:
     """Test security requirements for production environments."""
-    
+
     def test_production_secret_requirements(self):
         """Test that production environments have proper secret requirements."""
-    
+
     def test_environment_variable_isolation(self):
         """Test that environment variables are properly isolated."""
 ```
@@ -227,8 +227,8 @@ python test_env_enforcement.py
 
 **When JWT_SECRET_KEY is not set**:
 ```python
-ValueError: JWT_SECRET_KEY environment variable must be set. 
-This is a critical security requirement. 
+ValueError: JWT_SECRET_KEY environment variable must be set.
+This is a critical security requirement.
 Please set JWT_SECRET_KEY in your environment or CI/CD pipeline.
 ```
 
@@ -322,19 +322,19 @@ python test_env_enforcement.py
 
 The JWT secret environment enforcement implementation provides:
 
-✅ **No Hardcoded Secrets**: All JWT secrets loaded from environment variables  
-✅ **Fail-Fast Error Handling**: System fails immediately when secrets missing  
-✅ **Comprehensive Testing**: Full test coverage for all scenarios  
-✅ **Production Security**: Secrets meet security requirements  
-✅ **Clear Documentation**: Proper usage and error handling guidance  
-✅ **CI/CD Integration**: Automated validation in deployment pipeline  
-✅ **Security Scanning**: Detection of hardcoded secrets  
-✅ **Best Practices**: Follows security best practices  
+✅ **No Hardcoded Secrets**: All JWT secrets loaded from environment variables
+✅ **Fail-Fast Error Handling**: System fails immediately when secrets missing
+✅ **Comprehensive Testing**: Full test coverage for all scenarios
+✅ **Production Security**: Secrets meet security requirements
+✅ **Clear Documentation**: Proper usage and error handling guidance
+✅ **CI/CD Integration**: Automated validation in deployment pipeline
+✅ **Security Scanning**: Detection of hardcoded secrets
+✅ **Best Practices**: Follows security best practices
 
 This implementation ensures that JWT secrets are properly managed through environment variables, eliminating the risk of hardcoded secrets in production code while providing comprehensive validation and testing.
 
 ---
 
-**Implementation Date**: 2024-01-15  
-**Security Issue**: SECURITY_001  
-**Status**: ✅ Complete and Secure 
+**Implementation Date**: 2024-01-15
+**Security Issue**: SECURITY_001
+**Status**: ✅ Complete and Secure

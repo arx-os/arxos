@@ -112,7 +112,7 @@ report_generator = ReportGenerator()
 
 # JSON report
 json_report = report_generator.generate_json_report(
-    compliance_report, 
+    compliance_report,
     output_path="reports/compliance_report.json"
 )
 
@@ -435,6 +435,6 @@ For support and questions:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2024-01-15  
-**Compatibility**: Arxos Platform 2.0+ 
+**Version**: 1.0.0
+**Last Updated**: 2024-01-15
+**Compatibility**: Arxos Platform 2.0+

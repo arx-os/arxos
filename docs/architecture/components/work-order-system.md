@@ -50,20 +50,20 @@ Create a comprehensive work order creation system that enables users to create w
 # arxos/svgx_engine/services/work_orders/object_selection.py
 class ObjectSelectionService:
     """Handles object selection for work order creation"""
-    
+
     def __init__(self):
         self.selection_handler = UISelectionHandler()
         self.asset_service = AssetTrackingService()
         self.template_service = WorkOrderTemplateService()
-    
+
     async def select_object_for_work_order(self, object_id: str, user_id: str) -> WorkOrderDraft:
         """Create work order draft from selected object"""
         # Get object details
         object_data = await self.asset_service.get_object_details(object_id)
-        
+
         # Generate smart template
         template = await self.template_service.generate_template_for_object(object_data)
-        
+
         # Create work order draft
         draft = WorkOrderDraft(
             object_id=object_id,
@@ -72,7 +72,7 @@ class ObjectSelectionService:
             suggested_parts=template.suggested_parts,
             estimated_duration=template.estimated_duration
         )
-        
+
         return draft
 ```
 
@@ -81,28 +81,28 @@ class ObjectSelectionService:
 # arxos/svgx_engine/services/work_orders/smart_templates.py
 class SmartTemplateEngine:
     """AI-driven work order template generation"""
-    
+
     def __init__(self):
         self.ai_agent = ArxosAIAgent()
         self.parts_service = PartsVendorService()
         self.cmms_service = WorkOrderProcessingService()
-    
+
     async def generate_template_for_object(self, object_data: Dict) -> WorkOrderTemplate:
         """Generate work order template based on object type and condition"""
-        
+
         # Analyze object type and condition
         analysis = await self.ai_agent.analyze_object_for_maintenance(object_data)
-        
+
         # Get common maintenance tasks for this object type
         common_tasks = await self.get_common_maintenance_tasks(object_data.type)
-        
+
         # Get suggested parts
         suggested_parts = await self.parts_service.get_suggested_parts(
             object_type=object_data.type,
             condition=object_data.condition,
             last_maintenance=object_data.last_maintenance
         )
-        
+
         # Generate template
         template = WorkOrderTemplate(
             title=f"Maintenance for {object_data.name}",
@@ -113,7 +113,7 @@ class SmartTemplateEngine:
             priority=analysis.priority,
             required_skills=analysis.required_skills
         )
-        
+
         return template
 ```
 
@@ -122,20 +122,20 @@ class SmartTemplateEngine:
 # arxos/svgx_engine/services/work_orders/quick_creation.py
 class QuickWorkOrderCreation:
     """Streamlined work order creation interface"""
-    
+
     def __init__(self):
         self.object_selection = ObjectSelectionService()
         self.template_engine = SmartTemplateEngine()
         self.cmms_service = WorkOrderProcessingService()
-    
+
     async def create_from_object_selection(self, object_ids: List[str], user_id: str) -> List[WorkOrder]:
         """Create work orders from selected objects"""
         work_orders = []
-        
+
         for object_id in object_ids:
             # Get object selection draft
             draft = await self.object_selection.select_object_for_work_order(object_id, user_id)
-            
+
             # Create work order
             work_order = await self.cmms_service.create_work_order(
                 asset_id=object_id,
@@ -145,11 +145,11 @@ class QuickWorkOrderCreation:
                 estimated_hours=draft.template.estimated_duration,
                 suggested_parts=draft.template.suggested_parts
             )
-            
+
             work_orders.append(work_order)
-        
+
         return work_orders
-    
+
     async def create_from_design(self, work_order_data: Dict) -> WorkOrder:
         """Create work order from manual design/entry"""
         return await self.cmms_service.create_work_order(**work_order_data)
@@ -203,27 +203,27 @@ class QuickWorkOrderCreation:
 # arxos/svgx_engine/runtime/enhanced_ui_selection_handler.py
 class EnhancedUISelectionHandler(UISelectionHandler):
     """Enhanced selection handler with work order creation"""
-    
+
     def __init__(self):
         super().__init__()
         self.quick_creation = QuickWorkOrderCreation()
-    
+
     async def handle_object_selection_for_work_order(self, canvas_id: str, object_ids: List[str]) -> Dict:
         """Handle object selection specifically for work order creation"""
-        
+
         # Update selection state
         for object_id in object_ids:
             self.selection_state[canvas_id].add(object_id)
-        
+
         # Get object details for work order creation
         object_details = []
         for object_id in object_ids:
             details = await self.get_object_details(object_id)
             object_details.append(details)
-        
+
         # Generate work order suggestions
         suggestions = await self.quick_creation.get_work_order_suggestions(object_details)
-        
+
         return {
             "selected_objects": object_ids,
             "object_details": object_details,
@@ -246,20 +246,20 @@ async def create_work_orders_from_selection(
     current_user: User = Depends(get_current_user)
 ) -> CreateFromSelectionResponse:
     """Create work orders from selected objects"""
-    
+
     try:
         quick_creation = QuickWorkOrderCreation()
         work_orders = await quick_creation.create_from_object_selection(
             object_ids=request.object_ids,
             user_id=current_user.id
         )
-        
+
         return CreateFromSelectionResponse(
             success=True,
             work_orders=work_orders,
             message=f"Created {len(work_orders)} work orders"
         )
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -269,17 +269,17 @@ async def create_work_order_from_design(
     current_user: User = Depends(get_current_user)
 ) -> CreateFromDesignResponse:
     """Create work order from manual design"""
-    
+
     try:
         quick_creation = QuickWorkOrderCreation()
         work_order = await quick_creation.create_from_design(request.work_order_data)
-        
+
         return CreateFromDesignResponse(
             success=True,
             work_order=work_order,
             message="Work order created successfully"
         )
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -289,10 +289,10 @@ async def get_work_order_templates(
     current_user: User = Depends(get_current_user)
 ) -> List[WorkOrderTemplate]:
     """Get work order templates for object type"""
-    
+
     template_engine = SmartTemplateEngine()
     templates = await template_engine.get_templates_for_object_type(object_type)
-    
+
     return templates
 ```
 
@@ -354,26 +354,26 @@ class WorkOrderCreationUI {
         this.quickCreationDialog = null;
         this.init();
     }
-    
+
     init() {
         this.setupObjectSelection();
         this.setupQuickCreationButton();
         this.setupWorkOrderDialog();
     }
-    
+
     setupObjectSelection() {
         // Listen for object selection events
         document.addEventListener('object-selected', (event) => {
             this.selectedObjects.add(event.detail.objectId);
             this.updateQuickCreationButton();
         });
-        
+
         document.addEventListener('object-deselected', (event) => {
             this.selectedObjects.delete(event.detail.objectId);
             this.updateQuickCreationButton();
         });
     }
-    
+
     updateQuickCreationButton() {
         const button = document.getElementById('create-work-order-btn');
         if (this.selectedObjects.size > 0) {
@@ -383,7 +383,7 @@ class WorkOrderCreationUI {
             button.style.display = 'none';
         }
     }
-    
+
     async createWorkOrdersFromSelection() {
         try {
             const response = await fetch('/api/work-orders/create-from-selection', {
@@ -396,9 +396,9 @@ class WorkOrderCreationUI {
                     object_ids: Array.from(this.selectedObjects)
                 })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.showSuccessMessage(`Created ${result.work_orders.length} work orders`);
                 this.selectedObjects.clear();
@@ -423,7 +423,7 @@ class WorkOrderCreationUI {
             <h3>Create Work Orders</h3>
             <span class="close">&times;</span>
         </div>
-        
+
         <div class="modal-body">
             <div class="selected-objects">
                 <h4>Selected Objects ({{ selectedObjects.length }})</h4>
@@ -435,7 +435,7 @@ class WorkOrderCreationUI {
                     </div>
                 </div>
             </div>
-            
+
             <div class="work-order-templates">
                 <h4>Suggested Work Orders</h4>
                 <div v-for="template in workOrderTemplates" :key="template.id" class="template-item">
@@ -455,7 +455,7 @@ class WorkOrderCreationUI {
                 </div>
             </div>
         </div>
-        
+
         <div class="modal-footer">
             <button @click="createWorkOrders" class="btn btn-success">Create Work Orders</button>
             <button @click="closeDialog" class="btn btn-secondary">Cancel</button>

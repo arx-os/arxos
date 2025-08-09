@@ -27,106 +27,102 @@ from typing import List, Dict, Any, Optional
 
 class ComprehensiveDocumentationGenerator:
     """Generates comprehensive documentation for the codebase"""
-    
+
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
-        
+
         # Documentation templates
         self.docstring_templates = {
             'function': '''
 def {function_name}({parameters}):
     """
     {description}
-    
+
     Args:
         {args_doc}
-        
+
     Returns:
         {returns_doc}
-        
+
     Raises:
         {raises_doc}
-        
+
     Example:
         {example_doc}
-    """
-''',
+    """','
             'class': '''
 class {class_name}:
     """
     {description}
-    
+
     Attributes:
         {attributes_doc}
-        
+
     Methods:
         {methods_doc}
-        
+
     Example:
         {example_doc}
-    """
-''',
+    """','
             'async_function': '''
 async def {function_name}({parameters}):
     """
     {description}
-    
+
     Args:
         {args_doc}
-        
+
     Returns:
         {returns_doc}
-        
+
     Raises:
         {raises_doc}
-        
+
     Example:
         {example_doc}
-    """
-'''
+    """''
         }
-    
+
     def generate_comprehensive_documentation(self):
         """Generate comprehensive documentation"""
         print("📚 Generating Comprehensive Documentation")
         print("=" * 60)
-        
+
         # Generate function and class docstrings
         print("\n📝 Generating Function and Class Docstrings")
         self._generate_docstrings()
-        
+
         # Generate API documentation
         print("\n🌐 Generating API Documentation")
         self._generate_api_documentation()
-        
+
         # Generate user guides
         print("\n📖 Generating User Guides")
         self._generate_user_guides()
-        
+
         # Generate architecture documentation
         print("\n🏗️  Generating Architecture Documentation")
         self._generate_architecture_documentation()
-        
+
         # Generate security documentation
         print("\n🔒 Generating Security Documentation")
         self._generate_security_documentation()
-        
+
         print("\n" + "=" * 60)
         print("✅ Comprehensive documentation generated!")
-    
+
     def _generate_docstrings(self):
         """Generate docstrings for functions and classes"""
-        python_files = list(self.project_root.rglob("*.py"))
-        
+        python_files = list(self.project_root.rglob("*.py")
         for file_path in python_files:
             if self._should_skip_file(file_path):
                 continue
-            
+
             try:
                 self._add_docstrings_to_file(file_path)
             except Exception as e:
                 print(f"❌ Error processing {file_path}: {e}")
-    
+
     def _should_skip_file(self, file_path: Path) -> bool:
         """Check if file should be skipped"""
         skip_patterns = [
@@ -141,22 +137,22 @@ async def {function_name}({parameters}):
             'docs/',
             'scripts/'
         ]
-        
+
         return any(pattern in str(file_path) for pattern in skip_patterns)
-    
+
     def _add_docstrings_to_file(self, file_path: Path):
         """Add docstrings to a single file"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             # Parse the file to find functions and classes
             tree = ast.parse(content)
-            
+
             # Find functions and classes without docstrings
             functions_without_docstrings = []
             classes_without_docstrings = []
-            
+
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
                     if not ast.get_docstring(node):
@@ -164,111 +160,109 @@ async def {function_name}({parameters}):
                 elif isinstance(node, ast.ClassDef):
                     if not ast.get_docstring(node):
                         classes_without_docstrings.append(node)
-            
+
             if not functions_without_docstrings and not classes_without_docstrings:
                 return
-            
+
             # Add docstrings
             content = self._add_function_docstrings(content, functions_without_docstrings)
             content = self._add_class_docstrings(content, classes_without_docstrings)
-            
+
             # Write updated content
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-            
+
             print(f"✅ Added docstrings to: {file_path}")
-            
+
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
-    
+
     def _add_function_docstrings(self, content: str, functions: List[ast.FunctionDef]) -> str:
         """Add docstrings to functions"""
         lines = content.split('\n')
-        
+
         for func in functions:
             # Generate docstring for function
             docstring = self._generate_function_docstring(func)
-            
+
             # Find the line number of the function
             func_line = func.lineno - 1
-            
+
             # Insert docstring after function definition
             if func_line < len(lines):
                 # Find the end of the function definition
                 def_line = lines[func_line]
                 if def_line.strip().endswith(':'):
                     # Insert docstring after the colon
-                    lines.insert(func_line + 1, '    """')
+                    lines.insert(func_line + 1, '    """)
                     lines.insert(func_line + 2, f'    {docstring}')
-                    lines.insert(func_line + 3, '    """')
-        
+                    lines.insert(func_line + 3, '    """)
         return '\n'.join(lines)
-    
+
     def _add_class_docstrings(self, content: str, classes: List[ast.ClassDef]) -> str:
         """Add docstrings to classes"""
         lines = content.split('\n')
-        
+
         for cls in classes:
             # Generate docstring for class
             docstring = self._generate_class_docstring(cls)
-            
+
             # Find the line number of the class
             cls_line = cls.lineno - 1
-            
+
             # Insert docstring after class definition
             if cls_line < len(lines):
                 # Find the end of the class definition
                 def_line = lines[cls_line]
                 if def_line.strip().endswith(':'):
                     # Insert docstring after the colon
-                    lines.insert(cls_line + 1, '    """')
+                    lines.insert(cls_line + 1, '    """)
                     lines.insert(cls_line + 2, f'    {docstring}')
-                    lines.insert(cls_line + 3, '    """')
-        
+                    lines.insert(cls_line + 3, '    """)
         return '\n'.join(lines)
-    
+
     def _generate_function_docstring(self, func: ast.FunctionDef) -> str:
         """Generate docstring for a function"""
         func_name = func.name
-        
+
         # Determine function type
         is_async = isinstance(func, ast.AsyncFunctionDef)
-        
+
         # Generate description based on function name
         description = self._generate_function_description(func_name)
-        
+
         # Generate args documentation
         args_doc = self._generate_args_documentation(func)
-        
+
         # Generate returns documentation
         returns_doc = self._generate_returns_documentation(func)
-        
+
         # Generate raises documentation
         raises_doc = self._generate_raises_documentation(func)
-        
+
         # Generate example
         example_doc = self._generate_function_example(func_name, is_async)
-        
+
         return f"{description}\n\nArgs:\n{args_doc}\n\nReturns:\n{returns_doc}\n\nRaises:\n{raises_doc}\n\nExample:\n{example_doc}"
-    
+
     def _generate_class_docstring(self, cls: ast.ClassDef) -> str:
         """Generate docstring for a class"""
         class_name = cls.name
-        
+
         # Generate description based on class name
         description = self._generate_class_description(class_name)
-        
+
         # Generate attributes documentation
         attributes_doc = self._generate_attributes_documentation(cls)
-        
+
         # Generate methods documentation
         methods_doc = self._generate_methods_documentation(cls)
-        
+
         # Generate example
         example_doc = self._generate_class_example(class_name)
-        
+
         return f"{description}\n\nAttributes:\n{attributes_doc}\n\nMethods:\n{methods_doc}\n\nExample:\n{example_doc}"
-    
+
     def _generate_function_description(self, func_name: str) -> str:
         """Generate description for a function"""
         descriptions = {
@@ -293,13 +287,13 @@ async def {function_name}({parameters}):
             'send': 'Send data or messages',
             'receive': 'Receive data or messages'
         }
-        
+
         for key, desc in descriptions.items():
             if key in func_name.lower():
                 return desc
-        
+
         return f"Perform {func_name} operation"
-    
+
     def _generate_class_description(self, class_name: str) -> str:
         """Generate description for a class"""
         descriptions = {
@@ -319,54 +313,52 @@ async def {function_name}({parameters}):
             'Observer': 'Observer class for event handling',
             'Strategy': 'Strategy class for algorithm selection'
         }
-        
+
         for key, desc in descriptions.items():
             if key in class_name:
                 return desc
-        
+
         return f"Class for {class_name} functionality"
-    
+
     def _generate_args_documentation(self, func: ast.FunctionDef) -> str:
         """Generate args documentation for a function"""
         args = []
         for arg in func.args.args:
             if arg.arg != 'self':
                 args.append(f"        {arg.arg}: Description of {arg.arg}")
-        
+
         return '\n'.join(args) if args else "        None"
-    
+
     def _generate_returns_documentation(self, func: ast.FunctionDef) -> str:
         """Generate returns documentation for a function"""
         return "        Description of return value"
-    
+
     def _generate_raises_documentation(self, func: ast.FunctionDef) -> str:
         """Generate raises documentation for a function"""
         return "        Exception: Description of exception"
-    
+
     def _generate_function_example(self, func_name: str, is_async: bool) -> str:
         """Generate example for a function"""
         if is_async:
-            return f"        result = await {func_name}(param)\n        print(result)"
+            return f"        result = await {func_name}(param)\n        print(result)
         else:
-            return f"        result = {func_name}(param)\n        print(result)"
-    
+            return f"        result = {func_name}(param)\n        print(result)
     def _generate_attributes_documentation(self, cls: ast.ClassDef) -> str:
         """Generate attributes documentation for a class"""
         return "        None"
-    
+
     def _generate_methods_documentation(self, cls: ast.ClassDef) -> str:
         """Generate methods documentation for a class"""
         methods = []
         for node in cls.body:
             if isinstance(node, ast.FunctionDef):
                 methods.append(f"        {node.name}(): Description of {node.name}")
-        
+
         return '\n'.join(methods) if methods else "        None"
-    
+
     def _generate_class_example(self, class_name: str) -> str:
         """Generate example for a class"""
-        return f"        instance = {class_name}()\n        result = instance.method()\n        print(result)"
-    
+        return f"        instance = {class_name}()\n        result = instance.method()\n        print(result)
     def _generate_api_documentation(self):
         """Generate API documentation"""
         api_doc = '''
@@ -422,11 +414,11 @@ Content-Type: application/json
 curl -X POST "http://localhost:8000/api/v1/query" \\
      -H "Authorization: Bearer <token>" \\
      -H "Content-Type: application/json" \\
-     -d '{
+     -d '{'
          "query": "Analyze this building design",
          "user_id": "user123",
          "context": {"building_type": "residential"}
-     }'
+     }''
 ```
 
 ### Execute GUS Task
@@ -434,22 +426,22 @@ curl -X POST "http://localhost:8000/api/v1/query" \\
 curl -X POST "http://localhost:8000/api/v1/task" \\
      -H "Authorization: Bearer <token>" \\
      -H "Content-Type: application/json" \\
-     -d '{
+     -d '{'
          "task": "knowledge_search",
          "parameters": {"topic": "building_codes"},
          "user_id": "user123"
-     }'
+     }''
 ```
 '''
-        
+
         api_doc_path = self.project_root / "docs" / "API_DOCUMENTATION.md"
         api_doc_path.parent.mkdir(exist_ok=True)
-        
+
         with open(api_doc_path, 'w') as f:
             f.write(api_doc)
-        
+
         print(f"📝 Generated API documentation: {api_doc_path}")
-    
+
     def _generate_user_guides(self):
         """Generate user guides"""
         user_guide = '''
@@ -541,15 +533,15 @@ print(result)
 - Review the API documentation
 - Contact support with error details
 '''
-        
+
         user_guide_path = self.project_root / "docs" / "USER_GUIDE.md"
         user_guide_path.parent.mkdir(exist_ok=True)
-        
+
         with open(user_guide_path, 'w') as f:
             f.write(user_guide)
-        
+
         print(f"📝 Generated user guide: {user_guide_path}")
-    
+
     def _generate_architecture_documentation(self):
         """Generate architecture documentation"""
         arch_doc = '''
@@ -649,15 +641,15 @@ Arxos follows Clean Architecture principles with clear separation of concerns.
 - Error tracking and alerting
 - Health check endpoints
 '''
-        
+
         arch_doc_path = self.project_root / "docs" / "ARCHITECTURE_DOCUMENTATION.md"
         arch_doc_path.parent.mkdir(exist_ok=True)
-        
+
         with open(arch_doc_path, 'w') as f:
             f.write(arch_doc)
-        
+
         print(f"📝 Generated architecture documentation: {arch_doc_path}")
-    
+
     def _generate_security_documentation(self):
         """Generate security documentation"""
         security_doc = '''
@@ -753,13 +745,13 @@ Arxos implements comprehensive security measures to protect data and ensure secu
 - Automated alerting
 - Incident response procedures
 '''
-        
+
         security_doc_path = self.project_root / "docs" / "SECURITY_DOCUMENTATION.md"
         security_doc_path.parent.mkdir(exist_ok=True)
-        
+
         with open(security_doc_path, 'w') as f:
             f.write(security_doc)
-        
+
         print(f"📝 Generated security documentation: {security_doc_path}")
 
 
@@ -767,9 +759,9 @@ def main():
     """Main function"""
     project_root = "."
     dry_run = "--dry-run" in sys.argv
-    
+
     generator = ComprehensiveDocumentationGenerator(project_root)
-    
+
     if not dry_run:
         generator.generate_comprehensive_documentation()
     else:
@@ -783,4 +775,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

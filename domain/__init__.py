@@ -9,7 +9,7 @@ The domain layer is the innermost layer and contains:
 - Value Objects: Immutable objects that describe domain characteristics
 - Domain Events: Events that occur within the domain
 - Repository Interfaces: Abstract interfaces for data access
-- Domain Services: Business logic that doesn't belong to entities
+- Domain Services: Business logic that doesn't belong to entities'
 """
 
 from .entities import *
@@ -22,7 +22,7 @@ from .exceptions import *
 # PDF Analysis specific imports
 from .entities.pdf_analysis import PDFAnalysis
 from .value_objects.pdf_analysis_value_objects import (
-    TaskId, TaskStatus, ConfidenceScore, FileName, FilePath, 
+    TaskId, TaskStatus, ConfidenceScore, FileName, FilePath,
     AnalysisResult, AnalysisRequirements
 )
 from .events.pdf_analysis_events import (
@@ -47,7 +47,7 @@ __all__ = [
     'User',
     'Project',
     'PDFAnalysis',
-    
+
     # Value Objects
     'BuildingId',
     'FloorId',
@@ -73,7 +73,7 @@ __all__ = [
     'DeviceStatus',
     'UserRole',
     'ProjectStatus',
-    
+
     # Events
     'DomainEvent',
     'EventType',
@@ -100,7 +100,7 @@ __all__ = [
     'publish_event',
     'subscribe_to_event',
     'unsubscribe_from_event',
-    
+
     # PDF Analysis Events
     'PDFAnalysisCreated',
     'PDFAnalysisStarted',
@@ -129,7 +129,7 @@ __all__ = [
     'PDFAnalysisCollaboratorRemoved',
     'PDFAnalysisNotificationSent',
     'PDFAnalysisAuditLogCreated',
-    
+
     # Repository Interfaces
     'BuildingRepository',
     'FloorRepository',
@@ -140,7 +140,7 @@ __all__ = [
     'PDFAnalysisRepository',
     'UnitOfWork',
     'RepositoryFactory',
-    
+
     # Domain Services
     'BuildingDomainService',
     'FloorDomainService',
@@ -149,7 +149,7 @@ __all__ = [
     'UserDomainService',
     'ProjectDomainService',
     'PDFAnalysisDomainService',
-    
+
     # Exceptions
     'DomainException',
     'InvalidBuildingError',
@@ -189,4 +189,4 @@ __all__ = [
     'DomainServiceExecutionError',
     'format_error_message',
     'raise_domain_exception',
-] 
+]

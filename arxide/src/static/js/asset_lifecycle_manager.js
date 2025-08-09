@@ -127,4 +127,4 @@ class AssetLifecycleManager {
 }
 
 window.assetLifecycleManager = new AssetLifecycleManager();
-if (typeof module !== 'undefined' && module.exports) module.exports = AssetLifecycleManager; 
+if (typeof module !== 'undefined' && module.exports) module.exports = AssetLifecycleManager;

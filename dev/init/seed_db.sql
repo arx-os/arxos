@@ -67,43 +67,43 @@ CREATE INDEX IF NOT EXISTS idx_gus_interactions_intent ON gus_interactions(inten
 -- Insert initial knowledge base data (Tier 1 standards)
 INSERT INTO gus_knowledge_base (topic, category, title, content, source, citation, relevance_tags) VALUES
 -- IBC 2024
-('structural_requirements', 'building_codes', 'IBC 2024 - Structural Requirements', 
+('structural_requirements', 'building_codes', 'IBC 2024 - Structural Requirements',
 'International Building Code 2024 structural requirements for buildings including load calculations, material specifications, and safety factors.',
-'IBC 2024', 'International Building Code 2024, Chapter 16', 
+'IBC 2024', 'International Building Code 2024, Chapter 16',
 ARRAY['structural', 'building_codes', 'IBC', 'safety', 'loads']),
 
 ('architectural_requirements', 'building_codes', 'IBC 2024 - Architectural Requirements',
 'International Building Code 2024 architectural requirements including egress, accessibility, and building envelope specifications.',
-'IBC 2024', 'International Building Code 2024, Chapter 10', 
+'IBC 2024', 'International Building Code 2024, Chapter 10',
 ARRAY['architectural', 'building_codes', 'IBC', 'egress', 'accessibility']),
 
 -- NEC 2023
 ('electrical_systems', 'electrical_codes', 'NEC 2023 - Electrical System Requirements',
 'National Electrical Code 2023 requirements for electrical systems including wiring, grounding, and safety measures.',
-'NEC 2023', 'National Electrical Code 2023, Article 250', 
+'NEC 2023', 'National Electrical Code 2023, Article 250',
 ARRAY['electrical', 'NEC', 'wiring', 'grounding', 'safety']),
 
 ('electrical_outlets', 'electrical_codes', 'NEC 2023 - Electrical Outlet Requirements',
 'National Electrical Code 2023 requirements for electrical outlets including spacing, types, and installation.',
-'NEC 2023', 'National Electrical Code 2023, Article 210', 
+'NEC 2023', 'National Electrical Code 2023, Article 210',
 ARRAY['electrical', 'outlets', 'NEC', 'spacing', 'installation']),
 
 -- ASHRAE 90.1
 ('hvac_energy', 'hvac_standards', 'ASHRAE 90.1 - HVAC Energy Standards',
 'ASHRAE 90.1 energy standards for HVAC systems including efficiency requirements and energy conservation measures.',
-'ASHRAE 90.1', 'ASHRAE Standard 90.1-2022, Section 6', 
+'ASHRAE 90.1', 'ASHRAE Standard 90.1-2022, Section 6',
 ARRAY['HVAC', 'energy', 'ASHRAE', 'efficiency', 'conservation']),
 
 -- NFPA 101
 ('life_safety', 'fire_safety', 'NFPA 101 - Life Safety Code',
 'NFPA 101 Life Safety Code requirements for multi-floor buildings including egress, fire protection, and emergency systems.',
-'NFPA 101', 'NFPA 101 Life Safety Code 2021, Chapter 7', 
+'NFPA 101', 'NFPA 101 Life Safety Code 2021, Chapter 7',
 ARRAY['life_safety', 'fire_safety', 'NFPA', 'egress', 'emergency']),
 
 -- ADA
 ('accessibility', 'accessibility_standards', 'ADA - Accessibility Requirements',
 'Americans with Disabilities Act requirements for building accessibility including ramps, doorways, and facilities.',
-'ADA', 'ADA Standards for Accessible Design 2010', 
+'ADA', 'ADA Standards for Accessible Design 2010',
 ARRAY['accessibility', 'ADA', 'ramps', 'doorways', 'facilities']);
 
 -- Create spatial tables for CAD data
@@ -140,7 +140,7 @@ CREATE OR REPLACE FUNCTION update_gus_session_context(
     p_context JSONB
 ) RETURNS VOID AS $$
 BEGIN
-    UPDATE gus_sessions 
+    UPDATE gus_sessions
     SET context = p_context, updated_at = CURRENT_TIMESTAMP
     WHERE session_id = p_session_id;
 END;
@@ -151,8 +151,8 @@ CREATE OR REPLACE FUNCTION get_gus_session_history(
 ) RETURNS JSONB AS $$
 BEGIN
     RETURN (
-        SELECT conversation_history 
-        FROM gus_sessions 
+        SELECT conversation_history
+        FROM gus_sessions
         WHERE session_id = p_session_id
     );
 END;
@@ -161,4 +161,4 @@ $$ LANGUAGE plpgsql;
 -- Grant permissions
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO arxos_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO arxos_user;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO arxos_user; 
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO arxos_user;

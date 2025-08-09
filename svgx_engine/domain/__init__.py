@@ -46,21 +46,21 @@ __description__ = "Domain layer for SVGX Engine"
 __all__ = [
     # Entities
     "Building",
-    
+
     # Value Objects
     "Address", "Coordinates", "Dimensions", "Identifier", "Money", "Status",
-    
+
     # Aggregates
     "BuildingAggregate",
-    
+
     # Repositories
     "BuildingRepository",
-    
+
     # Services
     "BuildingService",
-    
+
     # Events
     "BuildingCreatedEvent", "BuildingUpdatedEvent", "BuildingDeletedEvent",
     "BuildingStatusChangedEvent", "BuildingLocationChangedEvent", "BuildingCostUpdatedEvent",
     "building_event_publisher"
-] 
+]

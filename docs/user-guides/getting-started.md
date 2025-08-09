@@ -4,7 +4,7 @@
 
 Arxos is the world's most advanced building intelligence platform, combining CAD capabilities, AI-powered insights, and comprehensive building management tools. This guide will help you get started with your first building project.
 
-**Estimated Time**: 15-20 minutes  
+**Estimated Time**: 15-20 minutes
 **Prerequisites**: None
 
 ---
@@ -263,4 +263,4 @@ arx report generate "Building Name" --type maintenance-schedule
 
 **Congratulations!** You've successfully started your journey with Arxos. The platform is designed to grow with your needs, from simple building visualization to complex enterprise management. Take your time exploring features and don't hesitate to ask for help when needed.
 
-**Need Help?** Contact our support team or use the AI assistant for immediate assistance. 
+**Need Help?** Contact our support team or use the AI assistant for immediate assistance.

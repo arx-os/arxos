@@ -728,4 +728,4 @@ if performance_metric > threshold:
 
 ---
 
-This API reference provides comprehensive documentation for all public interfaces in the SVGX Engine. For implementation details and advanced usage, see the architecture documentation and examples. 
+This API reference provides comprehensive documentation for all public interfaces in the SVGX Engine. For implementation details and advanced usage, see the architecture documentation and examples.

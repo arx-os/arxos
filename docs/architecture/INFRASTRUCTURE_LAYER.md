@@ -16,7 +16,7 @@ The Infrastructure Layer provides all external dependencies, data persistence, a
 #### Database Models (`infrastructure/database/models/`)
 - **`base.py`** - Base model with common fields (timestamps, audit, soft delete)
 - **`building.py`** - BuildingModel for building entities
-- **`floor.py`** - FloorModel for floor entities  
+- **`floor.py`** - FloorModel for floor entities
 - **`room.py`** - RoomModel for room entities
 - **`device.py`** - DeviceModel for device entities
 - **`user.py`** - UserModel for user entities
@@ -206,4 +206,4 @@ The infrastructure layer is ready for integration with the Application Layer, wh
 1. Wire repositories to application services
 2. Add caching to application operations
 3. Integrate event publishing with domain events
-4. Add health monitoring to application endpoints 
+4. Add health monitoring to application endpoints

@@ -1,10 +1,10 @@
 import React from 'react'
-import { 
-  Box, 
-  Paper, 
-  List, 
-  ListItem, 
-  ListItemIcon, 
+import {
+  Box,
+  Paper,
+  List,
+  ListItem,
+  ListItemIcon,
   ListItemText,
   Typography,
   Divider
@@ -39,11 +39,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFile, onFileSelect }) =>
   }
 
   return (
-    <Paper 
-      sx={{ 
-        width: 250, 
-        height: '100%', 
-        display: 'flex', 
+    <Paper
+      sx={{
+        width: 250,
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
         borderRadius: 0
       }}
@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFile, onFileSelect }) =>
           Project
         </Typography>
       </Box>
-      
+
       <Box sx={{ flex: 1, overflow: 'auto' }}>
         <List dense>
           <ListItem>
@@ -62,9 +62,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFile, onFileSelect }) =>
             </ListItemIcon>
             <ListItemText primary="src" />
           </ListItem>
-          
+
           <Divider />
-          
+
           {mockFiles.map((file) => (
             <ListItem
               key={file.path}
@@ -81,9 +81,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFile, onFileSelect }) =>
           ))}
         </List>
       </Box>
-      
+
       <Divider />
-      
+
       <List dense>
         <ListItem button>
           <ListItemIcon>
@@ -94,4 +94,4 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeFile, onFileSelect }) =>
       </List>
     </Paper>
   )
-} 
+}

@@ -1,516 +1,286 @@
-#!/usr/bin/env python3
+(#!/usr/bin/env python3
 """
-Fix Critical Syntax Errors
+Critical Syntax Error Fixer
 
-This script fixes the critical syntax errors that are preventing code execution
-and analysis, focusing on the specific patterns causing "expected an indented block" errors.
-
-Target Issues:
-- "expected an indented block after function definition" errors
-- Missing function bodies after docstrings
-- Improper docstring placement
-- Indentation errors
-
-Author: Arxos Engineering Team
-Date: 2024
-License: MIT
+This script fixes the most critical syntax errors that prevent compilation.
+Focuses on the most common and blocking issues.
 """
 
 import os
-import re
 import sys
-import ast
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-
+from typing import List, Dict
 
 class CriticalSyntaxFixer:
-    """Fixes critical syntax errors that prevent code execution"""
-    
-    def __init__(self, project_root: str):
-        self.project_root = Path(project_root)
-        
-        # Files with critical syntax errors
-        self.files_with_critical_errors = [
-            "plugins/example_behavior_plugin.py",
-            "cli/gus.py",
-            "cli/svgx-cli.py",
-            "svgx_engine/deploy_production.py",
-            "svgx_engine/app.py",
-            "api/middleware.py",
-            "application/logging_config.py",
-            "application/transaction.py",
-            "application/exceptions.py",
-            "domain/services.py",
-            "domain/events.py",
-            "domain/value_objects.py",
-            "domain/exceptions.py",
-            "services/iot/telemetry_api.py",
-            "services/iot/device_registry.py",
-            "services/ai/main.py",
-            "services/gus/main.py",
-            "services/gus/core/pdf_analysis.py",
-            "services/planarx/planarx-community/user_agreement_flags.py",
-            "services/planarx/planarx-community/main.py",
-            "services/planarx/planarx-funding/grant_eligibility.py",
-            "services/planarx/planarx-funding/hooks/milestone_hook.py",
-            "services/planarx/planarx-community/frontend/onboarding_flow.py",
-            "services/planarx/planarx-community/reputation/badges.py",
-            "services/planarx/planarx-community/reputation/scoring_engine.py",
-            "services/planarx/planarx-community/workflows/task_trigger_map.py",
-            "services/planarx/planarx-community/integrations/build_hooks.py",
-            "services/planarx/planarx-community/collab/realtime_editor.py",
-            "services/planarx/planarx-community/collab/annotations.py",
-            "services/planarx/planarx-community/examples/funding_escrow_demo.py",
-            "services/planarx/planarx-community/notifications/collab_events.py",
-            "services/planarx/planarx-community/mod/flagging.py",
-            "services/planarx/planarx-community/mod/mod_queue.py",
-            "services/planarx/planarx-community/funding/escrow_engine.py",
-            "services/planarx/planarx-community/governance/models/board_roles.py",
-            "services/ai/config/settings.py",
-            "services/ai/arx-mcp/validate/rule_engine.py",
-            "services/iot/tools/validate_schema.py",
-            "services/iot/protocol/arxlink_sync.py",
-            "domain/value_objects/pdf_analysis_value_objects.py",
-            "infrastructure/database/session.py",
-            "infrastructure/repositories/postgresql_pdf_analysis_repository.py",
-            "infrastructure/services/file_storage_service.py",
-            "infrastructure/services/gus_service.py",
-            "infrastructure/deploy/monitoring/alerting_workflows.py",
-            "infrastructure/database/tools/schema_validator.py",
-            "infrastructure/database/tools/validate_documentation.py",
-            "infrastructure/database/tools/audit_constraints.py",
-            "infrastructure/database/alembic/versions/001_create_initial_schema.py",
-            "application/use_cases/pdf_analysis_use_cases.py",
-            "application/use_cases/building_hierarchy_use_cases.py",
-            "application/use_cases/room_use_cases.py",
-            "application/use_cases/user_use_cases.py",
-            "application/use_cases/building_use_cases.py",
-            "application/use_cases/device_use_cases.py",
-            "application/use_cases/floor_use_cases.py",
-            "application/use_cases/project_use_cases.py",
-            "application/services/pdf_analysis_orchestrator.py",
-            "svgx_engine/tools/svgx_linter.py",
-            "svgx_engine/core/precision_system.py",
-            "svgx_engine/core/cad_system_integration.py",
-            "svgx_engine/core/precision_config.py",
-            "svgx_engine/core/precision_input.py",
-            "svgx_engine/core/constraint_system.py",
-            "svgx_engine/core/dimensioning_system.py",
-            "svgx_engine/core/precision_input_integration.py",
-            "svgx_engine/core/assembly_system.py",
-            "svgx_engine/core/drawing_views_system.py",
-            "svgx_engine/core/grid_snap_system.py",
-            "svgx_engine/core/precision_hooks.py",
-            "svgx_engine/config/enterprise_config.py",
-            "svgx_engine/runtime/custom_behavior_plugin_system.py",
-            "svgx_engine/runtime/time_based_trigger_system.py",
-            "svgx_engine/runtime/performance_optimization_engine.py",
-            "svgx_engine/runtime/animation_behavior_system.py",
-            "svgx_engine/runtime/ui_annotation_handler.py",
-            "svgx_engine/runtime/physics_engine.py",
-            "svgx_engine/runtime/event_driven_behavior_engine.py",
-            "svgx_engine/runtime/ui_navigation_handler.py",
-            "svgx_engine/runtime/__init__.py",
-            "svgx_engine/runtime/ui_editing_handler.py",
-            "svgx_engine/runtime/ui_selection_handler.py",
-            "svgx_engine/runtime/advanced_behavior_engine.py",
-            "svgx_engine/runtime/advanced_state_machine.py",
-            "svgx_engine/runtime/advanced_rule_engine.py",
-            "svgx_engine/utils/unified_error_handler.py",
-            "svgx_engine/utils/logging_config.py",
-            "svgx_engine/utils/precision_manager.py",
-            "svgx_engine/utils/database.py",
-            "svgx_engine/utils/telemetry.py",
-            "svgx_engine/utils/errors.py",
-            "svgx_engine/utils/permission_utils.py",
-            "svgx_engine/utils/performance.py",
-            "svgx_engine/models/bim_relationships.py",
-            "svgx_engine/models/bim_metadata.py",
-            "svgx_engine/models/database.py",
-            "svgx_engine/models/bim.py",
-            "svgx_engine/models/svgx.py",
-            "svgx_engine/models/error_response.py",
-            "svgx_engine/parser/parser.py",
-            "svgx_engine/parser/geometry.py",
-            "svgx_engine/schema/svgx_schema.py",
-            "svgx_engine/deployment/enterprise_deployment.py",
-            "svgx_engine/infrastructure/container.py",
-            "svgx_engine/compiler/svgx_to_ifc.py",
-            "svgx_engine/compiler/__init__.py",
-            "svgx_engine/compiler/svgx_to_gltf.py",
-            "svgx_engine/compiler/svgx_to_svg.py",
-            "svgx_engine/compiler/svgx_to_json.py",
-            "svgx_engine/services/ai_integration_service.py",
-            "svgx_engine/services/enhanced_physics_engine.py",
-            "svgx_engine/services/elite_parser.py",
-            "svgx_engine/services/cache/redis_client.py",
-            "svgx_engine/services/cmms/asset_tracking.py",
-            "svgx_engine/services/cmms/cmms_integration.py",
-            "svgx_engine/services/cmms/maintenance_scheduling.py",
-            "svgx_engine/services/cad/constraint_system.py",
-            "svgx_engine/services/cad/dimensioning_system.py",
-            "svgx_engine/services/cad/precision_drawing.py",
-            "svgx_engine/services/ai/ai_integration_service.py",
-            "svgx_engine/services/ai/ai_frontend_integration.py",
-            "svgx_engine/services/ai/user_pattern_learning.py",
-            "svgx_engine/services/ai/advanced_ai_service.py",
-            "svgx_engine/services/symbols/symbol_recognition.py",
-            "svgx_engine/services/physics/advanced_thermal_analysis.py",
-            "svgx_engine/services/performance/cdn_service.py",
-            "svgx_engine/services/logging/structured_logger.py",
-            "svgx_engine/services/notifications/monitoring.py",
-            "svgx_engine/services/notifications/go_client_optimized.py",
-            "svgx_engine/domain/events/building_events.py",
-            "svgx_engine/domain/services/building_service.py",
-            "svgx_engine/infrastructure/repositories/in_memory_building_repository.py",
-            "svgx_engine/application/use_cases/building_use_cases.py",
-            "svgx_engine/runtime/behavior/ui_event_dispatcher.py",
-            "sdk/generator/docs_generator.py",
-            "sdk/generator/generator.py",
-            "core/security/auth_middleware.py",
-            "core/shared/models/error.py"
-        ]
-    
-    def fix_critical_syntax_errors(self):
-        """Fix critical syntax errors that prevent code execution"""
-        print("🔧 Fixing Critical Syntax Errors")
-        print("=" * 60)
-        
-        success_count = 0
-        error_count = 0
-        
-        for file_path in self.files_with_critical_errors:
-            full_path = self.project_root / file_path
-            
-            if not full_path.exists():
-                print(f"⚠️  File not found: {file_path}")
-                continue
-            
-            try:
-                if self._fix_file_critical_syntax(full_path):
-                    print(f"✅ Fixed critical syntax errors in: {file_path}")
-                    success_count += 1
-                else:
-                    print(f"ℹ️  No critical syntax errors found in: {file_path}")
-                    
-            except Exception as e:
-                print(f"❌ Error fixing {file_path}: {e}")
-                error_count += 1
-        
-        print("\n" + "=" * 60)
-        print(f"📊 Summary:")
-        print(f"   ✅ Successfully fixed: {success_count} files")
-        print(f"   ❌ Errors: {error_count} files")
-        print(f"   📁 Total processed: {len(self.files_with_critical_errors)} files")
-    
-    def _fix_file_critical_syntax(self, file_path: Path) -> bool:
-        """Fix critical syntax errors in a single file"""
+    """Fix critical syntax errors that prevent compilation."""
+
+    def __init__(self, root_dir: str = "."):
+        self.root_dir = Path(root_dir)
+        self.fixed_files = []
+        self.errors = []
+
+        # Directories to exclude
+        self.exclude_dirs = {
+            'venv', '__pycache__', '.git', 'node_modules',
+            '.pytest_cache', '.mypy_cache', '.coverage'
+        }
+
+    def should_process_file(self, file_path: Path) -> bool:
+        """Check if file should be processed."""
+        # Skip virtual environment and cache directories
+        for part in file_path.parts:
+            if part in self.exclude_dirs:
+                return False
+
+        # Only process Python files
+        return file_path.suffix == '.py'
+
+    def fix_malformed_docstrings(self, file_path: Path) -> bool:
+        """Fix malformed docstrings that cause syntax errors."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             original_content = content
-            
-            # Fix missing function bodies after docstrings
-            content = self._fix_missing_function_bodies(content)
-            
-            # Fix improper docstring placement
-            content = self._fix_docstring_placement(content)
-            
-            # Fix class docstring issues
-            content = self._fix_class_docstring_issues(content)
-            
-            # Fix indentation errors
-            content = self._fix_indentation_errors(content)
-            
-            # Validate syntax
-            if not self._validate_syntax(content):
-                print(f"⚠️  Syntax validation failed for {file_path}")
-                return False
-            
-            # Only write if content changed
-            if content != original_content:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                return True
-            
-            return False
-            
-        except Exception as e:
-            print(f"Error processing {file_path}: {e}")
-            return False
-    
-    def _fix_missing_function_bodies(self, content: str) -> str:
-        """Fix missing function bodies after docstrings"""
-        lines = content.split('\n')
-        fixed_lines = []
-        
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            
-            # Check for function definition followed by docstring without body
-            if (line.strip().startswith('def ') or line.strip().startswith('async def ')) and ':' in line:
-                # Look ahead for docstring
-                if i + 1 < len(lines) and lines[i + 1].strip() == '"""':
-                    # Find the end of the docstring
-                    docstring_end = i + 1
-                    while docstring_end < len(lines) and '"""' not in lines[docstring_end][1:]:
-                        docstring_end += 1
-                    
-                    # Check if there's no function body after docstring
-                    if docstring_end + 1 >= len(lines) or not lines[docstring_end + 1].strip():
-                        # Add a pass statement as function body
-                        fixed_lines.append(line)
-                        # Add docstring lines
-                        for j in range(i + 1, docstring_end + 1):
-                            fixed_lines.append(lines[j])
-                        # Add pass statement
-                        fixed_lines.append('    pass')
-                        i = docstring_end + 1
-                        continue
-            
-            fixed_lines.append(line)
-            i += 1
-        
-        return '\n'.join(fixed_lines)
-    
-    def _fix_docstring_placement(self, content: str) -> str:
-        """Fix improper docstring placement"""
-        lines = content.split('\n')
-        fixed_lines = []
-        
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            
-            # Check for function definition with docstring on same line
-            if (line.strip().startswith('def ') or line.strip().startswith('async def ')) and '"""' in line:
-                # Split the line into function definition and docstring
-                if ':' in line:
-                    func_part = line[:line.find(':') + 1]
-                    docstring_part = line[line.find('"""'):]
-                    
-                    fixed_lines.append(func_part)
-                    fixed_lines.append('    """')
-                    fixed_lines.append(f'    {docstring_part[3:-3]}')
-                    fixed_lines.append('    """')
-                    fixed_lines.append('    pass')
-                else:
-                    fixed_lines.append(line)
-            else:
+
+            # Fix common malformed docstring patterns
+            # Pattern: """\nArgs:\n    param: Description\nReturns:\n    Description\nRaises:\n    Exception: Description\nExample:\n    result = func(param)\n    print(result)\n"""
+            lines = content.split('\n')
+            fixed_lines = []
+            i = 0
+
+            while i < len(lines):
+                line = lines[i]
+
+                # Check for malformed docstring pattern
+                if line.strip().startswith('""") and i + 1 < len(lines):"
+                    # Look for the pattern that causes issues
+                    if 'Args:' in line or 'Returns:' in line or 'Raises:' in line:
+                        # Find the end of the docstring
+                        j = i + 1
+                        while j < len(lines) and not lines[j].strip().endswith('"""):"
+                            j += 1
+
+                        if j < len(lines):
+                            # Replace the malformed docstring with a simple one
+                            fixed_lines.append(line.strip().replace('""", '"""TODO: Add proper documentation."""))
+                            i = j + 1
+                            continue
+
                 fixed_lines.append(line)
-            
-            i += 1
-        
-        return '\n'.join(fixed_lines)
-    
-    def _fix_class_docstring_issues(self, content: str) -> str:
-        """Fix class docstring issues"""
-        lines = content.split('\n')
-        fixed_lines = []
-        
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            
-            # Check for class definition followed by docstring without body
-            if line.strip().startswith('class ') and ':' in line:
-                # Look ahead for docstring
-                if i + 1 < len(lines) and lines[i + 1].strip() == '"""':
-                    # Find the end of the docstring
-                    docstring_end = i + 1
-                    while docstring_end < len(lines) and '"""' not in lines[docstring_end][1:]:
-                        docstring_end += 1
-                    
-                    # Check if there's no class body after docstring
-                    if docstring_end + 1 >= len(lines) or not lines[docstring_end + 1].strip():
-                        # Add a pass statement as class body
-                        fixed_lines.append(line)
-                        # Add docstring lines
-                        for j in range(i + 1, docstring_end + 1):
-                            fixed_lines.append(lines[j])
-                        # Add pass statement
-                        fixed_lines.append('    pass')
-                        i = docstring_end + 1
-                        continue
-            
-            fixed_lines.append(line)
-            i += 1
-        
-        return '\n'.join(fixed_lines)
-    
-    def _fix_indentation_errors(self, content: str) -> str:
-        """Fix indentation errors"""
-        lines = content.split('\n')
-        fixed_lines = []
-        
-        for i, line in enumerate(lines):
-            # Fix common indentation issues
-            if line.strip().startswith('async def ') and ':' in line:
-                # Ensure proper indentation for async function definitions
-                if not line.startswith('    ') and not line.startswith('\t'):
-                    line = '    ' + line.lstrip()
-            
-            # Fix indentation for class definitions
-            elif line.strip().startswith('class ') and ':' in line:
-                if not line.startswith('    ') and not line.startswith('\t'):
-                    line = '    ' + line.lstrip()
-            
-            # Fix indentation for function definitions
-            elif line.strip().startswith('def ') and ':' in line:
-                if not line.startswith('    ') and not line.startswith('\t'):
-                    line = '    ' + line.lstrip()
-            
-            # Fix indentation for try/except blocks
-            elif line.strip().startswith('try:') or line.strip().startswith('except'):
-                if not line.startswith('    ') and not line.startswith('\t'):
-                    line = '    ' + line.lstrip()
-            
-            # Fix indentation for if/elif/else blocks
-            elif line.strip().startswith(('if ', 'elif ', 'else:')):
-                if not line.startswith('    ') and not line.startswith('\t'):
-                    line = '    ' + line.lstrip()
-            
-            # Fix indentation for for/while loops
-            elif line.strip().startswith(('for ', 'while ')):
-                if not line.startswith('    ') and not line.startswith('\t'):
-                    line = '    ' + line.lstrip()
-            
-            # Fix indentation for with statements
-            elif line.strip().startswith('with '):
-                if not line.startswith('    ') and not line.startswith('\t'):
-                    line = '    ' + line.lstrip()
-            
-            fixed_lines.append(line)
-        
-        return '\n'.join(fixed_lines)
-    
-    def _validate_syntax(self, content: str) -> bool:
-        """Validate that the content has valid Python syntax"""
-        try:
-            ast.parse(content)
-            return True
-        except SyntaxError:
-            return False
-    
-    def create_critical_syntax_fix_example(self):
-        """Create an example of proper syntax after critical fixes"""
-        example = '''
-# Example of Proper Syntax After Critical Fixes
+                i += 1
 
-import json
-import logging
-from typing import Dict, List, Any, Optional
-from pathlib import Path
+            new_content = '\n'.join(fixed_lines)
 
-logger = logging.getLogger(__name__)
+            if new_content != original_content:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                return True
 
-class ExampleClass:
-    """
-    Example class with proper syntax after critical fixes.
-    
-    Attributes:
-        config: Configuration dictionary
-        
-    Methods:
-        process_data: Process input data
-        validate_input: Validate input parameters
-    """
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """
-        Initialize the class.
-        
-        Args:
-            config: Configuration dictionary
-            
-        Returns:
-            None
-        """
-        self.config = config or {}
-        self.logger = logger
-    
-    async def process_data(self, data: str) -> Dict[str, Any]:
-        """
-        Process input data asynchronously.
-        
-        Args:
-            data: Input data to process
-            
-        Returns:
-            Processed data dictionary
-            
-        Raises:
-            ValueError: If data is invalid
-        """
-        try:
-            result = {
-                "status": "success",
-                "data": data,
-                "config": self.config
-            }
-            return result
         except Exception as e:
-            self.logger.error(f"Error processing data: {e}")
-            raise ValueError(f"Invalid data: {e}")
-    
-    def validate_input(self, input_data: str) -> bool:
-        """
-        Validate input parameters.
-        
-        Args:
-            input_data: Input data to validate
-            
-        Returns:
-            True if valid, False otherwise
-        """
-        return bool(input_data and input_data.strip())
+            self.errors.append(f"Error fixing docstrings in {file_path}: {e}")
 
-# Usage example
-if __name__ == "__main__":
-    example = ExampleClass({"test": "value"})
-    result = await example.process_data("test_data")
-    print(result)
-'''
-        
-        example_path = self.project_root / "docs" / "critical_syntax_fix_example.py"
-        example_path.parent.mkdir(exist_ok=True)
-        
-        with open(example_path, 'w') as f:
-            f.write(example)
-        
-        print(f"📝 Created critical syntax fix example: {example_path}")
+        return False
 
+    def fix_function_signatures(self, file_path: Path) -> bool:
+        """Fix function signature syntax errors."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            original_content = content
+
+            # Fix function signatures with missing closing parentheses
+            lines = content.split('\n')
+            fixed_lines = []
+
+            for i, line in enumerate(lines):
+                # Check for function definitions with missing closing parentheses
+                if line.strip().startswith('async def ') or line.strip().startswith('def '):
+                    # Look for the pattern where a parameter is on the next line
+                    if i + 1 < len(lines):
+                        next_line = lines[i + 1].strip()
+                        if next_line.startswith('current_user: User = Depends(') and not line.strip().endswith(')'):
+                            # Fix the function signature
+                            fixed_line = line.rstrip() + ', ' + next_line.rstrip(',:') + ')
+                            fixed_lines.append(fixed_line)
+                            # Skip the next line since we merged it
+                            i += 1
+                            continue
+
+                fixed_lines.append(line)
+
+            new_content = '\n'.join(fixed_lines)
+
+            if new_content != original_content:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                return True
+
+        except Exception as e:
+            self.errors.append(f"Error fixing function signatures in {file_path}: {e}")
+
+        return False
+
+    def fix_import_statements(self, file_path: Path) -> bool:
+        """Fix malformed import statements."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            original_content = content
+
+            # Fix incomplete import statements
+            lines = content.split('\n')
+            fixed_lines = []
+
+            for line in lines:
+                # Fix incomplete imports like "from services.module"
+                if line.strip().startswith('from ') and not line.strip().endswith('import'):
+                    if 'import' not in line:
+                        # Extract module name and create proper import
+                        parts = line.strip().split()
+                        if len(parts) >= 2:
+                            module = parts[1]
+                            fixed_line = f"from {module} import {module.split('.')[-1]}"
+                            fixed_lines.append(fixed_line)
+                            continue
+
+                fixed_lines.append(line)
+
+            new_content = '\n'.join(fixed_lines)
+
+            if new_content != original_content:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                return True
+
+        except Exception as e:
+            self.errors.append(f"Error fixing imports in {file_path}: {e}")
+
+        return False
+
+    def fix_empty_function_bodies(self, file_path: Path) -> bool:
+        """Add proper implementations for empty function bodies."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            original_content = content
+
+            # Find functions with empty bodies and add TODO comments
+            lines = content.split('\n')
+            fixed_lines = []
+            i = 0
+
+            while i < len(lines):
+                line = lines[i]
+
+                # Check for function definition
+                if line.strip().startswith('def ') and i + 1 < len(lines):
+                    next_line = lines[i + 1].strip()
+
+                    # If the next line is just pass, add a TODO comment
+                    if next_line == 'pass':
+                        fixed_lines.append(line)
+                        fixed_lines.append('    """TODO: Implement this function.""")
+                        fixed_lines.append('    pass')
+                        i += 1
+                        continue
+
+                fixed_lines.append(line)
+                i += 1
+
+            new_content = '\n'.join(fixed_lines)
+
+            if new_content != original_content:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                return True
+
+        except Exception as e:
+            self.errors.append(f"Error fixing empty function bodies in {file_path}: {e}")
+
+        return False
+
+    def process_file(self, file_path: Path) -> bool:
+        """Process a single file and fix all syntax errors."""
+        if not self.should_process_file(file_path):
+            return False
+
+        print(f"Processing: {file_path}")
+
+        fixed = False
+
+        # Apply fixes in order
+        if self.fix_malformed_docstrings(file_path):
+            fixed = True
+            print(f"  ✓ Fixed docstrings")
+
+        if self.fix_function_signatures(file_path):
+            fixed = True
+            print(f"  ✓ Fixed function signatures")
+
+        if self.fix_import_statements(file_path):
+            fixed = True
+            print(f"  ✓ Fixed import statements")
+
+        if self.fix_empty_function_bodies(file_path):
+            fixed = True
+            print(f"  ✓ Fixed empty function bodies")
+
+        if fixed:
+            self.fixed_files.append(str(file_path)
+        return fixed
+
+    def process_directory(self, directory: Path) -> int:
+        """Process all Python files in a directory recursively."""
+        fixed_count = 0
+
+        for file_path in directory.rglob('*.py'):
+            if self.process_file(file_path):
+                fixed_count += 1
+
+        return fixed_count
+
+    def run(self) -> Dict[str, any]:
+        """Run the syntax error fixer on the entire codebase."""
+        print("🔧 Critical Syntax Error Fixer")
+        print("=" * 50)
+
+        # Process the root directory
+        fixed_count = self.process_directory(self.root_dir)
+
+        print(f"\n📊 Results:")
+        print(f"  Files fixed: {fixed_count}")
+        print(f"  Errors encountered: {len(self.errors)}")
+
+        if self.errors:
+            print(f"\n❌ Errors:")
+            for error in self.errors:
+                print(f"  {error}")
+
+        if self.fixed_files:
+            print(f"\n✅ Fixed files:")
+            for file_path in self.fixed_files:
+                print(f"  {file_path}")
+
+        return {
+            'fixed_count': fixed_count,
+            'errors': self.errors,
+            'fixed_files': self.fixed_files
+        }
 
 def main():
-    """Main function"""
-    if len(sys.argv) < 2:
-        print("Usage: python3 scripts/fix_critical_syntax_errors.py [--dry-run] [--example]")
-        sys.exit(1)
-    
-    project_root = "."
-    dry_run = "--dry-run" in sys.argv
-    create_example = "--example" in sys.argv
-    
-    fixer = CriticalSyntaxFixer(project_root)
-    
-    if create_example:
-        fixer.create_critical_syntax_fix_example()
-    
-    if not dry_run:
-        fixer.fix_critical_syntax_errors()
-    else:
-        print("🔍 DRY RUN MODE - No changes will be made")
-        print("Files that would be fixed:")
-        for file_path in fixer.files_with_critical_errors:
-            full_path = Path(project_root) / file_path
-            if full_path.exists():
-                print(f"  ✅ {file_path}")
-            else:
-                print(f"  ❌ {file_path} (not found)")
+    """Main entry point for the syntax error fixer."""
+    fixer = CriticalSyntaxFixer()
+    results = fixer.run()
 
+    if results['errors']:
+        sys.exit(1)
+    else:
+        print(f"\n🎉 Critical syntax error fixing completed successfully!")
+        print(f"Fixed {results['fixed_count']} files.")
 
 if __name__ == "__main__":
-    main() 
+    main()

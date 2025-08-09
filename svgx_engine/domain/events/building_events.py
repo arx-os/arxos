@@ -18,8 +18,9 @@ class DomainEvent:
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     occurred_on: datetime = field(default_factory=datetime.utcnow)
     event_type: str = field(init=False)
-    
+
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -115,16 +116,16 @@ Example:
         print(result)
     """
     """Event publisher for building domain events."""
-    
+
     def __init__(self):
         self.subscribers: Dict[str, list] = {}
-    
+
     def subscribe(self, event_type: str, subscriber):
         """Subscribe to building events."""
         if event_type not in self.subscribers:
             self.subscribers[event_type] = []
         self.subscribers[event_type].append(subscriber)
-    
+
     def publish(self, event: DomainEvent):
         """Publish a building domain event."""
         event_type = event.event_type
@@ -133,32 +134,32 @@ Example:
                 try:
                     subscriber(event)
                 except Exception as e:
-                    # Log error but don't stop other subscribers
+                    # Log error but don't stop other subscribers'
                     print(f"Error in event subscriber: {e}")
-    
+
     def publish_building_created(self, event: BuildingCreatedEvent):
         """Publish building created event."""
         self.publish(event)
-    
+
     def publish_building_updated(self, event: BuildingUpdatedEvent):
         """Publish building updated event."""
         self.publish(event)
-    
+
     def publish_building_deleted(self, event: BuildingDeletedEvent):
         """Publish building deleted event."""
         self.publish(event)
-    
+
     def publish_building_status_changed(self, event: BuildingStatusChangedEvent):
         """Publish building status changed event."""
         self.publish(event)
-    
+
     def publish_building_location_changed(self, event: BuildingLocationChangedEvent):
         """Publish building location changed event."""
         self.publish(event)
-    
+
     def publish_building_cost_updated(self, event: BuildingCostUpdatedEvent):
         """Publish building cost updated event."""
         self.publish(event)
 
 # Global event publisher instance
-building_event_publisher = BuildingEventPublisher() 
+building_event_publisher = BuildingEventPublisher()

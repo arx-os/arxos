@@ -18,4 +18,4 @@ Example:
     """
     error: str
     code: str
-    details: Optional[Dict] = None 
+    details: Optional[Dict] = None

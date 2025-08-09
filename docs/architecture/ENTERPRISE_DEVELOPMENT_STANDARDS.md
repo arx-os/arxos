@@ -94,16 +94,16 @@ Domain Events:
 
 class Building:
     """Building entity with business logic and validation."""
-    
+
     def __init__(self, id: BuildingId, address: Address, status: BuildingStatus):
         """
         Initialize a new Building.
-        
+
         Args:
             id: Unique building identifier
             address: Building address
             status: Current building status
-            
+
         Raises:
             InvalidBuildingError: If building data is invalid
         """
@@ -145,29 +145,29 @@ def create_building(id: BuildingId, address: Address) -> Building:
 ```python
 class TestBuilding:
     """Unit tests for Building entity."""
-    
+
     def test_create_building_with_valid_data(self):
         """Test building creation with valid data."""
         # Arrange
         building_id = BuildingId("bldg-001")
         address = Address("123 Main St", "City", "State", "12345")
-        
+
         # Act
         building = Building(building_id, address, BuildingStatus.DRAFT)
-        
+
         # Assert
         assert building.id == building_id
         assert building.address == address
         assert building.status == BuildingStatus.DRAFT
         assert len(building.domain_events) == 1
         assert isinstance(building.domain_events[0], BuildingCreated)
-    
+
     def test_create_building_with_invalid_address(self):
         """Test building creation with invalid address."""
         # Arrange
         building_id = BuildingId("bldg-001")
         invalid_address = Address("", "", "", "")  # Invalid address
-        
+
         # Act & Assert
         with pytest.raises(InvalidBuildingError):
             Building(building_id, invalid_address, BuildingStatus.DRAFT)
@@ -177,7 +177,7 @@ class TestBuilding:
 ```python
 class TestBuildingUseCase:
     """Integration tests for building use cases."""
-    
+
     def test_create_building_use_case(self):
         """Test complete building creation workflow."""
         # Arrange
@@ -187,10 +187,10 @@ class TestBuildingUseCase:
             name="Test Building",
             address="123 Main St, City, State 12345"
         )
-        
+
         # Act
         result = use_case.execute(request)
-        
+
         # Assert
         assert result.is_success
         assert result.building_id is not None
@@ -217,11 +217,11 @@ class TestBuildingUseCase:
 ```python
 class SecurityMiddleware:
     """Enterprise security middleware."""
-    
+
     def __init__(self, auth_service: AuthService, rate_limiter: RateLimiter):
         self.auth_service = auth_service
         self.rate_limiter = rate_limiter
-    
+
     def authenticate(self, request: Request) -> User:
         """Authenticate user with proper error handling."""
         try:
@@ -232,7 +232,7 @@ class SecurityMiddleware:
             raise UnauthorizedError("Invalid authentication token")
         except ExpiredTokenError:
             raise UnauthorizedError("Token has expired")
-    
+
     def authorize(self, user: User, resource: str, action: str) -> bool:
         """Authorize user action with RBAC."""
         return self.auth_service.has_permission(user, resource, action)
@@ -254,7 +254,7 @@ logger = structlog.get_logger()
 
 class BuildingService:
     """Building service with structured logging."""
-    
+
     def create_building(self, request: CreateBuildingRequest) -> Building:
         """Create building with comprehensive logging."""
         logger.info(
@@ -263,7 +263,7 @@ class BuildingService:
             address=request.address,
             user_id=request.user_id
         )
-        
+
         try:
             building = self._domain_service.create_building(request)
             logger.info(
@@ -294,15 +294,15 @@ class BuildingService:
     def create_building(self, request: CreateBuildingRequest) -> Building:
         """Create building with metrics collection."""
         start_time = time.time()
-        
+
         try:
             building = self._domain_service.create_building(request)
-            
+
             # Record metrics
             BUILDING_CREATED.inc()
             BUILDING_CREATION_DURATION.observe(time.time() - start_time)
             ACTIVE_BUILDINGS.inc()
-            
+
             return building
         except Exception as e:
             # Record error metrics
@@ -340,7 +340,7 @@ jobs:
           make test
           make lint
           make security-scan
-      
+
   quality:
     runs-on: ubuntu-latest
     steps:
@@ -349,7 +349,7 @@ jobs:
         run: |
           make code-quality
           make documentation-check
-      
+
   security:
     runs-on: ubuntu-latest
     steps:
@@ -396,15 +396,15 @@ jobs:
 ```python
 class EnvironmentConfig:
     """Environment configuration management."""
-    
+
     def __init__(self, environment: str):
         self.environment = environment
         self.config = self._load_config()
-    
+
     def get_database_url(self) -> str:
         """Get database URL for environment."""
         return self.config[f"{self.environment}_database_url"]
-    
+
     def get_redis_url(self) -> str:
         """Get Redis URL for environment."""
         return self.config[f"{self.environment}_redis_url"]
@@ -414,7 +414,7 @@ class EnvironmentConfig:
 ```python
 class HealthCheck:
     """Comprehensive health check system."""
-    
+
     def check_database(self) -> HealthStatus:
         """Check database connectivity."""
         try:
@@ -422,7 +422,7 @@ class HealthCheck:
             return HealthStatus.HEALTHY
         except Exception as e:
             return HealthStatus.UNHEALTHY
-    
+
     def check_redis(self) -> HealthStatus:
         """Check Redis connectivity."""
         try:
@@ -476,6 +476,6 @@ class HealthCheck:
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Active Development 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Active Development

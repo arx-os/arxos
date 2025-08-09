@@ -526,4 +526,4 @@ describe('ArxIDEApplication', () => {
       // Should trigger new file
     });
   });
-}); 
+});

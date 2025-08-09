@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 class StructuredLogger:
     """Structured logger for consistent log formatting."""
-    
+
     def __init__(self, name: str = "arxos", level: str = "INFO"):
         """Initialize structured logger."""
         self.name = name
         self.level = getattr(logging, level.upper())
-        
+
         # Configure structlog
         structlog.configure(
             processors=[
@@ -39,35 +39,35 @@ class StructuredLogger:
             wrapper_class=structlog.stdlib.BoundLogger,
             cache_logger_on_first_use=True,
         )
-        
+
         self.logger = structlog.get_logger(name)
-    
+
     def log(self, level: str, message: str, **kwargs) -> None:
         """Log a message with structured data."""
         log_method = getattr(self.logger, level.lower())
         log_method(message, **kwargs)
-    
+
     def debug(self, message: str, **kwargs) -> None:
         """Log a debug message."""
         self.log("debug", message, **kwargs)
-    
+
     def info(self, message: str, **kwargs) -> None:
         """Log an info message."""
         self.log("info", message, **kwargs)
-    
+
     def warning(self, message: str, **kwargs) -> None:
         """Log a warning message."""
         self.log("warning", message, **kwargs)
-    
+
     def error(self, message: str, **kwargs) -> None:
         """Log an error message."""
         self.log("error", message, **kwargs)
-    
+
     def critical(self, message: str, **kwargs) -> None:
         """Log a critical message."""
         self.log("critical", message, **kwargs)
-    
-    def log_event(self, event_type: str, event_data: Dict[str, Any], 
+
+    def log_event(self, event_type: str, event_data: Dict[str, Any],
                   level: str = "info", **kwargs) -> None:
         """Log an event with structured data."""
         log_data = {
@@ -76,8 +76,8 @@ class StructuredLogger:
             **kwargs
         }
         self.log(level, f"Event: {event_type}", **log_data)
-    
-    def log_metric(self, metric_name: str, metric_value: Any, 
+
+    def log_metric(self, metric_name: str, metric_value: Any,
                    metric_type: str = "gauge", **kwargs) -> None:
         """Log a metric."""
         log_data = {
@@ -87,8 +87,8 @@ class StructuredLogger:
             **kwargs
         }
         self.log("info", f"Metric: {metric_name}", **log_data)
-    
-    def log_request(self, method: str, path: str, status_code: int, 
+
+    def log_request(self, method: str, path: str, status_code: int,
                    duration_ms: float, **kwargs) -> None:
         """Log an HTTP request."""
         log_data = {
@@ -99,8 +99,8 @@ class StructuredLogger:
             **kwargs
         }
         self.log("info", f"Request: {method} {path}", **log_data)
-    
-    def log_database_query(self, query: str, duration_ms: float, 
+
+    def log_database_query(self, query: str, duration_ms: float,
                           rows_affected: Optional[int] = None, **kwargs) -> None:
         """Log a database query."""
         log_data = {
@@ -110,7 +110,7 @@ class StructuredLogger:
             **kwargs
         }
         self.log("debug", f"Database query: {duration_ms:.2f}ms", **log_data)
-    
+
     def log_error(self, error: Exception, context: Optional[Dict[str, Any]] = None, **kwargs) -> None:
         """Log an error with context."""
         log_data = {
@@ -120,11 +120,11 @@ class StructuredLogger:
             **kwargs
         }
         self.log("error", f"Error: {type(error).__name__}", **log_data)
-    
+
     def health_check(self) -> Dict[str, Any]:
         """Perform health check on structured logger."""
         return {
             "status": "healthy",
             "name": self.name,
             "level": logging.getLevelName(self.level)
-        } 
+        }

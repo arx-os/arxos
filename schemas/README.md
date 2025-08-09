@@ -226,6 +226,6 @@ For questions about schemas or system integration:
 
 ---
 
-**Last Updated**: December 19, 2024  
-**Version**: 1.0.0  
-**Maintained By**: Arxos Development Team 
+**Last Updated**: December 19, 2024
+**Version**: 1.0.0
+**Maintained By**: Arxos Development Team

@@ -9,13 +9,13 @@
 -- =============================================================================
 
 -- Check if all indexes exist
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
     indexdef
-FROM pg_indexes 
-WHERE schemaname = 'public' 
+FROM pg_indexes
+WHERE schemaname = 'public'
 AND indexname LIKE 'idx_%'
 ORDER BY tablename, indexname;
 
@@ -24,45 +24,45 @@ ORDER BY tablename, indexname;
 -- =============================================================================
 
 -- Test 1: Building queries with owner filtering
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM buildings WHERE owner_id = 1;
 
 -- Test 2: Room queries with building and floor filtering
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM rooms WHERE building_id = 1 AND floor_id = 1 AND status = 'active';
 
 -- Test 3: Wall queries with material filtering
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM walls WHERE building_id = 1 AND material = 'concrete';
 
 -- Test 4: Device queries with system and type filtering
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM devices WHERE building_id = 1 AND system = 'HVAC' AND type = 'vent';
 
 -- Test 5: User assignment queries
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM walls WHERE assigned_to = 1 AND status = 'active';
 
 -- Test 6: Project-based queries
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM rooms WHERE project_id = 1 AND status = 'active';
 
 -- Test 7: Audit log queries with user and time filtering
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM audit_logs WHERE user_id = 1 AND created_at > NOW() - INTERVAL '30 days';
 
 -- Test 8: Object history queries
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM object_history WHERE object_id = 'room_123' AND changed_at > NOW() - INTERVAL '7 days';
 
 -- Test 9: Catalog item queries
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM catalog_items WHERE make = 'Siemens' AND model = 'VAV-100' AND type = 'vent';
 
 -- Test 10: Spatial queries with building context
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
-SELECT * FROM walls 
-WHERE building_id = 1 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+SELECT * FROM walls
+WHERE building_id = 1
 AND ST_Intersects(geom, ST_MakeEnvelope(0, 0, 100, 100, 4326));
 
 -- =============================================================================
@@ -70,24 +70,24 @@ AND ST_Intersects(geom, ST_MakeEnvelope(0, 0, 100, 100, 4326));
 -- =============================================================================
 
 -- Test composite indexes for complex filtering
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
-SELECT * FROM rooms 
-WHERE building_id = 1 
-AND floor_id = 1 
-AND status = 'active' 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+SELECT * FROM rooms
+WHERE building_id = 1
+AND floor_id = 1
+AND status = 'active'
 AND category = 'office';
 
 -- Test covering indexes
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
-SELECT name, address, created_at 
-FROM buildings 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+SELECT name, address, created_at
+FROM buildings
 WHERE owner_id = 1;
 
 -- Test partial indexes
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
-SELECT * FROM rooms 
-WHERE building_id = 1 
-AND floor_id = 1 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
+SELECT * FROM rooms
+WHERE building_id = 1
+AND floor_id = 1
 AND status = 'active';
 
 -- =============================================================================
@@ -95,14 +95,14 @@ AND status = 'active';
 -- =============================================================================
 
 -- View index usage statistics
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
     idx_scan as index_scans,
     idx_tup_read as tuples_read,
     idx_tup_fetch as tuples_fetched,
-    CASE 
+    CASE
         WHEN idx_scan = 0 THEN 'UNUSED'
         WHEN idx_scan < 10 THEN 'RARELY_USED'
         WHEN idx_scan < 100 THEN 'OCCASIONALLY_USED'
@@ -117,7 +117,7 @@ ORDER BY idx_scan DESC;
 -- =============================================================================
 
 -- View index sizes
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -135,19 +135,19 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 -- (These queries should show significant performance differences)
 
 -- Query 1: Building filtering (should use idx_buildings_owner_id)
-EXPLAIN (ANALYZE, BUFFERS) 
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT COUNT(*) FROM buildings WHERE owner_id = 1;
 
 -- Query 2: Room filtering (should use idx_rooms_building_floor_status)
-EXPLAIN (ANALYZE, BUFFERS) 
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT COUNT(*) FROM rooms WHERE building_id = 1 AND floor_id = 1 AND status = 'active';
 
 -- Query 3: Device filtering (should use idx_devices_building_system_type)
-EXPLAIN (ANALYZE, BUFFERS) 
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT COUNT(*) FROM devices WHERE building_id = 1 AND system = 'HVAC' AND type = 'vent';
 
 -- Query 4: Audit log filtering (should use idx_audit_logs_recent)
-EXPLAIN (ANALYZE, BUFFERS) 
+EXPLAIN (ANALYZE, BUFFERS)
 SELECT COUNT(*) FROM audit_logs WHERE user_id = 1 AND created_at > NOW() - INTERVAL '30 days';
 
 -- =============================================================================
@@ -208,4 +208,4 @@ VALIDATION CRITERIA:
 
 -- =============================================================================
 -- END OF VALIDATION SCRIPT
--- ============================================================================= 
+-- =============================================================================

@@ -25,12 +25,12 @@ def create_demo_building():
             location={"x": 0, "y": 0, "width": 20, "height": 10}
         ),
         BuildingObject(
-            object_id="room_2", 
+            object_id="room_2",
             object_type="room",
             properties={"area": 150, "height": 12, "occupancy": 3, "load": 1200},
             location={"x": 20, "y": 0, "width": 15, "height": 10}
         ),
-        
+
         # Electrical outlets
         BuildingObject(
             object_id="outlet_1",
@@ -40,11 +40,11 @@ def create_demo_building():
         ),
         BuildingObject(
             object_id="outlet_2",
-            object_type="electrical_outlet", 
+            object_type="electrical_outlet",
             properties={"load": 800, "voltage": 120, "circuit": "A"},
             location={"x": 25, "y": 5}
         ),
-        
+
         # Plumbing fixtures
         BuildingObject(
             object_id="sink_1",
@@ -58,7 +58,7 @@ def create_demo_building():
             properties={"flow_rate": 1.6, "tank_volume": 1.28},
             location={"x": 30, "y": 8}
         ),
-        
+
         # HVAC units
         BuildingObject(
             object_id="hvac_1",
@@ -66,7 +66,7 @@ def create_demo_building():
             properties={"capacity": 24000, "efficiency": 0.85, "type": "split"},
             location={"x": 35, "y": 0}
         ),
-        
+
         # Structural elements
         BuildingObject(
             object_id="wall_1",
@@ -81,7 +81,7 @@ def create_demo_building():
             location={"x": 17.5, "y": 0}
         )
     ]
-    
+
     return BuildingModel(
         building_id="demo_building",
         building_name="Demo Office Building",
@@ -92,7 +92,7 @@ def create_demo_building():
 def demonstrate_basic_arithmetic(evaluator, context):
     """Demonstrate basic arithmetic operations"""
     print("\n=== Basic Arithmetic Operations ===")
-    
+
     formulas = [
         ("2 + 3 * 4", "Order of operations"),
         ("(2 + 3) * 4", "Parentheses precedence"),
@@ -100,7 +100,7 @@ def demonstrate_basic_arithmetic(evaluator, context):
         ("2 ^ 3 + 1", "Exponentiation"),
         ("17 % 5", "Modulo operation"),
     ]
-    
+
     for formula, description in formulas:
         try:
             result = evaluator.evaluate_formula(formula, context)
@@ -112,7 +112,7 @@ def demonstrate_basic_arithmetic(evaluator, context):
 def demonstrate_mathematical_functions(evaluator, context):
     """Demonstrate mathematical functions"""
     print("\n=== Mathematical Functions ===")
-    
+
     formulas = [
         ("abs(-15)", "Absolute value"),
         ("round(3.7)", "Rounding"),
@@ -127,7 +127,7 @@ def demonstrate_mathematical_functions(evaluator, context):
         ("sum(1, 2, 3, 4, 5)", "Sum of values"),
         ("avg(10, 20, 30, 40)", "Average of values"),
     ]
-    
+
     for formula, description in formulas:
         try:
             result = evaluator.evaluate_formula(formula, context)
@@ -139,7 +139,7 @@ def demonstrate_mathematical_functions(evaluator, context):
 def demonstrate_variable_substitution(evaluator, context):
     """Demonstrate variable substitution from building context"""
     print("\n=== Variable Substitution ===")
-    
+
     formulas = [
         ("{area}", "Total area of all objects"),
         ("{count}", "Number of matched objects"),
@@ -148,7 +148,7 @@ def demonstrate_variable_substitution(evaluator, context):
         ("{volume}", "Total volume"),
         ("{perimeter}", "Total perimeter"),
     ]
-    
+
     for formula, description in formulas:
         try:
             result = evaluator.evaluate_formula(formula, context)
@@ -160,7 +160,7 @@ def demonstrate_variable_substitution(evaluator, context):
 def demonstrate_object_properties(evaluator, context):
     """Demonstrate object property access"""
     print("\n=== Object Property Access ===")
-    
+
     formulas = [
         ("{objects.load}", "Total load across all objects"),
         ("{objects.area}", "Total area from properties"),
@@ -169,7 +169,7 @@ def demonstrate_object_properties(evaluator, context):
         ("{objects.sink.flow_rate}", "Total flow rate for sinks"),
         ("{objects.hvac_unit.capacity}", "Total HVAC capacity"),
     ]
-    
+
     for formula, description in formulas:
         try:
             result = evaluator.evaluate_formula(formula, context)
@@ -181,7 +181,7 @@ def demonstrate_object_properties(evaluator, context):
 def demonstrate_complex_calculations(evaluator, context):
     """Demonstrate complex building calculations"""
     print("\n=== Complex Building Calculations ===")
-    
+
     formulas = [
         ("{area} * {height} * 0.8", "Building volume with efficiency factor"),
         ("{count} * 100 + {objects.load}", "Base load plus per-object load"),
@@ -190,7 +190,7 @@ def demonstrate_complex_calculations(evaluator, context):
         ("{objects.room.occupancy} * 0.3", "Required egress width calculation"),
         ("{objects.sink.flow_rate} + {objects.toilet.flow_rate}", "Total plumbing flow"),
     ]
-    
+
     for formula, description in formulas:
         try:
             result = evaluator.evaluate_formula(formula, context)
@@ -202,7 +202,7 @@ def demonstrate_complex_calculations(evaluator, context):
 def demonstrate_security_features(evaluator, context):
     """Demonstrate security features"""
     print("\n=== Security Features ===")
-    
+
     dangerous_formulas = [
         ("eval(2+2)", "eval() function"),
         ("exec('print(1)')", "exec() function"),
@@ -212,7 +212,7 @@ def demonstrate_security_features(evaluator, context):
         ("2 + (3", "Unbalanced parentheses"),
         ("2 @ 3", "Invalid operator"),
     ]
-    
+
     for formula, description in dangerous_formulas:
         try:
             result = evaluator.evaluate_formula(formula, context)
@@ -224,12 +224,12 @@ def demonstrate_security_features(evaluator, context):
 def demonstrate_unit_conversions(evaluator, context):
     """Demonstrate unit conversion capabilities"""
     print("\n=== Unit Conversions ===")
-    
+
     # Note: Unit conversions would be implemented in the formula syntax
     # This is a demonstration of the concept
     print("Unit conversion support includes:")
     print("- Length: ft, in, yd, m")
-    print("- Area: sqft, acres, sqm") 
+    print("- Area: sqft, acres, sqm")
     print("- Volume: cuft, gal, l")
     print("- Weight: lb, ton, kg")
     print("- Power: hp, btu, w")
@@ -240,7 +240,7 @@ def main():
     """Run the formula evaluator demonstration"""
     print("Formula Evaluator Demonstration")
     print("=" * 50)
-    
+
     # Create demo building and context
     building = create_demo_building()
     context = RuleExecutionContext(
@@ -249,10 +249,10 @@ def main():
         matched_objects=building.objects,
         calculations={"safety_factor": 1.2, "efficiency": 0.85, "design_load": 2000}
     )
-    
+
     # Create formula evaluator
     evaluator = FormulaEvaluator()
-    
+
     # Run demonstrations
     demonstrate_basic_arithmetic(evaluator, context)
     demonstrate_mathematical_functions(evaluator, context)
@@ -261,7 +261,7 @@ def main():
     demonstrate_complex_calculations(evaluator, context)
     demonstrate_security_features(evaluator, context)
     demonstrate_unit_conversions(evaluator, context)
-    
+
     print("\n" + "=" * 50)
     print("Demonstration Complete!")
     print("\nKey Features Demonstrated:")
@@ -275,4 +275,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

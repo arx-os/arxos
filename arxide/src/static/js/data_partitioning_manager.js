@@ -11,7 +11,7 @@ class DataPartitioningManager {
         this.performanceStats = null;
         this.compressionStats = null;
         this.lazyLoadingStats = null;
-        
+
         // Event listeners
         this.eventListeners = {
             'partition_created': [],
@@ -21,20 +21,20 @@ class DataPartitioningManager {
             'compression_completed': [],
             'optimization_recommendations': []
         };
-        
+
         // Performance monitoring
         this.performanceHistory = [];
         this.maxHistorySize = 100;
-        
+
         // Initialize
         this.init();
     }
-    
+
     init() {
         console.log('DataPartitioningManager initialized');
         this.startPerformanceMonitoring();
     }
-    
+
     // Event system
     addEventListener(event, callback) {
         if (!this.eventListeners[event]) {
@@ -42,7 +42,7 @@ class DataPartitioningManager {
         }
         this.eventListeners[event].push(callback);
     }
-    
+
     removeEventListener(event, callback) {
         if (this.eventListeners[event]) {
             const index = this.eventListeners[event].indexOf(callback);
@@ -51,7 +51,7 @@ class DataPartitioningManager {
             }
         }
     }
-    
+
     emit(event, data) {
         if (this.eventListeners[event]) {
             this.eventListeners[event].forEach(callback => {
@@ -63,14 +63,14 @@ class DataPartitioningManager {
             });
         }
     }
-    
+
     // Partition Management
     async partitionFloor(floorData, floorId, buildingId, options = {}) {
         const {
             partitionStrategy = 'floor_based',
             compressionType = 'gzip'
         } = options;
-        
+
         try {
             const response = await fetch(`${this.baseUrl}/partition-floor`, {
                 method: 'POST',
@@ -85,39 +85,39 @@ class DataPartitioningManager {
                     compression_type: compressionType
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Store partition information
             result.partitions.forEach(partition => {
                 this.partitions.set(partition.partition_id, partition);
             });
-            
+
             this.emit('partition_created', result);
             console.log(`Partitioned floor ${floorId} into ${result.total_partitions} partitions`);
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Failed to partition floor:', error);
             throw error;
         }
     }
-    
+
     async getFloorPartitions(buildingId, floorId) {
         try {
             const response = await fetch(`${this.baseUrl}/floor-partitions/${buildingId}/${floorId}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Update partition information
             result.partitions.forEach(partition => {
                 this.partitions.set(partition.partition_id, partition);
@@ -125,15 +125,15 @@ class DataPartitioningManager {
                     this.loadedPartitions.add(partition.partition_id);
                 }
             });
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Failed to get floor partitions:', error);
             throw error;
         }
     }
-    
+
     async loadFloorPartitions(buildingId, floorId, loadStrategy = 'lazy') {
         try {
             const response = await fetch(`${this.baseUrl}/load-floor`, {
@@ -147,13 +147,13 @@ class DataPartitioningManager {
                     load_strategy: loadStrategy
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Update loaded partitions
             if (result.success) {
                 const floorPartitions = await this.getFloorPartitions(buildingId, floorId);
@@ -163,37 +163,37 @@ class DataPartitioningManager {
                     }
                 });
             }
-            
+
             this.emit('partition_loaded', result);
             return result;
-            
+
         } catch (error) {
             console.error('Failed to load floor partitions:', error);
             throw error;
         }
     }
-    
+
     async getPartition(partitionId) {
         try {
             const response = await fetch(`${this.baseUrl}/partition/${partitionId}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Mark as loaded
             this.loadedPartitions.add(partitionId);
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Failed to get partition:', error);
             throw error;
         }
     }
-    
+
     async loadPartition(partitionId) {
         try {
             const response = await fetch(`${this.baseUrl}/load-partition`, {
@@ -205,51 +205,51 @@ class DataPartitioningManager {
                     partition_id: partitionId
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.loadedPartitions.add(partitionId);
                 this.emit('partition_loaded', { partition_id: partitionId });
             }
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Failed to load partition:', error);
             throw error;
         }
     }
-    
+
     async unloadPartition(partitionId) {
         try {
             const response = await fetch(`${this.baseUrl}/unload-partition/${partitionId}`, {
                 method: 'DELETE'
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 this.loadedPartitions.delete(partitionId);
                 this.emit('partition_unloaded', { partition_id: partitionId });
             }
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Failed to unload partition:', error);
             throw error;
         }
     }
-    
+
     async preloadPartitions(partitionIds) {
         try {
             const response = await fetch(`${this.baseUrl}/preload-partitions`, {
@@ -261,118 +261,118 @@ class DataPartitioningManager {
                     partition_ids: partitionIds
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Update loaded partitions
             result.preload_results.forEach(preloadResult => {
                 if (preloadResult.success) {
                     this.loadedPartitions.add(preloadResult.partition_id);
                 }
             });
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Failed to preload partitions:', error);
             throw error;
         }
     }
-    
+
     // Performance Monitoring
     async getPerformanceStats() {
         try {
             const response = await fetch(`${this.baseUrl}/performance-stats`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
             this.performanceStats = result.performance_stats;
-            
+
             // Add to history
             this.performanceHistory.push({
                 timestamp: new Date(),
                 stats: this.performanceStats
             });
-            
+
             // Keep history size manageable
             if (this.performanceHistory.length > this.maxHistorySize) {
                 this.performanceHistory.shift();
             }
-            
+
             this.emit('performance_updated', this.performanceStats);
             return this.performanceStats;
-            
+
         } catch (error) {
             console.error('Failed to get performance stats:', error);
             throw error;
         }
     }
-    
+
     async getCompressionStats() {
         try {
             const response = await fetch(`${this.baseUrl}/compression-stats`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
             this.compressionStats = result.compression_stats;
-            
+
             return this.compressionStats;
-            
+
         } catch (error) {
             console.error('Failed to get compression stats:', error);
             throw error;
         }
     }
-    
+
     async getLazyLoadingStats() {
         try {
             const response = await fetch(`${this.baseUrl}/lazy-loading-stats`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
             this.lazyLoadingStats = result.lazy_loading_stats;
-            
+
             return this.lazyLoadingStats;
-            
+
         } catch (error) {
             console.error('Failed to get lazy loading stats:', error);
             throw error;
         }
     }
-    
+
     // Optimization
     async optimizeFloor(buildingId, floorId) {
         try {
             const response = await fetch(`${this.baseUrl}/optimize-floor/${buildingId}/${floorId}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             this.emit('optimization_recommendations', result.optimization_results);
             return result.optimization_results;
-            
+
         } catch (error) {
             console.error('Failed to optimize floor:', error);
             throw error;
         }
     }
-    
+
     async compressPartition(partitionId, compressionType = 'gzip') {
         try {
             const response = await fetch(`${this.baseUrl}/compress-partition`, {
@@ -385,47 +385,47 @@ class DataPartitioningManager {
                     compression_type: compressionType
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             this.emit('compression_completed', result);
             return result;
-            
+
         } catch (error) {
             console.error('Failed to compress partition:', error);
             throw error;
         }
     }
-    
+
     // Storage Information
     async getStorageInfo() {
         try {
             const response = await fetch(`${this.baseUrl}/storage-info`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
             return result.storage_info;
-            
+
         } catch (error) {
             console.error('Failed to get storage info:', error);
             throw error;
         }
     }
-    
+
     // Batch Operations
     async batchPartitionFloors(floorsData, options = {}) {
         const {
             partitionStrategy = 'floor_based',
             compressionType = 'gzip'
         } = options;
-        
+
         try {
             const response = await fetch(`${this.baseUrl}/batch-partition`, {
                 method: 'POST',
@@ -438,13 +438,13 @@ class DataPartitioningManager {
                     compression_type: compressionType
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             // Update partition information
             result.batch_results.forEach(batchResult => {
                 if (batchResult.success) {
@@ -452,36 +452,36 @@ class DataPartitioningManager {
                     this.getFloorPartitions(batchResult.building_id, batchResult.floor_id);
                 }
             });
-            
+
             return result;
-            
+
         } catch (error) {
             console.error('Failed to batch partition floors:', error);
             throw error;
         }
     }
-    
+
     // Utility Methods
     isPartitionLoaded(partitionId) {
         return this.loadedPartitions.has(partitionId);
     }
-    
+
     getPartitionInfo(partitionId) {
         return this.partitions.get(partitionId);
     }
-    
+
     getLoadedPartitions() {
         return Array.from(this.loadedPartitions);
     }
-    
+
     getPartitionCount() {
         return this.partitions.size;
     }
-    
+
     getLoadedPartitionCount() {
         return this.loadedPartitions.size;
     }
-    
+
     // Performance Monitoring
     startPerformanceMonitoring() {
         // Monitor performance every 30 seconds
@@ -495,22 +495,22 @@ class DataPartitioningManager {
             }
         }, 30000);
     }
-    
+
     getPerformanceHistory() {
         return this.performanceHistory;
     }
-    
+
     getPerformanceTrend() {
         if (this.performanceHistory.length < 2) {
             return 'insufficient_data';
         }
-        
+
         const recent = this.performanceHistory[this.performanceHistory.length - 1];
         const previous = this.performanceHistory[this.performanceHistory.length - 2];
-        
+
         const recentTotalSize = recent.stats.total_size || 0;
         const previousTotalSize = previous.stats.total_size || 0;
-        
+
         if (recentTotalSize > previousTotalSize * 1.1) {
             return 'increasing';
         } else if (recentTotalSize < previousTotalSize * 0.9) {
@@ -519,7 +519,7 @@ class DataPartitioningManager {
             return 'stable';
         }
     }
-    
+
     // Visualization Helpers
     getPartitionSizeChartData() {
         const data = [];
@@ -534,7 +534,7 @@ class DataPartitioningManager {
         });
         return data;
     }
-    
+
     getPerformanceChartData() {
         return this.performanceHistory.map(entry => ({
             timestamp: entry.timestamp,
@@ -544,43 +544,43 @@ class DataPartitioningManager {
             average_compression_ratio: entry.stats.compression?.average_compression_ratio || 0
         }));
     }
-    
+
     // Memory Management
     async cleanupUnusedPartitions() {
         const unusedPartitions = [];
-        
+
         this.partitions.forEach(partition => {
             if (partition.access_count === 0 && this.loadedPartitions.has(partition.partition_id)) {
                 unusedPartitions.push(partition.partition_id);
             }
         });
-        
+
         // Unload unused partitions
         for (const partitionId of unusedPartitions) {
             await this.unloadPartition(partitionId);
         }
-        
+
         return {
             unloaded_count: unusedPartitions.length,
             unloaded_partitions: unusedPartitions
         };
     }
-    
+
     // Error Handling
     handleError(error, operation) {
         console.error(`Error in ${operation}:`, error);
-        
+
         // Emit error event
         this.emit('error', {
             operation: operation,
             error: error.message,
             timestamp: new Date()
         });
-        
+
         // Show user notification
         this.showErrorNotification(error.message, operation);
     }
-    
+
     showErrorNotification(message, operation) {
         // Create notification element
         const notification = document.createElement('div');
@@ -595,9 +595,9 @@ class DataPartitioningManager {
                 <p><strong>Error:</strong> ${message}</p>
             </div>
         `;
-        
+
         document.body.appendChild(notification);
-        
+
         // Auto-remove after 10 seconds
         setTimeout(() => {
             if (notification.parentElement) {
@@ -613,4 +613,4 @@ window.dataPartitioningManager = new DataPartitioningManager();
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = DataPartitioningManager;
-} 
+}

@@ -24,17 +24,17 @@ class PackagePublisher:
         self.sdk_path = Path("generated")
         self.reports_path = Path("reports/publishing")
         self.reports_path.mkdir(parents=True, exist_ok=True)
-    
+
     def load_config(self, config_path: str) -> Dict[str, Any]:
         """Load publisher configuration"""
         config_file = Path(__file__).parent.parent / config_path
         if not config_file.exists():
             logger.warning(f"Config file {config_path} not found, using defaults")
             return self.get_default_config()
-        
+
         with open(config_file, 'r') as f:
             return yaml.safe_load(f)
-    
+
     def get_default_config(self) -> Dict[str, Any]:
         """Get default publisher configuration"""
         return {
@@ -101,7 +101,7 @@ class PackagePublisher:
                 'documentation_required': True
             }
         }
-    
+
     def publish_all_packages(self, version: Optional[str] = None, dry_run: bool = False):
         """Publish all packages for all services and languages"""
         results = {
@@ -110,7 +110,7 @@ class PackagePublisher:
             'skipped': [],
             'summary': {}
         }
-        
+
         for service in self.config['services']:
             for language, lang_config in self.config['languages'].items():
                 try:
@@ -126,7 +126,7 @@ class PackagePublisher:
                         'language': language,
                         'error': str(e)
                     })
-        
+
         # Generate summary
         results['summary'] = {
             'total': len(results['success']) + len(results['failed']) + len(results['skipped']),
@@ -134,16 +134,16 @@ class PackagePublisher:
             'failed': len(results['failed']),
             'skipped': len(results['skipped'])
         }
-        
+
         # Save results
         self.save_publishing_results(results)
-        
+
         return results
-    
+
     def publish_package(self, service: str, language: str, version: Optional[str] = None, dry_run: bool = False) -> Dict[str, Any]:
         """Publish a single package"""
         package_path = self.sdk_path / language / service
-        
+
         if not package_path.exists():
             return {
                 'service': service,
@@ -151,7 +151,7 @@ class PackagePublisher:
                 'success': False,
                 'error': f"Package path {package_path} does not exist"
             }
-        
+
         # Check quality gates
         quality_check = self.run_quality_gates(package_path, language)
         if not quality_check['passed']:
@@ -161,11 +161,11 @@ class PackagePublisher:
                 'success': False,
                 'error': f"Quality gates failed: {quality_check['errors']}"
             }
-        
+
         # Get version
         if not version:
             version = self.get_package_version(package_path, language)
-        
+
         # Build package
         build_result = self.build_package(package_path, language)
         if not build_result['success']:
@@ -175,7 +175,7 @@ class PackagePublisher:
                 'success': False,
                 'error': f"Build failed: {build_result['error']}"
             }
-        
+
         # Test package
         test_result = self.test_package(package_path, language)
         if not test_result['success']:
@@ -185,7 +185,7 @@ class PackagePublisher:
                 'success': False,
                 'error': f"Tests failed: {test_result['error']}"
             }
-        
+
         # Publish package
         if not dry_run:
             publish_result = self.execute_publish_command(package_path, language, version)
@@ -196,7 +196,7 @@ class PackagePublisher:
                     'success': False,
                     'error': f"Publish failed: {publish_result['error']}"
                 }
-        
+
         return {
             'service': service,
             'language': language,
@@ -207,39 +207,39 @@ class PackagePublisher:
             'test_time': test_result.get('time'),
             'publish_time': publish_result.get('time') if not dry_run else None
         }
-    
+
     def run_quality_gates(self, package_path: Path, language: str) -> Dict[str, Any]:
         """Run quality gates for package"""
         gates = self.config['quality_gates']
         errors = []
-        
+
         # Check if package exists
         if not package_path.exists():
             errors.append("Package directory does not exist")
             return {'passed': False, 'errors': errors}
-        
+
         # Check test coverage
         if gates.get('test_coverage_minimum'):
             coverage = self.get_test_coverage(package_path, language)
             if coverage < gates['test_coverage_minimum']:
                 errors.append(f"Test coverage {coverage}% below minimum {gates['test_coverage_minimum']}%")
-        
+
         # Check documentation
         if gates.get('documentation_required'):
             if not self.has_documentation(package_path, language):
                 errors.append("Documentation is required but missing")
-        
+
         # Check security scan
         if gates.get('security_scan_required'):
             security_result = self.run_security_scan(package_path, language)
             if not security_result['passed']:
                 errors.append(f"Security scan failed: {security_result['errors']}")
-        
+
         return {
             'passed': len(errors) == 0,
             'errors': errors
         }
-    
+
     def get_test_coverage(self, package_path: Path, language: str) -> float:
         """Get test coverage percentage"""
         try:
@@ -264,9 +264,9 @@ class PackagePublisher:
                     return 80.0  # Mock value
         except Exception as e:
             logger.warning(f"Could not get test coverage: {e}")
-        
+
         return 0.0
-    
+
     def has_documentation(self, package_path: Path, language: str) -> bool:
         """Check if package has documentation"""
         doc_files = ['README.md', 'docs/', 'documentation/']
@@ -274,7 +274,7 @@ class PackagePublisher:
             if (package_path / doc_file).exists():
                 return True
         return False
-    
+
     def run_security_scan(self, package_path: Path, language: str) -> Dict[str, Any]:
         """Run security scan on package"""
         try:
@@ -294,22 +294,22 @@ class PackagePublisher:
                 )
             else:
                 return {'passed': True, 'errors': []}
-            
+
             return {
                 'passed': result.returncode == 0,
                 'errors': result.stderr.split('\n') if result.stderr else []
             }
         except Exception as e:
             return {'passed': False, 'errors': [str(e)]}
-    
+
     def build_package(self, package_path: Path, language: str) -> Dict[str, Any]:
         """Build package"""
         lang_config = self.config['languages'][language]
         build_command = lang_config.get('build_command')
-        
+
         if not build_command:
             return {'success': True, 'time': 0}
-        
+
         try:
             start_time = time.time()
             result = subprocess.run(
@@ -319,7 +319,7 @@ class PackagePublisher:
                 text=True
             )
             end_time = time.time()
-            
+
             return {
                 'success': result.returncode == 0,
                 'time': end_time - start_time,
@@ -327,15 +327,15 @@ class PackagePublisher:
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def test_package(self, package_path: Path, language: str) -> Dict[str, Any]:
         """Test package"""
         lang_config = self.config['languages'][language]
         test_command = lang_config.get('test_command')
-        
+
         if not test_command:
             return {'success': True, 'time': 0}
-        
+
         try:
             start_time = time.time()
             result = subprocess.run(
@@ -345,7 +345,7 @@ class PackagePublisher:
                 text=True
             )
             end_time = time.time()
-            
+
             return {
                 'success': result.returncode == 0,
                 'time': end_time - start_time,
@@ -353,18 +353,18 @@ class PackagePublisher:
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def execute_publish_command(self, package_path: Path, language: str, version: str) -> Dict[str, Any]:
         """Execute publish command"""
         lang_config = self.config['languages'][language]
         publish_command = lang_config.get('publish_command')
-        
+
         if not publish_command:
             return {'success': False, 'error': 'No publish command configured'}
-        
+
         # Replace version placeholder
         publish_command = publish_command.format(version=version)
-        
+
         try:
             start_time = time.time()
             result = subprocess.run(
@@ -374,7 +374,7 @@ class PackagePublisher:
                 text=True
             )
             end_time = time.time()
-            
+
             return {
                 'success': result.returncode == 0,
                 'time': end_time - start_time,
@@ -382,19 +382,19 @@ class PackagePublisher:
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
-    
+
     def get_package_version(self, package_path: Path, language: str) -> str:
         """Get package version"""
         lang_config = self.config['languages'][language]
         version_file = lang_config.get('version_file')
-        
+
         if not version_file:
             return "1.0.0"
-        
+
         version_file_path = package_path / version_file
         if not version_file_path.exists():
             return "1.0.0"
-        
+
         try:
             if language == 'python':
                 # Parse setup.py or pyproject.toml
@@ -412,19 +412,19 @@ class PackagePublisher:
                             return "1.0.0"
         except Exception as e:
             logger.warning(f"Could not parse version file: {e}")
-        
+
         return "1.0.0"
-    
+
     def save_publishing_results(self, results: Dict[str, Any]):
         """Save publishing results to file"""
         timestamp = datetime.now().isoformat()
         results_file = self.reports_path / f"publishing_results_{timestamp}.json"
-        
+
         with open(results_file, 'w') as f:
             json.dump(results, f, indent=2, default=str)
-        
+
         logger.info(f"Publishing results saved to {results_file}")
-    
+
     def generate_publishing_report(self, results: Dict[str, Any]):
         """Generate human-readable publishing report"""
         report = f"""
@@ -438,22 +438,22 @@ class PackagePublisher:
 
 ## Successful Publications
 """
-        
+
         for result in results['success']:
             report += f"- {result['service']} ({result['language']}) v{result['version']}\n"
-        
+
         if results['failed']:
             report += "\n## Failed Publications\n"
             for result in results['failed']:
                 report += f"- {result['service']} ({result['language']}): {result['error']}\n"
-        
+
         # Save report
         timestamp = datetime.now().isoformat()
         report_file = self.reports_path / f"publishing_report_{timestamp}.md"
-        
+
         with open(report_file, 'w') as f:
             f.write(report)
-        
+
         logger.info(f"Publishing report saved to {report_file}")
         return report
 
@@ -464,11 +464,11 @@ def main():
     parser.add_argument("--service", help="Specific service to publish")
     parser.add_argument("--language", help="Specific language to publish")
     parser.add_argument("--config", default="config/publisher.yaml", help="Config file path")
-    
+
     args = parser.parse_args()
-    
+
     publisher = PackagePublisher(args.config)
-    
+
     if args.service and args.language:
         # Publish specific package
         result = publisher.publish_package(args.service, args.language, args.version, args.dry_run)
@@ -486,10 +486,10 @@ def main():
     else:
         # Publish all packages
         results = publisher.publish_all_packages(args.version, args.dry_run)
-    
+
     # Generate report
     publisher.generate_publishing_report(results)
-    
+
     # Exit with error code if any failed
     if results['summary']['failed'] > 0:
         sys.exit(1)
@@ -497,4 +497,4 @@ def main():
 if __name__ == "__main__":
     import time
     from datetime import datetime
-    main() 
+    main()

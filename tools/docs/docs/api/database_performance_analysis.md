@@ -198,11 +198,11 @@ CREATE INDEX idx_devices_geom ON devices USING GIST (geom) WITH (FILLFACTOR = 90
 SELECT * FROM buildings WHERE owner_id = ?;  -- Uses idx_buildings_owner_id
 
 -- Asset queries (optimized)
-SELECT * FROM building_assets 
+SELECT * FROM building_assets
 WHERE building_id = ? AND system = ? AND status = 'active';  -- Uses composite index
 
 -- Spatial queries (optimized)
-SELECT * FROM walls 
+SELECT * FROM walls
 WHERE building_id = ? AND floor_id = ? AND ST_Intersects(geom, ?);  -- Uses spatial + composite index
 
 -- Complex joins (optimized)
@@ -312,8 +312,8 @@ SELECT * FROM performance_alerts WHERE resolved_at IS NULL;
 
 -- Insert current metrics
 INSERT INTO performance_baseline (metric_name, metric_value, metric_unit, description)
-SELECT 'current_cache_hit_ratio', 
-    AVG(CASE 
+SELECT 'current_cache_hit_ratio',
+    AVG(CASE
         WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
         ELSE 100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read)
     END),
@@ -460,4 +460,4 @@ These optimizations result in:
 - **>95% index usage**
 - **>90% cache hit ratio**
 
-The system is now equipped with comprehensive monitoring and maintenance tools to ensure optimal performance as the database grows and evolves. 
+The system is now equipped with comprehensive monitoring and maintenance tools to ensure optimal performance as the database grows and evolves.

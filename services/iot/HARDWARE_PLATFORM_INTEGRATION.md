@@ -224,4 +224,4 @@ To contribute to the Arxos Open Hardware Platform:
 2. **Submit Hardware**: Fork and submit under `firmware/` or `vendor/`
 3. **Validate Schemas**: Use the provided CLI tool in `tools/validate_schema.py`
 
-This platform provides a comprehensive foundation for integrating any BAS/IoT hardware into the Arxos ecosystem while maintaining vendor neutrality and open standards. 
+This platform provides a comprehensive foundation for integrating any BAS/IoT hardware into the Arxos ecosystem while maintaining vendor neutrality and open standards.

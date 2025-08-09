@@ -25,12 +25,12 @@ logger = logging.getLogger(__name__)
 
 class SVGXWebIDE(BaseHTTPRequestHandler):
     """Simple web IDE for SVGX development."""
-    
+
     def do_GET(self):
         """Handle GET requests."""
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
-        
+
         if path == '/':
             self._serve_index()
         elif path == '/api/parse':
@@ -43,12 +43,12 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
             self._serve_static_file(path[8:])  # Remove /static/ prefix
         else:
             self._serve_404()
-    
+
     def do_POST(self):
         """Handle POST requests."""
         parsed_path = urllib.parse.urlparse(self.path)
         path = parsed_path.path
-        
+
         if path == '/api/parse':
             self._handle_parse_request()
         elif path == '/api/compile':
@@ -57,7 +57,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
             self._handle_lint_request()
         else:
             self._serve_404()
-    
+
     def _serve_index(self):
         """Serve the main IDE page."""
         html = self._get_index_html()
@@ -65,7 +65,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
         self.wfile.write(html.encode('utf-8'))
-    
+
     def _get_index_html(self) -> str:
         """Get the main IDE HTML."""
         return """
@@ -201,7 +201,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
             <h1>SVGX Web IDE</h1>
             <p>Edit, preview, and validate SVGX files</p>
         </div>
-        
+
         <div class="content">
             <div class="editor-panel">
                 <div class="panel-header">
@@ -220,7 +220,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
                     <textarea id="svgx-editor" placeholder="Enter your SVGX code here..."></textarea>
                 </div>
             </div>
-            
+
             <div class="preview-panel">
                 <div class="panel-header">
                     Preview
@@ -232,7 +232,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
                 </div>
             </div>
         </div>
-        
+
         <div class="controls">
             <button class="btn" onclick="parseSVGX()">Parse</button>
             <button class="btn" onclick="compileSVGX()">Compile to SVG</button>
@@ -240,7 +240,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
             <button class="btn success" onclick="exportSVG()">Export SVG</button>
             <button class="btn warning" onclick="exportJSON()">Export JSON</button>
             <button class="btn danger" onclick="clearEditor()">Clear</button>
-            
+
             <div id="status"></div>
         </div>
     </div>
@@ -260,7 +260,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
         style="stroke:black;fill:none;stroke-width:2"
         arx:layer="walls"
         arx:precision="1mm"/>
-        
+
   <arx:object id="lf01" type="electrical.light_fixture" system="electrical">
     <arx:geometry x="1500" y="2000"/>
     <arx:behavior>
@@ -273,12 +273,12 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
       </calculations>
     </arx:behavior>
   </arx:object>
-  
-  <circle cx="1500" cy="2000" r="50" 
+
+  <circle cx="1500" cy="2000" r="50"
           style="fill:yellow;stroke:black;stroke-width:2"
           arx:layer="electrical"/>
 </svg>`,
-            
+
             electrical_system: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:arx="http://arxos.io/svgx">
   <arx:object id="panel1" type="electrical.panel" system="electrical">
     <arx:geometry x="100" y="100"/>
@@ -289,24 +289,24 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
       </variables>
     </arx:behavior>
   </arx:object>
-  
-  <rect x="100" y="100" width="200" height="300" 
+
+  <rect x="100" y="100" width="200" height="300"
         style="fill:gray;stroke:black;stroke-width:2"
         arx:layer="electrical"/>
-        
+
   <arx:object id="outlet1" type="electrical.outlet" system="electrical">
     <arx:geometry x="400" y="200"/>
   </arx:object>
-  
-  <rect x="390" y="190" width="20" height="20" 
+
+  <rect x="390" y="190" width="20" height="20"
         style="fill:white;stroke:black;stroke-width:1"
         arx:layer="electrical"/>
-        
-  <path d="M300,250 L390,200" 
+
+  <path d="M300,250 L390,200"
         style="stroke:black;stroke-width:2"
         arx:layer="electrical"/>
 </svg>`,
-            
+
             mechanical_system: `<svg xmlns="http://www.w3.org/2000/svg" xmlns:arx="http://arxos.io/svgx">
   <arx:object id="hvac1" type="mechanical.hvac" system="mechanical">
     <arx:geometry x="200" y="100"/>
@@ -317,16 +317,16 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
       </variables>
     </arx:behavior>
   </arx:object>
-  
-  <rect x="200" y="100" width="150" height="100" 
+
+  <rect x="200" y="100" width="150" height="100"
         style="fill:lightblue;stroke:black;stroke-width:2"
         arx:layer="mechanical"/>
-        
+
   <arx:object id="duct1" type="mechanical.duct" system="mechanical">
     <arx:geometry x="350" y="150"/>
   </arx:object>
-  
-  <rect x="350" y="140" width="200" height="20" 
+
+  <rect x="350" y="140" width="200" height="20"
         style="fill:silver;stroke:black;stroke-width:1"
         arx:layer="mechanical"/>
 </svg>`
@@ -442,17 +442,17 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
     </script>
 </body>
 </html>"""
-    
+
     def _handle_parse_request(self):
         """Handle SVGX parsing requests."""
         try:
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
-            
+
             content = data.get('content', '')
             parser = SVGXParser()
-            
+
             try:
                 elements = parser.parse(content)
                 result = {
@@ -465,25 +465,25 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
                     'success': False,
                     'message': f'Parse error: {str(e)}'
                 }
-            
+
         except Exception as e:
             result = {
                 'success': False,
                 'message': f'Request error: {str(e)}'
             }
-        
+
         self._send_json_response(result)
-    
+
     def _handle_compile_request(self):
         """Handle SVGX compilation requests."""
         try:
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
-            
+
             content = data.get('content', '')
             compiler = SVGXToSVGCompiler()
-            
+
             try:
                 svg_output = compiler.compile(content)
                 result = {
@@ -496,25 +496,25 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
                     'success': False,
                     'message': f'Compilation error: {str(e)}'
                 }
-            
+
         except Exception as e:
             result = {
                 'success': False,
                 'message': f'Request error: {str(e)}'
             }
-        
+
         self._send_json_response(result)
-    
+
     def _handle_lint_request(self):
         """Handle SVGX linting requests."""
         try:
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
-            
+
             content = data.get('content', '')
             linter = SVGXLinter()
-            
+
             try:
                 is_valid = linter.lint_content(content)
                 result = {
@@ -530,7 +530,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
                     'warnings': [],
                     'info': []
                 }
-            
+
         except Exception as e:
             result = {
                 'valid': False,
@@ -538,9 +538,9 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
                 'warnings': [],
                 'info': []
             }
-        
+
         self._send_json_response(result)
-    
+
     def _send_json_response(self, data: Dict[str, Any]):
         """Send JSON response."""
         self.send_response(200)
@@ -548,7 +548,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
-    
+
     def _serve_static_file(self, filename: str):
         """Serve static files."""
         try:
@@ -556,7 +556,7 @@ class SVGXWebIDE(BaseHTTPRequestHandler):
             self._serve_404()
         except Exception as e:
             self._serve_404()
-    
+
     def _serve_404(self):
         """Serve 404 error page."""
         self.send_response(404)
@@ -580,13 +580,13 @@ def run_web_ide(port: int = 8080):
 def main():
     """Main function for command-line usage."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="SVGX Web IDE")
     parser.add_argument("--port", "-p", type=int, default=8080, help="Port to run on")
-    
+
     args = parser.parse_args()
     run_web_ide(args.port)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

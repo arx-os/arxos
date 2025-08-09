@@ -30,19 +30,19 @@ logger = logging.getLogger(__name__)
 
 class SQLAlchemyUnitOfWork(UnitOfWork):
     """SQLAlchemy implementation of UnitOfWork."""
-    
+
     def __init__(self, session_factory):
         """Initialize unit of work with session factory."""
         self.session_factory = session_factory
         self.session: Optional[Session] = None
         self._repositories = {}
-    
+
     def __enter__(self):
         """Enter the unit of work context."""
         self.session = self.session_factory()
         logger.debug("Unit of Work context entered")
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit the unit of work context."""
         try:
@@ -61,12 +61,12 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
             if self.session:
                 self.session.close()
                 self.session = None
-    
+
     def commit(self) -> None:
         """Commit the current transaction."""
         if not self.session:
             raise RepositoryError("No active session")
-        
+
         try:
             self.session.commit()
             logger.debug("Unit of Work committed")
@@ -74,63 +74,63 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
             logger.error(f"Failed to commit transaction: {e}")
             self.session.rollback()
             raise RepositoryError(f"Failed to commit transaction: {str(e)}")
-    
+
     def rollback(self) -> None:
         """Rollback the current transaction."""
         if not self.session:
             raise RepositoryError("No active session")
-        
+
         try:
             self.session.rollback()
             logger.debug("Unit of Work rolled back")
         except SQLAlchemyError as e:
             logger.error(f"Failed to rollback transaction: {e}")
             raise RepositoryError(f"Failed to rollback transaction: {str(e)}")
-    
+
     @property
-    def buildings(self) -> BuildingRepository:
+def buildings(self) -> BuildingRepository:
         """Get the building repository."""
         if 'buildings' not in self._repositories:
             self._repositories['buildings'] = SQLAlchemyBuildingRepository(self.session)
         return self._repositories['buildings']
-    
+
     @property
-    def floors(self) -> FloorRepository:
+def floors(self) -> FloorRepository:
         """Get the floor repository."""
         if 'floors' not in self._repositories:
             self._repositories['floors'] = SQLAlchemyFloorRepository(self.session)
         return self._repositories['floors']
-    
+
     @property
-    def rooms(self) -> RoomRepository:
+def rooms(self) -> RoomRepository:
         """Get the room repository."""
         if 'rooms' not in self._repositories:
             self._repositories['rooms'] = SQLAlchemyRoomRepository(self.session)
         return self._repositories['rooms']
-    
+
     @property
-    def devices(self) -> DeviceRepository:
+def devices(self) -> DeviceRepository:
         """Get the device repository."""
         if 'devices' not in self._repositories:
             self._repositories['devices'] = SQLAlchemyDeviceRepository(self.session)
         return self._repositories['devices']
-    
+
     @property
-    def users(self) -> UserRepository:
+def users(self) -> UserRepository:
         """Get the user repository."""
         if 'users' not in self._repositories:
             self._repositories['users'] = SQLAlchemyUserRepository(self.session)
         return self._repositories['users']
-    
+
     @property
-    def projects(self) -> ProjectRepository:
+def projects(self) -> ProjectRepository:
         """Get the project repository."""
         if 'projects' not in self._repositories:
             self._repositories['projects'] = SQLAlchemyProjectRepository(self.session)
         return self._repositories['projects']
-    
+
     @property
-    def pdf_analyses(self) -> PDFAnalysisRepository:
+def pdf_analyses(self) -> PDFAnalysisRepository:
         """Get the PDF analysis repository."""
         if 'pdf_analyses' not in self._repositories:
             # PDF analysis repository uses PostgreSQL directly, not SQLAlchemy session
@@ -142,11 +142,11 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
 
 class UnitOfWorkFactory:
     """Factory for creating UnitOfWork instances."""
-    
+
     def __init__(self, session_factory):
         """Initialize factory with session factory."""
         self.session_factory = session_factory
-    
+
     def create(self) -> UnitOfWork:
         """Create a new UnitOfWork instance."""
         return SQLAlchemyUnitOfWork(self.session_factory)
@@ -163,4 +163,4 @@ def unit_of_work(session_factory):
         uow.rollback()
         raise
     else:
-        uow.commit() 
+        uow.commit()

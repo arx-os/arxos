@@ -19,6 +19,6 @@ from .use_cases.process_ai_query_use_case import (
 
 __all__ = [
     'ProcessAIQueryUseCase',
-    'ProcessAIQueryRequest', 
+    'ProcessAIQueryRequest',
     'ProcessAIQueryResponse'
-] 
+]

@@ -12,7 +12,7 @@ class NotificationSystem {
             animationDuration: 300,
             ...options
         };
-        
+
         this.notifications = [];
         this.container = null;
         this.init();
@@ -36,7 +36,7 @@ class NotificationSystem {
             padding: 20px;
             pointer-events: none;
         `;
-        
+
         document.body.appendChild(this.container);
     }
 
@@ -70,34 +70,34 @@ class NotificationSystem {
                 overflow: hidden;
                 animation: slideIn 0.3s ease-out;
             }
-            
+
             .notification.success {
                 border-left: 4px solid #10b981;
             }
-            
+
             .notification.error {
                 border-left: 4px solid #ef4444;
             }
-            
+
             .notification.warning {
                 border-left: 4px solid #f59e0b;
             }
-            
+
             .notification.info {
                 border-left: 4px solid #3b82f6;
             }
-            
+
             .notification.processing {
                 border-left: 4px solid #8b5cf6;
             }
-            
+
             .notification-header {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 margin-bottom: 8px;
             }
-            
+
             .notification-title {
                 font-weight: 600;
                 font-size: 14px;
@@ -105,12 +105,12 @@ class NotificationSystem {
                 display: flex;
                 align-items: center;
             }
-            
+
             .notification-icon {
                 margin-right: 8px;
                 font-size: 16px;
             }
-            
+
             .notification-close {
                 background: none;
                 border: none;
@@ -120,19 +120,19 @@ class NotificationSystem {
                 border-radius: 4px;
                 transition: all 0.2s;
             }
-            
+
             .notification-close:hover {
                 background: #f3f4f6;
                 color: #374151;
             }
-            
+
             .notification-message {
                 font-size: 13px;
                 color: #6b7280;
                 line-height: 1.4;
                 margin-bottom: 8px;
             }
-            
+
             .notification-progress {
                 height: 3px;
                 background: #e5e7eb;
@@ -140,19 +140,19 @@ class NotificationSystem {
                 overflow: hidden;
                 margin-top: 8px;
             }
-            
+
             .notification-progress-bar {
                 height: 100%;
                 background: #3b82f6;
                 transition: width 0.1s linear;
             }
-            
+
             .notification-actions {
                 display: flex;
                 gap: 8px;
                 margin-top: 12px;
             }
-            
+
             .notification-btn {
                 padding: 6px 12px;
                 border-radius: 4px;
@@ -162,38 +162,38 @@ class NotificationSystem {
                 transition: all 0.2s;
                 border: none;
             }
-            
+
             .notification-btn.primary {
                 background: #3b82f6;
                 color: white;
             }
-            
+
             .notification-btn.primary:hover {
                 background: #2563eb;
             }
-            
+
             .notification-btn.secondary {
                 background: #f3f4f6;
                 color: #374151;
             }
-            
+
             .notification-btn.secondary:hover {
                 background: #e5e7eb;
             }
-            
+
             .notification-btn.danger {
                 background: #ef4444;
                 color: white;
             }
-            
+
             .notification-btn.danger:hover {
                 background: #dc2626;
             }
-            
+
             .notification.loading .notification-icon {
                 animation: spin 1s linear infinite;
             }
-            
+
             @keyframes slideIn {
                 from {
                     transform: translateX(100%);
@@ -204,7 +204,7 @@ class NotificationSystem {
                     opacity: 1;
                 }
             }
-            
+
             @keyframes slideOut {
                 from {
                     transform: translateX(0);
@@ -215,17 +215,17 @@ class NotificationSystem {
                     opacity: 0;
                 }
             }
-            
+
             @keyframes spin {
                 from { transform: rotate(0deg); }
                 to { transform: rotate(360deg); }
             }
-            
+
             .notification.removing {
                 animation: slideOut 0.3s ease-in forwards;
             }
         `;
-        
+
         document.head.appendChild(style);
     }
 
@@ -296,7 +296,7 @@ class NotificationSystem {
         }
 
         const actionsHtml = notification.actions.map(action => `
-            <button class="notification-btn ${action.type || 'secondary'}" 
+            <button class="notification-btn ${action.type || 'secondary'}"
                     onclick="notificationSystem.handleAction('${notification.id}', '${action.key}')">
                 ${action.label}
             </button>
@@ -325,9 +325,9 @@ class NotificationSystem {
         const updateProgress = () => {
             const elapsed = Date.now() - startTime;
             const progress = Math.max(0, 100 - (elapsed / duration) * 100);
-            
+
             notification.progress = progress;
-            
+
             if (notification.element) {
                 const progressBar = notification.element.querySelector('.notification-progress-bar');
                 if (progressBar) {
@@ -352,7 +352,7 @@ class NotificationSystem {
 
         if (notification.element) {
             notification.element.classList.add('removing');
-            
+
             setTimeout(() => {
                 if (notification.element && notification.element.parentElement) {
                     notification.element.parentElement.removeChild(notification.element);
@@ -478,7 +478,7 @@ class NotificationSystem {
         // Update the notification
         if (notification.element) {
             notification.element.className = `notification ${type}`;
-            
+
             const icon = this.getIcon(type);
             const titleElement = notification.element.querySelector('.notification-title');
             if (titleElement && title) {
@@ -529,4 +529,4 @@ const notificationSystem = new NotificationSystem();
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = NotificationSystem;
-} 
+}

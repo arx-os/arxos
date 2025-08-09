@@ -24,7 +24,7 @@ arxos_pipeline:
   entry_point: "models/ and schemas/ directories (BIM object model)"
   orchestrator: "Go backend (arx-backend/internal/pipeline/)"
   svgx_integration: "Python bridge service (svgx_engine/services/pipeline_integration.py)"
-  
+
   steps:
     - step: "Define Schema"
       applies_to: ["new_system", "new_object"]
@@ -261,4 +261,4 @@ jobs:
 5. **Testability**: Comprehensive test coverage requirements
 6. **Enterprise-Grade**: Integration with security and compliance workflows
 
-This pipeline ensures that every new system or object in Arxos is properly integrated, tested, and documented while maintaining the platform's architectural integrity. 
+This pipeline ensures that every new system or object in Arxos is properly integrated, tested, and documented while maintaining the platform's architectural integrity.

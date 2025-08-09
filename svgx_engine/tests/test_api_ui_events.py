@@ -102,4 +102,4 @@ def test_missing_payload(base_event):
     assert resp.status_code == 422 or resp.json()["status"] == "error"
     data = resp.json()
     assert data["status"] == "error"
-    assert "INVALID_PAYLOAD" in data.get("error_code", "") 
+    assert "INVALID_PAYLOAD" in data.get("error_code", "")

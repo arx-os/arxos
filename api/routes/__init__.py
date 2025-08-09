@@ -16,11 +16,11 @@ from .pdf_analysis_routes import pdf_router
 # Export all routers
 __all__ = [
     "device_router",
-    "room_router", 
+    "room_router",
     "user_router",
     "project_router",
     "building_router",
     "floor_router",
     "health_router",
     "pdf_router"
-] 
+]

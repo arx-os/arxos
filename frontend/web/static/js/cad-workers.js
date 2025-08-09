@@ -1,7 +1,7 @@
 /**
  * Arxos CAD Web Workers
  * Handles background processing for SVGX operations, geometry calculations, and constraint solving
- * 
+ *
  * @author Arxos Team
  * @version 1.1.0 - Enhanced Performance and Error Handling
  * @license MIT
@@ -18,11 +18,11 @@ let performanceMetrics = {
 // Worker context - this file runs in Web Worker environment
 self.onmessage = function(event) {
     const { type, objectId, object, options = {} } = event.data;
-    
+
     try {
         performanceMetrics.totalOperations++;
         const startTime = performance.now();
-        
+
         switch (type) {
             case 'process_svgx':
                 processSvgxObject(objectId, object, options);
@@ -50,11 +50,11 @@ self.onmessage = function(event) {
                     error: `Unknown message type: ${type}`
                 });
         }
-        
+
         // Update performance metrics
         const endTime = performance.now();
         const duration = endTime - startTime;
-        
+
         switch (type) {
             case 'process_svgx':
                 performanceMetrics.svgxProcessing += duration;
@@ -66,7 +66,7 @@ self.onmessage = function(event) {
                 performanceMetrics.constraintSolving += duration;
                 break;
         }
-        
+
     } catch (error) {
         console.error('Worker error:', error);
         self.postMessage({
@@ -83,17 +83,17 @@ self.onmessage = function(event) {
  */
 function processSvgxObject(objectId, object, options = {}) {
     console.log('Processing SVGX object:', objectId, 'with options:', options);
-    
+
     try {
         // Validate input object
         if (!object || typeof object !== 'object') {
             throw new Error('Invalid object provided for SVGX processing');
         }
-        
+
         // Apply precision settings
         const precision = options.precision || 0.001; // Default to 0.001 inches
         const units = options.units || 'inches';
-        
+
         // Process SVGX with enhanced precision
         const processedObject = {
             ...object,
@@ -110,12 +110,12 @@ function processSvgxObject(objectId, object, options = {}) {
                 }
             }
         };
-        
+
         // Validate processed object
         if (!processedObject.svgx.path) {
             throw new Error('Failed to generate SVGX path');
         }
-        
+
         self.postMessage({
             type: 'svgx_processed',
             objectId: objectId,
@@ -126,7 +126,7 @@ function processSvgxObject(objectId, object, options = {}) {
                 units: units
             }
         });
-        
+
     } catch (error) {
         console.error('SVGX processing error:', error);
         self.postMessage({
@@ -142,16 +142,16 @@ function processSvgxObject(objectId, object, options = {}) {
  */
 function calculateGeometry(objectId, object, options = {}) {
     console.log('Calculating geometry for:', objectId, 'with options:', options);
-    
+
     try {
         const precision = options.precision || 0.001;
         const geometry = calculateObjectGeometry(object, precision);
-        
+
         // Validate geometry results
         if (!geometry || !geometry.bounds) {
             throw new Error('Failed to calculate geometry');
         }
-        
+
         self.postMessage({
             type: 'geometry_calculated',
             objectId: objectId,
@@ -161,7 +161,7 @@ function calculateGeometry(objectId, object, options = {}) {
                 precision: precision
             }
         });
-        
+
     } catch (error) {
         console.error('Geometry calculation error:', error);
         self.postMessage({
@@ -177,16 +177,16 @@ function calculateGeometry(objectId, object, options = {}) {
  */
 function solveConstraints(objectId, object, options = {}) {
     console.log('Solving constraints for:', objectId, 'with options:', options);
-    
+
     try {
         const precision = options.precision || 0.001;
         const constraints = solveObjectConstraints(object, precision);
-        
+
         // Validate constraint results
         if (!constraints || !Array.isArray(constraints)) {
             throw new Error('Failed to solve constraints');
         }
-        
+
         self.postMessage({
             type: 'constraints_solved',
             objectId: objectId,
@@ -196,7 +196,7 @@ function solveConstraints(objectId, object, options = {}) {
                 precision: precision
             }
         });
-        
+
     } catch (error) {
         console.error('Constraint solving error:', error);
         self.postMessage({
@@ -212,18 +212,18 @@ function solveConstraints(objectId, object, options = {}) {
  */
 function validatePrecision(objectId, object, options = {}) {
     console.log('Validating precision for:', objectId);
-    
+
     try {
         const precision = options.precision || 0.001;
         const maxCoordinate = 1000000; // 1 million units
-        
+
         const validation = {
             objectId: objectId,
             isValid: true,
             errors: [],
             warnings: []
         };
-        
+
         // Validate coordinates
         if (object.coordinates) {
             for (const coord of object.coordinates) {
@@ -231,23 +231,23 @@ function validatePrecision(objectId, object, options = {}) {
                     validation.errors.push(`Coordinate out of bounds: ${coord.x}, ${coord.y}`);
                     validation.isValid = false;
                 }
-                
+
                 // Check precision compliance
                 const roundedX = Math.round(coord.x / precision) * precision;
                 const roundedY = Math.round(coord.y / precision) * precision;
-                
+
                 if (Math.abs(coord.x - roundedX) > precision || Math.abs(coord.y - roundedY) > precision) {
                     validation.warnings.push(`Coordinate precision mismatch: ${coord.x}, ${coord.y}`);
                 }
             }
         }
-        
+
         self.postMessage({
             type: 'precision_validated',
             objectId: objectId,
             validation: validation
         });
-        
+
     } catch (error) {
         console.error('Precision validation error:', error);
         self.postMessage({
@@ -263,33 +263,33 @@ function validatePrecision(objectId, object, options = {}) {
  */
 function optimizePerformance(objectId, object, options = {}) {
     console.log('Optimizing performance for:', objectId);
-    
+
     try {
         const optimization = {
             objectId: objectId,
             optimizations: [],
             performance: performanceMetrics
         };
-        
+
         // Suggest optimizations based on performance metrics
         if (performanceMetrics.svgxProcessing > 100) {
             optimization.optimizations.push('Consider reducing SVGX complexity');
         }
-        
+
         if (performanceMetrics.geometryCalculations > 50) {
             optimization.optimizations.push('Consider caching geometry calculations');
         }
-        
+
         if (performanceMetrics.constraintSolving > 200) {
             optimization.optimizations.push('Consider simplifying constraints');
         }
-        
+
         self.postMessage({
             type: 'performance_optimized',
             objectId: objectId,
             optimization: optimization
         });
-        
+
     } catch (error) {
         console.error('Performance optimization error:', error);
         self.postMessage({
@@ -307,19 +307,19 @@ function generateSvgxPath(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
             return `M ${object.startPoint.x} ${object.startPoint.y} L ${object.endPoint.x} ${object.endPoint.y}`;
-            
+
         case 'rectangle':
             const x = Math.min(object.startPoint.x, object.endPoint.x);
             const y = Math.min(object.startPoint.y, object.endPoint.y);
             const width = Math.abs(object.endPoint.x - object.startPoint.x);
             const height = Math.abs(object.endPoint.y - object.startPoint.y);
             return `M ${x} ${y} h ${width} v ${height} h -${width} z`;
-            
+
         case 'circle':
             const radius = object.radius;
             const center = object.center;
             return `M ${center.x + radius} ${center.y} A ${radius} ${radius} 0 1 1 ${center.x - radius} ${center.y} A ${radius} ${radius} 0 1 1 ${center.x + radius} ${center.y}`;
-            
+
         default:
             return '';
     }
@@ -335,7 +335,7 @@ function generateSvgxAttributes(object, precision = 0.001) {
         'fill': 'none',
         'vector-effect': 'non-scaling-stroke'
     };
-    
+
     switch (object.type) {
         case 'line':
             return {
@@ -343,21 +343,21 @@ function generateSvgxAttributes(object, precision = 0.001) {
                 'stroke': '#1F2937',
                 'marker-end': 'url(#arrowhead)'
             };
-            
+
         case 'rectangle':
             return {
                 ...baseAttributes,
                 'stroke': '#1F2937',
                 'fill': 'rgba(59, 130, 246, 0.1)'
             };
-            
+
         case 'circle':
             return {
                 ...baseAttributes,
                 'stroke': '#1F2937',
                 'fill': 'rgba(59, 130, 246, 0.1)'
             };
-            
+
         default:
             return baseAttributes;
     }
@@ -374,25 +374,25 @@ function calculateObjectGeometry(object, precision = 0.001) {
         area: calculateArea(object, precision),
         perimeter: calculatePerimeter(object, precision)
     };
-    
+
     switch (object.type) {
         case 'line':
             geometry.length = calculateDistance(object.startPoint, object.endPoint, precision);
             geometry.angle = calculateAngle(object.startPoint, object.endPoint, precision);
             break;
-            
+
         case 'rectangle':
             geometry.width = Math.abs(object.endPoint.x - object.startPoint.x);
             geometry.height = Math.abs(object.endPoint.y - object.startPoint.y);
             break;
-            
+
         case 'circle':
             geometry.radius = object.radius;
             geometry.diameter = object.radius * 2;
             geometry.circumference = 2 * Math.PI * object.radius;
             break;
     }
-    
+
     return geometry;
 }
 
@@ -401,7 +401,7 @@ function calculateObjectGeometry(object, precision = 0.001) {
  */
 function solveObjectConstraints(object, precision = 0.001) {
     const constraints = [];
-    
+
     // Add geometric constraints
     if (object.constraints && object.constraints.length > 0) {
         for (const constraint of object.constraints) {
@@ -411,11 +411,11 @@ function solveObjectConstraints(object, precision = 0.001) {
             }
         }
     }
-    
+
     // Add automatic constraints based on object type
     const automaticConstraints = generateAutomaticConstraints(object, precision);
     constraints.push(...automaticConstraints);
-    
+
     return constraints;
 }
 
@@ -435,7 +435,7 @@ function processBuildingData(buildingData) {
             totalComponents: 0
         }
     };
-    
+
     // Process floors
     if (buildingData.floors) {
         for (const floor of buildingData.floors) {
@@ -444,7 +444,7 @@ function processBuildingData(buildingData) {
             processedBuilding.statistics.totalArea += processedFloor.area;
         }
     }
-    
+
     // Process rooms
     if (buildingData.rooms) {
         for (const room of buildingData.rooms) {
@@ -453,7 +453,7 @@ function processBuildingData(buildingData) {
             processedBuilding.statistics.totalRooms++;
         }
     }
-    
+
     // Process components
     if (buildingData.components) {
         for (const component of buildingData.components) {
@@ -462,7 +462,7 @@ function processBuildingData(buildingData) {
             processedBuilding.statistics.totalComponents++;
         }
     }
-    
+
     return processedBuilding;
 }
 
@@ -519,7 +519,7 @@ function calculateBounds(object, precision = 0.001) {
                 maxX: Math.max(object.startPoint.x, object.endPoint.x),
                 maxY: Math.max(object.startPoint.y, object.endPoint.y)
             };
-            
+
         case 'rectangle':
             return {
                 minX: Math.min(object.startPoint.x, object.endPoint.x),
@@ -527,7 +527,7 @@ function calculateBounds(object, precision = 0.001) {
                 maxX: Math.max(object.startPoint.x, object.endPoint.x),
                 maxY: Math.max(object.startPoint.y, object.endPoint.y)
             };
-            
+
         case 'circle':
             return {
                 minX: object.center.x - object.radius,
@@ -535,7 +535,7 @@ function calculateBounds(object, precision = 0.001) {
                 maxX: object.center.x + object.radius,
                 maxY: object.center.y + object.radius
             };
-            
+
         default:
             return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
     }
@@ -548,19 +548,19 @@ function calculateCentroid(object, precision = 0.001) {
                 x: (object.startPoint.x + object.endPoint.x) / 2,
                 y: (object.startPoint.y + object.endPoint.y) / 2
             };
-            
+
         case 'rectangle':
             return {
                 x: (object.startPoint.x + object.endPoint.x) / 2,
                 y: (object.startPoint.y + object.endPoint.y) / 2
             };
-            
+
         case 'circle':
             return {
                 x: object.center.x,
                 y: object.center.y
             };
-            
+
         default:
             return { x: 0, y: 0 };
     }
@@ -570,15 +570,15 @@ function calculateArea(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
             return 0; // Lines have no area
-            
+
         case 'rectangle':
             const width = Math.abs(object.endPoint.x - object.startPoint.x);
             const height = Math.abs(object.endPoint.y - object.startPoint.y);
             return width * height;
-            
+
         case 'circle':
             return Math.PI * object.radius * object.radius;
-            
+
         default:
             return 0;
     }
@@ -588,15 +588,15 @@ function calculatePerimeter(object, precision = 0.001) {
     switch (object.type) {
         case 'line':
             return calculateDistance(object.startPoint, object.endPoint, precision);
-            
+
         case 'rectangle':
             const width = Math.abs(object.endPoint.x - object.startPoint.x);
             const height = Math.abs(object.endPoint.y - object.startPoint.y);
             return 2 * (width + height);
-            
+
         case 'circle':
             return 2 * Math.PI * object.radius;
-            
+
         default:
             return 0;
     }
@@ -713,7 +713,7 @@ function solvePerpendicularConstraint(constraint, object, precision = 0.001) {
 
 function generateAutomaticConstraints(object, precision = 0.001) {
     const constraints = [];
-    
+
     // Add automatic constraints based on object type
     switch (object.type) {
         case 'line':
@@ -724,7 +724,7 @@ function generateAutomaticConstraints(object, precision = 0.001) {
                 automatic: true
             });
             break;
-            
+
         case 'rectangle':
             // Rectangles automatically have width and height constraints
             const width = Math.abs(object.endPoint.x - object.startPoint.x);
@@ -734,7 +734,7 @@ function generateAutomaticConstraints(object, precision = 0.001) {
                 { type: 'height', value: height, automatic: true }
             );
             break;
-            
+
         case 'circle':
             // Circles automatically have radius constraint
             constraints.push({
@@ -744,7 +744,7 @@ function generateAutomaticConstraints(object, precision = 0.001) {
             });
             break;
     }
-    
+
     return constraints;
 }
 
@@ -756,4 +756,4 @@ if (typeof module !== 'undefined' && module.exports) {
         solveConstraints,
         processLargeBuilding
     };
-} 
+}

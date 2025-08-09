@@ -136,4 +136,4 @@ ALTER TABLE assets ADD COLUMN IF NOT EXISTS maintenance_priority VARCHAR(50) DEF
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_maintenance_date TIMESTAMP;
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS next_maintenance_date TIMESTAMP;
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS total_maintenance_cost DECIMAL(12,2) DEFAULT 0;
-ALTER TABLE assets ADD COLUMN IF NOT EXISTS maintenance_notes TEXT; 
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS maintenance_notes TEXT;

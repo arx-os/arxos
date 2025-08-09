@@ -40,7 +40,7 @@ done
 # Define expected table order based on dependencies
 EXPECTED_ORDER=(
     "users"
-    "projects" 
+    "projects"
     "buildings"
     "floors"
     "categories"
@@ -92,15 +92,15 @@ FK_PATTERNS=(
 for pattern in "${FK_PATTERNS[@]}"; do
     # Extract referenced table name
     ref_table=$(echo "$pattern" | sed 's/REFERENCES \([a-zA-Z_]*\)(id)/\1/')
-    
+
     # Find all tables that reference this table
     referencing_tables=$(grep -B 10 "$pattern" "$MIGRATION_FILE" | grep "CREATE TABLE" | sed 's/CREATE TABLE \([a-zA-Z_]*\).*/\1/')
-    
+
     for refing_table in $referencing_tables; do
         # Check if referenced table is created before referencing table
         ref_line=$(grep -n "CREATE TABLE $ref_table" "$MIGRATION_FILE" | cut -d: -f1)
         refing_line=$(grep -n "CREATE TABLE $refing_table" "$MIGRATION_FILE" | cut -d: -f1)
-        
+
         if [ "$refing_line" -lt "$ref_line" ]; then
             echo "  ❌ Foreign key constraint issue: $refing_table references $ref_table but is created first"
             echo "     $refing_table created at line $refing_line, $ref_table created at line $ref_line"
@@ -156,4 +156,4 @@ else
     echo "   2. Follow the dependency hierarchy in the schema comments"
     echo "   3. Re-run this validation script after fixes"
     exit 1
-fi 
+fi

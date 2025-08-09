@@ -13,7 +13,7 @@ class ToastManager {
     show(message, type = 'info', duration = 4000) {
         const toastId = this.nextId++;
         const toast = this.createToast(toastId, message, type);
-        
+
         this.container.appendChild(toast);
         this.toasts.set(toastId, toast);
 
@@ -67,7 +67,7 @@ class ToastManager {
                     <span class="${config.iconColor} text-lg">${config.icon}</span>
                     <span class="text-sm">${this.escapeHtml(message)}</span>
                 </div>
-                <button onclick="window.toastManager.remove(${id})" 
+                <button onclick="window.toastManager.remove(${id})"
                         class="ml-4 text-white hover:text-gray-200 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -118,7 +118,7 @@ class ToastManager {
     // Progress toast for long-running operations
     showProgress(message, progressCallback) {
         const toastId = this.show(message, 'info', 0); // No auto-remove
-        
+
         const updateProgress = (progress) => {
             const toast = this.toasts.get(toastId);
             if (toast) {
@@ -157,16 +157,16 @@ class ToastManager {
     confirm(message, onConfirm, onCancel) {
         const toastId = this.show(message, 'info', 0);
         const toast = this.toasts.get(toastId);
-        
+
         if (toast) {
             const buttonContainer = document.createElement('div');
             buttonContainer.className = 'mt-3 flex space-x-2';
             buttonContainer.innerHTML = `
-                <button onclick="window.toastManager.handleConfirm(${toastId}, true)" 
+                <button onclick="window.toastManager.handleConfirm(${toastId}, true)"
                         class="px-3 py-1 bg-white text-blue-600 rounded text-xs hover:bg-gray-100 transition-colors">
                     Confirm
                 </button>
-                <button onclick="window.toastManager.handleConfirm(${toastId}, false)" 
+                <button onclick="window.toastManager.handleConfirm(${toastId}, false)"
                         class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 transition-colors">
                     Cancel
                 </button>
@@ -230,4 +230,4 @@ class ToastManager {
 }
 
 // Export for global use
-window.ToastManager = ToastManager; 
+window.ToastManager = ToastManager;

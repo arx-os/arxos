@@ -81,25 +81,25 @@ const (
 
 func getBuildings() ([]byte, error) {
     client := &http.Client{}
-    
+
     req, err := http.NewRequest("GET", BASE_URL+"/api/vendor/buildings", nil)
     if err != nil {
         return nil, err
     }
-    
+
     req.Header.Set("X-API-Key", API_KEY)
     req.Header.Set("Content-Type", "application/json")
-    
+
     resp, err := client.Do(req)
     if err != nil {
         return nil, err
     }
     defer resp.Body.Close()
-    
+
     if resp.StatusCode != http.StatusOK {
         return nil, fmt.Errorf("API request failed with status: %d", resp.StatusCode)
     }
-    
+
     return ioutil.ReadAll(resp.Body)
 }
 ```
@@ -164,7 +164,7 @@ async function makeAPIRequest(endpoint) {
 Rate limits are enforced on a rolling window basis per API key:
 
 - **Basic:** 1,000 requests/hour
-- **Premium:** 5,000 requests/hour  
+- **Premium:** 5,000 requests/hour
 - **Enterprise:** 20,000 requests/hour
 
 ### Rate Limit Headers
@@ -203,18 +203,18 @@ class RateLimitedAPIClient {
         }
 
         this.requestCount++;
-        
+
         try {
             const response = await apiClient.get(endpoint);
-            
+
             // Update rate limit info from headers
             const remaining = response.headers['x-ratelimit-remaining'];
             const reset = response.headers['x-ratelimit-reset'];
-            
+
             if (remaining !== undefined) {
                 this.requestCount = this.requestsPerHour - parseInt(remaining);
             }
-            
+
             return response.data;
         } catch (error) {
             if (error.response?.status === 429) {
@@ -235,19 +235,19 @@ class RateLimitedAPIClient {
 // Get all available buildings
 async function discoverBuildings() {
     const buildings = await makeAPIRequest('/api/vendor/buildings');
-    
+
     console.log(`Found ${buildings.buildings.length} buildings`);
-    
+
     // Filter by building type
-    const officeBuildings = buildings.buildings.filter(b => 
+    const officeBuildings = buildings.buildings.filter(b =>
         b.building_type === 'Office'
     );
-    
+
     // Filter by status
-    const activeBuildings = buildings.buildings.filter(b => 
+    const activeBuildings = buildings.buildings.filter(b =>
         b.status === 'active'
     );
-    
+
     return activeBuildings;
 }
 ```
@@ -263,11 +263,11 @@ async function getBuildingInventory(buildingId, options = {}) {
         ...(options.category && { category: options.category }),
         ...(options.status && { status: options.status })
     });
-    
+
     const inventory = await makeAPIRequest(
         `/api/vendor/buildings/${buildingId}/inventory?${params}`
     );
-    
+
     return {
         building: inventory.building,
         assets: inventory.inventory,
@@ -280,18 +280,18 @@ async function processAllAssets(buildingId) {
     let offset = 0;
     const limit = 100;
     let allAssets = [];
-    
+
     while (true) {
         const result = await getBuildingInventory(buildingId, { limit, offset });
         allAssets = allAssets.concat(result.assets);
-        
+
         if (!result.pagination.has_more) {
             break;
         }
-        
+
         offset += limit;
     }
-    
+
     return allAssets;
 }
 ```
@@ -302,7 +302,7 @@ async function processAllAssets(buildingId) {
 // Analyze building assets by system
 function analyzeAssetsBySystem(assets) {
     const systemAnalysis = {};
-    
+
     assets.forEach(asset => {
         const system = asset.system;
         if (!systemAnalysis[system]) {
@@ -313,22 +313,22 @@ function analyzeAssetsBySystem(assets) {
                 assetTypes: {}
             };
         }
-        
+
         systemAnalysis[system].count++;
         systemAnalysis[system].totalValue += asset.estimated_value || 0;
-        
+
         if (!systemAnalysis[system].assetTypes[asset.asset_type]) {
             systemAnalysis[system].assetTypes[asset.asset_type] = 0;
         }
         systemAnalysis[system].assetTypes[asset.asset_type]++;
     });
-    
+
     // Calculate averages
     Object.keys(systemAnalysis).forEach(system => {
         const data = systemAnalysis[system];
         data.averageAge = data.totalValue / data.count;
     });
-    
+
     return systemAnalysis;
 }
 
@@ -367,7 +367,7 @@ class APIMonitor {
             responseTime,
             timestamp
         });
-        
+
         // Keep only last 1000 requests
         if (this.requestLog.length > 1000) {
             this.requestLog = this.requestLog.slice(-1000);
@@ -386,19 +386,19 @@ class APIMonitor {
     getMetrics() {
         const now = Date.now();
         const lastHour = now - 3600000;
-        
+
         const recentRequests = this.requestLog.filter(
             req => req.timestamp > lastHour
         );
-        
+
         const recentErrors = this.errorLog.filter(
             err => err.timestamp > lastHour
         );
-        
+
         return {
             requestsLastHour: recentRequests.length,
             errorsLastHour: recentErrors.length,
-            averageResponseTime: recentRequests.length > 0 
+            averageResponseTime: recentRequests.length > 0
                 ? recentRequests.reduce((sum, req) => sum + req.responseTime, 0) / recentRequests.length
                 : 0,
             successRate: recentRequests.length > 0
@@ -416,18 +416,18 @@ class APIMonitor {
 async function monitoredRequest(endpoint, options = {}) {
     const startTime = Date.now();
     const monitor = new APIMonitor();
-    
+
     try {
         const response = await apiClient.get(endpoint, options);
         const responseTime = Date.now() - startTime;
-        
+
         monitor.logRequest(
             endpoint,
             'GET',
             response.status,
             responseTime
         );
-        
+
         return response.data;
     } catch (error) {
         monitor.logError(endpoint, 'GET', error);
@@ -445,7 +445,7 @@ async function checkAPIHealth() {
         const startTime = Date.now();
         const response = await apiClient.get('/api/vendor/buildings?limit=1');
         const responseTime = Date.now() - startTime;
-        
+
         return {
             status: 'healthy',
             responseTime,
@@ -464,7 +464,7 @@ async function checkAPIHealth() {
 setInterval(async () => {
     const health = await checkAPIHealth();
     console.log('API Health:', health);
-    
+
     if (health.status === 'unhealthy') {
         // Send alert
         console.error('API is unhealthy:', health.error);
@@ -492,7 +492,7 @@ class AssetDatabase {
 
     addAsset(asset) {
         this.assets.set(asset.id, asset);
-        
+
         // Update indexes
         this.updateIndex('bySystem', asset.system, asset.id);
         this.updateIndex('byType', asset.asset_type, asset.id);
@@ -510,12 +510,12 @@ class AssetDatabase {
     queryAssets(filters) {
         let resultSet = new Set();
         let isFirstFilter = true;
-        
+
         Object.entries(filters).forEach(([key, value]) => {
             const indexKey = `by${key.charAt(0).toUpperCase() + key.slice(1)}`;
             if (this.indexes[indexKey] && this.indexes[indexKey].has(value)) {
                 const assetIds = this.indexes[indexKey].get(value);
-                
+
                 if (isFirstFilter) {
                     resultSet = new Set(assetIds);
                     isFirstFilter = false;
@@ -524,7 +524,7 @@ class AssetDatabase {
                 }
             }
         });
-        
+
         return Array.from(resultSet).map(id => this.assets.get(id));
     }
 }
@@ -542,25 +542,25 @@ class DataSync {
 
     async syncBuildingData(buildingId) {
         const lastSyncTime = this.lastSync.get(buildingId) || 0;
-        
+
         try {
             // Get updated data since last sync
             const params = new URLSearchParams({
                 updated_since: new Date(lastSyncTime).toISOString()
             });
-            
+
             const response = await apiClient.get(
                 `/api/vendor/buildings/${buildingId}/inventory?${params}`
             );
-            
+
             // Process updates
             await this.processUpdates(buildingId, response.data.inventory);
-            
+
             // Update last sync time
             this.lastSync.set(buildingId, Date.now());
-            
+
             console.log(`Synced ${response.data.inventory.length} assets for building ${buildingId}`);
-            
+
         } catch (error) {
             console.error(`Sync failed for building ${buildingId}:`, error);
             throw error;
@@ -590,35 +590,35 @@ class DataSync {
 // Exponential backoff retry
 async function retryRequest(requestFn, maxRetries = 3, baseDelay = 1000) {
     let lastError;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
             return await requestFn();
         } catch (error) {
             lastError = error;
-            
+
             if (attempt === maxRetries) {
                 throw error;
             }
-            
+
             // Don't retry on client errors (4xx)
             if (error.response && error.response.status >= 400 && error.response.status < 500) {
                 throw error;
             }
-            
+
             // Calculate delay with exponential backoff
             const delay = baseDelay * Math.pow(2, attempt);
             console.log(`Request failed, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
-            
+
             await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
-    
+
     throw lastError;
 }
 
 // Usage
-const buildings = await retryRequest(() => 
+const buildings = await retryRequest(() =>
     makeAPIRequest('/api/vendor/buildings')
 );
 ```
@@ -663,7 +663,7 @@ class CircuitBreaker {
     onFailure() {
         this.failureCount++;
         this.lastFailureTime = Date.now();
-        
+
         if (this.failureCount >= this.failureThreshold) {
             this.state = 'OPEN';
         }
@@ -740,7 +740,7 @@ function debugRequest(endpoint, options = {}) {
         headers: options.headers,
         timestamp: new Date().toISOString()
     });
-    
+
     return apiClient.get(endpoint, options).then(response => {
         console.log('API Response:', {
             status: response.status,
@@ -789,4 +789,4 @@ function debugRequest(endpoint, options = {}) {
 
 - **v1.2.0** - Added building summary endpoints
 - **v1.1.0** - Enhanced rate limiting and monitoring
-- **v1.0.0** - Initial API release 
+- **v1.0.0** - Initial API release

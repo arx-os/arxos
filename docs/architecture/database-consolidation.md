@@ -52,24 +52,24 @@ type DatabaseConfig struct {
 func NewDatabaseManager(config DatabaseConfig) (*DatabaseManager, error) {
     dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=require",
         config.Host, config.Port, config.Username, config.Password, config.Database)
-    
+
     db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
         Logger: logger.Default.LogMode(logger.Info),
     })
     if err != nil {
         return nil, err
     }
-    
+
     sqlDB, err := db.DB()
     if err != nil {
         return nil, err
     }
-    
+
     // Configure connection pool
     sqlDB.SetMaxOpenConns(config.MaxOpenConns)
     sqlDB.SetMaxIdleConns(config.MaxIdleConns)
     sqlDB.SetConnMaxLifetime(config.ConnMaxLifetime)
-    
+
     return &DatabaseManager{
         DB:     db,
         Config: config,
@@ -240,14 +240,14 @@ import (
 
 func setupRouter() *chi.Mux {
     r := chi.NewRouter()
-    
+
     // Middleware
     r.Use(middleware.Logger)
     r.Use(middleware.Recoverer)
     r.Use(middleware.RequestID)
     r.Use(middleware.RealIP)
     r.Use(middleware.Timeout(60 * time.Second))
-    
+
     // CORS
     r.Use(cors.Handler(cors.Options{
         AllowedOrigins:   []string{"*"},
@@ -257,7 +257,7 @@ func setupRouter() *chi.Mux {
         AllowCredentials: true,
         MaxAge:           300,
     }))
-    
+
     // API routes
     r.Route("/api/v1", func(r chi.Router) {
         // Core services
@@ -267,20 +267,20 @@ func setupRouter() *chi.Mux {
             r.Get("/users/{id}", handlers.GetUser)
             r.Put("/users/{id}", handlers.UpdateUser)
             r.Delete("/users/{id}", handlers.DeleteUser)
-            
+
             r.Get("/projects", handlers.GetProjects)
             r.Post("/projects", handlers.CreateProject)
             r.Get("/projects/{id}", handlers.GetProject)
             r.Put("/projects/{id}", handlers.UpdateProject)
             r.Delete("/projects/{id}", handlers.DeleteProject)
-            
+
             r.Get("/files", handlers.GetFiles)
             r.Post("/files", handlers.CreateFile)
             r.Get("/files/{id}", handlers.GetFile)
             r.Put("/files/{id}", handlers.UpdateFile)
             r.Delete("/files/{id}", handlers.DeleteFile)
         })
-        
+
         // GUS services
         r.Route("/gus", func(r chi.Router) {
             r.Post("/query", handlers.GUSQuery)
@@ -288,7 +288,7 @@ func setupRouter() *chi.Mux {
             r.Post("/knowledge", handlers.GUSKnowledge)
             r.Get("/health", handlers.GUSHealth)
         })
-        
+
         // CAD services
         r.Route("/cad", func(r chi.Router) {
             r.Get("/objects", handlers.GetCADObjects)
@@ -296,13 +296,13 @@ func setupRouter() *chi.Mux {
             r.Get("/objects/{id}", handlers.GetCADObject)
             r.Put("/objects/{id}", handlers.UpdateCADObject)
             r.Delete("/objects/{id}", handlers.DeleteCADObject)
-            
+
             r.Get("/constraints", handlers.GetCADConstraints)
             r.Post("/constraints", handlers.CreateCADConstraint)
             r.Put("/constraints/{id}", handlers.UpdateCADConstraint)
             r.Delete("/constraints/{id}", handlers.DeleteCADConstraint)
         })
-        
+
         // Sync services
         r.Route("/sync", func(r chi.Router) {
             r.Post("/connect", handlers.SyncConnect)
@@ -311,7 +311,7 @@ func setupRouter() *chi.Mux {
             r.Post("/resolve-conflict", handlers.ResolveConflict)
         })
     })
-    
+
     return r
 }
 ```
@@ -368,7 +368,7 @@ func (s *GUSService) ProcessQuery(ctx context.Context, query *GUSQuery) (*GUSRes
         Actions:    []map[string]interface{}{},
         Timestamp:  time.Now(),
     }
-    
+
     // Store interaction
     interaction := &GUSInteraction{
         SessionID: query.SessionID,
@@ -379,7 +379,7 @@ func (s *GUSService) ProcessQuery(ctx context.Context, query *GUSQuery) (*GUSRes
         Confidence: response.Confidence,
         Entities:  response.Entities,
     }
-    
+
     return response, s.db.WithContext(ctx).Create(interaction).Error
 }
 
@@ -402,7 +402,7 @@ func (s *SyncService) UploadChanges(ctx context.Context, changes *SyncChanges) e
         if err := s.updateFileContent(ctx, change.FileID, change.Content); err != nil {
             return err
         }
-        
+
         // Create sync session
         session := &SyncSession{
             UserID:   changes.UserID,
@@ -412,12 +412,12 @@ func (s *SyncService) UploadChanges(ctx context.Context, changes *SyncChanges) e
             Changes:  change.Changes,
             Status:   "synced",
         }
-        
+
         if err := s.db.WithContext(ctx).Create(session).Error; err != nil {
             return err
         }
     }
-    
+
     return nil
 }
 ```
@@ -443,22 +443,22 @@ func (m *MigrationManager) RunMigrations() error {
     if err := m.migrateCoreSchema(); err != nil {
         return err
     }
-    
+
     // GUS schema migrations
     if err := m.migrateGUSSchema(); err != nil {
         return err
     }
-    
+
     // CAD schema migrations
     if err := m.migrateCADSchema(); err != nil {
         return err
     }
-    
+
     // Sync schema migrations
     if err := m.migrateSyncSchema(); err != nil {
         return err
     }
-    
+
     return nil
 }
 
@@ -507,13 +507,13 @@ func configureConnectionPool(db *gorm.DB) error {
     if err != nil {
         return err
     }
-    
+
     // Configure for high performance
     sqlDB.SetMaxOpenConns(100)      // Maximum open connections
     sqlDB.SetMaxIdleConns(25)       // Maximum idle connections
     sqlDB.SetConnMaxLifetime(5 * time.Minute)  // Connection lifetime
     sqlDB.SetConnMaxIdleTime(1 * time.Minute)  // Idle connection timeout
-    
+
     return nil
 }
 ```
@@ -523,27 +523,27 @@ func configureConnectionPool(db *gorm.DB) error {
 // Optimized queries with proper indexing
 func (s *CoreService) GetUserProjects(ctx context.Context, userID string) ([]Project, error) {
     var projects []Project
-    
+
     // Use proper joins and indexing
     result := s.db.WithContext(ctx).
         Joins("JOIN arxos_core.users ON projects.owner_id = users.id").
         Where("users.id = ?", userID).
         Preload("Files").  // Eager load related files
         Find(&projects)
-    
+
     return projects, result.Error
 }
 
 // Spatial queries for CAD objects
 func (s *CADService) GetCADObjectsInBounds(ctx context.Context, bounds []float64) ([]CADObject, error) {
     var objects []CADObject
-    
+
     // Use PostGIS spatial functions
     query := `
-        SELECT * FROM arxos_cad.objects 
+        SELECT * FROM arxos_cad.objects
         WHERE ST_Intersects(geometry, ST_MakeEnvelope(?, ?, ?, ?, 4326))
     `
-    
+
     result := s.db.WithContext(ctx).Raw(query, bounds[0], bounds[1], bounds[2], bounds[3]).Scan(&objects)
     return objects, result.Error
 }
@@ -571,6 +571,6 @@ func (s *CADService) GetCADObjectsInBounds(ctx context.Context, bounds []float64
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Implementation Ready 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Implementation Ready

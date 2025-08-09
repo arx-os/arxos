@@ -584,36 +584,36 @@
     .storage-panel {
         margin: 10px;
     }
-    
+
     .partitioning-header,
     .performance-header,
     .optimization-header,
     .storage-header {
         padding: 15px;
     }
-    
+
     .partitioning-stats {
         flex-direction: column;
         gap: 10px;
     }
-    
+
     .partition-grid {
         grid-template-columns: 1fr;
         gap: 15px;
         padding: 15px;
     }
-    
+
     .performance-metrics {
         grid-template-columns: 1fr;
         gap: 15px;
         padding: 15px;
     }
-    
+
     .storage-stats {
         grid-template-columns: 1fr;
         gap: 12px;
     }
-    
+
     .partitioning-error-notification {
         top: 10px;
         right: 10px;
@@ -632,43 +632,43 @@
         background: #2d3748;
         color: #e2e8f0;
     }
-    
+
     .partition-id,
     .info-value {
         color: #f7fafc;
     }
-    
+
     .info-label,
     .metric-label {
         color: #a0aec0;
     }
-    
+
     .metric-card {
         background: #4a5568;
         color: #e2e8f0;
     }
-    
+
     .recommendation-item {
         background: #4a5568;
         color: #e2e8f0;
     }
-    
+
     .storage-stat {
         background: #4a5568;
         color: #e2e8f0;
     }
-    
+
     .storage-file {
         border-bottom-color: #718096;
         color: #e2e8f0;
     }
-    
+
     .file-name {
         color: #f7fafc;
     }
-    
+
     .file-size,
     .file-modified {
         color: #a0aec0;
     }
-} 
+}

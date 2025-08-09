@@ -33,6 +33,7 @@ import {
   Divider,
   Badge,
   CircularProgress,
+  Avatar,
 } from '@mui/material';
 import {
   Cloud as CloudIcon,
@@ -185,7 +186,7 @@ const CloudFileList: React.FC<{
                 <Tooltip title="Download">
                   <IconButton
                     size="small"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       onFileDownload(file.id);
                     }}
@@ -196,7 +197,7 @@ const CloudFileList: React.FC<{
                 <Tooltip title="Share">
                   <IconButton
                     size="small"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       onFileShare(file.id);
                     }}
@@ -208,7 +209,7 @@ const CloudFileList: React.FC<{
                   <IconButton
                     size="small"
                     color="error"
-                    onClick={(e) => {
+                    onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
                       onFileDelete(file.id);
                     }}
@@ -475,7 +476,7 @@ export const CloudSync: React.FC<CloudSyncProps> = ({
   // Handle sync start
   const handleSyncStart = useCallback(() => {
     setSyncStatus(prev => ({ ...prev, isSyncing: true, syncProgress: 0 }));
-    
+
     // Simulate sync progress
     const interval = setInterval(() => {
       setSyncStatus(prev => {
@@ -688,4 +689,4 @@ export const CloudSync: React.FC<CloudSyncProps> = ({
       </Dialog>
     </Box>
   );
-}; 
+};

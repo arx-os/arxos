@@ -6,24 +6,24 @@
 export class Selection {
     constructor(viewportManager, options = {}) {
         this.viewportManager = viewportManager;
-        
+
         // Selection state
         this.selectedObjects = new Set();
         this.selectionCache = new Map();
         this.maxUndoSteps = options.maxUndoSteps || 50;
-        
+
         // Marquee selection
         this.isMarqueeSelecting = false;
         this.marqueeStart = null;
         this.marqueeElement = null;
-        
+
         // Performance optimizations
         this.selectionUpdateThrottle = options.selectionUpdateThrottle || 16; // ~60fps
         this.lastSelectionUpdate = 0;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -34,17 +34,17 @@ export class Selection {
 
     setupEventListeners() {
         if (!this.viewportManager || !this.viewportManager.svg) return;
-        
+
         const svg = this.viewportManager.svg;
-        
+
         // Click to select
         svg.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        
+
         // Marquee selection
         svg.addEventListener('mousedown', (e) => this.handleMarqueeStart(e));
         svg.addEventListener('mousemove', (e) => this.handleMarqueeMove(e));
         svg.addEventListener('mouseup', (e) => this.handleMarqueeEnd(e));
-        
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
@@ -55,34 +55,34 @@ export class Selection {
             this.clearSelection();
             return;
         }
-        
+
         if (event.shiftKey) {
             this.toggleObjectSelection(target);
         } else {
             this.selectObject(target);
         }
-        
+
         this.triggerEvent('selectionChanged', { target });
     }
 
     handleMarqueeStart(event) {
-        if (event.target !== this.viewportManager.svg && 
+        if (event.target !== this.viewportManager.svg &&
             !event.target.classList.contains('svg-background')) {
             return;
         }
-        
+
         this.startMarqueeSelection(event);
     }
 
     handleMarqueeMove(event) {
         if (!this.isMarqueeSelecting) return;
-        
+
         this.updateMarqueeSelection(event);
     }
 
     handleMarqueeEnd(event) {
         if (!this.isMarqueeSelecting) return;
-        
+
         this.endMarqueeSelection(event);
     }
 
@@ -103,7 +103,7 @@ export class Selection {
     // Object selection methods
     selectObject(obj) {
         if (!obj) return;
-        
+
         this.clearSelection();
         this.selectedObjects.add(obj);
         this.highlightObject(obj);
@@ -113,21 +113,21 @@ export class Selection {
 
     toggleObjectSelection(obj) {
         if (!obj) return;
-        
+
         if (this.selectedObjects.has(obj)) {
             this.deselectObject(obj);
         } else {
             this.selectedObjects.add(obj);
             this.highlightObject(obj);
         }
-        
+
         this.updateSelectionCache();
         this.triggerEvent('selectionToggled', { object: obj });
     }
 
     deselectObject(obj) {
         if (!obj) return;
-        
+
         this.selectedObjects.delete(obj);
         this.unhighlightObject(obj);
         this.triggerEvent('objectDeselected', { object: obj });
@@ -156,7 +156,7 @@ export class Selection {
     startMarqueeSelection(event) {
         this.isMarqueeSelecting = true;
         this.marqueeStart = this.getMousePosition(event);
-        
+
         if (this.marqueeElement) {
             this.marqueeElement.style.display = 'block';
             this.marqueeElement.style.left = `${this.marqueeStart.x}px`;
@@ -168,34 +168,34 @@ export class Selection {
 
     updateMarqueeSelection(event) {
         if (!this.isMarqueeSelecting || !this.marqueeStart) return;
-        
+
         const currentPos = this.getMousePosition(event);
         const rect = this.calculateMarqueeRect(this.marqueeStart, currentPos);
-        
+
         if (this.marqueeElement) {
             this.marqueeElement.style.left = `${rect.left}px`;
             this.marqueeElement.style.top = `${rect.top}px`;
             this.marqueeElement.style.width = `${rect.width}px`;
             this.marqueeElement.style.height = `${rect.height}px`;
         }
-        
+
         // Update selection based on marquee
         this.updateSelectionFromMarquee(rect);
     }
 
     endMarqueeSelection(event) {
         this.isMarqueeSelecting = false;
-        
+
         if (this.marqueeElement) {
             this.marqueeElement.style.display = 'none';
         }
-        
+
         this.triggerEvent('marqueeSelectionEnded');
     }
 
     updateSelectionFromMarquee(rect) {
         const objectsInRect = this.getObjectsInRect(rect);
-        
+
         if (event.shiftKey) {
             // Add to existing selection
             objectsInRect.forEach(obj => {
@@ -210,14 +210,14 @@ export class Selection {
                 this.highlightObject(obj);
             });
         }
-        
+
         this.updateSelectionCache();
     }
 
     // Utility methods
     findClosestObject(target) {
         if (!target) return null;
-        
+
         // Walk up the DOM tree to find the closest selectable object
         let element = target;
         while (element && element !== this.viewportManager.svg) {
@@ -226,7 +226,7 @@ export class Selection {
             }
             element = element.parentElement;
         }
-        
+
         return null;
     }
 
@@ -254,23 +254,23 @@ export class Selection {
     getObjectsInRect(rect) {
         const objects = [];
         const selectableElements = this.getAllSelectableObjects();
-        
+
         selectableElements.forEach(obj => {
             const objRect = obj.getBoundingClientRect();
             const svgRect = this.viewportManager.svg.getBoundingClientRect();
-            
+
             const objScreenRect = {
                 left: objRect.left - svgRect.left,
                 top: objRect.top - svgRect.top,
                 right: objRect.right - svgRect.left,
                 bottom: objRect.bottom - svgRect.top
             };
-            
+
             if (this.rectsIntersect(rect, objScreenRect)) {
                 objects.push(obj);
             }
         });
-        
+
         return objects;
     }
 
@@ -284,23 +284,23 @@ export class Selection {
     }
 
     rectsIntersect(rect1, rect2) {
-        return !(rect1.left > rect2.right || 
-                rect1.right < rect2.left || 
-                rect1.top > rect2.bottom || 
+        return !(rect1.left > rect2.right ||
+                rect1.right < rect2.left ||
+                rect1.top > rect2.bottom ||
                 rect1.bottom < rect2.top);
     }
 
     // Visual feedback methods
     highlightObject(obj) {
         if (!obj) return;
-        
+
         obj.classList.add('selected');
         obj.setAttribute('data-selected', 'true');
     }
 
     unhighlightObject(obj) {
         if (!obj) return;
-        
+
         obj.classList.remove('selected');
         obj.removeAttribute('data-selected');
     }
@@ -316,7 +316,7 @@ export class Selection {
             z-index: 1000;
             display: none;
         `;
-        
+
         this.viewportManager.container.appendChild(this.marqueeElement);
     }
 
@@ -326,14 +326,14 @@ export class Selection {
         if (currentTime - this.lastSelectionUpdate < this.selectionUpdateThrottle) {
             return;
         }
-        
+
         this.lastSelectionUpdate = currentTime;
-        
+
         this.selectionCache.clear();
         this.selectedObjects.forEach(obj => {
             this.selectionCache.set(obj, this.extractObjectData(obj));
         });
-        
+
         this.triggerEvent('selectionCacheUpdated');
     }
 
@@ -365,25 +365,25 @@ export class Selection {
 
     getSelectionBounds() {
         if (this.selectedObjects.size === 0) return null;
-        
+
         let minX = Infinity, minY = Infinity;
         let maxX = -Infinity, maxY = -Infinity;
-        
+
         this.selectedObjects.forEach(obj => {
             const rect = obj.getBoundingClientRect();
             const svgRect = this.viewportManager.svg.getBoundingClientRect();
-            
+
             const x = rect.left - svgRect.left;
             const y = rect.top - svgRect.top;
             const width = rect.width;
             const height = rect.height;
-            
+
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             maxX = Math.max(maxX, x + width);
             maxY = Math.max(maxY, y + height);
         });
-        
+
         return {
             left: minX,
             top: minY,
@@ -430,13 +430,13 @@ export class Selection {
         this.clearSelection();
         this.selectedObjects.clear();
         this.selectionCache.clear();
-        
+
         if (this.marqueeElement) {
             this.marqueeElement.remove();
         }
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

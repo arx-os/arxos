@@ -496,7 +496,7 @@ spec:
           annotations:
             summary: "SVGX Engine is down"
             description: "SVGX Engine has been down for more than 1 minute"
-        
+
         - alert: SVGXEngineHighResponseTime
           expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{app="svgx-engine"}[5m])) > 0.1
           for: 2m
@@ -505,7 +505,7 @@ spec:
           annotations:
             summary: "SVGX Engine high response time"
             description: "95th percentile response time is above 100ms"
-        
+
         - alert: SVGXEngineHighErrorRate
           expr: rate(http_requests_total{app="svgx-engine", status=~"5.."}[5m]) / rate(http_requests_total{app="svgx-engine"}[5m]) > 0.05
           for: 2m
@@ -514,7 +514,7 @@ spec:
           annotations:
             summary: "SVGX Engine high error rate"
             description: "Error rate is above 5%"
-        
+
         - alert: SVGXEngineHighMemoryUsage
           expr: (container_memory_usage_bytes{container="svgx-engine"} / container_spec_memory_limit_bytes{container="svgx-engine"}) > 0.85
           for: 5m
@@ -523,7 +523,7 @@ spec:
           annotations:
             summary: "SVGX Engine high memory usage"
             description: "Memory usage is above 85%"
-        
+
         - alert: SVGXEngineHighCPUUsage
           expr: (rate(container_cpu_usage_seconds_total{container="svgx-engine"}[5m]) * 100) > 80
           for: 5m
@@ -614,4 +614,4 @@ spec:
           service:
             name: alertmanager
             port:
-              number: 9093 
+              number: 9093

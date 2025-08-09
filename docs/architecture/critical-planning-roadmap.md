@@ -22,17 +22,17 @@ interface WebAppArchitecture {
   framework: 'React' | 'Vue' | 'Angular' | 'HTMX'
   stateManagement: 'Redux' | 'Zustand' | 'Context API'
   routing: 'React Router' | 'Vue Router' | 'Custom'
-  
+
   // Component Architecture
   componentLibrary: ComponentLibraryDesign
   designSystem: DesignSystemSpecification
   theming: ThemeSystemArchitecture
-  
+
   // Performance & Optimization
   codeSplitting: CodeSplittingStrategy
   lazyLoading: LazyLoadingImplementation
   caching: CachingStrategy
-  
+
   // Integration
   apiIntegration: APIIntegrationPattern
   realTimeUpdates: WebSocketArchitecture
@@ -62,12 +62,12 @@ interface MobileAppArchitecture {
   iosFramework: 'SwiftUI' | 'UIKit' | 'React Native'
   iosArchitecture: 'MVVM' | 'MVC' | 'VIPER'
   iosDataLayer: DataLayerArchitecture
-  
+
   // Android Architecture
   androidFramework: 'Jetpack Compose' | 'XML Views' | 'React Native'
   androidArchitecture: 'MVVM' | 'MVP' | 'Clean Architecture'
   androidDataLayer: DataLayerArchitecture
-  
+
   // Cross-Platform Considerations
   sharedCode: SharedCodeStrategy
   platformSpecific: PlatformSpecificImplementation
@@ -97,12 +97,12 @@ interface CollaborationArchitecture {
   connectionManagement: ConnectionManagementStrategy
   messageRouting: MessageRoutingSystem
   presenceTracking: PresenceTrackingSystem
-  
+
   // Conflict Resolution
   operationalTransformation: OTImplementation
   conflictDetection: ConflictDetectionAlgorithm
   mergeStrategies: MergeStrategyImplementation
-  
+
   // Performance
   scalability: ScalabilityStrategy
   latencyOptimization: LatencyOptimization
@@ -136,19 +136,19 @@ production_architecture:
     development: DevelopmentEnvironmentConfig
     staging: StagingEnvironmentConfig
     production: ProductionEnvironmentConfig
-  
+
   # Scalability Design
   scaling:
     horizontal_scaling: HorizontalScalingStrategy
     vertical_scaling: VerticalScalingStrategy
     auto_scaling: AutoScalingConfiguration
-  
+
   # High Availability
   availability:
     load_balancing: LoadBalancingStrategy
     failover: FailoverConfiguration
     disaster_recovery: DisasterRecoveryPlan
-  
+
   # Security Architecture
   security:
     network_security: NetworkSecurityDesign
@@ -178,14 +178,14 @@ cicd_architecture:
     multi_stage_builds: MultiStageBuildStrategy
     artifact_management: ArtifactManagementSystem
     build_optimization: BuildOptimizationStrategy
-  
+
   # Testing Pipeline
   testing:
     unit_testing: UnitTestingStrategy
     integration_testing: IntegrationTestingStrategy
     e2e_testing: E2ETestingStrategy
     security_testing: SecurityTestingStrategy
-  
+
   # Deployment Pipeline
   deployment:
     blue_green_deployment: BlueGreenDeploymentStrategy
@@ -216,13 +216,13 @@ monitoring_architecture:
     metrics_collection: MetricsCollectionStrategy
     distributed_tracing: DistributedTracingImplementation
     error_tracking: ErrorTrackingSystem
-  
+
   # Infrastructure Monitoring
   infrastructure_monitoring:
     resource_monitoring: ResourceMonitoringStrategy
     performance_monitoring: PerformanceMonitoringStrategy
     capacity_planning: CapacityPlanningStrategy
-  
+
   # Alerting & Notification
   alerting:
     alert_rules: AlertRuleDesign
@@ -252,22 +252,22 @@ monitoring_architecture:
 # Required: AI Services Architecture
 class AIServicesArchitecture:
     """Complete AI services architecture"""
-    
+
     # Model Management
     model_registry: ModelRegistryArchitecture
     model_versioning: ModelVersioningStrategy
     model_deployment: ModelDeploymentStrategy
-    
+
     # Training Infrastructure
     training_pipeline: TrainingPipelineArchitecture
     data_pipeline: DataPipelineArchitecture
     experiment_tracking: ExperimentTrackingSystem
-    
+
     # Inference Architecture
     inference_engine: InferenceEngineArchitecture
     model_serving: ModelServingStrategy
     performance_optimization: PerformanceOptimization
-    
+
     # Integration
     api_design: AIServiceAPIDesign
     real_time_processing: RealTimeProcessingArchitecture
@@ -292,22 +292,22 @@ class AIServicesArchitecture:
 # Required: IoT Platform Architecture
 class IoTPlatformArchitecture:
     """Complete IoT platform architecture"""
-    
+
     # Device Management
     device_registry: DeviceRegistryArchitecture
     device_provisioning: DeviceProvisioningStrategy
     device_monitoring: DeviceMonitoringSystem
-    
+
     # Communication Protocols
     protocol_support: ProtocolSupportArchitecture
     message_routing: MessageRoutingSystem
     data_processing: DataProcessingArchitecture
-    
+
     # Security
     device_security: DeviceSecurityArchitecture
     data_encryption: DataEncryptionStrategy
     access_control: AccessControlSystem
-    
+
     # Integration
     external_systems: ExternalSystemIntegration
     analytics: IoTAnalyticsArchitecture
@@ -335,12 +335,12 @@ type CMMSIntegrationArchitecture struct {
     ExternalSystems []ExternalSystemConfig
     DataMapping     DataMappingStrategy
     SyncStrategy    SyncStrategyDesign
-    
+
     // Work Order Management
     WorkOrderEngine    WorkOrderEngineArchitecture
     AssetManagement    AssetManagementArchitecture
     MaintenancePlanning MaintenancePlanningArchitecture
-    
+
     // Real-time Integration
     RealTimeSync    RealTimeSyncArchitecture
     EventProcessing EventProcessingArchitecture

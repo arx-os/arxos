@@ -198,31 +198,31 @@ end
 
 function EnterpriseSecurityHandler:access(conf)
   EnterpriseSecurityHandler.super.access(self)
-  
+
   -- OWASP Top 10 Protection
   local request_uri = ngx.var.request_uri
   local request_body = ngx.req.get_body_data()
-  
+
   -- A01:2021 - Broken Access Control
   if not self:validate_access_control(conf) then
     return ngx.exit(403)
   end
-  
+
   -- A02:2021 - Cryptographic Failures
   if not self:validate_encryption(conf) then
     return ngx.exit(400)
   end
-  
+
   -- A03:2021 - Injection
   if self:detect_injection(request_uri, request_body) then
     return ngx.exit(400)
   end
-  
+
   -- A07:2021 - Authentication Failures
   if not self:validate_authentication(conf) then
     return ngx.exit(401)
   end
-  
+
   -- Add security headers
   ngx.header["X-Content-Type-Options"] = "nosniff"
   ngx.header["X-Frame-Options"] = "DENY"
@@ -237,13 +237,13 @@ function EnterpriseSecurityHandler:validate_access_control(conf)
   if not user then
     return false
   end
-  
+
   -- Check user permissions
   local required_permission = conf.required_permission
   if required_permission and not self:has_permission(user, required_permission) then
     return false
   end
-  
+
   return true
 end
 
@@ -252,7 +252,7 @@ function EnterpriseSecurityHandler:validate_encryption(conf)
   if conf.require_https and ngx.var.scheme ~= "https" then
     return false
   end
-  
+
   return true
 end
 
@@ -261,26 +261,26 @@ function EnterpriseSecurityHandler:detect_injection(uri, body)
   local sql_patterns = {
     "';", "union", "select", "drop", "delete", "insert", "update"
   }
-  
+
   for _, pattern in ipairs(sql_patterns) do
-    if string.find(string.lower(uri), pattern) or 
+    if string.find(string.lower(uri), pattern) or
        (body and string.find(string.lower(body), pattern)) then
       return true
     end
   end
-  
+
   -- XSS detection
   local xss_patterns = {
     "<script", "javascript:", "onload=", "onerror="
   }
-  
+
   for _, pattern in ipairs(xss_patterns) do
-    if string.find(string.lower(uri), pattern) or 
+    if string.find(string.lower(uri), pattern) or
        (body and string.find(string.lower(body), pattern)) then
       return true
     end
   end
-  
+
   return false
 end
 
@@ -290,19 +290,19 @@ function EnterpriseSecurityHandler:validate_authentication(conf)
   if not auth_header then
     return false
   end
-  
+
   local token = string.match(auth_header, "Bearer (.+)")
   if not token then
     return false
   end
-  
+
   -- Validate token (simplified)
   return true
 end
 
 function EnterpriseSecurityHandler:has_permission(user, permission)
   -- Implement permission checking logic
-  return user and user.groups and 
+  return user and user.groups and
          (user.groups.admin or user.groups[permission])
 end
 
@@ -684,22 +684,22 @@ events {
 http {
     lua_shared_dict prometheus_metrics 10m;
     lua_shared_dict rate_limiting 10m;
-    
+
     # Buffer settings
     client_body_buffer_size 128k;
     client_max_body_size 10m;
-    
+
     # Timeout settings
     client_body_timeout 60s;
     client_header_timeout 60s;
     send_timeout 60s;
-    
+
     # Gzip compression
     gzip on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_types text/plain text/css application/json application/javascript;
-    
+
     # Upstream settings
     upstream arxos_backend {
         least_conn;
@@ -816,6 +816,6 @@ return SecurityHeadersHandler
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: ✅ **Production Ready** 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: ✅ **Production Ready**

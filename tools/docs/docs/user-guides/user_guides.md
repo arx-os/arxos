@@ -711,7 +711,7 @@ curl -X POST https://api.arxos.io/v1/templates \
 #### Authentication Issues
 
 **Problem**: 401 Unauthorized errors
-**Symptoms**: 
+**Symptoms**:
 - API calls return 401 status
 - "Invalid token" error messages
 - Token expiration warnings
@@ -872,4 +872,4 @@ curl -X POST https://api.arxos.io/v1/templates \
 - Attend training sessions
 - Watch tutorial videos
 - Read best practice guides
-- Practice with sample data 
+- Practice with sample data

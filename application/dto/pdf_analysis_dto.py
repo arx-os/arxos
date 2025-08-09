@@ -10,7 +10,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from domain.value_objects import (
-    TaskId, UserId, TaskStatus, ConfidenceScore, 
+    TaskId, UserId, TaskStatus, ConfidenceScore,
     FileName, FilePath, AnalysisResult, AnalysisRequirements
 )
 
@@ -386,4 +386,4 @@ class PDFAnalysisValidation:
     completeness_score: float
     accuracy_score: float
     consistency_score: float
-    quality_assessment: Dict[str, Any] 
+    quality_assessment: Dict[str, Any]

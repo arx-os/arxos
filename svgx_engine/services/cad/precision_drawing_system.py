@@ -59,19 +59,19 @@ class PrecisionPoint:
     z: Optional[Decimal] = None
     precision_level: PrecisionLevel = PrecisionLevel.COMPUTE
     unit: PrecisionUnit = PrecisionUnit.MILLIMETERS
-    
+
     def __post_init__(self):
         """Validate and normalize point coordinates."""
         if self.validation_enabled:
             self._validate_coordinates()
         if self.auto_rounding:
             self._round_to_precision()
-    
+
     @property
-    def validation_enabled(self) -> bool:
+def validation_enabled(self) -> bool:
         """Check if validation is enabled for this point."""
         return True
-    
+
     def _validate_coordinates(self) -> None:
         """Validate coordinate values."""
         if not isinstance(self.x, (Decimal, int, float)):
@@ -80,7 +80,7 @@ class PrecisionPoint:
             raise ValueError(f"Invalid y coordinate: {self.y}")
         if self.z is not None and not isinstance(self.z, (Decimal, int, float)):
             raise ValueError(f"Invalid z coordinate: {self.z}")
-    
+
     def _round_to_precision(self) -> None:
         """Round coordinates to appropriate precision level."""
         precision = self._get_precision_value()
@@ -88,7 +88,7 @@ class PrecisionPoint:
         self.y = Decimal(str(self.y)).quantize(precision)
         if self.z is not None:
             self.z = Decimal(str(self.z)).quantize(precision)
-    
+
     def _get_precision_value(self) -> Decimal:
         """Get precision value for current level."""
         precision_map = {
@@ -96,8 +96,7 @@ class PrecisionPoint:
             PrecisionLevel.EDIT: Decimal("0.01"),
             PrecisionLevel.COMPUTE: Decimal("0.001")
         }
-        return precision_map.get(self.precision_level, Decimal("0.001"))
-    
+        return precision_map.get(self.precision_level, Decimal("0.001")
     def to_dict(self) -> Dict[str, Any]:
         """Convert point to dictionary representation."""
         result = {
@@ -109,9 +108,9 @@ class PrecisionPoint:
         if self.z is not None:
             result["z"] = float(self.z)
         return result
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PrecisionPoint":
+def from_dict(cls, data: Dict[str, Any]) -> "PrecisionPoint":
         """Create point from dictionary representation."""
         return cls(
             x=Decimal(str(data["x"])),
@@ -119,8 +118,6 @@ class PrecisionPoint:
             z=Decimal(str(data["z"])) if "z" in data else None,
             precision_level=PrecisionLevel(data["precision_level"]),
             unit=PrecisionUnit(data["unit"])
-        )
-    
     def distance_to(self, other: "PrecisionPoint") -> Decimal:
         """Calculate distance to another point."""
         dx = self.x - other.x
@@ -129,7 +126,7 @@ class PrecisionPoint:
             dz = self.z - other.z
             return (dx * dx + dy * dy + dz * dz).sqrt()
         return (dx * dx + dy * dy).sqrt()
-    
+
     def __str__(self) -> str:
         """String representation with precision display."""
         precision = self._get_precision_value()
@@ -149,17 +146,17 @@ class PrecisionVector:
     dz: Optional[Decimal] = None
     precision_level: PrecisionLevel = PrecisionLevel.COMPUTE
     unit: PrecisionUnit = PrecisionUnit.MILLIMETERS
-    
+
     def __post_init__(self):
         """Validate and normalize vector components."""
         if self.auto_rounding:
             self._round_to_precision()
-    
+
     @property
-    def auto_rounding(self) -> bool:
+def auto_rounding(self) -> bool:
         """Check if auto-rounding is enabled."""
         return True
-    
+
     def _round_to_precision(self) -> None:
         """Round vector components to appropriate precision level."""
         precision = self._get_precision_value()
@@ -167,7 +164,7 @@ class PrecisionVector:
         self.dy = Decimal(str(self.dy)).quantize(precision)
         if self.dz is not None:
             self.dz = Decimal(str(self.dz)).quantize(precision)
-    
+
     def _get_precision_value(self) -> Decimal:
         """Get precision value for current level."""
         precision_map = {
@@ -175,14 +172,13 @@ class PrecisionVector:
             PrecisionLevel.EDIT: Decimal("0.01"),
             PrecisionLevel.COMPUTE: Decimal("0.001")
         }
-        return precision_map.get(self.precision_level, Decimal("0.001"))
-    
+        return precision_map.get(self.precision_level, Decimal("0.001")
     def magnitude(self) -> Decimal:
         """Calculate vector magnitude."""
         if self.dz is not None:
             return (self.dx * self.dx + self.dy * self.dy + self.dz * self.dz).sqrt()
         return (self.dx * self.dx + self.dy * self.dy).sqrt()
-    
+
     def normalize(self) -> "PrecisionVector":
         """Normalize vector to unit length."""
         mag = self.magnitude()
@@ -195,7 +191,7 @@ class PrecisionVector:
             self.precision_level,
             self.unit
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert vector to dictionary representation."""
         result = {
@@ -211,7 +207,7 @@ class PrecisionVector:
 
 class PrecisionCoordinateSystem:
     """High-precision coordinate system for CAD operations."""
-    
+
     def __init__(self, config: Optional[PrecisionConfig] = None):
         """Initialize coordinate system with precision configuration."""
         self.config = config or PrecisionConfig()
@@ -223,7 +219,7 @@ class PrecisionCoordinateSystem:
         }
         self.transform_matrix = self._create_identity_matrix()
         logger.info("Precision coordinate system initialized")
-    
+
     def _create_identity_matrix(self) -> List[List[Decimal]]:
         """Create identity transformation matrix."""
         return [
@@ -232,12 +228,12 @@ class PrecisionCoordinateSystem:
             [Decimal("0"), Decimal("0"), Decimal("1"), Decimal("0")],
             [Decimal("0"), Decimal("0"), Decimal("0"), Decimal("1")]
         ]
-    
+
     def set_precision_level(self, level: PrecisionLevel) -> None:
         """Set precision level for coordinate system."""
         self.config.default_precision = level
         logger.info(f"Precision level set to: {level.value}")
-    
+
     def transform_point(self, point: PrecisionPoint) -> PrecisionPoint:
         """Transform point using current transformation matrix."""
         # Apply transformation matrix to point
@@ -246,9 +242,9 @@ class PrecisionCoordinateSystem:
         z = None
         if point.z is not None:
             z = point.x * self.transform_matrix[2][0] + point.y * self.transform_matrix[2][1] + point.z * self.transform_matrix[2][2]
-        
+
         return PrecisionPoint(x, y, z, point.precision_level, point.unit)
-    
+
     def validate_point(self, point: PrecisionPoint) -> bool:
         """Validate point coordinates."""
         try:
@@ -256,7 +252,7 @@ class PrecisionCoordinateSystem:
             return True
         except ValueError:
             return False
-    
+
     def get_precision_value(self, level: PrecisionLevel) -> Decimal:
         """Get precision value for specified level."""
         precision_map = {
@@ -269,7 +265,7 @@ class PrecisionCoordinateSystem:
 
 class PrecisionDrawingSystem:
     """Main precision drawing system for CAD operations."""
-    
+
     def __init__(self, config: Optional[PrecisionConfig] = None):
         """Initialize precision drawing system."""
         self.config = config or PrecisionConfig()
@@ -278,14 +274,14 @@ class PrecisionDrawingSystem:
         self.points: List[PrecisionPoint] = []
         self.vectors: List[PrecisionVector] = []
         logger.info("Precision drawing system initialized")
-    
+
     def set_precision_level(self, level: PrecisionLevel) -> None:
         """Set active precision level."""
         self.active_precision_level = level
         self.coordinate_system.set_precision_level(level)
         logger.info(f"Active precision level set to: {level.value}")
-    
-    def create_point(self, x: Union[float, Decimal], y: Union[float, Decimal], 
+
+    def create_point(self, x: Union[float, Decimal], y: Union[float, Decimal],
                     z: Optional[Union[float, Decimal]] = None) -> PrecisionPoint:
         """Create a new precision point."""
         point = PrecisionPoint(
@@ -294,15 +290,15 @@ class PrecisionDrawingSystem:
             Decimal(str(z)) if z is not None else None,
             self.active_precision_level
         )
-        
+
         if self.config.validation_enabled:
             if not self.coordinate_system.validate_point(point):
                 raise ValueError(f"Invalid point coordinates: {point}")
-        
+
         self.points.append(point)
         logger.debug(f"Created precision point: {point}")
         return point
-    
+
     def create_vector(self, dx: Union[float, Decimal], dy: Union[float, Decimal],
                      dz: Optional[Union[float, Decimal]] = None) -> PrecisionVector:
         """Create a new precision vector."""
@@ -312,51 +308,51 @@ class PrecisionDrawingSystem:
             Decimal(str(dz)) if dz is not None else None,
             self.active_precision_level
         )
-        
+
         self.vectors.append(vector)
         logger.debug(f"Created precision vector: {vector}")
         return vector
-    
+
     def calculate_distance(self, point1: PrecisionPoint, point2: PrecisionPoint) -> Decimal:
         """Calculate distance between two points."""
         return point1.distance_to(point2)
-    
+
     def calculate_angle(self, vector1: PrecisionVector, vector2: PrecisionVector) -> Decimal:
         """Calculate angle between two vectors in radians."""
         dot_product = (vector1.dx * vector2.dx + vector1.dy * vector2.dy)
         if vector1.dz is not None and vector2.dz is not None:
             dot_product += vector1.dz * vector2.dz
-        
+
         mag1 = vector1.magnitude()
         mag2 = vector2.magnitude()
-        
+
         if mag1 == 0 or mag2 == 0:
             return Decimal("0")
-        
+
         cos_angle = dot_product / (mag1 * mag2)
         # Clamp to valid range for acos
         cos_angle = max(Decimal("-1"), min(Decimal("1"), cos_angle))
         return Decimal(str(math.acos(float(cos_angle))))
-    
-    def round_to_precision(self, value: Union[float, Decimal], 
+
+    def round_to_precision(self, value: Union[float, Decimal],
                           level: Optional[PrecisionLevel] = None) -> Decimal:
         """Round value to specified precision level."""
         if level is None:
             level = self.active_precision_level
-        
+
         precision = self.coordinate_system.get_precision_value(level)
         return Decimal(str(value)).quantize(precision)
-    
-    def validate_precision(self, value: Union[float, Decimal], 
+
+    def validate_precision(self, value: Union[float, Decimal],
                           level: Optional[PrecisionLevel] = None) -> bool:
         """Validate if value meets precision requirements."""
         if level is None:
             level = self.active_precision_level
-        
+
         precision = self.coordinate_system.get_precision_value(level)
         rounded_value = Decimal(str(value)).quantize(precision)
         return abs(Decimal(str(value)) - rounded_value) < precision
-    
+
     def get_statistics(self) -> Dict[str, Any]:
         """Get system statistics."""
         return {
@@ -371,7 +367,7 @@ class PrecisionDrawingSystem:
                 "auto_rounding": self.config.auto_rounding
             }
         }
-    
+
     def export_data(self) -> Dict[str, Any]:
         """Export system data for persistence."""
         return {
@@ -386,13 +382,12 @@ class PrecisionDrawingSystem:
                 "auto_rounding": self.config.auto_rounding
             }
         }
-    
+
     def import_data(self, data: Dict[str, Any]) -> None:
         """Import system data from persistence."""
         self.points = [PrecisionPoint.from_dict(p) for p in data.get("points", [])]
         self.vectors = [PrecisionVector(**v) for v in data.get("vectors", [])]
-        self.active_precision_level = PrecisionLevel(data.get("active_precision_level", "compute"))
-        
+        self.active_precision_level = PrecisionLevel(data.get("active_precision_level", "compute")
         if "config" in data:
             config_data = data["config"]
             self.config.ui_precision = Decimal(str(config_data.get("ui_precision", "0.1")))
@@ -400,7 +395,7 @@ class PrecisionDrawingSystem:
             self.config.compute_precision = Decimal(str(config_data.get("compute_precision", "0.001")))
             self.config.validation_enabled = config_data.get("validation_enabled", True)
             self.config.auto_rounding = config_data.get("auto_rounding", True)
-        
+
         logger.info("Precision drawing system data imported successfully")
 
 
@@ -420,4 +415,4 @@ def create_precision_config(ui_precision: float = 0.1, edit_precision: float = 0
         compute_precision=Decimal(str(compute_precision)),
         validation_enabled=validation_enabled,
         auto_rounding=auto_rounding
-    ) 
+    )

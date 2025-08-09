@@ -26,29 +26,29 @@ console = Console()
 
 class SVGXCLI:
     """SVGX Engine CLI client."""
-    
+
     def __init__(self, base_url: str = "http://localhost:8000"):
         """
         Initialize the SVGX CLI.
-        
+
         Args:
             base_url: Base URL for the SVGX Engine
-            
+
         Returns:
             None
-            
+
         Raises:
             None
         """
         self.base_url = base_url
         self.session = requests.Session()
         self.token = None
-        
+
         # Load token from environment or file
         self.token = os.getenv('SVGX_TOKEN') or self._load_token()
         if self.token:
             self.session.headers.update({'Authorization': f'Bearer {self.token}'})
-    
+
     def _load_token(self) -> Optional[str]:
         """Load token from config file."""
         config_file = os.path.expanduser('~/.svgx/config.json')
@@ -60,17 +60,17 @@ class SVGXCLI:
             except Exception:
                 pass
         return None
-    
+
     def _save_token(self, token: str):
         """Save token to config file."""
         config_dir = os.path.expanduser('~/.svgx')
         os.makedirs(config_dir, exist_ok=True)
         config_file = os.path.join(config_dir, 'config.json')
-        
+
         config = {'token': token, 'updated_at': datetime.now().isoformat()}
         with open(config_file, 'w') as f:
             json.dump(config, f, indent=2)
-    
+
     def login(self, username: str, password: str) -> bool:
         """Login to SVGX Engine."""
         try:
@@ -78,7 +78,7 @@ class SVGXCLI:
                 'username': username,
                 'password': password
             })
-            
+
             if response.status_code == 200:
                 data = response.json()
                 self.token = data['access_token']
@@ -88,11 +88,11 @@ class SVGXCLI:
             else:
                 console.print(f"[red]Login failed: {response.text}[/red]")
                 return False
-                
+
         except Exception as e:
             console.print(f"[red]Login error: {e}[/red]")
             return False
-    
+
     def get_system_health(self) -> Dict[str, Any]:
         """Get system health status."""
         try:
@@ -100,7 +100,7 @@ class SVGXCLI:
             return response.json()
         except Exception as e:
             return {'error': str(e)}
-    
+
     def get_metrics(self) -> Dict[str, Any]:
         """Get system metrics."""
         try:
@@ -108,7 +108,7 @@ class SVGXCLI:
             return response.json()
         except Exception as e:
             return {'error': str(e)}
-    
+
     def list_canvases(self) -> List[Dict[str, Any]]:
         """List all canvases."""
         try:
@@ -117,7 +117,7 @@ class SVGXCLI:
         except Exception as e:
             console.print(f"[red]Error listing canvases: {e}[/red]")
             return []
-    
+
     def create_canvas(self, name: str, description: str = "") -> Optional[Dict[str, Any]]:
         """Create a new canvas."""
         try:
@@ -125,17 +125,17 @@ class SVGXCLI:
                 'name': name,
                 'description': description
             })
-            
+
             if response.status_code == 201:
                 return response.json()
             else:
                 console.print(f"[red]Failed to create canvas: {response.text}[/red]")
                 return None
-                
+
         except Exception as e:
             console.print(f"[red]Error creating canvas: {e}[/red]")
             return None
-    
+
     def delete_canvas(self, canvas_id: str) -> bool:
         """Delete a canvas."""
         try:
@@ -144,7 +144,7 @@ class SVGXCLI:
         except Exception as e:
             console.print(f"[red]Error deleting canvas: {e}[/red]")
             return False
-    
+
     def get_canvas(self, canvas_id: str) -> Optional[Dict[str, Any]]:
         """Get canvas details."""
         try:
@@ -153,7 +153,7 @@ class SVGXCLI:
         except Exception as e:
             console.print(f"[red]Error getting canvas: {e}[/red]")
             return None
-    
+
     def list_users(self) -> List[Dict[str, Any]]:
         """List all users (admin only)."""
         try:
@@ -162,7 +162,7 @@ class SVGXCLI:
         except Exception as e:
             console.print(f"[red]Error listing users: {e}[/red]")
             return []
-    
+
     def create_user(self, username: str, email: str, password: str, role: str = "viewer") -> Optional[Dict[str, Any]]:
         """Create a new user (admin only)."""
         try:
@@ -172,17 +172,17 @@ class SVGXCLI:
                 'password': password,
                 'role': role
             })
-            
+
             if response.status_code == 201:
                 return response.json()
             else:
                 console.print(f"[red]Failed to create user: {response.text}[/red]")
                 return None
-                
+
         except Exception as e:
             console.print(f"[red]Error creating user: {e}[/red]")
             return None
-    
+
     def get_backups(self) -> List[Dict[str, Any]]:
         """List system backups."""
         try:
@@ -191,24 +191,24 @@ class SVGXCLI:
         except Exception as e:
             console.print(f"[red]Error listing backups: {e}[/red]")
             return []
-    
+
     def create_backup(self, backup_type: str = "full") -> Optional[Dict[str, Any]]:
         """Create a system backup."""
         try:
             response = self.session.post(f"{self.base_url}/state/backup/", json={
                 'backup_type': backup_type
             })
-            
+
             if response.status_code == 200:
                 return response.json()
             else:
                 console.print(f"[red]Failed to create backup: {response.text}[/red]")
                 return None
-                
+
         except Exception as e:
             console.print(f"[red]Error creating backup: {e}[/red]")
             return None
-    
+
     def get_instances(self) -> List[Dict[str, Any]]:
         """List all instances."""
         try:
@@ -217,7 +217,7 @@ class SVGXCLI:
         except Exception as e:
             console.print(f"[red]Error listing instances: {e}[/red]")
             return []
-    
+
     def get_alerts(self) -> List[Dict[str, Any]]:
         """List active alerts."""
         try:
@@ -244,7 +244,7 @@ def cli(ctx, url):
 def login(ctx, username, password):
     """Login to SVGX Engine"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Logging in..."):
         if cli_client.login(username, password):
             console.print("[green]Login successful![/green]")
@@ -258,25 +258,25 @@ def login(ctx, username, password):
 def health(ctx):
     """Show system health status"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Checking system health..."):
         health_data = cli_client.get_system_health()
-    
+
     if 'error' in health_data:
         console.print(f"[red]Error: {health_data['error']}[/red]")
         return
-    
+
     # Create health table
     table = Table(title="System Health")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", style="green")
-    
+
     for key, value in health_data.items():
         if key != 'metrics':
             table.add_row(key.replace('_', ' ').title(), str(value))
-    
+
     console.print(table)
-    
+
     # Show metrics if available
     if 'metrics' in health_data:
         metrics = health_data['metrics']
@@ -284,10 +284,10 @@ def health(ctx):
             metrics_table = Table(title="System Metrics")
             metrics_table.add_column("Metric", style="cyan")
             metrics_table.add_column("Value", style="yellow")
-            
+
             for key, value in metrics.items():
                 metrics_table.add_row(key.replace('_', ' ').title(), str(value))
-            
+
             console.print(metrics_table)
 
 
@@ -296,22 +296,22 @@ def health(ctx):
 def metrics(ctx):
     """Show system metrics"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Fetching metrics..."):
         metrics_data = cli_client.get_metrics()
-    
+
     if 'error' in metrics_data:
         console.print(f"[red]Error: {metrics_data['error']}[/red]")
         return
-    
+
     # Create metrics table
     table = Table(title="System Metrics")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", style="green")
-    
+
     for key, value in metrics_data.items():
         table.add_row(key.replace('_', ' ').title(), str(value))
-    
+
     console.print(table)
 
 
@@ -326,14 +326,14 @@ def canvas(ctx):
 def list_canvases(ctx):
     """List all canvases"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Fetching canvases..."):
         canvases = cli_client.list_canvases()
-    
+
     if not canvases:
         console.print("[yellow]No canvases found[/yellow]")
         return
-    
+
     # Create canvas table
     table = Table(title="Canvases")
     table.add_column("ID", style="cyan")
@@ -341,7 +341,7 @@ def list_canvases(ctx):
     table.add_column("Created", style="yellow")
     table.add_column("Updated", style="yellow")
     table.add_column("Objects", style="blue")
-    
+
     for canvas in canvases:
         table.add_row(
             canvas.get('id', 'N/A'),
@@ -350,7 +350,7 @@ def list_canvases(ctx):
             canvas.get('updated_at', 'N/A')[:19],
             str(len(canvas.get('objects', [])))
         )
-    
+
     console.print(table)
 
 
@@ -361,10 +361,10 @@ def list_canvases(ctx):
 def create_canvas(ctx, name, description):
     """Create a new canvas"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Creating canvas..."):
         canvas = cli_client.create_canvas(name, description or "")
-    
+
     if canvas:
         console.print(f"[green]Canvas created successfully![/green]")
         console.print(f"ID: {canvas.get('id')}")
@@ -379,10 +379,10 @@ def create_canvas(ctx, name, description):
 def delete_canvas(ctx, canvas_id):
     """Delete a canvas"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Deleting canvas..."):
         success = cli_client.delete_canvas(canvas_id)
-    
+
     if success:
         console.print(f"[green]Canvas {canvas_id} deleted successfully![/green]")
     else:
@@ -395,25 +395,25 @@ def delete_canvas(ctx, canvas_id):
 def show_canvas(ctx, canvas_id):
     """Show canvas details"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Fetching canvas details..."):
         canvas = cli_client.get_canvas(canvas_id)
-    
+
     if not canvas:
         console.print(f"[red]Canvas {canvas_id} not found[/red]")
         return
-    
+
     # Create canvas details table
     table = Table(title=f"Canvas: {canvas.get('name', 'N/A')}")
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="green")
-    
+
     for key, value in canvas.items():
         if key != 'objects':
             table.add_row(key.replace('_', ' ').title(), str(value))
-    
+
     console.print(table)
-    
+
     # Show objects count
     objects = canvas.get('objects', [])
     console.print(f"\n[bold]Objects: {len(objects)}[/bold]")
@@ -430,14 +430,14 @@ def user(ctx):
 def list_users(ctx):
     """List all users"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Fetching users..."):
         users = cli_client.list_users()
-    
+
     if not users:
         console.print("[yellow]No users found[/yellow]")
         return
-    
+
     # Create users table
     table = Table(title="Users")
     table.add_column("ID", style="cyan")
@@ -445,7 +445,7 @@ def list_users(ctx):
     table.add_column("Email", style="yellow")
     table.add_column("Role", style="blue")
     table.add_column("Created", style="magenta")
-    
+
     for user in users:
         table.add_row(
             user.get('user_id', 'N/A'),
@@ -454,7 +454,7 @@ def list_users(ctx):
             user.get('role', 'N/A'),
             user.get('created_at', 'N/A')[:19]
         )
-    
+
     console.print(table)
 
 
@@ -467,10 +467,10 @@ def list_users(ctx):
 def create_user(ctx, username, email, password, role):
     """Create a new user"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Creating user..."):
         user = cli_client.create_user(username, email, password, role)
-    
+
     if user:
         console.print(f"[green]User created successfully![/green]")
         console.print(f"Username: {user.get('username')}")
@@ -491,14 +491,14 @@ def backup(ctx):
 def list_backups(ctx):
     """List system backups"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Fetching backups..."):
         backups = cli_client.get_backups()
-    
+
     if not backups:
         console.print("[yellow]No backups found[/yellow]")
         return
-    
+
     # Create backups table
     table = Table(title="System Backups")
     table.add_column("ID", style="cyan")
@@ -506,7 +506,7 @@ def list_backups(ctx):
     table.add_column("Created", style="yellow")
     table.add_column("Size", style="blue")
     table.add_column("Objects", style="magenta")
-    
+
     for backup in backups:
         size_mb = backup.get('size_bytes', 0) / (1024 * 1024)
         table.add_row(
@@ -516,7 +516,7 @@ def list_backups(ctx):
             f"{size_mb:.2f} MB",
             str(backup.get('entry_count', 0))
         )
-    
+
     console.print(table)
 
 
@@ -526,10 +526,10 @@ def list_backups(ctx):
 def create_backup(ctx, type):
     """Create a system backup"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Creating backup..."):
         backup = cli_client.create_backup(type)
-    
+
     if backup:
         console.print(f"[green]Backup created successfully![/green]")
         console.print(f"ID: {backup.get('backup_id')}")
@@ -551,14 +551,14 @@ def system(ctx):
 def list_instances(ctx):
     """List all instances"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Fetching instances..."):
         instances = cli_client.get_instances()
-    
+
     if not instances:
         console.print("[yellow]No instances found[/yellow]")
         return
-    
+
     # Create instances table
     table = Table(title="System Instances")
     table.add_column("ID", style="cyan")
@@ -567,7 +567,7 @@ def list_instances(ctx):
     table.add_column("Connections", style="blue")
     table.add_column("CPU", style="magenta")
     table.add_column("Memory", style="red")
-    
+
     for instance in instances:
         status_color = "green" if instance.get('status') == 'healthy' else "red"
         table.add_row(
@@ -578,7 +578,7 @@ def list_instances(ctx):
             f"{instance.get('cpu_usage', 0):.1f}%",
             f"{instance.get('memory_usage', 0):.1f}%"
         )
-    
+
     console.print(table)
 
 
@@ -587,14 +587,14 @@ def list_instances(ctx):
 def list_alerts(ctx):
     """List active alerts"""
     cli_client = ctx.obj['cli']
-    
+
     with console.status("[bold green]Fetching alerts..."):
         alerts = cli_client.get_alerts()
-    
+
     if not alerts:
         console.print("[green]No active alerts[/green]")
         return
-    
+
     # Create alerts table
     table = Table(title="Active Alerts")
     table.add_column("ID", style="cyan")
@@ -603,7 +603,7 @@ def list_alerts(ctx):
     table.add_column("Metric", style="yellow")
     table.add_column("Value", style="blue")
     table.add_column("Time", style="magenta")
-    
+
     for alert in alerts:
         level_color = "red" if alert.get('level') == 'critical' else "yellow"
         table.add_row(
@@ -614,9 +614,9 @@ def list_alerts(ctx):
             str(alert.get('current_value', 'N/A')),
             alert.get('timestamp', 'N/A')[:19]
         )
-    
+
     console.print(table)
 
 
 if __name__ == '__main__':
-    cli() 
+    cli()

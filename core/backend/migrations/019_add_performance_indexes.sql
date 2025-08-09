@@ -145,7 +145,7 @@ ANALYZE audit_logs;
 
 -- Create a view to monitor index usage for these new indexes
 CREATE OR REPLACE VIEW performance_indexes_monitoring AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -153,7 +153,7 @@ SELECT
     idx_tup_read as tuples_read,
     idx_tup_fetch as tuples_fetched,
     pg_size_pretty(pg_relation_size(indexrelid)) as index_size,
-    CASE 
+    CASE
         WHEN idx_scan = 0 THEN 'UNUSED'
         WHEN idx_scan < 10 THEN 'RARELY_USED'
         WHEN idx_scan < 100 THEN 'OCCASIONALLY_USED'
@@ -185,4 +185,4 @@ COMMENT ON INDEX idx_audit_logs_action_object_type IS 'Composite index for filte
 
 -- These queries can be run to verify the indexes were created successfully
 -- SELECT indexname, tablename FROM pg_indexes WHERE indexname LIKE 'idx_%' ORDER BY tablename, indexname;
--- SELECT * FROM performance_indexes_monitoring WHERE usage_category = 'UNUSED'; 
+-- SELECT * FROM performance_indexes_monitoring WHERE usage_category = 'UNUSED';

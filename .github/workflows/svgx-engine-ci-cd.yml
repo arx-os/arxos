@@ -39,16 +39,16 @@ jobs:
     name: 🧪 Test and Quality Assurance
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
+
     - name: Cache pip dependencies
       uses: actions/cache@v3
       with:
@@ -56,13 +56,13 @@ jobs:
         key: ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-${{ hashFiles('svgx_engine/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-${{ env.PYTHON_VERSION }}-
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r svgx_engine/requirements.txt
         pip install pytest pytest-cov pytest-asyncio black flake8 mypy bandit safety
-    
+
     - name: Run linting
       run: |
         cd svgx_engine
@@ -70,28 +70,28 @@ jobs:
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
         mypy . --ignore-missing-imports
-    
+
     - name: Run security scan
       run: |
         cd svgx_engine
         bandit -r . -f json -o bandit-report.json || true
         safety check --json --output safety-report.json || true
-    
+
     - name: Run unit tests
       run: |
         cd svgx_engine
         pytest tests/ -v --cov=. --cov-report=xml --cov-report=html
-    
+
     - name: Run integration tests
       run: |
         cd svgx_engine
         pytest tests/ -v --cov=. --cov-report=xml --cov-report=html --ignore=tests/test_performance.py
-    
+
     - name: Run performance tests
       run: |
         cd svgx_engine
         pytest tests/ -v --benchmark-only || echo "No performance tests found"
-    
+
     - name: Upload test results
       uses: actions/upload-artifact@v3
       if: always()
@@ -110,21 +110,21 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     timeout-minutes: 20
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
-    
+
     - name: Log in to Container Registry
       uses: docker/login-action@v2
       with:
         registry: ${{ env.DOCKER_REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v4
@@ -137,7 +137,7 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=sha
           type=raw,value=latest,enable={{is_default_branch}}
-    
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
@@ -148,7 +148,7 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-    
+
     - name: Test Docker image
       run: |
         docker run --rm ${{ env.DOCKER_REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }} python -c "import svgx_engine; print('✅ SVGX Engine import successful')"
@@ -161,21 +161,21 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'development')
     timeout-minutes: 15
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up kubectl
       uses: azure/setup-kubectl@v3
       with:
         version: 'latest'
-    
+
     - name: Configure kubectl
       run: |
         echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > kubeconfig
         export KUBECONFIG=kubeconfig
-    
+
     - name: Deploy to development
       run: |
         kubectl apply -f svgx_engine/k8s/namespace.yaml
@@ -184,7 +184,7 @@ jobs:
         kubectl apply -f svgx_engine/k8s/deployment.yaml
         kubectl apply -f svgx_engine/k8s/service.yaml
         kubectl rollout status deployment/svgx-engine -n ${{ env.SVGX_NAMESPACE }} --timeout=300s
-    
+
     - name: Run smoke tests
       run: |
         kubectl get pods -n ${{ env.SVGX_NAMESPACE }}
@@ -199,21 +199,21 @@ jobs:
     needs: [build, deploy-development]
     if: github.ref == 'refs/heads/staging' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
     timeout-minutes: 20
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up kubectl
       uses: azure/setup-kubectl@v3
       with:
         version: 'latest'
-    
+
     - name: Configure kubectl
       run: |
         echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > kubeconfig
         export KUBECONFIG=kubeconfig
-    
+
     - name: Deploy to staging
       run: |
         kubectl apply -f svgx_engine/k8s/namespace.yaml
@@ -223,7 +223,7 @@ jobs:
         kubectl apply -f svgx_engine/k8s/service.yaml
         kubectl apply -f svgx_engine/k8s/monitoring.yaml
         kubectl rollout status deployment/svgx-engine -n ${{ env.SVGX_NAMESPACE }} --timeout=300s
-    
+
     - name: Run integration tests
       run: |
         kubectl get pods -n ${{ env.SVGX_NAMESPACE }}
@@ -239,26 +239,26 @@ jobs:
     needs: [build, deploy-staging]
     if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
     timeout-minutes: 30
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up kubectl
       uses: azure/setup-kubectl@v3
       with:
         version: 'latest'
-    
+
     - name: Configure kubectl
       run: |
         echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > kubeconfig
         export KUBECONFIG=kubeconfig
-    
+
     - name: Pre-deployment health check
       run: |
         # Check current production health
         kubectl get pods -n ${{ env.SVGX_NAMESPACE }} || echo "No existing deployment"
-    
+
     - name: Deploy to production
       run: |
         kubectl apply -f svgx_engine/k8s/namespace.yaml
@@ -269,7 +269,7 @@ jobs:
         kubectl apply -f svgx_engine/k8s/monitoring.yaml
         kubectl apply -f svgx_engine/k8s/ingress.yaml
         kubectl rollout status deployment/svgx-engine -n ${{ env.SVGX_NAMESPACE }} --timeout=600s
-    
+
     - name: Verify deployment
       run: |
         kubectl get pods -n ${{ env.SVGX_NAMESPACE }}
@@ -278,7 +278,7 @@ jobs:
         # Add production verification tests here
         curl -f http://localhost:8080/health || echo "Health check failed"
         curl -f http://localhost:8080/metrics || echo "Metrics endpoint failed"
-    
+
     - name: Run production smoke tests
       run: |
         # Add production smoke tests here
@@ -290,11 +290,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     timeout-minutes: 15
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
@@ -302,7 +302,7 @@ jobs:
         scan-ref: './svgx_engine'
         format: 'sarif'
         output: 'trivy-results.sarif'
-    
+
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       if: always()
@@ -316,28 +316,28 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 20
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r svgx_engine/requirements.txt
         pip install locust pytest-benchmark
-    
+
     - name: Run performance tests
       run: |
         cd svgx_engine
         python -m pytest tests/ -v --benchmark-only || echo "No benchmark tests found"
         # locust -f tests/locustfile.py --headless --users 10 --spawn-rate 1 --run-time 60s || echo "No locustfile found"
-    
+
     - name: Upload performance results
       uses: actions/upload-artifact@v3
       if: always()
@@ -354,20 +354,20 @@ jobs:
     needs: [test, build, deploy-development, deploy-staging, deploy-production, security-scan, performance-test]
     if: always()
     timeout-minutes: 5
-    
+
     steps:
     - name: Notify on success
       if: success()
       run: |
         echo "✅ SVGX Engine CI/CD pipeline completed successfully!"
         echo "🎉 All tests passed, builds successful, and deployments completed"
-    
+
     - name: Notify on failure
       if: failure()
       run: |
         echo "❌ SVGX Engine CI/CD pipeline failed!"
         echo "🔍 Check the logs for details on what went wrong"
-    
+
     - name: Comment on PR
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v6
@@ -378,32 +378,32 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo
           });
-          
-          const botComment = comments.find(comment => 
-            comment.user.type === 'Bot' && 
+
+          const botComment = comments.find(comment =>
+            comment.user.type === 'Bot' &&
             comment.body.includes('SVGX Engine CI/CD')
           );
-          
+
           const commentBody = `## SVGX Engine CI/CD Pipeline Results
-          
+
           **Status**: ${context.job === 'notify' ? '✅ Success' : '❌ Failed'}
-          
+
           **Jobs Completed**:
           - Test and Quality Assurance: ${needs.test.result === 'success' ? '✅' : '❌'}
           - Build and Package: ${needs.build.result === 'success' ? '✅' : '❌'}
           - Security Scan: ${needs['security-scan'].result === 'success' ? '✅' : '❌'}
           - Performance Testing: ${needs['performance-test'].result === 'success' ? '✅' : '❌'}
-          
+
           **Deployments**:
           - Development: ${needs['deploy-development'].result === 'success' ? '✅' : '❌'}
           - Staging: ${needs['deploy-staging'].result === 'success' ? '✅' : '❌'}
           - Production: ${needs['deploy-production'].result === 'success' ? '✅' : '❌'}
-          
+
           **Commit**: ${context.sha}
           **Branch**: ${context.ref}
-          
+
           ${context.job === 'notify' ? '🎉 All checks passed!' : '🔍 Check the logs for details.'}`;
-          
+
           if (botComment) {
             await github.rest.issues.updateComment({
               comment_id: botComment.id,
@@ -418,4 +418,4 @@ jobs:
               repo: context.repo.repo,
               body: commentBody
             });
-          } 
+          }

@@ -62,10 +62,10 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 
 	// Check service health
 	services := checkServices()
-	
+
 	// Get system metrics
 	metrics := getSystemMetrics()
-	
+
 	// Determine overall status
 	status := "healthy"
 	for _, serviceStatus := range services {
@@ -100,22 +100,22 @@ func HealthCheck(w http.ResponseWriter, r *http.Request) {
 // checkServices performs health checks on all services
 func checkServices() map[string]string {
 	services := make(map[string]string)
-	
+
 	// Database health check
 	services["database"] = checkDatabaseHealth()
-	
+
 	// Redis health check (if configured)
 	services["redis"] = checkRedisHealth()
-	
+
 	// Cache health check
 	services["cache"] = checkCacheHealth()
-	
+
 	// API health check
 	services["api"] = checkAPIHealth()
-	
+
 	// File system health check
 	services["filesystem"] = checkFilesystemHealth()
-	
+
 	return services
 }
 
@@ -128,7 +128,7 @@ func checkDatabaseHealth() string {
 	// 2. Run a simple query
 	// 3. Check connection pool status
 	// 4. Monitor query performance
-	
+
 	return "healthy"
 }
 
@@ -141,7 +141,7 @@ func checkRedisHealth() string {
 	// 2. Run a simple PING command
 	// 3. Check memory usage
 	// 4. Monitor response times
-	
+
 	return "healthy"
 }
 
@@ -154,7 +154,7 @@ func checkCacheHealth() string {
 	// 2. Check cache hit/miss ratios
 	// 3. Monitor cache size
 	// 4. Test cache operations
-	
+
 	return "healthy"
 }
 
@@ -167,7 +167,7 @@ func checkAPIHealth() string {
 	// 2. Check response times
 	// 3. Monitor error rates
 	// 4. Test authentication
-	
+
 	return "healthy"
 }
 
@@ -180,7 +180,7 @@ func checkFilesystemHealth() string {
 	// 2. Test file read/write operations
 	// 3. Monitor I/O performance
 	// 4. Check file permissions
-	
+
 	return "healthy"
 }
 
@@ -188,7 +188,7 @@ func checkFilesystemHealth() string {
 func getSystemMetrics() map[string]interface{} {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	
+
 	metrics := map[string]interface{}{
 		"memory_usage": map[string]interface{}{
 			"alloc":        m.Alloc,
@@ -229,14 +229,14 @@ func getSystemMetrics() map[string]interface{} {
 			"other_sys":     m.OtherSys,
 		},
 	}
-	
+
 	return metrics
 }
 
 // DetailedHealthCheck provides detailed health information for debugging
 func DetailedHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	// Perform detailed health checks
 	detailedHealth := map[string]interface{}{
 		"status":    "healthy",
@@ -258,7 +258,7 @@ func DetailedHealthCheck(w http.ResponseWriter, r *http.Request) {
 			"api":      checkDetailedAPIHealth(),
 		},
 	}
-	
+
 	json.NewEncoder(w).Encode(detailedHealth)
 }
 
@@ -330,4 +330,4 @@ func checkDetailedAPIHealth() map[string]interface{} {
 			},
 		},
 	}
-} 
+}

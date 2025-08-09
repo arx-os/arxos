@@ -225,4 +225,4 @@ health:
 	@curl -f http://localhost:8080/health || echo "❌ Backend not responding"
 	@curl -f http://localhost:8000/health || echo "❌ GUS not responding"
 	@curl -f http://localhost:3000/health || echo "❌ CAD not responding"
-	@curl -f http://localhost:3001/health || echo "❌ ArxIDE not responding" 
+	@curl -f http://localhost:3001/health || echo "❌ ArxIDE not responding"

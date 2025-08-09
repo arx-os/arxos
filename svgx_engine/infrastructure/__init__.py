@@ -18,7 +18,7 @@ __description__ = "Infrastructure layer for SVGX Engine"
 __all__ = [
     # Repository Implementations
     "InMemoryBuildingRepository", "PostgreSQLBuildingRepository",
-    
+
     # Container
     "container"
-] 
+]

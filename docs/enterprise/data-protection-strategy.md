@@ -61,42 +61,42 @@ Arxos data exports (e.g., SVGX plans, BIM logic, object metadata) are valuable a
 ```python
 class DataExportProtectionSystem:
     """Comprehensive data export protection and licensing system"""
-    
+
     def __init__(self):
         self.hash_engine = HashEngine()
         self.license_manager = LicenseManager()
         self.watermark_system = WatermarkSystem()
         self.blockchain_anchor = BlockchainAnchor()
         self.pattern_detector = PatternDetector()
-    
+
     def process_export_request(self, user_id: str, export_type: str, license_type: str) -> ExportResult:
         """Process and protect a data export request"""
-        
+
         # Generate export data
         export_data = self.generate_export_data(user_id, export_type)
-        
+
         # Create protection layers
         protected_export = self.apply_protection_layers(export_data, license_type, user_id)
-        
+
         # Anchor to blockchain
         blockchain_proof = self.anchor_to_blockchain(protected_export)
-        
+
         # Create license
         license = self.create_license(protected_export, license_type, user_id)
-        
+
         return ExportResult(
             export_data=protected_export,
             license=license,
             blockchain_proof=blockchain_proof,
             watermark_id=protected_export.watermark_id
         )
-    
+
     def apply_protection_layers(self, export_data: ExportData, license_type: str, user_id: str) -> ProtectedExport:
         """Apply multiple protection layers to export data"""
-        
+
         # Generate hash
         content_hash = self.hash_engine.generate_hash(export_data.content)
-        
+
         # Create watermark
         watermark = self.watermark_system.create_watermark(
             content=export_data.content,
@@ -104,13 +104,13 @@ class DataExportProtectionSystem:
             license_type=license_type,
             timestamp=datetime.now()
         )
-        
+
         # Apply watermark to content
         watermarked_content = self.watermark_system.embed_watermark(
             content=export_data.content,
             watermark=watermark
         )
-        
+
         # Create metadata
         metadata = ExportMetadata(
             export_id=self.generate_export_id(),
@@ -121,16 +121,16 @@ class DataExportProtectionSystem:
             timestamp=datetime.now(),
             version=export_data.version
         )
-        
+
         return ProtectedExport(
             content=watermarked_content,
             metadata=metadata,
             watermark=watermark
         )
-    
+
     def anchor_to_blockchain(self, protected_export: ProtectedExport) -> BlockchainProof:
         """Anchor export hash to blockchain for immutability"""
-        
+
         # Create anchor data
         anchor_data = {
             'export_id': protected_export.metadata.export_id,
@@ -140,15 +140,15 @@ class DataExportProtectionSystem:
             'timestamp': protected_export.metadata.timestamp.isoformat(),
             'watermark_id': protected_export.metadata.watermark_id
         }
-        
+
         # Anchor to blockchain
         blockchain_proof = self.blockchain_anchor.anchor_data(anchor_data)
-        
+
         return blockchain_proof
-    
+
     def create_license(self, protected_export: ProtectedExport, license_type: str, user_id: str) -> License:
         """Create cryptographic license for the export"""
-        
+
         license_data = LicenseData(
             export_id=protected_export.metadata.export_id,
             user_id=user_id,
@@ -158,22 +158,22 @@ class DataExportProtectionSystem:
             expiry_date=self.calculate_expiry_date(license_type),
             royalty_percentage=self.get_royalty_percentage(license_type)
         )
-        
+
         # Create cryptographic license
         license = self.license_manager.create_license(license_data)
-        
+
         return license
-    
+
     def detect_unauthorized_usage(self, content: bytes) -> DetectionResult:
         """Detect unauthorized usage of Arxos data"""
-        
+
         # Extract watermark
         extracted_watermark = self.watermark_system.extract_watermark(content)
-        
+
         if extracted_watermark:
             # Verify watermark
             verification_result = self.verify_watermark(extracted_watermark)
-            
+
             if not verification_result.is_valid:
                 return DetectionResult(
                     unauthorized_usage=True,
@@ -181,10 +181,10 @@ class DataExportProtectionSystem:
                     license_violation=verification_result.violation_type,
                     confidence=verification_result.confidence
                 )
-        
+
         # Check for suspicious patterns
         pattern_result = self.pattern_detector.analyze_content(content)
-        
+
         return DetectionResult(
             unauthorized_usage=pattern_result.suspicious,
             pattern_indicators=pattern_result.indicators,
@@ -196,14 +196,14 @@ class DataExportProtectionSystem:
 ```python
 class WatermarkSystem:
     """Cryptographic watermarking for data protection"""
-    
+
     def __init__(self):
         self.crypto_engine = CryptoEngine()
         self.steganography = SteganographyEngine()
-    
+
     def create_watermark(self, content: bytes, user_id: str, license_type: str, timestamp: datetime) -> Watermark:
         """Create invisible watermark for content"""
-        
+
         # Generate watermark data
         watermark_data = {
             'user_id': user_id,
@@ -212,10 +212,10 @@ class WatermarkSystem:
             'content_hash': hashlib.sha256(content).hexdigest(),
             'watermark_id': self.generate_watermark_id()
         }
-        
+
         # Encrypt watermark data
         encrypted_watermark = self.crypto_engine.encrypt_watermark(watermark_data)
-        
+
         # Create watermark object
         watermark = Watermark(
             id=watermark_data['watermark_id'],
@@ -223,45 +223,45 @@ class WatermarkSystem:
             algorithm='AES-256',
             strength='high'
         )
-        
+
         return watermark
-    
+
     def embed_watermark(self, content: bytes, watermark: Watermark) -> bytes:
         """Embed watermark into content using steganography"""
-        
+
         # Convert watermark to binary
         watermark_binary = self.convert_watermark_to_binary(watermark)
-        
+
         # Embed using steganography
         watermarked_content = self.steganography.embed(
             carrier=content,
             payload=watermark_binary,
             method='lsb_adaptive'
         )
-        
+
         return watermarked_content
-    
+
     def extract_watermark(self, content: bytes) -> Optional[Watermark]:
         """Extract watermark from content"""
-        
+
         try:
             # Extract watermark binary
             watermark_binary = self.steganography.extract(content, method='lsb_adaptive')
-            
+
             if watermark_binary:
                 # Convert binary to watermark
                 watermark_data = self.convert_binary_to_watermark(watermark_binary)
-                
+
                 # Decrypt watermark data
                 decrypted_data = self.crypto_engine.decrypt_watermark(watermark_data)
-                
+
                 return Watermark(
                     id=decrypted_data['watermark_id'],
                     data=watermark_data,
                     algorithm='AES-256',
                     strength='high'
                 )
-        
+
         except Exception as e:
             logger.warning(f"Failed to extract watermark: {e}")
             return None
@@ -271,14 +271,14 @@ class WatermarkSystem:
 ```python
 class LicenseManager:
     """Manage cryptographic licenses for data exports"""
-    
+
     def __init__(self):
         self.crypto_engine = CryptoEngine()
         self.smart_contract = SmartContractManager()
-    
+
     def create_license(self, license_data: LicenseData) -> License:
         """Create cryptographic license"""
-        
+
         # Create license object
         license_obj = License(
             id=self.generate_license_id(),
@@ -291,35 +291,35 @@ class LicenseManager:
             royalty_percentage=license_data.royalty_percentage,
             created_at=datetime.now()
         )
-        
+
         # Create cryptographic signature
         signature = self.crypto_engine.sign_license(license_obj)
         license_obj.signature = signature
-        
+
         # Store on blockchain if needed
         if license_data.license_type in ['commercial', 'reseller']:
             blockchain_license = self.smart_contract.create_license_on_chain(license_obj)
             license_obj.blockchain_id = blockchain_license.id
-        
+
         return license_obj
-    
+
     def verify_license(self, license: License, content_hash: str) -> LicenseVerification:
         """Verify license validity"""
-        
+
         # Check signature
         signature_valid = self.crypto_engine.verify_signature(license)
-        
+
         # Check expiry
         expired = datetime.now() > license.expiry_date
-        
+
         # Check content hash
         content_hash_valid = license.content_hash == content_hash
-        
+
         # Check blockchain status if applicable
         blockchain_valid = True
         if license.blockchain_id:
             blockchain_valid = self.smart_contract.verify_license_on_chain(license.blockchain_id)
-        
+
         return LicenseVerification(
             valid=signature_valid and not expired and content_hash_valid and blockchain_valid,
             expired=expired,
@@ -327,27 +327,27 @@ class LicenseManager:
             content_hash_valid=content_hash_valid,
             blockchain_valid=blockchain_valid
         )
-    
+
     def get_license_rights(self, license_type: str) -> List[str]:
         """Get rights for license type"""
-        
+
         rights_map = {
             'basic': ['internal_use', 'view', 'print'],
             'commercial': ['internal_use', 'client_use', 'modify', 'distribute_internal'],
             'reseller': ['internal_use', 'client_use', 'modify', 'distribute_external', 'resell']
         }
-        
+
         return rights_map.get(license_type, ['internal_use'])
-    
+
     def get_license_restrictions(self, license_type: str) -> List[str]:
         """Get restrictions for license type"""
-        
+
         restrictions_map = {
             'basic': ['no_resale', 'no_redistribution', 'no_white_labeling'],
             'commercial': ['no_resale', 'no_white_labeling', 'attribution_required'],
             'reseller': ['attribution_required', 'royalty_payment_required']
         }
-        
+
         return restrictions_map.get(license_type, ['no_resale', 'no_redistribution'])
 ```
 
@@ -355,18 +355,18 @@ class LicenseManager:
 ```python
 class PatternDetector:
     """Detect suspicious patterns in data usage"""
-    
+
     def __init__(self):
         self.ml_engine = MLEngine()
         self.behavior_analyzer = BehaviorAnalyzer()
         self.threshold_manager = ThresholdManager()
-    
+
     def analyze_api_usage(self, user_id: str, time_window: timedelta) -> UsageAnalysis:
         """Analyze API usage patterns for suspicious activity"""
-        
+
         # Get usage data
         usage_data = self.get_usage_data(user_id, time_window)
-        
+
         # Analyze patterns
         patterns = {
             'download_frequency': self.analyze_download_frequency(usage_data),
@@ -375,13 +375,13 @@ class PatternDetector:
             'time_distribution': self.analyze_time_distribution(usage_data),
             'content_types': self.analyze_content_types(usage_data)
         }
-        
+
         # Calculate risk score
         risk_score = self.calculate_risk_score(patterns)
-        
+
         # Determine if suspicious
         suspicious = risk_score > self.threshold_manager.get_threshold('api_usage')
-        
+
         return UsageAnalysis(
             user_id=user_id,
             patterns=patterns,
@@ -389,46 +389,46 @@ class PatternDetector:
             suspicious=suspicious,
             recommendations=self.generate_recommendations(patterns, risk_score)
         )
-    
+
     def analyze_content(self, content: bytes) -> ContentAnalysis:
         """Analyze content for signs of Arxos data"""
-        
+
         # Extract features
         features = self.extract_content_features(content)
-        
+
         # Use ML model to detect Arxos patterns
         arxos_probability = self.ml_engine.predict_arxos_content(features)
-        
+
         # Check for specific markers
         markers = self.detect_arxos_markers(content)
-        
+
         return ContentAnalysis(
             arxos_probability=arxos_probability,
             markers=markers,
             suspicious=arxos_probability > 0.8 or len(markers) > 3
         )
-    
+
     def detect_arxos_markers(self, content: bytes) -> List[str]:
         """Detect specific markers that indicate Arxos content"""
-        
+
         markers = []
-        
+
         # Check for SVGX patterns
         if b'svgx' in content.lower():
             markers.append('svgx_pattern')
-        
+
         # Check for arxobject patterns
         if b'arxobject' in content.lower():
             markers.append('arxobject_pattern')
-        
+
         # Check for specific file structures
         if self.has_arxos_file_structure(content):
             markers.append('file_structure')
-        
+
         # Check for metadata patterns
         if self.has_arxos_metadata(content):
             markers.append('metadata_pattern')
-        
+
         return markers
 ```
 
@@ -499,21 +499,21 @@ class PatternDetector:
 ```python
 class ViolationResponseSystem:
     """Handle violations of data export licenses"""
-    
+
     def __init__(self):
         self.blacklist_manager = BlacklistManager()
         self.notification_system = NotificationSystem()
         self.legal_team = LegalTeam()
-    
+
     def handle_violation(self, violation: ViolationReport) -> ViolationResponse:
         """Handle detected license violation"""
-        
+
         # Log violation
         self.log_violation(violation)
-        
+
         # Determine response level
         response_level = self.determine_response_level(violation)
-        
+
         # Execute response
         if response_level == 'warning':
             response = self.issue_warning(violation)
@@ -523,21 +523,21 @@ class ViolationResponseSystem:
             response = self.blacklist_user(violation)
         elif response_level == 'legal':
             response = self.escalate_to_legal(violation)
-        
+
         # Notify relevant parties
         self.notify_violation(violation, response)
-        
+
         return response
-    
+
     def determine_response_level(self, violation: ViolationReport) -> str:
         """Determine appropriate response level for violation"""
-        
+
         # Check violation history
         violation_history = self.get_violation_history(violation.user_id)
-        
+
         # Calculate severity
         severity = self.calculate_violation_severity(violation)
-        
+
         # Determine response based on severity and history
         if severity == 'high' and len(violation_history) > 2:
             return 'blacklist'
@@ -565,15 +565,15 @@ Instead of fighting all resellers, Arxos can embrace resellers as partners using
 ```python
 class ResellerPartnershipSystem:
     """Manage authorized reseller partnerships"""
-    
+
     def __init__(self):
         self.partnership_manager = PartnershipManager()
         self.royalty_distributor = RoyaltyDistributor()
         self.attribution_tracker = AttributionTracker()
-    
+
     def create_reseller_partnership(self, reseller_id: str, terms: PartnershipTerms) -> Partnership:
         """Create authorized reseller partnership"""
-        
+
         partnership = Partnership(
             reseller_id=reseller_id,
             terms=terms,
@@ -581,29 +581,29 @@ class ResellerPartnershipSystem:
             attribution_requirements=terms.attribution_requirements,
             created_at=datetime.now()
         )
-        
+
         # Create smart contract for automated royalty collection
         smart_contract = self.create_royalty_contract(partnership)
         partnership.smart_contract_id = smart_contract.id
-        
+
         return partnership
-    
+
     def track_resale(self, original_export_id: str, reseller_id: str, sale_amount: float) -> ResaleRecord:
         """Track authorized resale and distribute royalties"""
-        
+
         # Get original export
         original_export = self.get_export(original_export_id)
-        
+
         # Calculate royalties
         royalties = self.calculate_royalties(sale_amount, original_export.license)
-        
+
         # Distribute royalties
         self.royalty_distributor.distribute_royalties(
             royalties=royalties,
             original_author=original_export.author,
             arx_pool_percentage=0.3  # 30% to ARX pool
         )
-        
+
         # Record resale
         resale_record = ResaleRecord(
             original_export_id=original_export_id,
@@ -612,7 +612,7 @@ class ResellerPartnershipSystem:
             royalties_paid=royalties,
             timestamp=datetime.now()
         )
-        
+
         return resale_record
 ```
 

@@ -11,25 +11,20 @@ from typing import Optional, Any
 
 class DomainException(Exception):
     """Base exception for all domain-related errors."""
-    
+
     def __init__(self, message: str, details: Optional[Any] = None):
-    """
-    Perform __init__ operation
+        """Initialize the domain exception."
 
-Args:
-        message: Description of message
-        details: Description of details
+        Args:
+            message: Error message
+            details: Additional error details
 
-Returns:
-        Description of return value
+        Returns:
+            None
 
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        Raises:
+            None
+        """
         self.message = message
         self.details = details
         super().__init__(self.message)
@@ -251,7 +246,7 @@ def format_error_message(message_key: str, **kwargs) -> str:
     """Format error message with provided parameters."""
     if message_key not in ERROR_MESSAGES:
         return f"Unknown error: {message_key}"
-    
+
     try:
         return ERROR_MESSAGES[message_key].format(**kwargs)
     except KeyError as e:
@@ -261,4 +256,4 @@ def format_error_message(message_key: str, **kwargs) -> str:
 def raise_domain_exception(exception_class: type, message_key: str, **kwargs) -> None:
     """Raise a domain exception with formatted message."""
     message = format_error_message(message_key, **kwargs)
-    raise exception_class(message, details=kwargs) 
+    raise exception_class(message, details=kwargs)

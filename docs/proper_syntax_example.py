@@ -10,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 class ExampleClass:
     """Example class with proper syntax"""
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize the class"""
         self.config = config or {}
         self.logger = logger
-    
+
     async def example_function(self, param: str) -> Dict[str, Any]:
         """Example async function with proper syntax"""
         try:
@@ -28,7 +28,7 @@ class ExampleClass:
         except Exception as e:
             self.logger.error(f"Error in example_function: {e}")
             raise
-    
+
     def validate_syntax(self, content: str) -> bool:
         """Validate Python syntax"""
         try:

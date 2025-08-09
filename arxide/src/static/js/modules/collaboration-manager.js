@@ -15,27 +15,27 @@ export class CollaborationManager {
             enableCollaborativeIndicators: options.enableCollaborativeIndicators !== false,
             ...options
         };
-        
+
         // Initialize modules
         this.realtime = new Realtime(options);
         this.presence = new Presence(options);
         this.conflicts = new Conflicts(options);
-        
+
         // Connect modules
         this.connectModules();
-        
+
         // Floor locking state
         this.currentFloor = null;
         this.floorLock = null;
         this.lockTimer = null;
-        
+
         // UI elements
         this.collaborationUI = null;
         this.settingsModal = null;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -49,41 +49,41 @@ export class CollaborationManager {
         this.realtime.addEventListener('connected', (data) => {
             this.triggerEvent('connected', data);
         });
-        
+
         this.realtime.addEventListener('disconnected', (data) => {
             this.triggerEvent('disconnected', data);
         });
-        
+
         this.realtime.addEventListener('floorLockAcquired', (data) => {
             this.handleFloorLockAcquired(data);
         });
-        
+
         this.realtime.addEventListener('floorLockReleased', (data) => {
             this.handleFloorLockReleased(data);
         });
-        
+
         this.realtime.addEventListener('liveUpdate', (data) => {
             this.handleLiveUpdate(data);
         });
-        
+
         // Connect presence events
         this.presence.addEventListener('userJoined', (data) => {
             this.triggerEvent('userJoined', data);
         });
-        
+
         this.presence.addEventListener('userLeft', (data) => {
             this.triggerEvent('userLeft', data);
         });
-        
+
         this.presence.addEventListener('userStatusChanged', (data) => {
             this.triggerEvent('userStatusChanged', data);
         });
-        
+
         // Connect conflicts events
         this.conflicts.addEventListener('conflictsDetected', (data) => {
             this.triggerEvent('conflictsDetected', data);
         });
-        
+
         this.conflicts.addEventListener('conflictsResolved', (data) => {
             this.triggerEvent('conflictsResolved', data);
         });
@@ -94,7 +94,7 @@ export class CollaborationManager {
         document.addEventListener('floorSelected', (event) => {
             this.handleFloorSelection(event.detail);
         });
-        
+
         // Listen for beforeunload
         window.addEventListener('beforeunload', () => {
             this.releaseFloorLock();
@@ -107,21 +107,21 @@ export class CollaborationManager {
         if (this.currentFloor) {
             await this.releaseFloorLock();
         }
-        
+
         this.currentFloor = floorData;
-        
+
         // Request lock on new floor
         if (this.options.enableFloorLocking) {
             await this.requestFloorLock();
         }
-        
+
         this.triggerEvent('floorChanged', { floor: floorData });
     }
 
     // Floor locking methods
     async requestFloorLock() {
         if (!this.currentFloor || !this.options.enableFloorLocking) return;
-        
+
         try {
             const response = await fetch('/api/floors/lock', {
                 method: 'POST',
@@ -134,16 +134,16 @@ export class CollaborationManager {
                     timeout: this.options.floorLockTimeout
                 })
             });
-            
+
             if (!response.ok) {
                 const error = await response.json();
                 this.handleFloorLockError(error);
                 return;
             }
-            
+
             const lockInfo = await response.json();
             this.handleFloorLockAcquired(lockInfo);
-            
+
         } catch (error) {
             console.error('Error requesting floor lock:', error);
             this.handleFloorLockError(error);
@@ -152,7 +152,7 @@ export class CollaborationManager {
 
     async refreshFloorLock() {
         if (!this.floorLock || !this.options.enableFloorLocking) return;
-        
+
         try {
             const response = await fetch('/api/floors/lock/refresh', {
                 method: 'POST',
@@ -165,16 +165,16 @@ export class CollaborationManager {
                     lock_id: this.floorLock.id
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to refresh floor lock');
             }
-            
+
             const lockInfo = await response.json();
             this.floorLock = lockInfo;
-            
+
             this.triggerEvent('floorLockRefreshed', { lockInfo });
-            
+
         } catch (error) {
             console.error('Error refreshing floor lock:', error);
             this.handleFloorLockError(error);
@@ -183,7 +183,7 @@ export class CollaborationManager {
 
     async releaseFloorLock() {
         if (!this.floorLock) return;
-        
+
         try {
             const response = await fetch('/api/floors/lock/release', {
                 method: 'POST',
@@ -196,16 +196,16 @@ export class CollaborationManager {
                     lock_id: this.floorLock.id
                 })
             });
-            
+
             if (!response.ok) {
                 console.warn('Failed to release floor lock');
             }
-            
+
             this.floorLock = null;
             this.clearLockTimer();
-            
+
             this.triggerEvent('floorLockReleased', { floorId: this.currentFloor?.id });
-            
+
         } catch (error) {
             console.error('Error releasing floor lock:', error);
         }
@@ -216,7 +216,7 @@ export class CollaborationManager {
         this.floorLock = lockInfo;
         this.startLockTimer();
         this.updateFloorLockStatus(true, lockInfo.user_id);
-        
+
         this.triggerEvent('floorLockAcquired', { lockInfo });
     }
 
@@ -224,7 +224,7 @@ export class CollaborationManager {
         this.floorLock = null;
         this.clearLockTimer();
         this.updateFloorLockStatus(false);
-        
+
         this.triggerEvent('floorLockReleased', data);
     }
 
@@ -242,7 +242,7 @@ export class CollaborationManager {
     handleFloorLockedByOther(lockInfo) {
         this.updateFloorLockStatus(true, lockInfo.user_id);
         this.triggerEvent('floorLockedByOther', { lockInfo });
-        
+
         // Show notification
         this.showNotification(`Floor is locked by ${lockInfo.user_name}`, 'warning');
     }
@@ -251,7 +251,7 @@ export class CollaborationManager {
         this.floorLock = null;
         this.clearLockTimer();
         this.updateFloorLockStatus(false);
-        
+
         this.triggerEvent('floorLockExpired');
         this.showNotification('Floor lock has expired', 'warning');
     }
@@ -259,10 +259,10 @@ export class CollaborationManager {
     // Live update handling
     handleLiveUpdate(data) {
         const { userId, updateType, data: updateData } = data;
-        
+
         // Apply live update to the UI
         this.applyLiveUpdate(updateType, updateData);
-        
+
         this.triggerEvent('liveUpdateApplied', { userId, updateType, data: updateData });
     }
 
@@ -316,7 +316,7 @@ export class CollaborationManager {
     // Timer management
     startLockTimer() {
         this.clearLockTimer();
-        
+
         this.lockTimer = setTimeout(() => {
             this.refreshFloorLock();
         }, this.options.floorLockTimeout * 0.8); // Refresh at 80% of timeout
@@ -340,7 +340,7 @@ export class CollaborationManager {
         this.collaborationUI.id = 'collaboration-ui';
         this.collaborationUI.className = 'fixed top-4 left-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-40 max-w-sm';
         this.collaborationUI.style.display = 'none';
-        
+
         this.collaborationUI.innerHTML = `
             <div class="flex items-center justify-between mb-3">
                 <h3 class="font-semibold text-gray-900">Collaboration</h3>
@@ -378,7 +378,7 @@ export class CollaborationManager {
                 </button>
             </div>
         `;
-        
+
         document.body.appendChild(this.collaborationUI);
         this.setupCollaborationUIEvents();
     }
@@ -388,7 +388,7 @@ export class CollaborationManager {
         this.settingsModal.id = 'collaboration-settings-modal';
         this.settingsModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         this.settingsModal.style.display = 'none';
-        
+
         this.settingsModal.innerHTML = `
             <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                 <div class="flex items-center justify-between mb-4">
@@ -427,7 +427,7 @@ export class CollaborationManager {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(this.settingsModal);
         this.setupSettingsModalEvents();
     }
@@ -437,19 +437,19 @@ export class CollaborationManager {
         const requestLockButton = this.collaborationUI.querySelector('#request-floor-lock');
         const releaseLockButton = this.collaborationUI.querySelector('#release-floor-lock');
         const settingsButton = this.collaborationUI.querySelector('#show-collaboration-settings');
-        
+
         closeButton.addEventListener('click', () => {
             this.hideCollaborationUI();
         });
-        
+
         requestLockButton.addEventListener('click', () => {
             this.requestFloorLock();
         });
-        
+
         releaseLockButton.addEventListener('click', () => {
             this.releaseFloorLock();
         });
-        
+
         settingsButton.addEventListener('click', () => {
             this.showSettingsModal();
         });
@@ -459,15 +459,15 @@ export class CollaborationManager {
         const closeButton = this.settingsModal.querySelector('#close-settings-modal');
         const saveButton = this.settingsModal.querySelector('#save-settings');
         const cancelButton = this.settingsModal.querySelector('#cancel-settings');
-        
+
         closeButton.addEventListener('click', () => {
             this.hideSettingsModal();
         });
-        
+
         saveButton.addEventListener('click', () => {
             this.saveSettings();
         });
-        
+
         cancelButton.addEventListener('click', () => {
             this.hideSettingsModal();
         });
@@ -501,7 +501,7 @@ export class CollaborationManager {
 
     updateCollaborationStatus() {
         if (!this.collaborationUI) return;
-        
+
         // Update connection status
         const connectionStatus = this.collaborationUI.querySelector('#connection-status');
         if (connectionStatus) {
@@ -509,7 +509,7 @@ export class CollaborationManager {
             connectionStatus.textContent = isConnected ? 'Connected' : 'Disconnected';
             connectionStatus.className = `text-sm font-medium ${isConnected ? 'text-green-600' : 'text-red-600'}`;
         }
-        
+
         // Update floor lock status
         const floorLockStatus = this.collaborationUI.querySelector('#floor-lock-status');
         if (floorLockStatus) {
@@ -521,14 +521,14 @@ export class CollaborationManager {
                 floorLockStatus.className = 'text-sm font-medium text-gray-600';
             }
         }
-        
+
         // Update active users count
         const activeUsersCount = this.collaborationUI.querySelector('#active-users-count');
         if (activeUsersCount) {
             const count = this.presence.getActiveUsersCount();
             activeUsersCount.textContent = count.toString();
         }
-        
+
         // Update conflicts count
         const conflictsCount = this.collaborationUI.querySelector('#conflicts-count');
         if (conflictsCount) {
@@ -543,7 +543,7 @@ export class CollaborationManager {
         } else {
             this.showNotification('Floor lock released', 'info');
         }
-        
+
         this.updateCollaborationStatus();
     }
 
@@ -552,18 +552,18 @@ export class CollaborationManager {
         const enableFloorLocking = this.settingsModal.querySelector('#enable-floor-locking').checked;
         const showUserPresence = this.settingsModal.querySelector('#show-user-presence').checked;
         const autoResolveConflicts = this.settingsModal.querySelector('#auto-resolve-conflicts').checked;
-        
+
         // Update options
         this.options.enableFloorLocking = enableFloorLocking;
         this.options.enableCollaborativeIndicators = showUserPresence;
         this.options.autoResolveConflicts = autoResolveConflicts;
-        
+
         // Save to localStorage
         localStorage.setItem('collaboration_settings', JSON.stringify(this.options));
-        
+
         this.hideSettingsModal();
         this.showNotification('Settings saved successfully', 'success');
-        
+
         this.triggerEvent('settingsSaved', { settings: this.options });
     }
 
@@ -581,9 +581,9 @@ export class CollaborationManager {
         const notification = document.createElement('div');
         notification.className = `fixed top-4 right-4 bg-${type === 'success' ? 'green' : type === 'warning' ? 'yellow' : 'blue'}-600 text-white px-4 py-2 rounded-lg shadow-lg z-50`;
         notification.textContent = message;
-        
+
         document.body.appendChild(notification);
-        
+
         // Remove after 3 seconds
         setTimeout(() => {
             notification.remove();
@@ -671,10 +671,10 @@ export class CollaborationManager {
         if (this.conflicts) {
             this.conflicts.destroy();
         }
-        
+
         // Clear timers
         this.clearLockTimer();
-        
+
         // Remove UI elements
         if (this.collaborationUI) {
             this.collaborationUI.remove();
@@ -682,10 +682,10 @@ export class CollaborationManager {
         if (this.settingsModal) {
             this.settingsModal.remove();
         }
-        
+
         // Clear event handlers
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

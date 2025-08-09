@@ -54,4 +54,4 @@ func downloadDocument(w http.ResponseWriter, r *http.Request) {
 	documentID := chi.URLParam(r, "id")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"id": "` + documentID + `", "download_url": "/api/v1/documents/` + documentID + `/download"}`))
-} 
+}

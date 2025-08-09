@@ -12,8 +12,8 @@ from .nlp_engine import NLPEngine
 
 __all__ = [
     "AIAgent",
-    "AIResponse", 
+    "AIResponse",
     "GeometryValidator",
     "VoiceProcessor",
     "NLPEngine"
-] 
+]

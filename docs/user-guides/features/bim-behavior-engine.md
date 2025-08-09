@@ -316,7 +316,7 @@ async def monitor_building_systems(bim_engine, session_id):
     """Real-time building system monitoring."""
     while True:
         status = bim_engine.get_simulation_status(session_id)
-        
+
         # Display real-time metrics
         print(f"\n=== Building System Status ===")
         print(f"Time: {datetime.now().strftime('%H:%M:%S')}")
@@ -324,14 +324,14 @@ async def monitor_building_systems(bim_engine, session_id):
         print(f"Normal Systems: {status['normal_elements']}")
         print(f"Warning Systems: {status['warning_elements']}")
         print(f"Critical Systems: {status['critical_elements']}")
-        
+
         # Check for alerts
         for element_id, element_data in bim_engine.active_behaviors[session_id]['elements'].items():
             if element_data['alerts']:
                 print(f"\n⚠️  Alerts for {element_id}:")
                 for alert in element_data['alerts']:
                     print(f"  - {alert}")
-        
+
         await asyncio.sleep(5)  # Update every 5 seconds
 
 # Start monitoring
@@ -344,22 +344,22 @@ asyncio.run(monitor_building_systems(bim_engine, session_id))
 def optimize_building_energy(bim_engine, session_id):
     """Energy optimization based on behavior simulation."""
     status = bim_engine.get_simulation_status(session_id)
-    
+
     # Analyze energy consumption
     total_energy = status['total_energy_consumption']
-    
+
     # Get recommendations
     recommendations = []
     for element_id, element_data in bim_engine.active_behaviors[session_id]['elements'].items():
         recommendations.extend(element_data['recommendations'])
-    
+
     # Implement energy optimization
     if total_energy > 10000:  # High energy consumption
         print("🔋 Energy optimization recommendations:")
         for rec in recommendations:
             if "energy" in rec.lower():
                 print(f"  - {rec}")
-    
+
     return recommendations
 ```
 
@@ -474,13 +474,13 @@ def integrate_with_bms(bim_engine, bms_connection):
     """Integrate with external BMS."""
     # Get real-time data from BMS
     bms_data = bms_connection.get_current_data()
-    
+
     # Update BIM simulation with real data
     bim_engine.update_environment(bms_data)
-    
+
     # Compare simulation vs real data
     comparison = bim_engine.compare_with_real_data(bms_data)
-    
+
     return comparison
 ```
 
@@ -491,7 +491,7 @@ def integrate_with_bms(bim_engine, bms_connection):
 def predict_maintenance_needs(bim_engine, session_id):
     """Predict maintenance needs based on behavior patterns."""
     history = bim_engine.behavior_history[session_id]
-    
+
     # Analyze patterns
     maintenance_predictions = []
     for element_id, element_data in bim_engine.active_behaviors[session_id]['elements'].items():
@@ -501,7 +501,7 @@ def predict_maintenance_needs(bim_engine, session_id):
                 'maintenance_type': 'preventive',
                 'estimated_date': 'within_30_days'
             })
-    
+
     return maintenance_predictions
 ```
 
@@ -550,4 +550,4 @@ def predict_maintenance_needs(bim_engine, session_id):
 
 ---
 
-*This guide provides comprehensive documentation for the BIM Behavior Engine. For additional support or feature requests, please refer to the project documentation or create an issue in the repository.* 
+*This guide provides comprehensive documentation for the BIM Behavior Engine. For additional support or feature requests, please refer to the project documentation or create an issue in the repository.*

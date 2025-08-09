@@ -72,7 +72,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(event1)
-        
+
         # Try to create duplicate
         event2 = Event(
             id="evt2",
@@ -107,7 +107,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(create_event)
-        
+
         # Update annotation
         update_event = Event(
             id="evt2",
@@ -167,7 +167,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(create_event)
-        
+
         # Delete annotation
         delete_event = Event(
             id="evt2",
@@ -220,7 +220,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(create_event)
-        
+
         # Hide it first
         hide_event = Event(
             id="evt2",
@@ -235,7 +235,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(hide_event)
-        
+
         # Show annotation
         show_event = Event(
             id="evt3",
@@ -272,7 +272,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(create_event)
-        
+
         # Hide annotation
         hide_event = Event(
             id="evt2",
@@ -309,7 +309,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(create_event)
-        
+
         # Toggle to hidden
         toggle_event1 = Event(
             id="evt2",
@@ -327,7 +327,7 @@ class TestAnnotationHandlerLogic:
         assert feedback1['action'] == 'toggle'
         assert feedback1['old_visibility'] == 'visible'
         assert feedback1['new_visibility'] == 'hidden'
-        
+
         # Toggle back to visible
         toggle_event2 = Event(
             id="evt3",
@@ -363,7 +363,7 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(create_event)
-        
+
         # Move annotation
         move_event = Event(
             id="evt2",
@@ -383,7 +383,7 @@ class TestAnnotationHandlerLogic:
         assert feedback['annotation_id'] == 'ann1'
         assert feedback['old_position'] == (100.0, 200.0)
         assert feedback['new_position'] == (150.0, 250.0)
-        
+
         # Verify annotation was moved
         annotation = annotation_handler.get_annotation("canvas1", "ann1")
         assert annotation.position == (150.0, 250.0)
@@ -400,7 +400,7 @@ class TestAnnotationHandlerLogic:
         )
         feedback = annotation_handler.handle_annotation_event(event)
         assert feedback is None
-        
+
         # Missing action
         event2 = Event(
             id="evt2",
@@ -412,7 +412,7 @@ class TestAnnotationHandlerLogic:
         )
         feedback2 = annotation_handler.handle_annotation_event(event2)
         assert feedback2 is None
-        
+
         # Unknown action
         event3 = Event(
             id="evt3",
@@ -428,7 +428,7 @@ class TestAnnotationHandlerLogic:
     def test_annotation_types(self):
         # Test different annotation types
         types = ["text", "marker", "highlight", "note", "measurement", "custom"]
-        
+
         for i, annotation_type in enumerate(types):
             event = Event(
                 id=f"evt{i}",
@@ -464,7 +464,7 @@ class TestAnnotationHandlerLogic:
                 }
             )
             annotation_handler.handle_annotation_event(create_event)
-        
+
         # Hide one annotation
         hide_event = Event(
             id="evt3",
@@ -479,11 +479,11 @@ class TestAnnotationHandlerLogic:
             }
         )
         annotation_handler.handle_annotation_event(hide_event)
-        
+
         # Get all annotations
         all_annotations = annotation_handler.get_annotations("canvas1", visible_only=False)
         assert len(all_annotations) == 3
-        
+
         # Get visible annotations only
         visible_annotations = annotation_handler.get_annotations("canvas1", visible_only=True)
         assert len(visible_annotations) == 2
@@ -507,12 +507,12 @@ class TestAnnotationHandlerLogic:
                 }
             )
             annotation_handler.handle_annotation_event(create_event)
-        
+
         # Get annotations for obj0
         obj0_annotations = annotation_handler.get_annotations_by_target("canvas1", "obj0")
         assert len(obj0_annotations) == 2
         assert all(ann.target_id == "obj0" for ann in obj0_annotations)
-        
+
         # Get annotations for obj1
         obj1_annotations = annotation_handler.get_annotations_by_target("canvas1", "obj1")
         assert len(obj1_annotations) == 1
@@ -559,7 +559,7 @@ class TestAnnotationHandlerIntegration:
             {"action": "update", "annotation_id": "ann1", "content": "Updated annotation"},
             {"action": "delete", "annotation_id": "ann2"}
         ]
-        
+
         for i, action_data in enumerate(actions):
             event = Event(
                 id=f"evt{i}",
@@ -570,7 +570,7 @@ class TestAnnotationHandlerIntegration:
                 data={"canvas_id": "canvas1", **action_data}
             )
             annotation_handler.handle_annotation_event(event)
-        
+
         history = annotation_handler.get_annotation_history("canvas1")
         assert len(history) == 4
         assert history[0]['action'] == 'create'
@@ -595,7 +595,7 @@ class TestAnnotationHandlerIntegration:
         )
         annotation_handler.handle_annotation_event(event)
         assert len(annotation_handler.get_annotation_history("canvas1")) == 1
-        
+
         # Clear history
         annotation_handler.clear_history("canvas1")
-        assert len(annotation_handler.get_annotation_history("canvas1")) == 0 
+        assert len(annotation_handler.get_annotation_history("canvas1")) == 0

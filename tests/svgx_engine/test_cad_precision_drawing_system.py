@@ -52,7 +52,7 @@ class TestPrecisionConfig(unittest.TestCase):
             validation_enabled=False,
             auto_rounding=False
         )
-        
+
         self.assertEqual(config.default_precision, PrecisionLevel.UI)
         self.assertEqual(config.ui_precision, Decimal("0.5"))
         self.assertEqual(config.edit_precision, Decimal("0.05"))
@@ -131,7 +131,7 @@ class TestPrecisionPoint(unittest.TestCase):
     def test_point_serialization(self):
         """Test point serialization and deserialization."""
         original_point = PrecisionPoint(10.123, 20.456, 30.789, PrecisionLevel.EDIT)
-        
+
         # Serialize
         data = original_point.to_dict()
         self.assertEqual(data["x"], 10.123)
@@ -200,7 +200,7 @@ class TestPrecisionVector(unittest.TestCase):
     def test_vector_serialization(self):
         """Test vector serialization."""
         original_vector = PrecisionVector(3, 4, 5, PrecisionLevel.EDIT)
-        
+
         data = original_vector.to_dict()
         self.assertEqual(data["dx"], 3.0)
         self.assertEqual(data["dy"], 4.0)
@@ -251,7 +251,7 @@ class TestPrecisionCoordinateSystem(unittest.TestCase):
         """Test point transformation."""
         original_point = PrecisionPoint(10, 20)
         transformed_point = self.coord_system.transform_point(original_point)
-        
+
         # Identity transformation should preserve coordinates
         self.assertEqual(transformed_point.x, original_point.x)
         self.assertEqual(transformed_point.y, original_point.y)
@@ -282,7 +282,7 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
     def test_point_creation(self):
         """Test point creation."""
         point = self.drawing_system.create_point(10.123, 20.456)
-        
+
         self.assertIsInstance(point, PrecisionPoint)
         self.assertEqual(point.x, Decimal("10.123"))
         self.assertEqual(point.y, Decimal("20.456"))
@@ -292,7 +292,7 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
     def test_vector_creation(self):
         """Test vector creation."""
         vector = self.drawing_system.create_vector(3, 4)
-        
+
         self.assertIsInstance(vector, PrecisionVector)
         self.assertEqual(vector.dx, Decimal("3.000"))
         self.assertEqual(vector.dy, Decimal("4.000"))
@@ -303,7 +303,7 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         """Test distance calculation."""
         point1 = self.drawing_system.create_point(0, 0)
         point2 = self.drawing_system.create_point(3, 4)
-        
+
         distance = self.drawing_system.calculate_distance(point1, point2)
         self.assertEqual(distance, Decimal("5.000"))
 
@@ -311,7 +311,7 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         """Test angle calculation between vectors."""
         vector1 = self.drawing_system.create_vector(1, 0)
         vector2 = self.drawing_system.create_vector(0, 1)
-        
+
         angle = self.drawing_system.calculate_angle(vector1, vector2)
         expected_angle = Decimal("1.571")  # π/2 radians
         self.assertAlmostEqual(float(angle), float(expected_angle), places=3)
@@ -337,7 +337,7 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         """Test precision validation."""
         # Valid precision
         self.assertTrue(self.drawing_system.validate_precision(10.123, PrecisionLevel.COMPUTE))
-        
+
         # Invalid precision (too many decimal places)
         self.assertFalse(self.drawing_system.validate_precision(10.123456, PrecisionLevel.UI))
 
@@ -345,9 +345,9 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         """Test system statistics retrieval."""
         self.drawing_system.create_point(10, 20)
         self.drawing_system.create_vector(3, 4)
-        
+
         stats = self.drawing_system.get_statistics()
-        
+
         self.assertEqual(stats["total_points"], 1)
         self.assertEqual(stats["total_vectors"], 1)
         self.assertEqual(stats["active_precision_level"], "compute")
@@ -359,14 +359,14 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         self.drawing_system.create_point(10, 20)
         self.drawing_system.create_vector(3, 4)
         self.drawing_system.set_precision_level(PrecisionLevel.EDIT)
-        
+
         # Export data
         exported_data = self.drawing_system.export_data()
-        
+
         # Create new system and import data
         new_system = PrecisionDrawingSystem()
         new_system.import_data(exported_data)
-        
+
         # Verify imported data
         self.assertEqual(len(new_system.points), 1)
         self.assertEqual(len(new_system.vectors), 1)
@@ -392,7 +392,7 @@ class TestFactoryFunctions(unittest.TestCase):
             validation_enabled=False,
             auto_rounding=False
         )
-        
+
         self.assertIsInstance(config, PrecisionConfig)
         self.assertEqual(config.ui_precision, Decimal("0.5"))
         self.assertEqual(config.edit_precision, Decimal("0.05"))
@@ -425,11 +425,11 @@ class TestPrecisionEdgeCases(unittest.TestCase):
         """Test high precision operations."""
         config = PrecisionConfig(compute_precision=Decimal("0.000001"))
         system = PrecisionDrawingSystem(config)
-        
+
         point = system.create_point(10.123456789, 20.987654321)
         self.assertEqual(point.x, Decimal("10.123457"))
         self.assertEqual(point.y, Decimal("20.987654"))
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()

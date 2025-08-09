@@ -28,7 +28,7 @@ from arx_mcp.models import (
 def create_sample_building_model() -> BuildingModel:
     """Create a comprehensive sample building model"""
     print("🏗️  Creating sample building model...")
-    
+
     return BuildingModel(
         building_id="office_building_001",
         building_name="Downtown Office Building",
@@ -93,7 +93,7 @@ def create_sample_building_model() -> BuildingModel:
                 },
                 location={"x": 50, "y": 400, "width": 12, "height": 6}
             ),
-            
+
             # HVAC System
             BuildingObject(
                 object_id="hvac_air_handler_001",
@@ -119,7 +119,7 @@ def create_sample_building_model() -> BuildingModel:
                 },
                 location={"x": 250, "y": 350, "width": 6, "height": 4}
             ),
-            
+
             # Plumbing System
             BuildingObject(
                 object_id="sink_bathroom_001",
@@ -157,7 +157,7 @@ def create_sample_building_model() -> BuildingModel:
                 },
                 location={"x": 550, "y": 200, "width": 30, "height": 40}
             ),
-            
+
             # Fire Safety
             BuildingObject(
                 object_id="smoke_detector_001",
@@ -181,7 +181,7 @@ def create_sample_building_model() -> BuildingModel:
                 },
                 location={"x": 160, "y": 240, "width": 12, "height": 20}
             ),
-            
+
             # Rooms and Spaces
             BuildingObject(
                 object_id="room_bathroom_001",
@@ -238,9 +238,9 @@ def create_sample_building_model() -> BuildingModel:
 def create_sample_mcp_files() -> list:
     """Create sample MCP files for different jurisdictions and codes"""
     print("📋 Creating sample MCP files...")
-    
+
     mcp_files = []
-    
+
     # NEC 2020 - Electrical Code
     nec_mcp = {
         "mcp_id": "us_fl_nec_2020",
@@ -333,7 +333,7 @@ def create_sample_mcp_files() -> list:
             "contact": "NFPA Customer Service"
         }
     }
-    
+
     # IPC 2021 - Plumbing Code
     ipc_mcp = {
         "mcp_id": "us_fl_ipc_2021",
@@ -402,7 +402,7 @@ def create_sample_mcp_files() -> list:
             "contact": "ICC Customer Service"
         }
     }
-    
+
     # IMC 2021 - Mechanical Code
     imc_mcp = {
         "mcp_id": "us_fl_imc_2021",
@@ -471,13 +471,13 @@ def create_sample_mcp_files() -> list:
             "contact": "ICC Customer Service"
         }
     }
-    
+
     # Create temporary files
     for mcp_data, filename in [(nec_mcp, "nec_2020.json"), (ipc_mcp, "ipc_2021.json"), (imc_mcp, "imc_2021.json")]:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             json.dump(mcp_data, f, indent=2)
             mcp_files.append(f.name)
-    
+
     return mcp_files
 
 
@@ -485,19 +485,19 @@ def run_validation_demo():
     """Run the complete MCP validation demo"""
     print("🚀 Starting MCP Validation Demo")
     print("=" * 50)
-    
+
     # Initialize components
     engine = MCPRuleEngine()
     report_generator = ReportGenerator()
-    
+
     # Create building model
     building_model = create_sample_building_model()
     print(f"✅ Created building model with {len(building_model.objects)} objects")
-    
+
     # Create MCP files
     mcp_files = create_sample_mcp_files()
     print(f"✅ Created {len(mcp_files)} MCP files")
-    
+
     # Validate MCP files
     print("\n🔍 Validating MCP files...")
     for mcp_file in mcp_files:
@@ -506,18 +506,18 @@ def run_validation_demo():
             print(f"❌ Validation errors in {mcp_file}: {errors}")
         else:
             print(f"✅ {mcp_file} is valid")
-    
+
     # Run validation
     print("\n🏗️  Running building validation...")
     start_time = datetime.now()
-    
+
     compliance_report = engine.validate_building_model(building_model, mcp_files)
-    
+
     end_time = datetime.now()
     validation_time = (end_time - start_time).total_seconds()
-    
+
     print(f"✅ Validation completed in {validation_time:.2f} seconds")
-    
+
     # Display results
     print("\n📊 Validation Results:")
     print(f"   Overall Compliance Score: {compliance_report.overall_compliance_score:.1f}%")
@@ -525,7 +525,7 @@ def run_validation_demo():
     print(f"   Total Violations: {compliance_report.total_violations}")
     print(f"   Total Warnings: {compliance_report.total_warnings}")
     print(f"   MCPs Evaluated: {len(compliance_report.validation_reports)}")
-    
+
     # Display violations by category
     print("\n🚨 Violations by Category:")
     for report in compliance_report.validation_reports:
@@ -533,52 +533,52 @@ def run_validation_demo():
         for result in report.results:
             if result.violations:
                 print(f"     - {result.rule_name}: {len(result.violations)} violations")
-    
+
     # Generate reports
     print("\n📄 Generating reports...")
-    
+
     # Create reports directory
     reports_dir = Path("reports")
     reports_dir.mkdir(exist_ok=True)
-    
+
     # JSON report
     json_path = reports_dir / "compliance_report.json"
     json_content = report_generator.generate_json_report(compliance_report, str(json_path))
     print(f"✅ JSON report saved to: {json_path}")
-    
+
     # PDF report
     pdf_path = reports_dir / "compliance_report.html"
     pdf_content = report_generator.generate_pdf_report(compliance_report, str(pdf_path))
     print(f"✅ PDF report saved to: {pdf_path}")
-    
+
     # Summary report
     summary = report_generator.generate_summary_report(compliance_report)
     print(f"✅ Summary report generated")
-    
+
     # Display recommendations
     print("\n💡 Recommendations:")
     for i, recommendation in enumerate(compliance_report.recommendations, 1):
         print(f"   {i}. {recommendation}")
-    
+
     # Display priority actions
     print("\n🎯 Priority Actions:")
     priority_actions = summary["priority_actions"]
     for i, action in enumerate(priority_actions[:5], 1):  # Show top 5
         print(f"   {i}. {action['action']} (Priority: {action['priority']})")
-    
+
     # Performance metrics
     print("\n⚡ Performance Metrics:")
     metrics = engine.get_performance_metrics()
     print(f"   Total Validations: {metrics['total_validations']}")
     print(f"   Average Execution Time: {metrics['average_execution_time']:.3f}s")
     print(f"   Cache Size: {metrics['cache_size']} files")
-    
+
     # Cleanup
     print("\n🧹 Cleaning up temporary files...")
     for mcp_file in mcp_files:
         if os.path.exists(mcp_file):
             os.unlink(mcp_file)
-    
+
     print("\n✅ Demo completed successfully!")
     print(f"📁 Reports available in: {reports_dir.absolute()}")
 
@@ -587,12 +587,12 @@ def demonstrate_advanced_features():
     """Demonstrate advanced MCP features"""
     print("\n🔬 Advanced Features Demo")
     print("=" * 30)
-    
+
     engine = MCPRuleEngine()
-    
+
     # Demonstrate rule execution
     print("📋 Rule Execution Examples:")
-    
+
     # Create a simple building model
     simple_building = BuildingModel(
         building_id="demo_building",
@@ -608,7 +608,7 @@ def demonstrate_advanced_features():
             )
         ]
     )
-    
+
     # Create a simple MCP rule
     simple_rule = MCPRule(
         rule_id="demo_rule",
@@ -633,14 +633,14 @@ def demonstrate_advanced_features():
             )
         ]
     )
-    
+
     # Execute rule
     result = engine._execute_rule(simple_rule, simple_building)
     print(f"   Rule '{result.rule_name}' executed:")
     print(f"     Passed: {result.passed}")
     print(f"     Violations: {len(result.violations)}")
     print(f"     Execution time: {result.execution_time:.3f}s")
-    
+
     if result.violations:
         for violation in result.violations:
             print(f"     - {violation.message}")
@@ -650,11 +650,11 @@ if __name__ == "__main__":
     try:
         # Run main demo
         run_validation_demo()
-        
+
         # Run advanced features demo
         demonstrate_advanced_features()
-        
+
     except Exception as e:
         print(f"❌ Demo failed with error: {e}")
         import traceback
-        traceback.print_exc() 
+        traceback.print_exc()

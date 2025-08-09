@@ -1348,4 +1348,4 @@ For API support and questions:
 **Created:** $(date)
 **Status:** API Reference Complete
 **Version:** 1.0.0
-**Next Steps:** Implementation and testing 
+**Next Steps:** Implementation and testing

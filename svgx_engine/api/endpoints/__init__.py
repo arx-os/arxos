@@ -16,4 +16,4 @@ __description__ = "API endpoints for SVGX Engine"
 __all__ = [
     "BuildingAPI",
     "HealthAPI"
-] 
+]

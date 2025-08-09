@@ -27,7 +27,7 @@ from application.dto.building_dto import (
 
 class CreateBuildingWithFloorsUseCase:
     """Use case for creating a building with multiple floors in a single transaction."""
-    
+
     def __init__(self, unit_of_work: UnitOfWork):
     """
     Perform __init__ operation
@@ -46,15 +46,15 @@ Example:
         print(result)
     """
         self.unit_of_work = unit_of_work
-    
-    def execute(self, building_request: CreateBuildingRequest, 
+
+    def execute(self, building_request: CreateBuildingRequest,
                 floors_data: List[Dict[str, Any]]) -> CreateBuildingResponse:
         """Execute the create building with floors use case."""
         try:
             # Create building
             building_id = BuildingId()
             address = Address.from_string(building_request.address)
-            
+
             building = Building(
                 id=building_id,
                 name=building_request.name.strip(),
@@ -63,10 +63,10 @@ Example:
                 created_by=building_request.created_by,
                 metadata=building_request.metadata or {}
             )
-            
+
             # Save building
             self.unit_of_work.buildings.save(building)
-            
+
             # Create floors for the building
             created_floors = []
             for floor_data in floors_data:
@@ -79,17 +79,15 @@ Example:
                     description=floor_data.get('description'),
                     created_by=building_request.created_by
                 )
-                
+
                 self.unit_of_work.floors.save(floor)
                 created_floors.append(floor)
-            
+
             return CreateBuildingResponse(
                 success=True,
                 building_id=str(building_id),
                 message=f"Building created successfully with {len(created_floors)} floors",
                 created_at=datetime.utcnow()
-            )
-            
         except DuplicateFloorError as e:
             return CreateBuildingResponse(
                 success=False,
@@ -120,38 +118,37 @@ Example:
         print(result)
     """
     """Use case for getting a complete building hierarchy (building, floors, rooms, devices)."""
-    
+
     def __init__(self, unit_of_work: UnitOfWork):
         self.unit_of_work = unit_of_work
-    
+
     def execute(self, building_id: str) -> GetBuildingResponse:
         """Execute the get building hierarchy use case."""
         try:
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id))
-            
+            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id)
             if not building:
                 return GetBuildingResponse(
                     success=False,
                     error_message="Building not found"
                 )
-            
+
             # Get floors for the building
             floors = self.unit_of_work.floors.get_by_building_id(building.id)
-            
+
             # Get rooms and devices for each floor
             floors_data = []
             total_rooms = 0
             total_devices = 0
-            
+
             for floor in floors:
                 rooms = self.unit_of_work.rooms.get_by_floor_id(floor.id)
-                
+
                 rooms_data = []
                 floor_device_count = 0
-                
+
                 for room in rooms:
                     devices = self.unit_of_work.devices.get_by_room_id(room.id)
-                    
+
                     devices_data = []
                     for device in devices:
                         devices_data.append({
@@ -164,7 +161,7 @@ Example:
                             'serial_number': device.serial_number,
                             'description': device.description
                         })
-                    
+
                     rooms_data.append({
                         'id': str(room.id),
                         'name': room.name,
@@ -175,10 +172,10 @@ Example:
                         'devices': devices_data,
                         'device_count': len(devices)
                     })
-                    
+
                     floor_device_count += len(devices)
                     total_devices += len(devices)
-                
+
                 floors_data.append({
                     'id': str(floor.id),
                     'name': floor.name,
@@ -189,9 +186,9 @@ Example:
                     'room_count': len(rooms),
                     'device_count': floor_device_count
                 })
-                
+
                 total_rooms += len(rooms)
-            
+
             # Build complete building hierarchy
             building_data = {
                 'id': str(building.id),
@@ -209,13 +206,13 @@ Example:
                 'room_count': total_rooms,
                 'device_count': total_devices
             }
-            
+
             if building.coordinates:
                 building_data['coordinates'] = {
                     'latitude': building.coordinates.latitude,
                     'longitude': building.coordinates.longitude
                 }
-            
+
             if building.dimensions:
                 building_data['dimensions'] = {
                     'width': building.dimensions.width,
@@ -223,12 +220,12 @@ Example:
                     'height': building.dimensions.height,
                     'unit': building.dimensions.unit
                 }
-            
+
             return GetBuildingResponse(
                 success=True,
                 building=building_data
             )
-            
+
         except Exception as e:
             return GetBuildingResponse(
                 success=False,
@@ -238,23 +235,22 @@ Example:
 
 class AddRoomToFloorUseCase:
     """Use case for adding a room to a floor with devices."""
-    
+
     def __init__(self, unit_of_work: UnitOfWork):
         self.unit_of_work = unit_of_work
-    
-    def execute(self, floor_id: str, room_data: Dict[str, Any], 
+
+    def execute(self, floor_id: str, room_data: Dict[str, Any],
                 devices_data: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute the add room to floor use case."""
         try:
             # Get floor
-            floor = self.unit_of_work.floors.get_by_id(FloorId(floor_id))
-            
+            floor = self.unit_of_work.floors.get_by_id(FloorId(floor_id)
             if not floor:
                 return {
                     'success': False,
                     'error_message': "Floor not found"
                 }
-            
+
             # Create room
             room = Room(
                 id=RoomId(),
@@ -265,11 +261,9 @@ class AddRoomToFloorUseCase:
                 status=RoomStatus.PLANNED,
                 description=room_data.get('description'),
                 created_by=room_data.get('created_by', 'system')
-            )
-            
             # Save room
             self.unit_of_work.rooms.save(room)
-            
+
             # Add devices if provided
             created_devices = []
             if devices_data:
@@ -286,11 +280,9 @@ class AddRoomToFloorUseCase:
                         serial_number=device_data.get('serial_number'),
                         description=device_data.get('description'),
                         created_by=room_data.get('created_by', 'system')
-                    )
-                    
                     self.unit_of_work.devices.save(device)
                     created_devices.append(device)
-            
+
             return {
                 'success': True,
                 'room_id': str(room.id),
@@ -298,7 +290,7 @@ class AddRoomToFloorUseCase:
                 'device_count': len(created_devices),
                 'message': f"Room '{room.name}' created successfully with {len(created_devices)} devices"
             }
-            
+
         except DuplicateRoomError as e:
             return {
                 'success': False,
@@ -318,22 +310,21 @@ class AddRoomToFloorUseCase:
 
 class UpdateBuildingStatusUseCase:
     """Use case for updating building status with cascading updates to floors and rooms."""
-    
+
     def __init__(self, unit_of_work: UnitOfWork):
         self.unit_of_work = unit_of_work
-    
+
     def execute(self, building_id: str, new_status: str, updated_by: str) -> Dict[str, Any]:
         """Execute the update building status use case."""
         try:
             # Get building
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id))
-            
+            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id)
             if not building:
                 return {
                     'success': False,
                     'error_message': "Building not found"
                 }
-            
+
             # Update building status
             try:
                 new_building_status = BuildingStatus(new_status)
@@ -349,10 +340,10 @@ class UpdateBuildingStatusUseCase:
                     'success': False,
                     'error_message': f"Invalid status transition: {str(e)}"
                 }
-            
+
             # Get all floors for the building
             floors = self.unit_of_work.floors.get_by_building_id(building.id)
-            
+
             # Update floor statuses based on building status
             updated_floors = 0
             for floor in floors:
@@ -366,19 +357,19 @@ class UpdateBuildingStatusUseCase:
                         BuildingStatus.MAINTENANCE: FloorStatus.MAINTENANCE,
                         BuildingStatus.DECOMMISSIONED: FloorStatus.MAINTENANCE
                     }
-                    
+
                     new_floor_status = floor_status_mapping.get(new_building_status, FloorStatus.PLANNED)
                     floor.update_status(new_floor_status, updated_by)
                     self.unit_of_work.floors.save(floor)
                     updated_floors += 1
-                    
+
                 except InvalidStatusTransitionError:
-                    # Skip floors that can't transition to the new status
+                    # Skip floors that can't transition to the new status'
                     continue
-            
+
             # Get all rooms for the building
             rooms = self.unit_of_work.rooms.get_by_building_id(building.id)
-            
+
             # Update room statuses based on building status
             updated_rooms = 0
             for room in rooms:
@@ -392,16 +383,16 @@ class UpdateBuildingStatusUseCase:
                         BuildingStatus.MAINTENANCE: RoomStatus.MAINTENANCE,
                         BuildingStatus.DECOMMISSIONED: RoomStatus.MAINTENANCE
                     }
-                    
+
                     new_room_status = room_status_mapping.get(new_building_status, RoomStatus.PLANNED)
                     room.update_status(new_room_status, updated_by)
                     self.unit_of_work.rooms.save(room)
                     updated_rooms += 1
-                    
+
                 except InvalidStatusTransitionError:
-                    # Skip rooms that can't transition to the new status
+                    # Skip rooms that can't transition to the new status'
                     continue
-            
+
             return {
                 'success': True,
                 'building_id': building_id,
@@ -410,7 +401,7 @@ class UpdateBuildingStatusUseCase:
                 'updated_rooms': updated_rooms,
                 'message': f"Building status updated to '{new_status}' with {updated_floors} floors and {updated_rooms} rooms updated"
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
@@ -420,64 +411,63 @@ class UpdateBuildingStatusUseCase:
 
 class GetBuildingStatisticsUseCase:
     """Use case for getting comprehensive building statistics."""
-    
+
     def __init__(self, unit_of_work: UnitOfWork):
         self.unit_of_work = unit_of_work
-    
+
     def execute(self, building_id: str) -> Dict[str, Any]:
         """Execute the get building statistics use case."""
         try:
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id))
-            
+            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id)
             if not building:
                 return {
                     'success': False,
                     'error_message': "Building not found"
                 }
-            
+
             # Get floors
             floors = self.unit_of_work.floors.get_by_building_id(building.id)
-            
+
             # Get rooms
             rooms = self.unit_of_work.rooms.get_by_building_id(building.id)
-            
+
             # Get devices
             devices = self.unit_of_work.devices.get_by_building_id(building.id)
-            
+
             # Calculate statistics
             floor_count = len(floors)
             room_count = len(rooms)
             device_count = len(devices)
-            
+
             # Status breakdowns
             floor_statuses = {}
             room_statuses = {}
             device_statuses = {}
-            
+
             for floor in floors:
                 status = floor.status.value
                 floor_statuses[status] = floor_statuses.get(status, 0) + 1
-            
+
             for room in rooms:
                 status = room.status.value
                 room_statuses[status] = room_statuses.get(status, 0) + 1
-            
+
             for device in devices:
                 status = device.status.value
                 device_statuses[status] = device_statuses.get(status, 0) + 1
-            
+
             # Device type breakdown
             device_types = {}
             for device in devices:
                 device_type = device.device_type
                 device_types[device_type] = device_types.get(device_type, 0) + 1
-            
+
             # Room type breakdown
             room_types = {}
             for room in rooms:
                 room_type = room.room_type
                 room_types[room_type] = room_types.get(room_type, 0) + 1
-            
+
             return {
                 'success': True,
                 'building_id': building_id,
@@ -495,9 +485,9 @@ class GetBuildingStatisticsUseCase:
                 },
                 'calculated_at': datetime.utcnow().isoformat()
             }
-            
+
         except Exception as e:
             return {
                 'success': False,
                 'error_message': f"Failed to get building statistics: {str(e)}"
-            } 
+            }

@@ -28,7 +28,8 @@ jupyter~=1.0.0
 
 # Performance Testing
 locust~=2.17.0
-wrk~=4.2.0
+# Note: wrk is a system dependency, not a Python package
+# Install with: apt-get install wrk or brew install wrk
 
 # API Testing
 pytest-httpx~=0.25.0
@@ -48,4 +49,28 @@ types-psutil~=5.9.5.20231107
 types-requests~=2.31.0.20231107
 
 # Debugging
-debugpy~=1.8.0 
+debugpy~=1.8.0
+
+# Additional Testing Tools
+pytest-xdist~=3.3.1  # Parallel test execution
+pytest-html~=3.2.0   # HTML test reports
+pytest-json-report~=1.5.0  # JSON test reports
+
+# Code Coverage
+coverage~=7.3.2
+
+# Static Analysis
+pylint~=3.0.3
+radon~=6.0.1  # Code complexity analysis
+xenon~=0.8.0  # Code complexity monitoring
+
+# Dependency Management
+pip-tools~=7.3.0
+
+# Environment Management
+python-dotenv~=1.0.0
+
+# Additional Development Tools
+watchdog~=3.0.0  # File system monitoring
+rich~=13.7.0     # Rich terminal output
+click~=8.1.7     # Command line interface creation

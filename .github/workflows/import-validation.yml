@@ -20,52 +20,52 @@ jobs:
   validate-imports:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-        
+
     - name: Validate required files exist
       run: |
         echo "Validating required files and directories..."
-        
+
         # Check if required files exist
         if [ ! -f "requirements.txt" ]; then
           echo "❌ requirements.txt not found"
           exit 1
         fi
-        
+
         if [ ! -d "core/shared" ]; then
           echo "❌ core/shared directory not found"
           exit 1
         fi
-        
+
         if [ ! -d "svgx_engine" ]; then
           echo "❌ svgx_engine directory not found"
           exit 1
         fi
-        
+
         echo "✅ All required files and directories found"
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install flake8 importlib-metadata
-        
+
     - name: Validate imports
       run: |
         python -c "
         import sys
         import traceback
         sys.path.insert(0, '.')
-        
+
         failed_imports = []
-        
+
         # Test imports for core.shared package
         try:
             from core.shared.date_utils import get_current_timestamp_iso
@@ -79,7 +79,7 @@ jobs:
             print(f'❌ Unexpected error in core.shared import: {e}')
             traceback.print_exc()
             failed_imports.append('core.shared')
-            
+
         # Test imports for svgx_engine package
         try:
             from svgx_engine.core.precision_coordinate import PrecisionCoordinate
@@ -92,20 +92,20 @@ jobs:
             print(f'❌ Unexpected error in svgx_engine import: {e}')
             traceback.print_exc()
             failed_imports.append('svgx_engine')
-            
+
         if failed_imports:
             print(f'\\n❌ Failed imports: {failed_imports}')
             sys.exit(1)
         else:
             print('\\n✅ All imports successful')
         "
-        
+
     - name: Run import validation script
       run: |
         python -c "
         import sys
         sys.path.insert(0, '.')
-        
+
         # Validate that all expected modules can be imported
         expected_modules = [
             'core.shared',
@@ -116,7 +116,7 @@ jobs:
             'svgx_engine.core',
             'svgx_engine.services'
         ]
-        
+
         failed_imports = []
         for module in expected_modules:
             try:
@@ -125,10 +125,10 @@ jobs:
             except ImportError as e:
                 print(f'❌ {module}: {e}')
                 failed_imports.append(module)
-                
+
         if failed_imports:
             print(f'\\n❌ Failed imports: {failed_imports}')
             sys.exit(1)
         else:
             print('\\n✅ All imports successful')
-        " 
+        "

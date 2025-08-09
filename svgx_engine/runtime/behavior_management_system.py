@@ -28,15 +28,15 @@ import html
 def safe_execute_command(command: str, args: List[str] = None, timeout: int = 30) -> subprocess.CompletedProcess:
     """
     Execute command safely with input validation.
-    
+
     Args:
         command: Command to execute
         args: Command arguments
         timeout: Command timeout in seconds
-        
+
     Returns:
         CompletedProcess result
-        
+
     Raises:
         ValueError: If command is not allowed
         subprocess.TimeoutExpired: If command times out
@@ -45,10 +45,10 @@ def safe_execute_command(command: str, args: List[str] = None, timeout: int = 30
     # Validate command
     if command not in ALLOWED_COMMANDS:
         raise ValueError(f"Command '{command}' is not allowed")
-    
+
     # Prepare command
     cmd = [command] + (args or [])
-    
+
     # Execute with security measures
     try:
         result = subprocess.run(
@@ -59,7 +59,7 @@ def safe_execute_command(command: str, args: List[str] = None, timeout: int = 30
             timeout=timeout,
             cwd=None,  # Use current directory
             env=None,  # Use current environment
-            check=False  # Don't raise on non-zero exit
+            check=False  # Don't raise on non-zero exit'
         )
         return result
     except subprocess.TimeoutExpired:
@@ -164,7 +164,7 @@ class BehaviorManagementSystem:
     Comprehensive behavior management system for discovery, registration, validation, versioning, and documentation.
     Supports enterprise-grade behavior lifecycle management.
     """
-    def __init__(self):
+def __init__(self):
         # {behavior_id: Behavior}
         self.behaviors: Dict[str, Behavior] = {}
         # {behavior_type: Set[behavior_id]}
@@ -181,7 +181,7 @@ class BehaviorManagementSystem:
         self.performance_tracking: Dict[str, List[Dict[str, Any]]] = {}
         # Thread safety
         self._lock = threading.RLock()
-        
+
         # Initialize discovery patterns
         self._initialize_discovery_patterns()
         # Initialize validation rules
@@ -236,18 +236,18 @@ class BehaviorManagementSystem:
     async def discover_behaviors(self, element_id: str = None, behavior_types: Optional[List[BehaviorType]] = None) -> List[Behavior]:
         """
         Discover behaviors using pattern recognition and analysis.
-        
+
         Args:
             element_id: Optional element ID to focus discovery on
             behavior_types: Optional filter for specific behavior types
-            
+
         Returns:
             List of discovered behaviors
         """
         try:
             with self._lock:
                 discovered_behaviors = []
-                
+
                 # Import behavior systems for discovery
                 from svgx_engine import (
                     event_driven_behavior_engine, advanced_state_machine,
@@ -255,7 +255,7 @@ class BehaviorManagementSystem:
                     selection_handler, editing_handler, navigation_handler,
                     annotation_handler, time_based_trigger_system, advanced_rule_engine
                 )
-                
+
                 # Discover behaviors from each system
                 systems = [
                     (event_driven_behavior_engine, BehaviorType.EVENT_DRIVEN),
@@ -269,22 +269,22 @@ class BehaviorManagementSystem:
                     (time_based_trigger_system, BehaviorType.TIME_BASED_TRIGGER),
                     (advanced_rule_engine, BehaviorType.RULE_ENGINE)
                 ]
-                
+
                 for system, behavior_type in systems:
                     if behavior_types and behavior_type not in behavior_types:
                         continue
-                    
-                    # Discover behaviors from system
+
+                    # Discover behaviors from system import system
                     system_behaviors = await self._discover_system_behaviors(system, behavior_type, element_id)
                     discovered_behaviors.extend(system_behaviors)
-                
+
                 # Apply pattern recognition for custom behaviors
                 custom_behaviors = await self._discover_custom_behaviors(element_id)
                 discovered_behaviors.extend(custom_behaviors)
-                
+
                 logger.info(f"Discovered {len(discovered_behaviors)} behaviors")
                 return discovered_behaviors
-                
+
         except Exception as e:
             logger.error(f"Error discovering behaviors: {e}")
             return []
@@ -292,12 +292,11 @@ class BehaviorManagementSystem:
     async def _discover_system_behaviors(self, system, behavior_type: BehaviorType, element_id: str = None) -> List[Behavior]:
         """Discover behaviors from a specific system."""
         behaviors = []
-        
+
         try:
             # Analyze system methods and attributes
             system_methods = inspect.getmembers(system, inspect.ismethod)
-            system_attributes = inspect.getmembers(system, lambda x: not inspect.ismethod(x))
-            
+            system_attributes = inspect.getmembers(system, lambda x: not inspect.ismethod(x)
             for method_name, method in system_methods:
                 if self._is_behavior_method(method_name, behavior_type):
                     behavior = await self._create_behavior_from_method(
@@ -305,15 +304,15 @@ class BehaviorManagementSystem:
                     )
                     if behavior:
                         behaviors.append(behavior)
-            
+
             # Check for system-level behaviors
             system_behavior = await self._create_system_behavior(system, behavior_type, element_id)
             if system_behavior:
                 behaviors.append(system_behavior)
-                
+
         except Exception as e:
             logger.error(f"Error discovering behaviors from {behavior_type.value}: {e}")
-        
+
         return behaviors
 
     def _is_behavior_method(self, method_name: str, behavior_type: BehaviorType) -> bool:
@@ -330,19 +329,19 @@ class BehaviorManagementSystem:
             BehaviorType.TIME_BASED_TRIGGER: [r"schedule_\w+", r"trigger_\w+", r"time_\w+"],
             BehaviorType.RULE_ENGINE: [r"evaluate_\w+_rule", r"apply_\w+_rule", r"validate_\w+_rule"]
         }
-        
+
         if behavior_type in patterns:
             for pattern in patterns[behavior_type]:
                 if re.match(pattern, method_name):
                     return True
-        
+
         return False
 
     async def _create_behavior_from_method(self, method_name: str, method, behavior_type: BehaviorType, system, element_id: str = None) -> Optional[Behavior]:
         """Create a behavior from a discovered method."""
         try:
             behavior_id = f"{behavior_type.value}_{method_name}"
-            
+
             # Create metadata
             metadata = BehaviorMetadata(
                 author="System Discovery",
@@ -355,7 +354,7 @@ class BehaviorManagementSystem:
                 performance_metrics={},
                 usage_examples=[f"system.{method_name}()"]
             )
-            
+
             # Create implementation info
             implementation = {
                 "method_name": method_name,
@@ -364,7 +363,7 @@ class BehaviorManagementSystem:
                 "docstring": method.__doc__ or "",
                 "is_async": asyncio.iscoroutinefunction(method)
             }
-            
+
             behavior = Behavior(
                 id=behavior_id,
                 name=f"{behavior_type.value.title()} {method_name.replace('_', ' ').title()}",
@@ -373,9 +372,9 @@ class BehaviorManagementSystem:
                 metadata=metadata,
                 implementation=implementation
             )
-            
+
             return behavior
-            
+
         except Exception as e:
             logger.error(f"Error creating behavior from method {method_name}: {e}")
             return None
@@ -385,7 +384,7 @@ class BehaviorManagementSystem:
         try:
             system_name = type(system).__name__
             behavior_id = f"{behavior_type.value}_system_{system_name.lower()}"
-            
+
             # Create metadata
             metadata = BehaviorMetadata(
                 author="System Discovery",
@@ -398,7 +397,7 @@ class BehaviorManagementSystem:
                 performance_metrics={},
                 usage_examples=[f"system = {system_name}()"]
             )
-            
+
             # Create implementation info
             implementation = {
                 "system_name": system_name,
@@ -406,7 +405,7 @@ class BehaviorManagementSystem:
                 "methods": [name for name, _ in inspect.getmembers(system, inspect.ismethod)],
                 "attributes": [name for name, _ in inspect.getmembers(system, lambda x: not inspect.ismethod(x))]
             }
-            
+
             behavior = Behavior(
                 id=behavior_id,
                 name=f"{behavior_type.value.title()} System: {system_name}",
@@ -415,9 +414,9 @@ class BehaviorManagementSystem:
                 metadata=metadata,
                 implementation=implementation
             )
-            
+
             return behavior
-            
+
         except Exception as e:
             logger.error(f"Error creating system behavior: {e}")
             return None
@@ -425,15 +424,15 @@ class BehaviorManagementSystem:
     async def _discover_custom_behaviors(self, element_id: str = None) -> List[Behavior]:
         """Discover custom behaviors using pattern recognition."""
         behaviors = []
-        
+
         try:
             # This would typically scan code files for custom behavior patterns
             # For now, return empty list as custom behaviors are user-defined
             pass
-            
+
         except Exception as e:
             logger.error(f"Error discovering custom behaviors: {e}")
-        
+
         return behaviors
 
     def register_behavior(self, behavior: Behavior) -> bool:
@@ -445,13 +444,13 @@ class BehaviorManagementSystem:
                 if not validation.is_valid:
                     logger.error(f"Behavior validation failed for {behavior.id}: {validation.errors}")
                     return False
-                
+
                 # Check for conflicts
                 conflicts = self._detect_conflicts(behavior)
                 if conflicts:
                     behavior.conflicts = conflicts
                     logger.warning(f"Behavior {behavior.id} has conflicts: {conflicts}")
-                
+
                 # Create initial version record
                 initial_version = BehaviorVersion(
                     version=behavior.metadata.version,
@@ -460,27 +459,27 @@ class BehaviorManagementSystem:
                     timestamp=behavior.metadata.created_at
                 )
                 behavior.versions.append(initial_version)
-                
+
                 # Register behavior
                 self.behaviors[behavior.id] = behavior
-                
+
                 # Update indexes
                 if behavior.behavior_type not in self.behaviors_by_type:
                     self.behaviors_by_type[behavior.behavior_type] = set()
                 self.behaviors_by_type[behavior.behavior_type].add(behavior.id)
-                
+
                 if behavior.status not in self.behaviors_by_status:
                     self.behaviors_by_status[behavior.status] = set()
                 self.behaviors_by_status[behavior.status].add(behavior.id)
-                
+
                 for tag in behavior.metadata.tags:
                     if tag not in self.behaviors_by_tag:
                         self.behaviors_by_tag[tag] = set()
                     self.behaviors_by_tag[tag].add(behavior.id)
-                
+
                 logger.info(f"Registered behavior: {behavior.id}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Error registering behavior {behavior.id}: {e}")
             return False
@@ -491,13 +490,13 @@ class BehaviorManagementSystem:
             errors = []
             warnings = []
             suggestions = []
-            
+
             # Run validation rules for the specified level
             if level in self.validation_rules:
                 for rule in self.validation_rules[level]:
                     rule_name = rule["name"]
                     rule_check = rule["check"]
-                    
+
                     try:
                         result = rule_check(behavior)
                         if isinstance(result, dict):
@@ -509,14 +508,14 @@ class BehaviorManagementSystem:
                                 suggestions.extend(result["suggestions"])
                     except Exception as e:
                         errors.append(f"Validation rule '{rule_name}' failed: {e}")
-            
+
             # Calculate validation score
-            total_checks = len(self.validation_rules.get(level, []))
+            total_checks = len(self.validation_rules.get(level, [])
             passed_checks = total_checks - len(errors)
             validation_score = passed_checks / total_checks if total_checks > 0 else 0.0
-            
+
             is_valid = len(errors) == 0
-            
+
             validation = BehaviorValidation(
                 is_valid=is_valid,
                 errors=errors,
@@ -525,12 +524,12 @@ class BehaviorManagementSystem:
                 validation_level=level,
                 validation_score=validation_score
             )
-            
+
             # Update behavior with validation result
             behavior.validation = validation
-            
+
             return validation
-            
+
         except Exception as e:
             logger.error(f"Error validating behavior {behavior.id}: {e}")
             return BehaviorValidation(
@@ -544,39 +543,39 @@ class BehaviorManagementSystem:
         """Validate that all required fields are present."""
         errors = []
         warnings = []
-        
+
         required_fields = ["id", "name", "behavior_type", "status", "metadata", "implementation"]
         for field in required_fields:
             if not hasattr(behavior, field) or getattr(behavior, field) is None:
                 errors.append(f"Missing required field: {field}")
-        
+
         if not behavior.metadata.description:
             warnings.append("Behavior description is empty")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _validate_naming_convention(self, behavior: Behavior) -> Dict[str, List[str]]:
         """Validate naming conventions."""
         errors = []
         warnings = []
-        
+
         # Check behavior ID format
         if not re.match(r"^[a-z][a-z0-9_]*$", behavior.id):
             errors.append("Behavior ID must follow snake_case convention")
-        
+
         # Check behavior name
         if len(behavior.name) < 3:
             errors.append("Behavior name is too short")
         elif len(behavior.name) > 100:
             warnings.append("Behavior name is very long")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _validate_implementation_structure(self, behavior: Behavior) -> Dict[str, List[str]]:
         """Validate implementation structure."""
         errors = []
         warnings = []
-        
+
         if "implementation" not in behavior.__dict__:
             errors.append("Missing implementation information")
         else:
@@ -585,25 +584,25 @@ class BehaviorManagementSystem:
                 errors.append("Implementation must be a dictionary")
             elif not impl:
                 warnings.append("Implementation is empty")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _validate_dependencies(self, behavior: Behavior) -> Dict[str, List[str]]:
         """Validate behavior dependencies."""
         errors = []
         warnings = []
-        
+
         for dep in behavior.metadata.dependencies:
             if dep not in self.behaviors:
                 warnings.append(f"Dependency not found: {dep}")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _validate_performance_requirements(self, behavior: Behavior) -> Dict[str, List[str]]:
         """Validate performance requirements."""
         errors = []
         warnings = []
-        
+
         # This would check against performance benchmarks
         # For now, just basic checks
         if "performance_metrics" in behavior.metadata.__dict__:
@@ -611,62 +610,62 @@ class BehaviorManagementSystem:
             if isinstance(metrics, dict):
                 if "response_time" in metrics and metrics["response_time"] > 100:
                     warnings.append("Response time exceeds recommended threshold")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _validate_security(self, behavior: Behavior) -> Dict[str, List[str]]:
         """Validate security requirements."""
         errors = []
         warnings = []
-        
+
         # Basic security checks
         impl_str = str(behavior.implementation)
-        if "# SECURITY: eval() removed - use safe alternatives
-        # eval(" in impl_str or "exec(" in impl_str:
+        if "# SECURITY: eval() removed - use safe alternatives"
+        # eval(" in impl_str or "exec(" in impl_str:"
             errors.append("Potentially unsafe code detected")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _validate_compliance(self, behavior: Behavior) -> Dict[str, List[str]]:
         """Validate compliance requirements."""
         errors = []
         warnings = []
-        
+
         # This would check against compliance standards
         # For now, just basic checks
         if not behavior.metadata.documentation_url:
             warnings.append("Documentation URL is missing")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _validate_documentation(self, behavior: Behavior) -> Dict[str, List[str]]:
         """Validate documentation requirements."""
         errors = []
         warnings = []
-        
+
         if not behavior.metadata.description or len(behavior.metadata.description) < 10:
             warnings.append("Behavior description is too short")
-        
+
         if not behavior.metadata.usage_examples:
             warnings.append("No usage examples provided")
-        
+
         return {"errors": errors, "warnings": warnings}
 
     def _detect_conflicts(self, behavior: Behavior) -> List[str]:
         """Detect conflicts with existing behaviors."""
         conflicts = []
-        
+
         # Check for naming conflicts
         for existing_id, existing_behavior in self.behaviors.items():
             if existing_id != behavior.id:
                 if existing_behavior.name == behavior.name:
                     conflicts.append(f"Naming conflict with {existing_id}")
-                
+
                 # Check for implementation conflicts
                 if (existing_behavior.behavior_type == behavior.behavior_type and
                     existing_behavior.implementation.get("method_name") == behavior.implementation.get("method_name")):
                     conflicts.append(f"Implementation conflict with {existing_id}")
-        
+
         return conflicts
 
     def version_behavior(self, behavior_id: str, version: str, changes: List[str], author: str) -> bool:
@@ -676,27 +675,25 @@ class BehaviorManagementSystem:
                 if behavior_id not in self.behaviors:
                     logger.error(f"Behavior {behavior_id} not found")
                     return False
-                
+
                 behavior = self.behaviors[behavior_id]
-                
+
                 # Create version record
                 version_record = BehaviorVersion(
                     version=version,
                     changes=changes,
                     author=author,
                     timestamp=datetime.utcnow()
-                )
-                
                 # Add to versions list
                 behavior.versions.append(version_record)
-                
+
                 # Update metadata
                 behavior.metadata.version = version
                 behavior.metadata.updated_at = datetime.utcnow()
-                
+
                 logger.info(f"Created version {version} for behavior {behavior_id}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Error versioning behavior {behavior_id}: {e}")
             return False
@@ -708,24 +705,24 @@ class BehaviorManagementSystem:
                 if behavior_id not in self.behaviors:
                     logger.error(f"Behavior {behavior_id} not found")
                     return False
-                
+
                 behavior = self.behaviors[behavior_id]
-                
+
                 # Find target version
                 target_version_record = None
                 for version in behavior.versions:
                     if version.version == target_version:
                         target_version_record = version
                         break
-                
+
                 if not target_version_record:
                     logger.error(f"Version {target_version} not found for behavior {behavior_id}")
                     return False
-                
+
                 if not target_version_record.rollback_supported:
                     logger.error(f"Rollback not supported for version {target_version}")
                     return False
-                
+
                 # Create rollback version
                 rollback_version = BehaviorVersion(
                     version=f"{behavior.metadata.version}_rollback_to_{target_version}",
@@ -734,14 +731,14 @@ class BehaviorManagementSystem:
                     timestamp=datetime.utcnow(),
                     is_stable=False
                 )
-                
+
                 behavior.versions.append(rollback_version)
                 behavior.metadata.version = target_version
                 behavior.metadata.updated_at = datetime.utcnow()
-                
+
                 logger.info(f"Rolled back behavior {behavior_id} to version {target_version}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Error rolling back behavior {behavior_id}: {e}")
             return False
@@ -753,9 +750,9 @@ class BehaviorManagementSystem:
                 if behavior_id not in self.behaviors:
                     logger.error(f"Behavior {behavior_id} not found")
                     return None
-                
+
                 behavior = self.behaviors[behavior_id]
-                
+
                 documentation = {
                     "id": behavior.id,
                     "name": behavior.name,
@@ -791,9 +788,9 @@ class BehaviorManagementSystem:
                     "usage_examples": behavior.metadata.usage_examples,
                     "documentation_url": behavior.metadata.documentation_url
                 }
-                
+
                 return documentation
-                
+
         except Exception as e:
             logger.error(f"Error documenting behavior {behavior_id}: {e}")
             return None
@@ -804,17 +801,17 @@ class BehaviorManagementSystem:
 
     def get_behaviors_by_type(self, behavior_type: BehaviorType) -> List[Behavior]:
         """Get all behaviors of a specific type."""
-        behavior_ids = self.behaviors_by_type.get(behavior_type, set())
+        behavior_ids = self.behaviors_by_type.get(behavior_type, set()
         return [self.behaviors[bid] for bid in behavior_ids if bid in self.behaviors]
 
     def get_behaviors_by_status(self, status: BehaviorStatus) -> List[Behavior]:
         """Get all behaviors with a specific status."""
-        behavior_ids = self.behaviors_by_status.get(status, set())
+        behavior_ids = self.behaviors_by_status.get(status, set()
         return [self.behaviors[bid] for bid in behavior_ids if bid in self.behaviors]
 
     def get_behaviors_by_tag(self, tag: str) -> List[Behavior]:
         """Get all behaviors with a specific tag."""
-        behavior_ids = self.behaviors_by_tag.get(tag, set())
+        behavior_ids = self.behaviors_by_tag.get(tag, set()
         return [self.behaviors[bid] for bid in behavior_ids if bid in self.behaviors]
 
     def update_behavior(self, behavior_id: str, updates: Dict[str, Any]) -> bool:
@@ -824,24 +821,24 @@ class BehaviorManagementSystem:
                 if behavior_id not in self.behaviors:
                     logger.error(f"Behavior {behavior_id} not found")
                     return False
-                
+
                 behavior = self.behaviors[behavior_id]
-                
+
                 # Update fields
                 for field, value in updates.items():
                     if hasattr(behavior, field):
                         setattr(behavior, field, value)
                     elif hasattr(behavior.metadata, field):
                         setattr(behavior.metadata, field, value)
-                
+
                 behavior.metadata.updated_at = datetime.utcnow()
-                
+
                 # Re-validate behavior
                 self.validate_behavior(behavior, ValidationLevel.STANDARD)
-                
+
                 logger.info(f"Updated behavior: {behavior_id}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Error updating behavior {behavior_id}: {e}")
             return False
@@ -853,26 +850,26 @@ class BehaviorManagementSystem:
                 if behavior_id not in self.behaviors:
                     logger.error(f"Behavior {behavior_id} not found")
                     return False
-                
+
                 behavior = self.behaviors[behavior_id]
-                
-                # Remove from indexes
+
+                # Remove from indexes import indexes
                 if behavior.behavior_type in self.behaviors_by_type:
                     self.behaviors_by_type[behavior.behavior_type].discard(behavior_id)
-                
+
                 if behavior.status in self.behaviors_by_status:
                     self.behaviors_by_status[behavior.status].discard(behavior_id)
-                
+
                 for tag in behavior.metadata.tags:
                     if tag in self.behaviors_by_tag:
                         self.behaviors_by_tag[tag].discard(behavior_id)
-                
+
                 # Remove behavior
                 del self.behaviors[behavior_id]
-                
+
                 logger.info(f"Deleted behavior: {behavior_id}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Error deleting behavior {behavior_id}: {e}")
             return False
@@ -885,7 +882,7 @@ class BehaviorManagementSystem:
                     behavior = self.behaviors.get(behavior_id)
                     if not behavior:
                         return {}
-                    
+
                     return {
                         "behavior_id": behavior_id,
                         "performance_history": behavior.performance_history,
@@ -901,7 +898,7 @@ class BehaviorManagementSystem:
                         b.validation.validation_score if b.validation else 0.0
                         for b in self.behaviors.values()
                     ) / total_behaviors if total_behaviors > 0 else 0.0
-                    
+
                     return {
                         "total_behaviors": total_behaviors,
                         "active_behaviors": active_behaviors,
@@ -915,7 +912,7 @@ class BehaviorManagementSystem:
                             for bs, behaviors in self.behaviors_by_status.items()
                         }
                     }
-                    
+
         except Exception as e:
             logger.error(f"Error getting performance analytics: {e}")
             return {}
@@ -930,7 +927,7 @@ def _register_behavior_management_system():
             # Behavior management events are handled internally
             return None
         return None
-    
+
     # Import here to avoid circular imports
     from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
     event_driven_behavior_engine.register_handler(
@@ -940,4 +937,4 @@ def _register_behavior_management_system():
         priority=2
     )
 
-_register_behavior_management_system() 
+_register_behavior_management_system() ))))))))))

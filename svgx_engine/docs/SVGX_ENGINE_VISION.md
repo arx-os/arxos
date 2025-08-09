@@ -11,8 +11,8 @@ The key innovation is pairing SVG's native grid system with **real-world coordin
 
 ```xml
 <!-- Real-world coordinates with precision -->
-<rect x="0mm" y="0mm" width="3000mm" height="4000mm" 
-      arx:precision="0.1mm" 
+<rect x="0mm" y="0mm" width="3000mm" height="4000mm"
+      arx:precision="0.1mm"
       arx:units="mm"
       arx:real_world_coords="true"/>
 ```
@@ -265,7 +265,7 @@ The SVGX Engine represents the future of infrastructure modeling: **living, brea
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: December 2024  
-**Project Status**: Vision and Architecture Complete, Implementation In Progress  
-**Next Milestone**: Complete Core Foundation and CAD-Parity Features 
+**Document Version**: 1.0
+**Last Updated**: December 2024
+**Project Status**: Vision and Architecture Complete, Implementation In Progress
+**Next Milestone**: Complete Core Foundation and CAD-Parity Features

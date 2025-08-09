@@ -491,4 +491,4 @@ kill -9 $(lsof -t -i:8081)
 
 ---
 
-*This onboarding guide is maintained by the Arxos development team. Last updated: 2024-01-15* 
+*This onboarding guide is maintained by the Arxos development team. Last updated: 2024-01-15*

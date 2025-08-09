@@ -1,7 +1,7 @@
 /**
  * Arxos CAD Styles
  * Professional styling for the CAD interface
- * 
+ *
  * @author Arxos Team
  * @version 1.0.0
  * @license MIT
@@ -331,15 +331,15 @@
     .cad-toolbar {
         @apply flex-col space-y-2;
     }
-    
+
     .tool-groups {
         @apply flex-wrap justify-center;
     }
-    
+
     .cad-workspace {
         @apply flex-col;
     }
-    
+
     #arx-objects-panel,
     #properties-panel {
         @apply w-full h-32;
@@ -350,11 +350,11 @@
     .cad-tool-btn {
         @apply text-xs px-2 py-1;
     }
-    
+
     .cad-tool-btn span {
         @apply hidden;
     }
-    
+
     .status-bar {
         @apply text-xs;
     }
@@ -364,11 +364,11 @@
     .modal-content {
         @apply w-11/12 max-w-none mx-4;
     }
-    
+
     .ai-message.user {
         @apply ml-2;
     }
-    
+
     .ai-message.assistant {
         @apply mr-2;
     }
@@ -379,12 +379,12 @@
     .cad-tool-btn {
         @apply bg-gray-800 hover:bg-gray-700;
     }
-    
+
     .form-input,
     .form-select {
         @apply bg-gray-800 border-gray-700;
     }
-    
+
     .form-input:hover,
     .form-select:hover {
         @apply border-gray-600;
@@ -396,11 +396,11 @@
     .cad-tool-btn {
         @apply border-2;
     }
-    
+
     .selection-box {
         @apply stroke-4;
     }
-    
+
     .measurement-line {
         @apply stroke-2;
     }
@@ -417,13 +417,13 @@
     .btn-danger {
         @apply transition-none;
     }
-    
+
     .fade-in,
     .slide-in,
     .scale-in {
         @apply animate-none;
     }
-    
+
     .animate-pulse {
         @apply animate-none;
     }
@@ -449,7 +449,7 @@
     #ai-modal {
         @apply hidden;
     }
-    
+
     #cad-canvas {
         @apply border-none;
     }
@@ -497,4 +497,4 @@
 
 .cad-theme-text-muted {
     color: var(--cad-text-muted);
-} 
+}

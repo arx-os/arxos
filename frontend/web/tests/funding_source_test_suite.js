@@ -1,9 +1,9 @@
 /**
  * Consolidated Funding Source Test Suite
- * 
+ *
  * This file consolidates all funding_source tests into a single, maintainable structure:
  * - Unit tests for JavaScript functions
- * - E2E tests for user workflows  
+ * - E2E tests for user workflows
  * - Integration tests for API/database
  * - Shared utilities and mock data
  */
@@ -148,7 +148,7 @@ class TestUtils {
 class UnitTests {
     static runAll() {
         console.log('🧪 Running Unit Tests...');
-        
+
         const tests = [
             this.testSymbolDisplay,
             this.testAssetFormValidation,
@@ -178,7 +178,7 @@ class UnitTests {
         const symbol = MOCK_DATA.symbols.ahu;
         const fundingSourceElement = document.createElement('div');
         fundingSourceElement.textContent = `Funding Source: ${symbol.funding_source}`;
-        
+
         if (!fundingSourceElement.textContent.includes('Capital Budget')) {
             throw new Error('Symbol display test failed');
         }
@@ -187,10 +187,10 @@ class UnitTests {
     static testAssetFormValidation() {
         const validData = { funding_source: 'Capital Budget' };
         const invalidData = { funding_source: '' };
-        
+
         const validResult = TestUtils.validateFundingSource(validData.funding_source);
         const invalidResult = TestUtils.validateFundingSource(invalidData.funding_source);
-        
+
         if (!validResult.valid || invalidResult.valid) {
             throw new Error('Form validation test failed');
         }
@@ -203,9 +203,9 @@ class UnitTests {
             funding_source: 'Capital Budget',
             estimated_value: '50000'
         };
-        
+
         const transformed = TestUtils.transformAssetData(formData);
-        
+
         if (transformed.funding_source !== 'Capital Budget') {
             throw new Error('Data transformation test failed');
         }
@@ -214,9 +214,9 @@ class UnitTests {
     static testExportFormatting() {
         const assets = MOCK_DATA.assets;
         const csvHeaders = ['ID', 'Name', 'Funding Source'];
-        const csvContent = csvHeaders.join(',') + '\n' + 
+        const csvContent = csvHeaders.join(',') + '\n' +
             assets.map(asset => [asset.id, asset.name, asset.funding_source].join(',')).join('\n');
-        
+
         if (!csvContent.includes('Funding Source')) {
             throw new Error('Export formatting test failed');
         }
@@ -228,7 +228,7 @@ class UnitTests {
             { input: '', expected: false },
             { input: 'A'.repeat(300), expected: false }
         ];
-        
+
         testCases.forEach(testCase => {
             const result = TestUtils.validateFundingSource(testCase.input);
             if (result.valid !== testCase.expected) {
@@ -245,7 +245,7 @@ class UnitTests {
 class E2ETests {
     static async runAll(page) {
         console.log('🌐 Running E2E Tests...');
-        
+
         const tests = [
             () => this.testSymbolLibrary(page),
             () => this.testAssetCreation(page),
@@ -336,7 +336,7 @@ class E2ETests {
 class IntegrationTests {
     static async runAll(page) {
         console.log('🔗 Running Integration Tests...');
-        
+
         const tests = [
             () => this.testAPIIntegration(page),
             () => this.testDatabaseIntegration(page)
@@ -362,7 +362,7 @@ class IntegrationTests {
     static async testAPIIntegration(page) {
         await page.goto(`${FUNDING_SOURCE_CONFIG.baseUrl}/symbol_library.html`);
         await page.waitForSelector('#symbol-library', { timeout: 5000 });
-        
+
         await page.goto(`${FUNDING_SOURCE_CONFIG.baseUrl}/asset_inventory.html`);
         await page.waitForSelector('#asset-list', { timeout: 5000 });
     }
@@ -370,7 +370,7 @@ class IntegrationTests {
     static async testDatabaseIntegration(page) {
         await page.goto(`${FUNDING_SOURCE_CONFIG.baseUrl}/asset_inventory.html`);
         await page.waitForSelector('#asset-list', { timeout: 5000 });
-        
+
         const assetItems = await page.$$('#asset-list .asset-item');
         if (assetItems.length === 0) {
             console.warn('⚠️ No asset items found - database may be empty');
@@ -386,7 +386,7 @@ class FundingSourceTestSuite {
     static async runAllTests(page = null) {
         console.log('🚀 FUNDING SOURCE TEST SUITE');
         console.log('============================');
-        
+
         const results = {
             unit: false,
             e2e: false,
@@ -404,7 +404,7 @@ class FundingSourceTestSuite {
 
         // Print summary
         this.printResults(results);
-        
+
         return Object.values(results).every(result => result);
     }
 
@@ -414,7 +414,7 @@ class FundingSourceTestSuite {
         console.log(`🧪 Unit Tests: ${results.unit ? '✅ PASSED' : '❌ FAILED'}`);
         console.log(`🌐 E2E Tests: ${results.e2e ? '✅ PASSED' : '❌ FAILED'}`);
         console.log(`🔗 Integration Tests: ${results.integration ? '✅ PASSED' : '❌ FAILED'}`);
-        
+
         const allPassed = Object.values(results).every(result => result);
         console.log(`\n🎯 Overall: ${allPassed ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED'}`);
     }
@@ -453,4 +453,4 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
     window.FundingSourceTestSuite = FundingSourceTestSuite;
     console.log('Funding Source Test Suite loaded. Run FundingSourceTestSuite.runAllTests() to start testing.');
-} 
+}

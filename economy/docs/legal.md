@@ -112,4 +112,3 @@ Establish a legally compliant and structurally sound financial and token archite
 ## 📅 Version History
 
 - 1.0 - Initial framework defining ARX as a registered revenue-sharing token, legally distinct from Arxos equity
-

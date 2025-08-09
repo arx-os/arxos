@@ -14,11 +14,11 @@ from .ai_agent import (
 __all__ = [
     'AIAgent',
     'AIQuery',
-    'AIResponse', 
+    'AIResponse',
     'AIAgentConfig',
     'ModelType',
     'AgentStatus',
     'AIAgentError',
     'InvalidConfigurationError',
     'ModelNotAvailableError'
-] 
+]

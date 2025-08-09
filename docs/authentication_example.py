@@ -12,15 +12,15 @@ async def secure_endpoint(
     user: User = Depends(get_current_user)
 ):
     """Secure endpoint with authentication"""
-    
+
     # User is automatically authenticated
     if not user.is_active:
         raise HTTPException(status_code=403, detail="User account is disabled")
-    
+
     # Check user roles
     if "admin" not in user.roles:
         raise HTTPException(status_code=403, detail="Admin access required")
-    
+
     # Process request
     return {"message": "Success", "user_id": user.id}
 
@@ -30,5 +30,5 @@ async def admin_only_endpoint(user: User = Depends(get_current_user)):
     """Admin-only endpoint"""
     if "admin" not in user.roles:
         raise HTTPException(status_code=403, detail="Admin access required")
-    
+
     return {"message": "Admin access granted"}

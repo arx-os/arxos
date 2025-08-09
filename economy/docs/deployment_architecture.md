@@ -323,11 +323,11 @@ alerts:
   - name: HighErrorRate
     condition: error_rate > 5%
     notification: slack, email, pagerduty
-    
+
   - name: DatabaseConnectionIssues
     condition: db_connections > 80%
     notification: slack, email
-    
+
   - name: BlockchainNodeDown
     condition: node_status != "healthy"
     notification: pagerduty, slack

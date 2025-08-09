@@ -73,4 +73,4 @@ class User(BaseModel):
     """Simple user model for authentication."""
     id: str
     username: str
-    email: Optional[str] = None 
+    email: Optional[str] = None

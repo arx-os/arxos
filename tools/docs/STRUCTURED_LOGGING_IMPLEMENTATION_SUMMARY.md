@@ -249,7 +249,7 @@ def handle_request(request):
         request_id=request.headers.get("X-Request-ID"),
         user_id=request.user.id if request.user else None
     )
-    
+
     try:
         # Process request
         result = process_request(request)
@@ -448,4 +448,4 @@ The structured logging implementation provides a robust foundation for observabi
 - **Compliance**: Audit-ready logging for regulatory requirements
 - **Developer Experience**: Easy-to-use logging with rich context
 
-The implementation establishes a strong foundation for monitoring, debugging, and maintaining the Arxos Platform at scale. 
+The implementation establishes a strong foundation for monitoring, debugging, and maintaining the Arxos Platform at scale.

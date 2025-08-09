@@ -94,4 +94,4 @@ Build a secure and append-only interface for Authorities Having Jurisdiction (AH
 - Audit logging infrastructure
 - Notification system
 - File storage for attachments
-- Security team review and approval 
+- Security team review and approval

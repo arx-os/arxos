@@ -1,13 +1,13 @@
 /**
  * Arxos CDN Configuration
- * 
+ *
  * This file contains the CDN configuration for the Arxos web frontend.
  * It provides environment-based CDN settings, asset management, and
  * fallback mechanisms for optimal performance and reliability.
  */
 
 // Environment detection
-const isDevelopment = window.location.hostname === 'localhost' || 
+const isDevelopment = window.location.hostname === 'localhost' ||
                      window.location.hostname === '127.0.0.1' ||
                      window.location.hostname.includes('dev') ||
                      window.location.hostname.includes('staging');
@@ -20,13 +20,13 @@ const isProduction = window.location.hostname.includes('arxos.io') ||
 const CDN_CONFIG = {
     // Base CDN URL - environment specific
     baseUrl: isDevelopment ? 'http://localhost:3000' : 'https://cdn.arxos.io',
-    
+
     // Version for cache busting
     version: 'v1.0.0',
-    
+
     // Environment-specific settings
     environment: isDevelopment ? 'development' : (isProduction ? 'production' : 'staging'),
-    
+
     // Asset paths
     assets: {
         css: '/css',
@@ -38,7 +38,7 @@ const CDN_CONFIG = {
         videos: '/videos',
         audio: '/audio'
     },
-    
+
     // CDN regions for global distribution
     regions: {
         us: 'https://cdn-us.arxos.io',
@@ -46,7 +46,7 @@ const CDN_CONFIG = {
         asia: 'https://cdn-asia.arxos.io',
         australia: 'https://cdn-au.arxos.io'
     },
-    
+
     // Performance settings
     performance: {
         // Enable compression
@@ -60,7 +60,7 @@ const CDN_CONFIG = {
         // Enable prefetching
         prefetch: true
     },
-    
+
     // Security settings
     security: {
         // Enable HTTPS only in production
@@ -72,7 +72,7 @@ const CDN_CONFIG = {
         // Cross-Origin Resource Sharing
         cors: true
     },
-    
+
     // Fallback configuration
     fallback: {
         // Enable fallback to local assets
@@ -84,7 +84,7 @@ const CDN_CONFIG = {
         // Retry delay in milliseconds
         retryDelay: 1000
     },
-    
+
     // Monitoring and analytics
     monitoring: {
         // Enable performance monitoring
@@ -114,10 +114,10 @@ function getAssetUrl(path, type = 'js') {
     const baseUrl = getOptimalCDNUrl();
     const assetPath = CDN_CONFIG.assets[type] || '';
     const version = CDN_CONFIG.version;
-    
+
     // Add compression suffix for CSS and JS files
     const compressionSuffix = (type === 'css' || type === 'js') && CDN_CONFIG.performance.compression ? '.gz' : '';
-    
+
     return `${baseUrl}${assetPath}/${path}?v=${version}${compressionSuffix}`;
 }
 
@@ -127,20 +127,20 @@ function loadCSS(href, fallbackHref = null) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = href;
-        
+
         let timeout;
         let retryCount = 0;
-        
+
         const loadHandler = () => {
             clearTimeout(timeout);
             document.head.removeChild(link);
             resolve(href);
         };
-        
+
         const errorHandler = () => {
             clearTimeout(timeout);
             document.head.removeChild(link);
-            
+
             // Try fallback if available
             if (fallbackHref && retryCount < CDN_CONFIG.fallback.retryAttempts) {
                 retryCount++;
@@ -151,12 +151,12 @@ function loadCSS(href, fallbackHref = null) {
                 reject(new Error(`Failed to load CSS: ${href}`));
             }
         };
-        
+
         link.addEventListener('load', loadHandler);
         link.addEventListener('error', errorHandler);
-        
+
         document.head.appendChild(link);
-        
+
         // Set timeout for fallback
         timeout = setTimeout(() => {
             errorHandler();
@@ -170,20 +170,20 @@ function loadJS(src, fallbackSrc = null) {
         const script = document.createElement('script');
         script.src = src;
         script.async = true;
-        
+
         let timeout;
         let retryCount = 0;
-        
+
         const loadHandler = () => {
             clearTimeout(timeout);
             document.head.removeChild(script);
             resolve(src);
         };
-        
+
         const errorHandler = () => {
             clearTimeout(timeout);
             document.head.removeChild(script);
-            
+
             // Try fallback if available
             if (fallbackSrc && retryCount < CDN_CONFIG.fallback.retryAttempts) {
                 retryCount++;
@@ -194,12 +194,12 @@ function loadJS(src, fallbackSrc = null) {
                 reject(new Error(`Failed to load JavaScript: ${src}`));
             }
         };
-        
+
         script.addEventListener('load', loadHandler);
         script.addEventListener('error', errorHandler);
-        
+
         document.head.appendChild(script);
-        
+
         // Set timeout for fallback
         timeout = setTimeout(() => {
             errorHandler();
@@ -210,17 +210,17 @@ function loadJS(src, fallbackSrc = null) {
 // Preload critical assets
 function preloadAssets(assets) {
     if (!CDN_CONFIG.performance.preload) return;
-    
+
     assets.forEach(asset => {
         const link = document.createElement('link');
         link.rel = 'preload';
         link.href = asset.url;
         link.as = asset.type;
-        
+
         if (asset.crossorigin) {
             link.crossOrigin = 'anonymous';
         }
-        
+
         document.head.appendChild(link);
     });
 }
@@ -228,12 +228,12 @@ function preloadAssets(assets) {
 // Prefetch non-critical assets
 function prefetchAssets(assets) {
     if (!CDN_CONFIG.performance.prefetch) return;
-    
+
     assets.forEach(asset => {
         const link = document.createElement('link');
         link.rel = 'prefetch';
         link.href = asset.url;
-        
+
         document.head.appendChild(link);
     });
 }
@@ -241,7 +241,7 @@ function prefetchAssets(assets) {
 // Track CDN performance
 function trackCDNPerformance(url, loadTime, success) {
     if (!CDN_CONFIG.monitoring.enabled) return;
-    
+
     const data = {
         url: url,
         loadTime: loadTime,
@@ -250,7 +250,7 @@ function trackCDNPerformance(url, loadTime, success) {
         userAgent: navigator.userAgent,
         connection: navigator.connection ? navigator.connection.effectiveType : 'unknown'
     };
-    
+
     // Send to analytics endpoint
     fetch(CDN_CONFIG.monitoring.analyticsEndpoint, {
         method: 'POST',
@@ -272,7 +272,7 @@ function initCDN() {
             const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
             trackCDNPerformance(window.location.href, loadTime, true);
         });
-        
+
         // Monitor resource loading errors
         window.addEventListener('error', (event) => {
             if (event.target && event.target.src) {
@@ -280,20 +280,20 @@ function initCDN() {
             }
         });
     }
-    
+
     // Preload critical assets
     preloadAssets([
         { url: getAssetUrl('main.css', 'css'), type: 'style' },
         { url: getAssetUrl('main.js', 'js'), type: 'script' },
         { url: getAssetUrl('fonts/arxos-font.woff2', 'fonts'), type: 'font', crossorigin: true }
     ]);
-    
+
     // Prefetch non-critical assets
     prefetchAssets([
         { url: getAssetUrl('icons/sprite.svg', 'icons') },
         { url: getAssetUrl('images/logo.png', 'images') }
     ]);
-    
+
     console.log('CDN Configuration initialized:', CDN_CONFIG);
 }
 
@@ -332,4 +332,4 @@ if (typeof module !== 'undefined' && module.exports) {
             initCDN
         }
     };
-} 
+}

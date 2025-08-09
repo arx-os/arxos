@@ -94,8 +94,9 @@ class Milestone:
     created_at: datetime = None
     updated_at: datetime = None
     metadata: Dict[str, Any] = None
-    
+
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -138,7 +139,7 @@ class FundingRelease:
     created_at: datetime = None
     updated_at: datetime = None
     metadata: Dict[str, Any] = None
-    
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.utcnow()
@@ -164,7 +165,7 @@ class MilestoneHook:
     updated_at: datetime = None
     last_triggered: Optional[datetime] = None
     metadata: Dict[str, Any] = None
-    
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.utcnow()
@@ -181,7 +182,7 @@ class MilestoneHook:
 class MilestoneHookSystem:
     """
     Comprehensive milestone hook system for Planarx funding.
-    
+
     Features:
     - Milestone completion tracking
     - Automated funding release triggers
@@ -191,14 +192,14 @@ class MilestoneHookSystem:
     - Comprehensive audit trail
     - Webhook notifications for milestone events
     """
-    
+
     def __init__(self, db_path: str = "milestone_hooks.db"):
         """Initialize the milestone hook system."""
         self.db_path = db_path
         self.milestones: Dict[str, Milestone] = {}
         self.funding_releases: Dict[str, FundingRelease] = {}
         self.hooks: Dict[str, MilestoneHook] = {}
-        
+
         # Performance tracking
         self.metrics = {
             "total_milestones_created": 0,
@@ -209,13 +210,12 @@ class MilestoneHookSystem:
             "average_processing_time": 0.0,
             "success_rate": 0.0
         }
-        
+
         # Initialize database
         self._init_database()
-        
+
         # Start background tasks
-        asyncio.create_task(self._start_background_tasks())
-    
+        asyncio.create_task(self._start_background_tasks()
     def _init_database(self):
         """Initialize database tables."""
         with sqlite3.connect(self.db_path) as conn:
@@ -241,7 +241,6 @@ class MilestoneHookSystem:
                     metadata TEXT
                 )
             """)
-            
             # Funding releases table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS funding_releases (
@@ -260,7 +259,6 @@ class MilestoneHookSystem:
                     metadata TEXT
                 )
             """)
-            
             # Milestone hooks table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS milestone_hooks (
@@ -279,9 +277,8 @@ class MilestoneHookSystem:
                     metadata TEXT
                 )
             """)
-            
             conn.commit()
-    
+
     async def _start_background_tasks(self):
         """Start background processing tasks."""
         while True:
@@ -294,7 +291,7 @@ class MilestoneHookSystem:
             except Exception as e:
                 logger.error(f"Background task error: {e}")
                 await asyncio.sleep(10)  # Wait longer on error
-    
+
     async def create_milestone(
         self,
         project_id: str,
@@ -306,8 +303,7 @@ class MilestoneHookSystem:
         completion_criteria: List[Dict[str, Any]]
     ) -> str:
         """Create a new milestone."""
-        milestone_id = str(uuid.uuid4())
-        
+        milestone_id = str(uuid.uuid4()
         milestone = Milestone(
             milestone_id=milestone_id,
             project_id=project_id,
@@ -319,15 +315,15 @@ class MilestoneHookSystem:
             status=MilestoneStatus.PENDING,
             completion_criteria=completion_criteria
         )
-        
+
         self.milestones[milestone_id] = milestone
         await self._save_milestone(milestone)
-        
+
         self.metrics["total_milestones_created"] += 1
         logger.info(f"Created milestone {milestone_id} for project {project_id}")
-        
+
         return milestone_id
-    
+
     async def create_funding_release(
         self,
         milestone_id: str,
@@ -338,11 +334,10 @@ class MilestoneHookSystem:
         approvers: List[str] = None
     ) -> str:
         """Create a new funding release."""
-        release_id = str(uuid.uuid4())
-        
+        release_id = str(uuid.uuid4()
         if approvers is None:
             approvers = []
-        
+
         funding_release = FundingRelease(
             release_id=release_id,
             milestone_id=milestone_id,
@@ -353,15 +348,15 @@ class MilestoneHookSystem:
             approval_required=approval_required,
             approvers=approvers
         )
-        
+
         self.funding_releases[release_id] = funding_release
         await self._save_funding_release(funding_release)
-        
+
         self.metrics["total_funding_releases"] += 1
         logger.info(f"Created funding release {release_id} for milestone {milestone_id}")
-        
+
         return release_id
-    
+
     async def create_milestone_hook(
         self,
         milestone_id: str,
@@ -373,13 +368,12 @@ class MilestoneHookSystem:
         actions: List[Dict[str, Any]] = None
     ) -> str:
         """Create a new milestone hook."""
-        hook_id = str(uuid.uuid4())
-        
+        hook_id = str(uuid.uuid4()
         if conditions is None:
             conditions = []
         if actions is None:
             actions = []
-        
+
         hook = MilestoneHook(
             hook_id=hook_id,
             milestone_id=milestone_id,
@@ -390,14 +384,14 @@ class MilestoneHookSystem:
             conditions=conditions,
             actions=actions
         )
-        
+
         self.hooks[hook_id] = hook
         await self._save_milestone_hook(hook)
-        
+
         logger.info(f"Created milestone hook {hook_id} for milestone {milestone_id}")
-        
+
         return hook_id
-    
+
     async def submit_milestone(
         self,
         milestone_id: str,
@@ -407,15 +401,15 @@ class MilestoneHookSystem:
         """Submit a milestone for approval."""
         if milestone_id not in self.milestones:
             raise HTTPException(status_code=404, detail="Milestone not found")
-        
+
         milestone = self.milestones[milestone_id]
         milestone.status = MilestoneStatus.IN_PROGRESS
         milestone.evidence_urls = evidence_urls
         milestone.submitted_at = datetime.utcnow()
         milestone.updated_at = datetime.utcnow()
-        
+
         await self._save_milestone(milestone)
-        
+
         # Trigger hooks
         await self._trigger_milestone_hooks(milestone_id, "milestone_submitted", {
             "milestone_id": milestone_id,
@@ -423,15 +417,15 @@ class MilestoneHookSystem:
             "submitted_by": submitted_by,
             "evidence_urls": evidence_urls
         })
-        
+
         logger.info(f"Milestone {milestone_id} submitted by {submitted_by}")
-        
+
         return {
             "success": True,
             "milestone_id": milestone_id,
             "status": milestone.status.value
         }
-    
+
     async def approve_milestone(
         self,
         milestone_id: str,
@@ -441,18 +435,18 @@ class MilestoneHookSystem:
         """Approve a milestone."""
         if milestone_id not in self.milestones:
             raise HTTPException(status_code=404, detail="Milestone not found")
-        
+
         milestone = self.milestones[milestone_id]
         milestone.status = MilestoneStatus.APPROVED
         milestone.approved_at = datetime.utcnow()
         milestone.approved_by = approved_by
         milestone.updated_at = datetime.utcnow()
-        
+
         await self._save_milestone(milestone)
-        
+
         # Trigger funding release
         await self._trigger_funding_release(milestone_id)
-        
+
         # Trigger hooks
         await self._trigger_milestone_hooks(milestone_id, "milestone_approved", {
             "milestone_id": milestone_id,
@@ -460,16 +454,16 @@ class MilestoneHookSystem:
             "approved_by": approved_by,
             "approval_notes": approval_notes
         })
-        
+
         self.metrics["total_milestones_completed"] += 1
         logger.info(f"Milestone {milestone_id} approved by {approved_by}")
-        
+
         return {
             "success": True,
             "milestone_id": milestone_id,
             "status": milestone.status.value
         }
-    
+
     async def reject_milestone(
         self,
         milestone_id: str,
@@ -479,14 +473,14 @@ class MilestoneHookSystem:
         """Reject a milestone."""
         if milestone_id not in self.milestones:
             raise HTTPException(status_code=404, detail="Milestone not found")
-        
+
         milestone = self.milestones[milestone_id]
         milestone.status = MilestoneStatus.REJECTED
         milestone.rejection_reason = rejection_reason
         milestone.updated_at = datetime.utcnow()
-        
+
         await self._save_milestone(milestone)
-        
+
         # Trigger hooks
         await self._trigger_milestone_hooks(milestone_id, "milestone_rejected", {
             "milestone_id": milestone_id,
@@ -494,15 +488,15 @@ class MilestoneHookSystem:
             "rejected_by": rejected_by,
             "rejection_reason": rejection_reason
         })
-        
+
         logger.info(f"Milestone {milestone_id} rejected by {rejected_by}")
-        
+
         return {
             "success": True,
             "milestone_id": milestone_id,
             "status": milestone.status.value
         }
-    
+
     async def _trigger_funding_release(self, milestone_id: str):
         """Trigger funding release for milestone."""
         # Find funding releases for this milestone
@@ -520,7 +514,7 @@ class MilestoneHookSystem:
                     release.updated_at = datetime.utcnow()
                     await self._save_funding_release(release)
                     logger.info(f"Funding release {release_id} pending approval")
-    
+
     async def approve_funding_release(
         self,
         release_id: str,
@@ -529,38 +523,38 @@ class MilestoneHookSystem:
         """Approve a funding release."""
         if release_id not in self.funding_releases:
             raise HTTPException(status_code=404, detail="Funding release not found")
-        
+
         release = self.funding_releases[release_id]
-        
+
         if approved_by not in release.approvers:
             raise HTTPException(status_code=403, detail="Not authorized to approve")
-        
+
         release.status = FundingReleaseStatus.APPROVED
         release.approved_by = approved_by
         release.updated_at = datetime.utcnow()
-        
+
         await self._save_funding_release(release)
-        
+
         # Trigger release
         await self._execute_funding_release(release_id)
-        
+
         logger.info(f"Funding release {release_id} approved by {approved_by}")
-        
+
         return {
             "success": True,
             "release_id": release_id,
             "status": release.status.value
         }
-    
+
     async def _execute_funding_release(self, release_id: str):
         """Execute funding release."""
         release = self.funding_releases[release_id]
         release.status = FundingReleaseStatus.RELEASED
         release.released_at = datetime.utcnow()
         release.updated_at = datetime.utcnow()
-        
+
         await self._save_funding_release(release)
-        
+
         # Trigger hooks
         await self._trigger_milestone_hooks(release.milestone_id, "funding_released", {
             "release_id": release_id,
@@ -569,9 +563,9 @@ class MilestoneHookSystem:
             "amount": release.amount,
             "released_at": release.released_at.isoformat()
         })
-        
+
         logger.info(f"Funding release {release_id} executed")
-    
+
     async def _trigger_milestone_hooks(
         self,
         milestone_id: str,
@@ -590,16 +584,16 @@ class MilestoneHookSystem:
                         await self._trigger_build_pipeline(hook, event_type, event_data)
                     elif hook.hook_type == "funding_release":
                         await self._trigger_funding_release_hook(hook, event_type, event_data)
-                    
+
                     hook.last_triggered = datetime.utcnow()
                     hook.updated_at = datetime.utcnow()
                     await self._save_milestone_hook(hook)
-                    
+
                     self.metrics["total_hooks_triggered"] += 1
-                    
+
                 except Exception as e:
                     logger.error(f"Failed to trigger hook {hook_id}: {e}")
-    
+
     async def _send_webhook(self, hook: MilestoneHook, event_type: str, event_data: Dict[str, Any]):
         """Send webhook notification."""
         payload = {
@@ -608,7 +602,7 @@ class MilestoneHookSystem:
             "hook_id": hook.hook_id,
             "data": event_data
         }
-        
+
         headers = {"Content-Type": "application/json"}
         if hook.secret:
             signature = hmac.new(
@@ -617,7 +611,7 @@ class MilestoneHookSystem:
                 hashlib.sha256
             ).hexdigest()
             headers["X-Webhook-Signature"] = signature
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(hook.url, json=payload, headers=headers) as response:
@@ -628,27 +622,27 @@ class MilestoneHookSystem:
                         logger.error(f"Webhook failed with status {response.status}")
         except Exception as e:
             logger.error(f"Webhook error: {e}")
-    
+
     async def _send_notification(self, hook: MilestoneHook, event_type: str, event_data: Dict[str, Any]):
         """Send notification."""
         # This would integrate with notification system
         logger.info(f"Notification sent for event {event_type}")
-    
+
     async def _trigger_build_pipeline(self, hook: MilestoneHook, event_type: str, event_data: Dict[str, Any]):
         """Trigger build pipeline."""
         # This would integrate with build pipeline system
         logger.info(f"Build pipeline triggered for event {event_type}")
-    
+
     async def _trigger_funding_release_hook(self, hook: MilestoneHook, event_type: str, event_data: Dict[str, Any]):
         """Trigger funding release hook."""
         # This would integrate with funding release system
         logger.info(f"Funding release hook triggered for event {event_type}")
-    
+
     async def _process_milestone_hooks(self):
         """Process milestone hooks."""
         # This would process any pending hooks
         pass
-    
+
     async def _check_funding_releases(self):
         """Check funding releases for processing."""
         for release_id, release in self.funding_releases.items():
@@ -657,35 +651,35 @@ class MilestoneHookSystem:
                 conditions_met = await self._evaluate_release_conditions(release)
                 if conditions_met:
                     await self._execute_funding_release(release_id)
-    
+
     async def _evaluate_release_conditions(self, release: FundingRelease) -> bool:
         """Evaluate funding release conditions."""
         for condition in release.release_conditions:
             condition_type = condition.get("type")
-            
+
             if condition_type == "milestone_approved":
                 milestone_id = condition.get("milestone_id")
                 if milestone_id in self.milestones:
                     milestone = self.milestones[milestone_id]
                     if milestone.status != MilestoneStatus.APPROVED:
                         return False
-                        
+
             elif condition_type == "time_elapsed":
                 elapsed_days = condition.get("days", 0)
                 if release.created_at + timedelta(days=elapsed_days) > datetime.utcnow():
                     return False
-                    
+
             elif condition_type == "custom":
                 # This would handle custom condition evaluation
                 pass
-                
+
         return True
-    
+
     async def _sync_milestone_status(self):
         """Synchronize milestone status."""
         # This would sync with external systems
         pass
-    
+
     async def _update_metrics(self):
         """Update performance metrics."""
         total_hooks = self.metrics["total_hooks_triggered"]
@@ -693,17 +687,17 @@ class MilestoneHookSystem:
             self.metrics["success_rate"] = (
                 (total_hooks - self.metrics.get("failed_hooks", 0)) / total_hooks
             )
-    
+
     async def _save_milestone(self, milestone: Milestone):
         """Save milestone to database."""
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
-                INSERT OR REPLACE INTO milestones 
+                INSERT OR REPLACE INTO milestones
                 (milestone_id, project_id, title, description, milestone_type, amount,
                  due_date, status, completion_criteria, evidence_urls, submitted_at,
                  approved_at, approved_by, rejection_reason, created_at, updated_at, metadata)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            """, ("
                 milestone.milestone_id,
                 milestone.project_id,
                 milestone.title,
@@ -723,16 +717,16 @@ class MilestoneHookSystem:
                 json.dumps(milestone.metadata)
             ))
             conn.commit()
-    
+
     async def _save_funding_release(self, release: FundingRelease):
         """Save funding release to database."""
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
-                INSERT OR REPLACE INTO funding_releases 
+                INSERT OR REPLACE INTO funding_releases
                 (release_id, milestone_id, project_id, amount, status, release_conditions,
                  approval_required, approvers, approved_by, released_at, created_at, updated_at, metadata)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            """, ("
                 release.release_id,
                 release.milestone_id,
                 release.project_id,
@@ -748,16 +742,16 @@ class MilestoneHookSystem:
                 json.dumps(release.metadata)
             ))
             conn.commit()
-    
+
     async def _save_milestone_hook(self, hook: MilestoneHook):
         """Save milestone hook to database."""
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("""
-                INSERT OR REPLACE INTO milestone_hooks 
+                INSERT OR REPLACE INTO milestone_hooks
                 (hook_id, milestone_id, project_id, hook_type, url, secret, conditions,
                  actions, status, created_at, updated_at, last_triggered, metadata)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
+            """, ("
                 hook.hook_id,
                 hook.milestone_id,
                 hook.project_id,
@@ -773,31 +767,31 @@ class MilestoneHookSystem:
                 json.dumps(hook.metadata)
             ))
             conn.commit()
-    
+
     def get_metrics(self) -> Dict[str, Any]:
         """Get performance metrics."""
         return self.metrics.copy()
-    
+
     def get_milestones(self, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get milestones for a project."""
         milestones = []
         for milestone in self.milestones.values():
             if project_id is None or milestone.project_id == project_id:
-                milestones.append(asdict(milestone))
+                milestones.append(asdict(milestone)
         return milestones
-    
+
     def get_funding_releases(self, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get funding releases for a project."""
         releases = []
         for release in self.funding_releases.values():
             if project_id is None or release.project_id == project_id:
-                releases.append(asdict(release))
+                releases.append(asdict(release)
         return releases
-    
+
     def get_hooks(self, milestone_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get hooks for a milestone."""
         hooks = []
         for hook in self.hooks.values():
             if milestone_id is None or hook.milestone_id == milestone_id:
-                hooks.append(asdict(hook))
-        return hooks 
+                hooks.append(asdict(hook)
+        return hooks

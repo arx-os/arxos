@@ -108,10 +108,10 @@ _instances = {}
 def get_instance(instance_type: str):
     """
     Get a global instance by type.
-    
+
     Args:
         instance_type: Type of instance to retrieve
-        
+
     Returns:
         The requested instance or None if not found
     """
@@ -120,7 +120,7 @@ def get_instance(instance_type: str):
 def register_instance(instance_type: str, instance):
     """
     Register a global instance.
-    
+
     Args:
         instance_type: Type of instance
         instance: Instance to register
@@ -130,7 +130,7 @@ def register_instance(instance_type: str, instance):
 def initialize_core_systems():
     """
     Initialize all core SVGX Engine systems.
-    
+
     This function sets up all the core behavior systems and registers
     them as global instances for easy access throughout the application.
     """
@@ -140,24 +140,24 @@ def initialize_core_systems():
         from svgx_engine.runtime.advanced_state_machine import advanced_state_machine
         from svgx_engine.runtime.conditional_logic_engine import conditional_logic_engine
         from svgx_engine.runtime.performance_optimization_engine import performance_optimization_engine
-        
+
         # Initialize UI behavior systems
         from svgx_engine.runtime.ui_selection_handler import selection_handler
         from svgx_engine.runtime.ui_editing_handler import editing_handler
         from svgx_engine.runtime.ui_navigation_handler import navigation_handler
         from svgx_engine.runtime.ui_annotation_handler import annotation_handler
-        
+
         # Initialize time-based and rule systems
         from svgx_engine.runtime.time_based_trigger_system import time_based_trigger_system
         from svgx_engine.runtime.advanced_rule_engine import advanced_rule_engine
-        
+
         # Initialize behavior management and animation
         from svgx_engine.runtime.behavior_management_system import behavior_management_system
         from svgx_engine.runtime.animation_behavior_system import animation_behavior_system
-        
+
         # Initialize custom behavior plugin system
         from svgx_engine.runtime.custom_behavior_plugin_system import custom_behavior_plugin_system
-        
+
         # Register all instances
         register_instance("event_driven_behavior_engine", event_driven_behavior_engine)
         register_instance("advanced_state_machine", advanced_state_machine)
@@ -172,10 +172,10 @@ def initialize_core_systems():
         register_instance("behavior_management_system", behavior_management_system)
         register_instance("animation_behavior_system", animation_behavior_system)
         register_instance("custom_behavior_plugin_system", custom_behavior_plugin_system)
-        
+
         print("All core SVGX Engine systems initialized successfully")
         return True
-        
+
     except Exception as e:
         print(f"Error initializing core systems: {e}")
         return False
@@ -183,15 +183,15 @@ def initialize_core_systems():
 def get_system_status():
     """
     Get the status of all core systems.
-    
+
     Returns:
         Dictionary containing the status of all systems
     """
     status = {}
-    
+
     for system_name in [
         "event_driven_behavior_engine",
-        "advanced_state_machine", 
+        "advanced_state_machine",
         "conditional_logic_engine",
         "performance_optimization_engine",
         "selection_handler",
@@ -209,7 +209,7 @@ def get_system_status():
             "initialized": instance is not None,
             "type": type(instance).__name__ if instance else None
         }
-    
+
     return status
 
 # Export all public classes and instances
@@ -223,7 +223,7 @@ __all__ = [
     "ConditionalLogicEngine",
     "performance_optimization_engine",
     "PerformanceOptimizationEngine",
-    
+
     # UI Behavior Systems (global instances)
     "selection_handler",
     "SelectionHandler",
@@ -233,23 +233,23 @@ __all__ = [
     "NavigationHandler",
     "annotation_handler",
     "AnnotationHandler",
-    
+
     # Time-based and Rule Systems (global instances)
     "time_based_trigger_system",
     "TimeBasedTriggerSystem",
     "advanced_rule_engine",
     "AdvancedRuleEngine",
-    
+
     # Behavior Management and Animation (global instances)
     "behavior_management_system",
     "BehaviorManagementSystem",
     "animation_behavior_system",
     "AnimationBehaviorSystem",
-    
+
     # Custom Behavior Plugin System (global instance)
     "custom_behavior_plugin_system",
     "CustomBehaviorPluginSystem",
-    
+
     # Core Classes and Types
     "Event", "EventType", "EventPriority",
     "State", "StateType", "StatePriority", "StateTransition",
@@ -261,17 +261,17 @@ __all__ = [
     "Rule", "RuleCondition", "RuleAction", "RuleResult", "RuleType", "RulePriority", "RuleStatus",
     "Behavior", "BehaviorMetadata", "BehaviorValidation", "BehaviorVersion", "BehaviorType", "BehaviorStatus", "ValidationLevel",
     "Animation", "AnimationConfig", "AnimationState", "Keyframe", "AnimationType", "EasingFunction", "AnimationStatus", "AnimationDirection",
-    
+
     # Error Classes
     "SVGXError", "ValidationError", "BehaviorError", "StateError", "OptimizationError", "MemoryError",
-    
+
     # Utility Functions
     "get_instance", "register_instance", "initialize_core_systems", "get_system_status",
-    
+
     # Configuration
     "DEFAULT_CONFIG"
 ]
 
 # Auto-initialize core systems when package is imported
 if __name__ != "__main__":
-    initialize_core_systems() 
+    initialize_core_systems()

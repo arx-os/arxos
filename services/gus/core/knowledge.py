@@ -23,16 +23,16 @@ class KnowledgeResult:
 class KnowledgeManager:
     """
     Custom Knowledge Manager for GUS
-    
+
     Handles knowledge queries for PDF analysis and system schedule generation.
     Built without external dependencies using custom knowledge base.
     """
-    
+
     def __init__(self, config: Dict[str, Any]):
         """Initialize knowledge manager"""
         self.config = config
         self.logger = logging.getLogger(__name__)
-        
+
         # Custom knowledge base
         self.knowledge_base = {
             'pdf_analysis': {
@@ -106,7 +106,7 @@ class KnowledgeManager:
                 'sources': ['Arxos Quality Standards']
             }
         }
-        
+
         # Query patterns for intent matching
         self.query_patterns = {
             'pdf_analysis': ['pdf', 'analysis', 'extract', 'process'],
@@ -116,38 +116,38 @@ class KnowledgeManager:
             'symbol_recognition': ['symbol', 'recognize', 'identify', 'pattern'],
             'quality_assurance': ['quality', 'validate', 'check', 'assure']
         }
-        
+
         self.logger.info("Custom Knowledge Manager initialized")
-    
+
     async def query(self, intent: str, entities: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> KnowledgeResult:
         """
         Query knowledge base
-        
+
         Args:
             intent: Query intent
             entities: Extracted entities
             context: Additional context
-            
+
         Returns:
             KnowledgeResult: Knowledge query result
         """
         try:
             # Determine knowledge topic
             topic = self._determine_topic(intent, entities)
-            
+
             # Get knowledge for topic
             knowledge = self.knowledge_base.get(topic, self._get_default_knowledge())
-            
+
             # Enhance with context
             enhanced_knowledge = self._enhance_with_context(knowledge, context)
-            
+
             return KnowledgeResult(
                 summary=enhanced_knowledge['summary'],
                 confidence=enhanced_knowledge['confidence'],
                 details=enhanced_knowledge['details'],
                 sources=enhanced_knowledge['sources']
             )
-            
+
         except Exception as e:
             self.logger.error(f"Error querying knowledge: {e}")
             return KnowledgeResult(
@@ -156,7 +156,7 @@ class KnowledgeManager:
                 details={},
                 sources=[]
             )
-    
+
     def _determine_topic(self, intent: str, entities: Dict[str, Any]) -> str:
         """Determine knowledge topic from intent and entities"""
         # Direct intent mapping
@@ -168,27 +168,27 @@ class KnowledgeManager:
             'status_check': 'quality_assurance',
             'export_request': 'system_schedule'
         }
-        
+
         # Check direct intent mapping
         if intent in intent_mapping:
             return intent_mapping[intent]
-        
+
         # Check entities for topic hints
         if 'systems' in entities:
             return 'system_schedule'
-        
+
         if 'cost' in entities or 'estimate' in entities:
             return 'cost_estimation'
-        
+
         if 'timeline' in entities or 'schedule' in entities:
             return 'timeline_generation'
-        
+
         if 'quality' in entities or 'validate' in entities:
             return 'quality_assurance'
-        
+
         # Default to PDF analysis
         return 'pdf_analysis'
-    
+
     def _get_default_knowledge(self) -> Dict[str, Any]:
         """Get default knowledge when topic not found"""
         return {
@@ -201,44 +201,44 @@ class KnowledgeManager:
             },
             'sources': ['Arxos System Documentation']
         }
-    
+
     def _enhance_with_context(self, knowledge: Dict[str, Any], context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Enhance knowledge with context information"""
         enhanced = knowledge.copy()
-        
+
         if context:
             # Add context-specific details
             if 'file_size' in context:
                 enhanced['details']['file_size'] = context['file_size']
-            
+
             if 'systems_found' in context:
                 enhanced['details']['systems_found'] = context['systems_found']
-            
+
             if 'processing_time' in context:
                 enhanced['details']['actual_processing_time'] = context['processing_time']
-            
+
             # Adjust confidence based on context
             if 'confidence' in context:
                 enhanced['confidence'] = min(enhanced['confidence'], context['confidence'])
-        
+
         return enhanced
-    
+
     def get_available_topics(self) -> List[str]:
         """Get list of available knowledge topics"""
         return list(self.knowledge_base.keys())
-    
+
     def get_topic_summary(self, topic: str) -> str:
         """Get summary for specific topic"""
         knowledge = self.knowledge_base.get(topic)
         if knowledge:
             return knowledge['summary']
         return "Topic not found"
-    
+
     def search_knowledge(self, query: str) -> List[Dict[str, Any]]:
         """Search knowledge base for relevant information"""
         results = []
         query_lower = query.lower()
-        
+
         for topic, knowledge in self.knowledge_base.items():
             # Check if query matches topic
             if query_lower in topic.lower():
@@ -247,7 +247,7 @@ class KnowledgeManager:
                     'summary': knowledge['summary'],
                     'confidence': knowledge['confidence']
                 })
-            
+
             # Check if query matches summary
             elif query_lower in knowledge['summary'].lower():
                 results.append({
@@ -255,7 +255,7 @@ class KnowledgeManager:
                     'summary': knowledge['summary'],
                     'confidence': knowledge['confidence']
                 })
-            
+
             # Check if query matches details
             else:
                 for key, value in knowledge['details'].items():
@@ -266,9 +266,9 @@ class KnowledgeManager:
                             'confidence': knowledge['confidence'] * 0.8  # Lower confidence for detail match
                         })
                         break
-        
+
         return results
-    
+
     def add_knowledge(self, topic: str, knowledge: Dict[str, Any]) -> bool:
         """Add new knowledge to the knowledge base"""
         try:
@@ -278,7 +278,7 @@ class KnowledgeManager:
         except Exception as e:
             self.logger.error(f"Error adding knowledge: {e}")
             return False
-    
+
     def update_knowledge(self, topic: str, updates: Dict[str, Any]) -> bool:
         """Update existing knowledge"""
         try:
@@ -291,4 +291,4 @@ class KnowledgeManager:
                 return False
         except Exception as e:
             self.logger.error(f"Error updating knowledge: {e}")
-            return False 
+            return False

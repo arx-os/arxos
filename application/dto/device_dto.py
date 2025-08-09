@@ -13,7 +13,7 @@ from datetime import datetime
 @dataclass
 class CreateDeviceRequest:
     """Request DTO for creating a device."""
-    
+
     room_id: str
     device_type: str
     name: str
@@ -28,7 +28,7 @@ class CreateDeviceRequest:
 @dataclass
 class CreateDeviceResponse:
     """Response DTO for device creation."""
-    
+
     success: bool
     device_id: Optional[str] = None
     message: Optional[str] = None
@@ -39,7 +39,7 @@ class CreateDeviceResponse:
 @dataclass
 class UpdateDeviceRequest:
     """Request DTO for updating a device."""
-    
+
     device_id: str
     name: Optional[str] = None
     device_type: Optional[str] = None
@@ -55,7 +55,7 @@ class UpdateDeviceRequest:
 @dataclass
 class UpdateDeviceResponse:
     """Response DTO for device updates."""
-    
+
     success: bool
     device_id: Optional[str] = None
     message: Optional[str] = None
@@ -66,7 +66,7 @@ class UpdateDeviceResponse:
 @dataclass
 class GetDeviceResponse:
     """Response DTO for getting a device."""
-    
+
     success: bool
     device: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
@@ -75,7 +75,7 @@ class GetDeviceResponse:
 @dataclass
 class ListDevicesResponse:
     """Response DTO for listing devices."""
-    
+
     success: bool
     devices: List[Dict[str, Any]] = None
     total_count: int = 0
@@ -87,9 +87,9 @@ class ListDevicesResponse:
 @dataclass
 class DeleteDeviceResponse:
     """Response DTO for deleting a device."""
-    
+
     success: bool
     device_id: Optional[str] = None
     message: Optional[str] = None
     error_message: Optional[str] = None
-    deleted_at: Optional[datetime] = None 
+    deleted_at: Optional[datetime] = None

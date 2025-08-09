@@ -27,7 +27,7 @@ from infrastructure.monitoring.logging import StructuredLogger
 
 class DeviceApplicationService:
     """Application service for device operations with infrastructure integration."""
-    
+
     def __init__(self, unit_of_work: UnitOfWork,
                  cache_service: Optional[RedisCacheService] = None,
                  event_store: Optional[EventStoreService] = None,
@@ -41,7 +41,7 @@ class DeviceApplicationService:
         self.message_queue = message_queue
         self.metrics = metrics
         self.logger = logger
-    
+
     def create_device(self, room_id: str, device_type: str, name: str,
                      manufacturer: Optional[str] = None,
                      model: Optional[str] = None,
@@ -51,7 +51,7 @@ class DeviceApplicationService:
                      metadata: Optional[Dict[str, Any]] = None) -> CreateDeviceResponse:
         """Create a new device with infrastructure integration."""
         start_time = time.time()
-        
+
         try:
             # Log the operation
             if self.logger:
@@ -62,11 +62,11 @@ class DeviceApplicationService:
                     room_id=room_id,
                     created_by=created_by
                 )
-            
+
             # Execute use case directly with UnitOfWork
             from application.use_cases.device_use_cases import CreateDeviceUseCase
             create_device_uc = CreateDeviceUseCase(self.unit_of_work)
-            
+
             request = CreateDeviceRequest(
                 room_id=room_id,
                 device_type=device_type,
@@ -79,7 +79,7 @@ class DeviceApplicationService:
                 metadata=metadata
             )
             result = create_device_uc.execute(request)
-            
+
             if result.success:
                 # Publish domain event
                 if self.event_store:
@@ -91,7 +91,7 @@ class DeviceApplicationService:
                         created_by=created_by
                     )
                     self.event_store.store_event(device_created_event)
-                
+
                 # Publish message to queue
                 if self.message_queue:
                     message = {
@@ -104,26 +104,26 @@ class DeviceApplicationService:
                         'timestamp': datetime.utcnow().isoformat()
                     }
                     self.message_queue.publish('device.events', message)
-                
+
                 # Clear cache
                 if self.cache_service:
                     self.cache_service.delete(f'room:{room_id}:devices')
                     self.cache_service.delete('devices:list')
                     self.cache_service.delete('devices:statistics')
-                
+
                 # Record metrics
                 if self.metrics:
                     self.metrics.record_timing('device.create', time.time() - start_time)
                     self.metrics.increment_counter('device.created')
-                
+
                 return result
             else:
                 # Record error metrics
                 if self.metrics:
                     self.metrics.increment_counter('device.create.error')
-                
+
                 return result
-                
+
         except Exception as e:
             # Log error
             if self.logger:
@@ -133,16 +133,16 @@ class DeviceApplicationService:
                     device_type=device_type,
                     error=str(e)
                 )
-            
+
             # Record error metrics
             if self.metrics:
                 self.metrics.increment_counter('device.create.error')
-            
+
             return CreateDeviceResponse(
                 success=False,
                 error_message=f"Failed to create device: {str(e)}"
             )
-    
+
     def update_device(self, device_id: str, name: Optional[str] = None,
                      device_type: Optional[str] = None,
                      manufacturer: Optional[str] = None,
@@ -154,7 +154,7 @@ class DeviceApplicationService:
                      metadata: Optional[Dict[str, Any]] = None) -> UpdateDeviceResponse:
         """Update a device with infrastructure integration."""
         start_time = time.time()
-        
+
         try:
             # Log the operation
             if self.logger:
@@ -163,11 +163,11 @@ class DeviceApplicationService:
                     device_id=device_id,
                     updated_by=updated_by
                 )
-            
+
             # Execute use case directly with UnitOfWork
             from application.use_cases.device_use_cases import UpdateDeviceUseCase
             update_device_uc = UpdateDeviceUseCase(self.unit_of_work)
-            
+
             request = UpdateDeviceRequest(
                 device_id=device_id,
                 name=name,
@@ -181,7 +181,7 @@ class DeviceApplicationService:
                 metadata=metadata
             )
             result = update_device_uc.execute(request)
-            
+
             if result.success:
                 # Publish domain event
                 if self.event_store:
@@ -191,25 +191,25 @@ class DeviceApplicationService:
                         updated_by=updated_by
                     )
                     self.event_store.store_event(device_updated_event)
-                
+
                 # Clear cache
                 if self.cache_service:
                     self.cache_service.delete(f'device:{device_id}')
                     self.cache_service.delete('devices:list')
-                
+
                 # Record metrics
                 if self.metrics:
                     self.metrics.record_timing('device.update', time.time() - start_time)
                     self.metrics.increment_counter('device.updated')
-                
+
                 return result
             else:
                 # Record error metrics
                 if self.metrics:
                     self.metrics.increment_counter('device.update.error')
-                
+
                 return result
-                
+
         except Exception as e:
             # Log error
             if self.logger:
@@ -218,20 +218,20 @@ class DeviceApplicationService:
                     device_id=device_id,
                     error=str(e)
                 )
-            
+
             # Record error metrics
             if self.metrics:
                 self.metrics.increment_counter('device.update.error')
-            
+
             return UpdateDeviceResponse(
                 success=False,
                 error_message=f"Failed to update device: {str(e)}"
             )
-    
+
     def get_device(self, device_id: str) -> GetDeviceResponse:
         """Get a device with infrastructure integration."""
         start_time = time.time()
-        
+
         try:
             # Check cache first
             if self.cache_service:
@@ -243,31 +243,31 @@ class DeviceApplicationService:
                         success=True,
                         device=cached_device
                     )
-            
+
             # Execute use case directly with UnitOfWork
             from application.use_cases.device_use_cases import GetDeviceUseCase
             get_device_uc = GetDeviceUseCase(self.unit_of_work)
-            
+
             result = get_device_uc.execute(device_id)
-            
+
             if result.success:
                 # Cache the result
                 if self.cache_service:
                     self.cache_service.set(f'device:{device_id}', result.device, ttl=300)
-                
+
                 # Record metrics
                 if self.metrics:
                     self.metrics.record_timing('device.get', time.time() - start_time)
                     self.metrics.increment_counter('device.get.cache_miss')
-                
+
                 return result
             else:
                 # Record error metrics
                 if self.metrics:
                     self.metrics.increment_counter('device.get.error')
-                
+
                 return result
-                
+
         except Exception as e:
             # Log error
             if self.logger:
@@ -276,23 +276,23 @@ class DeviceApplicationService:
                     device_id=device_id,
                     error=str(e)
                 )
-            
+
             # Record error metrics
             if self.metrics:
                 self.metrics.increment_counter('device.get.error')
-            
+
             return GetDeviceResponse(
                 success=False,
                 error_message=f"Failed to get device: {str(e)}"
             )
-    
+
     def list_devices(self, room_id: Optional[str] = None,
                     device_type: Optional[str] = None,
                     status: Optional[str] = None,
                     page: int = 1, page_size: int = 10) -> ListDevicesResponse:
         """List devices with infrastructure integration."""
         start_time = time.time()
-        
+
         try:
             # Check cache first
             cache_key = f'devices:list:{room_id or "all"}:{device_type or "all"}:{status or "all"}:{page}:{page_size}'
@@ -302,31 +302,31 @@ class DeviceApplicationService:
                     if self.metrics:
                         self.metrics.increment_counter('device.list.cache_hit')
                     return ListDevicesResponse(**cached_devices)
-            
+
             # Execute use case directly with UnitOfWork
             from application.use_cases.device_use_cases import ListDevicesUseCase
             list_devices_uc = ListDevicesUseCase(self.unit_of_work)
-            
+
             result = list_devices_uc.execute(room_id, device_type, status, page, page_size)
-            
+
             if result.success:
                 # Cache the result
                 if self.cache_service:
                     self.cache_service.set(cache_key, result.__dict__, ttl=60)
-                
+
                 # Record metrics
                 if self.metrics:
                     self.metrics.record_timing('device.list', time.time() - start_time)
                     self.metrics.increment_counter('device.list.cache_miss')
-                
+
                 return result
             else:
                 # Record error metrics
                 if self.metrics:
                     self.metrics.increment_counter('device.list.error')
-                
+
                 return result
-                
+
         except Exception as e:
             # Log error
             if self.logger:
@@ -337,20 +337,20 @@ class DeviceApplicationService:
                     status=status,
                     error=str(e)
                 )
-            
+
             # Record error metrics
             if self.metrics:
                 self.metrics.increment_counter('device.list.error')
-            
+
             return ListDevicesResponse(
                 success=False,
                 error_message=f"Failed to list devices: {str(e)}"
             )
-    
+
     def delete_device(self, device_id: str) -> DeleteDeviceResponse:
         """Delete a device with infrastructure integration."""
         start_time = time.time()
-        
+
         try:
             # Log the operation
             if self.logger:
@@ -358,42 +358,42 @@ class DeviceApplicationService:
                     "Deleting device",
                     device_id=device_id
                 )
-            
+
             # Execute use case directly with UnitOfWork
             from application.use_cases.device_use_cases import DeleteDeviceUseCase
             delete_device_uc = DeleteDeviceUseCase(self.unit_of_work)
-            
+
             result = delete_device_uc.execute(device_id)
-            
+
             if result.success:
                 # Publish domain event
                 if self.event_store:
                     device_deleted_event = DeviceDeleted(
                         device_id=device_id,
-                        device_name="",  # Would need to get from device
+                        device_name="",  # Would need to get from device import device
                         deleted_by="system"
                     )
                     self.event_store.store_event(device_deleted_event)
-                
+
                 # Clear cache
                 if self.cache_service:
                     self.cache_service.delete(f'device:{device_id}')
                     self.cache_service.delete('devices:list')
                     self.cache_service.delete('devices:statistics')
-                
+
                 # Record metrics
                 if self.metrics:
                     self.metrics.record_timing('device.delete', time.time() - start_time)
                     self.metrics.increment_counter('device.deleted')
-                
+
                 return result
             else:
                 # Record error metrics
                 if self.metrics:
                     self.metrics.increment_counter('device.delete.error')
-                
+
                 return result
-                
+
         except Exception as e:
             # Log error
             if self.logger:
@@ -402,20 +402,20 @@ class DeviceApplicationService:
                     device_id=device_id,
                     error=str(e)
                 )
-            
+
             # Record error metrics
             if self.metrics:
                 self.metrics.increment_counter('device.delete.error')
-            
+
             return DeleteDeviceResponse(
                 success=False,
                 error_message=f"Failed to delete device: {str(e)}"
             )
-    
+
     def get_device_statistics(self) -> Dict[str, Any]:
         """Get device statistics with infrastructure integration."""
         start_time = time.time()
-        
+
         try:
             # Check cache first
             if self.cache_service:
@@ -424,10 +424,10 @@ class DeviceApplicationService:
                     if self.metrics:
                         self.metrics.increment_counter('device.statistics.cache_hit')
                     return cached_stats
-            
+
             # Get statistics using UnitOfWork
             devices = self.unit_of_work.devices.get_all()
-            
+
             stats = {
                 'total_devices': len(devices),
                 'by_status': {},
@@ -436,39 +436,39 @@ class DeviceApplicationService:
                 'created_today': 0,
                 'updated_today': 0
             }
-            
+
             today = datetime.utcnow().date()
-            
+
             for device in devices:
                 # Status breakdown
                 status = device.status.value
                 stats['by_status'][status] = stats['by_status'].get(status, 0) + 1
-                
+
                 # Type breakdown
                 device_type = device.device_type
                 stats['by_type'][device_type] = stats['by_type'].get(device_type, 0) + 1
-                
+
                 # Manufacturer breakdown
                 manufacturer = device.manufacturer or 'unknown'
                 stats['by_manufacturer'][manufacturer] = stats['by_manufacturer'].get(manufacturer, 0) + 1
-                
-                # Today's activity
+
+                # Today's activity'
                 if device.created_at and device.created_at.date() == today:
                     stats['created_today'] += 1
                 if device.updated_at and device.updated_at.date() == today:
                     stats['updated_today'] += 1
-            
+
             # Cache the result
             if self.cache_service:
                 self.cache_service.set('devices:statistics', stats, ttl=300)
-            
+
             # Record metrics
             if self.metrics:
                 self.metrics.record_timing('device.statistics', time.time() - start_time)
                 self.metrics.increment_counter('device.statistics.cache_miss')
-            
+
             return stats
-            
+
         except Exception as e:
             # Log error
             if self.logger:
@@ -476,11 +476,11 @@ class DeviceApplicationService:
                     "Failed to get device statistics",
                     error=str(e)
                 )
-            
+
             # Record error metrics
             if self.metrics:
                 self.metrics.increment_counter('device.statistics.error')
-            
+
             return {
                 'error': f"Failed to get device statistics: {str(e)}"
-            } 
+            }

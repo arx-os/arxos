@@ -7,7 +7,7 @@ This module provides custom exception classes for the SVGX Engine.
 
 class SVGXError(Exception):
     """Base exception for SVGX Engine errors."""
-    
+
     def __init__(self, message: str, context: str = None):
     """
     Perform __init__ operation
@@ -50,7 +50,7 @@ Example:
         print(result)
     """
     """Exception raised for symbol-related errors."""
-    
+
     def __init__(self, message: str, symbol_name: str = None):
         self.symbol_name = symbol_name
         super().__init__(message, symbol_name)
@@ -58,7 +58,7 @@ Example:
 
 class ValidationError(SVGXError):
     """Exception raised for validation errors."""
-    
+
     def __init__(self, message: str, field: str = None):
         self.field = field
         super().__init__(message, field)
@@ -66,7 +66,7 @@ class ValidationError(SVGXError):
 
 class PipelineError(SVGXError):
     """Exception raised for pipeline-related errors."""
-    
+
     def __init__(self, message: str, operation: str = None):
         self.operation = operation
         super().__init__(message, operation)
@@ -74,7 +74,7 @@ class PipelineError(SVGXError):
 
 class ConfigurationError(SVGXError):
     """Exception raised for configuration errors."""
-    
+
     def __init__(self, message: str, config_key: str = None):
         self.config_key = config_key
         super().__init__(message, config_key)
@@ -82,7 +82,7 @@ class ConfigurationError(SVGXError):
 
 class SecurityError(SVGXError):
     """Exception raised for security-related errors."""
-    
+
     def __init__(self, message: str, security_context: str = None):
         self.security_context = security_context
         super().__init__(message, security_context)
@@ -90,7 +90,7 @@ class SecurityError(SVGXError):
 
 class ExportError(SVGXError):
     """Exception raised for export-related errors."""
-    
+
     def __init__(self, message: str, export_format: str = None):
         self.export_format = export_format
         super().__init__(message, export_format)
@@ -98,7 +98,7 @@ class ExportError(SVGXError):
 
 class ImportError(SVGXError):
     """Exception raised for import-related errors."""
-    
+
     def __init__(self, message: str, import_format: str = None):
         self.import_format = import_format
         super().__init__(message, import_format)
@@ -106,7 +106,7 @@ class ImportError(SVGXError):
 
 class PerformanceError(SVGXError):
     """Exception raised for performance-related errors."""
-    
+
     def __init__(self, message: str, performance_metric: str = None):
         self.performance_metric = performance_metric
         super().__init__(message, performance_metric)
@@ -114,7 +114,7 @@ class PerformanceError(SVGXError):
 
 class PersistenceError(SVGXError):
     """Exception raised for persistence-related errors."""
-    
+
     def __init__(self, message: str, persistence_operation: str = None):
         self.persistence_operation = persistence_operation
         super().__init__(message, persistence_operation)
@@ -122,7 +122,7 @@ class PersistenceError(SVGXError):
 
 class NetworkError(SVGXError):
     """Exception raised for network-related errors."""
-    
+
     def __init__(self, message: str, network_endpoint: str = None):
         self.network_endpoint = network_endpoint
         super().__init__(message, network_endpoint)
@@ -130,7 +130,7 @@ class NetworkError(SVGXError):
 
 class AuthenticationError(SVGXError):
     """Exception raised for authentication-related errors."""
-    
+
     def __init__(self, message: str, auth_context: str = None):
         self.auth_context = auth_context
         super().__init__(message, auth_context)
@@ -138,7 +138,7 @@ class AuthenticationError(SVGXError):
 
 class AuthorizationError(SVGXError):
     """Exception raised for authorization-related errors."""
-    
+
     def __init__(self, message: str, auth_context: str = None):
         self.auth_context = auth_context
         super().__init__(message, auth_context)
@@ -146,7 +146,7 @@ class AuthorizationError(SVGXError):
 
 class ResourceNotFoundError(SVGXError):
     """Exception raised when a resource is not found."""
-    
+
     def __init__(self, message: str, resource_type: str = None, resource_id: str = None):
         self.resource_type = resource_type
         self.resource_id = resource_id
@@ -155,7 +155,7 @@ class ResourceNotFoundError(SVGXError):
 
 class MetadataError(SVGXError):
     """Exception raised for metadata-related errors."""
-    
+
     def __init__(self, message: str, metadata_key: str = None):
         self.metadata_key = metadata_key
         super().__init__(message, metadata_key)
@@ -163,7 +163,7 @@ class MetadataError(SVGXError):
 
 class CacheError(SVGXError):
     """Exception raised for cache-related errors."""
-    
+
     def __init__(self, message: str, cache_operation: str = None):
         self.cache_operation = cache_operation
         super().__init__(message, cache_operation)
@@ -171,7 +171,7 @@ class CacheError(SVGXError):
 
 class DatabaseError(SVGXError):
     """Exception raised for database-related errors."""
-    
+
     def __init__(self, message: str, database_operation: str = None):
         self.database_operation = database_operation
         super().__init__(message, database_operation)
@@ -179,7 +179,7 @@ class DatabaseError(SVGXError):
 
 class RecognitionError(SVGXError):
     """Exception raised for recognition-related errors."""
-    
+
     def __init__(self, message: str, recognition_type: str = None):
         self.recognition_type = recognition_type
         super().__init__(message, recognition_type)
@@ -187,7 +187,7 @@ class RecognitionError(SVGXError):
 
 class BIMError(SVGXError):
     """Exception raised for BIM-related errors."""
-    
+
     def __init__(self, message: str, bim_operation: str = None):
         self.bim_operation = bim_operation
         super().__init__(message, bim_operation)
@@ -195,7 +195,7 @@ class BIMError(SVGXError):
 
 class PhysicsError(SVGXError):
     """Exception raised for physics-related errors."""
-    
+
     def __init__(self, message: str, physics_type: str = None):
         self.physics_type = physics_type
         super().__init__(message, physics_type)
@@ -203,7 +203,7 @@ class PhysicsError(SVGXError):
 
 class IntegrationError(SVGXError):
     """Exception raised for integration-related errors."""
-    
+
     def __init__(self, message: str, integration_type: str = None):
         self.integration_type = integration_type
         super().__init__(message, integration_type)
@@ -211,7 +211,7 @@ class IntegrationError(SVGXError):
 
 class BehaviorError(SVGXError):
     """Exception raised for behavior-related errors."""
-    
+
     def __init__(self, message: str, behavior_type: str = None):
         self.behavior_type = behavior_type
         super().__init__(message, behavior_type)
@@ -219,7 +219,7 @@ class BehaviorError(SVGXError):
 
 class StateMachineError(SVGXError):
     """Exception raised for state machine-related errors."""
-    
+
     def __init__(self, message: str, state_machine_operation: str = None):
         self.state_machine_operation = state_machine_operation
         super().__init__(message, state_machine_operation)
@@ -227,7 +227,7 @@ class StateMachineError(SVGXError):
 
 class TransitionError(SVGXError):
     """Exception raised for state transition-related errors."""
-    
+
     def __init__(self, message: str, transition_operation: str = None):
         self.transition_operation = transition_operation
         super().__init__(message, transition_operation)
@@ -235,7 +235,7 @@ class TransitionError(SVGXError):
 
 class LogicError(SVGXError):
     """Exception raised for logic-related errors."""
-    
+
     def __init__(self, message: str, logic_operation: str = None):
         self.logic_operation = logic_operation
         super().__init__(message, logic_operation)
@@ -243,7 +243,7 @@ class LogicError(SVGXError):
 
 class EventError(SVGXError):
     """Exception raised for event-related errors."""
-    
+
     def __init__(self, message: str, event_type: str = None):
         self.event_type = event_type
         super().__init__(message, event_type)
@@ -251,7 +251,7 @@ class EventError(SVGXError):
 
 class ConditionError(SVGXError):
     """Exception raised for condition-related errors."""
-    
+
     def __init__(self, message: str, condition_type: str = None):
         self.condition_type = condition_type
         super().__init__(message, condition_type)
@@ -260,7 +260,7 @@ class ConditionError(SVGXError):
 # Additional error classes for core behavior systems
 class StateError(SVGXError):
     """Exception raised for state-related errors."""
-    
+
     def __init__(self, message: str, state_operation: str = None):
         self.state_operation = state_operation
         super().__init__(message, state_operation)
@@ -268,7 +268,7 @@ class StateError(SVGXError):
 
 class OptimizationError(SVGXError):
     """Exception raised for optimization-related errors."""
-    
+
     def __init__(self, message: str, optimization_operation: str = None):
         self.optimization_operation = optimization_operation
         super().__init__(message, optimization_operation)
@@ -276,7 +276,7 @@ class OptimizationError(SVGXError):
 
 class MemoryError(SVGXError):
     """Exception raised for memory-related errors."""
-    
+
     def __init__(self, message: str, memory_operation: str = None):
         self.memory_operation = memory_operation
         super().__init__(message, memory_operation)

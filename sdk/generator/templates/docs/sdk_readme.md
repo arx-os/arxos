@@ -174,4 +174,4 @@ See [CHANGELOG.md](CHANGELOG.md) for a complete list of changes.
 
 ## 🚀 Migration Guide
 
-If you're upgrading from a previous version, see [MIGRATION.md](MIGRATION.md) for detailed upgrade instructions. 
+If you're upgrading from a previous version, see [MIGRATION.md](MIGRATION.md) for detailed upgrade instructions.

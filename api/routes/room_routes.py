@@ -85,7 +85,7 @@ async def create_room(
             status=request.status,
             created_by=user.user_id
         )
-        
+
         # Use application service to create room
         result = room_service.create_room(
             floor_id=create_request.floor_id,
@@ -97,7 +97,7 @@ async def create_room(
             description=create_request.description,
             created_by=create_request.created_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -121,7 +121,7 @@ async def create_room(
                 message=result.error_message or "Failed to create room",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to create room: {str(e)}")
         return format_error_response(
@@ -156,7 +156,7 @@ async def list_rooms(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -191,7 +191,7 @@ async def list_rooms(
                 message=result.error_message or "Failed to retrieve rooms",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to list rooms: {str(e)}")
         return format_error_response(
@@ -216,7 +216,7 @@ async def get_room(
     try:
         # Use application service to get room
         result = room_service.get_room(room_id=room_id)
-        
+
         if result.success and result.room:
             room = result.room
             return format_success_response(
@@ -242,7 +242,7 @@ async def get_room(
                 message=result.error_message or "Room not found",
                 details={"room_id": room_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get room {room_id}: {str(e)}")
         return format_error_response(
@@ -278,7 +278,7 @@ async def update_room(
             status=request.status,
             updated_by=user.user_id
         )
-        
+
         # Use application service to update room
         result = room_service.update_room(
             room_id=room_id,
@@ -291,7 +291,7 @@ async def update_room(
             status=update_request.status,
             updated_by=update_request.updated_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -315,7 +315,7 @@ async def update_room(
                 message=result.error_message or "Failed to update room",
                 details={"error": result.error_message, "room_id": room_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to update room {room_id}: {str(e)}")
         return format_error_response(
@@ -343,7 +343,7 @@ async def delete_room(
             room_id=room_id,
             deleted_by=user.user_id
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -359,7 +359,7 @@ async def delete_room(
                 message=result.error_message or "Failed to delete room",
                 details={"error": result.error_message, "room_id": room_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to delete room {room_id}: {str(e)}")
         return format_error_response(
@@ -394,7 +394,7 @@ async def get_room_devices(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -428,7 +428,7 @@ async def get_room_devices(
                 message=result.error_message or "Failed to retrieve room devices",
                 details={"error": result.error_message, "room_id": room_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get devices for room {room_id}: {str(e)}")
         return format_error_response(
@@ -453,7 +453,7 @@ async def get_room_statistics(
     try:
         # Use application service to get room statistics
         result = room_service.get_room_statistics(room_id=room_id)
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -477,11 +477,11 @@ async def get_room_statistics(
                 message=result.error_message or "Failed to retrieve room statistics",
                 details={"error": result.error_message, "room_id": room_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get statistics for room {room_id}: {str(e)}")
         return format_error_response(
             error_code="ROOM_STATISTICS_ERROR",
             message="Failed to retrieve room statistics",
             details={"error": str(e), "room_id": room_id}
-        ) 
+        )

@@ -168,7 +168,7 @@ func UpdateMaintenanceTask(w http.ResponseWriter, r *http.Request) {
 
 	// Update the task
 	err = db.DB.Exec(`
-		UPDATE maintenance_tasks SET 
+		UPDATE maintenance_tasks SET
 			status = $1, priority = $2, title = $3, description = $4, instructions = $5,
 			assigned_to = $6, actual_hours = $7, actual_cost = $8, parts_used = $9,
 			notes = $10, started_date = $11, completed_date = $12, updated_at = CURRENT_TIMESTAMP
@@ -185,7 +185,7 @@ func UpdateMaintenanceTask(w http.ResponseWriter, r *http.Request) {
 	// If task is completed, update asset's last maintenance date and total cost
 	if task.Status == "completed" && task.CompletedDate != nil {
 		db.DB.Exec(`
-			UPDATE assets SET last_maintenance_date = $1, 
+			UPDATE assets SET last_maintenance_date = $1,
 				total_maintenance_cost = total_maintenance_cost + $2,
 				updated_at = CURRENT_TIMESTAMP
 			WHERE id = (SELECT asset_id FROM maintenance_tasks WHERE id = $3)
@@ -602,8 +602,8 @@ func GetMaintenanceDashboard(w http.ResponseWriter, r *http.Request) {
 
 	// Get average completion time
 	db.DB.Raw(`
-		SELECT COALESCE(AVG(actual_hours), 0) 
-		FROM maintenance_tasks 
+		SELECT COALESCE(AVG(actual_hours), 0)
+		FROM maintenance_tasks
 		WHERE status = 'completed' AND actual_hours > 0
 	`).Scan(&stats.AverageCompletion)
 

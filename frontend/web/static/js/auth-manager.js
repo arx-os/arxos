@@ -28,7 +28,7 @@ class AuthManager {
 
                 try {
                     const response = await fetch(`${baseURL}${endpoint}`, config);
-                    
+
                     if (response.status === 401) {
                         // Try token refresh
                         const refreshed = await this.refreshToken();
@@ -178,4 +178,4 @@ class AuthManager {
 }
 
 // Export for global use
-window.AuthManager = AuthManager; 
+window.AuthManager = AuthManager;

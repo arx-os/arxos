@@ -6,7 +6,7 @@
 export class Pan {
     constructor(viewport, options = {}) {
         this.viewport = viewport;
-        
+
         // Pan settings
         this.panEnabled = options.panEnabled !== false; // Default to true
         this.panInertia = options.panInertia !== false; // Default to true
@@ -17,7 +17,7 @@ export class Pan {
             padding: 100, // Padding from edges
             maxDistance: 2000 // Maximum pan distance from center
         };
-        
+
         // Pan state
         this.isPanning = false;
         this.panStartX = 0;
@@ -29,10 +29,10 @@ export class Pan {
         this.panInertiaAnimation = null;
         this.hasShownPanIndicator = false;
         this.lastPanTime = null;
-        
+
         // Pan feedback
         this.panFeedbackElement = null;
-        
+
         this.initialize();
     }
 
@@ -46,71 +46,71 @@ export class Pan {
         this.viewport.svg.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.viewport.svg.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.viewport.svg.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        
+
         // Keyboard pan events
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
     handleMouseDown(event) {
         if (!this.panEnabled || event.button !== 0) return; // Left mouse button only
-        
+
         event.preventDefault();
         this.startPan(event);
     }
 
     handleMouseMove(event) {
         if (!this.isPanning) return;
-        
+
         event.preventDefault();
-        
+
         const currentTime = performance.now();
         const deltaTime = this.lastPanTime ? currentTime - this.lastPanTime : 0;
         this.lastPanTime = currentTime;
-        
+
         // Calculate pan delta
         const deltaX = event.clientX - this.panStartX;
         const deltaY = event.clientY - this.panStartY;
-        
+
         // Convert to viewport coordinates
         const currentZoom = this.viewport.getZoom();
         const viewDeltaX = deltaX / currentZoom;
         const viewDeltaY = deltaY / currentZoom;
-        
+
         // Calculate new pan position
         const newPanX = this.panStartViewX - viewDeltaX;
         const newPanY = this.panStartViewY - viewDeltaY;
-        
+
         // Apply boundaries
         const constrainedPan = this.applyPanBoundaries(newPanX, newPanY);
-        
+
         // Update viewport
         this.viewport.setPan(constrainedPan.x, constrainedPan.y);
-        
+
         // Calculate velocity for inertia
         if (deltaTime > 0) {
             this.panVelocityX = viewDeltaX / deltaTime;
             this.panVelocityY = viewDeltaY / deltaTime;
         }
-        
+
         // Show pan feedback
         this.showPanFeedback();
     }
 
     handleMouseUp(event) {
         if (!this.isPanning) return;
-        
+
         event.preventDefault();
         this.endPan();
     }
 
     handleKeyDown(event) {
         if (!this.panEnabled) return;
-        
+
         const panStep = 50;
         const currentPan = this.viewport.getPan();
         let newPanX = currentPan.x;
         let newPanY = currentPan.y;
-        
+
         switch (event.key) {
             case 'ArrowLeft':
                 event.preventDefault();
@@ -133,7 +133,7 @@ export class Pan {
                 this.resetPan();
                 return;
         }
-        
+
         // Apply boundaries
         const constrainedPan = this.applyPanBoundaries(newPanX, newPanY);
         this.viewport.setPan(constrainedPan.x, constrainedPan.y);
@@ -148,10 +148,10 @@ export class Pan {
         this.panVelocityX = 0;
         this.panVelocityY = 0;
         this.lastPanTime = performance.now();
-        
+
         // Change cursor
         this.viewport.svg.style.cursor = 'grabbing';
-        
+
         // Show pan indicator
         this.showPanIndicator();
     }
@@ -159,12 +159,12 @@ export class Pan {
     endPan() {
         this.isPanning = false;
         this.viewport.svg.style.cursor = 'grab';
-        
+
         // Start inertia if enabled
         if (this.panInertia && (Math.abs(this.panVelocityX) > 0.1 || Math.abs(this.panVelocityY) > 0.1)) {
             this.startPanInertia();
         }
-        
+
         // Hide pan feedback
         this.hidePanFeedback();
     }
@@ -173,29 +173,29 @@ export class Pan {
         if (this.panInertiaAnimation) {
             cancelAnimationFrame(this.panInertiaAnimation);
         }
-        
+
         const startTime = performance.now();
         const startVelocityX = this.panVelocityX;
         const startVelocityY = this.panVelocityY;
-        
+
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / this.panInertiaDuration, 1);
-            
+
             // Apply decay
             const decay = Math.pow(this.panInertiaDecay, progress);
             const currentVelocityX = startVelocityX * decay;
             const currentVelocityY = startVelocityY * decay;
-            
+
             // Update pan position
             const currentPan = this.viewport.getPan();
             const newPanX = currentPan.x - currentVelocityX * 16; // 60fps
             const newPanY = currentPan.y - currentVelocityY * 16;
-            
+
             // Apply boundaries
             const constrainedPan = this.applyPanBoundaries(newPanX, newPanY);
             this.viewport.setPan(constrainedPan.x, constrainedPan.y);
-            
+
             // Continue animation if velocity is significant
             if (progress < 1 && (Math.abs(currentVelocityX) > 0.01 || Math.abs(currentVelocityY) > 0.01)) {
                 this.panInertiaAnimation = requestAnimationFrame(animate);
@@ -203,7 +203,7 @@ export class Pan {
                 this.stopPanInertia();
             }
         };
-        
+
         this.panInertiaAnimation = requestAnimationFrame(animate);
     }
 
@@ -285,20 +285,20 @@ export class Pan {
     // Pan feedback
     showPanFeedback() {
         if (!this.panFeedbackElement) return;
-        
+
         this.panFeedbackElement.style.display = 'block';
         this.panFeedbackElement.textContent = 'Panning';
     }
 
     hidePanFeedback() {
         if (!this.panFeedbackElement) return;
-        
+
         this.panFeedbackElement.style.display = 'none';
     }
 
     showPanIndicator() {
         if (this.hasShownPanIndicator) return;
-        
+
         this.hasShownPanIndicator = true;
         // Could show a tooltip or notification here
     }
@@ -319,7 +319,7 @@ export class Pan {
             top: 10px;
             left: 10px;
         `;
-        
+
         this.viewport.container.appendChild(this.panFeedbackElement);
     }
 
@@ -328,7 +328,7 @@ export class Pan {
         const pan = this.viewport.getPan();
         const bounds = this.viewport.getViewportBounds();
         const padding = this.panBoundaries.padding;
-        
+
         return (
             pan.x <= -bounds.width + padding ||
             pan.x >= bounds.width - padding ||
@@ -344,4 +344,4 @@ export class Pan {
             this.panFeedbackElement.remove();
         }
     }
-} 
+}

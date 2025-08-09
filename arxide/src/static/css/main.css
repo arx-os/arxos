@@ -64,7 +64,7 @@ body {
 }
 
 .canvas-grid {
-    background-image: 
+    background-image:
         linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
     background-size: 20px 20px;
@@ -420,16 +420,16 @@ body {
         top: 0;
         z-index: 100;
     }
-    
+
     .sidebar.collapsed {
         transform: translateX(-100%);
     }
-    
+
     .toolbar {
         flex-wrap: wrap;
         gap: 0.5rem;
     }
-    
+
     .toolbar-group {
         flex-wrap: wrap;
     }
@@ -443,7 +443,7 @@ body {
     .toast-container {
         display: none !important;
     }
-    
+
     .canvas-container {
         border: none !important;
     }
@@ -473,7 +473,7 @@ body {
     .btn {
         border-width: 2px;
     }
-    
+
     .svgx-element.selected {
         stroke-width: 4px;
     }
@@ -486,4 +486,4 @@ body {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
-} 
+}

@@ -62,7 +62,7 @@ class AuthConfig:
 
 class ArxosError(Exception):
     """Base exception for Arxos SDK"""
-    
+
     def __init__(
         self,
         message: str,
@@ -78,31 +78,31 @@ class ArxosError(Exception):
 
 class AuthenticationError(ArxosError):
     """Authentication error"""
-    
+
     def __init__(self, message: str = "Authentication failed"):
         super().__init__(message, 401, "AUTHENTICATION_ERROR")
 
 class ValidationError(ArxosError):
     """Validation error"""
-    
+
     def __init__(self, message: str = "Validation failed"):
         super().__init__(message, 400, "VALIDATION_ERROR")
 
 class RateLimitError(ArxosError):
     """Rate limit error"""
-    
+
     def __init__(self, message: str = "Rate limit exceeded"):
         super().__init__(message, 429, "RATE_LIMIT_ERROR")
 
 class NotFoundError(ArxosError):
     """Not found error"""
-    
+
     def __init__(self, message: str = "Resource not found"):
         super().__init__(message, 404, "NOT_FOUND_ERROR")
 
 class ServerError(ArxosError):
     """Server error"""
-    
+
     def __init__(self, message: str = "Internal server error"):
         super().__init__(message, 500, "SERVER_ERROR")
 
@@ -124,26 +124,26 @@ class PaginatedResponse(GenericModel, Generic[T]):
 
 class RateLimiter:
     """Rate limiter for API requests"""
-    
+
     def __init__(self, max_requests: int = 100, window_ms: int = 60000):
         self.max_requests = max_requests
         self.window_ms = window_ms
         self.requests = []
-    
+
     def can_make_request(self) -> bool:
         """Check if request can be made"""
         now = time.time() * 1000
         window_start = now - self.window_ms
-        
+
         # Remove old requests
         self.requests = [req_time for req_time in self.requests if req_time > window_start]
-        
+
         if len(self.requests) >= self.max_requests:
             return False
-        
+
         self.requests.append(now)
         return True
-    
+
     async def wait_if_needed(self):
         """Wait if rate limit is reached"""
         while not self.can_make_request():
@@ -151,7 +151,7 @@ class RateLimiter:
 
 class RetryHandler:
     """Retry handler for failed requests"""
-    
+
     def __init__(
         self,
         max_retries: int = 3,
@@ -163,11 +163,11 @@ class RetryHandler:
         self.retry_delay = retry_delay
         self.backoff_multiplier = backoff_multiplier
         self.retryable_status_codes = retryable_status_codes or [429, 500, 502, 503, 504]
-    
+
     async def execute(self, request_func, *args, **kwargs):
         """Execute request with retry logic"""
         last_error = None
-        
+
         for attempt in range(self.max_retries + 1):
             try:
                 return await request_func(*args, **kwargs)
@@ -187,46 +187,46 @@ class RetryHandler:
                     last_error = e
                 else:
                     raise e
-        
+
         if last_error:
             raise last_error
 
 class ResponseCache:
     """Simple in-memory cache for API responses"""
-    
+
     def __init__(self, ttl: float = 300.0, max_size: int = 100):
         self.ttl = ttl
         self.max_size = max_size
         self.cache = {}
-    
+
     def get(self, key: str) -> Optional[Any]:
         """Get cached response"""
         if key not in self.cache:
             return None
-        
+
         cached_item = self.cache[key]
         if time.time() - cached_item['timestamp'] > self.ttl:
             del self.cache[key]
             return None
-        
+
         return cached_item['data']
-    
+
     def set(self, key: str, data: Any):
         """Set cached response"""
         if len(self.cache) >= self.max_size:
             # Remove oldest entry
             oldest_key = min(self.cache.keys(), key=lambda k: self.cache[k]['timestamp'])
             del self.cache[oldest_key]
-        
+
         self.cache[key] = {
             'data': data,
             'timestamp': time.time()
         }
-    
+
     def clear(self):
         """Clear cache"""
         self.cache.clear()
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics"""
         return {
@@ -237,23 +237,23 @@ class ResponseCache:
 
 class AuthManager:
     """Authentication manager"""
-    
+
     def __init__(self, client: '{{classname}}Client', config: AuthConfig):
         self.client = client
         self.config = config
-    
+
     def get_headers(self) -> Dict[str, str]:
         """Get authentication headers"""
         headers = {}
-        
+
         if self.config.api_key:
             headers['X-API-Key'] = self.config.api_key
-        
+
         if self.config.access_token:
             headers['Authorization'] = f'Bearer {self.config.access_token}'
-        
+
         return headers
-    
+
     async def authenticate(self, username: str, password: str) -> str:
         """Authenticate with username and password"""
         try:
@@ -262,35 +262,35 @@ class AuthManager:
                 '/auth/login',
                 data={'username': username, 'password': password}
             )
-            
+
             if response.get('access_token'):
                 self.config.access_token = response['access_token']
                 return response['access_token']
-            
+
             raise AuthenticationError('Invalid response format')
         except Exception as e:
             raise AuthenticationError(f'Authentication failed: {str(e)}')
-    
+
     async def refresh_token(self) -> str:
         """Refresh authentication token"""
         if not self.config.access_token:
             raise AuthenticationError('No token to refresh')
-        
+
         try:
             response = await self.client.make_request(
                 'POST',
                 '/auth/refresh',
                 data={'token': self.config.access_token}
             )
-            
+
             if response.get('access_token'):
                 self.config.access_token = response['access_token']
                 return response['access_token']
-            
+
             raise AuthenticationError('Invalid refresh response')
         except Exception as e:
             raise AuthenticationError(f'Token refresh failed: {str(e)}')
-    
+
     async def logout(self):
         """Logout and clear authentication"""
         if self.config.access_token:
@@ -298,16 +298,16 @@ class AuthManager:
                 await self.client.make_request('POST', '/auth/logout')
             except Exception as e:
                 logger.warning(f'Logout request failed: {e}')
-        
+
         self.config.access_token = None
 
 class {{classname}}Client:
     """
     {{classname}} API Client
-    
+
     Provides type-safe access to {{classname}} API endpoints
     """
-    
+
     def __init__(self, base_url: str, config: Optional[ClientConfig] = None):
         self.base_url = base_url.rstrip('/')
         self.config = config or ClientConfig()
@@ -316,36 +316,36 @@ class {{classname}}Client:
         self.rate_limiter = RateLimiter()
         self.retry_handler = RetryHandler()
         self.cache = ResponseCache()
-        
+
         # Set default headers
         self.session.headers.update({
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'User-Agent': 'Arxos-SDK-Python/1.0.0'
         })
-        
+
         if self.config.default_headers:
             self.session.headers.update(self.config.default_headers)
-    
+
     def set_auth_config(self, auth_config: AuthConfig):
         """Set authentication configuration"""
         self.auth_manager = AuthManager(self, auth_config)
-    
+
     def set_auth_token(self, token: str):
         """Set authentication token"""
         if not self.auth_manager:
             self.auth_manager = AuthManager(self, AuthConfig())
         self.auth_manager.config.access_token = token
-    
+
     def clear_auth_token(self):
         """Clear authentication token"""
         if self.auth_manager:
             self.auth_manager.config.access_token = None
-    
+
     def get_auth_token(self) -> Optional[str]:
         """Get current authentication token"""
         return self.auth_manager.config.access_token if self.auth_manager else None
-    
+
     async def make_request(
         self,
         method: str,
@@ -358,19 +358,19 @@ class {{classname}}Client:
         """Make HTTP request to API"""
         # Wait for rate limit
         await self.rate_limiter.wait_if_needed()
-        
+
         # Prepare request
         url = f"{self.base_url}{endpoint}"
         request_headers = headers or {}
-        
+
         # Add authentication headers
         if self.auth_manager:
             request_headers.update(self.auth_manager.get_headers())
-        
+
         # Prepare request data
         if data and isinstance(data, (dict, list)):
             data = json.dumps(data)
-        
+
         # Make request with retry logic
         async def _make_request():
             try:
@@ -382,17 +382,17 @@ class {{classname}}Client:
                     headers=request_headers,
                     timeout=timeout or self.config.timeout
                 )
-                
+
                 # Handle response
                 if response.status_code >= 400:
                     self._handle_error_response(response)
-                
+
                 return response.json()
             except requests.exceptions.RequestException as e:
                 raise ArxosError(f"Request failed: {str(e)}")
-        
+
         return await self.retry_handler.execute(_make_request)
-    
+
     def _handle_error_response(self, response: requests.Response):
         """Handle error responses"""
         try:
@@ -402,7 +402,7 @@ class {{classname}}Client:
         except (ValueError, KeyError):
             message = response.text or 'Unknown error'
             code = 'UNKNOWN_ERROR'
-        
+
         if response.status_code == 401:
             raise AuthenticationError(message)
         elif response.status_code == 400:
@@ -415,7 +415,7 @@ class {{classname}}Client:
             raise ServerError(message)
         else:
             raise ArxosError(message, response.status_code, code)
-    
+
     async def make_cached_request(
         self,
         key: str,
@@ -428,7 +428,7 @@ class {{classname}}Client:
         if cached:
             logger.debug(f"Cache hit for key: {key}")
             return cached
-        
+
         logger.debug(f"Cache miss for key: {key}")
         result = await request_func(*args, **kwargs)
         self.cache.set(key, result)
@@ -445,18 +445,18 @@ class {{classname}}Client:
     ) -> {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Dict[str, Any]{{/returnType}}:
         """
         {{summary}}
-        
+
         {{notes}}
-        
+
         Args:
             {{#parameters}}
             {{paramName}}{{^required}} (Optional[{{dataType}}]){{/required}}{{#required}} ({{dataType}}){{/required}}: {{description}}{{#defaultValue}}, defaults to {{{defaultValue}}}{{/defaultValue}}
             {{/parameters}}
             **kwargs: Additional request parameters
-        
+
         Returns:
             {{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}Dict[str, Any]{{/returnType}}: API response
-        
+
         Raises:
             ArxosError: If the request fails
             AuthenticationError: If authentication fails
@@ -467,20 +467,20 @@ class {{classname}}Client:
         """
         # Build URL with path parameters
         url = "{{{path}}}"{{#pathParams}}.replace("{{paramName}}", str({{paramName}})){{/pathParams}}
-        
+
         # Prepare request parameters
         request_params = {}
         {{#queryParams}}
         if {{paramName}} is not None:
             request_params['{{paramName}}'] = {{paramName}}
         {{/queryParams}}
-        
+
         # Prepare request data
         request_data = None
         {{#hasBodyParam}}
         request_data = {{bodyParam.paramName}}
         {{/hasBodyParam}}
-        
+
         # Make request
         return await self.make_request(
             method='{{httpMethod}}',
@@ -497,7 +497,7 @@ class Enhanced{{classname}}Client({{classname}}Client):
     """
     Enhanced {{classname}} client with advanced features
     """
-    
+
     def __init__(
         self,
         base_url: str,
@@ -508,47 +508,47 @@ class Enhanced{{classname}}Client({{classname}}Client):
         cache_config: Optional[Dict[str, Any]] = None
     ):
         super().__init__(base_url, config)
-        
+
         # Set up authentication
         if auth_config:
             self.set_auth_config(auth_config)
-        
+
         # Configure rate limiter
         if rate_limit_config:
             self.rate_limiter = RateLimiter(**rate_limit_config)
-        
+
         # Configure retry handler
         if retry_config:
             self.retry_handler = RetryHandler(**retry_config)
-        
+
         # Configure cache
         if cache_config:
             self.cache = ResponseCache(**cache_config)
-    
+
     def get_auth_manager(self) -> Optional[AuthManager]:
         """Get authentication manager"""
         return self.auth_manager
-    
+
     def get_rate_limiter(self) -> RateLimiter:
         """Get rate limiter"""
         return self.rate_limiter
-    
+
     def get_cache(self) -> ResponseCache:
         """Get cache"""
         return self.cache
-    
+
     async def authenticate(self, username: str, password: str) -> str:
         """Authenticate with username and password"""
         if not self.auth_manager:
             self.auth_manager = AuthManager(self, AuthConfig())
         return await self.auth_manager.authenticate(username, password)
-    
+
     async def refresh_token(self) -> str:
         """Refresh authentication token"""
         if not self.auth_manager:
             raise AuthenticationError("No authentication manager configured")
         return await self.auth_manager.refresh_token()
-    
+
     async def logout(self):
         """Logout and clear authentication"""
         if self.auth_manager:
@@ -562,13 +562,13 @@ def create_client(
 ) -> Enhanced{{classname}}Client:
     """
     Create an enhanced {{classname}} client
-    
+
     Args:
         base_url: Base URL for the API
         auth_config: Authentication configuration
         **kwargs: Additional configuration options
-    
+
     Returns:
         Enhanced{{classname}}Client: Configured client instance
     """
-    return Enhanced{{classname}}Client(base_url, auth_config=auth_config, **kwargs) 
+    return Enhanced{{classname}}Client(base_url, auth_config=auth_config, **kwargs)

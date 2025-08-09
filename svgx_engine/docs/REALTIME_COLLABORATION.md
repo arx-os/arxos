@@ -186,7 +186,7 @@ async def collaboration_example():
     if not success:
         print("Failed to start collaboration server")
         return
-    
+
     # 2. Send collaborative operations
     operations = [
         {
@@ -208,12 +208,12 @@ async def collaboration_example():
             "data": {"constraint_type": "distance", "value": 50}
         }
     ]
-    
+
     for operation in operations:
         success = await send_operation(operation)
         if success:
             print(f"Operation sent: {operation['type']}")
-    
+
     # 3. Handle conflicts
     conflicts = [
         {
@@ -222,7 +222,7 @@ async def collaboration_example():
             "resolved_by": "user_1"
         }
     ]
-    
+
     for conflict in conflicts:
         success = await resolve_conflict(
             conflict["conflict_id"],
@@ -231,7 +231,7 @@ async def collaboration_example():
         )
         if success:
             print(f"Conflict resolved: {conflict['conflict_id']}")
-    
+
     # 4. Monitor active users
     active_users = get_active_users()
     print(f"Active users: {len(active_users)}")
@@ -260,27 +260,27 @@ ws.onopen = function() {
 
 ws.onmessage = function(event) {
     const data = JSON.parse(event.data);
-    
+
     switch(data.type) {
         case 'welcome':
             console.log('Connected to collaboration server');
             break;
-            
+
         case 'operations':
             console.log('Received operations:', data.operations);
             // Apply operations to local document
             break;
-            
+
         case 'conflict_detected':
             console.log('Conflict detected:', data.conflicts);
             // Handle conflicts
             break;
-            
+
         case 'presence_update':
             console.log('Presence update:', data.users);
             // Update user presence UI
             break;
-            
+
         case 'version_created':
             console.log('Version created:', data.version_id);
             // Update version control UI
@@ -394,7 +394,7 @@ try:
     success = await start_collaboration_server("localhost", 8765)
     if not success:
         print("Failed to start collaboration server")
-        
+
 except Exception as e:
     print(f"Server error: {e}")
 
@@ -403,7 +403,7 @@ try:
     success = await send_operation(operation_data)
     if not success:
         print("Failed to send operation")
-        
+
 except Exception as e:
     print(f"Operation error: {e}")
 
@@ -412,7 +412,7 @@ try:
     success = await resolve_conflict("conflict_1", "automatic", "user_1")
     if not success:
         print("Failed to resolve conflict")
-        
+
 except Exception as e:
     print(f"Conflict resolution error: {e}")
 ```
@@ -550,4 +550,4 @@ print(f"Total sessions: {stats['total_sessions']}")
 - **Interactive Capabilities**: Multi-user interactive editing
 - **Cloud Integration**: Cloud-based collaboration services
 
-This real-time collaboration service completes Phase 5 implementation, providing the foundation for multi-user CAD-grade collaboration with full CTO compliance and excellent performance characteristics. 
+This real-time collaboration service completes Phase 5 implementation, providing the foundation for multi-user CAD-grade collaboration with full CTO compliance and excellent performance characteristics.

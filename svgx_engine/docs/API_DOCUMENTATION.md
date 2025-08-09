@@ -21,7 +21,7 @@ curl -H "Authorization: Bearer YOUR_API_KEY" \
 ## Performance Targets
 
 - **UI Response Time**: < 16ms
-- **Redraw Time**: < 32ms  
+- **Redraw Time**: < 32ms
 - **Physics Simulation**: < 100ms
 - **Batch Processing**: Enabled for non-critical updates
 
@@ -615,4 +615,4 @@ For API support and questions:
 - Compilation to SVG/JSON
 - Performance monitoring
 - Security features
-- Comprehensive documentation 
+- Comprehensive documentation

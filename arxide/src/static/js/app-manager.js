@@ -22,19 +22,19 @@ class AppManager {
 
             // Initialize managers
             this.initializeManagers();
-            
+
             // Setup global event listeners
             this.setupGlobalEventListeners();
-            
+
             // Setup HTMX interceptors
             this.setupHTMXInterceptors();
-            
+
             // Setup keyboard shortcuts
             this.setupKeyboardShortcuts();
-            
+
             this.isInitialized = true;
             console.log('✅ Arxos Application initialized successfully');
-            
+
         } catch (error) {
             console.error('❌ Failed to initialize Arxos Application:', error);
             window.toastManager.error('Failed to initialize application');
@@ -283,7 +283,7 @@ class AppManager {
     // Canvas management
     setCurrentCanvas(canvasId) {
         this.currentCanvas = canvasId;
-        
+
         // Connect WebSocket for canvas
         if (window.wsManager && canvasId) {
             const sessionId = `session_${Date.now()}_${window.authManager?.user?.user_id}`;
@@ -407,4 +407,4 @@ class AppManager {
 }
 
 // Export for global use
-window.AppManager = AppManager; 
+window.AppManager = AppManager;

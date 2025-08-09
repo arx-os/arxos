@@ -1,4 +1,4 @@
-"""
+("""
 Arxos NLP Integration Package
 
 This package provides natural language processing capabilities for the Arxos Platform,
@@ -12,9 +12,9 @@ Key Components:
 - Context Management: Handle contextual object resolution
 """
 
-from services.nlp_router
-from services.intent_mapper
-from services.models.nlp_models
+from services.nlp_router import services.nlp_router
+from services.intent_mapper import services.intent_mapper
+from services.models.nlp_models import services.models.nlp_models
     NLPRequest, NLPResponse, Intent, Slot, SlotResult, CLICommand,
     NLPContext, ValidationResult, ProcessingStats,
     IntentType, SlotType
@@ -27,11 +27,11 @@ __description__ = "NLP Integration for Arxos Platform"
 # Main classes for easy import
 __all__ = [
     "NLPRouter",
-    "IntentMapper", 
+    "IntentMapper",
     "process_nlp_input",
     "detect_intent",
     "NLPRequest",
-    "NLPResponse", 
+    "NLPResponse",
     "Intent",
     "Slot",
     "SlotResult",
@@ -41,4 +41,4 @@ __all__ = [
     "ProcessingStats",
     "IntentType",
     "SlotType"
-] 
+]

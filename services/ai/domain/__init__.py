@@ -19,7 +19,7 @@ from .entities.ai_agent import (
 
 __all__ = [
     'AIAgent',
-    'AIQuery', 
+    'AIQuery',
     'AIResponse',
     'AIAgentConfig',
     'ModelType',
@@ -27,4 +27,4 @@ __all__ = [
     'AIAgentError',
     'InvalidConfigurationError',
     'ModelNotAvailableError'
-] 
+]

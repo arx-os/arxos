@@ -13,15 +13,16 @@ from svgx_engine.compiler.svgx_to_gltf import SVGXToGLTFCompiler
 __all__ = [
     "SVGXCompiler",
     "SVGXToSVGCompiler",
-    "SVGXToIFCCompiler", 
+    "SVGXToIFCCompiler",
     "SVGXToJSONCompiler",
     "SVGXToGLTFCompiler",
 ]
 
 class SVGXCompiler:
     """Main compiler class that orchestrates format conversions."""
-    
+
     def __init__(self):
+        pass
     """
     Perform __init__ operation
 
@@ -42,7 +43,7 @@ Example:
         self.ifc_compiler = SVGXToIFCCompiler()
         self.json_compiler = SVGXToJSONCompiler()
         self.gltf_compiler = SVGXToGLTFCompiler()
-    
+
     def compile(self, svgx_content, target_format="svg"):
         """Compile SVGX content to target format."""
         if target_format == "svg":
@@ -54,4 +55,4 @@ Example:
         elif target_format == "gltf":
             return self.gltf_compiler.compile(svgx_content)
         else:
-            raise ValueError(f"Unsupported target format: {target_format}") 
+            raise ValueError(f"Unsupported target format: {target_format}")

@@ -6,26 +6,26 @@
 export class Zoom {
     constructor(viewport, options = {}) {
         this.viewport = viewport;
-        
+
         // Zoom settings
         this.minZoom = options.minZoom || 0.1;
         this.maxZoom = options.maxZoom || 5.0;
         this.zoomStep = options.zoomStep || 0.1;
-        
+
         // Mouse wheel zoom settings
         this.wheelZoomSpeed = options.wheelZoomSpeed || 0.001;
         this.wheelZoomSmooth = options.wheelZoomSmooth !== false; // Default to true
         this.wheelZoomDuration = options.wheelZoomDuration || 150;
-        
+
         // Zoom history for undo/redo
         this.zoomHistory = [];
         this.maxHistorySize = options.maxHistorySize || 50;
         this.historyIndex = -1;
-        
+
         // Zoom feedback
         this.zoomFeedbackElement = null;
         this.zoomFeedbackTimeout = null;
-        
+
         this.initialize();
     }
 
@@ -37,28 +37,28 @@ export class Zoom {
     setupEventListeners() {
         // Mouse wheel zoom
         this.viewport.svg.addEventListener('wheel', (e) => this.handleWheel(e));
-        
+
         // Keyboard zoom
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
 
     handleWheel(event) {
         event.preventDefault();
-        
+
         const delta = event.deltaY;
         const zoomFactor = delta > 0 ? 0.9 : 1.1;
-        
+
         // Get mouse position relative to SVG
         const rect = this.viewport.svg.getBoundingClientRect();
         const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
-        
+
         // Convert to SVG coordinates
         const svgCoords = this.viewport.screenToSVG(mouseX, mouseY);
-        
+
         // Apply zoom at mouse position
         this.zoomAtPoint(zoomFactor, svgCoords.x, svgCoords.y, this.wheelZoomSmooth);
-        
+
         // Show zoom feedback
         this.showZoomFeedback(event);
     }
@@ -131,12 +131,12 @@ export class Zoom {
 
     setZoom(zoom) {
         const constrainedZoom = Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
-        
+
         // Save to history before changing
         this.saveZoomState();
-        
+
         this.viewport.setZoom(constrainedZoom);
-        
+
         // Update zoom button states
         this.updateZoomButtonStates();
     }
@@ -156,15 +156,15 @@ export class Zoom {
 
         // Remove any states after current index
         this.zoomHistory = this.zoomHistory.slice(0, this.historyIndex + 1);
-        
+
         // Add new state
         this.zoomHistory.push(currentState);
-        
+
         // Limit history size
         if (this.zoomHistory.length > this.maxHistorySize) {
             this.zoomHistory.shift();
         }
-        
+
         this.historyIndex = this.zoomHistory.length - 1;
     }
 
@@ -184,7 +184,7 @@ export class Zoom {
 
     restoreZoomState(state) {
         if (!state) return;
-        
+
         this.viewport.setZoom(state.zoom);
         this.viewport.setPan(state.panX, state.panY);
         this.updateZoomButtonStates();
@@ -230,7 +230,7 @@ export class Zoom {
             z-index: 1000;
             display: none;
         `;
-        
+
         this.viewport.container.appendChild(this.zoomFeedbackElement);
     }
 
@@ -294,4 +294,4 @@ export class Zoom {
             this.zoomFeedbackElement.remove();
         }
     }
-} 
+}

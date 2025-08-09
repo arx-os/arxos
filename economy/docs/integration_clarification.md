@@ -22,7 +22,7 @@
 | Security     | 2.0                       |
 
 ### 💰 ARX Minting Logic
-- Mint formula proposal:  
+- Mint formula proposal:
   `ARX_minted = BaseAmount * ValidationScore * ComplexityMultiplier`
 - Example:
   - A fully validated HVAC VAV object (ValidationScore = 1.0, Complexity = 1.5) → mints 1.5 ARX
@@ -153,4 +153,3 @@ This document ensures the ARX system:
 - Stays legally and financially compliant
 - Maintains developer and contributor trust through transparency
 - Enables rapid prototyping without isolating systems
-

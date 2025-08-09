@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS api_key_usage (
     error_message TEXT,
     rate_limit_hit BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     FOREIGN KEY (api_key_id) REFERENCES data_vendor_api_keys(id) ON DELETE CASCADE
 );
 
@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_api_key_usage_ip_address ON api_key_usage(ip_addr
 CREATE INDEX IF NOT EXISTS idx_api_key_usage_created_at ON api_key_usage(created_at);
 
 -- Add missing columns to data_vendor_api_keys if they don't exist
-ALTER TABLE data_vendor_api_keys 
+ALTER TABLE data_vendor_api_keys
 ADD COLUMN IF NOT EXISTS last_used TIMESTAMP NULL,
 ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMP NULL,
 ADD COLUMN IF NOT EXISTS failed_attempts INTEGER DEFAULT 0,
@@ -44,14 +44,14 @@ CREATE INDEX IF NOT EXISTS idx_data_vendor_api_keys_last_used_at ON data_vendor_
 CREATE INDEX IF NOT EXISTS idx_data_vendor_api_keys_locked_until ON data_vendor_api_keys(locked_until);
 
 -- Add access_level column to buildings table if it doesn't exist
-ALTER TABLE buildings 
+ALTER TABLE buildings
 ADD COLUMN IF NOT EXISTS access_level VARCHAR(50) DEFAULT 'public';
 
 -- Create index for buildings access_level
 CREATE INDEX IF NOT EXISTS idx_buildings_access_level ON buildings(access_level);
 
 -- Add missing columns to industry_benchmarks if they don't exist
-ALTER TABLE industry_benchmarks 
+ALTER TABLE industry_benchmarks
 ADD COLUMN IF NOT EXISTS region VARCHAR(100) DEFAULT 'Global',
 ADD COLUMN IF NOT EXISTS building_type VARCHAR(100),
 ADD COLUMN IF NOT EXISTS confidence_level DECIMAL(3,2) DEFAULT 0.95,
@@ -67,7 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_industry_benchmarks_confidence_level ON industry_
 CREATE OR REPLACE FUNCTION update_api_key_last_used()
 RETURNS TRIGGER AS $$
 BEGIN
-    UPDATE data_vendor_api_keys 
+    UPDATE data_vendor_api_keys
     SET last_used = CURRENT_TIMESTAMP,
         last_used_at = CURRENT_TIMESTAMP
     WHERE id = NEW.api_key_id;
@@ -83,7 +83,7 @@ CREATE TRIGGER update_api_key_last_used_trigger
 
 -- Create view for data vendor usage analytics
 CREATE OR REPLACE VIEW data_vendor_usage_analytics AS
-SELECT 
+SELECT
     dvak.id as api_key_id,
     dvak.vendor_name,
     dvak.access_level,
@@ -101,33 +101,33 @@ GROUP BY dvak.id, dvak.vendor_name, dvak.access_level, dvak.is_active, dvak.crea
 
 -- Create view for billing calculations
 CREATE OR REPLACE VIEW data_vendor_billing AS
-SELECT 
+SELECT
     dvak.id as api_key_id,
     dvak.vendor_name,
     dvak.access_level,
     dvak.is_active,
-    CASE 
+    CASE
         WHEN dvak.access_level = 'basic' THEN 50.0
         WHEN dvak.access_level = 'premium' THEN 150.0
         WHEN dvak.access_level = 'enterprise' THEN 500.0
         ELSE 0.0
     END as monthly_base_rate,
     COUNT(aku.id) as requests_this_month,
-    CASE 
+    CASE
         WHEN COUNT(aku.id) > 10000 THEN (COUNT(aku.id) - 10000) * 0.005
         ELSE 0.0
     END as overage_charges,
-    CASE 
+    CASE
         WHEN dvak.access_level = 'basic' THEN 50.0
         WHEN dvak.access_level = 'premium' THEN 150.0
         WHEN dvak.access_level = 'enterprise' THEN 500.0
         ELSE 0.0
-    END + CASE 
+    END + CASE
         WHEN COUNT(aku.id) > 10000 THEN (COUNT(aku.id) - 10000) * 0.005
         ELSE 0.0
     END as total_monthly_charge
 FROM data_vendor_api_keys dvak
-LEFT JOIN api_key_usage aku ON dvak.id = aku.api_key_id 
+LEFT JOIN api_key_usage aku ON dvak.id = aku.api_key_id
     AND aku.created_at >= DATE_TRUNC('month', CURRENT_DATE)
 WHERE dvak.is_active = true
 GROUP BY dvak.id, dvak.vendor_name, dvak.access_level, dvak.is_active;
@@ -137,4 +137,4 @@ COMMENT ON TABLE data_vendor_api_keys IS 'API keys for external data vendors wit
 COMMENT ON TABLE api_key_usage IS 'Log of all API requests from data vendors for billing and monitoring';
 COMMENT ON TABLE industry_benchmarks IS 'Industry benchmark data for equipment and systems';
 COMMENT ON VIEW data_vendor_usage_analytics IS 'Analytics view for data vendor API usage';
-COMMENT ON VIEW data_vendor_billing IS 'Billing calculations for data vendor API usage'; 
+COMMENT ON VIEW data_vendor_billing IS 'Billing calculations for data vendor API usage';

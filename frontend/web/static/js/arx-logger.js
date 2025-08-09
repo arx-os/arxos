@@ -12,7 +12,7 @@ class ArxLogger {
         this.remoteEndpoint = options.remoteEndpoint || '/api/logs/aggregate';
         this.batchSize = options.batchSize || 10;
         this.batchTimeout = options.batchTimeout || 5000; // 5 seconds
-        
+
         // Log levels
         this.levels = {
             debug: 0,
@@ -21,7 +21,7 @@ class ArxLogger {
             error: 3,
             critical: 4
         };
-        
+
         // Context tracking
         this.correlationId = null;
         this.requestId = null;
@@ -29,27 +29,27 @@ class ArxLogger {
         this.sessionId = null;
         this.buildingId = null;
         this.floorId = null;
-        
+
         // Log batching for remote logging
         this.logBatch = [];
         this.batchTimer = null;
-        
+
         // Performance tracking
         this.performanceStats = {};
-        
+
         // Initialize
         this._generateSessionId();
         this._setupErrorHandling();
         this._startBatchTimer();
     }
-    
+
     /**
      * Generate a unique session ID
      */
     _generateSessionId() {
         this.sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    
+
     /**
      * Generate a correlation ID
      */
@@ -57,7 +57,7 @@ class ArxLogger {
         this.correlationId = 'corr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         return this.correlationId;
     }
-    
+
     /**
      * Generate a request ID
      */
@@ -65,7 +65,7 @@ class ArxLogger {
         this.requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         return this.requestId;
     }
-    
+
     /**
      * Set context for logging
      */
@@ -76,7 +76,7 @@ class ArxLogger {
         if (context.buildingId) this.buildingId = context.buildingId;
         if (context.floorId) this.floorId = context.floorId;
     }
-    
+
     /**
      * Clear context
      */
@@ -87,14 +87,14 @@ class ArxLogger {
         this.buildingId = null;
         this.floorId = null;
     }
-    
+
     /**
      * Check if log level should be output
      */
     _shouldLog(level) {
         return this.levels[level] >= this.levels[this.logLevel];
     }
-    
+
     /**
      * Create structured log entry
      */
@@ -116,67 +116,67 @@ class ArxLogger {
             user_agent: navigator.userAgent,
             metadata: metadata
         };
-        
+
         // Add performance data if available
         if (metadata.performance) {
             entry.performance = metadata.performance;
         }
-        
+
         return entry;
     }
-    
+
     /**
      * Log to console and remote endpoint
      */
     _log(level, message, metadata = {}) {
         if (!this._shouldLog(level)) return;
-        
+
         const entry = this._createLogEntry(level, message, metadata);
-        
+
         // Console logging
-        const consoleMethod = level === 'error' ? 'error' : 
-                             level === 'warning' ? 'warn' : 
+        const consoleMethod = level === 'error' ? 'error' :
+                             level === 'warning' ? 'warn' :
                              level === 'debug' ? 'debug' : 'log';
-        
+
         console[consoleMethod](`[${level.toUpperCase()}] ${message}`, entry);
-        
+
         // Remote logging
         if (this.enableRemoteLogging) {
             this._addToBatch(entry);
         }
     }
-    
+
     /**
      * Add log entry to batch for remote logging
      */
     _addToBatch(entry) {
         this.logBatch.push(entry);
-        
+
         if (this.logBatch.length >= this.batchSize) {
             this._sendBatch();
         }
     }
-    
+
     /**
      * Send log batch to remote endpoint
      */
     async _sendBatch() {
         if (this.logBatch.length === 0) return;
-        
+
         const batch = [...this.logBatch];
         this.logBatch = [];
-        
+
         try {
             const response = await fetch(this.remoteEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': localStorage.getItem('arx_jwt') ? 
+                    'Authorization': localStorage.getItem('arx_jwt') ?
                         'Bearer ' + localStorage.getItem('arx_jwt') : ''
                 },
                 body: JSON.stringify(batch)
             });
-            
+
             if (!response.ok) {
                 console.warn('Failed to send logs to remote endpoint:', response.status);
             }
@@ -184,7 +184,7 @@ class ArxLogger {
             console.warn('Error sending logs to remote endpoint:', error);
         }
     }
-    
+
     /**
      * Start batch timer for periodic log sending
      */
@@ -195,7 +195,7 @@ class ArxLogger {
             }
         }, this.batchTimeout);
     }
-    
+
     /**
      * Setup global error handling
      */
@@ -207,7 +207,7 @@ class ArxLogger {
                 stack: event.reason?.stack
             });
         });
-        
+
         // Handle JavaScript errors
         window.addEventListener('error', (event) => {
             this.error('JavaScript error', {
@@ -218,7 +218,7 @@ class ArxLogger {
                 error: event.error?.stack
             });
         });
-        
+
         // Handle resource loading errors
         window.addEventListener('error', (event) => {
             if (event.target !== window) {
@@ -230,30 +230,30 @@ class ArxLogger {
             }
         }, true);
     }
-    
+
     /**
      * Log methods
      */
     debug(message, metadata = {}) {
         this._log('debug', message, metadata);
     }
-    
+
     info(message, metadata = {}) {
         this._log('info', message, metadata);
     }
-    
+
     warning(message, metadata = {}) {
         this._log('warning', message, metadata);
     }
-    
+
     error(message, metadata = {}) {
         this._log('error', message, metadata);
     }
-    
+
     critical(message, metadata = {}) {
         this._log('critical', message, metadata);
     }
-    
+
     /**
      * Log API request
      */
@@ -267,7 +267,7 @@ class ArxLogger {
             ...metadata
         });
     }
-    
+
     /**
      * Log API error
      */
@@ -282,7 +282,7 @@ class ArxLogger {
             ...metadata
         });
     }
-    
+
     /**
      * Log business event
      */
@@ -294,7 +294,7 @@ class ArxLogger {
             ...metadata
         });
     }
-    
+
     /**
      * Log performance metrics
      */
@@ -304,7 +304,7 @@ class ArxLogger {
             duration,
             ...metadata
         });
-        
+
         // Track performance statistics
         if (!this.performanceStats[operation]) {
             this.performanceStats[operation] = {
@@ -315,7 +315,7 @@ class ArxLogger {
                 avgTime: 0
             };
         }
-        
+
         const stats = this.performanceStats[operation];
         stats.count++;
         stats.totalTime += duration;
@@ -323,14 +323,14 @@ class ArxLogger {
         stats.maxTime = Math.max(stats.maxTime, duration);
         stats.avgTime = stats.totalTime / stats.count;
     }
-    
+
     /**
      * Get performance statistics
      */
     getPerformanceStats() {
         return this.performanceStats;
     }
-    
+
     /**
      * Log user interaction
      */
@@ -343,7 +343,7 @@ class ArxLogger {
             ...metadata
         });
     }
-    
+
     /**
      * Log page navigation
      */
@@ -354,7 +354,7 @@ class ArxLogger {
             ...metadata
         });
     }
-    
+
     /**
      * Log form submission
      */
@@ -365,7 +365,7 @@ class ArxLogger {
             ...metadata
         });
     }
-    
+
     /**
      * Log asset operation
      */
@@ -377,7 +377,7 @@ class ArxLogger {
             ...metadata
         });
     }
-    
+
     /**
      * Performance tracker decorator
      */
@@ -385,34 +385,34 @@ class ArxLogger {
         return (target, propertyKey, descriptor) => {
             const method = descriptor.value;
             const opName = operationName || `${target.constructor.name}.${propertyKey}`;
-            
+
             descriptor.value = async function(...args) {
                 const startTime = performance.now();
-                
+
                 try {
                     const result = await method.apply(this, args);
                     const duration = performance.now() - startTime;
-                    
+
                     if (window.arxLogger) {
                         window.arxLogger.logPerformance(opName, duration);
                     }
-                    
+
                     return result;
                 } catch (error) {
                     const duration = performance.now() - startTime;
-                    
+
                     if (window.arxLogger) {
                         window.arxLogger.logPerformance(opName, duration, { error: error.message });
                     }
-                    
+
                     throw error;
                 }
             };
-            
+
             return descriptor;
         };
     }
-    
+
     /**
      * Cleanup and send remaining logs
      */
@@ -420,7 +420,7 @@ class ArxLogger {
         if (this.batchTimer) {
             clearInterval(this.batchTimer);
         }
-        
+
         if (this.logBatch.length > 0) {
             await this._sendBatch();
         }
@@ -440,4 +440,4 @@ window.arxLogger = new ArxLogger({
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ArxLogger;
-} 
+}

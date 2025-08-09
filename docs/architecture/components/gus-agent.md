@@ -4,8 +4,8 @@
 
 **GUS (General User Support)** is the primary AI agent for the Arxos platform, providing intelligent assistance, natural language processing, and automated support for all Arxos operations. GUS serves as the central intelligence hub for building information modeling, CAD operations, and platform guidance.
 
-**Status**: 🔄 **IN DEVELOPMENT**  
-**Priority**: HIGH  
+**Status**: 🔄 **IN DEVELOPMENT**
+**Priority**: HIGH
 **Timeline**: Weeks 1-12
 
 ---
@@ -246,12 +246,12 @@ const gusAssistant = {
   helpWithDrawing: async (userQuery) => {
     return await gusAPI.analyzeDrawingRequest(userQuery);
   },
-  
+
   // Precision guidance
   validatePrecision: async (coordinates) => {
     return await gusAPI.validatePrecision(coordinates);
   },
-  
+
   // Constraint assistance
   suggestConstraints: async (geometry) => {
     return await gusAPI.suggestConstraints(geometry);
@@ -340,19 +340,19 @@ python main.py
 gus:
   name: "General User Support"
   version: "1.0.0"
-  
+
   # AI Models
   models:
     nlp: "gpt-4"
     embedding: "text-embedding-ada-002"
     reasoning: "claude-3-sonnet"
-  
+
   # Knowledge Base
   knowledge:
     building_codes: "data/building_codes/"
     engineering_standards: "data/standards/"
     arxos_documentation: "data/arxos/"
-    
+
   # Integration
   integrations:
     browser_cad: "http://localhost:3000"
@@ -429,6 +429,6 @@ monitor.track_user_satisfaction()
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Active Development 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Active Development

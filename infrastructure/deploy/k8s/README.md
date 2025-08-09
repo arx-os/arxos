@@ -79,10 +79,10 @@ k8s/
    # For production
    kubectl apply -f environments/production.yaml
    kubectl apply -f environments/production-svgx.yaml
-   
+
    # For staging
    kubectl apply -f environments/staging.yaml
-   
+
    # For development
    kubectl apply -f environments/dev.yaml
    ```
@@ -217,4 +217,4 @@ Use Kubernetes rollback:
 ```bash
 kubectl rollout undo deployment/svgx-engine -n arxos
 kubectl rollout undo deployment/arxos-export-service -n arxos
-``` 
+```

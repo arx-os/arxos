@@ -28,13 +28,13 @@ data:
     environment: production
     debug: false
     strict_validation: true
-    
+
     limits:
       max_file_size_mb: 1000
       max_concurrent_exports: 10
       max_export_duration_minutes: 60
       max_objects_per_export: 100000
-    
+
     formats:
       allowed_formats:
         - ifc-lite
@@ -49,18 +49,18 @@ data:
         - medium
         - high
       default_quality: medium
-    
+
     performance:
       max_memory_usage_mb: 2048
       cpu_throttling: true
       enable_caching: true
       cache_ttl_seconds: 3600
-    
+
     validation:
       enable_data_validation: true
       enable_quality_checks: true
       strict_mode: true
-    
+
     security:
       enable_authentication: true
       enable_encryption: true
@@ -349,4 +349,4 @@ spec:
     - protocol: TCP
       port: 53
     - protocol: UDP
-      port: 53 
+      port: 53

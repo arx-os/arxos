@@ -12,7 +12,7 @@ import os
 
 async def test_app():
     """Test the SVGX Engine application"""
-    
+
     # Start the application
     print("Starting SVGX Engine application...")
     process = subprocess.Popen(
@@ -21,11 +21,11 @@ async def test_app():
         stderr=subprocess.PIPE,
         text=True
     )
-    
+
     # Wait for application to start
     print("Waiting for application to start...")
     await asyncio.sleep(5)
-    
+
     try:
         # Test health endpoint
         print("Testing health endpoint...")
@@ -37,7 +37,7 @@ async def test_app():
                 else:
                     print(f"❌ Health check failed: {response.status}")
                     return False
-        
+
         # Test parse endpoint
         print("Testing parse endpoint...")
         parse_payload = {
@@ -48,7 +48,7 @@ async def test_app():
             </svgx>
             '''
         }
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.post('http://localhost:8000/parse', json=parse_payload) as response:
                 if response.status == 200:
@@ -57,7 +57,7 @@ async def test_app():
                 else:
                     print(f"❌ Parse test failed: {response.status}")
                     return False
-        
+
         # Test evaluate endpoint
         print("Testing evaluate endpoint...")
         evaluate_payload = {
@@ -67,7 +67,7 @@ async def test_app():
             </svgx>
             '''
         }
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.post('http://localhost:8000/evaluate', json=evaluate_payload) as response:
                 if response.status == 200:
@@ -76,7 +76,7 @@ async def test_app():
                 else:
                     print(f"❌ Evaluate test failed: {response.status}")
                     return False
-        
+
         # Test simulate endpoint
         print("Testing simulate endpoint...")
         simulate_payload = {
@@ -86,7 +86,7 @@ async def test_app():
             </svgx>
             '''
         }
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.post('http://localhost:8000/simulate', json=simulate_payload) as response:
                 if response.status == 200:
@@ -95,10 +95,10 @@ async def test_app():
                 else:
                     print(f"❌ Simulate test failed: {response.status}")
                     return False
-        
+
         print("🎉 All tests passed!")
         return True
-        
+
     except Exception as e:
         print(f"❌ Test failed: {e}")
         return False
@@ -110,5 +110,5 @@ async def test_app():
         print("Application stopped")
 
 if __name__ == "__main__":
-    success = asyncio.run(test_app())
-    sys.exit(0 if success else 1) 
+    success = asyncio.run(test_app()
+    sys.exit(0 if success else 1)

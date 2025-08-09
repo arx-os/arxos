@@ -1,7 +1,7 @@
 /**
  * Arxos CAD Engine - Core Drawing Engine
  * Handles Canvas 2D rendering, precision drawing, and Web Workers integration for high-performance CAD operations
- * 
+ *
  * @author Arxos Team
  * @version 1.2.0 - Enhanced CAD Features and Parametric Modeling
  * @license MIT
@@ -12,19 +12,19 @@ class CadEngine {
         this.canvas = null;
         this.ctx = null;
         this.isInitialized = false;
-        
+
         // Drawing state
         this.currentTool = 'select';
         this.isDrawing = false;
         this.startPoint = null;
         this.currentPoint = null;
-        
+
         // Enhanced precision settings
         this.precision = 0.001; // Sub-millimeter precision (0.001 inches)
         this.units = 'inches';
         this.scale = 1.0;
         this.gridSize = 0.1; // Grid size in current units
-        
+
         // CAD-level precision system
         this.precisionLevels = {
             'UI': 0.01,      // UI precision (0.01 inches)
@@ -32,76 +32,76 @@ class CadEngine {
             'COMPUTE': 0.0001 // Compute precision (0.0001 inches)
         };
         this.currentPrecisionLevel = 'EDIT';
-        
+
         // Geometric constraint system
         this.constraints = new Map();
         this.constraintSolver = new ConstraintSolver();
-        
+
         // Parametric modeling system
         this.parameters = new Map();
         this.parametricObjects = new Map();
         this.parameterId = 0;
-        
+
         // Performance tracking
         this.fps = 60;
         this.lastFrameTime = 0;
         this.frameCount = 0;
-        
+
         // ArxObjects storage
         this.arxObjects = new Map();
         this.selectedObjects = new Set();
-        
+
         // Web Workers
         this.workers = new Map();
         this.workerId = 0;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
         this.eventListeners = new Map();
-        
+
         // Initialize Web Workers
         this.initializeWorkers();
     }
-    
+
     /**
      * Initialize the CAD engine
      */
     async initialize(canvasId = 'cad-canvas') {
         try {
             console.log('Initializing Arxos CAD Engine...');
-            
+
             // Get canvas and context
             this.canvas = document.getElementById(canvasId);
             if (!this.canvas) {
                 throw new Error(`Canvas element with id '${canvasId}' not found`);
             }
-            
+
             this.ctx = this.canvas.getContext('2d');
             if (!this.ctx) {
                 throw new Error('Could not get 2D context');
             }
-            
+
             // Set canvas size
             this.resizeCanvas();
-            
+
             // Initialize drawing tools (only if we're in the main CAD interface)
             if (canvasId === 'cad-canvas') {
                 this.initializeDrawingTools();
                 this.initializeEventListeners();
             }
-            
+
             // Start render loop
             this.startRenderLoop();
-            
+
             this.isInitialized = true;
             console.log('Arxos CAD Engine initialized successfully');
-            
+
         } catch (error) {
             console.error('Failed to initialize CAD Engine:', error);
             throw error;
         }
     }
-    
+
     /**
      * Initialize Web Workers for background processing
      */
@@ -113,28 +113,28 @@ class CadEngine {
                 this.handleWorkerMessage('svgx', event.data);
             };
             this.workers.set('svgx', svgxWorker);
-            
+
             // Geometry Processing Worker
             const geometryWorker = new Worker('./static/js/cad-workers.js');
             geometryWorker.onmessage = (event) => {
                 this.handleWorkerMessage('geometry', event.data);
             };
             this.workers.set('geometry', geometryWorker);
-            
+
             // Constraint Solver Worker
             const constraintWorker = new Worker('./static/js/cad-workers.js');
             constraintWorker.onmessage = (event) => {
                 this.handleWorkerMessage('constraints', event.data);
             };
             this.workers.set('constraints', constraintWorker);
-            
+
             console.log('Web Workers initialized:', this.workers.size, 'workers');
         } catch (error) {
             console.warn('Web Workers not available:', error);
             // Continue without Web Workers for now
         }
     }
-    
+
     /**
      * Handle messages from Web Workers
      */
@@ -153,7 +153,7 @@ class CadEngine {
                 console.warn('Unknown worker type:', workerType);
         }
     }
-    
+
     /**
      * Handle SVGX worker messages
      */
@@ -169,7 +169,7 @@ class CadEngine {
                 console.warn('Unknown SVGX message type:', data.type);
         }
     }
-    
+
     /**
      * Handle geometry worker messages
      */
@@ -185,7 +185,7 @@ class CadEngine {
                 console.warn('Unknown geometry message type:', data.type);
         }
     }
-    
+
     /**
      * Handle constraint worker messages
      */
@@ -201,24 +201,24 @@ class CadEngine {
                 console.warn('Unknown constraint message type:', data.type);
         }
     }
-    
+
     /**
      * Resize canvas to fit container
      */
     resizeCanvas() {
         const container = this.canvas.parentElement;
         const rect = container.getBoundingClientRect();
-        
+
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
-        
+
         // Update canvas style
         this.canvas.style.width = rect.width + 'px';
         this.canvas.style.height = rect.height + 'px';
-        
+
         console.log('Canvas resized to:', rect.width, 'x', rect.height);
     }
-    
+
     /**
      * Initialize drawing tools
      */
@@ -228,13 +228,13 @@ class CadEngine {
         toolButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 this.setCurrentTool(button.dataset.tool);
-                
+
                 // Update active state
                 toolButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
             });
         });
-        
+
         // Precision selection
         const precisionSelect = document.getElementById('precision-select');
         if (precisionSelect) {
@@ -243,7 +243,7 @@ class CadEngine {
             });
         }
     }
-    
+
     /**
      * Initialize event listeners
      */
@@ -252,29 +252,29 @@ class CadEngine {
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        
+
         // Keyboard events
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
         document.addEventListener('keyup', (e) => this.handleKeyUp(e));
-        
+
         // Window resize
         window.addEventListener('resize', () => this.resizeCanvas());
-        
+
         // Touch events for mobile
         this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e));
         this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e));
         this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e));
     }
-    
+
     /**
      * Handle mouse down event
      */
     handleMouseDown(event) {
         const point = this.getCanvasPoint(event);
         if (!point) return; // Exit if point is invalid
-        
+
         this.startPoint = this.snapToGrid(point);
-        
+
         switch (this.currentTool) {
             case 'select':
                 this.selectObjectAtPoint(this.startPoint);
@@ -286,26 +286,26 @@ class CadEngine {
                 this.currentPoint = this.startPoint;
                 break;
         }
-        
+
         this.updateMouseCoordinates(this.startPoint);
     }
-    
+
     /**
      * Handle mouse move event
      */
     handleMouseMove(event) {
         const point = this.getCanvasPoint(event);
         if (!point) return; // Exit if point is invalid
-        
+
         this.currentPoint = this.snapToGrid(point);
-        
+
         if (this.isDrawing) {
             this.previewDrawing();
         }
-        
+
         this.updateMouseCoordinates(this.currentPoint);
     }
-    
+
     /**
      * Handle mouse up event
      */
@@ -315,7 +315,7 @@ class CadEngine {
             this.isDrawing = false;
         }
     }
-    
+
     /**
      * Handle key down event
      */
@@ -340,14 +340,14 @@ class CadEngine {
                 break;
         }
     }
-    
+
     /**
      * Handle key up event
      */
     handleKeyUp(event) {
         // Handle key up events if needed
     }
-    
+
     /**
      * Handle touch events for mobile
      */
@@ -360,7 +360,7 @@ class CadEngine {
         });
         this.handleMouseDown(mouseEvent);
     }
-    
+
     handleTouchMove(event) {
         event.preventDefault();
         const touch = event.touches[0];
@@ -370,13 +370,13 @@ class CadEngine {
         });
         this.handleMouseMove(mouseEvent);
     }
-    
+
     handleTouchEnd(event) {
         event.preventDefault();
         const mouseEvent = new MouseEvent('mouseup', {});
         this.handleMouseUp(mouseEvent);
     }
-    
+
     /**
      * Enhanced precision coordinate calculation with sub-millimeter accuracy
      * @param {number} x - Raw x coordinate
@@ -386,18 +386,18 @@ class CadEngine {
     calculatePrecisionPoint(x, y) {
         // Convert to current units and apply precision
         const precision = this.precisionLevels[this.currentPrecisionLevel];
-        
+
         // Apply sub-millimeter precision (0.001 inches = 0.0254 mm)
         const precisionX = Math.round(x / precision) * precision;
         const precisionY = Math.round(y / precision) * precision;
-        
+
         // Validate precision bounds
         const maxCoordinate = 1000000; // 1 million units
         if (Math.abs(precisionX) > maxCoordinate || Math.abs(precisionY) > maxCoordinate) {
             console.warn('Coordinate out of bounds:', { x: precisionX, y: precisionY });
             return null;
         }
-        
+
         return {
             x: precisionX,
             y: precisionY,
@@ -416,9 +416,9 @@ class CadEngine {
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
         const scaleY = this.canvas.height / rect.height;
-        
+
         let clientX, clientY;
-        
+
         if (event.touches && event.touches.length > 0) {
             clientX = event.touches[0].clientX;
             clientY = event.touches[0].clientY;
@@ -426,19 +426,19 @@ class CadEngine {
             clientX = event.clientX;
             clientY = event.clientY;
         }
-        
+
         const canvasX = (clientX - rect.left) * scaleX;
         const canvasY = (clientY - rect.top) * scaleY;
-        
+
         // Apply precision and grid snapping
         const precisionPoint = this.calculatePrecisionPoint(canvasX, canvasY);
         if (!precisionPoint) return null;
-        
+
         // Apply grid snapping if enabled
         if (document.getElementById('grid-snap')?.checked) {
             return this.snapToGrid(precisionPoint);
         }
-        
+
         return precisionPoint;
     }
 
@@ -450,13 +450,13 @@ class CadEngine {
     snapToGrid(point) {
         const gridSize = parseFloat(document.getElementById('grid-size')?.value || this.gridSize);
         const precision = this.precisionLevels[this.currentPrecisionLevel];
-        
+
         // Use the smaller of grid size or precision for snapping
         const snapSize = Math.min(gridSize, precision);
-        
+
         const snappedX = Math.round(point.x / snapSize) * snapSize;
         const snappedY = Math.round(point.y / snapSize) * snapSize;
-        
+
         return {
             ...point,
             x: snappedX,
@@ -475,21 +475,21 @@ class CadEngine {
             console.error('Invalid precision level:', level);
             return;
         }
-        
+
         this.currentPrecisionLevel = level;
         this.precision = this.precisionLevels[level];
-        
+
         // Update UI
         const precisionSelect = document.getElementById('precision-level');
         if (precisionSelect) {
             precisionSelect.value = level;
         }
-        
+
         // Update status bar
         this.updateMouseCoordinates({ x: 0, y: 0 });
-        
+
         console.log(`Precision level set to: ${level} (${this.precision} ${this.units})`);
-        
+
         // Dispatch precision change event
         this.dispatchEvent('precisionChanged', {
             level: level,
@@ -512,7 +512,7 @@ class CadEngine {
             coordsElement.textContent = `X: ${x}" Y: ${y}" (${this.currentPrecisionLevel})`;
         }
     }
-    
+
     /**
      * Set current drawing tool
      */
@@ -520,23 +520,23 @@ class CadEngine {
         this.currentTool = tool;
         console.log('Current tool set to:', tool);
     }
-    
+
     /**
      * Preview drawing in real-time
      */
     previewDrawing() {
         if (!this.startPoint || !this.currentPoint) return;
-        
+
         // Clear canvas and redraw all objects
         this.clearCanvas();
         this.drawAllObjects();
-        
+
         // Draw preview based on current tool
         this.ctx.save();
         this.ctx.strokeStyle = '#3B82F6';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([5, 5]);
-        
+
         switch (this.currentTool) {
             case 'line':
                 this.drawLine(this.startPoint, this.currentPoint);
@@ -548,29 +548,29 @@ class CadEngine {
                 this.drawCircle(this.startPoint, this.currentPoint);
                 break;
         }
-        
+
         this.ctx.restore();
     }
-    
+
     /**
      * Finish drawing and create ArxObject
      */
     finishDrawing() {
         if (!this.startPoint || !this.currentPoint) return;
-        
+
         const arxObject = this.createArxObject(this.startPoint, this.currentPoint);
         if (arxObject) {
             this.addArxObject(arxObject);
             this.render();
         }
     }
-    
+
     /**
      * Create ArxObject based on current tool
      */
     createArxObject(startPoint, endPoint) {
         const id = this.generateObjectId();
-        
+
         switch (this.currentTool) {
             case 'line':
                 return {
@@ -585,7 +585,7 @@ class CadEngine {
                     constraints: [],
                     measurements: []
                 };
-                
+
             case 'rectangle':
                 return {
                     id: id,
@@ -600,7 +600,7 @@ class CadEngine {
                     constraints: [],
                     measurements: []
                 };
-                
+
             case 'circle':
                 const radius = this.calculateDistance(startPoint, endPoint);
                 return {
@@ -616,24 +616,24 @@ class CadEngine {
                     constraints: [],
                     measurements: []
                 };
-                
+
             default:
                 return null;
         }
     }
-    
+
     /**
      * Add ArxObject to the drawing
      */
     addArxObject(arxObject) {
         this.arxObjects.set(arxObject.id, arxObject);
-        
+
         // Send to Web Workers for processing
         this.processArxObject(arxObject);
-        
+
         console.log('Added ArxObject:', arxObject);
     }
-    
+
     /**
      * Process ArxObject with Web Workers
      */
@@ -647,7 +647,7 @@ class CadEngine {
                 object: arxObject
             });
         }
-        
+
         // Send to geometry worker for calculations
         const geometryWorker = this.workers.get('geometry');
         if (geometryWorker) {
@@ -658,7 +658,7 @@ class CadEngine {
             });
         }
     }
-    
+
     /**
      * Start render loop
      */
@@ -670,7 +670,7 @@ class CadEngine {
         };
         render();
     }
-    
+
     /**
      * Main render function
      */
@@ -680,25 +680,25 @@ class CadEngine {
         this.drawAllObjects();
         this.drawSelection();
     }
-    
+
     /**
      * Clear canvas
      */
     clearCanvas() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
-    
+
     /**
      * Draw grid
      */
     drawGrid() {
         const gridSize = 10 * this.scale;
         const gridColor = '#374151';
-        
+
         this.ctx.save();
         this.ctx.strokeStyle = gridColor;
         this.ctx.lineWidth = 1;
-        
+
         // Draw vertical lines
         for (let x = 0; x <= this.canvas.width; x += gridSize) {
             this.ctx.beginPath();
@@ -706,7 +706,7 @@ class CadEngine {
             this.ctx.lineTo(x, this.canvas.height);
             this.ctx.stroke();
         }
-        
+
         // Draw horizontal lines
         for (let y = 0; y <= this.canvas.height; y += gridSize) {
             this.ctx.beginPath();
@@ -714,10 +714,10 @@ class CadEngine {
             this.ctx.lineTo(this.canvas.width, y);
             this.ctx.stroke();
         }
-        
+
         this.ctx.restore();
     }
-    
+
     /**
      * Draw all ArxObjects
      */
@@ -726,13 +726,13 @@ class CadEngine {
             this.drawArxObject(arxObject);
         }
     }
-    
+
     /**
      * Draw single ArxObject
      */
     drawArxObject(arxObject) {
         this.ctx.save();
-        
+
         // Set color based on selection
         if (this.selectedObjects.has(arxObject.id)) {
             this.ctx.strokeStyle = '#3B82F6';
@@ -741,7 +741,7 @@ class CadEngine {
             this.ctx.strokeStyle = '#1F2937';
             this.ctx.lineWidth = 2;
         }
-        
+
         switch (arxObject.type) {
             case 'line':
                 this.drawLine(arxObject.startPoint, arxObject.endPoint);
@@ -753,10 +753,10 @@ class CadEngine {
                 this.drawCircle(arxObject.center, { x: arxObject.center.x + arxObject.radius, y: arxObject.center.y });
                 break;
         }
-        
+
         this.ctx.restore();
     }
-    
+
     /**
      * Draw line
      */
@@ -766,7 +766,7 @@ class CadEngine {
         this.ctx.lineTo(endPoint.x * this.scale, endPoint.y * this.scale);
         this.ctx.stroke();
     }
-    
+
     /**
      * Draw rectangle
      */
@@ -775,21 +775,21 @@ class CadEngine {
         const y = Math.min(startPoint.y, endPoint.y) * this.scale;
         const width = Math.abs(endPoint.x - startPoint.x) * this.scale;
         const height = Math.abs(endPoint.y - startPoint.y) * this.scale;
-        
+
         this.ctx.strokeRect(x, y, width, height);
     }
-    
+
     /**
      * Draw circle
      */
     drawCircle(center, endPoint) {
         const radius = this.calculateDistance(center, endPoint) * this.scale;
-        
+
         this.ctx.beginPath();
         this.ctx.arc(center.x * this.scale, center.y * this.scale, radius, 0, 2 * Math.PI);
         this.ctx.stroke();
     }
-    
+
     /**
      * Draw selection indicators
      */
@@ -801,7 +801,7 @@ class CadEngine {
             }
         }
     }
-    
+
     /**
      * Draw selection box around object
      */
@@ -809,28 +809,28 @@ class CadEngine {
         // Implementation for selection box drawing
         // This would draw handles around selected objects
     }
-    
+
     /**
      * Update performance metrics
      */
     updatePerformance() {
         const now = performance.now();
         const deltaTime = now - this.lastFrameTime;
-        
+
         if (deltaTime > 0) {
             this.fps = 1000 / deltaTime;
         }
-        
+
         this.lastFrameTime = now;
         this.frameCount++;
-        
+
         // Update performance display
         const performanceElement = document.getElementById('performance-info');
         if (performanceElement) {
             performanceElement.textContent = `FPS: ${Math.round(this.fps)} | Objects: ${this.arxObjects.size}`;
         }
     }
-    
+
     /**
      * Utility functions
      */
@@ -838,23 +838,23 @@ class CadEngine {
         const dx = point2.x - point1.x;
         const dy = point2.y - point1.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         // Round to current precision level
         const precision = this.precisionLevels[this.currentPrecisionLevel];
         return Math.round(distance / precision) * precision;
     }
-    
+
     calculateAngle(point1, point2) {
         const angle = Math.atan2(point2.y - point1.y, point2.x - point1.x) * 180 / Math.PI;
-        
+
         // Round to 0.1 degrees for CAD precision
         return Math.round(angle * 10) / 10;
     }
-    
+
     generateObjectId() {
         return 'arx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    
+
     /**
      * Selection methods
      */
@@ -867,43 +867,43 @@ class CadEngine {
                 return;
             }
         }
-        
+
         // Clear selection if no object found
         this.selectedObjects.clear();
         this.updatePropertiesPanel(null);
     }
-    
+
     isPointInObject(point, arxObject) {
         // Implementation for point-in-object detection
         // This would check if a point is within an object's bounds
         return false; // Placeholder
     }
-    
+
     /**
      * Update properties panel
      */
     updatePropertiesPanel(arxObject) {
         const propertiesContent = document.getElementById('properties-content');
         if (!propertiesContent) return;
-        
+
         if (arxObject) {
             propertiesContent.innerHTML = this.generatePropertiesHTML(arxObject);
         } else {
             propertiesContent.innerHTML = '<div class="text-gray-400 text-sm">Select an object to view properties</div>';
         }
     }
-    
+
     generatePropertiesHTML(arxObject) {
         // Generate HTML for object properties
         return `<div class="space-y-2">
             <div><strong>Type:</strong> ${arxObject.type}</div>
             <div><strong>ID:</strong> ${arxObject.id}</div>
-            ${Object.entries(arxObject.properties).map(([key, value]) => 
+            ${Object.entries(arxObject.properties).map(([key, value]) =>
                 `<div><strong>${key}:</strong> ${value}</div>`
             ).join('')}
         </div>`;
     }
-    
+
     /**
      * Delete selected objects
      */
@@ -914,7 +914,7 @@ class CadEngine {
         this.selectedObjects.clear();
         this.updatePropertiesPanel(null);
     }
-    
+
     /**
      * Cancel current drawing
      */
@@ -923,18 +923,18 @@ class CadEngine {
         this.startPoint = null;
         this.currentPoint = null;
     }
-    
+
     /**
      * Undo/Redo (placeholder)
      */
     undo() {
         console.log('Undo not implemented yet');
     }
-    
+
     redo() {
         console.log('Redo not implemented yet');
     }
-    
+
     /**
      * Event system methods
      */
@@ -944,7 +944,7 @@ class CadEngine {
         }
         this.eventListeners.get(eventType).push(callback);
     }
-    
+
     removeEventListener(eventType, callback) {
         if (this.eventListeners.has(eventType)) {
             const listeners = this.eventListeners.get(eventType);
@@ -954,7 +954,7 @@ class CadEngine {
             }
         }
     }
-    
+
     dispatchEvent(eventType, data) {
         if (this.eventListeners.has(eventType)) {
             const listeners = this.eventListeners.get(eventType);
@@ -967,7 +967,7 @@ class CadEngine {
             });
         }
     }
-    
+
     /**
      * Export to SVG
      */
@@ -976,11 +976,11 @@ class CadEngine {
         svg.setAttribute('width', this.canvas.width);
         svg.setAttribute('height', this.canvas.height);
         svg.setAttribute('viewBox', `0 0 ${this.canvas.width} ${this.canvas.height}`);
-        
+
         // Add grid
         const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         gridGroup.setAttribute('id', 'grid');
-        
+
         const gridSize = 10 * this.scale;
         for (let x = 0; x <= this.canvas.width; x += gridSize) {
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -992,7 +992,7 @@ class CadEngine {
             line.setAttribute('stroke-width', '1');
             gridGroup.appendChild(line);
         }
-        
+
         for (let y = 0; y <= this.canvas.height; y += gridSize) {
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             line.setAttribute('x1', 0);
@@ -1003,14 +1003,14 @@ class CadEngine {
             line.setAttribute('stroke-width', '1');
             gridGroup.appendChild(line);
         }
-        
+
         svg.appendChild(gridGroup);
-        
+
         // Add objects
         for (const [id, arxObject] of this.arxObjects) {
             const objectGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
             objectGroup.setAttribute('id', arxObject.id);
-            
+
             switch (arxObject.type) {
                 case 'line':
                     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -1022,14 +1022,14 @@ class CadEngine {
                     line.setAttribute('stroke-width', '2');
                     objectGroup.appendChild(line);
                     break;
-                    
+
                 case 'rectangle':
                     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                     const x = Math.min(arxObject.startPoint.x, arxObject.endPoint.x) * this.scale;
                     const y = Math.min(arxObject.startPoint.y, arxObject.endPoint.y) * this.scale;
                     const width = Math.abs(arxObject.endPoint.x - arxObject.startPoint.x) * this.scale;
                     const height = Math.abs(arxObject.endPoint.y - arxObject.startPoint.y) * this.scale;
-                    
+
                     rect.setAttribute('x', x);
                     rect.setAttribute('y', y);
                     rect.setAttribute('width', width);
@@ -1039,11 +1039,11 @@ class CadEngine {
                     rect.setAttribute('fill', 'none');
                     objectGroup.appendChild(rect);
                     break;
-                    
+
                 case 'circle':
                     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                     const radius = arxObject.radius * this.scale;
-                    
+
                     circle.setAttribute('cx', arxObject.center.x * this.scale);
                     circle.setAttribute('cy', arxObject.center.y * this.scale);
                     circle.setAttribute('r', radius);
@@ -1053,13 +1053,13 @@ class CadEngine {
                     objectGroup.appendChild(circle);
                     break;
             }
-            
+
             svg.appendChild(objectGroup);
         }
-        
+
         return new XMLSerializer().serializeToString(svg);
     }
-    
+
     /**
      * Update ArxObject
      */
@@ -1068,20 +1068,20 @@ class CadEngine {
         if (!arxObject) {
             throw new Error('Object not found');
         }
-        
+
         // Update properties
         if (updates.properties) {
             arxObject.properties = { ...arxObject.properties, ...updates.properties };
         }
-        
+
         // Update geometry
         if (updates.geometry) {
             arxObject.geometry = { ...arxObject.geometry, ...updates.geometry };
         }
-        
+
         // Dispatch event
         this.dispatchEvent('objectUpdated', { objectId, arxObject });
-        
+
         return arxObject;
     }
 
@@ -1098,7 +1098,7 @@ class CadEngine {
      */
     defineParameter(name, value, constraints = {}) {
         const parameterId = `param_${++this.parameterId}`;
-        
+
         const parameter = {
             id: parameterId,
             name: name,
@@ -1106,13 +1106,13 @@ class CadEngine {
             constraints: constraints,
             createdAt: Date.now()
         };
-        
+
         this.parameters.set(parameterId, parameter);
         console.log(`Defined parameter: ${name} = ${value}`, parameter);
-        
+
         // Dispatch event
         this.dispatchEvent('parameterDefined', { parameterId, parameter });
-        
+
         return parameterId;
     }
 
@@ -1126,7 +1126,7 @@ class CadEngine {
         if (!parameter) {
             throw new Error(`Parameter not found: ${parameterId}`);
         }
-        
+
         // Validate constraints
         if (parameter.constraints.min !== undefined && newValue < parameter.constraints.min) {
             throw new Error(`Value ${newValue} is below minimum ${parameter.constraints.min}`);
@@ -1134,16 +1134,16 @@ class CadEngine {
         if (parameter.constraints.max !== undefined && newValue > parameter.constraints.max) {
             throw new Error(`Value ${newValue} is above maximum ${parameter.constraints.max}`);
         }
-        
+
         parameter.value = newValue;
         parameter.updatedAt = Date.now();
-        
+
         // Update all parametric objects that depend on this parameter
         this.updateParametricObjects(parameterId);
-        
+
         // Dispatch event
         this.dispatchEvent('parameterUpdated', { parameterId, parameter });
-        
+
         console.log(`Updated parameter: ${parameter.name} = ${newValue}`);
     }
 
@@ -1156,7 +1156,7 @@ class CadEngine {
      */
     createParametricObject(type, parameters, geometry) {
         const objectId = this.generateObjectId();
-        
+
         const parametricObject = {
             id: objectId,
             type: type,
@@ -1164,17 +1164,17 @@ class CadEngine {
             baseGeometry: geometry,
             createdAt: Date.now()
         };
-        
+
         this.parametricObjects.set(objectId, parametricObject);
-        
+
         // Generate initial geometry
         this.generateParametricGeometry(objectId);
-        
+
         console.log(`Created parametric object: ${type}`, parametricObject);
-        
+
         // Dispatch event
         this.dispatchEvent('parametricObjectCreated', { objectId, parametricObject });
-        
+
         return objectId;
     }
 
@@ -1187,7 +1187,7 @@ class CadEngine {
         if (!parametricObject) {
             throw new Error(`Parametric object not found: ${objectId}`);
         }
-        
+
         // Calculate parameter values
         const parameterValues = {};
         for (const [paramName, paramId] of Object.entries(parametricObject.parameters)) {
@@ -1196,7 +1196,7 @@ class CadEngine {
                 parameterValues[paramName] = parameter.value;
             }
         }
-        
+
         // Generate geometry based on type and parameters
         let geometry;
         switch (parametricObject.type) {
@@ -1212,7 +1212,7 @@ class CadEngine {
             default:
                 throw new Error(`Unknown parametric object type: ${parametricObject.type}`);
         }
-        
+
         // Create or update ArxObject
         const arxObject = {
             id: objectId,
@@ -1221,9 +1221,9 @@ class CadEngine {
             isParametric: true,
             parameterDependencies: parametricObject.parameters
         };
-        
+
         this.arxObjects.set(objectId, arxObject);
-        
+
         // Dispatch event
         this.dispatchEvent('parametricGeometryGenerated', { objectId, geometry });
     }
@@ -1239,7 +1239,7 @@ class CadEngine {
         const height = parameters.height || baseGeometry.height || 1;
         const x = parameters.x || baseGeometry.x || 0;
         const y = parameters.y || baseGeometry.y || 0;
-        
+
         return {
             type: 'rectangle',
             startPoint: { x: x, y: y },
@@ -1259,7 +1259,7 @@ class CadEngine {
         const radius = parameters.radius || baseGeometry.radius || 1;
         const centerX = parameters.centerX || baseGeometry.centerX || 0;
         const centerY = parameters.centerY || baseGeometry.centerY || 0;
-        
+
         return {
             type: 'circle',
             center: { x: centerX, y: centerY },
@@ -1278,7 +1278,7 @@ class CadEngine {
         const startY = parameters.startY || baseGeometry.startY || 0;
         const endX = parameters.endX || baseGeometry.endX || 1;
         const endY = parameters.endY || baseGeometry.endY || 1;
-        
+
         return {
             type: 'line',
             startPoint: { x: startX, y: startY },
@@ -1294,7 +1294,7 @@ class CadEngine {
         for (const [objectId, parametricObject] of this.parametricObjects) {
             // Check if this object depends on the updated parameter
             const dependsOnParameter = Object.values(parametricObject.parameters).includes(parameterId);
-            
+
             if (dependsOnParameter) {
                 this.generateParametricGeometry(objectId);
             }
@@ -1324,19 +1324,19 @@ class CadEngine {
     removeParameter(parameterId) {
         if (this.parameters.has(parameterId)) {
             this.parameters.delete(parameterId);
-            
+
             // Remove parametric objects that depend on this parameter
             for (const [objectId, parametricObject] of this.parametricObjects) {
                 const dependsOnParameter = Object.values(parametricObject.parameters).includes(parameterId);
-                
+
                 if (dependsOnParameter) {
                     this.parametricObjects.delete(objectId);
                     this.arxObjects.delete(objectId);
                 }
             }
-            
+
             console.log(`Removed parameter: ${parameterId}`);
-            
+
             // Dispatch event
             this.dispatchEvent('parameterRemoved', { parameterId });
         }
@@ -1356,19 +1356,19 @@ class CadEngine {
         if (!this.constraintSolver) {
             throw new Error('Constraint solver not initialized');
         }
-        
+
         const constraintId = this.constraintSolver.addConstraint(type, params);
-        
+
         // Apply constraint to affected objects
         const affectedObjects = this.getAffectedObjects(params);
         if (affectedObjects.length > 0) {
             const updatedObjects = this.constraintSolver.solveConstraints(affectedObjects);
             this.updateObjectsFromConstraints(updatedObjects);
         }
-        
+
         // Dispatch event
         this.dispatchEvent('constraintAdded', { constraintId, type, params });
-        
+
         return constraintId;
     }
 
@@ -1379,7 +1379,7 @@ class CadEngine {
      */
     getAffectedObjects(params) {
         const affectedObjects = [];
-        
+
         if (params.objectIds) {
             for (const objectId of params.objectIds) {
                 const arxObject = this.arxObjects.get(objectId);
@@ -1388,7 +1388,7 @@ class CadEngine {
                 }
             }
         }
-        
+
         return affectedObjects;
     }
 
@@ -1404,12 +1404,12 @@ class CadEngine {
                 if (updatedObject.geometry) {
                     existingObject.geometry = updatedObject.geometry;
                 }
-                
+
                 // Update properties
                 if (updatedObject.properties) {
                     existingObject.properties = { ...existingObject.properties, ...updatedObject.properties };
                 }
-                
+
                 // Dispatch event
                 this.dispatchEvent('objectUpdated', { objectId: updatedObject.id, arxObject: existingObject });
             }
@@ -1424,7 +1424,7 @@ class CadEngine {
         if (!this.constraintSolver) {
             return { totalConstraints: 0, activeConstraints: 0 };
         }
-        
+
         return this.constraintSolver.getStatistics();
     }
 
@@ -1440,17 +1440,17 @@ class CadEngine {
         if (!this.precisionLevels[level]) {
             throw new Error(`Invalid precision level: ${level}`);
         }
-        
+
         this.currentPrecisionLevel = level;
         this.precision = this.precisionLevels[level];
-        
+
         // Update constraint solver precision
         if (this.constraintSolver) {
             this.constraintSolver.precision = this.precision;
         }
-        
+
         console.log(`Precision level set to: ${level} (${this.precision} inches)`);
-        
+
         // Dispatch event
         this.dispatchEvent('precisionChanged', { level, precision: this.precision });
     }
@@ -1479,4 +1479,4 @@ class CadEngine {
 }
 
 // Export for global use
-window.CadEngine = CadEngine; 
+window.CadEngine = CadEngine;

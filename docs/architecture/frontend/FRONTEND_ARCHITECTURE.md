@@ -95,18 +95,18 @@ arxos/frontend/
   --arxos-primary: #2563eb;
   --arxos-primary-dark: #1d4ed8;
   --arxos-primary-light: #3b82f6;
-  
+
   /* Secondary Colors */
   --arxos-secondary: #64748b;
   --arxos-secondary-dark: #475569;
   --arxos-secondary-light: #94a3b8;
-  
+
   /* Accent Colors */
   --arxos-accent: #f59e0b;
   --arxos-success: #10b981;
   --arxos-warning: #f59e0b;
   --arxos-error: #ef4444;
-  
+
   /* Neutral Colors */
   --arxos-gray-50: #f8fafc;
   --arxos-gray-100: #f1f5f9;
@@ -156,16 +156,16 @@ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, san
 ```html
 <!-- Navigation with HTMX -->
 <nav class="main-nav">
-  <a href="/" 
-     hx-get="/api/navigation/home" 
+  <a href="/"
+     hx-get="/api/navigation/home"
      hx-target="#main-content"
      hx-push-url="true"
      class="nav-link">
     Home
   </a>
-  
-  <a href="/applications" 
-     hx-get="/api/navigation/applications" 
+
+  <a href="/applications"
+     hx-get="/api/navigation/applications"
      hx-target="#main-content"
      hx-push-url="true"
      class="nav-link">
@@ -180,7 +180,7 @@ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, san
 
 <!-- Search with HTMX -->
 <div class="search-container">
-  <input type="text" 
+  <input type="text"
          placeholder="Search applications..."
          hx-get="/api/search"
          hx-trigger="keyup changed delay:500ms"
@@ -201,7 +201,7 @@ document.body.addEventListener('htmx:beforeRequest', function(evt) {
 document.body.addEventListener('htmx:afterRequest', function(evt) {
   // Hide loading indicator
   hideLoading();
-  
+
   // Update page title
   if (evt.detail.xhr.getResponseHeader('X-Page-Title')) {
     document.title = evt.detail.xhr.getResponseHeader('X-Page-Title');
@@ -282,7 +282,7 @@ document.body.addEventListener('htmx:responseError', function(evt) {
 ### **Loading Strategy**
 ```html
 <!-- Lazy Loading Images -->
-<img src="/assets/placeholder.svg" 
+<img src="/assets/placeholder.svg"
      data-src="/assets/images/app-icon.png"
      loading="lazy"
      class="app-icon">
@@ -329,11 +329,11 @@ self.addEventListener('install', function(event) {
 
 ### **Content Security Policy**
 ```html
-<meta http-equiv="Content-Security-Policy" 
-      content="default-src 'self'; 
-               script-src 'self' 'unsafe-inline' 'unsafe-eval'; 
-               style-src 'self' 'unsafe-inline'; 
-               img-src 'self' data: https:; 
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self';
+               script-src 'self' 'unsafe-inline' 'unsafe-eval';
+               style-src 'self' 'unsafe-inline';
+               img-src 'self' data: https:;
                connect-src 'self' https:;">
 ```
 
@@ -386,7 +386,7 @@ describe('HTMX Navigation', () => {
   test('should load applications page', async () => {
     const link = document.querySelector('[hx-get="/api/navigation/applications"]');
     link.click();
-    
+
     await waitFor(() => {
       expect(document.querySelector('#main-content')).toHaveTextContent('Applications');
     });
@@ -445,6 +445,6 @@ test('homepage should match snapshot', async ({ page }) => {
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Ready for Implementation 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Ready for Implementation

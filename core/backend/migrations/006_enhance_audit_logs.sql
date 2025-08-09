@@ -3,7 +3,7 @@
 -- Description: Add enhanced fields to audit_logs table for detailed asset and export change tracking
 
 -- Add new columns to audit_logs table
-ALTER TABLE audit_logs 
+ALTER TABLE audit_logs
 ADD COLUMN ip_address VARCHAR(45), -- IPv6 compatible
 ADD COLUMN user_agent TEXT,
 ADD COLUMN session_id VARCHAR(255),
@@ -36,4 +36,4 @@ COMMENT ON COLUMN audit_logs.floor_id IS 'Floor context for asset operations';
 COMMENT ON COLUMN audit_logs.asset_id IS 'Asset identifier for asset-specific operations';
 COMMENT ON COLUMN audit_logs.export_id IS 'Export identifier for export operations';
 COMMENT ON COLUMN audit_logs.field_changes IS 'JSON object tracking field-level changes';
-COMMENT ON COLUMN audit_logs.context IS 'Additional context metadata for the operation'; 
+COMMENT ON COLUMN audit_logs.context IS 'Additional context metadata for the operation';

@@ -111,7 +111,7 @@ INSERT INTO floors (building_id, name, svg_path, created_at, updated_at) VALUES
 INSERT INTO building_assets (id, building_id, floor_id, room_id, symbol_id, asset_type, system, subsystem, location_floor, location_room, location_area, location_x, location_y, location_coordinates, specifications, metadata, age, efficiency_rating, lifecycle_stage, estimated_value, replacement_cost, status, created_by, created_at, updated_at) VALUES
 
 -- HVAC Assets
-('HVAC_001', 1, 1, 'ROOM_101', 'ahu', 'HVAC', 'Heating', 'Air Handling', 'Ground Floor', '101', 'North Wing', 150.5, 200.0, '150.5,200.0', 
+('HVAC_001', 1, 1, 'ROOM_101', 'ahu', 'HVAC', 'Heating', 'Air Handling', 'Ground Floor', '101', 'North Wing', 150.5, 200.0, '150.5,200.0',
 '{"manufacturer": "Carrier", "model": "48TC", "capacity": "10 tons", "efficiency": "SEER 16", "voltage": "480V", "phase": "3"}',
 '{"installation_date": "2020-03-15", "warranty_expiry": "2025-03-15", "last_maintenance": "2024-01-10", "next_maintenance": "2024-04-10"}',
 4, 'A', 'operational', 25000.00, 30000.00, 'active', 1, NOW(), NOW()),
@@ -218,4 +218,4 @@ INSERT INTO asset_valuations (asset_id, valuation_date, valuation_type, value, c
 UPDATE buildings SET access_level = 'public' WHERE id IN (1, 6);
 UPDATE buildings SET access_level = 'basic' WHERE id IN (2, 7);
 UPDATE buildings SET access_level = 'premium' WHERE id IN (3, 5, 10);
-UPDATE buildings SET access_level = 'enterprise' WHERE id IN (4, 8, 9); 
+UPDATE buildings SET access_level = 'enterprise' WHERE id IN (4, 8, 9);

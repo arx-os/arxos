@@ -12,14 +12,14 @@ class BIMEditingIntegration {
             objectInteraction: null,
             ...options
         };
-        
+
         this.editCount = 0;
         this.lastSnapshotTime = Date.now();
         this.pendingChanges = new Set();
         this.editHistory = [];
         this.isProcessing = false;
         this.autoSnapshotTimer = null;
-        
+
         this.initializeIntegration();
     }
 
@@ -38,16 +38,16 @@ class BIMEditingIntegration {
             if (window.viewportManager) {
                 this.options.viewportManager = window.viewportManager;
                 window.arxLogger.info('BIMEditingIntegration connected to ViewportManager', { file: 'bim_editing_integration.js' });
-                
+
                 // Listen for viewport changes that might indicate editing
                 this.options.viewportManager.addEventListener('objectMoved', (data) => {
                     this.trackEdit('object_move', data);
                 });
-                
+
                 this.options.viewportManager.addEventListener('objectSelected', (data) => {
                     this.trackEdit('object_select', data);
                 });
-                
+
                 this.options.viewportManager.addEventListener('zoomChanged', (data) => {
                     this.trackEdit('viewport_zoom', data);
                 });
@@ -64,7 +64,7 @@ class BIMEditingIntegration {
             if (window.svgObjectInteraction) {
                 this.options.objectInteraction = window.svgObjectInteraction;
                 window.arxLogger.info('BIMEditingIntegration connected to SVGObjectInteraction', { file: 'bim_editing_integration.js' });
-                
+
                 // Override object interaction methods to track edits
                 this.overrideObjectInteractionMethods();
             } else {
@@ -90,14 +90,14 @@ class BIMEditingIntegration {
     // Override object interaction methods to track edits
     overrideObjectInteractionMethods() {
         const original = this.options.objectInteraction;
-        
+
         // Override moveSelectedObjectsWithArrowKeys
         const originalMove = original.moveSelectedObjectsWithArrowKeys.bind(original);
         original.moveSelectedObjectsWithArrowKeys = (key) => {
             this.trackEdit('keyboard_move', { key, objects: original.selectedObjects });
             return originalMove(key);
         };
-        
+
         // Override rotateSelectedObjects
         if (original.rotateSelectedObjects) {
             const originalRotate = original.rotateSelectedObjects.bind(original);
@@ -106,7 +106,7 @@ class BIMEditingIntegration {
                 return originalRotate(angle);
             };
         }
-        
+
         // Override scaleSelectedObjects
         if (original.scaleSelectedObjects) {
             const originalScale = original.scaleSelectedObjects.bind(original);
@@ -115,7 +115,7 @@ class BIMEditingIntegration {
                 return originalScale(scale);
             };
         }
-        
+
         // Override deleteSelectedObjects
         if (original.deleteSelectedObjects) {
             const originalDelete = original.deleteSelectedObjects.bind(original);
@@ -132,46 +132,46 @@ class BIMEditingIntegration {
         document.addEventListener('symbolPlaced', (event) => {
             this.trackEdit('symbol_place', event.detail);
         });
-        
+
         // Listen for object property changes
         document.addEventListener('objectPropertyChanged', (event) => {
             this.trackEdit('property_change', event.detail);
         });
-        
+
         // Listen for object deletion
         document.addEventListener('objectDeleted', (event) => {
             this.trackEdit('object_delete', event.detail);
         });
-        
+
         // Listen for object duplication
         document.addEventListener('objectDuplicated', (event) => {
             this.trackEdit('object_duplicate', event.detail);
         });
-        
+
         // Listen for layer changes
         document.addEventListener('layerChanged', (event) => {
             this.trackEdit('layer_change', event.detail);
         });
-        
+
         // Listen for viewport operations
         document.addEventListener('viewportOperation', (event) => {
             this.trackEdit('viewport_operation', event.detail);
         });
-        
+
         // Listen for undo/redo operations
         document.addEventListener('undoOperation', (event) => {
             this.trackEdit('undo', event.detail);
         });
-        
+
         document.addEventListener('redoOperation', (event) => {
             this.trackEdit('redo', event.detail);
         });
-        
+
         // Listen for save operations
         document.addEventListener('saveOperation', (event) => {
             this.trackEdit('save', event.detail);
         });
-        
+
         // Listen for export operations
         document.addEventListener('exportOperation', (event) => {
             this.trackEdit('export', event.detail);
@@ -181,7 +181,7 @@ class BIMEditingIntegration {
     // Track an edit operation
     trackEdit(type, data) {
         if (!this.options.editTrackingEnabled) return;
-        
+
         const edit = {
             id: this.generateEditId(),
             type: type,
@@ -190,23 +190,23 @@ class BIMEditingIntegration {
             user: this.getCurrentUser(),
             session: this.getCurrentSession()
         };
-        
+
         this.editHistory.push(edit);
         this.editCount++;
         this.pendingChanges.add(edit.id);
-        
+
         // Check if this is a major edit
         if (this.isMajorEdit(edit)) {
             window.arxLogger.info('Major edit detected:', edit, { file: 'bim_editing_integration.js' });
             this.handleMajorEdit(edit);
         }
-        
+
         // Update UI indicators
         this.updateEditIndicators();
-        
+
         // Trigger auto-snapshot if needed
         this.checkAutoSnapshot();
-        
+
         // Emit edit tracked event
         this.emitEvent('editTracked', edit);
     }
@@ -220,22 +220,22 @@ class BIMEditingIntegration {
             'object_duplicate',
             'layer_change'
         ];
-        
+
         return majorEditTypes.includes(edit.type);
     }
 
     // Handle major edit
     handleMajorEdit(edit) {
         console.log('Major edit detected:', edit);
-        
+
         // Show visual feedback
         this.showMajorEditIndicator(edit);
-        
+
         // Prompt for manual snapshot if enabled
         if (this.options.manualSnapshotPrompts) {
             this.promptForManualSnapshot(edit);
         }
-        
+
         // Emit major edit event
         this.emitEvent('majorEditDetected', edit);
     }
@@ -259,7 +259,7 @@ class BIMEditingIntegration {
             `;
             document.body.appendChild(indicator);
         }
-        
+
         // Auto-hide after 5 seconds
         setTimeout(() => {
             if (indicator && indicator.parentElement) {
@@ -273,13 +273,13 @@ class BIMEditingIntegration {
         // Check if we should show the prompt (avoid spam)
         const lastPromptTime = this.lastPromptTime || 0;
         const timeSinceLastPrompt = Date.now() - lastPromptTime;
-        
+
         if (timeSinceLastPrompt < 30000) { // Don't prompt more than once every 30 seconds
             return;
         }
-        
+
         this.lastPromptTime = Date.now();
-        
+
         // Create snapshot prompt
         const prompt = document.createElement('div');
         prompt.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border border-gray-300 rounded-lg shadow-xl p-6 z-50 max-w-md';
@@ -300,9 +300,9 @@ class BIMEditingIntegration {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(prompt);
-        
+
         // Auto-remove after 10 seconds
         setTimeout(() => {
             if (prompt && prompt.parentElement) {
@@ -314,7 +314,7 @@ class BIMEditingIntegration {
     // Start auto-snapshot timer
     startAutoSnapshotTimer() {
         if (!this.options.autoSnapshotEnabled) return;
-        
+
         this.autoSnapshotTimer = setInterval(() => {
             this.checkAutoSnapshot();
         }, this.options.autoSnapshotInterval);
@@ -323,10 +323,10 @@ class BIMEditingIntegration {
     // Check if auto-snapshot should be triggered
     checkAutoSnapshot() {
         if (!this.options.autoSnapshotEnabled) return;
-        
+
         const timeSinceLastSnapshot = Date.now() - this.lastSnapshotTime;
         const hasPendingChanges = this.pendingChanges.size > 0;
-        
+
         if (timeSinceLastSnapshot >= this.options.autoSnapshotInterval && hasPendingChanges) {
             this.createAutoSnapshot();
         }
@@ -335,21 +335,21 @@ class BIMEditingIntegration {
     // Create auto-snapshot
     async createAutoSnapshot() {
         if (this.isProcessing) return;
-        
+
         try {
             this.isProcessing = true;
-            
+
             const description = `Auto-save snapshot (${this.editCount} edits)`;
             const tags = ['auto-save'];
-            
+
             await this.createSnapshot(description, tags, 'auto-save');
-            
+
             // Clear pending changes
             this.pendingChanges.clear();
             this.lastSnapshotTime = Date.now();
-            
+
             window.arxLogger.info('Auto-snapshot created successfully', { file: 'bim_editing_integration.js' });
-            
+
         } catch (error) {
             console.error('Failed to create auto-snapshot:', error);
         } finally {
@@ -360,24 +360,24 @@ class BIMEditingIntegration {
     // Create manual snapshot
     async createManualSnapshot() {
         if (this.isProcessing) return;
-        
+
         try {
             this.isProcessing = true;
-            
+
             // Get user input for description
             const description = await this.promptForSnapshotDescription();
             if (!description) return; // User cancelled
-            
+
             const tags = ['manual'];
-            
+
             await this.createSnapshot(description, tags, 'manual');
-            
+
             // Clear pending changes
             this.pendingChanges.clear();
             this.lastSnapshotTime = Date.now();
-            
+
             window.arxLogger.info('Manual snapshot created successfully', { file: 'bim_editing_integration.js' });
-            
+
         } catch (error) {
             console.error('Failed to create manual snapshot:', error);
         } finally {
@@ -411,13 +411,13 @@ class BIMEditingIntegration {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(prompt);
-            
+
             // Store prompt reference for confirmation
             this.currentSnapshotPrompt = prompt;
             this.currentSnapshotResolve = resolve;
-            
+
             // Focus on description field
             setTimeout(() => {
                 const descriptionField = prompt.querySelector('#snapshot-description');
@@ -431,25 +431,25 @@ class BIMEditingIntegration {
     // Confirm snapshot creation
     confirmSnapshot() {
         if (!this.currentSnapshotPrompt || !this.currentSnapshotResolve) return;
-        
+
         const description = this.currentSnapshotPrompt.querySelector('#snapshot-description').value;
         const tags = this.currentSnapshotPrompt.querySelector('#snapshot-tags').value;
-        
+
         this.currentSnapshotPrompt.remove();
         this.currentSnapshotPrompt = null;
-        
+
         this.currentSnapshotResolve({
             description: description || 'Manual snapshot',
             tags: tags ? tags.split(',').map(tag => tag.trim()).filter(tag => tag) : []
         });
-        
+
         this.currentSnapshotResolve = null;
     }
 
     // Cancel snapshot creation
     cancelSnapshot() {
         if (!this.currentSnapshotPrompt || !this.currentSnapshotResolve) return;
-        
+
         this.currentSnapshotPrompt.remove();
         this.currentSnapshotPrompt = null;
         this.currentSnapshotResolve(null);
@@ -461,16 +461,16 @@ class BIMEditingIntegration {
         if (!this.options.versionControlSystem) {
             throw new Error('Version control system not available');
         }
-        
+
         // Get current floor ID
         const floorId = this.getCurrentFloorId();
         if (!floorId) {
             throw new Error('No floor selected');
         }
-        
+
         // Create snapshot using version control system
         await this.options.versionControlSystem.createSnapshot(description, tags, type);
-        
+
         // Emit snapshot created event
         this.emitEvent('snapshotCreated', {
             description,
@@ -489,7 +489,7 @@ class BIMEditingIntegration {
             editCounter.textContent = this.editCount;
             editCounter.className = this.editCount > 0 ? 'text-orange-600' : 'text-gray-500';
         }
-        
+
         // Update pending changes indicator
         const pendingIndicator = document.getElementById('pending-changes-indicator');
         if (pendingIndicator) {
@@ -500,14 +500,14 @@ class BIMEditingIntegration {
                 pendingIndicator.style.display = 'none';
             }
         }
-        
+
         // Update auto-save indicator
         const autoSaveIndicator = document.getElementById('auto-save-indicator');
         if (autoSaveIndicator) {
             const timeSinceLastSnapshot = Date.now() - this.lastSnapshotTime;
             const timeUntilNextSnapshot = Math.max(0, this.options.autoSnapshotInterval - timeSinceLastSnapshot);
             const minutes = Math.ceil(timeUntilNextSnapshot / 60000);
-            
+
             autoSaveIndicator.textContent = `Auto-save in ${minutes}m`;
             autoSaveIndicator.className = timeUntilNextSnapshot < 60000 ? 'text-red-600' : 'text-gray-500';
         }
@@ -533,7 +533,7 @@ class BIMEditingIntegration {
     // Get current floor ID
     getCurrentFloorId() {
         // This would typically come from your floor selection system
-        return localStorage.getItem('current_floor_id') || 
+        return localStorage.getItem('current_floor_id') ||
                document.querySelector('[data-floor-id]')?.dataset.floorId;
     }
 
@@ -581,7 +581,7 @@ class BIMEditingIntegration {
     // Enable/disable auto-snapshot
     setAutoSnapshotEnabled(enabled) {
         this.options.autoSnapshotEnabled = enabled;
-        
+
         if (enabled) {
             this.startAutoSnapshotTimer();
         } else {
@@ -595,7 +595,7 @@ class BIMEditingIntegration {
     // Set auto-snapshot interval
     setAutoSnapshotInterval(interval) {
         this.options.autoSnapshotInterval = interval;
-        
+
         // Restart timer with new interval
         if (this.options.autoSnapshotEnabled) {
             if (this.autoSnapshotTimer) {
@@ -611,7 +611,7 @@ class BIMEditingIntegration {
             clearInterval(this.autoSnapshotTimer);
             this.autoSnapshotTimer = null;
         }
-        
+
         // Remove any UI indicators
         const indicators = [
             'major-edit-indicator',
@@ -619,14 +619,14 @@ class BIMEditingIntegration {
             'pending-changes-indicator',
             'auto-save-indicator'
         ];
-        
+
         indicators.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
                 element.remove();
             }
         });
-        
+
         // Clear current snapshot prompt
         if (this.currentSnapshotPrompt) {
             this.currentSnapshotPrompt.remove();
@@ -641,4 +641,4 @@ const bimEditingIntegration = new BIMEditingIntegration();
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = BIMEditingIntegration;
-} 
+}

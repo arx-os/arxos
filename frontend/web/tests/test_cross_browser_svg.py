@@ -69,4 +69,4 @@ def test_svg_zoom_pan_undo_redo(browser):
             pass  # Symbol placement optional
 
     finally:
-        driver.quit() 
+        driver.quit()

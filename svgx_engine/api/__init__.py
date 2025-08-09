@@ -24,10 +24,10 @@ __description__ = "API module for SVGX Engine"
 __all__ = [
     # Endpoints
     "BuildingAPI", "HealthAPI",
-    
+
     # Models
     "APIRequest", "APIResponse",
-    
+
     # Middleware
     "APIMiddleware", "CorsMiddleware"
-] 
+]

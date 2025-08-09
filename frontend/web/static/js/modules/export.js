@@ -16,14 +16,14 @@ export class Export {
             supportedFormats: ['json', 'svg', 'zip'],
             ...options
         };
-        
+
         this.exportQueue = [];
         this.isProcessing = false;
         this.currentOperation = null;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -36,7 +36,7 @@ export class Export {
         document.addEventListener('exportVersion', (event) => {
             this.handleExportRequest(event.detail);
         });
-        
+
         // Listen for backup requests
         document.addEventListener('backupFloor', (event) => {
             this.handleBackupRequest(event.detail);
@@ -46,7 +46,7 @@ export class Export {
     // Export request handlers
     async handleExportRequest(details) {
         const { versionId, format, includeMetadata = true, includeHistory = true } = details;
-        
+
         try {
             switch (format) {
                 case 'json':
@@ -66,7 +66,7 @@ export class Export {
 
     async handleBackupRequest(details) {
         const { floorId, includeAllVersions = true, includeMetadata = true } = details;
-        
+
         try {
             await this.createFloorBackup(floorId, includeAllVersions, includeMetadata);
         } catch (error) {
@@ -78,7 +78,7 @@ export class Export {
     // JSON Export
     async exportVersionAsJSON(versionId, includeMetadata = true, includeHistory = true) {
         this.startProgress('Exporting JSON', 'Preparing version data...');
-        
+
         try {
             // Get version data
             const versionData = await this.getVersionData(versionId);
@@ -90,47 +90,47 @@ export class Export {
                     version: '1.0'
                 }
             };
-            
+
             // Include metadata if requested
             if (includeMetadata) {
                 exportData.metadata = await this.getVersionMetadata(versionId);
             }
-            
+
             // Include history if requested
             if (includeHistory) {
                 exportData.history = await this.getVersionHistory(versionId);
             }
-            
+
             this.updateProgress(50, 'Compressing data...');
-            
+
             // Compress data if enabled
             let finalData = exportData;
             if (this.options.compressionEnabled) {
                 finalData = await this.compressData(exportData);
             }
-            
+
             this.updateProgress(75, 'Creating download...');
-            
+
             // Create and trigger download
             const blob = new Blob([JSON.stringify(finalData, null, 2)], {
                 type: 'application/json'
             });
-            
+
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `version_${versionId}_${Date.now()}.json`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             this.completeProgress('Export completed successfully');
-            this.triggerEvent('exportCompleted', { 
-                format: 'json', 
-                versionId, 
-                data: exportData 
+            this.triggerEvent('exportCompleted', {
+                format: 'json',
+                versionId,
+                data: exportData
             });
-            
+
         } catch (error) {
             this.failProgress('Export failed: ' + error.message);
             throw error;
@@ -140,43 +140,43 @@ export class Export {
     // SVG Export
     async exportVersionAsSVG(versionId, includeMetadata = true) {
         this.startProgress('Exporting SVG', 'Preparing SVG data...');
-        
+
         try {
             // Get SVG data
             const svgData = await this.getVersionSVGData(versionId);
-            
+
             this.updateProgress(30, 'Creating SVG document...');
-            
+
             // Create SVG document
             const svgDocument = this.createSVGDocument(svgData, includeMetadata);
-            
+
             this.updateProgress(60, 'Optimizing SVG...');
-            
+
             // Optimize SVG
             const optimizedSVG = await this.optimizeSVG(svgDocument);
-            
+
             this.updateProgress(80, 'Creating download...');
-            
+
             // Create and trigger download
             const blob = new Blob([optimizedSVG], {
                 type: 'image/svg+xml'
             });
-            
+
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `version_${versionId}_${Date.now()}.svg`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             this.completeProgress('SVG export completed successfully');
-            this.triggerEvent('exportCompleted', { 
-                format: 'svg', 
-                versionId, 
-                data: svgData 
+            this.triggerEvent('exportCompleted', {
+                format: 'svg',
+                versionId,
+                data: svgData
             });
-            
+
         } catch (error) {
             this.failProgress('SVG export failed: ' + error.message);
             throw error;
@@ -186,14 +186,14 @@ export class Export {
     // Backup Export
     async createVersionBackup(versionId) {
         this.startProgress('Creating Backup', 'Collecting version data...');
-        
+
         try {
             const versionData = await this.getVersionData(versionId);
             const metadata = await this.getVersionMetadata(versionId);
             const assets = await this.collectVersionAssets(versionId);
-            
+
             this.updateProgress(40, 'Preparing backup...');
-            
+
             const backupData = {
                 type: 'version_backup',
                 version: versionData,
@@ -205,34 +205,34 @@ export class Export {
                     format: 'backup'
                 }
             };
-            
+
             this.updateProgress(70, 'Compressing backup...');
-            
+
             // Compress backup
             const compressedBackup = await this.compressBackup(backupData);
-            
+
             this.updateProgress(90, 'Creating download...');
-            
+
             // Create and trigger download
             const blob = new Blob([compressedBackup], {
                 type: 'application/zip'
             });
-            
+
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `backup_version_${versionId}_${Date.now()}.zip`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             this.completeProgress('Backup created successfully');
-            this.triggerEvent('backupCompleted', { 
-                type: 'version', 
-                versionId, 
-                data: backupData 
+            this.triggerEvent('backupCompleted', {
+                type: 'version',
+                versionId,
+                data: backupData
             });
-            
+
         } catch (error) {
             this.failProgress('Backup failed: ' + error.message);
             throw error;
@@ -241,15 +241,15 @@ export class Export {
 
     async createFloorBackup(floorId, includeAllVersions = true, includeMetadata = true) {
         this.startProgress('Creating Floor Backup', 'Collecting floor data...');
-        
+
         try {
             const floorData = await this.getFloorData(floorId);
             const versions = includeAllVersions ? await this.getFloorVersions(floorId) : [];
             const metadata = includeMetadata ? await this.getFloorMetadata(floorId) : {};
             const assets = await this.collectFloorAssets(floorId);
-            
+
             this.updateProgress(40, 'Preparing backup...');
-            
+
             const backupData = {
                 type: 'floor_backup',
                 floor: floorData,
@@ -263,34 +263,34 @@ export class Export {
                     includeAllVersions: includeAllVersions
                 }
             };
-            
+
             this.updateProgress(70, 'Compressing backup...');
-            
+
             // Compress backup
             const compressedBackup = await this.compressBackup(backupData);
-            
+
             this.updateProgress(90, 'Creating download...');
-            
+
             // Create and trigger download
             const blob = new Blob([compressedBackup], {
                 type: 'application/zip'
             });
-            
+
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `backup_floor_${floorId}_${Date.now()}.zip`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             this.completeProgress('Floor backup created successfully');
-            this.triggerEvent('backupCompleted', { 
-                type: 'floor', 
-                floorId, 
-                data: backupData 
+            this.triggerEvent('backupCompleted', {
+                type: 'floor',
+                floorId,
+                data: backupData
             });
-            
+
         } catch (error) {
             this.failProgress('Floor backup failed: ' + error.message);
             throw error;
@@ -430,18 +430,18 @@ export class Export {
     // SVG methods
     createSVGDocument(svgData, includeMetadata) {
         let svgContent = svgData;
-        
+
         if (includeMetadata) {
             const metadata = this.createSVGMetadata({
                 timestamp: new Date().toISOString(),
                 creator: this.getCurrentUser(),
                 version: '1.0'
             });
-            
+
             // Insert metadata into SVG
             svgContent = svgContent.replace('<svg', `<svg ${metadata}`);
         }
-        
+
         return svgContent;
     }
 
@@ -449,7 +449,7 @@ export class Export {
         const metadataStr = Object.entries(metadata)
             .map(([key, value]) => `data-${key}="${value}"`)
             .join(' ');
-        
+
         return metadataStr;
     }
 
@@ -520,9 +520,9 @@ export class Export {
         this.exportQueue = [];
         this.isProcessing = false;
         this.currentOperation = null;
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

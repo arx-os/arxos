@@ -105,7 +105,7 @@ class AdvancedStateMachine:
     Comprehensive state machine engine with enterprise-grade features
     for managing complex state transitions and behaviors.
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
     """
     Perform __init__ operation
@@ -125,11 +125,11 @@ Example:
     """
         self.config = config or {}
         self.performance_monitor = PerformanceMonitor()
-        
+
         # State machine registry
         self.state_machines: Dict[str, StateMachine] = {}
         self.global_states: Dict[str, State] = {}
-        
+
         # Performance tracking
         self.state_stats = {
             'total_transitions': 0,
@@ -138,20 +138,20 @@ Example:
             'avg_transition_time': 0.0,
             'active_state_machines': 0
         }
-        
+
         # Threading and concurrency
         self.state_lock = threading.Lock()
         self.transition_lock = threading.Lock()
         self.running = False
-        
+
         # Initialize default state machines
         self._initialize_default_state_machines()
-        
+
         logger.info("Advanced state machine engine initialized")
-    
+
     def _initialize_default_state_machines(self):
         """Initialize default state machines for common scenarios."""
-        
+
         # Equipment State Machine
         equipment_states = {
             'off': State(id='off', type=StateType.EQUIPMENT, name='Off', priority=StatePriority.NORMAL),
@@ -160,7 +160,7 @@ Example:
             'fault': State(id='fault', type=StateType.EQUIPMENT, name='Fault', priority=StatePriority.HIGH),
             'maintenance': State(id='maintenance', type=StateType.EQUIPMENT, name='Maintenance', priority=StatePriority.HIGH)
         }
-        
+
         equipment_transitions = [
             StateTransition(id='off_to_standby', from_state='off', to_state='standby'),
             StateTransition(id='standby_to_on', from_state='standby', to_state='on'),
@@ -169,7 +169,7 @@ Example:
             StateTransition(id='fault_to_maintenance', from_state='fault', to_state='maintenance'),
             StateTransition(id='maintenance_to_off', from_state='maintenance', to_state='off')
         ]
-        
+
         self.create_state_machine(
             machine_id='equipment',
             name='Equipment State Machine',
@@ -177,7 +177,7 @@ Example:
             states=equipment_states,
             transitions=equipment_transitions
         )
-        
+
         # Process State Machine
         process_states = {
             'stopped': State(id='stopped', type=StateType.PROCESS, name='Stopped', priority=StatePriority.NORMAL),
@@ -187,7 +187,7 @@ Example:
             'stopping': State(id='stopping', type=StateType.PROCESS, name='Stopping', priority=StatePriority.NORMAL),
             'error': State(id='error', type=StateType.PROCESS, name='Error', priority=StatePriority.HIGH)
         }
-        
+
         process_transitions = [
             StateTransition(id='stopped_to_starting', from_state='stopped', to_state='starting'),
             StateTransition(id='starting_to_running', from_state='starting', to_state='running'),
@@ -197,7 +197,7 @@ Example:
             StateTransition(id='stopping_to_stopped', from_state='stopping', to_state='stopped'),
             StateTransition(id='any_to_error', from_state='*', to_state='error')
         ]
-        
+
         self.create_state_machine(
             machine_id='process',
             name='Process State Machine',
@@ -205,7 +205,7 @@ Example:
             states=process_states,
             transitions=process_transitions
         )
-        
+
         # System State Machine
         system_states = {
             'normal': State(id='normal', type=StateType.SYSTEM, name='Normal', priority=StatePriority.NORMAL),
@@ -214,7 +214,7 @@ Example:
             'emergency': State(id='emergency', type=StateType.SYSTEM, name='Emergency', priority=StatePriority.CRITICAL),
             'shutdown': State(id='shutdown', type=StateType.SYSTEM, name='Shutdown', priority=StatePriority.CRITICAL)
         }
-        
+
         system_transitions = [
             StateTransition(id='normal_to_warning', from_state='normal', to_state='warning'),
             StateTransition(id='warning_to_normal', from_state='warning', to_state='normal'),
@@ -224,7 +224,7 @@ Example:
             StateTransition(id='emergency_to_shutdown', from_state='emergency', to_state='shutdown'),
             StateTransition(id='any_to_shutdown', from_state='*', to_state='shutdown')
         ]
-        
+
         self.create_state_machine(
             machine_id='system',
             name='System State Machine',
@@ -232,7 +232,7 @@ Example:
             states=system_states,
             transitions=system_transitions
         )
-        
+
         # Safety State Machine
         safety_states = {
             'safe': State(id='safe', type=StateType.SAFETY, name='Safe', priority=StatePriority.NORMAL),
@@ -241,7 +241,7 @@ Example:
             'shutdown': State(id='shutdown', type=StateType.SAFETY, name='Shutdown', priority=StatePriority.CRITICAL),
             'emergency': State(id='emergency', type=StateType.SAFETY, name='Emergency', priority=StatePriority.CRITICAL)
         }
-        
+
         safety_transitions = [
             StateTransition(id='safe_to_warning', from_state='safe', to_state='warning'),
             StateTransition(id='warning_to_safe', from_state='warning', to_state='safe'),
@@ -251,7 +251,7 @@ Example:
             StateTransition(id='any_to_emergency', from_state='*', to_state='emergency'),
             StateTransition(id='emergency_to_shutdown', from_state='emergency', to_state='shutdown')
         ]
-        
+
         self.create_state_machine(
             machine_id='safety',
             name='Safety State Machine',
@@ -259,19 +259,19 @@ Example:
             states=safety_states,
             transitions=safety_transitions
         )
-    
+
     def create_state_machine(self, machine_id: str, name: str, initial_state: str,
                            states: Dict[str, State], transitions: List[StateTransition]) -> bool:
         """
         Create a new state machine.
-        
+
         Args:
             machine_id: Unique identifier for the state machine
             name: Human-readable name
             initial_state: ID of the initial state
             states: Dictionary of states
             transitions: List of state transitions
-            
+
         Returns:
             True if creation successful, False otherwise
         """
@@ -279,7 +279,7 @@ Example:
             # Validate initial state exists
             if initial_state not in states:
                 raise ValidationError(f"Initial state '{initial_state}' not found in states")
-            
+
             # Create state machine
             state_machine = StateMachine(
                 id=machine_id,
@@ -288,103 +288,103 @@ Example:
                 states=states,
                 current_state=initial_state
             )
-            
+
             # Add transitions
             for transition in transitions:
                 state_machine.transitions[transition.id] = transition
-            
+
             # Register state machine
             self.state_machines[machine_id] = state_machine
-            
+
             with self.state_lock:
                 self.state_stats['active_state_machines'] += 1
-            
+
             logger.info(f"Created state machine '{name}' with {len(states)} states and {len(transitions)} transitions")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to create state machine {machine_id}: {e}")
             return False
-    
+
     def get_state_machine(self, machine_id: str) -> Optional[StateMachine]:
         """Get a state machine by ID."""
         return self.state_machines.get(machine_id)
-    
+
     def get_current_state(self, machine_id: str) -> Optional[str]:
         """Get the current state of a state machine."""
         state_machine = self.get_state_machine(machine_id)
         return state_machine.current_state if state_machine else None
-    
-    async def transition_state(self, machine_id: str, target_state: str, 
+
+    async def transition_state(self, machine_id: str, target_state: str,
                              context: Optional[Dict[str, Any]] = None) -> bool:
         """
         Transition a state machine to a new state.
-        
+
         Args:
             machine_id: ID of the state machine
             target_state: Target state ID
             context: Additional context for the transition
-            
+
         Returns:
             True if transition successful, False otherwise
         """
         start_time = time.time()
-        
+
         try:
             state_machine = self.get_state_machine(machine_id)
             if not state_machine:
                 logger.error(f"State machine {machine_id} not found")
                 return False
-            
+
             current_state = state_machine.current_state
             if not current_state:
                 logger.error(f"No current state for machine {machine_id}")
                 return False
-            
+
             # Find valid transition
             transition = self._find_valid_transition(state_machine, current_state, target_state, context)
             if not transition:
                 logger.warning(f"No valid transition from {current_state} to {target_state}")
                 return False
-            
+
             # Execute transition
             success = await self._execute_transition(state_machine, transition, context)
-            
+
             if success:
                 # Update state machine
                 state_machine.current_state = target_state
                 state_machine.state_history.append((current_state, target_state, datetime.utcnow()))
                 state_machine.updated_at = datetime.utcnow()
-                
+
                 # Update stats
                 with self.transition_lock:
                     self.state_stats['total_transitions'] += 1
                     self.state_stats['successful_transitions'] += 1
-                
+
                 logger.info(f"Transitioned {machine_id} from {current_state} to {target_state}")
-            
+
             return success
-            
+
         except Exception as e:
             logger.error(f"State transition failed for {machine_id}: {e}")
-            
+
             with self.transition_lock:
                 self.state_stats['total_transitions'] += 1
                 self.state_stats['failed_transitions'] += 1
-            
+
             return False
-    
-    def _find_valid_transition(self, state_machine: StateMachine, from_state: str, 
+
+    def _find_valid_transition(self, state_machine: StateMachine, from_state: str,
                              to_state: str, context: Optional[Dict[str, Any]] = None) -> Optional[StateTransition]:
         """Find a valid transition between states."""
         for transition in state_machine.transitions.values():
             if not transition.enabled:
                 continue
-            
+
             # Check if transition matches (wildcard '*' matches any state)
             if (transition.from_state == from_state or transition.from_state == '*') and \
                transition.to_state == to_state:
-                
+
                 # Check condition if present
                 if transition.condition:
                     try:
@@ -393,11 +393,11 @@ Example:
                     except Exception as e:
                         logger.error(f"Transition condition evaluation failed: {e}")
                         continue
-                
+
                 return transition
-        
+
         return None
-    
+
     async def _execute_transition(self, state_machine: StateMachine, transition: StateTransition,
                                 context: Optional[Dict[str, Any]] = None) -> bool:
         """Execute a state transition."""
@@ -409,36 +409,36 @@ Example:
                 except Exception as e:
                     logger.error(f"Transition action failed: {e}")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Transition execution failed: {e}")
             return False
-    
+
     def get_state_history(self, machine_id: str, limit: int = 100) -> List[Tuple[str, str, datetime]]:
         """Get state transition history for a machine."""
         state_machine = self.get_state_machine(machine_id)
         if not state_machine:
             return []
-        
+
         return state_machine.state_history[-limit:]
-    
+
     def get_available_transitions(self, machine_id: str) -> List[StateTransition]:
         """Get available transitions for the current state."""
         state_machine = self.get_state_machine(machine_id)
         if not state_machine or not state_machine.current_state:
             return []
-        
+
         current_state = state_machine.current_state
         available_transitions = []
-        
+
         for transition in state_machine.transitions.values():
             if transition.enabled and (transition.from_state == current_state or transition.from_state == '*'):
                 available_transitions.append(transition)
-        
+
         return available_transitions
-    
+
     def get_state_machine_stats(self) -> Dict[str, Any]:
         """Get state machine statistics."""
         with self.state_lock:
@@ -456,27 +456,27 @@ Example:
                     for machine_id, sm in self.state_machines.items()
                 }
             }
-    
+
     def validate_state_machine(self, machine_id: str) -> Dict[str, Any]:
         """Validate a state machine configuration."""
         state_machine = self.get_state_machine(machine_id)
         if not state_machine:
             return {'valid': False, 'error': f'State machine {machine_id} not found'}
-        
+
         issues = []
-        
+
         # Check if current state exists
         if state_machine.current_state and state_machine.current_state not in state_machine.states:
             issues.append(f"Current state '{state_machine.current_state}' not found in states")
-        
+
         # Check transition validity
         for transition_id, transition in state_machine.transitions.items():
             if transition.from_state != '*' and transition.from_state not in state_machine.states:
                 issues.append(f"Transition {transition_id}: from_state '{transition.from_state}' not found")
-            
+
             if transition.to_state not in state_machine.states:
                 issues.append(f"Transition {transition_id}: to_state '{transition.to_state}' not found")
-        
+
         return {
             'valid': len(issues) == 0,
             'issues': issues,
@@ -486,4 +486,4 @@ Example:
 
 
 # Global instance for easy access
-advanced_state_machine = AdvancedStateMachine() 
+advanced_state_machine = AdvancedStateMachine()

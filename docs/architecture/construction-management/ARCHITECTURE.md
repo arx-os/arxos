@@ -54,18 +54,18 @@ package main
 import (
     "log"
     "net/http"
-    
+
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
     "github.com/go-chi/cors"
-    
+
     "arxos/construction/internal/config"
     "arxos/construction/api"
 )
 
 func main() {
     r := chi.NewRouter()
-    
+
     // Middleware
     r.Use(middleware.Logger)
     r.Use(middleware.Recoverer)
@@ -77,7 +77,7 @@ func main() {
         AllowCredentials: true,
         MaxAge:           300,
     }))
-    
+
     // Routes
     r.Route("/api/v1", func(r chi.Router) {
         r.Route("/projects", api.ProjectsHandler)
@@ -87,7 +87,7 @@ func main() {
         r.Route("/safety", api.SafetyHandler)
         r.Route("/reporting", api.ReportingHandler)
     })
-    
+
     log.Fatal(http.ListenAndServe(":8080", r))
 }
 ```
@@ -274,7 +274,7 @@ func (ms *MarkupSync) SyncConstructionProgress(ctx context.Context, progress Con
         Status:     progress.Status,
         Data:       progress.MarkupData,
     }
-    
+
     return ms.svgxClient.UpdateMarkup(ctx, markup)
 }
 
@@ -284,12 +284,12 @@ func (ms *MarkupSync) ValidateAsBuilt(ctx context.Context, projectID string, des
     if err != nil {
         return nil, fmt.Errorf("failed to get design: %w", err)
     }
-    
+
     asBuilt, err := ms.svgxClient.GetAsBuilt(ctx, projectID)
     if err != nil {
         return nil, fmt.Errorf("failed to get as-built: %w", err)
     }
-    
+
     return ms.compareDesigns(design, asBuilt), nil
 }
 ```
@@ -317,12 +317,12 @@ func (ai *AIIntegration) AnalyzeSafetyPhotos(ctx context.Context, photos []strin
         Photos: photos,
         Task:   "safety_compliance",
     }
-    
+
     response, err := ai.aiClient.AnalyzeImages(ctx, request)
     if err != nil {
         return nil, err
     }
-    
+
     return &SafetyAnalysis{
         Compliance: response.Compliance,
         Violations: response.Violations,
@@ -335,12 +335,12 @@ func (ai *AIIntegration) PredictProjectDelays(ctx context.Context, scheduleData 
     request := &DelayPredictionRequest{
         ScheduleData: scheduleData,
     }
-    
+
     response, err := ai.aiClient.PredictDelays(ctx, request)
     if err != nil {
         return nil, err
     }
-    
+
     return &DelayPrediction{
         RiskLevel:    response.RiskLevel,
         PredictedDelay: response.PredictedDelay,
@@ -371,12 +371,12 @@ func (iot *IoTIntegration) MonitorSiteSafety(ctx context.Context, projectID stri
     if err != nil {
         return nil, err
     }
-    
+
     safetyData, err := iot.iotClient.GetSafetyData(ctx, devices)
     if err != nil {
         return nil, err
     }
-    
+
     return &SafetyMonitoring{
         ProjectID:   projectID,
         AlertLevel:  safetyData.AlertLevel,
@@ -391,12 +391,12 @@ func (iot *IoTIntegration) TrackEquipmentUsage(ctx context.Context, projectID st
     if err != nil {
         return nil, err
     }
-    
+
     usageData, err := iot.iotClient.GetEquipmentData(ctx, equipment)
     if err != nil {
         return nil, err
     }
-    
+
     return &EquipmentTracking{
         ProjectID: projectID,
         Equipment: usageData.Equipment,
@@ -428,12 +428,12 @@ func (cmms *CMMSIntegration) TrackEquipmentMaintenance(ctx context.Context, proj
     if err != nil {
         return nil, err
     }
-    
+
     schedule, err := cmms.cmmsClient.GetMaintenanceSchedule(ctx, equipment)
     if err != nil {
         return nil, err
     }
-    
+
     return &MaintenanceSchedule{
         ProjectID: projectID,
         Equipment: schedule.Equipment,
@@ -448,7 +448,7 @@ func (cmms *CMMSIntegration) TrackMaintenanceCosts(ctx context.Context, projectI
     if err != nil {
         return nil, err
     }
-    
+
     return &MaintenanceCosts{
         ProjectID: projectID,
         TotalCost: costs.TotalCost,
@@ -470,7 +470,7 @@ import (
     "context"
     "net/http"
     "strings"
-    
+
     "github.com/golang-jwt/jwt/v5"
 )
 
@@ -485,34 +485,34 @@ func (am *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
             http.Error(w, "Authorization header required", http.StatusUnauthorized)
             return
         }
-        
+
         tokenString := strings.TrimPrefix(authHeader, "Bearer ")
         if tokenString == authHeader {
             http.Error(w, "Bearer token required", http.StatusUnauthorized)
             return
         }
-        
+
         token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
             return am.secretKey, nil
         })
-        
+
         if err != nil || !token.Valid {
             http.Error(w, "Invalid token", http.StatusUnauthorized)
             return
         }
-        
+
         claims, ok := token.Claims.(jwt.MapClaims)
         if !ok {
             http.Error(w, "Invalid token claims", http.StatusUnauthorized)
             return
         }
-        
+
         userID, ok := claims["sub"].(string)
         if !ok {
             http.Error(w, "Invalid user ID", http.StatusUnauthorized)
             return
         }
-        
+
         ctx := context.WithValue(r.Context(), "user_id", userID)
         next.ServeHTTP(w, r.WithContext(ctx))
     })
@@ -529,15 +529,15 @@ import hashlib
 class ConstructionSecurity:
     def __init__(self):
         self.cipher_suite = Fernet(os.getenv("ENCRYPTION_KEY").encode())
-    
+
     def encrypt_sensitive_data(self, data: str) -> str:
         """Encrypt sensitive construction data"""
         return self.cipher_suite.encrypt(data.encode()).decode()
-    
+
     def decrypt_sensitive_data(self, encrypted_data: str) -> str:
         """Decrypt sensitive construction data"""
         return self.cipher_suite.decrypt(encrypted_data.encode()).decode()
-    
+
     def hash_document(self, document_content: bytes) -> str:
         """Create hash for document integrity verification"""
         return hashlib.sha256(document_content).hexdigest()
@@ -555,7 +555,7 @@ import (
     "context"
     "encoding/json"
     "time"
-    
+
     "github.com/go-redis/redis/v8"
 )
 
@@ -572,13 +572,13 @@ func (c *Cache) GetProjectData(ctx context.Context, projectID string) (*Project,
     if err != nil {
         return nil, err
     }
-    
+
     var project Project
     err = json.Unmarshal([]byte(data), &project)
     if err != nil {
         return nil, err
     }
-    
+
     return &project, nil
 }
 
@@ -588,7 +588,7 @@ func (c *Cache) SetProjectData(ctx context.Context, projectID string, project *P
     if err != nil {
         return err
     }
-    
+
     return c.client.Set(ctx, key, data, ttl).Err()
 }
 ```
@@ -738,27 +738,27 @@ var (
         Name: "construction_project_requests_total",
         Help: "Total project requests",
     })
-    
+
     scheduleRequests = promauto.NewCounter(prometheus.CounterOpts{
         Name: "construction_schedule_requests_total",
         Help: "Total schedule requests",
     })
-    
+
     documentUploads = promauto.NewCounter(prometheus.CounterOpts{
         Name: "construction_document_uploads_total",
         Help: "Total document uploads",
     })
-    
+
     safetyIncidents = promauto.NewCounter(prometheus.CounterOpts{
         Name: "construction_safety_incidents_total",
         Help: "Total safety incidents",
     })
-    
+
     requestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
         Name: "construction_request_duration_seconds",
         Help: "Request duration",
     })
-    
+
     activeProjects = promauto.NewGauge(prometheus.GaugeOpts{
         Name: "construction_active_projects",
         Help: "Number of active projects",
@@ -799,7 +799,7 @@ import (
     "log"
     "os"
     "time"
-    
+
     "go.uber.org/zap"
     "go.uber.org/zap/zapcore"
 )
@@ -808,12 +808,12 @@ func SetupLogging() *zap.Logger {
     config := zap.NewProductionConfig()
     config.EncoderConfig.TimeKey = "timestamp"
     config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-    
+
     logger, err := config.Build()
     if err != nil {
         log.Fatal("Failed to initialize logger:", err)
     }
-    
+
     return logger
 }
 
@@ -869,20 +869,20 @@ import (
     "encoding/json"
     "net/http"
     "strconv"
-    
+
     "github.com/go-chi/chi/v5"
     "arxos/construction/internal/core"
 )
 
 func ProjectsHandler() http.Handler {
     r := chi.NewRouter()
-    
+
     r.Get("/", getProjects)
     r.Post("/", createProject)
     r.Get("/{projectID}", getProject)
     r.Put("/{projectID}", updateProject)
     r.Delete("/{projectID}", deleteProject)
-    
+
     return r
 }
 
@@ -893,7 +893,7 @@ func getProjects(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    
+
     json.NewEncoder(w).Encode(map[string]interface{}{
         "success": true,
         "data":    projects,
@@ -907,13 +907,13 @@ func createProject(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
-    
+
     createdProject, err := core.CreateProject(r.Context(), &project)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
-    
+
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(map[string]interface{}{
         "success": true,
@@ -973,14 +973,14 @@ package tests
 import (
     "context"
     "testing"
-    
+
     "github.com/stretchr/testify/assert"
     "arxos/construction/internal/core"
 )
 
 func TestCreateProject(t *testing.T) {
     ctx := context.Background()
-    
+
     project := &core.Project{
         Name:        "Test Project",
         Description: "Test Description",
@@ -988,9 +988,9 @@ func TestCreateProject(t *testing.T) {
         EndDate:     "2024-12-31",
         Budget:      1000000.00,
     }
-    
+
     createdProject, err := core.CreateProject(ctx, project)
-    
+
     assert.NoError(t, err)
     assert.NotNil(t, createdProject)
     assert.Equal(t, "Test Project", createdProject.Name)
@@ -1000,9 +1000,9 @@ func TestCreateProject(t *testing.T) {
 func TestGetProject(t *testing.T) {
     ctx := context.Background()
     projectID := "test-project-id"
-    
+
     project, err := core.GetProject(ctx, projectID)
-    
+
     assert.NoError(t, err)
     assert.NotNil(t, project)
     assert.Equal(t, projectID, project.ID)
@@ -1018,36 +1018,36 @@ package tests
 import (
     "context"
     "testing"
-    
+
     "github.com/stretchr/testify/assert"
     "arxos/construction/pkg/svgxbridge"
 )
 
 func TestSVGXIntegration(t *testing.T) {
     ctx := context.Background()
-    
+
     sync := &svgxbridge.MarkupSync{}
-    
+
     progress := svgxbridge.ConstructionProgress{
         ProjectID: "test-project",
         TaskID:    "test-task",
         Progress:  75.0,
         Status:    "in_progress",
     }
-    
+
     err := sync.SyncConstructionProgress(ctx, progress)
-    
+
     assert.NoError(t, err)
 }
 
 func TestAIIntegration(t *testing.T) {
     ctx := context.Background()
-    
+
     ai := &core.AIIntegration{}
     photos := []string{"photo1.jpg", "photo2.jpg"}
-    
+
     analysis, err := ai.AnalyzeSafetyPhotos(ctx, photos)
-    
+
     assert.NoError(t, err)
     assert.NotNil(t, analysis)
     assert.NotEmpty(t, analysis.Compliance)
@@ -1067,10 +1067,10 @@ class TestConstructionWorkflow:
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page()
-            
+
             # Navigate to construction app
             page.goto("http://localhost:3000/construction")
-            
+
             # Create new project
             page.click("text=New Project")
             page.fill("[data-testid=project-name]", "Test Construction Project")
@@ -1079,10 +1079,10 @@ class TestConstructionWorkflow:
             page.fill("[data-testid=end-date]", "2024-12-31")
             page.fill("[data-testid=budget]", "1000000")
             page.click("text=Create Project")
-            
+
             # Verify project created
             assert page.locator("text=Test Construction Project").is_visible()
-            
+
             browser.close()
 ```
 
@@ -1099,14 +1099,14 @@ async def create_project(
 ):
     """
     Create a new construction project.
-    
+
     Args:
         project: Project creation data
         current_user: Authenticated user ID
-    
+
     Returns:
         Project: Created project details
-    
+
     Raises:
         HTTPException: If project creation fails
     """
@@ -1120,34 +1120,34 @@ async def create_project(
 class ProjectManager:
     """
     Manages construction project lifecycle operations.
-    
+
     This class handles all project-related operations including creation,
     updates, deletion, and status management. It integrates with
     other services for comprehensive project management.
     """
-    
+
     def __init__(self, db: Session):
         """
         Initialize ProjectManager with database session.
-        
+
         Args:
             db: SQLAlchemy database session
         """
         self.db = db
         self.cache = ConstructionCache()
         self.ai = ConstructionAI()
-    
+
     async def create_project(self, project_data: ProjectCreate, user_id: str) -> Project:
         """
         Create a new construction project.
-        
+
         Args:
             project_data: Project creation data
             user_id: ID of user creating the project
-        
+
         Returns:
             Project: Created project object
-        
+
         Raises:
             ValidationError: If project data is invalid
             DatabaseError: If database operation fails
@@ -1160,4 +1160,4 @@ class ProjectManager:
 **Created:** $(date)
 **Status:** Architecture Design Complete
 **Version:** 1.0.0
-**Next Steps:** Implementation planning and development 
+**Next Steps:** Implementation planning and development

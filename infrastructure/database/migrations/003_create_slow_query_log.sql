@@ -1,6 +1,6 @@
 -- 003_create_slow_query_log.sql
 -- Migration: Create slow query logging table for performance monitoring
--- 
+--
 -- This table stores parsed slow query metrics for trend analysis and
 -- performance optimization. It follows Arxos logging standards with
 -- structured data and comprehensive indexing.
@@ -55,13 +55,13 @@ CREATE INDEX idx_slow_query_log_user_timestamp ON slow_query_log (user_name, tim
 CREATE INDEX idx_slow_query_log_app_timestamp ON slow_query_log (application_name, timestamp);
 
 -- Partial indexes for high-impact queries
-CREATE INDEX idx_slow_query_log_critical ON slow_query_log (timestamp, duration_ms) 
+CREATE INDEX idx_slow_query_log_critical ON slow_query_log (timestamp, duration_ms)
     WHERE severity = 'critical';
-CREATE INDEX idx_slow_query_log_warning ON slow_query_log (timestamp, duration_ms) 
+CREATE INDEX idx_slow_query_log_warning ON slow_query_log (timestamp, duration_ms)
     WHERE severity = 'warning';
 
 -- Recent queries index (last 30 days)
-CREATE INDEX idx_slow_query_log_recent ON slow_query_log (timestamp, severity) 
+CREATE INDEX idx_slow_query_log_recent ON slow_query_log (timestamp, severity)
     WHERE timestamp > NOW() - INTERVAL '30 days';
 
 -- =============================================================================
@@ -70,7 +70,7 @@ CREATE INDEX idx_slow_query_log_recent ON slow_query_log (timestamp, severity)
 
 -- View for critical slow queries
 CREATE VIEW v_critical_slow_queries AS
-SELECT 
+SELECT
     query_hash,
     statement,
     COUNT(*) as execution_count,
@@ -82,28 +82,28 @@ SELECT
     COUNT(DISTINCT application_name) as unique_applications,
     MAX(timestamp) as last_execution,
     MIN(timestamp) as first_execution
-FROM slow_query_log 
+FROM slow_query_log
 WHERE severity = 'critical'
 GROUP BY query_hash, statement
 ORDER BY total_duration_ms DESC;
 
 -- View for query performance trends
 CREATE VIEW v_query_performance_trends AS
-SELECT 
+SELECT
     DATE_TRUNC('hour', timestamp) as hour_bucket,
     severity,
     COUNT(*) as query_count,
     AVG(duration_ms) as avg_duration_ms,
     MAX(duration_ms) as max_duration_ms,
     SUM(duration_ms) as total_duration_ms
-FROM slow_query_log 
+FROM slow_query_log
 WHERE timestamp > NOW() - INTERVAL '7 days'
 GROUP BY DATE_TRUNC('hour', timestamp), severity
 ORDER BY hour_bucket DESC, severity;
 
 -- View for user performance analysis
 CREATE VIEW v_user_performance_analysis AS
-SELECT 
+SELECT
     user_name,
     COUNT(*) as total_queries,
     COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical_queries,
@@ -113,14 +113,14 @@ SELECT
     SUM(duration_ms) as total_duration_ms,
     MAX(timestamp) as last_activity,
     MIN(timestamp) as first_activity
-FROM slow_query_log 
+FROM slow_query_log
 WHERE user_name IS NOT NULL
 GROUP BY user_name
 ORDER BY total_duration_ms DESC;
 
 -- View for application performance analysis
 CREATE VIEW v_application_performance_analysis AS
-SELECT 
+SELECT
     application_name,
     COUNT(*) as total_queries,
     COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical_queries,
@@ -131,7 +131,7 @@ SELECT
     COUNT(DISTINCT user_name) as unique_users,
     MAX(timestamp) as last_activity,
     MIN(timestamp) as first_activity
-FROM slow_query_log 
+FROM slow_query_log
 WHERE application_name IS NOT NULL
 GROUP BY application_name
 ORDER BY total_duration_ms DESC;
@@ -146,16 +146,16 @@ RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    DELETE FROM slow_query_log 
+    DELETE FROM slow_query_log
     WHERE timestamp < NOW() - INTERVAL '90 days';
-    
+
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    
+
     -- Log the cleanup operation
     INSERT INTO audit_logs (object_type, object_id, action, payload)
-    VALUES ('slow_query_log', 'cleanup', 'cleanup_old_logs', 
+    VALUES ('slow_query_log', 'cleanup', 'cleanup_old_logs',
             jsonb_build_object('deleted_count', deleted_count, 'cutoff_date', NOW() - INTERVAL '90 days'));
-    
+
     RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql;
@@ -174,7 +174,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         COUNT(*) as total_queries,
         COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical_queries,
         COUNT(CASE WHEN severity = 'warning' THEN 1 END) as warning_queries,
@@ -183,7 +183,7 @@ BEGIN
         SUM(duration_ms) as total_duration_ms,
         COUNT(DISTINCT user_name) as unique_users,
         COUNT(DISTINCT application_name) as unique_applications
-    FROM slow_query_log 
+    FROM slow_query_log
     WHERE timestamp > NOW() - (days_back || ' days')::INTERVAL;
 END;
 $$ LANGUAGE plpgsql;
@@ -246,4 +246,4 @@ COMMENT ON VIEW v_application_performance_analysis IS 'Application-specific perf
 -- 3. Includes views for common analysis patterns
 -- 4. Offers maintenance functions for cleanup and statistics
 -- 5. Follows Arxos logging standards with structured data
--- 6. Integrates with existing audit logging system 
+-- 6. Integrates with existing audit logging system

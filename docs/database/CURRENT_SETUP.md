@@ -211,4 +211,4 @@ brew upgrade postgresql@17 postgis
 ---
 
 *Last Updated: August 2, 2024*
-*Setup by: Development Team* 
+*Setup by: Development Team*

@@ -194,4 +194,4 @@ This foundation will support the continued growth and development of the Arxos p
 
 ---
 
-*This documentation organization was completed as part of the Arxos platform development effort, following best practices for technical documentation management and maintainability.* 
+*This documentation organization was completed as part of the Arxos platform development effort, following best practices for technical documentation management and maintainability.*

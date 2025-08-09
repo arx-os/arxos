@@ -98,11 +98,11 @@ class DataVendorIntentType(IntentType):
 
 class DataVendorNLPRouter(NLPRouter):
     """NLP Router specialized for data vendor queries"""
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__(config)
         self._load_data_vendor_patterns()
-    
+
     def _load_data_vendor_patterns(self):
         """Load data vendor specific NLP patterns"""
         self.data_vendor_patterns = {
@@ -124,7 +124,7 @@ class DataVendorNLPRouter(NLPRouter):
                 r'performance\s+of\s+(\w+)'
             ]
         }
-    
+
     def parse_vendor_query(self, text: str, vendor_context: Dict) -> DataVendorResponse:
         """Parse data vendor specific queries"""
         # Create vendor-specific context
@@ -134,10 +134,10 @@ class DataVendorNLPRouter(NLPRouter):
             permissions=vendor_context.get('permissions', []),
             object_context=vendor_context
         )
-        
+
         # Parse with vendor patterns
         result = self.parse_natural_language(text, context)
-        
+
         # Enhance with vendor-specific processing
         return DataVendorResponse(
             original_text=text,
@@ -203,23 +203,23 @@ type ChatResponse struct {
 ```python
 class DataVendorQueryTranslator:
     """Translates natural language to structured queries"""
-    
+
     def __init__(self):
         self.nlp_router = NLPRouter()
         self.query_builder = QueryBuilder()
         self.context_manager = ContextManager()
-    
+
     def translate_query(self, message: str, context: Dict) -> QueryResult:
         """Translate natural language to database query"""
         # Parse intent and extract parameters
         nlp_result = self.nlp_router.parse_natural_language(message)
-        
+
         # Build structured query
         query = self.query_builder.build_query(nlp_result, context)
-        
+
         # Execute and format results
         results = self.execute_query(query)
-        
+
         return QueryResult(
             data=results,
             confidence=nlp_result.confidence,
@@ -248,21 +248,21 @@ func (h *DataVendorHandler) SendChatMessage(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
-    
+
     // Validate vendor access
     vendorID := c.GetString("vendor_id")
     if !h.validateVendorAccess(vendorID, req.VendorID) {
         c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
         return
     }
-    
+
     // Process chat message
     response, err := h.chatService.ProcessMessage(req)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
-    
+
     c.JSON(http.StatusOK, response)
 }
 
@@ -274,7 +274,7 @@ func (h *DataVendorHandler) ListChatSessions(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
-    
+
     c.JSON(http.StatusOK, sessions)
 }
 ```
@@ -322,29 +322,29 @@ type MultiBuildingQuery struct {
 ```python
 class CrossBuildingQueryEngine:
     """Handle queries across multiple buildings"""
-    
+
     def __init__(self):
         self.building_repository = BuildingRepository()
         self.asset_repository = AssetRepository()
         self.query_optimizer = QueryOptimizer()
-    
+
     def execute_cross_building_query(self, query: MultiBuildingQuery) -> QueryResult:
         """Execute query across multiple buildings"""
         # Validate building access
         accessible_buildings = self.validate_building_access(query.buildings)
-        
+
         # Optimize query for cross-building execution
         optimized_query = self.query_optimizer.optimize_for_cross_building(query)
-        
+
         # Execute query across buildings
         results = []
         for building_id in accessible_buildings:
             building_result = self.execute_single_building_query(optimized_query, building_id)
             results.append(building_result)
-        
+
         # Aggregate results
         aggregated_result = self.aggregate_cross_building_results(results, query)
-        
+
         return QueryResult(
             data=aggregated_result.data,
             metadata=aggregated_result.metadata,
@@ -370,25 +370,25 @@ type WebSocketMessage struct {
 // Channels: building_updates, asset_changes, alerts, analytics
 func (h *DataVendorHandler) HandleWebSocket(c *gin.Context) {
     vendorID := c.GetString("vendor_id")
-    
+
     // Upgrade to WebSocket
     conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
     if err != nil {
         return
     }
     defer conn.Close()
-    
+
     // Register connection
     h.wsManager.RegisterConnection(vendorID, conn)
     defer h.wsManager.UnregisterConnection(vendorID, conn)
-    
+
     // Handle WebSocket messages
     for {
         var msg WebSocketMessage
         if err := conn.ReadJSON(&msg); err != nil {
             break
         }
-        
+
         // Process message
         response := h.processWebSocketMessage(vendorID, msg)
         conn.WriteJSON(response)
@@ -402,12 +402,12 @@ func (h *DataVendorHandler) HandleWebSocket(c *gin.Context) {
 ```python
 class DataVendorAnalytics:
     """Real-time analytics for data vendors"""
-    
+
     def __init__(self):
         self.trend_analyzer = TrendAnalyzer()
         self.predictor = PredictiveModel()
         self.anomaly_detector = AnomalyDetector()
-    
+
     def generate_insights(self, data: Dict, query_context: Dict) -> AnalyticsResult:
         """Generate insights from query results"""
         insights = {
@@ -416,7 +416,7 @@ class DataVendorAnalytics:
             "anomalies": self.anomaly_detector.detect(data),
             "recommendations": self.generate_recommendations(data)
         }
-        
+
         return AnalyticsResult(
             insights=insights,
             confidence=self.calculate_confidence(insights),
@@ -596,6 +596,6 @@ The phased approach ensures incremental value delivery while maintaining system 
 
 ---
 
-**Implementation Date**: December 2024  
-**Version**: 1.0.0  
-**Status**: In Development 
+**Implementation Date**: December 2024
+**Version**: 1.0.0
+**Status**: In Development

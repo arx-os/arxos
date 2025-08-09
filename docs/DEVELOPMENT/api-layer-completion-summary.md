@@ -101,15 +101,15 @@ async def create_entity(
     try:
         # Convert API request to application DTO
         create_request = CreateEntityRequest(...)
-        
+
         # Use application service
         result = entity_service.create_entity(...)
-        
+
         if result.success:
             return format_success_response(data={...}, message="...")
         else:
             return format_error_response(...)
-            
+
     except Exception as e:
         return format_error_response(...)
 ```
@@ -239,4 +239,4 @@ arxos/api/
 
 The API Layer implementation is **COMPLETE** and represents a major milestone in the Arxos platform development. All 6 routes are fully implemented with 39 total endpoints, following clean architecture principles and enterprise-grade patterns.
 
-**The API Layer is now ready for production use and can support the full Arxos platform!** 🚀 
+**The API Layer is now ready for production use and can support the full Arxos platform!** 🚀

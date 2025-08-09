@@ -454,7 +454,7 @@ CREATE TABLE catalog_items (
     created_by INTEGER REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-); 
+);
 CREATE INDEX idx_catalog_items_category_id ON catalog_items(category_id);
 CREATE INDEX idx_catalog_items_created_by ON catalog_items(created_by);
 CREATE INDEX idx_catalog_items_make ON catalog_items(make);
@@ -553,7 +553,7 @@ CREATE INDEX idx_devices_covering ON devices (building_id, floor_id) INCLUDE (ty
 -- =============================================================================
 
 -- Review query logs regularly and add further indexes as needed for performance.
--- 
+--
 -- DEPENDENCY HIERARCHY SUMMARY:
 -- Level 1: users (base table)
 -- Level 2: projects (depends on users)
@@ -571,4 +571,4 @@ CREATE INDEX idx_devices_covering ON devices (building_id, floor_id) INCLUDE (ty
 -- - Partial indexes for filtered queries
 -- - Covering indexes for frequently accessed columns
 -- - Spatial indexes for geometric data
--- - User activity and project-based indexes 
+-- - User activity and project-based indexes

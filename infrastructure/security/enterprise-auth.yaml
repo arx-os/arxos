@@ -1,0 +1,475 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arxos-auth-config
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+    component: authentication
+data:
+  # Authentication Configuration
+  AUTH_PROVIDER: "enterprise"
+  AUTH_MODE: "sso"
+  AUTH_SESSION_TIMEOUT: "3600"
+  AUTH_REFRESH_TOKEN_EXPIRY: "604800"
+  AUTH_MAX_LOGIN_ATTEMPTS: "5"
+  AUTH_LOCKOUT_DURATION: "900"
+
+  # SSO Configuration
+  SSO_ENABLED: "true"
+  SSO_PROVIDER: "okta"
+  SSO_ISSUER_URL: "https://arxos.okta.com"
+  SSO_AUDIENCE: "https://api.arxos.com"
+  SSO_SIGNING_ALGORITHM: "RS256"
+
+  # SAML Configuration
+  SAML_ENABLED: "true"
+  SAML_ENTITY_ID: "https://api.arxos.com"
+  SAML_ACS_URL: "https://api.arxos.com/saml/acs"
+  SAML_SLO_URL: "https://api.arxos.com/saml/slo"
+  SAML_NAME_ID_FORMAT: "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
+
+  # OAuth 2.0 Configuration
+  OAUTH_ENABLED: "true"
+  OAUTH_CLIENT_ID: "arxos-enterprise-client"
+  OAUTH_CLIENT_SECRET: "enterprise-client-secret"
+  OAUTH_AUTHORIZATION_URL: "https://auth.arxos.com/oauth/authorize"
+  OAUTH_TOKEN_URL: "https://auth.arxos.com/oauth/token"
+  OAUTH_USERINFO_URL: "https://auth.arxos.com/oauth/userinfo"
+  OAUTH_SCOPE: "openid profile email groups"
+
+  # LDAP Configuration
+  LDAP_ENABLED: "true"
+  LDAP_SERVER_URL: "ldaps://ldap.arxos.com:636"
+  LDAP_BASE_DN: "dc=arxos,dc=com"
+  LDAP_BIND_DN: "cn=arxos-service,ou=service-accounts,dc=arxos,dc=com"
+  LDAP_USER_SEARCH_BASE: "ou=users,dc=arxos,dc=com"
+  LDAP_GROUP_SEARCH_BASE: "ou=groups,dc=arxos,dc=com"
+  LDAP_USER_FILTER: "(objectClass=person)"
+  LDAP_GROUP_FILTER: "(objectClass=groupOfNames)"
+
+  # Multi-Factor Authentication
+  MFA_ENABLED: "true"
+  MFA_PROVIDER: "totp"
+  MFA_ISSUER: "Arxos"
+  MFA_ALGORITHM: "SHA1"
+  MFA_DIGITS: "6"
+  MFA_PERIOD: "30"
+
+  # Password Policy
+  PASSWORD_MIN_LENGTH: "12"
+  PASSWORD_REQUIRE_UPPERCASE: "true"
+  PASSWORD_REQUIRE_LOWERCASE: "true"
+  PASSWORD_REQUIRE_NUMBERS: "true"
+  PASSWORD_REQUIRE_SPECIAL: "true"
+  PASSWORD_HISTORY_COUNT: "5"
+  PASSWORD_EXPIRY_DAYS: "90"
+
+  # Session Management
+  SESSION_STORE: "redis"
+  SESSION_SECURE_COOKIES: "true"
+  SESSION_HTTP_ONLY: "true"
+  SESSION_SAME_SITE: "strict"
+  SESSION_MAX_AGE: "3600"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: arxos-auth-secrets
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+    component: authentication
+type: Opaque
+data:
+  # SSO Secrets
+  SSO_CLIENT_ID: YXJ4b3Mtc2VydmljZQ==  # arxos-service
+  SSO_CLIENT_SECRET: U2VjdXJlU1NPU2VjcmV0MTIz  # SecureSSOSecret123
+  SSO_PRIVATE_KEY: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCg==  # Base64 encoded private key
+  SSO_PUBLIC_KEY: LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0K  # Base64 encoded public key
+
+  # SAML Secrets
+  SAML_PRIVATE_KEY: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCg==  # Base64 encoded SAML private key
+  SAML_CERTIFICATE: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==  # Base64 encoded SAML certificate
+  SAML_IDP_CERTIFICATE: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==  # Base64 encoded IdP certificate
+
+  # OAuth Secrets
+  OAUTH_CLIENT_SECRET: U2VjdXJlT0F1dGhTZWNyZXQxMjM=  # SecureOAuthSecret123
+  OAUTH_SIGNING_KEY: U2VjdXJlU2lnbmluZ0tleTEyMw==  # SecureSigningKey123
+
+  # LDAP Secrets
+  LDAP_BIND_PASSWORD: U2VjdXJlTERBUFBhc3N3b3JkMTIz  # SecureLDAPPassword123
+
+  # MFA Secrets
+  MFA_ENCRYPTION_KEY: U2VjdXJlT0ZBU2NyeXB0aW9uS2V5MTIz  # SecureOFAScryptionKey123
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arxos-auth-service
+  namespace: arxos-production
+  labels:
+    app: arxos-auth-service
+    environment: production
+    component: authentication
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: arxos-auth-service
+  template:
+    metadata:
+      labels:
+        app: arxos-auth-service
+        environment: production
+        component: authentication
+    spec:
+      serviceAccountName: arxos-service-account
+      containers:
+      - name: arxos-auth-service
+        image: arxos/auth-service:1.0.0
+        ports:
+        - containerPort: 8006
+          name: http
+        - containerPort: 8007
+          name: metrics
+        env:
+        - name: AUTH_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-auth-config
+              key: AUTH_PROVIDER
+        - name: SSO_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-auth-config
+              key: SSO_ENABLED
+        - name: SAML_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-auth-config
+              key: SAML_ENABLED
+        - name: OAUTH_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-auth-config
+              key: OAUTH_ENABLED
+        - name: LDAP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-auth-config
+              key: LDAP_ENABLED
+        - name: MFA_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-auth-config
+              key: MFA_ENABLED
+        - name: SSO_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: arxos-auth-secrets
+              key: SSO_CLIENT_SECRET
+        - name: LDAP_BIND_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: arxos-auth-secrets
+              key: LDAP_BIND_PASSWORD
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8006
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8006
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arxos-auth-service
+  namespace: arxos-production
+  labels:
+    app: arxos-auth-service
+    environment: production
+    component: authentication
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8006
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 8006
+    protocol: TCP
+    name: https
+  selector:
+    app: arxos-auth-service
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: arxos-auth-network-policy
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+    component: authentication
+spec:
+  podSelector:
+    matchLabels:
+      app: arxos-auth-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: arxos-production
+    ports:
+    - protocol: TCP
+      port: 8006
+    - protocol: TCP
+      port: 8007
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: arxos-production
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 6379
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: arxos-auth-role
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+    component: authentication
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods", "services"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: arxos-auth-role-binding
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+    component: authentication
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: arxos-auth-role
+subjects:
+- kind: ServiceAccount
+  name: arxos-service-account
+  namespace: arxos-production
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: arxos-auth-service-hpa
+  namespace: arxos-production
+  labels:
+    app: arxos-auth-service
+    environment: production
+    component: authentication
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: arxos-auth-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arxos-rbac-config
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+    component: rbac
+data:
+  # RBAC Configuration
+  RBAC_ENABLED: "true"
+  RBAC_DEFAULT_ROLE: "user"
+  RBAC_ADMIN_ROLE: "admin"
+  RBAC_SUPER_ADMIN_ROLE: "super_admin"
+
+  # Role Definitions
+  ROLE_USER_PERMISSIONS: "read:own,write:own,delete:own"
+  ROLE_ADMIN_PERMISSIONS: "read:all,write:all,delete:all,manage:users,manage:roles"
+  ROLE_SUPER_ADMIN_PERMISSIONS: "read:all,write:all,delete:all,manage:users,manage:roles,manage:system"
+
+  # Permission Scopes
+  PERMISSION_SCOPES: "buildings,devices,analytics,reports,users,roles,system"
+
+  # Access Control
+  ACCESS_CONTROL_ENABLED: "true"
+  ACCESS_CONTROL_MODE: "whitelist"
+  ACCESS_CONTROL_DEFAULT_DENY: "true"
+
+  # Audit Configuration
+  AUDIT_ENABLED: "true"
+  AUDIT_LOG_LEVEL: "info"
+  AUDIT_RETENTION_DAYS: "365"
+  AUDIT_SENSITIVE_ACTIONS: "login,logout,role_change,permission_change,data_access"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arxos-rbac-service
+  namespace: arxos-production
+  labels:
+    app: arxos-rbac-service
+    environment: production
+    component: rbac
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: arxos-rbac-service
+  template:
+    metadata:
+      labels:
+        app: arxos-rbac-service
+        environment: production
+        component: rbac
+    spec:
+      serviceAccountName: arxos-service-account
+      containers:
+      - name: arxos-rbac-service
+        image: arxos/rbac-service:1.0.0
+        ports:
+        - containerPort: 8008
+          name: http
+        - containerPort: 8009
+          name: metrics
+        env:
+        - name: RBAC_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-rbac-config
+              key: RBAC_ENABLED
+        - name: AUDIT_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-rbac-config
+              key: AUDIT_ENABLED
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8008
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8008
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arxos-rbac-service
+  namespace: arxos-production
+  labels:
+    app: arxos-rbac-service
+    environment: production
+    component: rbac
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8008
+    protocol: TCP
+    name: http
+  selector:
+    app: arxos-rbac-service

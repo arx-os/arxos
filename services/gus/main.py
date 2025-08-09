@@ -3,7 +3,7 @@ GUS Service Main Application
 
 This module contains the FastAPI application for the GUS service, following
 Clean Architecture principles by keeping the presentation layer separate
-from domain logic.
+from domain import domain
 
 Presentation Layer:
 - FastAPI application setup
@@ -98,14 +98,14 @@ gus_task_use_case: ExecuteGUSTaskUseCase = None
     async def lifespan(app: FastAPI, user: User = Depends(get_current_user)):
     """Application lifespan manager"""
     global gus_query_use_case, gus_task_use_case
-    
+
     # Startup
     logger.info("Starting GUS Agent service...")
-    
+
     try:
         # Initialize domain and application layers
         settings = get_settings()
-        
+
         # Create domain configuration
         config = GUSAgentConfig(
             model_type="gpt-4",
@@ -115,22 +115,22 @@ gus_task_use_case: ExecuteGUSTaskUseCase = None
             temperature=settings.temperature,
             timeout=settings.timeout
         )
-        
+
         # Create infrastructure implementation
         gus_agent = ConcreteGUSAgent(config)
-        
+
         # Create use cases with dependency injection
         gus_query_use_case = ProcessGUSQueryUseCase(gus_agent)
         gus_task_use_case = ExecuteGUSTaskUseCase(gus_agent)
-        
+
         logger.info("GUS Service initialized successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"Failed to initialize GUS Service: {e}")
         raise
-    
+
     finally:
         # Shutdown
         logger.info("Shutting down GUS Agent service...")
@@ -187,7 +187,7 @@ app.add_middleware(
     async def process_query(request: QueryRequest, user: User = Depends(get_current_user)):
     """
     Process GUS query endpoint.
-    
+
     This endpoint uses the use case to process GUS queries while keeping
     the presentation layer separate from business logic.
     """
@@ -199,10 +199,10 @@ app.add_middleware(
             context=request.context,
             session_id=request.session_id
         )
-        
+
         # Execute use case
         response = gus_query_use_case.execute(use_case_request)
-        
+
         # Convert use case response to API response
         if response.success:
             return {
@@ -219,7 +219,7 @@ app.add_middleware(
                 status_code=400,
                 detail=response.error_message
             )
-            
+
     except Exception as e:
         logger.error(f"Error processing GUS query: {e}")
         raise HTTPException(
@@ -232,7 +232,7 @@ app.add_middleware(
     async def execute_task(request: TaskRequest, user: User = Depends(get_current_user)):
     """
     Execute GUS task endpoint.
-    
+
     This endpoint uses the use case to execute GUS tasks while keeping
     the presentation layer separate from business logic.
     """
@@ -243,10 +243,10 @@ app.add_middleware(
             parameters=request.parameters,
             user_id=request.user_id
         )
-        
+
         # Execute use case
         response = gus_task_use_case.execute(use_case_request)
-        
+
         # Convert use case response to API response
         if response.success:
             return {
@@ -260,7 +260,7 @@ app.add_middleware(
                 status_code=400,
                 detail=response.error_message
             )
-            
+
     except Exception as e:
         logger.error(f"Error executing GUS task: {e}")
         raise HTTPException(
@@ -350,4 +350,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=True
-    ) 
+    )

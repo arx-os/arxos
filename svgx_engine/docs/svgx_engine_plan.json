@@ -48,7 +48,7 @@
   "services": {
     "completed": [
       "auth",
-      "security", 
+      "security",
       "telemetry",
       "realtime",
       "advanced_caching",
@@ -92,8 +92,8 @@
   },
   "next_steps": [
     "Complete remaining BIM integration services",
-    "Migrate symbol management services", 
+    "Migrate symbol management services",
     "Implement export and interoperability services",
     "Complete infrastructure services migration"
   ]
-} 
+}

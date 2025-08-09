@@ -53,27 +53,27 @@ This system works for **all building systems and equipment**:
 ```python
 class SiteURLService:
     """Manage shortened URLs for site access across all building systems"""
-    
+
     def __init__(self):
         self.url_generator = URLGenerator()
         self.view_mapper = ViewMapper()
         self.analytics = URLAnalytics()
         self.access_control = AccessControl()
-    
-    def create_site_url(self, user_id: str, view_config: ViewConfig, 
+
+    def create_site_url(self, user_id: str, view_config: ViewConfig,
                        custom_slug: str = None, password: str = None) -> SiteURL:
         """Create shortened URL for specific SVGX view of any building system"""
-        
+
         # Generate unique slug
         slug = custom_slug or self.url_generator.generate_slug()
-        
+
         # Create view mapping
         view_mapping = self.view_mapper.create_mapping(
             user_id=user_id,
             view_config=view_config,
             slug=slug
         )
-        
+
         # Create access control
         access_config = AccessConfig(
             password_protected=bool(password),
@@ -81,7 +81,7 @@ class SiteURLService:
             expires_at=self.calculate_expiry(view_config.access_type),
             max_uses=view_config.max_uses
         )
-        
+
         # Create site URL
         site_url = SiteURL(
             slug=slug,
@@ -91,54 +91,54 @@ class SiteURLService:
             created_at=datetime.now(),
             created_by=user_id
         )
-        
+
         # Store in database
         self.store_site_url(site_url)
-        
+
         return site_url
-    
+
     def resolve_site_url(self, slug: str, password: str = None) -> ViewConfig:
         """Resolve shortened URL to view configuration for any building system"""
-        
+
         # Get site URL
         site_url = self.get_site_url(slug)
-        
+
         if not site_url:
             raise URLNotFoundError(f"Site URL not found: {slug}")
-        
+
         # Check access control
         access_granted = self.access_control.check_access(
-            site_url.access_config, 
+            site_url.access_config,
             password=password
         )
-        
+
         if not access_granted:
             raise AccessDeniedError("Access denied to this site URL")
-        
+
         # Log access
         self.analytics.log_access(site_url, password_provided=bool(password))
-        
+
         # Return view configuration
         return site_url.view_mapping.view_config
-    
+
     def update_site_url(self, slug: str, updates: dict) -> SiteURL:
         """Update site URL configuration"""
-        
+
         site_url = self.get_site_url(slug)
-        
+
         # Apply updates
         for field, value in updates.items():
             if hasattr(site_url, field):
                 setattr(site_url, field, value)
-        
+
         # Update in database
         self.update_site_url(site_url)
-        
+
         return site_url
-    
+
     def get_analytics(self, slug: str) -> URLAnalytics:
         """Get analytics for site URL"""
-        
+
         return self.analytics.get_analytics(slug)
 ```
 
@@ -146,13 +146,13 @@ class SiteURLService:
 ```python
 class ViewMapper:
     """Map shortened URLs to specific SVGX views for all building systems"""
-    
+
     def create_mapping(self, user_id: str, view_config: ViewConfig, slug: str) -> ViewMapping:
         """Create mapping between slug and SVGX view for any building system"""
-        
+
         # Capture current view state
         view_state = self.capture_view_state(view_config)
-        
+
         # Create mapping
         mapping = ViewMapping(
             slug=slug,
@@ -161,12 +161,12 @@ class ViewMapper:
             view_state=view_state,
             created_at=datetime.now()
         )
-        
+
         return mapping
-    
+
     def capture_view_state(self, view_config: ViewConfig) -> ViewState:
         """Capture current state of SVGX view for any building system"""
-        
+
         return ViewState(
             building_id=view_config.building_id,
             floor_id=view_config.floor_id,
@@ -179,10 +179,10 @@ class ViewMapper:
             filters=view_config.filters,
             system_specific_config=view_config.system_specific_config  # HVAC filters, electrical phases, etc.
         )
-    
+
     def restore_view_state(self, view_state: ViewState) -> ViewConfig:
         """Restore view configuration from captured state for any building system"""
-        
+
         return ViewConfig(
             building_id=view_state.building_id,
             floor_id=view_state.floor_id,
@@ -201,42 +201,42 @@ class ViewMapper:
 ```python
 class SystemSpecificConfig:
     """Configuration specific to different building systems"""
-    
+
     @dataclass
     class ElectricalConfig:
         phase: str = None  # A, B, C, or all
         voltage: str = None  # 120V, 240V, 480V, etc.
         circuit_type: str = None  # lighting, power, emergency
         panel_id: str = None
-    
+
     @dataclass
     class HVACConfig:
         zone: str = None
         equipment_type: str = None  # AHU, chiller, thermostat
         temperature_setpoint: float = None
         airflow: str = None
-    
+
     @dataclass
     class PlumbingConfig:
         pipe_size: str = None
         material: str = None  # copper, pvc, steel
         flow_rate: float = None
         pressure: float = None
-    
+
     @dataclass
     class FireProtectionConfig:
         sprinkler_type: str = None
         coverage_area: str = None
         flow_rate: float = None
         pressure: float = None
-    
+
     @dataclass
     class SecurityConfig:
         camera_type: str = None
         recording_quality: str = None
         motion_detection: bool = None
         access_level: str = None
-    
+
     @dataclass
     class AVConfig:
         speaker_type: str = None
@@ -253,27 +253,27 @@ class SystemSpecificConfig:
 ```python
 class NFCService:
     """Manage NFC tags for site access across all building systems"""
-    
+
     def __init__(self):
         self.nfc_generator = NFCGenerator()
         self.tag_manager = TagManager()
         self.tap_handler = TapHandler()
         self.url_service = SiteURLService()
-    
-    def create_nfc_tag(self, user_id: str, view_config: ViewConfig, 
+
+    def create_nfc_tag(self, user_id: str, view_config: ViewConfig,
                        tag_type: str = 'standard', equipment_info: dict = None) -> NFCTag:
         """Create NFC tag for site access to any building system"""
-        
+
         # Create site URL first
         site_url = self.url_service.create_site_url(user_id, view_config)
-        
+
         # Generate NFC data with system-specific information
         nfc_data = self.nfc_generator.generate_nfc_data(
             site_url=site_url,
             tag_type=tag_type,
             equipment_info=equipment_info
         )
-        
+
         # Create NFC tag
         nfc_tag = NFCTag(
             tag_id=self.generate_tag_id(),
@@ -284,36 +284,36 @@ class NFCService:
             created_at=datetime.now(),
             created_by=user_id
         )
-        
+
         # Store in database
         self.tag_manager.store_tag(nfc_tag)
-        
+
         return nfc_tag
-    
+
     def handle_nfc_tap(self, nfc_data: bytes) -> ViewConfig:
         """Handle NFC tap and return view configuration for any building system"""
-        
+
         # Decode NFC data
         decoded_data = self.nfc_generator.decode_nfc_data(nfc_data)
-        
+
         # Extract site URL slug
         slug = decoded_data.get('slug')
-        
+
         if not slug:
             raise NFCDataError("Invalid NFC data format")
-        
+
         # Resolve site URL
         view_config = self.url_service.resolve_site_url(slug)
-        
+
         # Log tap with system information
         self.tap_handler.log_tap(slug, nfc_data, decoded_data.get('system_type'))
-        
+
         return view_config
-    
-    def generate_nfc_data(self, site_url: SiteURL, tag_type: str, 
+
+    def generate_nfc_data(self, site_url: SiteURL, tag_type: str,
                           equipment_info: dict = None) -> bytes:
         """Generate NFC data for tag with system-specific information"""
-        
+
         # Create NFC payload with system context
         payload = {
             'type': 'arxos_site_access',
@@ -323,7 +323,7 @@ class NFCService:
             'system_type': site_url.view_mapping.view_config.system_type,
             'equipment_info': equipment_info or {}
         }
-        
+
         # Encode based on tag type
         if tag_type == 'standard':
             return self.encode_standard_nfc(payload)
@@ -341,60 +341,60 @@ class NFCService:
 ```python
 class HubService:
     """Manage building discovery and search across all building systems"""
-    
+
     def __init__(self):
         self.search_engine = BuildingSearchEngine()
         self.directory = BuildingDirectory()
         self.geolocation = GeolocationService()
         self.system_filter = SystemFilter()
-    
+
     def search_buildings(self, query: str, filters: dict = None) -> SearchResults:
         """Search for buildings and systems in the system"""
-        
+
         # Parse search query
         parsed_query = self.search_engine.parse_query(query)
-        
+
         # Apply filters including system-specific filters
         search_filters = self.build_search_filters(parsed_query, filters)
-        
+
         # Execute search
         results = self.search_engine.search(parsed_query, search_filters)
-        
+
         return SearchResults(
             query=query,
             results=results,
             total_count=len(results),
             search_time=results.search_time
         )
-    
+
     def search_by_system(self, system_type: str, location: str = None) -> SystemSearchResults:
         """Search for specific building systems"""
-        
+
         # Build system-specific search criteria
         criteria = SearchCriteria(
             system_type=system_type,
             location=location,
             include_equipment=True
         )
-        
+
         # Execute system search
         results = self.search_engine.search_by_system(criteria)
-        
+
         return SystemSearchResults(
             system_type=system_type,
             results=results,
             total_count=len(results)
         )
-    
-    def get_nearby_buildings(self, latitude: float, longitude: float, 
+
+    def get_nearby_buildings(self, latitude: float, longitude: float,
                             radius_km: float = 10.0, system_type: str = None) -> NearbyBuildings:
         """Get buildings near specified location, optionally filtered by system"""
-        
+
         # Find buildings within radius
         nearby = self.geolocation.find_nearby_buildings(
             latitude, longitude, radius_km, system_type
         )
-        
+
         return NearbyBuildings(
             center_lat=latitude,
             center_lng=longitude,
@@ -402,13 +402,13 @@ class HubService:
             buildings=nearby,
             system_type=system_type
         )
-    
+
     def get_building_directory(self, filters: dict = None) -> BuildingDirectory:
         """Get public building directory with system information"""
-        
+
         # Get public buildings with system details
         public_buildings = self.directory.get_public_buildings(filters)
-        
+
         return BuildingDirectory(
             buildings=public_buildings,
             total_count=len(public_buildings),
@@ -420,13 +420,13 @@ class HubService:
 ```python
 class SystemFilter:
     """Filter and search by building system types"""
-    
+
     def __init__(self):
         self.system_definitions = self.load_system_definitions()
-    
+
     def load_system_definitions(self) -> dict:
         """Load definitions for all building systems"""
-        
+
         return {
             'electrical': {
                 'name': 'Electrical Systems',
@@ -469,30 +469,30 @@ class SystemFilter:
                 'keywords': ['load', 'support', 'foundation', 'structural']
             }
         }
-    
+
     def filter_by_system(self, buildings: List[Building], system_type: str) -> List[Building]:
         """Filter buildings by specific system type"""
-        
+
         filtered_buildings = []
-        
+
         for building in buildings:
             if self.has_system(building, system_type):
                 filtered_buildings.append(building)
-        
+
         return filtered_buildings
-    
+
     def has_system(self, building: Building, system_type: str) -> bool:
         """Check if building has specific system"""
-        
+
         # Check building systems
         if system_type in building.systems:
             return True
-        
+
         # Check equipment inventory
         for equipment in building.equipment:
             if equipment.system_type == system_type:
                 return True
-        
+
         return False
 ```
 
@@ -513,7 +513,7 @@ CREATE TABLE site_urls (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE,
-    
+
     -- Indexes
     INDEX idx_site_urls_slug (slug),
     INDEX idx_site_urls_user_id (user_id),
@@ -536,7 +536,7 @@ CREATE TABLE nfc_tags (
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT NOW(),
     created_by UUID REFERENCES users(id),
-    
+
     -- Indexes
     INDEX idx_nfc_tags_tag_id (tag_id),
     INDEX idx_nfc_tags_site_url_id (site_url_id),
@@ -556,7 +556,7 @@ CREATE TABLE building_systems (
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Indexes
     INDEX idx_building_systems_building_id (building_id),
     INDEX idx_building_systems_system_type (system_type),
@@ -577,7 +577,7 @@ CREATE TABLE equipment (
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Indexes
     INDEX idx_equipment_building_id (building_id),
     INDEX idx_equipment_system_type (system_type),
@@ -681,7 +681,7 @@ const SystemSpecificURLCreation: React.FC<SystemSpecificURLCreationProps> = ({
     const [password, setPassword] = useState('');
     const [expiresAt, setExpiresAt] = useState('');
     const [maxUses, setMaxUses] = useState(0);
-    
+
     const getSystemSpecificFields = () => {
         switch (systemType) {
             case 'electrical':
@@ -728,7 +728,7 @@ const SystemSpecificURLCreation: React.FC<SystemSpecificURLCreationProps> = ({
                 return null;
         }
     };
-    
+
     const createSiteURL = async () => {
         const response = await api.post('/site-urls', {
             view_config: {
@@ -742,43 +742,43 @@ const SystemSpecificURLCreation: React.FC<SystemSpecificURLCreationProps> = ({
             expires_at: expiresAt || undefined,
             max_uses: maxUses || undefined
         });
-        
+
         onURLCreated(response.data);
     };
-    
+
     return (
         <div className="system-specific-url-creation">
             <h3>Create {getSystemName(systemType)} Access Link</h3>
-            
+
             {equipment && (
                 <div className="equipment-info">
                     <h4>Equipment: {equipment.name}</h4>
                     <p>{equipment.location_description}</p>
                 </div>
             )}
-            
+
             {getSystemSpecificFields()}
-            
+
             <div className="form-group">
                 <label>Custom URL (optional)</label>
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     value={customSlug}
                     onChange={(e) => setCustomSlug(e.target.value)}
                     placeholder={`${systemType}-${equipment?.name || 'location'}`}
                 />
             </div>
-            
+
             <div className="form-group">
                 <label>Password Protection (optional)</label>
-                <input 
-                    type="password" 
+                <input
+                    type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter password"
                 />
             </div>
-            
+
             <button onClick={createSiteURL}>
                 Create {getSystemName(systemType)} Access Link
             </button>
@@ -804,7 +804,7 @@ const SystemSpecificHubSearch: React.FC<SystemSpecificHubSearchProps> = ({
     const [selectedSystem, setSelectedSystem] = useState(systemType || '');
     const [results, setResults] = useState<SearchResults>([]);
     const [loading, setLoading] = useState(false);
-    
+
     const systemTypes = [
         { value: 'electrical', label: 'Electrical Systems' },
         { value: 'hvac', label: 'HVAC Systems' },
@@ -815,16 +815,16 @@ const SystemSpecificHubSearch: React.FC<SystemSpecificHubSearchProps> = ({
         { value: 'mechanical', label: 'Mechanical Systems' },
         { value: 'structural', label: 'Structural Systems' }
     ];
-    
+
     const searchBuildings = async () => {
         setLoading(true);
-        
+
         try {
             const params: any = { q: query };
             if (selectedSystem) {
                 params.system_type = selectedSystem;
             }
-            
+
             const response = await api.get('/hub/search', { params });
             setResults(response.data);
         } catch (error) {
@@ -833,16 +833,16 @@ const SystemSpecificHubSearch: React.FC<SystemSpecificHubSearchProps> = ({
             setLoading(false);
         }
     };
-    
+
     return (
         <div className="system-specific-hub-search">
             <h2>Find Buildings & Systems</h2>
-            
+
             <div className="search-form">
                 <div className="system-filter">
                     <label>System Type</label>
-                    <select 
-                        value={selectedSystem} 
+                    <select
+                        value={selectedSystem}
                         onChange={(e) => setSelectedSystem(e.target.value)}
                     >
                         <option value="">All Systems</option>
@@ -853,24 +853,24 @@ const SystemSpecificHubSearch: React.FC<SystemSpecificHubSearchProps> = ({
                         ))}
                     </select>
                 </div>
-                
-                <input 
-                    type="text" 
+
+                <input
+                    type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search by address, building name, or equipment..."
                     onKeyPress={(e) => e.key === 'Enter' && searchBuildings()}
                 />
-                
+
                 <button onClick={searchBuildings} disabled={loading}>
                     {loading ? 'Searching...' : 'Search'}
                 </button>
             </div>
-            
+
             {results.length > 0 && (
                 <div className="search-results">
                     <h3>Found {results.length} results</h3>
-                    
+
                     {results.map((result) => (
                         <div key={result.id} className="search-result">
                             <h4>{result.name}</h4>

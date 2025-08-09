@@ -74,7 +74,7 @@ class WebSocketManager {
         this.isConnecting = false;
         this.currentCanvasId = null;
         this.currentSessionId = null;
-        
+
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
@@ -113,23 +113,23 @@ class WebSocketManager {
             case 'handshake_ack':
                 console.log('Handshake acknowledged');
                 break;
-            
+
             case 'lock_acquired':
                 this.handleLockAcquired(message.data);
                 break;
-            
+
             case 'lock_released':
                 this.handleLockReleased(message.data);
                 break;
-            
+
             case 'object_updated':
                 this.handleObjectUpdate(message.data);
                 break;
-            
+
             case 'user_activity':
                 this.handleUserActivity(message.data);
                 break;
-            
+
             case 'collaboration_error':
                 window.toastManager.show(message.data.message, 'error');
                 break;
@@ -275,4 +275,4 @@ class WebSocketManager {
 }
 
 // Export for global use
-window.WebSocketManager = WebSocketManager; 
+window.WebSocketManager = WebSocketManager;

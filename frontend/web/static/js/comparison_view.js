@@ -12,11 +12,11 @@ class ComparisonView {
             maxChanges: 1000,
             ...options
         };
-        
+
         this.comparison = null;
         this.currentView = 'side-by-side'; // side-by-side, unified, timeline
         this.selectedChanges = [];
-        
+
         this.render();
         this.initializeEventListeners();
     }
@@ -52,7 +52,7 @@ class ComparisonView {
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Version Info -->
                     <div id="version-info" class="mt-4 grid grid-cols-2 gap-4" style="display: none;">
                         <div class="from-version bg-gray-50 p-3 rounded-md">
@@ -65,7 +65,7 @@ class ComparisonView {
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Comparison Content -->
                 <div id="comparison-content" class="p-4">
                     <div class="text-center text-gray-500 py-8">
@@ -73,7 +73,7 @@ class ComparisonView {
                         <p>Select versions to compare</p>
                     </div>
                 </div>
-                
+
                 <!-- Change Summary -->
                 <div id="change-summary" class="p-4 border-t border-gray-200 bg-gray-50" style="display: none;">
                     <div class="flex items-center justify-between">
@@ -145,7 +145,7 @@ class ComparisonView {
 
         try {
             this.showLoading();
-            
+
             const response = await fetch(`/api/floors/${this.options.floorId}/versions/compare`, {
                 method: 'POST',
                 headers: {
@@ -177,7 +177,7 @@ class ComparisonView {
         }
 
         const content = document.getElementById('comparison-content');
-        
+
         switch (this.currentView) {
             case 'side-by-side':
                 content.innerHTML = this.renderSideBySideView();
@@ -198,7 +198,7 @@ class ComparisonView {
     // Render side-by-side view
     renderSideBySideView() {
         const { from_data, to_data, changes } = this.comparison;
-        
+
         return `
             <div class="grid grid-cols-2 gap-6 h-96">
                 <div class="comparison-panel border border-gray-200 rounded-md overflow-hidden">
@@ -209,7 +209,7 @@ class ComparisonView {
                         ${this.renderDiffContent(from_data, changes, 'from')}
                     </div>
                 </div>
-                
+
                 <div class="comparison-panel border border-gray-200 rounded-md overflow-hidden">
                     <div class="comparison-header bg-gray-50 px-4 py-2 border-b border-gray-200">
                         <h4 class="font-medium text-gray-900">To Version</h4>
@@ -225,7 +225,7 @@ class ComparisonView {
     // Render unified view
     renderUnifiedView() {
         const { changes } = this.comparison;
-        
+
         return `
             <div class="unified-view border border-gray-200 rounded-md overflow-hidden">
                 <div class="comparison-header bg-gray-50 px-4 py-2 border-b border-gray-200">
@@ -241,7 +241,7 @@ class ComparisonView {
     // Render timeline view
     renderTimelineView() {
         const { changes } = this.comparison;
-        
+
         return `
             <div class="timeline-view">
                 <div class="timeline-header bg-gray-50 px-4 py-2 border-b border-gray-200">
@@ -257,14 +257,14 @@ class ComparisonView {
     // Render diff content
     renderDiffContent(data, changes, side) {
         if (!data) return '<div class="text-gray-500">No data available</div>';
-        
+
         let html = '<div class="space-y-2">';
-        
+
         changes.forEach((change, index) => {
             const changeClass = this.getChangeClass(change.type);
             const indicator = `<span class="change-indicator ${changeClass}"></span>`;
             const checkbox = `<input type="checkbox" class="change-checkbox mr-2" data-change-index="${index}">`;
-            
+
             if (side === 'from' && change.type === 'removed') {
                 html += `
                     <div class="diff-item diff-removed p-2 rounded border-l-4 border-red-500 bg-red-50">
@@ -300,7 +300,7 @@ class ComparisonView {
                 `;
             }
         });
-        
+
         html += '</div>';
         return html;
     }
@@ -308,12 +308,12 @@ class ComparisonView {
     // Render unified changes
     renderUnifiedChanges(changes) {
         let html = '<div class="space-y-3">';
-        
+
         changes.forEach((change, index) => {
             const changeClass = this.getChangeClass(change.type);
             const indicator = `<span class="change-indicator ${changeClass}"></span>`;
             const checkbox = `<input type="checkbox" class="change-checkbox mr-2" data-change-index="${index}">`;
-            
+
             switch (change.type) {
                 case 'added':
                     html += `
@@ -368,7 +368,7 @@ class ComparisonView {
                     break;
             }
         });
-        
+
         html += '</div>';
         return html;
     }
@@ -376,12 +376,12 @@ class ComparisonView {
     // Render timeline changes
     renderTimelineChanges(changes) {
         let html = '<div class="space-y-4">';
-        
+
         changes.forEach((change, index) => {
             const changeClass = this.getChangeClass(change.type);
             const indicator = `<span class="change-indicator ${changeClass}"></span>`;
             const checkbox = `<input type="checkbox" class="change-checkbox mr-2" data-change-index="${index}">`;
-            
+
             html += `
                 <div class="timeline-item flex items-start space-x-3">
                     <div class="timeline-marker flex-shrink-0 w-3 h-3 rounded-full ${changeClass === 'change-added' ? 'bg-green-500' : changeClass === 'change-removed' ? 'bg-red-500' : 'bg-yellow-500'} mt-2"></div>
@@ -403,7 +403,7 @@ class ComparisonView {
                 </div>
             `;
         });
-        
+
         html += '</div>';
         return html;
     }
@@ -443,7 +443,7 @@ class ComparisonView {
     // Render version info
     renderVersionInfo() {
         const { from_version, to_version } = this.comparison;
-        
+
         document.getElementById('from-version-details').innerHTML = `
             <div class="space-y-1">
                 <div><strong>Description:</strong> ${from_version.description || 'Untitled'}</div>
@@ -452,7 +452,7 @@ class ComparisonView {
                 <div><strong>Type:</strong> ${this.formatVersionType(from_version.type)}</div>
             </div>
         `;
-        
+
         document.getElementById('to-version-details').innerHTML = `
             <div class="space-y-1">
                 <div><strong>Description:</strong> ${to_version.description || 'Untitled'}</div>
@@ -461,7 +461,7 @@ class ComparisonView {
                 <div><strong>Type:</strong> ${this.formatVersionType(to_version.type)}</div>
             </div>
         `;
-        
+
         document.getElementById('version-info').style.display = 'grid';
     }
 
@@ -479,14 +479,14 @@ class ComparisonView {
     // Update change counts
     updateChangeCounts() {
         if (!this.comparison) return;
-        
+
         const { changes } = this.comparison;
         const counts = {
             added: changes.filter(c => c.type === 'added').length,
             removed: changes.filter(c => c.type === 'removed').length,
             modified: changes.filter(c => c.type === 'modified').length
         };
-        
+
         document.getElementById('added-count').textContent = `${counts.added} added`;
         document.getElementById('removed-count').textContent = `${counts.removed} removed`;
         document.getElementById('modified-count').textContent = `${counts.modified} modified`;
@@ -563,7 +563,7 @@ class ComparisonView {
                 a.download = `comparison-${Date.now()}.pdf`;
                 a.click();
                 window.URL.revokeObjectURL(url);
-                
+
                 this.showSuccess('Comparison exported successfully');
             } else {
                 throw new Error('Failed to export comparison');
@@ -649,4 +649,4 @@ class ComparisonView {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ComparisonView;
-} 
+}

@@ -673,13 +673,13 @@
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
                     const targetId = this.getAttribute('href').substring(1);
-                    
+
                     // Hide all sections
                     sections.forEach(section => section.classList.add('hidden'));
-                    
+
                     // Show target section
                     document.getElementById(targetId).classList.remove('hidden');
-                    
+
                     // Update active nav link
                     navLinks.forEach(l => l.classList.remove('bg-gray-100'));
                     this.classList.add('bg-gray-100');
@@ -842,4 +842,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

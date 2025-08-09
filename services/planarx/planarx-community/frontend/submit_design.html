@@ -63,7 +63,7 @@
         <div id="step-1" class="step-content">
             <div class="bg-white rounded-lg shadow-md p-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-6">Upload Your Design</h2>
-                
+
                 <!-- File Upload Area -->
                 <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center upload-area" id="upload-area">
                     <div class="mb-4">
@@ -112,7 +112,7 @@
         <div id="step-2" class="step-content hidden">
             <div class="bg-white rounded-lg shadow-md p-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-6">Project Details</h2>
-                
+
                 <form id="project-form" class="space-y-6">
                     <!-- Basic Information -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -157,12 +157,12 @@
                     <!-- Funding Information -->
                     <div class="border-t border-gray-200 pt-6">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Crowdfunding Setup</h3>
-                        
+
                         <div class="flex items-center mb-4">
                             <input type="checkbox" id="enable-crowdfunding" class="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                             <label for="enable-crowdfunding" class="text-sm font-medium text-gray-700">Enable crowdfunding for this project</label>
                         </div>
-                        
+
                         <div id="crowdfunding-fields" class="hidden space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
@@ -178,12 +178,12 @@
                                     <input type="number" id="min-pledge" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" min="1" placeholder="10">
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Funding Description</label>
                                 <textarea id="funding-description" rows="3" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Explain how the funds will be used and what backers can expect..."></textarea>
                             </div>
-                            
+
                             <!-- Milestone Setup -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Funding Milestones</label>
@@ -241,13 +241,13 @@
         <div id="step-3" class="step-content hidden">
             <div class="bg-white rounded-lg shadow-md p-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-6">ArxIDE Preview</h2>
-                
+
                 <div class="preview-container">
                     <div class="bg-gray-100 rounded-lg p-4 mb-4">
                         <h3 class="text-lg font-medium text-gray-900 mb-2">Interactive Design Preview</h3>
                         <p class="text-gray-600">Your design will be rendered in ArxIDE for interactive viewing and collaboration.</p>
                     </div>
-                    
+
                     <div class="arxide-frame bg-white border-2 border-gray-200 rounded-lg p-4">
                         <div class="flex items-center justify-between mb-4">
                             <h4 class="text-lg font-medium text-gray-900">ArxIDE Workspace</h4>
@@ -256,7 +256,7 @@
                                 <button class="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">Reset View</button>
                             </div>
                         </div>
-                        
+
                         <div class="bg-gray-50 rounded-lg p-8 text-center">
                             <i class="fas fa-cube text-4xl text-gray-400 mb-4"></i>
                             <p class="text-gray-600">Design preview will be loaded here</p>
@@ -278,7 +278,7 @@
         <div id="step-4" class="step-content hidden">
             <div class="bg-white rounded-lg shadow-md p-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-6">Submit & Review</h2>
-                
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- Project Summary -->
                     <div>
@@ -336,11 +336,11 @@
                     <div class="flex items-start mb-4">
                         <input type="checkbox" id="terms-accept" class="mr-3 mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="terms-accept" class="text-sm text-gray-700">
-                            I agree to the <a href="#" class="text-blue-600 hover:text-blue-800">Terms of Service</a> and 
+                            I agree to the <a href="#" class="text-blue-600 hover:text-blue-800">Terms of Service</a> and
                             <a href="#" class="text-blue-600 hover:text-blue-800">Community Guidelines</a>
                         </label>
                     </div>
-                    
+
                     <div class="flex items-start mb-4" id="escrow-terms" style="display: none;">
                         <input type="checkbox" id="escrow-accept" class="mr-3 mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="escrow-accept" class="text-sm text-gray-700">
@@ -402,7 +402,7 @@
         function displayUploadedFiles() {
             const container = document.getElementById('files-list');
             container.innerHTML = '';
-            
+
             uploadedFiles.forEach((file, index) => {
                 const fileDiv = document.createElement('div');
                 fileDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
@@ -418,7 +418,7 @@
                 `;
                 container.appendChild(fileDiv);
             });
-            
+
             if (uploadedFiles.length > 0) {
                 document.getElementById('uploaded-files').classList.remove('hidden');
             }
@@ -433,7 +433,7 @@
         function addTag() {
             const input = document.getElementById('tag-input');
             const tag = input.value.trim();
-            
+
             if (tag && !projectTags.includes(tag)) {
                 projectTags.push(tag);
                 displayTags();
@@ -444,7 +444,7 @@
         function displayTags() {
             const container = document.getElementById('tags-container');
             container.innerHTML = '';
-            
+
             projectTags.forEach((tag, index) => {
                 const tagSpan = document.createElement('span');
                 tagSpan.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800';
@@ -468,7 +468,7 @@
             const fields = document.getElementById('crowdfunding-fields');
             const summary = document.getElementById('funding-summary');
             const escrowTerms = document.getElementById('escrow-terms');
-            
+
             if (e.target.checked) {
                 fields.classList.remove('hidden');
                 summary.classList.remove('hidden');
@@ -511,7 +511,7 @@
                     </div>
                 </div>
             `;
-            
+
             document.getElementById('milestones-container').insertAdjacentHTML('beforeend', milestoneHtml);
             milestones.push(milestoneId);
         }
@@ -529,10 +529,10 @@
                 document.getElementById('summary-category').textContent = document.getElementById('project-category').value || '-';
                 document.getElementById('summary-files').textContent = uploadedFiles.length + ' files';
                 document.getElementById('summary-tags').textContent = projectTags.join(', ') || '-';
-                
+
                 const crowdfundingEnabled = document.getElementById('enable-crowdfunding').checked;
                 document.getElementById('summary-crowdfunding').textContent = crowdfundingEnabled ? 'Enabled' : 'Disabled';
-                
+
                 if (crowdfundingEnabled) {
                     document.getElementById('summary-goal').textContent = '$' + (document.getElementById('funding-goal').value || '0');
                     document.getElementById('summary-duration').textContent = (document.getElementById('campaign-duration').value || '0') + ' days';
@@ -547,12 +547,12 @@
             const termsAccepted = document.getElementById('terms-accept').checked;
             const crowdfundingEnabled = document.getElementById('enable-crowdfunding').checked;
             const escrowAccepted = !crowdfundingEnabled || document.getElementById('escrow-accept').checked;
-            
+
             if (!termsAccepted || (crowdfundingEnabled && !escrowAccepted)) {
                 alert('Please accept all required terms and conditions.');
                 return;
             }
-            
+
             // Collect project data
             const projectData = {
                 title: document.getElementById('project-title').value,
@@ -571,13 +571,13 @@
                     milestones: collectMilestones()
                 }
             };
-            
+
             // Submit to backend
             console.log('Submitting project:', projectData);
-            
+
             // Show success message
             alert('Project submitted successfully! Your project is now under review.');
-            
+
             // Redirect to project page
             window.location.href = '/discover';
         }
@@ -591,7 +591,7 @@
                     const amount = element.querySelector('.milestone-amount').value;
                     const description = element.querySelector('.milestone-description').value;
                     const dueDate = element.querySelector('.milestone-due-date').value;
-                    
+
                     if (title && amount && description && dueDate) {
                         milestoneData.push({
                             title,
@@ -610,14 +610,14 @@
             const submitButton = document.getElementById('submit-button');
             const crowdfundingEnabled = document.getElementById('enable-crowdfunding').checked;
             const escrowAccepted = !crowdfundingEnabled || document.getElementById('escrow-accept').checked;
-            
+
             submitButton.disabled = !e.target.checked || (crowdfundingEnabled && !escrowAccepted);
         });
 
         document.getElementById('escrow-accept').addEventListener('change', function(e) {
             const submitButton = document.getElementById('submit-button');
             const termsAccepted = document.getElementById('terms-accept').checked;
-            
+
             submitButton.disabled = !termsAccepted || !e.target.checked;
         });
 
@@ -627,4 +627,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

@@ -7,27 +7,27 @@ export class Viewport {
     constructor(svgElement, options = {}) {
         this.svg = svgElement;
         this.container = svgElement.parentElement;
-        
+
         // Viewport state
         this.currentZoom = options.initialZoom || 1.0;
         this.panX = options.initialPanX || 0;
         this.panY = options.initialPanY || 0;
-        
+
         // Zoom constraints
         this.minZoom = options.minZoom || 0.1;
         this.maxZoom = options.maxZoom || 5.0;
         this.zoomStep = options.zoomStep || 0.1;
-        
+
         // Scale factors for real-world coordinate conversion
         this.scaleFactors = {
             x: 1.0,
             y: 1.0
         };
         this.currentUnit = 'pixels';
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -97,10 +97,10 @@ export class Viewport {
 
     updateViewport() {
         if (!this.svg) return;
-        
+
         const transform = `translate(${this.panX}, ${this.panY}) scale(${this.currentZoom})`;
         this.svg.style.transform = transform;
-        
+
         this.triggerEvent('viewportChanged');
     }
 
@@ -156,7 +156,7 @@ export class Viewport {
         const rect = this.svg.getBoundingClientRect();
         const topLeft = this.screenToSVG(rect.left, rect.top);
         const bottomRight = this.screenToSVG(rect.right, rect.bottom);
-        
+
         return {
             left: topLeft.x,
             top: topLeft.y,
@@ -218,4 +218,4 @@ export class Viewport {
     destroy() {
         this.eventHandlers.clear();
     }
-} 
+}

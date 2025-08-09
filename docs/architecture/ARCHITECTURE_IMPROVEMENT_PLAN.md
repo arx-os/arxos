@@ -35,41 +35,41 @@ from .events import BuildingCreated, BuildingUpdated
 @dataclass
 class Building:
     """Building entity with business logic and validation."""
-    
+
     id: BuildingId
     address: Address
     status: BuildingStatus
     floors: List['Floor'] = None
     _domain_events: List = None
-    
+
     def __post_init__(self):
         """Validate building data after initialization."""
         self._validate_building_data()
         self._domain_events = self._domain_events or []
         self.floors = self.floors or []
-    
+
     def _validate_building_data(self):
         """Validate building data according to business rules."""
         if not self.address.is_valid():
             raise InvalidBuildingError("Building must have a valid address")
         if self.status not in BuildingStatus:
             raise InvalidBuildingError("Invalid building status")
-    
+
     def add_floor(self, floor: 'Floor') -> None:
         """Add a floor to the building."""
         if floor in self.floors:
             raise DuplicateFloorError("Floor already exists in building")
         self.floors.append(floor)
         self._add_domain_event(BuildingUpdated(self.id))
-    
+
     def _add_domain_event(self, event):
         """Add domain event to the collection."""
         self._domain_events.append(event)
-    
+
     def get_domain_events(self) -> List:
         """Get all domain events."""
         return self._domain_events.copy()
-    
+
     def clear_domain_events(self) -> None:
         """Clear domain events after processing."""
         self._domain_events.clear()
@@ -85,22 +85,22 @@ from ..value_objects import BuildingId
 
 class BuildingRepository(ABC):
     """Abstract building repository interface."""
-    
+
     @abstractmethod
     def save(self, building: Building) -> None:
         """Save building to repository."""
         pass
-    
+
     @abstractmethod
     def get_by_id(self, building_id: BuildingId) -> Optional[Building]:
         """Get building by ID."""
         pass
-    
+
     @abstractmethod
     def get_all(self) -> List[Building]:
         """Get all buildings."""
         pass
-    
+
     @abstractmethod
     def delete(self, building_id: BuildingId) -> None:
         """Delete building by ID."""
@@ -119,10 +119,10 @@ from ..dto.create_building_response import CreateBuildingResponse
 
 class CreateBuildingUseCase:
     """Use case for creating a new building."""
-    
+
     def __init__(self, building_repository: BuildingRepository):
         self.building_repository = building_repository
-    
+
     def execute(self, request: CreateBuildingRequest) -> CreateBuildingResponse:
         """Execute the create building use case."""
         try:
@@ -130,10 +130,10 @@ class CreateBuildingUseCase:
             building_id = BuildingId.generate()
             address = Address.from_string(request.address)
             building = Building(building_id, address, BuildingStatus.DRAFT)
-            
+
             # Save to repository
             self.building_repository.save(building)
-            
+
             # Return response
             return CreateBuildingResponse(
                 success=True,
@@ -161,10 +161,10 @@ from ..models.building_model import BuildingModel
 
 class PostgreSQLBuildingRepository(BuildingRepository):
     """PostgreSQL implementation of building repository."""
-    
+
     def __init__(self, session: Session):
         self.session = session
-    
+
     def save(self, building: Building) -> None:
         """Save building to PostgreSQL."""
         building_model = BuildingModel(
@@ -174,16 +174,16 @@ class PostgreSQLBuildingRepository(BuildingRepository):
         )
         self.session.add(building_model)
         self.session.commit()
-    
+
     def get_by_id(self, building_id: BuildingId) -> Optional[Building]:
         """Get building by ID from PostgreSQL."""
         building_model = self.session.query(BuildingModel).filter_by(
             id=building_id.value
         ).first()
-        
+
         if not building_model:
             return None
-        
+
         return Building(
             id=BuildingId(building_model.id),
             address=Address.from_string(building_model.address),
@@ -213,10 +213,10 @@ async def create_building(
     """Create a new building."""
     use_case = CreateBuildingUseCase(building_repository)
     result = use_case.execute(request)
-    
+
     if not result.success:
         raise HTTPException(status_code=400, detail=result.error_message)
-    
+
     return result
 
 @router.get("/{building_id}", response_model=BuildingDTO)
@@ -227,10 +227,10 @@ async def get_building(
     """Get building by ID."""
     use_case = GetBuildingUseCase(building_repository)
     result = use_case.execute(BuildingId(building_id))
-    
+
     if not result.success:
         raise HTTPException(status_code=404, detail="Building not found")
-    
+
     return result.building
 ```
 
@@ -255,25 +255,25 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.9, 3.10, 3.11]
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
-      
+
       - name: Run tests
         run: |
           pytest tests/ --cov=arxos --cov-report=xml
-      
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
@@ -285,16 +285,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
-      
+
       - name: Install dependencies
         run: |
           pip install black flake8 mypy isort
-      
+
       - name: Run linting
         run: |
           black --check arxos/
@@ -306,7 +306,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Run security scan
         uses: snyk/actions/python@master
         env:
@@ -318,12 +318,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
-      
+
       - name: Run code quality analysis
         run: |
           python svgx_engine/code_quality_standards.py
@@ -343,24 +343,24 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
       - id: check-merge-conflict
-  
+
   - repo: https://github.com/psf/black
     rev: 23.9.1
     hooks:
       - id: black
         language_version: python3
-  
+
   - repo: https://github.com/pycqa/flake8
     rev: 6.1.0
     hooks:
       - id: flake8
         additional_dependencies: [flake8-docstrings]
-  
+
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
       - id: isort
-  
+
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.6.1
     hooks:
@@ -379,11 +379,11 @@ from pydantic import BaseModel
 
 class CreateBuildingRequest(BaseModel):
     """Request model for creating a building."""
-    
+
     name: str = Field(..., description="Building name", min_length=1, max_length=255)
     address: str = Field(..., description="Building address")
     status: str = Field(default="draft", description="Building status")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -400,26 +400,26 @@ async def create_building(
 ):
     """
     Create a new building.
-    
+
     This endpoint creates a new building with the provided information.
     The building will be created in draft status by default.
-    
+
     Args:
         request: Building creation request
         building_repository: Building repository dependency
-        
+
     Returns:
         CreateBuildingResponse: Response with building ID and status
-        
+
     Raises:
         HTTPException: If building creation fails
     """
     use_case = CreateBuildingUseCase(building_repository)
     result = use_case.execute(request)
-    
+
     if not result.success:
         raise HTTPException(status_code=400, detail=result.error_message)
-    
+
     return result
 ```
 
@@ -436,7 +436,7 @@ from datetime import datetime
 
 class StructuredLogger:
     """Enterprise-grade structured logger."""
-    
+
     def __init__(self):
         structlog.configure(
             processors=[
@@ -456,7 +456,7 @@ class StructuredLogger:
             cache_logger_on_first_use=True,
         )
         self.logger = structlog.get_logger()
-    
+
     def log_building_created(self, building_id: str, user_id: str, **kwargs):
         """Log building creation event."""
         self.logger.info(
@@ -467,7 +467,7 @@ class StructuredLogger:
             timestamp=datetime.utcnow().isoformat(),
             **kwargs
         )
-    
+
     def log_error(self, error: Exception, context: Dict[str, Any]):
         """Log error with context."""
         self.logger.error(
@@ -486,7 +486,7 @@ from typing import Dict, Any
 
 class MetricsCollector:
     """Enterprise metrics collection."""
-    
+
     def __init__(self):
         # Counters
         self.building_created = Counter('building_created_total', 'Total buildings created')
@@ -494,7 +494,7 @@ class MetricsCollector:
         self.building_deleted = Counter('building_deleted_total', 'Total buildings deleted')
         self.api_requests = Counter('api_requests_total', 'Total API requests', ['endpoint', 'method'])
         self.api_errors = Counter('api_errors_total', 'Total API errors', ['endpoint', 'error_type'])
-        
+
         # Histograms
         self.api_request_duration = Histogram(
             'api_request_duration_seconds',
@@ -506,24 +506,24 @@ class MetricsCollector:
             'Database query duration',
             ['query_type']
         )
-        
+
         # Gauges
         self.active_buildings = Gauge('active_buildings', 'Number of active buildings')
         self.active_users = Gauge('active_users', 'Number of active users')
-        
+
         # Summaries
         self.building_size = Summary('building_size_bytes', 'Building data size')
-    
+
     def record_building_created(self, building_id: str):
         """Record building creation metric."""
         self.building_created.inc()
         self.active_buildings.inc()
-    
+
     def record_api_request(self, endpoint: str, method: str, duration: float):
         """Record API request metric."""
         self.api_requests.labels(endpoint=endpoint, method=method).inc()
         self.api_request_duration.labels(endpoint=endpoint, method=method).observe(duration)
-    
+
     def record_api_error(self, endpoint: str, error_type: str):
         """Record API error metric."""
         self.api_errors.labels(endpoint=endpoint, error_type=error_type).inc()
@@ -555,26 +555,26 @@ class HealthCheckResult:
 
 class HealthChecker:
     """Comprehensive health check system."""
-    
+
     def __init__(self, database_url: str, redis_url: str):
         self.database_url = database_url
         self.redis_url = redis_url
-    
+
     async def check_all(self) -> Dict[str, HealthCheckResult]:
         """Check health of all components."""
         results = {}
-        
+
         # Check database
         results['database'] = await self.check_database()
-        
+
         # Check Redis
         results['redis'] = await self.check_redis()
-        
+
         # Check external services
         results['external_services'] = await self.check_external_services()
-        
+
         return results
-    
+
     async def check_database(self) -> HealthCheckResult:
         """Check database connectivity."""
         try:
@@ -589,7 +589,7 @@ class HealthChecker:
                 status=HealthStatus.UNHEALTHY,
                 message=f"Database connection failed: {str(e)}"
             )
-    
+
     async def check_redis(self) -> HealthCheckResult:
         """Check Redis connectivity."""
         try:
@@ -620,11 +620,11 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 class JWTHandler:
     """Enterprise JWT token handler."""
-    
+
     def __init__(self, secret_key: str, algorithm: str = "HS256"):
         self.secret_key = secret_key
         self.algorithm = algorithm
-    
+
     def create_token(self, user_id: str, roles: list, expires_in: int = 3600) -> str:
         """Create JWT token for user."""
         payload = {
@@ -634,9 +634,9 @@ class JWTHandler:
             "iat": datetime.utcnow(),
             "iss": "arxos-platform"
         }
-        
+
         return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
-    
+
     def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Verify JWT token."""
         try:
@@ -646,7 +646,7 @@ class JWTHandler:
             raise TokenExpiredError("Token has expired")
         except jwt.InvalidTokenError:
             raise InvalidTokenError("Invalid token")
-    
+
     def refresh_token(self, token: str) -> str:
         """Refresh JWT token."""
         payload = self.verify_token(token)
@@ -675,7 +675,7 @@ class Role(Enum):
 
 class RBACManager:
     """Role-based access control manager."""
-    
+
     def __init__(self):
         self.role_permissions = {
             Role.VIEWER: {Permission.READ_BUILDING},
@@ -683,15 +683,15 @@ class RBACManager:
             Role.ADMIN: {Permission.READ_BUILDING, Permission.WRITE_BUILDING, Permission.DELETE_BUILDING},
             Role.SUPER_ADMIN: {Permission.READ_BUILDING, Permission.WRITE_BUILDING, Permission.DELETE_BUILDING, Permission.ADMIN_BUILDING}
         }
-    
+
     def has_permission(self, user_roles: List[Role], permission: Permission) -> bool:
         """Check if user has permission."""
         user_permissions = set()
         for role in user_roles:
             user_permissions.update(self.role_permissions.get(role, set()))
-        
+
         return permission in user_permissions
-    
+
     def get_user_permissions(self, user_roles: List[Role]) -> Set[Permission]:
         """Get all permissions for user roles."""
         permissions = set()
@@ -712,23 +712,23 @@ from html import escape
 
 class InputValidator:
     """Enterprise input validation and sanitization."""
-    
+
     @staticmethod
     def sanitize_string(value: str) -> str:
         """Sanitize string input."""
         if not value:
             return ""
-        
+
         # Remove potentially dangerous characters
         sanitized = re.sub(r'[<>"\']', '', value)
         return escape(sanitized)
-    
+
     @staticmethod
     def validate_email(email: str) -> bool:
         """Validate email format."""
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         return bool(re.match(pattern, email))
-    
+
     @staticmethod
     def validate_sql_injection(value: str) -> bool:
         """Check for SQL injection attempts."""
@@ -740,13 +740,13 @@ class InputValidator:
             r'(\b(SCRIPT|JAVASCRIPT)\b)',
             r'(\b(ONLOAD|ONERROR|ONCLICK)\b)'
         ]
-        
+
         for pattern in sql_patterns:
             if re.search(pattern, value, re.IGNORECASE):
                 return False
-        
+
         return True
-    
+
     @staticmethod
     def validate_xss(value: str) -> bool:
         """Check for XSS attempts."""
@@ -758,11 +758,11 @@ class InputValidator:
             r'<object[^>]*>',
             r'<embed[^>]*>'
         ]
-        
+
         for pattern in xss_patterns:
             if re.search(pattern, value, re.IGNORECASE):
                 return False
-        
+
         return True
 ```
 
@@ -780,7 +780,7 @@ from typing import Generator
 
 class DatabaseConnectionPool:
     """Database connection pool manager."""
-    
+
     def __init__(self, database_url: str):
         self.engine = create_engine(
             database_url,
@@ -790,7 +790,7 @@ class DatabaseConnectionPool:
             pool_pre_ping=True,
             pool_recycle=3600
         )
-    
+
     @contextmanager
     def get_connection(self) -> Generator:
         """Get database connection from pool."""
@@ -799,7 +799,7 @@ class DatabaseConnectionPool:
             yield connection
         finally:
             connection.close()
-    
+
     def get_pool_status(self) -> Dict[str, Any]:
         """Get connection pool status."""
         return {
@@ -819,12 +819,12 @@ from sqlalchemy import text
 
 class QueryOptimizer:
     """Database query optimization."""
-    
+
     @staticmethod
     def optimize_building_query(session: Session, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Optimize building query with proper indexing."""
         query = text("""
-            SELECT 
+            SELECT
                 b.id,
                 b.name,
                 b.address,
@@ -837,10 +837,10 @@ class QueryOptimizer:
             GROUP BY b.id, b.name, b.address, b.status, b.created_at
             ORDER BY b.created_at DESC
         """)
-        
+
         result = session.execute(query, {"status": filters.get("status", "active")})
         return [dict(row) for row in result]
-    
+
     @staticmethod
     def create_performance_indexes(session: Session):
         """Create performance indexes."""
@@ -850,7 +850,7 @@ class QueryOptimizer:
             "CREATE INDEX IF NOT EXISTS idx_floors_building_id ON floors(building_id)",
             "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)"
         ]
-        
+
         for index_sql in indexes:
             session.execute(text(index_sql))
         session.commit()
@@ -868,41 +868,41 @@ from datetime import timedelta
 
 class CacheManager:
     """Multi-level cache manager."""
-    
+
     def __init__(self, redis_url: str):
         self.redis_client = redis.from_url(redis_url)
         self.local_cache = {}
-    
+
     def get(self, key: str) -> Optional[Any]:
         """Get value from cache."""
         # Check local cache first
         if key in self.local_cache:
             return self.local_cache[key]
-        
+
         # Check Redis cache
         value = self.redis_client.get(key)
         if value:
             parsed_value = json.loads(value)
             self.local_cache[key] = parsed_value
             return parsed_value
-        
+
         return None
-    
+
     def set(self, key: str, value: Any, ttl: int = 3600) -> None:
         """Set value in cache."""
         # Set in local cache
         self.local_cache[key] = value
-        
+
         # Set in Redis cache
         serialized_value = json.dumps(value)
         self.redis_client.setex(key, ttl, serialized_value)
-    
+
     def invalidate(self, pattern: str) -> None:
         """Invalidate cache entries matching pattern."""
         keys = self.redis_client.keys(pattern)
         if keys:
             self.redis_client.delete(*keys)
-        
+
         # Clear local cache
         self.local_cache.clear()
 ```
@@ -975,6 +975,6 @@ class CacheManager:
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Implementation Plan 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Implementation Plan

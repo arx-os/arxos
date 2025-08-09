@@ -15,4 +15,4 @@ CREATE TABLE posts (
     INDEX idx_posts_status (status),
     INDEX idx_posts_published_at (published_at),
     INDEX idx_posts_created_at (created_at)
-); 
+);

@@ -24,10 +24,10 @@ from typing import List, Dict, Any, Optional
 
 class SpecificDocstringPatternFixer:
     """Fixes specific docstring patterns that cause syntax errors"""
-    
+
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
-        
+
         # Files with specific docstring pattern issues
         self.files_with_pattern_issues = [
             "plugins/example_behavior_plugin.py",
@@ -169,90 +169,90 @@ class SpecificDocstringPatternFixer:
             "core/security/auth_middleware.py",
             "core/shared/models/error.py"
         ]
-    
+
     def fix_specific_docstring_patterns(self):
         """Fix specific docstring patterns that cause syntax errors"""
         print("🔧 Fixing Specific Docstring Patterns")
         print("=" * 60)
-        
+
         success_count = 0
         error_count = 0
-        
+
         for file_path in self.files_with_pattern_issues:
             full_path = self.project_root / file_path
-            
+
             if not full_path.exists():
                 print(f"⚠️  File not found: {file_path}")
                 continue
-            
+
             try:
                 if self._fix_file_specific_patterns(full_path):
                     print(f"✅ Fixed specific patterns in: {file_path}")
                     success_count += 1
                 else:
                     print(f"ℹ️  No specific pattern issues found in: {file_path}")
-                    
+
             except Exception as e:
                 print(f"❌ Error fixing {file_path}: {e}")
                 error_count += 1
-        
+
         print("\n" + "=" * 60)
         print(f"📊 Summary:")
         print(f"   ✅ Successfully fixed: {success_count} files")
         print(f"   ❌ Errors: {error_count} files")
         print(f"   📁 Total processed: {len(self.files_with_pattern_issues)} files")
-    
+
     def _fix_file_specific_patterns(self, file_path: Path) -> bool:
         """Fix specific docstring patterns in a single file"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             original_content = content
-            
+
             # Fix specific patterns
             content = self._fix_pattern_1(content)  # Function with unindented docstring
             content = self._fix_pattern_2(content)  # Class with unindented docstring
             content = self._fix_pattern_3(content)  # Async function with unindented docstring
-            
+
             # Validate syntax
             if not self._validate_syntax(content):
                 print(f"⚠️  Syntax validation failed for {file_path}")
                 return False
-            
+
             # Only write if content changed
             if content != original_content:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
                 return True
-            
+
             return False
-            
+
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             return False
-    
+
     def _fix_pattern_1(self, content: str) -> str:
         """Fix pattern: def func(): followed by unindented docstring"""
         # Pattern: def func(): followed by unindented docstring
-        pattern = r'(def [^:]+:)\n\s*("""[^"]*?""")'
+        pattern = r'(def [^:]+:)\n\s*("""[^"]*?""")'"
         replacement = r'\1\n        \2'
         return re.sub(pattern, replacement, content, flags=re.MULTILINE | re.DOTALL)
-    
+
     def _fix_pattern_2(self, content: str) -> str:
         """Fix pattern: class Class(): followed by unindented docstring"""
         # Pattern: class Class(): followed by unindented docstring
-        pattern = r'(class [^:]+:)\n\s*("""[^"]*?""")'
+        pattern = r'(class [^:]+:)\n\s*("""[^"]*?""")'"
         replacement = r'\1\n        \2'
         return re.sub(pattern, replacement, content, flags=re.MULTILINE | re.DOTALL)
-    
+
     def _fix_pattern_3(self, content: str) -> str:
         """Fix pattern: async def func(): followed by unindented docstring"""
         # Pattern: async def func(): followed by unindented docstring
-        pattern = r'(async def [^:]+:)\n\s*("""[^"]*?""")'
+        pattern = r'(async def [^:]+:)\n\s*("""[^"]*?""")'"
         replacement = r'\1\n        \2'
         return re.sub(pattern, replacement, content, flags=re.MULTILINE | re.DOTALL)
-    
+
     def _validate_syntax(self, content: str) -> bool:
         """Validate that the content has valid Python syntax"""
         try:
@@ -260,7 +260,7 @@ class SpecificDocstringPatternFixer:
             return True
         except SyntaxError:
             return False
-    
+
     def create_pattern_fix_example(self):
         """Create an example of proper docstring patterns"""
         example = '''
@@ -276,38 +276,38 @@ logger = logging.getLogger(__name__)
 class ExampleClass:
     """
     Example class with proper docstring patterns.
-    
+
     Attributes:
         config: Configuration dictionary
-        
+
     Methods:
         process_data: Process input data
         validate_input: Validate input parameters
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize the class.
-        
+
         Args:
             config: Configuration dictionary
-            
+
         Returns:
             None
         """
         self.config = config or {}
         self.logger = logger
-    
+
     async def process_data(self, data: str) -> Dict[str, Any]:
         """
         Process input data asynchronously.
-        
+
         Args:
             data: Input data to process
-            
+
         Returns:
             Processed data dictionary
-            
+
         Raises:
             ValueError: If data is invalid
         """
@@ -321,32 +321,31 @@ class ExampleClass:
         except Exception as e:
             self.logger.error(f"Error processing data: {e}")
             raise ValueError(f"Invalid data: {e}")
-    
+
     def validate_input(self, input_data: str) -> bool:
         """
         Validate input parameters.
-        
+
         Args:
             input_data: Input data to validate
-            
+
         Returns:
             True if valid, False otherwise
         """
-        return bool(input_data and input_data.strip())
-
+        return bool(input_data and input_data.strip()
 # Usage example
 if __name__ == "__main__":
     example = ExampleClass({"test": "value"})
     result = await example.process_data("test_data")
     print(result)
 '''
-        
+
         example_path = self.project_root / "docs" / "proper_docstring_patterns_example.py"
         example_path.parent.mkdir(exist_ok=True)
-        
+
         with open(example_path, 'w') as f:
             f.write(example)
-        
+
         print(f"📝 Created proper docstring patterns example: {example_path}")
 
 
@@ -355,16 +354,16 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/fix_specific_docstring_patterns.py [--dry-run] [--example]")
         sys.exit(1)
-    
+
     project_root = "."
     dry_run = "--dry-run" in sys.argv
     create_example = "--example" in sys.argv
-    
+
     fixer = SpecificDocstringPatternFixer(project_root)
-    
+
     if create_example:
         fixer.create_pattern_fix_example()
-    
+
     if not dry_run:
         fixer.fix_specific_docstring_patterns()
     else:
@@ -379,4 +378,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

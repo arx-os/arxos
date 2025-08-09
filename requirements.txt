@@ -50,4 +50,4 @@ pyyaml~=6.0.1
 
 # Optional: Advanced Features
 # automerge-py==0.1.0  # For CRDT support
-# python-ot==0.1.0     # For operational transform 
+# python-ot==0.1.0     # For operational transform

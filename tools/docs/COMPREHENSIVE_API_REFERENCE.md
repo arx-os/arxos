@@ -1134,4 +1134,4 @@ All responses include security headers:
 2. **Secure Tokens**: Store tokens securely and rotate regularly
 3. **Validate Input**: Validate all input data
 4. **Handle Errors**: Implement proper error handling
-5. **Monitor Usage**: Monitor API usage and performance 
+5. **Monitor Usage**: Monitor API usage and performance

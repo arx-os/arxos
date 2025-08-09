@@ -187,4 +187,4 @@ This project is part of the Arxos platform and is licensed under the same terms 
 
 ## Support
 
-For support and questions, please refer to the main Arxos documentation or create an issue in this repository. 
+For support and questions, please refer to the main Arxos documentation or create an issue in this repository.

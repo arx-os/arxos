@@ -103,14 +103,14 @@ psql -d arxos_db -f migrations/007_add_partitioning.sql
 
 ```sql
 -- Check partition creation
-SELECT 
+SELECT
     schemaname,
     tablename,
     partitiontablename,
     partitionname,
     partitionrangestart,
     partitionrangeend
-FROM pg_partitions 
+FROM pg_partitions
 WHERE tablename LIKE '%_partitioned'
 ORDER BY tablename, partitionname;
 
@@ -125,14 +125,14 @@ SELECT COUNT(*) FROM chat_messages_partitioned;
 
 **Before Partitioning:**
 ```sql
-SELECT * FROM audit_logs 
+SELECT * FROM audit_logs
 WHERE created_at >= NOW() - INTERVAL '7 days'
 ORDER BY created_at DESC;
 ```
 
 **After Partitioning:**
 ```sql
-SELECT * FROM audit_logs_partitioned 
+SELECT * FROM audit_logs_partitioned
 WHERE created_at >= NOW() - INTERVAL '7 days'
 ORDER BY created_at DESC;
 ```
@@ -348,15 +348,15 @@ partitioned_tables = {
 **Good**:
 ```sql
 -- Query uses partition pruning
-SELECT * FROM audit_logs_partitioned 
-WHERE created_at >= '2024-01-01' 
+SELECT * FROM audit_logs_partitioned
+WHERE created_at >= '2024-01-01'
 AND created_at < '2024-02-01';
 ```
 
 **Avoid**:
 ```sql
 -- Query cannot use partition pruning
-SELECT * FROM audit_logs_partitioned 
+SELECT * FROM audit_logs_partitioned
 WHERE created_at::text LIKE '2024%';
 ```
 
@@ -365,7 +365,7 @@ WHERE created_at::text LIKE '2024%';
 **Good**:
 ```sql
 -- Uses partition key in WHERE clause
-SELECT * FROM object_history_partitioned 
+SELECT * FROM object_history_partitioned
 WHERE changed_at >= NOW() - INTERVAL '30 days'
 ORDER BY changed_at DESC;
 ```
@@ -373,7 +373,7 @@ ORDER BY changed_at DESC;
 **Avoid**:
 ```sql
 -- Doesn't use partition key effectively
-SELECT * FROM object_history_partitioned 
+SELECT * FROM object_history_partitioned
 WHERE object_id = 'room_123'
 ORDER BY changed_at DESC;
 ```
@@ -386,11 +386,11 @@ Create indexes on the parent table, not individual partitions:
 
 ```sql
 -- Good: Index on parent table
-CREATE INDEX idx_audit_logs_partitioned_user_id 
+CREATE INDEX idx_audit_logs_partitioned_user_id
 ON audit_logs_partitioned (user_id);
 
 -- Avoid: Index on individual partition
-CREATE INDEX idx_audit_logs_p2024_01_user_id 
+CREATE INDEX idx_audit_logs_p2024_01_user_id
 ON audit_logs_p2024_01 (user_id);
 ```
 
@@ -400,11 +400,11 @@ Use composite indexes for common query patterns:
 
 ```sql
 -- Composite index for user activity queries
-CREATE INDEX idx_audit_logs_partitioned_user_created 
+CREATE INDEX idx_audit_logs_partitioned_user_created
 ON audit_logs_partitioned (user_id, created_at);
 
 -- Composite index for object history queries
-CREATE INDEX idx_object_history_partitioned_object_changed 
+CREATE INDEX idx_object_history_partitioned_object_changed
 ON object_history_partitioned (object_id, changed_at);
 ```
 
@@ -464,13 +464,13 @@ SELECT * FROM pg_partitions WHERE tablename = 'audit_logs_partitioned';
 **Solutions**:
 ```sql
 -- Check if query uses partition pruning
-EXPLAIN (ANALYZE, BUFFERS) 
-SELECT * FROM audit_logs_partitioned 
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM audit_logs_partitioned
 WHERE created_at >= NOW() - INTERVAL '7 days';
 
 -- Verify indexes exist
-SELECT indexname, indexdef 
-FROM pg_indexes 
+SELECT indexname, indexdef
+FROM pg_indexes
 WHERE tablename = 'audit_logs_partitioned';
 ```
 
@@ -481,16 +481,16 @@ WHERE tablename = 'audit_logs_partitioned';
 **Solutions**:
 ```sql
 -- Check partition sizes
-SELECT 
+SELECT
     schemaname,
     tablename,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-FROM pg_tables 
+FROM pg_tables
 WHERE tablename LIKE 'audit_logs_p%'
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 
 -- Consider sub-partitioning if needed
-ALTER TABLE audit_logs_partitioned 
+ALTER TABLE audit_logs_partitioned
 PARTITION BY RANGE (created_at, user_id);
 ```
 
@@ -500,13 +500,13 @@ PARTITION BY RANGE (created_at, user_id);
 
 ```sql
 -- Monitor partition usage
-SELECT 
+SELECT
     schemaname,
     tablename,
     n_tup_ins as inserts,
     n_tup_upd as updates,
     n_tup_del as deletes
-FROM pg_stat_user_tables 
+FROM pg_stat_user_tables
 WHERE tablename LIKE '%_partitioned'
 ORDER BY n_tup_ins DESC;
 ```
@@ -515,7 +515,7 @@ ORDER BY n_tup_ins DESC;
 
 ```sql
 -- Check partition data distribution
-SELECT 
+SELECT
     partition_name,
     start_date,
     end_date,
@@ -579,4 +579,4 @@ Table partitioning provides significant performance improvements for large time-
 4. **Automated Maintenance**: Partition lifecycle management
 5. **Best Practices**: Query optimization and index strategies
 
-The partitioning system is designed to be transparent to applications while providing substantial performance benefits for time-based queries and data management operations. 
+The partitioning system is designed to be transparent to applications while providing substantial performance benefits for time-based queries and data management operations.

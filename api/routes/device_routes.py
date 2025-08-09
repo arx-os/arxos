@@ -85,7 +85,7 @@ async def create_device(
             status=request.status,
             created_by=user.user_id
         )
-        
+
         # Use application service to create device
         result = device_service.create_device(
             room_id=create_request.room_id,
@@ -97,7 +97,7 @@ async def create_device(
             description=create_request.description,
             created_by=create_request.created_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -121,7 +121,7 @@ async def create_device(
                 message=result.error_message or "Failed to create device",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to create device: {str(e)}")
         return format_error_response(
@@ -156,7 +156,7 @@ async def list_devices(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -191,7 +191,7 @@ async def list_devices(
                 message=result.error_message or "Failed to retrieve devices",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to list devices: {str(e)}")
         return format_error_response(
@@ -216,7 +216,7 @@ async def get_device(
     try:
         # Use application service to get device
         result = device_service.get_device(device_id=device_id)
-        
+
         if result.success and result.device:
             device = result.device
             return format_success_response(
@@ -242,7 +242,7 @@ async def get_device(
                 message=result.error_message or "Device not found",
                 details={"device_id": device_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get device {device_id}: {str(e)}")
         return format_error_response(
@@ -278,7 +278,7 @@ async def update_device(
             status=request.status,
             updated_by=user.user_id
         )
-        
+
         # Use application service to update device
         result = device_service.update_device(
             device_id=device_id,
@@ -291,7 +291,7 @@ async def update_device(
             status=update_request.status,
             updated_by=update_request.updated_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -315,7 +315,7 @@ async def update_device(
                 message=result.error_message or "Failed to update device",
                 details={"error": result.error_message, "device_id": device_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to update device {device_id}: {str(e)}")
         return format_error_response(
@@ -343,7 +343,7 @@ async def delete_device(
             device_id=device_id,
             deleted_by=user.user_id
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -359,7 +359,7 @@ async def delete_device(
                 message=result.error_message or "Failed to delete device",
                 details={"error": result.error_message, "device_id": device_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to delete device {device_id}: {str(e)}")
         return format_error_response(
@@ -384,7 +384,7 @@ async def get_device_statistics(
     try:
         # Use application service to get device statistics
         result = device_service.get_device_statistics(device_id=device_id)
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -408,11 +408,11 @@ async def get_device_statistics(
                 message=result.error_message or "Failed to retrieve device statistics",
                 details={"error": result.error_message, "device_id": device_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get statistics for device {device_id}: {str(e)}")
         return format_error_response(
             error_code="DEVICE_STATISTICS_ERROR",
             message="Failed to retrieve device statistics",
             details={"error": str(e), "device_id": device_id}
-        ) 
+        )

@@ -20,4 +20,4 @@ testcontainers[postgresql]>=3.7.0
 
 # Partitioning Analysis Dependencies
 numpy>=1.24.0
-matplotlib>=3.7.0 
+matplotlib>=3.7.0

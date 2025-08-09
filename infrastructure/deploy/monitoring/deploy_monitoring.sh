@@ -51,7 +51,7 @@ port_available() {
 # Function to create directories
 create_directories() {
     log_info "Creating monitoring directories..."
-    
+
     mkdir -p "$CONFIG_DIR"
     mkdir -p "$DATA_DIR"
     mkdir -p "$LOGS_DIR"
@@ -61,26 +61,26 @@ create_directories() {
     mkdir -p "$DATA_DIR/elasticsearch"
     mkdir -p "$DATA_DIR/kibana"
     mkdir -p "$DATA_DIR/jaeger"
-    
+
     log_success "Directories created successfully"
 }
 
 # Function to check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check for Docker
     if ! command_exists docker; then
         log_error "Docker is not installed. Please install Docker first."
         exit 1
     fi
-    
+
     # Check for Docker Compose
     if ! command_exists docker-compose; then
         log_error "Docker Compose is not installed. Please install Docker Compose first."
         exit 1
     fi
-    
+
     # Check for required ports
     local required_ports=(9090 9093 3000 9200 5601 16686 8080)
     for port in "${required_ports[@]}"; do
@@ -88,14 +88,14 @@ check_prerequisites() {
             log_warning "Port $port is already in use. Please ensure it's available for monitoring services."
         fi
     done
-    
+
     log_success "Prerequisites check completed"
 }
 
 # Function to create Docker Compose configuration
 create_docker_compose() {
     log_info "Creating Docker Compose configuration..."
-    
+
     cat > "$MONITORING_DIR/docker-compose.yml" << 'EOF'
 version: '3.8'
 
@@ -364,7 +364,7 @@ EOF
 # Function to create Grafana datasources configuration
 create_grafana_datasources() {
     log_info "Creating Grafana datasources configuration..."
-    
+
     cat > "$MONITORING_DIR/grafana_datasources.yml" << 'EOF'
 apiVersion: 1
 
@@ -396,7 +396,7 @@ EOF
 # Function to create Nginx configuration
 create_nginx_config() {
     log_info "Creating Nginx configuration..."
-    
+
     cat > "$MONITORING_DIR/nginx.conf" << 'EOF'
 events {
     worker_connections 1024;
@@ -488,7 +488,7 @@ EOF
 # Function to deploy monitoring stack
 deploy_monitoring() {
     log_info "Deploying monitoring stack..."
-    
+
     # Copy configuration files
     cp "$MONITORING_DIR/prometheus.yml" "$CONFIG_DIR/"
     cp "$MONITORING_DIR/alert_rules.yml" "$CONFIG_DIR/"
@@ -496,18 +496,18 @@ deploy_monitoring() {
     cp "$MONITORING_DIR/grafana_dashboards.json" "$CONFIG_DIR/"
     cp "$MONITORING_DIR/grafana_datasources.yml" "$CONFIG_DIR/"
     cp "$MONITORING_DIR/nginx.conf" "$CONFIG_DIR/"
-    
+
     # Start services
     cd "$MONITORING_DIR"
     docker-compose up -d
-    
+
     log_success "Monitoring stack deployed successfully"
 }
 
 # Function to check service health
 check_service_health() {
     log_info "Checking service health..."
-    
+
     local services=(
         "prometheus:9090"
         "alertmanager:9093"
@@ -517,11 +517,11 @@ check_service_health() {
         "jaeger:16686"
         "node-exporter:9100"
     )
-    
+
     for service in "${services[@]}"; do
         local service_name="${service%:*}"
         local port="${service#*:}"
-        
+
         if curl -s "http://localhost:$port" >/dev/null 2>&1; then
             log_success "$service_name is healthy"
         else
@@ -533,10 +533,10 @@ check_service_health() {
 # Function to configure monitoring
 configure_monitoring() {
     log_info "Configuring monitoring components..."
-    
+
     # Wait for services to be ready
     sleep 30
-    
+
     # Configure Grafana dashboards
     log_info "Configuring Grafana dashboards..."
     curl -X POST \
@@ -544,14 +544,14 @@ configure_monitoring() {
         -H "Authorization: Bearer admin:arxos-admin" \
         -d @grafana_dashboards.json \
         http://localhost:3000/api/dashboards/db
-    
+
     # Configure AlertManager
     log_info "Configuring AlertManager..."
     curl -X POST \
         -H "Content-Type: application/json" \
         -d @alertmanager.yml \
         http://localhost:9093/api/v1/receivers
-    
+
     log_success "Monitoring configuration completed"
 }
 
@@ -586,28 +586,28 @@ display_urls() {
 # Function to stop monitoring stack
 stop_monitoring() {
     log_info "Stopping monitoring stack..."
-    
+
     cd "$MONITORING_DIR"
     docker-compose down
-    
+
     log_success "Monitoring stack stopped"
 }
 
 # Function to restart monitoring stack
 restart_monitoring() {
     log_info "Restarting monitoring stack..."
-    
+
     stop_monitoring
     sleep 5
     deploy_monitoring
-    
+
     log_success "Monitoring stack restarted"
 }
 
 # Function to show logs
 show_logs() {
     local service="$1"
-    
+
     if [ -z "$service" ]; then
         log_info "Showing all service logs..."
         cd "$MONITORING_DIR"
@@ -622,61 +622,61 @@ show_logs() {
 # Function to backup monitoring data
 backup_monitoring() {
     local backup_dir="$MONITORING_DIR/backups/$(date +%Y%m%d_%H%M%S)"
-    
+
     log_info "Creating backup in $backup_dir..."
-    
+
     mkdir -p "$backup_dir"
-    
+
     # Backup configuration files
     cp -r "$CONFIG_DIR" "$backup_dir/"
-    
+
     # Backup data directories
     cp -r "$DATA_DIR" "$backup_dir/"
-    
+
     # Backup logs
     cp -r "$LOGS_DIR" "$backup_dir/"
-    
+
     # Create backup archive
     tar -czf "$backup_dir.tar.gz" -C "$MONITORING_DIR" "backups/$(basename "$backup_dir")"
     rm -rf "$backup_dir"
-    
+
     log_success "Backup created: $backup_dir.tar.gz"
 }
 
 # Function to restore monitoring data
 restore_monitoring() {
     local backup_file="$1"
-    
+
     if [ -z "$backup_file" ]; then
         log_error "Please specify backup file to restore"
         exit 1
     fi
-    
+
     if [ ! -f "$backup_file" ]; then
         log_error "Backup file not found: $backup_file"
         exit 1
     fi
-    
+
     log_info "Restoring from backup: $backup_file..."
-    
+
     # Stop services
     stop_monitoring
-    
+
     # Extract backup
     tar -xzf "$backup_file" -C "$MONITORING_DIR"
-    
+
     # Restore data
     local backup_dir=$(tar -tzf "$backup_file" | head -1 | cut -d'/' -f1)
     cp -r "$MONITORING_DIR/$backup_dir/data" "$DATA_DIR/"
     cp -r "$MONITORING_DIR/$backup_dir/config" "$CONFIG_DIR/"
     cp -r "$MONITORING_DIR/$backup_dir/logs" "$LOGS_DIR/"
-    
+
     # Clean up
     rm -rf "$MONITORING_DIR/$backup_dir"
-    
+
     # Restart services
     deploy_monitoring
-    
+
     log_success "Backup restored successfully"
 }
 
@@ -707,7 +707,7 @@ show_usage() {
 # Main script logic
 main() {
     local command="$1"
-    
+
     case "$command" in
         "deploy")
             check_prerequisites
@@ -750,4 +750,4 @@ main() {
 }
 
 # Run main function with all arguments
-main "$@" 
+main "$@"

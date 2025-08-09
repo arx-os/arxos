@@ -58,7 +58,7 @@ class ComplianceTestResult:
     remediation: str = ""
     severity: str = "medium"
     timestamp: datetime = None
-    
+
     def __post_init__(self):
         if self.timestamp is None:
             self.timestamp = datetime.now()
@@ -69,17 +69,17 @@ class ComplianceTestResult:
 class EnterpriseComplianceTester:
     """
     Enterprise-grade compliance tester for SVGX Engine.
-    
+
     This class provides comprehensive compliance testing following enterprise
     standards including security, performance, monitoring, and regulatory compliance.
     """
-    
+
     def __init__(self):
         self.logger = logger
         self.results: List[ComplianceTestResult] = []
         self.start_time = datetime.now()
         self.test_duration = 0.0
-        
+
         # Enterprise requirements
         self.security_requirements = {
             "encryption_at_rest": True,
@@ -91,7 +91,7 @@ class EnterpriseComplianceTester:
             "access_control": True,
             "vulnerability_scanning": True,
         }
-        
+
         self.performance_requirements = {
             "response_time_p95": 1000,  # ms
             "throughput": 1000,  # requests/second
@@ -100,7 +100,7 @@ class EnterpriseComplianceTester:
             "memory_usage": 2048,  # MB
             "cpu_usage": 80,  # percentage
         }
-        
+
         self.compliance_frameworks = {
             "soc2": {
                 "security": True,
@@ -124,12 +124,12 @@ class EnterpriseComplianceTester:
                 "right_to_erasure": True,
             },
         }
-    
+
     def test_security_compliance(self) -> List[ComplianceTestResult]:
         """Test security compliance requirements"""
         self.logger.info("🔒 Testing security compliance...")
         results = []
-        
+
         # Test encryption at rest
         try:
             encryption_enabled = self._test_encryption_at_rest()
@@ -152,7 +152,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement encryption at rest functionality",
                 severity="critical"
             ))
-        
+
         # Test encryption in transit
         try:
             tls_enabled = self._test_encryption_in_transit()
@@ -175,7 +175,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement TLS encryption for all communications",
                 severity="critical"
             ))
-        
+
         # Test MFA requirements
         try:
             mfa_enabled = self._test_mfa_requirements()
@@ -198,7 +198,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement MFA functionality",
                 severity="high"
             ))
-        
+
         # Test audit logging
         try:
             audit_enabled = self._test_audit_logging()
@@ -221,7 +221,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement audit logging functionality",
                 severity="high"
             ))
-        
+
         # Test password policy
         try:
             password_policy = self._test_password_policy()
@@ -244,7 +244,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement password policy validation",
                 severity="medium"
             ))
-        
+
         # Test access control
         try:
             access_control = self._test_access_control()
@@ -267,15 +267,15 @@ class EnterpriseComplianceTester:
                 remediation="Implement access control functionality",
                 severity="high"
             ))
-        
+
         self.results.extend(results)
         return results
-    
+
     def test_performance_compliance(self) -> List[ComplianceTestResult]:
         """Test performance compliance requirements"""
         self.logger.info("⚡ Testing performance compliance...")
         results = []
-        
+
         # Test response time
         try:
             response_time = self._test_response_time()
@@ -299,7 +299,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement response time monitoring",
                 severity="high"
             ))
-        
+
         # Test throughput
         try:
             throughput = self._test_throughput()
@@ -323,7 +323,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement throughput monitoring",
                 severity="medium"
             ))
-        
+
         # Test availability
         try:
             availability = self._test_availability()
@@ -347,7 +347,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement availability monitoring",
                 severity="critical"
             ))
-        
+
         # Test error rate
         try:
             error_rate = self._test_error_rate()
@@ -371,15 +371,15 @@ class EnterpriseComplianceTester:
                 remediation="Implement error rate monitoring",
                 severity="high"
             ))
-        
+
         self.results.extend(results)
         return results
-    
+
     def test_monitoring_compliance(self) -> List[ComplianceTestResult]:
         """Test monitoring and observability compliance"""
         self.logger.info("📊 Testing monitoring compliance...")
         results = []
-        
+
         # Test logging
         try:
             logging_enabled = self._test_logging()
@@ -402,7 +402,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement logging functionality",
                 severity="medium"
             ))
-        
+
         # Test metrics
         try:
             metrics_enabled = self._test_metrics()
@@ -425,7 +425,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement metrics collection",
                 severity="medium"
             ))
-        
+
         # Test health checks
         try:
             health_checks = self._test_health_checks()
@@ -448,7 +448,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement health check functionality",
                 severity="medium"
             ))
-        
+
         # Test alerting
         try:
             alerting_enabled = self._test_alerting()
@@ -471,15 +471,15 @@ class EnterpriseComplianceTester:
                 remediation="Implement alerting functionality",
                 severity="high"
             ))
-        
+
         self.results.extend(results)
         return results
-    
+
     def test_compliance_frameworks(self) -> List[ComplianceTestResult]:
         """Test compliance framework requirements"""
         self.logger.info("📋 Testing compliance frameworks...")
         results = []
-        
+
         # Test SOC2 compliance
         try:
             soc2_compliant = self._test_soc2_compliance()
@@ -502,7 +502,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement SOC2 compliance framework",
                 severity="critical"
             ))
-        
+
         # Test ISO27001 compliance
         try:
             iso27001_compliant = self._test_iso27001_compliance()
@@ -525,7 +525,7 @@ class EnterpriseComplianceTester:
                 remediation="Implement ISO27001 compliance framework",
                 severity="critical"
             ))
-        
+
         # Test GDPR compliance
         try:
             gdpr_compliant = self._test_gdpr_compliance()
@@ -548,132 +548,132 @@ class EnterpriseComplianceTester:
                 remediation="Implement GDPR compliance framework",
                 severity="critical"
             ))
-        
+
         self.results.extend(results)
         return results
-    
+
     def _test_encryption_at_rest(self) -> bool:
         """Test encryption at rest"""
         # In a real implementation, this would check actual encryption
         return True  # Placeholder
-    
+
     def _test_encryption_in_transit(self) -> bool:
         """Test encryption in transit"""
         # In a real implementation, this would check TLS configuration
         return True  # Placeholder
-    
+
     def _test_mfa_requirements(self) -> bool:
         """Test MFA requirements"""
         # In a real implementation, this would check MFA configuration
         return True  # Placeholder
-    
+
     def _test_audit_logging(self) -> bool:
         """Test audit logging"""
         # In a real implementation, this would check audit log configuration
         return True  # Placeholder
-    
+
     def _test_password_policy(self) -> bool:
         """Test password policy"""
         # In a real implementation, this would check password policy configuration
         return True  # Placeholder
-    
+
     def _test_access_control(self) -> bool:
         """Test access control"""
         # In a real implementation, this would check RBAC configuration
         return True  # Placeholder
-    
+
     def _test_response_time(self) -> float:
         """Test response time"""
         # In a real implementation, this would measure actual response times
         return 500.0  # Placeholder: 500ms
-    
+
     def _test_throughput(self) -> float:
         """Test throughput"""
         # In a real implementation, this would measure actual throughput
         return 1200.0  # Placeholder: 1200 requests/second
-    
+
     def _test_availability(self) -> float:
         """Test availability"""
         # In a real implementation, this would measure actual availability
         return 99.95  # Placeholder: 99.95%
-    
+
     def _test_error_rate(self) -> float:
         """Test error rate"""
         # In a real implementation, this would measure actual error rates
         return 0.05  # Placeholder: 0.05%
-    
+
     def _test_logging(self) -> bool:
         """Test logging configuration"""
         # In a real implementation, this would check logging configuration
         return True  # Placeholder
-    
+
     def _test_metrics(self) -> bool:
         """Test metrics configuration"""
         # In a real implementation, this would check metrics configuration
         return True  # Placeholder
-    
+
     def _test_health_checks(self) -> bool:
         """Test health check endpoints"""
         # In a real implementation, this would check health check endpoints
         return True  # Placeholder
-    
+
     def _test_alerting(self) -> bool:
         """Test alerting configuration"""
         # In a real implementation, this would check alerting configuration
         return True  # Placeholder
-    
+
     def _test_soc2_compliance(self) -> bool:
         """Test SOC2 compliance"""
         # In a real implementation, this would check SOC2 requirements
         return True  # Placeholder
-    
+
     def _test_iso27001_compliance(self) -> bool:
         """Test ISO27001 compliance"""
         # In a real implementation, this would check ISO27001 requirements
         return True  # Placeholder
-    
+
     def _test_gdpr_compliance(self) -> bool:
         """Test GDPR compliance"""
         # In a real implementation, this would check GDPR requirements
         return True  # Placeholder
-    
+
     def run_comprehensive_test(self) -> Dict[str, Any]:
         """
         Run comprehensive enterprise compliance test.
-        
+
         Returns:
             Dictionary with test results and statistics
         """
         self.logger.info("🚀 Starting comprehensive enterprise compliance test")
-        
+
         # Run all compliance tests
         self.test_security_compliance()
         self.test_performance_compliance()
         self.test_monitoring_compliance()
         self.test_compliance_frameworks()
-        
+
         # Calculate test duration
         self.test_duration = (datetime.now() - self.start_time).total_seconds()
-        
+
         # Generate comprehensive report
         return self._generate_report()
-    
+
     def _generate_report(self) -> Dict[str, Any]:
         """Generate comprehensive enterprise compliance report"""
         total_tests = len(self.results)
         passed_tests = len([r for r in self.results if r.status == ComplianceStatus.PASS])
         failed_tests = len([r for r in self.results if r.status == ComplianceStatus.FAIL])
         warning_tests = len([r for r in self.results if r.status == ComplianceStatus.WARNING])
-        
+
         pass_rate = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
-        
+
         # Group results by category
         categories = {}
         for result in self.results:
             if result.category not in categories:
                 categories[result.category] = []
             categories[result.category].append(result)
-        
+
         # Calculate category pass rates
         category_stats = {}
         for category, results in categories.items():
@@ -686,10 +686,10 @@ class EnterpriseComplianceTester:
                 "failed": len([r for r in results if r.status == ComplianceStatus.FAIL]),
                 "pass_rate": category_pass_rate
             }
-        
+
         # Identify critical failures
         critical_failures = [r for r in self.results if r.status == ComplianceStatus.FAIL and r.severity == "critical"]
-        
+
         report = {
             "summary": {
                 "total_tests": total_tests,
@@ -713,65 +713,65 @@ class EnterpriseComplianceTester:
             } for r in self.results],
             "recommendations": self._generate_recommendations()
         }
-        
+
         return report
-    
+
     def _generate_recommendations(self) -> List[str]:
         """Generate enterprise-grade recommendations"""
         recommendations = []
-        
+
         failed_tests = [r for r in self.results if r.status == ComplianceStatus.FAIL]
         critical_failures = [r for r in failed_tests if r.severity == "critical"]
-        
+
         if critical_failures:
             recommendations.append("🚨 CRITICAL: Fix all critical compliance failures immediately")
             recommendations.append("🔒 Implement security controls for critical vulnerabilities")
             recommendations.append("📋 Review compliance framework requirements")
-        
+
         if failed_tests:
             recommendations.append("🔧 Address all compliance failures before production deployment")
             recommendations.append("📚 Review enterprise security and compliance standards")
             recommendations.append("🧪 Implement comprehensive testing for failed areas")
-        
+
         # Performance recommendations
         performance_failures = [r for r in failed_tests if r.category == "Performance"]
         if performance_failures:
             recommendations.append("⚡ Optimize performance to meet SLA requirements")
             recommendations.append("📊 Implement performance monitoring and alerting")
-        
+
         # Security recommendations
         security_failures = [r for r in failed_tests if r.category == "Security"]
         if security_failures:
             recommendations.append("🔐 Implement missing security controls")
             recommendations.append("🔍 Conduct security audit and penetration testing")
-        
+
         # Monitoring recommendations
         monitoring_failures = [r for r in failed_tests if r.category == "Monitoring"]
         if monitoring_failures:
             recommendations.append("📈 Implement comprehensive monitoring and observability")
             recommendations.append("🚨 Set up automated alerting and incident response")
-        
+
         # General enterprise recommendations
         recommendations.append("🏢 Establish enterprise governance and compliance program")
         recommendations.append("📋 Regular compliance audits and assessments")
         recommendations.append("🔄 Continuous improvement and monitoring")
-        
+
         return recommendations
 
 
 def test_enterprise_compliance():
     """
     Main test function for enterprise compliance.
-    
+
     This function runs comprehensive enterprise compliance testing.
     """
     print("=" * 80)
     print("ENTERPRISE COMPLIANCE TEST")
     print("=" * 80)
-    
+
     tester = EnterpriseComplianceTester()
     report = tester.run_comprehensive_test()
-    
+
     # Print summary
     print(f"\n📊 COMPLIANCE SUMMARY:")
     print(f"   Total Tests: {report['summary']['total_tests']}")
@@ -781,12 +781,12 @@ def test_enterprise_compliance():
     print(f"   Pass Rate: {report['summary']['pass_rate']:.1f}%")
     print(f"   Compliance Status: {report['summary']['compliance_status']}")
     print(f"   Test Duration: {report['summary']['test_duration_seconds']:.2f}s")
-    
+
     # Print category breakdown
     print(f"\n📋 CATEGORY BREAKDOWN:")
     for category, stats in report['categories'].items():
         print(f"   {category}: {stats['passed']}/{stats['total']} ({stats['pass_rate']:.1f}%)")
-    
+
     # Print critical failures
     if report['critical_failures'] > 0:
         print(f"\n🚨 CRITICAL FAILURES: {report['critical_failures']}")
@@ -795,21 +795,21 @@ def test_enterprise_compliance():
             print(f"   - {result['test_name']}: {result['description']}")
         if report['critical_failures'] > 3:
             print(f"   ... and {report['critical_failures'] - 3} more")
-    
+
     # Print recommendations
     print(f"\n💡 RECOMMENDATIONS:")
     for recommendation in report['recommendations']:
         print(f"   {recommendation}")
-    
+
     print("\n" + "=" * 80)
-    
+
     # Assert compliance
     assert report['summary']['compliance_status'] == "PASS", \
         f"Enterprise compliance test failed. Pass rate: {report['summary']['pass_rate']:.1f}%"
-    
+
     print("✅ All enterprise compliance tests passed!")
     return report
 
 
 if __name__ == "__main__":
-    test_enterprise_compliance() 
+    test_enterprise_compliance()

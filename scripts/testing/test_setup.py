@@ -33,7 +33,7 @@ def print_status(message, status="INFO"):
 def wait_for_service(url, endpoint, service_name, max_attempts=30):
     """Wait for a service to be ready."""
     print_status(f"Waiting for {service_name} to be ready...")
-    
+
     for attempt in range(max_attempts):
         try:
             response = requests.get(f"{url}{endpoint}", timeout=5)
@@ -42,10 +42,10 @@ def wait_for_service(url, endpoint, service_name, max_attempts=30):
                 return True
         except requests.exceptions.RequestException:
             pass
-        
+
         print(".", end="", flush=True)
         time.sleep(2)
-    
+
     print_status(f"{service_name} failed to start within expected time", "ERROR")
     return False
 
@@ -66,7 +66,7 @@ def test_service_health(service_name, config):
 def test_user_registration():
     """Test user registration functionality."""
     print_status("Testing user registration...")
-    
+
     try:
         response = requests.post(
             "http://localhost:8080/api/register",
@@ -77,7 +77,7 @@ def test_user_registration():
             },
             timeout=10
         )
-        
+
         if response.status_code in [200, 201, 409]:  # 409 means user already exists
             print_status("User registration test passed", "SUCCESS")
             return True
@@ -91,7 +91,7 @@ def test_user_registration():
 def test_user_login():
     """Test user login functionality."""
     print_status("Testing user login...")
-    
+
     try:
         response = requests.post(
             "http://localhost:8080/api/login",
@@ -101,7 +101,7 @@ def test_user_login():
             },
             timeout=10
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             if "token" in data:
@@ -120,13 +120,13 @@ def test_user_login():
 def test_svg_upload(token):
     """Test SVG upload functionality."""
     print_status("Testing SVG upload...")
-    
+
     # Create a simple test SVG
-    test_svg = '''<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+    test_svg = '''<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">'
   <rect x="100" y="100" width="200" height="150" fill="white" stroke="black"/>
   <circle cx="200" cy="175" r="20" fill="red"/>
 </svg>'''
-    
+
     try:
         # First create a test building
         building_response = requests.post(
@@ -139,12 +139,12 @@ def test_svg_upload(token):
             },
             timeout=10
         )
-        
+
         if building_response.status_code in [200, 201]:
             print_status("Building creation test passed", "SUCCESS")
         else:
             print_status(f"Building creation failed (status: {building_response.status_code})", "WARNING")
-        
+
         # Test SVG upload to SVG Parser
         upload_response = requests.post(
             "http://localhost:8000/api/upload",
@@ -153,7 +153,7 @@ def test_svg_upload(token):
             data={"building_id": "1", "name": "Test Floor"},
             timeout=10
         )
-        
+
         if upload_response.status_code in [200, 201]:
             print_status("SVG upload test passed", "SUCCESS")
             return True
@@ -167,8 +167,8 @@ def test_svg_upload(token):
 def test_svgx_engine():
     """Test SVGX Engine functionality."""
     print_status("Testing SVGX Engine...")
-    
-    test_svgx = '''<svgx>
+
+    test_svgx = '''<svgx>'
   <element id="test-rect" type="rectangle" x="100" y="100" width="200" height="150">
     <properties>
       <property name="fill" value="white"/>
@@ -176,7 +176,7 @@ def test_svgx_engine():
     </properties>
   </element>
 </svgx>'''
-    
+
     try:
         response = requests.post(
             "http://localhost:8001/parse",
@@ -186,7 +186,7 @@ def test_svgx_engine():
             },
             timeout=10
         )
-        
+
         if response.status_code == 200:
             print_status("SVGX Engine parse test passed", "SUCCESS")
             return True
@@ -200,13 +200,13 @@ def test_svgx_engine():
 def test_api_documentation():
     """Test API documentation endpoints."""
     print_status("Testing API documentation...")
-    
+
     docs_endpoints = [
         ("http://localhost:8000/docs", "SVG Parser API Docs"),
         ("http://localhost:8080/docs", "Backend API Docs"),
         ("http://localhost:8001/docs", "SVGX Engine API Docs")
     ]
-    
+
     success_count = 0
     for url, name in docs_endpoints:
         try:
@@ -218,65 +218,65 @@ def test_api_documentation():
                 print_status(f"{name} not accessible (status: {response.status_code})", "WARNING")
         except requests.exceptions.RequestException as e:
             print_status(f"{name} not accessible: {e}", "WARNING")
-    
+
     return success_count > 0
 
 def main():
     """Main test function."""
     print_status("Starting Arxos Setup Test...")
     print_status("=" * 50)
-    
+
     # Wait for all services to be ready
     print_status("Waiting for services to be ready...")
     all_ready = True
-    
+
     for service_name, config in SERVICES.items():
         if not wait_for_service(config["url"], config["health_endpoint"], service_name):
             all_ready = False
-    
+
     if not all_ready:
         print_status("Some services failed to start. Please check the setup.", "ERROR")
         return False
-    
+
     print_status("All services are ready!", "SUCCESS")
     print_status("=" * 50)
-    
+
     # Test service health
     print_status("Testing service health...")
     health_tests_passed = 0
     total_health_tests = len(SERVICES)
-    
+
     for service_name, config in SERVICES.items():
         if test_service_health(service_name, config):
             health_tests_passed += 1
-    
+
     print_status(f"Health tests: {health_tests_passed}/{total_health_tests} passed")
     print_status("=" * 50)
-    
+
     # Test user functionality
     print_status("Testing user functionality...")
     user_registration_ok = test_user_registration()
     token = test_user_login()
     user_login_ok = token is not None
-    
+
     print_status("=" * 50)
-    
+
     # Test SVG functionality
     print_status("Testing SVG functionality...")
     svg_upload_ok = False
     if token:
         svg_upload_ok = test_svg_upload(token)
-    
+
     svgx_engine_ok = test_svgx_engine()
-    
+
     print_status("=" * 50)
-    
+
     # Test API documentation
     print_status("Testing API documentation...")
     docs_ok = test_api_documentation()
-    
+
     print_status("=" * 50)
-    
+
     # Summary
     print_status("Test Summary:", "INFO")
     print_status(f"  - Service Health: {health_tests_passed}/{total_health_tests}")
@@ -285,11 +285,11 @@ def main():
     print_status(f"  - SVG Upload: {'✓' if svg_upload_ok else '✗'}")
     print_status(f"  - SVGX Engine: {'✓' if svgx_engine_ok else '✗'}")
     print_status(f"  - API Documentation: {'✓' if docs_ok else '✗'}")
-    
+
     # Overall result
     total_tests = 5  # health + registration + login + upload + svgx + docs
     passed_tests = health_tests_passed + (1 if user_registration_ok else 0) + (1 if user_login_ok else 0) + (1 if svg_upload_ok else 0) + (1 if svgx_engine_ok else 0) + (1 if docs_ok else 0)
-    
+
     if passed_tests >= total_tests * 0.8:  # 80% success rate
         print_status("Arxos setup test PASSED!", "SUCCESS")
         print_status("Your local development environment is working correctly.")
@@ -308,4 +308,4 @@ if __name__ == "__main__":
         sys.exit(1)
     except Exception as e:
         print_status(f"Test failed with error: {e}", "ERROR")
-        sys.exit(1) 
+        sys.exit(1)

@@ -34,7 +34,7 @@
                     <h2>Branch Management</h2>
                     <button class="btn btn-primary" id="create-branch-btn">Create Branch</button>
                 </div>
-                
+
                 <div class="search-filter">
                     <input type="text" class="search-input" placeholder="Search branches..." id="branch-search">
                     <select class="filter-select" id="branch-status-filter">
@@ -366,7 +366,7 @@
             const buildingId = urlParams.get('building_id') || localStorage.getItem('arx_building_id') || 'unknown';
             const floorId = urlParams.get('floor_id') || localStorage.getItem('arx_floor_id') || 'unknown';
             const userId = localStorage.getItem('arx_user_id') || 'unknown';
-            
+
             // Set context for version control operations
             if (window.arxLogger) {
                 window.arxLogger.setContext({
@@ -375,7 +375,7 @@
                     userId: userId,
                     correlationId: window.arxLogger.generateCorrelationId()
                 });
-                
+
                 window.arxLogger.info('Version Control page initialized with context', {
                     building_id: buildingId,
                     floor_id: floorId,
@@ -385,7 +385,7 @@
             }
         });
     </script>
-    
+
     <script src="static/js/version_control_manager.js"></script>
     <script>
         // Safe DOM manipulation utility
@@ -403,7 +403,7 @@
         // Initialize version control page
         document.addEventListener('DOMContentLoaded', function() {
             const vcManager = window.versionControlManager;
-            
+
             // Configuration
             const config = {
                 buildingId: 'demo-building',
@@ -418,11 +418,11 @@
             tabBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const tabName = btn.dataset.tab;
-                    
+
                     // Update active tab
                     tabBtns.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    
+
                     // Show corresponding content
                     tabContents.forEach(content => {
                         content.classList.remove('active');
@@ -430,7 +430,7 @@
                             content.classList.add('active');
                         }
                     });
-                    
+
                     // Load tab data
                     loadTabData(tabName);
                 });
@@ -471,7 +471,7 @@
             async function loadBranches() {
                 const container = document.getElementById('branch-list');
                 setContainerContent(container, '<div class="loading">Loading branches...</div>');
-                
+
                 try {
                     const result = await vcManager.getBranches(config.buildingId, config.floorId);
                     if (result.success) {
@@ -487,7 +487,7 @@
             async function loadVersions() {
                 const container = document.getElementById('version-timeline');
                 setContainerContent(container, '<div class="loading">Loading versions...</div>');
-                
+
                 try {
                     const result = await vcManager.getVersionHistory(config.buildingId, config.floorId);
                     if (result.success) {
@@ -503,7 +503,7 @@
             async function loadMergeRequests() {
                 const container = document.getElementById('merge-requests-list');
                 setContainerContent(container, '<div class="loading">Loading merge requests...</div>');
-                
+
                 // This would typically load from the backend
                 setContainerContent(container, '<div class="empty-state">No merge requests found</div>');
             }
@@ -511,7 +511,7 @@
             async function loadBranchGraph() {
                 const container = document.getElementById('branch-graph-container');
                 setContainerContent(container, '<div class="loading">Loading branch graph...</div>');
-                
+
                 try {
                     const result = await vcManager.getBranchGraph(config.buildingId, config.floorId);
                     if (result.success) {
@@ -527,7 +527,7 @@
             async function loadAnnotations() {
                 const container = document.getElementById('annotations-list');
                 setContainerContent(container, '<div class="loading">Loading annotations...</div>');
-                
+
                 // This would typically load from the backend
                 setContainerContent(container, '<div class="empty-state">No annotations found</div>');
             }
@@ -535,7 +535,7 @@
             async function loadComments() {
                 const container = document.getElementById('comments-list');
                 setContainerContent(container, '<div class="loading">Loading comments...</div>');
-                
+
                 // This would typically load from the backend
                 setContainerContent(container, '<div class="empty-state">No comments found</div>');
             }
@@ -548,65 +548,65 @@
 
                 // Clear container safely
                 container.textContent = '';
-                
+
                 branches.forEach(branch => {
                     const branchCard = document.createElement('div');
                     branchCard.className = 'branch-card';
                     if (branch.status === 'active') {
                         branchCard.classList.add('active');
                     }
-                    
+
                     const branchName = document.createElement('div');
                     branchName.className = 'branch-name';
                     branchName.textContent = branch.branch_name;
-                    
+
                     const branchMeta = document.createElement('div');
                     branchMeta.className = 'branch-meta';
-                    
+
                     const statusDiv = document.createElement('div');
                     statusDiv.textContent = `Status: ${branch.status}`;
-                    
+
                     const createdByDiv = document.createElement('div');
                     createdByDiv.textContent = `Created by: ${branch.created_by}`;
-                    
+
                     const createdDiv = document.createElement('div');
                     createdDiv.textContent = `Created: ${new Date(branch.created_at).toLocaleDateString()}`;
-                    
+
                     branchMeta.appendChild(statusDiv);
                     branchMeta.appendChild(createdByDiv);
                     branchMeta.appendChild(createdDiv);
-                    
+
                     const branchDescription = document.createElement('div');
                     branchDescription.className = 'branch-description';
                     branchDescription.textContent = branch.description || 'No description';
-                    
+
                     const branchActions = document.createElement('div');
                     branchActions.className = 'branch-actions';
-                    
+
                     const switchBtn = document.createElement('button');
                     switchBtn.className = 'btn btn-sm btn-primary';
                     switchBtn.textContent = 'Switch';
                     switchBtn.addEventListener('click', () => switchToBranch(branch.branch_name));
-                    
+
                     const historyBtn = document.createElement('button');
                     historyBtn.className = 'btn btn-sm btn-secondary';
                     historyBtn.textContent = 'History';
                     historyBtn.addEventListener('click', () => viewBranchHistory(branch.branch_name));
-                    
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'btn btn-sm btn-danger';
                     deleteBtn.textContent = 'Delete';
                     deleteBtn.addEventListener('click', () => deleteBranch(branch.branch_name));
-                    
+
                     branchActions.appendChild(switchBtn);
                     branchActions.appendChild(historyBtn);
                     branchActions.appendChild(deleteBtn);
-                    
+
                     branchCard.appendChild(branchName);
                     branchCard.appendChild(branchMeta);
                     branchCard.appendChild(branchDescription);
                     branchCard.appendChild(branchActions);
-                    
+
                     container.appendChild(branchCard);
                 });
             }
@@ -619,62 +619,62 @@
 
                 // Clear container safely
                 container.textContent = '';
-                
+
                 versions.forEach(version => {
                     const versionItem = document.createElement('div');
                     versionItem.className = `version-item ${version.version_type}`;
-                    
+
                     const versionHeader = document.createElement('div');
                     versionHeader.className = 'version-header';
-                    
+
                     const versionNumber = document.createElement('span');
                     versionNumber.className = 'version-number';
                     versionNumber.textContent = version.version_number;
-                    
+
                     const versionType = document.createElement('span');
                     versionType.className = `version-type ${version.version_type}`;
                     versionType.textContent = version.version_type;
-                    
+
                     versionHeader.appendChild(versionNumber);
                     versionHeader.appendChild(versionType);
-                    
+
                     const versionMessage = document.createElement('div');
                     versionMessage.className = 'version-message';
                     versionMessage.textContent = version.commit_message;
-                    
+
                     const versionMeta = document.createElement('div');
                     versionMeta.className = 'version-meta';
-                    
+
                     const authorSpan = document.createElement('span');
                     authorSpan.textContent = `Author: ${version.author}`;
-                    
+
                     const createdSpan = document.createElement('span');
                     createdSpan.textContent = `Created: ${new Date(version.created_at).toLocaleDateString()}`;
-                    
+
                     versionMeta.appendChild(authorSpan);
                     versionMeta.appendChild(createdSpan);
-                    
+
                     const versionActions = document.createElement('div');
                     versionActions.className = 'version-actions';
-                    
+
                     const viewBtn = document.createElement('button');
                     viewBtn.className = 'btn btn-sm btn-primary';
                     viewBtn.textContent = 'View';
                     viewBtn.addEventListener('click', () => viewVersion(version.version_id));
-                    
+
                     const compareBtn = document.createElement('button');
                     compareBtn.className = 'btn btn-sm btn-secondary';
                     compareBtn.textContent = 'Compare';
                     compareBtn.addEventListener('click', () => compareVersion(version.version_id));
-                    
+
                     versionActions.appendChild(viewBtn);
                     versionActions.appendChild(compareBtn);
-                    
+
                     versionItem.appendChild(versionHeader);
                     versionItem.appendChild(versionMessage);
                     versionItem.appendChild(versionMeta);
                     versionItem.appendChild(versionActions);
-                    
+
                     container.appendChild(versionItem);
                 });
             }
@@ -722,7 +722,7 @@
                 document.getElementById('create-branch-submit').addEventListener('click', async () => {
                     const form = document.getElementById('create-branch-form');
                     const formData = new FormData(form);
-                    
+
                     try {
                         const result = await vcManager.createBranch(
                             formData.get('branch-name'),
@@ -732,7 +732,7 @@
                             config.currentUser,
                             formData.get('branch-description')
                         );
-                        
+
                         if (result.success) {
                             showNotification('Branch created successfully', 'success');
                             document.getElementById('create-branch-modal').style.display = 'none';
@@ -751,9 +751,9 @@
                 const notification = document.createElement('div');
                 notification.className = `notification notification-${type}`;
                 notification.textContent = message;
-                
+
                 notifications.appendChild(notification);
-                
+
                 setTimeout(() => {
                     notification.remove();
                 }, 5000);
@@ -788,4 +788,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

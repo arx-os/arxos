@@ -289,4 +289,4 @@ type: Opaque
 data:
   database-url: c3FsaXRlOi8vL2FwcC9zdmdfZW5naW5lX3N0YWdpbmcuZGIK
   redis-url: cmVkaXM6Ly9sb2NhbGhvc3Q6NjM3OQo=
-  api-key: c3RhZ2luZy1hcGkta2V5LXRlc3QK 
+  api-key: c3RhZ2luZy1hcGkta2V5LXRlc3QK

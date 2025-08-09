@@ -51,4 +51,4 @@ spec:
               service:
                 name: svgx-engine-service
                 port:
-                  number: 80 
+                  number: 80

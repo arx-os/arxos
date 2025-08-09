@@ -51,21 +51,21 @@ __all__ = [
     'MaterialPhase',
     'NonLinearSolverSettings',
     'AdaptiveMeshSettings',
-    
+
     # Basic Thermal Analysis
     'ThermalAnalysisService',
     'ThermalAnalysisRequest',
     'ThermalAnalysisResult',
     'HeatTransferType',
-    
+
     # Thermal Integration
     'ThermalIntegrationService',
     'ThermalAnalysisMode',
     'ThermalAnalysisConfig',
-    
+
     # Other Physics Services
     'FluidDynamicsService',
     'StructuralAnalysisService',
     'ElectricalAnalysisService',
     'SignalPropagationService'
-] 
+]

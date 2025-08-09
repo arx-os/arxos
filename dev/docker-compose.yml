@@ -177,4 +177,4 @@ volumes:
 
 networks:
   arxos_network:
-    driver: bridge 
+    driver: bridge

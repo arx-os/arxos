@@ -16,7 +16,7 @@ class VersionControlManager {
             'comment_added': [],
             'branch_graph_updated': []
         };
-        
+
         // Use shared utilities
         this.utils = window.sharedUtilities || new SharedUtilities();
     }
@@ -56,7 +56,7 @@ class VersionControlManager {
     }
 
     async getVersionHistory(buildingId, floorId, branchName = null) {
-        const url = branchName 
+        const url = branchName
             ? `${this.baseUrl}/versions/${buildingId}/${floorId}?branch_name=${branchName}`
             : `${this.baseUrl}/versions/${buildingId}/${floorId}`;
         const res = await fetch(url);
@@ -212,14 +212,14 @@ class VersionControlManager {
     // --- UI Rendering Helpers ---
     renderBranchGraph(graphData, container) {
         if (!container || !graphData.success) return;
-        
+
         container.innerHTML = '';
         const graph = graphData.graph;
-        
+
         // Create branch timeline
         const timeline = document.createElement('div');
         timeline.className = 'branch-timeline';
-        
+
         // Group versions by branch
         const branchVersions = {};
         graph.versions.forEach(version => {
@@ -228,7 +228,7 @@ class VersionControlManager {
             }
             branchVersions[version.branch].push(version);
         });
-        
+
         // Create branch lanes
         Object.keys(branchVersions).forEach(branchName => {
             const branchLane = document.createElement('div');
@@ -247,17 +247,17 @@ class VersionControlManager {
             `;
             timeline.appendChild(branchLane);
         });
-        
+
         container.appendChild(timeline);
     }
 
     renderMergeConflicts(conflicts, container) {
         if (!container) return;
-        
+
         container.innerHTML = '';
         const conflictsList = document.createElement('div');
         conflictsList.className = 'conflicts-list';
-        
+
         conflicts.forEach(conflict => {
             const conflictItem = document.createElement('div');
             conflictItem.className = 'conflict-item';
@@ -285,17 +285,17 @@ class VersionControlManager {
             `;
             conflictsList.appendChild(conflictItem);
         });
-        
+
         container.appendChild(conflictsList);
     }
 
     renderAnnotations(annotations, container) {
         if (!container) return;
-        
+
         container.innerHTML = '';
         const annotationsList = document.createElement('div');
         annotationsList.className = 'annotations-list';
-        
+
         annotations.forEach(annotation => {
             const annotationItem = document.createElement('div');
             annotationItem.className = 'annotation-item';
@@ -315,17 +315,17 @@ class VersionControlManager {
             `;
             annotationsList.appendChild(annotationItem);
         });
-        
+
         container.appendChild(annotationsList);
     }
 
     renderComments(comments, container) {
         if (!container) return;
-        
+
         container.innerHTML = '';
         const commentsList = document.createElement('div');
         commentsList.className = 'comments-list';
-        
+
         comments.forEach(comment => {
             const commentItem = document.createElement('div');
             commentItem.className = 'comment-item';
@@ -338,7 +338,7 @@ class VersionControlManager {
             `;
             commentsList.appendChild(commentItem);
         });
-        
+
         container.appendChild(commentsList);
     }
 
@@ -356,14 +356,14 @@ class VersionControlManager {
                 </div>
             </div>
         `;
-        
+
         this.renderMergeConflicts(conflicts, dialog.querySelector('.conflicts-container'));
-        
+
         // Event handlers
         dialog.querySelector('.btn-cancel').addEventListener('click', () => {
             document.body.removeChild(dialog);
         });
-        
+
         dialog.querySelector('.btn-resolve').addEventListener('click', () => {
             const resolutions = {};
             dialog.querySelectorAll('.resolution-select').forEach(select => {
@@ -374,7 +374,7 @@ class VersionControlManager {
             onResolve(resolutions);
             document.body.removeChild(dialog);
         });
-        
+
         document.body.appendChild(dialog);
     }
 
@@ -404,4 +404,4 @@ window.versionControlManager = new VersionControlManager();
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = VersionControlManager;
-} 
+}

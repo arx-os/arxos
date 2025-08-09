@@ -260,4 +260,4 @@ python tools/validate_migration_docs.py
 
 ---
 
-*This documentation is maintained by the Database Team and updated with each schema change. For questions or contributions, please contact the database team.* 
+*This documentation is maintained by the Database Team and updated with each schema change. For questions or contributions, please contact the database team.*

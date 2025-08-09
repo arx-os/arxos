@@ -1,6 +1,6 @@
 /**
  * Access Control Manager
- * Frontend module for managing role-based permissions, floor-specific access controls, 
+ * Frontend module for managing role-based permissions, floor-specific access controls,
  * audit trails, and permission inheritance
  */
 
@@ -167,7 +167,7 @@ class AccessControlManager {
         try {
             const form = document.getElementById('create-user-form');
             const formData = new FormData(form);
-            
+
             const userData = {
                 username: formData.get('username'),
                 email: formData.get('email'),
@@ -185,7 +185,7 @@ class AccessControlManager {
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 this.showNotification('User created successfully', 'success');
                 form.reset();
@@ -203,7 +203,7 @@ class AccessControlManager {
         try {
             const response = await fetch(`${this.baseUrl}/users`);
             const data = await response.json();
-            
+
             if (data.success) {
                 this.renderUserList(data.users);
             } else {
@@ -243,7 +243,7 @@ class AccessControlManager {
         try {
             const form = document.getElementById('grant-permission-form');
             const formData = new FormData(form);
-            
+
             const permissionData = {
                 role: formData.get('role'),
                 resource_type: formData.get('resource_type'),
@@ -263,7 +263,7 @@ class AccessControlManager {
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 this.showNotification('Permission granted successfully', 'success');
                 form.reset();
@@ -281,7 +281,7 @@ class AccessControlManager {
         try {
             const form = document.getElementById('check-permission-form');
             const formData = new FormData(form);
-            
+
             const checkData = {
                 user_id: formData.get('user_id'),
                 resource_type: formData.get('resource_type'),
@@ -300,7 +300,7 @@ class AccessControlManager {
             });
 
             const result = await response.json();
-            
+
             this.showPermissionCheckResult(result);
         } catch (error) {
             console.error('Failed to check permission:', error);
@@ -334,7 +334,7 @@ class AccessControlManager {
         try {
             const response = await fetch(`${this.baseUrl}/permissions`);
             const data = await response.json();
-            
+
             if (data.success) {
                 this.renderPermissionList(data.permissions);
             } else {
@@ -360,7 +360,7 @@ class AccessControlManager {
                     <small>Created: ${new Date(permission.created_at).toLocaleDateString()}</small>
                 </div>
                 <div class="permission-actions">
-                    <button class="btn btn-sm btn-danger revoke-permission-btn" 
+                    <button class="btn btn-sm btn-danger revoke-permission-btn"
                             data-permission-id="${permission.permission_id}">
                         Revoke
                     </button>
@@ -380,7 +380,7 @@ class AccessControlManager {
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 this.showNotification('Permission revoked successfully', 'success');
                 await this.loadPermissions();
@@ -397,10 +397,10 @@ class AccessControlManager {
         try {
             const filters = this.getAuditLogFilters();
             const queryParams = new URLSearchParams(filters);
-            
+
             const response = await fetch(`${this.baseUrl}/audit-logs?${queryParams}`);
             const data = await response.json();
-            
+
             if (data.success) {
                 this.renderAuditLogs(data.logs);
             } else {
@@ -458,10 +458,10 @@ class AccessControlManager {
         try {
             const filters = this.getAuditLogFilters();
             const queryParams = new URLSearchParams(filters);
-            
+
             const response = await fetch(`${this.baseUrl}/audit-logs/export?${queryParams}`);
             const blob = await response.blob();
-            
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -470,7 +470,7 @@ class AccessControlManager {
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-            
+
             this.showNotification('Audit logs exported successfully', 'success');
         } catch (error) {
             console.error('Failed to export audit logs:', error);
@@ -482,7 +482,7 @@ class AccessControlManager {
         try {
             const buildingId = document.getElementById('building-id')?.value;
             const floorId = document.getElementById('floor-id')?.value;
-            
+
             if (!buildingId || !floorId) {
                 this.showNotification('Please provide building ID and floor ID', 'error');
                 return;
@@ -490,7 +490,7 @@ class AccessControlManager {
 
             const response = await fetch(`${this.baseUrl}/floors/${buildingId}/${floorId}/access-summary`);
             const data = await response.json();
-            
+
             if (data.success) {
                 this.renderFloorAccessSummary(data);
             } else {
@@ -519,7 +519,7 @@ class AccessControlManager {
                         <span class="stat-label">Recent Activities</span>
                     </div>
                 </div>
-                
+
                 <div class="permissions-section">
                     <h5>Floor Permissions</h5>
                     <div class="permission-list">
@@ -532,7 +532,7 @@ class AccessControlManager {
                         `).join('')}
                     </div>
                 </div>
-                
+
                 <div class="activity-section">
                     <h5>Recent Activity</h5>
                     <div class="activity-list">
@@ -553,7 +553,7 @@ class AccessControlManager {
         try {
             const form = document.getElementById('bulk-permission-form');
             const formData = new FormData(form);
-            
+
             const buildingId = formData.get('building_id');
             const floorId = formData.get('floor_id');
             const permissionsData = JSON.parse(formData.get('permissions') || '[]');
@@ -572,7 +572,7 @@ class AccessControlManager {
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
                 this.showNotification(`Granted ${result.total} permissions successfully`, 'success');
                 form.reset();
@@ -614,9 +614,9 @@ class AccessControlManager {
             <span class="message">${message}</span>
             <button class="close-btn" onclick="this.parentElement.remove()">&times;</button>
         `;
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             if (notification.parentElement) {
                 notification.remove();
@@ -628,9 +628,9 @@ class AccessControlManager {
     hasPermission(resourceType, action, resourceId = null) {
         const key = `${resourceType}:${resourceId || 'global'}`;
         const permissionLevel = this.userPermissions.get(key);
-        
+
         if (!permissionLevel) return false;
-        
+
         const requiredLevel = this.getRequiredPermissionLevel(action);
         return permissionLevel >= requiredLevel;
     }
@@ -689,4 +689,4 @@ class AccessControlManager {
 const accessControlManager = new AccessControlManager();
 
 // Export for use in other modules
-window.accessControlManager = accessControlManager; 
+window.accessControlManager = accessControlManager;

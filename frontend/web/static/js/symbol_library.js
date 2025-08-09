@@ -56,7 +56,7 @@ class SymbolLibrary {
             if (window.symbolScaler) {
                 this.symbolScaler = window.symbolScaler;
                 window.arxLogger.info('SymbolLibrary connected to SymbolScaler', { file: 'symbol_library.js' });
-                
+
                 // Update symbol previews when scaler is ready
                 this.updateSymbolPreviews();
             } else {
@@ -76,7 +76,7 @@ class SymbolLibrary {
             if (window.lodManager) {
                 this.lodManager = window.lodManager;
                 window.arxLogger.info('SymbolLibrary connected to LODManager', { file: 'symbol_library.js' });
-                
+
                 // Listen for LOD changes to update symbol previews
                 this.lodManager.addEventListener('lodChanged', (data) => {
                     this.updateSymbolPreviews();
@@ -142,18 +142,18 @@ class SymbolLibrary {
             div.setAttribute('draggable', 'true');
             div.setAttribute('data-symbol-id', symbol.id);
             div.setAttribute('data-base-scale', '1.0'); // Default base scale
-            
+
             // Create symbol preview with LOD support
             const previewDiv = document.createElement('div');
             previewDiv.className = 'symbol-preview mb-1';
             previewDiv.setAttribute('data-base-scale', '1.0');
             previewDiv.setAttribute('data-symbol-id', symbol.id);
-            
+
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('width', '32');
             svg.setAttribute('height', '32');
             svg.setAttribute('viewBox', '0 0 20 20');
-            
+
             // Use LOD-optimized SVG for preview if available
             if (this.lodManager) {
                 const lodData = this.lodManager.getSymbolLODData(symbol.id);
@@ -171,17 +171,17 @@ class SymbolLibrary {
             } else {
                 svg.innerHTML = symbol.svg || '';
             }
-            
+
             previewDiv.appendChild(svg);
-            
+
             div.innerHTML = '';
             div.appendChild(previewDiv);
-            
+
             const nameSpan = document.createElement('span');
             nameSpan.className = 'text-xs text-gray-700';
             nameSpan.textContent = symbol.name;
             div.appendChild(nameSpan);
-            
+
             // Add LOD indicator if available
             if (this.lodManager) {
                 const lodIndicator = document.createElement('span');
@@ -189,12 +189,12 @@ class SymbolLibrary {
                 lodIndicator.textContent = `LOD: ${this.lodManager.getCurrentLODLevel()}`;
                 div.appendChild(lodIndicator);
             }
-            
+
             div.addEventListener('dragstart', e => this.handleDragStart(e, symbol));
             div.addEventListener('dragend', e => this.handleDragEnd(e));
             this.list.appendChild(div);
         });
-        
+
         // Apply scaling to previews if scaler is available
         this.updateSymbolPreviews();
     }
@@ -241,20 +241,20 @@ class SymbolLibrary {
             } catch (err) { return; }
         }
         if (!symbol) return;
-        
+
         // Get drop coordinates using viewport manager if available
         const svg = svgContainer.querySelector('svg');
         if (!svg) return;
-        
+
         const coordinates = this.getDropCoordinates(e, svg);
-        
+
         // Convert to real-world coordinates if scale factors are available
         let realWorldCoords = null;
         if (this.viewportManager && this.viewportManager.scaleFactors.x !== 1.0) {
             realWorldCoords = this.viewportManager.svgToRealWorld(coordinates.x, coordinates.y);
             window.arxLogger.info(`Symbol placed at real-world coordinates: (${realWorldCoords.x.toFixed(2)}, ${realWorldCoords.y.toFixed(2)}) ${this.viewportManager.currentUnit}`, { file: 'symbol_library.js' });
         }
-        
+
         this.placeSymbol(svg, symbol, coordinates.x, coordinates.y, realWorldCoords);
     }
 
@@ -266,7 +266,7 @@ class SymbolLibrary {
         if (window.viewportManager && window.viewportManager.screenToSVG) {
             return window.viewportManager.screenToSVG(e.clientX, e.clientY);
         }
-        
+
         // Fallback to original method
         const pt = svg.createSVGPoint();
         pt.x = e.clientX;
@@ -278,7 +278,7 @@ class SymbolLibrary {
     placeSymbol(svg, symbol, x, y, realWorldCoords) {
         // Create unique ID
         const objectId = `${symbol.id}_${Date.now()}_${Math.floor(Math.random()*10000)}`;
-        
+
         // Create symbol element
         const symbolElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         symbolElement.setAttribute('id', objectId);
@@ -295,37 +295,37 @@ class SymbolLibrary {
         symbolElement.setAttribute('data-system', 'electrical');
         symbolElement.setAttribute('data-status', 'active');
         symbolElement.setAttribute('data-priority', 'normal');
-        
+
         // Add LOD attributes
         symbolElement.setAttribute('data-lod-level', 'medium'); // Default LOD level
         symbolElement.setAttribute('data-lod-complexity', '0.7'); // Default complexity
         symbolElement.setAttribute('data-lod-enabled', 'true'); // Enable LOD by default
-        
+
         // Add scale metadata if viewport manager is available
         if (this.viewportManager && this.viewportManager.scaleFactors.x !== 1.0) {
             symbolElement.setAttribute('data-scale-x', this.viewportManager.scaleFactors.x.toString());
             symbolElement.setAttribute('data-scale-y', this.viewportManager.scaleFactors.y.toString());
             symbolElement.setAttribute('data-coordinate-system', 'real_world');
             symbolElement.setAttribute('data-unit', this.viewportManager.currentUnit);
-            
+
             // Store original SVG coordinates
             symbolElement.setAttribute('data-svg-x', x.toString());
             symbolElement.setAttribute('data-svg-y', y.toString());
         }
-        
+
         // Store real-world coordinates as metadata if available
         if (realWorldCoords) {
             symbolElement.setAttribute('data-real-world-x', realWorldCoords.x.toString());
             symbolElement.setAttribute('data-real-world-y', realWorldCoords.y.toString());
             symbolElement.setAttribute('data-unit', this.viewportManager.currentUnit);
         }
-        
+
         // Create the SVG content with LOD support
         const symbolSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         symbolSvg.setAttribute('width', '40');
         symbolSvg.setAttribute('height', '40');
         symbolSvg.setAttribute('viewBox', '0 0 20 20');
-        
+
         // Use LOD-optimized SVG if available
         if (this.lodManager) {
             const lodData = this.lodManager.getSymbolLODData(symbol.id);
@@ -343,36 +343,36 @@ class SymbolLibrary {
         } else {
             symbolSvg.innerHTML = symbol.svg || '';
         }
-        
+
         // Apply base scaling if symbol scaler is available
         if (this.symbolScaler) {
             this.symbolScaler.applyBaseScaling(symbolSvg, 1.0);
         }
-        
+
         symbolElement.appendChild(symbolSvg);
-        
+
         // Position the symbol
         symbolElement.setAttribute('transform', `translate(${x}, ${y})`);
-        
+
         // Add to SVG
         svg.appendChild(symbolElement);
-        
+
         // Add placement animation
         symbolElement.classList.add('placing');
         setTimeout(() => {
             symbolElement.classList.remove('placing');
         }, 400);
-        
+
         // Log placement with real-world coordinates if available
         if (realWorldCoords) {
             window.arxLogger.debug(`Symbol "${symbol.name}" placed at:`, { symbol, file: 'symbol_library.js' });
         } else {
             window.arxLogger.debug(`Symbol "${symbol.name}" placed at SVG coordinates: (${x.toFixed(2)}, ${y.toFixed(2)})`, { file: 'symbol_library.js' });
         }
-        
+
         // Trigger symbol placed event
         this.triggerSymbolPlacedEvent(symbol, x, y, realWorldCoords, symbolElement);
-        
+
         return symbolElement;
     }
 
@@ -381,13 +381,13 @@ class SymbolLibrary {
      */
     updateSymbolPositions() {
         if (!window.viewportManager) return;
-        
+
         const placedSymbols = document.querySelectorAll('.placed-symbol[data-placed-symbol="true"]');
         placedSymbols.forEach(symbol => {
             const x = parseFloat(symbol.getAttribute('data-x'));
             const y = parseFloat(symbol.getAttribute('data-y'));
             const rotation = parseFloat(symbol.getAttribute('data-rotation') || '0');
-            
+
             // Apply transform with rotation
             const transform = `translate(${x},${y}) rotate(${rotation})`;
             symbol.setAttribute('transform', transform);
@@ -412,7 +412,7 @@ class SymbolLibrary {
         const rotation = parseFloat(symbolElement.getAttribute('data-rotation') || '0');
         const transform = `translate(${x},${y}) rotate(${rotation})`;
         symbolElement.setAttribute('transform', transform);
-        
+
         // Trigger viewport manager event
         if (window.viewportManager) {
             window.viewportManager.triggerEvent('objectMoved', {
@@ -476,17 +476,17 @@ class SymbolLibrary {
      */
     updateSymbolPreviews() {
         if (!this.list) return;
-        
+
         const previews = this.list.querySelectorAll('.symbol-preview');
         previews.forEach(preview => {
             const symbolId = preview.getAttribute('data-symbol-id');
             const baseScale = parseFloat(preview.getAttribute('data-base-scale')) || 1.0;
-            
+
             // Update scaling if symbol scaler is available
             if (this.symbolScaler) {
                 this.symbolScaler.scaleSymbolPreview(preview, baseScale);
             }
-            
+
             // Update LOD if LOD manager is available
             if (this.lodManager && symbolId) {
                 const svg = preview.querySelector('svg');
@@ -502,7 +502,7 @@ class SymbolLibrary {
                 }
             }
         });
-        
+
         // Update LOD indicators
         const lodIndicators = this.list.querySelectorAll('.text-blue-500');
         lodIndicators.forEach(indicator => {
@@ -518,12 +518,12 @@ class SymbolLibrary {
     setSymbolPreviewScale(symbolId, baseScale) {
         const symbolItem = this.list?.querySelector(`[data-symbol-id="${symbolId}"]`);
         if (!symbolItem) return;
-        
+
         const preview = symbolItem.querySelector('.symbol-preview');
         if (!preview) return;
-        
+
         preview.setAttribute('data-base-scale', baseScale);
-        
+
         if (this.symbolScaler) {
             this.symbolScaler.updateSymbolScale(preview, baseScale);
         }
@@ -537,7 +537,7 @@ class SymbolLibrary {
         if (window.svgObjectInteraction) {
             window.svgObjectInteraction.selectObject(symbolElement);
         }
-        
+
         // Trigger viewport manager event for new object placement
         if (window.viewportManager) {
             window.viewportManager.triggerEvent('objectPlaced', {
@@ -549,7 +549,7 @@ class SymbolLibrary {
                 element: symbolElement
             });
         }
-        
+
         // Trigger custom event for other components
         const event = new CustomEvent('symbolPlaced', {
             detail: {

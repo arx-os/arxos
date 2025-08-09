@@ -12,14 +12,14 @@ export class Inventory {
             enableLogging: options.enableLogging !== false,
             ...options
         };
-        
+
         // Inventory state
         this.assets = [];
         this.currentPage = 1;
         this.sortField = this.options.defaultSortField;
         this.sortAsc = this.options.defaultSortAsc;
         this.isLoading = false;
-        
+
         // Filters
         this.filters = {
             building: '',
@@ -28,10 +28,10 @@ export class Inventory {
             room: '',
             status: ''
         };
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -44,12 +44,12 @@ export class Inventory {
         document.addEventListener('filterChanged', (event) => {
             this.handleFilterChange(event.detail);
         });
-        
+
         // Listen for sort changes
         document.addEventListener('sortChanged', (event) => {
             this.handleSortChange(event.detail);
         });
-        
+
         // Listen for page changes
         document.addEventListener('pageChanged', (event) => {
             this.handlePageChange(event.detail);
@@ -59,54 +59,54 @@ export class Inventory {
     // Asset loading methods
     async loadAssets() {
         if (this.isLoading) return;
-        
+
         this.isLoading = true;
         this.triggerEvent('loadingStarted');
-        
+
         try {
             const startTime = performance.now();
             const url = this.buildAssetUrl();
-            
+
             this.logInfo('Loading assets', {
                 building_id: this.filters.building,
                 filters: this.filters,
                 url: url
             });
-            
+
             const response = await fetch(url, {
                 headers: this.getAuthHeaders()
             });
-            
+
             const duration = performance.now() - startTime;
             this.logApiRequest('GET', url, response.status, duration);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const data = await response.json();
             this.assets = data;
             this.currentPage = 1;
-            
+
             this.logBusinessEvent('asset_inventory', 'assets_loaded', {
                 asset_count: data.length,
                 building_id: this.filters.building,
                 filters: this.filters,
                 page_size: this.options.pageSize
             });
-            
-            this.triggerEvent('assetsLoaded', { 
+
+            this.triggerEvent('assetsLoaded', {
                 assets: this.assets,
-                count: this.assets.length 
+                count: this.assets.length
             });
-            
+
         } catch (error) {
             this.logError('Failed to load assets', {
                 building_id: this.filters.building,
                 filters: this.filters,
                 error: error.message
             });
-            
+
             this.triggerEvent('assetsLoadFailed', { error });
         } finally {
             this.isLoading = false;
@@ -117,12 +117,12 @@ export class Inventory {
     buildAssetUrl() {
         const baseUrl = `/api/buildings/${this.filters.building}/assets`;
         const params = new URLSearchParams();
-        
+
         if (this.filters.system) params.append('system', this.filters.system);
         if (this.filters.assetType) params.append('assetType', this.filters.assetType);
         if (this.filters.room) params.append('roomId', this.filters.room);
         if (this.filters.status) params.append('status', this.filters.status);
-        
+
         const queryString = params.toString();
         return queryString ? `${baseUrl}?${queryString}` : baseUrl;
     }
@@ -138,15 +138,15 @@ export class Inventory {
             const response = await fetch(`/api/assets/${assetId}`, {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const asset = await response.json();
             this.triggerEvent('assetLoaded', { asset });
             return asset;
-            
+
         } catch (error) {
             this.logError('Failed to load asset', { assetId, error: error.message });
             this.triggerEvent('assetLoadFailed', { assetId, error });
@@ -164,22 +164,22 @@ export class Inventory {
                 },
                 body: JSON.stringify(assetData)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const asset = await response.json();
             this.assets.push(asset);
-            
+
             this.logBusinessEvent('asset_inventory', 'asset_created', {
                 asset_id: asset.id,
                 asset_type: asset.asset_type
             });
-            
+
             this.triggerEvent('assetCreated', { asset });
             return asset;
-            
+
         } catch (error) {
             this.logError('Failed to create asset', { assetData, error: error.message });
             this.triggerEvent('assetCreateFailed', { assetData, error });
@@ -197,27 +197,27 @@ export class Inventory {
                 },
                 body: JSON.stringify(assetData)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const asset = await response.json();
-            
+
             // Update asset in local array
             const index = this.assets.findIndex(a => a.id === assetId);
             if (index !== -1) {
                 this.assets[index] = asset;
             }
-            
+
             this.logBusinessEvent('asset_inventory', 'asset_updated', {
                 asset_id: assetId,
                 asset_type: asset.asset_type
             });
-            
+
             this.triggerEvent('assetUpdated', { asset });
             return asset;
-            
+
         } catch (error) {
             this.logError('Failed to update asset', { assetId, assetData, error: error.message });
             this.triggerEvent('assetUpdateFailed', { assetId, assetData, error });
@@ -231,20 +231,20 @@ export class Inventory {
                 method: 'DELETE',
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             // Remove asset from local array
             this.assets = this.assets.filter(a => a.id !== assetId);
-            
+
             this.logBusinessEvent('asset_inventory', 'asset_deleted', {
                 asset_id: assetId
             });
-            
+
             this.triggerEvent('assetDeleted', { assetId });
-            
+
         } catch (error) {
             this.logError('Failed to delete asset', { assetId, error: error.message });
             this.triggerEvent('assetDeleteFailed', { assetId, error });
@@ -262,21 +262,21 @@ export class Inventory {
                 },
                 body: JSON.stringify({ asset_ids: assetIds })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             // Remove assets from local array
             this.assets = this.assets.filter(a => !assetIds.includes(a.id));
-            
+
             this.logBusinessEvent('asset_inventory', 'assets_bulk_deleted', {
                 asset_count: assetIds.length,
                 asset_ids: assetIds
             });
-            
+
             this.triggerEvent('assetsBulkDeleted', { assetIds });
-            
+
         } catch (error) {
             this.logError('Failed to delete assets', { assetIds, error: error.message });
             this.triggerEvent('assetsBulkDeleteFailed', { assetIds, error });
@@ -292,7 +292,7 @@ export class Inventory {
             this.sortField = field;
             this.sortAsc = true;
         }
-        
+
         this.triggerEvent('sortChanged', { field: this.sortField, asc: this.sortAsc });
     }
 
@@ -300,21 +300,21 @@ export class Inventory {
         const sorted = [...this.assets];
         sorted.sort((a, b) => {
             let v1 = a[this.sortField], v2 = b[this.sortField];
-            
+
             // Handle null/undefined values
             if (v1 == null && v2 == null) return 0;
             if (v1 == null) return this.sortAsc ? -1 : 1;
             if (v2 == null) return this.sortAsc ? 1 : -1;
-            
+
             // Handle string values
             if (typeof v1 === 'string') v1 = v1.toLowerCase();
             if (typeof v2 === 'string') v2 = v2.toLowerCase();
-            
+
             if (v1 < v2) return this.sortAsc ? -1 : 1;
             if (v1 > v2) return this.sortAsc ? 1 : -1;
             return 0;
         });
-        
+
         return sorted;
     }
 
@@ -475,9 +475,9 @@ export class Inventory {
         this.assets = [];
         this.currentPage = 1;
         this.filters = {};
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

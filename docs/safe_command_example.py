@@ -15,13 +15,13 @@ def safe_execute_command(command: str, args: List[str] = None, timeout: int = 30
         'pip', 'pip3', 'node', 'npm', 'yarn',
         'ls', 'cat', 'echo', 'mkdir', 'rm', 'cp', 'mv'
     ]
-    
+
     if command not in allowed_commands:
         raise ValueError(f"Command '{command}' is not allowed")
-    
+
     # Prepare command
     cmd = [command] + (args or [])
-    
+
     # Execute safely
     result = subprocess.run(
         cmd,
@@ -30,7 +30,7 @@ def safe_execute_command(command: str, args: List[str] = None, timeout: int = 30
         text=True,
         timeout=timeout
     )
-    
+
     return result
 
 # Usage examples
@@ -38,11 +38,11 @@ try:
     # Safe command execution
     result = safe_execute_command('git', ['status'])
     print(f"Git status: {result.stdout}")
-    
+
     # Safe file listing
     result = safe_execute_command('ls', ['-la'])
     print(f"Directory contents: {result.stdout}")
-    
+
 except ValueError as e:
     print(f"Command not allowed: {e}")
 except subprocess.TimeoutExpired:

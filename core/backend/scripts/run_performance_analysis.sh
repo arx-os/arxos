@@ -41,12 +41,12 @@ command_exists() {
 # Function to check database connection
 check_db_connection() {
     print_status $BLUE "Checking database connection..."
-    
+
     if ! command_exists psql; then
         print_status $RED "Error: psql command not found. Please install PostgreSQL client."
         exit 1
     fi
-    
+
     # Test connection
     if ! PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" >/dev/null 2>&1; then
         print_status $RED "Error: Cannot connect to database. Please check your connection parameters:"
@@ -57,32 +57,32 @@ check_db_connection() {
         echo "  Password: ${DB_PASSWORD:0:3}***"
         exit 1
     fi
-    
+
     print_status $GREEN "Database connection successful!"
 }
 
 # Function to run SQL analysis
 run_sql_analysis() {
     print_status $BLUE "Running SQL performance analysis..."
-    
+
     if [ ! -f "$ANALYSIS_SCRIPT" ]; then
         print_status $RED "Error: Analysis script not found: $ANALYSIS_SCRIPT"
         exit 1
     fi
-    
+
     # Create output directory
     OUTPUT_DIR="$SCRIPT_DIR/analysis_output"
     mkdir -p "$OUTPUT_DIR"
-    
+
     # Run analysis and save output
     OUTPUT_FILE="$OUTPUT_DIR/sql_analysis_$(date '+%Y%m%d_%H%M%S').txt"
-    
+
     print_status $YELLOW "Running SQL analysis (this may take a few minutes)..."
-    
+
     if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$ANALYSIS_SCRIPT" > "$OUTPUT_FILE" 2>&1; then
         print_status $GREEN "SQL analysis completed successfully!"
         print_status $BLUE "Results saved to: $OUTPUT_FILE"
-        
+
         # Show summary
         echo ""
         print_status $BLUE "=== SQL Analysis Summary ==="
@@ -100,20 +100,20 @@ run_sql_analysis() {
 # Function to run Go analyzer
 run_go_analyzer() {
     print_status $BLUE "Running Go performance analyzer..."
-    
+
     if [ ! -f "$GO_ANALYZER" ]; then
         print_status $RED "Error: Go analyzer not found: $GO_ANALYZER"
         return 1
     fi
-    
+
     if ! command_exists go; then
         print_status $RED "Error: Go command not found. Please install Go."
         return 1
     fi
-    
+
     # Set environment variables for Go analyzer
     export DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME
-    
+
     # Run Go analyzer
     cd "$(dirname "$GO_ANALYZER")"
     if go run main.go; then
@@ -127,14 +127,14 @@ run_go_analyzer() {
 # Function to apply optimizations
 apply_optimizations() {
     print_status $BLUE "Applying database optimizations..."
-    
+
     if [ ! -f "$MIGRATION_FILE" ]; then
         print_status $RED "Error: Migration file not found: $MIGRATION_FILE"
         return 1
     fi
-    
+
     print_status $YELLOW "Applying performance optimization migration..."
-    
+
     if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$MIGRATION_FILE" >/dev/null 2>&1; then
         print_status $GREEN "Database optimizations applied successfully!"
     else
@@ -173,12 +173,12 @@ show_usage() {
 # Function to run all analysis
 run_all_analysis() {
     print_status $BLUE "Running complete performance analysis and optimization..."
-    
+
     check_db_connection
     run_sql_analysis
     run_go_analyzer
     apply_optimizations
-    
+
     print_status $GREEN "Complete analysis and optimization finished!"
 }
 
@@ -187,7 +187,7 @@ main() {
     # Parse command line arguments
     COMMAND="analyze"
     CHECK_ONLY=false
-    
+
     while [[ $# -gt 0 ]]; do
         case $1 in
             -h|--help)
@@ -209,22 +209,22 @@ main() {
                 ;;
         esac
     done
-    
+
     # Show banner
     echo ""
     print_status $BLUE "=========================================="
     print_status $BLUE "  Arxos Database Performance Analysis"
     print_status $BLUE "=========================================="
     echo ""
-    
+
     # Check database connection first
     check_db_connection
-    
+
     if [ "$CHECK_ONLY" = true ]; then
         print_status $GREEN "Database connection check completed successfully!"
         exit 0
     fi
-    
+
     # Run requested command
     case $COMMAND in
         analyze)
@@ -245,10 +245,10 @@ main() {
             exit 1
             ;;
     esac
-    
+
     echo ""
     print_status $GREEN "Performance analysis completed successfully!"
 }
 
 # Run main function
-main "$@" 
+main "$@"

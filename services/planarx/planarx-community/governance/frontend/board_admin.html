@@ -200,7 +200,7 @@
             <!-- Analytics Tab -->
             <div id="analytics-tab" class="tab-content p-6 hidden">
                 <h3 class="text-lg font-semibold text-gray-900 mb-6">Board Analytics</h3>
-                
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <h4 class="text-md font-medium text-gray-900 mb-4">Participation Trends</h4>
@@ -506,10 +506,10 @@
             boardData.members.forEach(member => {
                 const row = document.createElement('tr');
                 row.className = 'user-row';
-                
+
                 const statusColor = member.status === 'active' ? 'bg-green-500' : 'bg-red-500';
                 const statusText = member.status === 'active' ? 'Active' : 'Suspended';
-                
+
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
@@ -547,7 +547,7 @@
                         <div class="flex items-center">
                             <span class="text-sm text-gray-900">${member.reputation}</span>
                             <div class="ml-1 flex">
-                                ${Array.from({length: 5}, (_, i) => 
+                                ${Array.from({length: 5}, (_, i) =>
                                     `<i class="fas fa-star text-xs ${i < Math.floor(member.reputation) ? 'text-yellow-400' : 'text-gray-300'}"></i>`
                                 ).join('')}
                             </div>
@@ -568,7 +568,7 @@
                         </button>
                     </td>
                 `;
-                
+
                 tbody.appendChild(row);
             });
         }
@@ -581,7 +581,7 @@
             boardData.candidates.forEach(candidate => {
                 const card = document.createElement('div');
                 card.className = 'role-card bg-white rounded-lg shadow-md p-6';
-                
+
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-4">
                         <div>
@@ -593,7 +593,7 @@
                             <div class="text-xs text-gray-500">Eligibility</div>
                         </div>
                     </div>
-                    
+
                     <div class="space-y-2 mb-4">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Experience:</span>
@@ -604,16 +604,16 @@
                             <span class="font-medium">${candidate.target_role.replace('_', ' ').toUpperCase()}</span>
                         </div>
                     </div>
-                    
+
                     <div class="mb-4">
                         <div class="text-sm text-gray-600 mb-2">Skills:</div>
                         <div class="flex flex-wrap gap-1">
-                            ${candidate.skills.map(skill => 
+                            ${candidate.skills.map(skill =>
                                 `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">${skill}</span>`
                             ).join('')}
                         </div>
                     </div>
-                    
+
                     <div class="flex space-x-2">
                         <button onclick="assignRole('${candidate.id}', '${candidate.target_role}')" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm">
                             Assign Role
@@ -623,7 +623,7 @@
                         </button>
                     </div>
                 `;
-                
+
                 grid.appendChild(card);
             });
         }
@@ -678,18 +678,18 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize charts
             initializeCharts();
-            
+
             // Populate data
             populateMembersTable();
             populateCandidatesGrid();
-            
+
             // Tab switching
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.addEventListener('click', function() {
                     switchTab(this.dataset.tab);
                 });
             });
-            
+
             // Form submission
             document.getElementById('add-member-form').addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -697,7 +697,7 @@
                 // Implement form submission
                 closeAddMemberModal();
             });
-            
+
             // Search functionality
             document.getElementById('member-search').addEventListener('input', function(e) {
                 const query = e.target.value.toLowerCase();
@@ -706,4 +706,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

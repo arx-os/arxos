@@ -15,28 +15,28 @@ logger = logging.getLogger(__name__)
 
 class SVGXLogger:
     """Structured logger for SVGX Engine."""
-    
+
     def __init__(self, name: str = "svgx_engine"):
         """Initialize SVGX logger."""
         self.name = name
         self.logger = logging.getLogger(name)
-    
+
     def info(self, message: str, **kwargs):
         """Log info message."""
         self.logger.info(message, extra=kwargs)
-    
+
     def warning(self, message: str, **kwargs):
         """Log warning message."""
         self.logger.warning(message, extra=kwargs)
-    
+
     def error(self, message: str, **kwargs):
         """Log error message."""
         self.logger.error(message, extra=kwargs)
-    
+
     def debug(self, message: str, **kwargs):
         """Log debug message."""
         self.logger.debug(message, extra=kwargs)
-    
+
     def critical(self, message: str, **kwargs):
         """Log critical message."""
         self.logger.critical(message, extra=kwargs)
@@ -58,7 +58,7 @@ def setup_logging(level: str = "INFO", format: str = "json"):
 def logging_context(**kwargs):
     """Context manager for logging with additional context."""
     # Simple context manager that does nothing for now
-    class ContextManager:
+class ContextManager:
     """
     Manager class for coordinating operations
 
@@ -74,7 +74,7 @@ Example:
         result = instance.method()
         print(result)
     """
-        def __enter__(self):
+def __enter__(self):
     """
     Perform __enter__ operation
 
@@ -92,8 +92,11 @@ Example:
         print(result)
     """
             return self
-        
+
         def __exit__(self, exc_type, exc_val, exc_tb):
             pass
-    
-    return ContextManager() 
+    """TODO: Implement this function."""
+    pass
+            pass
+
+    return ContextManager()

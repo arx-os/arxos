@@ -43,7 +43,7 @@ jobs:
           else
             echo "should-generate=false" >> $GITHUB_OUTPUT
           fi
-          
+
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "should-publish=true" >> $GITHUB_OUTPUT
           else
@@ -457,4 +457,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: final-reports
-          path: sdk/reports/ 
+          path: sdk/reports/

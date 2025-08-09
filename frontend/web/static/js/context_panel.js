@@ -46,10 +46,10 @@ class ContextPanel {
         this.isVisible = true;
         this.panel.classList.remove('hidden');
         const objectData = this.extractObjectData(object);
-        
+
         // Get floor information if available
         const floorInfo = this.getFloorInfo(objectData.floor_id);
-        
+
         this.content.innerHTML = `
             <div class="space-y-4">
                 ${objectData.type === 'connector' ? `<div class="flex items-center space-x-2">
@@ -57,10 +57,10 @@ class ContextPanel {
                 </div>` : ''}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                    <input type="text" id="object-name" value="${objectData.name || ''}" 
+                    <input type="text" id="object-name" value="${objectData.name || ''}"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                     <select id="object-type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -71,7 +71,7 @@ class ContextPanel {
                         <option value="label" ${objectData.type === 'label' ? 'selected' : ''}>Label</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">System</label>
                     <select id="object-system" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -85,7 +85,7 @@ class ContextPanel {
                         <option value="lighting" ${objectData.system === 'lighting' ? 'selected' : ''}>Lighting</option>
                     </select>
                 </div>
-                
+
                 <!-- Floor Selection (for all objects) -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Floor</label>
@@ -94,7 +94,7 @@ class ContextPanel {
                         ${this.getFloorOptions(objectData.floor_id)}
                     </select>
                 </div>
-                
+
                 <!-- Connector-specific fields -->
                 <div id="connector-fields" class="space-y-3 ${objectData.type === 'connector' ? '' : 'hidden'}">
                     <div>
@@ -109,7 +109,7 @@ class ContextPanel {
                             <option value="security" ${objectData.connector_type === 'security' ? 'selected' : ''}>Security</option>
                         </select>
                     </div>
-                    
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Connection Type</label>
                         <select id="connection-type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -118,7 +118,7 @@ class ContextPanel {
                             <option value="both" ${objectData.connection_type === 'both' ? 'selected' : ''}>Both</option>
                         </select>
                     </div>
-                    
+
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Connection Status</label>
                         <select id="connection-status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -127,7 +127,7 @@ class ContextPanel {
                             <option value="pending" ${objectData.connection_status === 'pending' ? 'selected' : ''}>Pending</option>
                         </select>
                     </div>
-                    
+
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Max Capacity</label>
@@ -141,7 +141,7 @@ class ContextPanel {
                         </div>
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select id="object-status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -151,7 +151,7 @@ class ContextPanel {
                         <option value="retired" ${objectData.status === 'retired' ? 'selected' : ''}>Retired</option>
                     </select>
                 </div>
-                
+
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">X Position</label>
@@ -164,34 +164,34 @@ class ContextPanel {
                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Rotation</label>
                     <input type="number" id="object-rotation" value="${objectData.rotation || 0}" step="1" min="0" max="360"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
-                    <input type="text" id="object-tags" value="${objectData.tags || ''}" 
+                    <input type="text" id="object-tags" value="${objectData.tags || ''}"
                            placeholder="Enter tags separated by commas"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea id="object-description" rows="3" 
+                    <textarea id="object-description" rows="3"
                               placeholder="Enter description"
                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">${objectData.description || ''}</textarea>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Funding Source</label>
-                    <input type="text" id="object-funding-source" value="${objectData.funding_source || ''}" 
+                    <input type="text" id="object-funding-source" value="${objectData.funding_source || ''}"
                            placeholder="e.g., Capital Budget, Grant, Operating Budget"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                
+
                 <div class="flex space-x-2 pt-4">
                     <button id="save-object" class="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                         Save
@@ -214,7 +214,7 @@ class ContextPanel {
                     <h4 class="font-medium text-gray-800">${selectedObjects.size} Objects Selected</h4>
                     <p class="text-sm text-gray-500">Batch operations</p>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">System (apply to all)</label>
                     <select id="batch-system" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -229,7 +229,7 @@ class ContextPanel {
                         <option value="lighting">Lighting</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Status (apply to all)</label>
                     <select id="batch-status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -240,7 +240,7 @@ class ContextPanel {
                         <option value="retired">Retired</option>
                     </select>
                 </div>
-                
+
                 <div class="flex space-x-2">
                     <button id="batch-save" class="flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                         Apply Changes
@@ -258,7 +258,7 @@ class ContextPanel {
         const saveBtn = this.panel.querySelector('#save-object');
         const deleteBtn = this.panel.querySelector('#delete-object');
         const typeSelect = this.panel.querySelector('#object-type');
-        
+
         saveBtn.addEventListener('click', () => this.saveObjectChanges(object));
         deleteBtn.addEventListener('click', () => {
             if (confirm('Are you sure you want to delete this object?')) {
@@ -302,7 +302,7 @@ class ContextPanel {
     setupBatchEventListeners(selectedObjects) {
         const batchSaveBtn = this.panel.querySelector('#batch-save');
         const batchDeleteBtn = this.panel.querySelector('#batch-delete');
-        
+
         batchSaveBtn.addEventListener('click', () => this.saveBatchChanges(selectedObjects));
         batchDeleteBtn.addEventListener('click', () => {
             if (confirm(`Are you sure you want to delete ${selectedObjects.size} objects?`)) {
@@ -472,8 +472,8 @@ class ContextPanel {
             { id: 4, name: 'Third Floor' },
             { id: 5, name: 'Basement' }
         ];
-        
-        return floors.map(floor => 
+
+        return floors.map(floor =>
             `<option value="${floor.id}" ${floor.id.toString() === selectedFloorId.toString() ? 'selected' : ''}>${floor.name}</option>`
         ).join('');
     }
@@ -481,7 +481,7 @@ class ContextPanel {
     // Helper method to get floor information
     getFloorInfo(floorId) {
         if (!floorId) return null;
-        
+
         // This would typically fetch from an API
         const floors = [
             { id: 1, name: 'Ground Floor' },
@@ -490,7 +490,7 @@ class ContextPanel {
             { id: 4, name: 'Third Floor' },
             { id: 5, name: 'Basement' }
         ];
-        
+
         return floors.find(floor => floor.id.toString() === floorId.toString());
     }
 
@@ -503,7 +503,7 @@ class ContextPanel {
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             if (response.ok) {
                 const floors = await response.json();
                 return floors;

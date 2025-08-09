@@ -57,7 +57,7 @@ def downgrade() -> None:
 #### **Table Modification**
 ```python
 def upgrade() -> None:
-    op.add_column('existing_table', 
+    op.add_column('existing_table',
         sa.Column('new_column', sa.String(length=100), nullable=True)
     )
 
@@ -79,7 +79,7 @@ def downgrade() -> None:
 #### **Composite Indexes**
 ```python
 def upgrade() -> None:
-    op.create_index('idx_table_col1_col2', 'table_name', 
+    op.create_index('idx_table_col1_col2', 'table_name',
                    ['column1', 'column2'])
 
 def downgrade() -> None:
@@ -126,10 +126,10 @@ def upgrade() -> None:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) PARTITION BY RANGE (created_at)
     """)
-    
+
     # Create partitions
     op.execute("""
-        CREATE TABLE table_p2024_01 
+        CREATE TABLE table_p2024_01
         PARTITION OF table_partitioned
         FOR VALUES FROM ('2024-01-01') TO ('2024-02-01')
     """)
@@ -286,11 +286,11 @@ CREATE TABLE audit_logs AS SELECT * FROM audit_logs_backup;
 #### **Data Recovery**
 ```sql
 -- Restore data from backup
-CREATE TABLE table_restored AS 
+CREATE TABLE table_restored AS
 SELECT * FROM table_backup_20240101;
 
 -- Update foreign key references
-UPDATE dependent_table 
+UPDATE dependent_table
 SET table_id = (SELECT id FROM table_restored WHERE old_id = table_id);
 ```
 
@@ -312,13 +312,13 @@ python tools/validate_migration.py
 def test_migration_rollback():
     # Apply migration
     alembic.upgrade()
-    
+
     # Verify migration applied
     assert table_exists('new_table')
-    
+
     # Rollback migration
     alembic.downgrade()
-    
+
     # Verify rollback successful
     assert not table_exists('new_table')
 ```
@@ -334,14 +334,14 @@ def test_migration_rollback():
   run: |
     # Set up test database
     createdb arxos_test
-    
+
     # Apply all migrations
     alembic upgrade head
-    
+
     # Test rollback
     alembic downgrade base
     alembic upgrade head
-    
+
     # Validate schema
     python tools/schema_validator.py
 ```
@@ -352,10 +352,10 @@ def test_migration_rollback():
   run: |
     # Benchmark before migration
     python tools/benchmark_partitioning.py --baseline
-    
+
     # Apply migration
     alembic upgrade head
-    
+
     # Benchmark after migration
     python tools/benchmark_partitioning.py --compare
 ```
@@ -368,10 +368,10 @@ def test_migration_rollback():
   run: |
     # Apply migrations to staging
     alembic upgrade head
-    
+
     # Run integration tests
     python -m pytest tests/integration/
-    
+
     # Performance validation
     python tools/validate_performance.py
 ```
@@ -382,10 +382,10 @@ def test_migration_rollback():
   run: |
     # Create backup
     pg_dump arxos_prod > backup_$(date +%Y%m%d_%H%M%S).sql
-    
+
     # Apply migrations
     alembic upgrade head
-    
+
     # Verify deployment
     alembic current
     python tools/validate_deployment.py
@@ -466,13 +466,13 @@ SELECT * FROM pg_locks WHERE NOT granted;
 # For large tables, use batch processing
 def upgrade() -> None:
     # Add column with default value
-    op.add_column('large_table', 
+    op.add_column('large_table',
                   sa.Column('new_column', sa.String(100), nullable=True))
-    
+
     # Update in batches
     op.execute("""
-        UPDATE large_table 
-        SET new_column = 'default_value' 
+        UPDATE large_table
+        SET new_column = 'default_value'
         WHERE new_column IS NULL
     """)
 ```
@@ -512,13 +512,13 @@ psql -d arxos_db -c "DELETE FROM alembic_version WHERE version_num = 'failed_ver
 #### **Performance Issues**
 ```sql
 -- Check for long-running queries
-SELECT pid, query, query_start 
-FROM pg_stat_activity 
+SELECT pid, query, query_start
+FROM pg_stat_activity
 WHERE state = 'active' AND query_start < NOW() - INTERVAL '5 minutes';
 
 -- Kill blocking queries if necessary
-SELECT pg_terminate_backend(pid) 
-FROM pg_stat_activity 
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
 WHERE state = 'active' AND query_start < NOW() - INTERVAL '10 minutes';
 ```
 
@@ -561,4 +561,4 @@ alembic upgrade head
 
 ---
 
-*This documentation is maintained by the Database Team. For questions about migrations, contact the database team.* 
+*This documentation is maintained by the Database Team. For questions about migrations, contact the database team.*

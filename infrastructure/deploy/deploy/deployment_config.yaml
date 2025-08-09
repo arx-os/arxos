@@ -364,4 +364,4 @@ compliance:
   data_encryption:
     at_rest: true
     in_transit: true
-    key_rotation: true 
+    key_rotation: true

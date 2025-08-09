@@ -24,11 +24,11 @@ __all__ = [
     # Use Cases
     "CreateBuildingUseCase", "UpdateBuildingUseCase", "GetBuildingUseCase",
     "DeleteBuildingUseCase", "ListBuildingsUseCase",
-    
+
     # DTOs
     "CreateBuildingRequest", "UpdateBuildingRequest", "BuildingResponse",
     "BuildingSearchRequest", "BuildingListResponse",
     "AddressDTO", "CoordinatesDTO", "DimensionsDTO", "StatusDTO", "MoneyDTO",
     "BuildingResponseDTO", "CreateBuildingRequestDTO", "UpdateBuildingRequestDTO",
     "BuildingListResponseDTO", "BuildingSearchRequestDTO"
-] 
+]

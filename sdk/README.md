@@ -292,14 +292,14 @@ import (
 
 func main() {
     client := arxos.NewArxBackendClient("http://localhost:8080")
-    
+
     // Authenticate
     token, err := client.Authenticate("username", "password")
     if err != nil {
         panic(err)
     }
     client.SetAuthToken(token)
-    
+
     // Make API calls
     health, err := client.Health.GetHealth()
     if err != nil {
@@ -478,4 +478,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Generated with ❤️ by the Arxos SDK Generator** 
+**Generated with ❤️ by the Arxos SDK Generator**

@@ -25,17 +25,17 @@ def test_access_control_migration():
     """Test the migrated AccessControlService."""
     print("🧪 Testing AccessControlService Migration")
     print("=" * 50)
-    
+
     # Create temporary database
     temp_dir = tempfile.mkdtemp()
     db_path = os.path.join(temp_dir, "test_access_control.db")
-    
+
     try:
         # Initialize service
         print("1. Initializing AccessControlService...")
         ac_service = SVGXAccessControlService(db_path=db_path)
         print("   ✅ Service initialized successfully")
-        
+
         # Test user creation
         print("\n2. Testing user creation...")
         user_data = ac_service.create_user(
@@ -51,7 +51,7 @@ def test_access_control_migration():
             }
         )
         print(f"   ✅ User created: {user_data['user_id']}")
-        
+
         # Test user retrieval
         print("\n3. Testing user retrieval...")
         retrieved_user = ac_service.get_user(user_data['user_id'])
@@ -59,7 +59,7 @@ def test_access_control_migration():
         assert retrieved_user['username'] == "test_user"
         assert retrieved_user['svgx_preferences']['default_namespace'] == "arx"
         print("   ✅ User retrieved successfully")
-        
+
         # Test permission checking
         print("\n4. Testing permission checking...")
         has_permission = ac_service.check_permission(
@@ -69,14 +69,14 @@ def test_access_control_migration():
         )
         assert has_permission is True
         print("   ✅ Permission checking works")
-        
+
         # Test SVGX capabilities
         print("\n5. Testing SVGX capabilities...")
         capabilities = ac_service.get_user_svgx_capabilities(user_data['user_id'])
         assert "edit" in capabilities
         assert "cad_tools" in capabilities
         print(f"   ✅ SVGX capabilities: {capabilities}")
-        
+
         # Test SVGX-specific permission
         print("\n6. Testing SVGX-specific permission...")
         svgx_permission = ac_service.check_svgx_permission(
@@ -87,7 +87,7 @@ def test_access_control_migration():
         )
         assert svgx_permission is True
         print("   ✅ SVGX-specific permission works")
-        
+
         # Test session management
         print("\n7. Testing session management...")
         session_id = ac_service.create_session(
@@ -98,13 +98,13 @@ def test_access_control_migration():
         )
         assert session_id is not None
         print(f"   ✅ Session created: {session_id}")
-        
+
         # Validate session
         session_data = ac_service.validate_session(session_id)
         assert session_data is not None
         assert session_data['user_id'] == user_data['user_id']
         print("   ✅ Session validation works")
-        
+
         # Test audit logging
         print("\n8. Testing audit logging...")
         ac_service.log_audit_event(
@@ -123,7 +123,7 @@ def test_access_control_migration():
             }
         )
         print("   ✅ Audit logging works")
-        
+
         # Test audit log retrieval
         print("\n9. Testing audit log retrieval...")
         audit_logs = ac_service.get_audit_logs(
@@ -134,13 +134,13 @@ def test_access_control_migration():
         assert audit_logs[0]['action'] == "svgx_file_created"
         assert audit_logs[0]['svgx_context']['namespace'] == "arx"
         print("   ✅ Audit log retrieval works")
-        
+
         # Test role permissions
         print("\n10. Testing role permissions...")
         permissions = ac_service._get_role_permissions("editor")
         assert len(permissions) > 0
         print(f"   ✅ Role permissions: {len(permissions)} permissions found")
-        
+
         # Test error handling
         print("\n11. Testing error handling...")
         try:
@@ -148,13 +148,13 @@ def test_access_control_migration():
             assert False, "Should have raised ValidationError"
         except ValidationError:
             print("   ✅ Validation error handling works")
-        
+
         try:
             ac_service.get_user("")
             assert False, "Should have raised ValidationError"
         except ValidationError:
             print("   ✅ User ID validation works")
-        
+
         # Test CAD user role
         print("\n12. Testing CAD user role...")
         cad_user_data = ac_service.create_user(
@@ -171,7 +171,7 @@ def test_access_control_migration():
         assert "cad_tools" in cad_capabilities
         assert "dimensioning" in cad_capabilities
         print(f"   ✅ CAD user capabilities: {cad_capabilities}")
-        
+
         # Test BIM specialist role
         print("\n13. Testing BIM specialist role...")
         bim_user_data = ac_service.create_user(
@@ -188,16 +188,16 @@ def test_access_control_migration():
         assert "bim_integration" in bim_capabilities
         assert "physics_simulation" in bim_capabilities
         print(f"   ✅ BIM specialist capabilities: {bim_capabilities}")
-        
+
         print("\n🎉 All tests passed! AccessControlService migration successful.")
         return True
-        
+
     except Exception as e:
         print(f"\n❌ Test failed: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
-        
+
     finally:
         # Cleanup
         if os.path.exists(temp_dir):
@@ -208,7 +208,7 @@ def test_clean_code_practices():
     """Test that the migrated code follows clean code practices."""
     print("\n🧹 Testing Clean Code Practices")
     print("=" * 50)
-    
+
     # Test imports
     print("1. Checking imports...")
     try:
@@ -219,7 +219,7 @@ def test_clean_code_practices():
     except ImportError as e:
         print(f"   ❌ Import error: {e}")
         return False
-    
+
     # Test type hints
     print("2. Checking type hints...")
     try:
@@ -234,7 +234,7 @@ def test_clean_code_practices():
     except Exception as e:
         print(f"   ❌ Type hint error: {e}")
         return False
-    
+
     # Test error handling
     print("3. Checking error handling...")
     try:
@@ -243,14 +243,14 @@ def test_clean_code_practices():
     except ImportError as e:
         print(f"   ❌ Error class import error: {e}")
         return False
-    
+
     # Test documentation
     print("4. Checking documentation...")
     ac_service = SVGXAccessControlService()
     assert ac_service.__doc__ is not None
     assert "SVGX" in ac_service.__doc__
     print("   ✅ Documentation is present")
-    
+
     print("\n🎉 Clean code practices verified!")
     return True
 
@@ -258,15 +258,15 @@ def test_clean_code_practices():
 if __name__ == "__main__":
     print("🚀 Starting AccessControlService Migration Tests")
     print("=" * 60)
-    
+
     # Run tests
     migration_success = test_access_control_migration()
     clean_code_success = test_clean_code_practices()
-    
+
     print("\n" + "=" * 60)
     print("📊 Test Results Summary")
     print("=" * 60)
-    
+
     if migration_success and clean_code_success:
         print("✅ ALL TESTS PASSED")
         print("✅ AccessControlService migration successful")
@@ -274,7 +274,7 @@ if __name__ == "__main__":
         print("✅ SVGX-specific features implemented")
         print("✅ Error handling improved")
         print("✅ Documentation updated")
-        
+
         print("\n📝 Migration Summary:")
         print("- Copied access_control.py from arx_svg_parser")
         print("- Updated imports for SVGX namespace")
@@ -284,13 +284,13 @@ if __name__ == "__main__":
         print("- Improved error handling with custom exceptions")
         print("- Added SVGX-specific permission checking")
         print("- Updated database schema with SVGX extensions")
-        
+
         print("\n🎯 Next Steps:")
         print("- Update MIGRATION_PLAN.md to mark step 4.1.1.1 as complete")
         print("- Proceed to step 4.1.1.2 (advanced_security.py migration)")
         print("- Continue with remaining services in Phase 4")
-        
+
     else:
         print("❌ SOME TESTS FAILED")
         print("Please review the errors above and fix the issues.")
-        sys.exit(1) 
+        sys.exit(1)

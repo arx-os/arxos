@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arxos CDN Configuration Example</title>
-    
+
     <!-- CDN Configuration -->
     <script src="static/cdn-config.js"></script>
     <script src="static/js/cdn-loader.js"></script>
-    
+
     <!-- Critical CSS - Loaded via CDN -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    
+
     <!-- Critical JavaScript - Loaded via CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    
+
     <!-- Arxos-specific scripts - Loaded via CDN -->
     <script src="static/js/session.js"></script>
     <script src="static/js/arx-logger.js"></script>
@@ -23,7 +23,7 @@
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold text-gray-900 mb-8">Arxos CDN Configuration Example</h1>
-        
+
         <!-- CDN Status Display -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">CDN Status</h2>
@@ -46,7 +46,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Asset Loading Examples -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             <!-- CSS Loading Example -->
@@ -62,7 +62,7 @@
                     <div id="css-status" class="text-sm text-gray-600"></div>
                 </div>
             </div>
-            
+
             <!-- JavaScript Loading Example -->
             <div class="bg-white rounded-lg shadow-md p-6">
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">JavaScript Asset Loading</h3>
@@ -77,7 +77,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Asset URL Examples -->
         <div class="bg-white rounded-lg shadow-md p-6 mt-8">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Asset URL Examples</h3>
@@ -96,7 +96,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Performance Monitoring -->
         <div class="bg-white rounded-lg shadow-md p-6 mt-8">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Performance Monitoring</h3>
@@ -107,7 +107,7 @@
                 <div id="cdn-stats" class="text-sm text-gray-600 bg-gray-50 p-4 rounded"></div>
             </div>
         </div>
-        
+
         <!-- Preloading Examples -->
         <div class="bg-white rounded-lg shadow-md p-6 mt-8">
             <h3 class="text-lg font-semibold text-gray-800 mb-4">Asset Preloading</h3>
@@ -122,7 +122,7 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         // Initialize CDN and display configuration
         document.addEventListener('DOMContentLoaded', function() {
@@ -130,20 +130,20 @@
             document.getElementById('environment').textContent = window.CDN_CONFIG.environment;
             document.getElementById('base-url').textContent = window.CDN_CONFIG.baseUrl;
             document.getElementById('version').textContent = window.CDN_CONFIG.version;
-            
+
             // Display asset URL examples
             document.getElementById('css-url').textContent = window.CDNUtils.getAssetUrl('main.css', 'css');
             document.getElementById('js-url').textContent = window.CDNUtils.getAssetUrl('main.js', 'js');
             document.getElementById('image-url').textContent = window.CDNUtils.getAssetUrl('logo.png', 'images');
-            
+
             console.log('✅ CDN Configuration Example loaded successfully');
         });
-        
+
         // CSS Loading Examples
         async function loadCSSExample() {
             const statusDiv = document.getElementById('css-status');
             statusDiv.textContent = 'Loading CSS...';
-            
+
             try {
                 await window.CDNLoader.loadCSS('example.css');
                 statusDiv.textContent = '✅ CSS loaded successfully via CDN';
@@ -153,11 +153,11 @@
                 statusDiv.className = 'text-sm text-red-600';
             }
         }
-        
+
         async function loadMultipleCSSExample() {
             const statusDiv = document.getElementById('css-status');
             statusDiv.textContent = 'Loading multiple CSS files...';
-            
+
             try {
                 await window.CDNLoader.loadMultipleCSS(['main.css', 'dashboard.css', 'components.css']);
                 statusDiv.textContent = '✅ Multiple CSS files loaded successfully via CDN';
@@ -167,12 +167,12 @@
                 statusDiv.className = 'text-sm text-red-600';
             }
         }
-        
+
         // JavaScript Loading Examples
         async function loadJSExample() {
             const statusDiv = document.getElementById('js-status');
             statusDiv.textContent = 'Loading JavaScript...';
-            
+
             try {
                 await window.CDNLoader.loadJS('example.js');
                 statusDiv.textContent = '✅ JavaScript loaded successfully via CDN';
@@ -182,11 +182,11 @@
                 statusDiv.className = 'text-sm text-red-600';
             }
         }
-        
+
         async function loadMultipleJSExample() {
             const statusDiv = document.getElementById('js-status');
             statusDiv.textContent = 'Loading multiple JavaScript files...';
-            
+
             try {
                 await window.CDNLoader.loadMultipleJS(['utils.js', 'components.js', 'analytics.js']);
                 statusDiv.textContent = '✅ Multiple JavaScript files loaded successfully via CDN';
@@ -196,12 +196,12 @@
                 statusDiv.className = 'text-sm text-red-600';
             }
         }
-        
+
         // Performance Monitoring
         function getCDNStats() {
             const statsDiv = document.getElementById('cdn-stats');
             const stats = window.CDNLoader.getStats();
-            
+
             statsDiv.innerHTML = `
                 <h4 class="font-medium text-gray-800 mb-2">CDN Loader Statistics:</h4>
                 <ul class="space-y-1">
@@ -213,12 +213,12 @@
                 ${stats.failedAssets.length > 0 ? `<p class="mt-2"><strong>Failed:</strong> ${stats.failedAssets.join(', ')}</p>` : ''}
             `;
         }
-        
+
         // Preloading Examples
         function preloadAssetsExample() {
             const statusDiv = document.getElementById('preload-status');
             statusDiv.textContent = 'Preloading critical assets...';
-            
+
             try {
                 window.CDNLoader.preloadNonCriticalAssets({
                     css: ['critical.css'],
@@ -226,7 +226,7 @@
                     images: ['hero-image.jpg'],
                     fonts: ['main-font.woff2']
                 });
-                
+
                 statusDiv.textContent = '✅ Critical assets preloaded successfully';
                 statusDiv.className = 'text-sm text-green-600';
             } catch (error) {
@@ -234,18 +234,18 @@
                 statusDiv.className = 'text-sm text-red-600';
             }
         }
-        
+
         function prefetchAssetsExample() {
             const statusDiv = document.getElementById('preload-status');
             statusDiv.textContent = 'Prefetching non-critical assets...';
-            
+
             try {
                 window.CDNLoader.preloadNonCriticalAssets({
                     css: ['non-critical.css'],
                     js: ['non-critical.js'],
                     images: ['background.jpg', 'icon-sprite.svg']
                 });
-                
+
                 statusDiv.textContent = '✅ Non-critical assets prefetched successfully';
                 statusDiv.className = 'text-sm text-green-600';
             } catch (error) {
@@ -255,4 +255,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

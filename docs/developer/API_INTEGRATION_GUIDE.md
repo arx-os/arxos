@@ -277,36 +277,36 @@ ws.send(JSON.stringify({
 ```javascript
 ws.onmessage = (event) => {
   const message = JSON.parse(event.data);
-  
+
   switch (message.type) {
     case 'handshake_ack':
       console.log('Connected to collaboration server');
       break;
-      
+
     case 'lock_acquired':
       console.log('Lock acquired:', message.data);
       break;
-      
+
     case 'lock_released':
       console.log('Lock released:', message.data);
       break;
-      
+
     case 'edit_operation':
       handleRemoteEdit(message.data);
       break;
-      
+
     case 'user_joined':
       console.log('User joined:', message.data.username);
       break;
-      
+
     case 'user_left':
       console.log('User left:', message.data.username);
       break;
-      
+
     case 'conflict_detected':
       handleConflict(message.data);
       break;
-      
+
     default:
       console.log('Unknown message type:', message.type);
   }
@@ -354,12 +354,12 @@ async function makeApiCall(endpoint, data) {
       },
       body: JSON.stringify(data)
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(`${error.error}: ${error.message}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('API call failed:', error);
@@ -387,13 +387,13 @@ function handleRateLimit(response) {
   const limit = response.headers.get('X-RateLimit-Limit');
   const remaining = response.headers.get('X-RateLimit-Remaining');
   const reset = response.headers.get('X-RateLimit-Reset');
-  
+
   if (remaining === '0') {
     const resetTime = new Date(reset * 1000);
     console.log(`Rate limit exceeded. Reset at: ${resetTime}`);
     return false;
   }
-  
+
   return true;
 }
 ```
@@ -406,40 +406,40 @@ function handleRateLimit(response) {
 class SVGXClient {
   private baseUrl: string;
   private token: string;
-  
+
   constructor(baseUrl: string, token: string) {
     this.baseUrl = baseUrl;
     this.token = token;
   }
-  
+
   async login(username: string, password: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    
+
     if (!response.ok) {
       throw new Error('Login failed');
     }
-    
+
     const data = await response.json();
     this.token = data.access_token;
   }
-  
+
   async getCanvases(): Promise<Canvas[]> {
     const response = await fetch(`${this.baseUrl}/runtime/canvases/`, {
       headers: { 'Authorization': `Bearer ${this.token}` }
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch canvases');
     }
-    
+
     const data = await response.json();
     return data.canvases;
   }
-  
+
   async createCanvas(name: string, description?: string): Promise<Canvas> {
     const response = await fetch(`${this.baseUrl}/runtime/canvases/`, {
       method: 'POST',
@@ -449,14 +449,14 @@ class SVGXClient {
       },
       body: JSON.stringify({ name, description })
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to create canvas');
     }
-    
+
     return await response.json();
   }
-  
+
   async sendUIEvent(canvasId: string, eventType: string, data: any): Promise<void> {
     const response = await fetch(`${this.baseUrl}/runtime/ui-event/`, {
       method: 'POST',
@@ -470,7 +470,7 @@ class SVGXClient {
         data
       })
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to send UI event');
     }
@@ -490,14 +490,14 @@ class SVGXClient:
         self.base_url = base_url
         self.session = requests.Session()
         self.token = None
-    
+
     def login(self, username: str, password: str) -> bool:
         """Login to SVGX Engine."""
         response = self.session.post(
             f"{self.base_url}/auth/login",
             json={"username": username, "password": password}
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             self.token = data['access_token']
@@ -506,13 +506,13 @@ class SVGXClient:
             })
             return True
         return False
-    
+
     def get_canvases(self) -> List[Dict]:
         """Get list of canvases."""
         response = self.session.get(f"{self.base_url}/runtime/canvases/")
         response.raise_for_status()
         return response.json()['canvases']
-    
+
     def create_canvas(self, name: str, description: str = "") -> Dict:
         """Create a new canvas."""
         response = self.session.post(
@@ -521,7 +521,7 @@ class SVGXClient:
         )
         response.raise_for_status()
         return response.json()
-    
+
     def send_ui_event(self, canvas_id: str, event_type: str, data: Dict) -> None:
         """Send UI event to canvas."""
         response = self.session.post(
@@ -533,7 +533,7 @@ class SVGXClient:
             }
         )
         response.raise_for_status()
-    
+
     def get_health(self) -> Dict:
         """Get system health status."""
         response = self.session.get(f"{self.base_url}/health/summary/")
@@ -554,16 +554,16 @@ class SVGXWebSocket {
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
   }
-  
+
   connect() {
     const wsUrl = `${this.baseUrl.replace('http', 'ws')}/runtime/events?canvas_id=${this.canvasId}&session_id=${this.sessionId}&token=${this.token}`;
-    
+
     this.ws = new WebSocket(wsUrl);
-    
+
     this.ws.onopen = () => {
       console.log('WebSocket connected');
       this.reconnectAttempts = 0;
-      
+
       // Send handshake
       this.send({
         event_type: 'handshake',
@@ -571,22 +571,22 @@ class SVGXWebSocket {
         session_id: this.sessionId
       });
     };
-    
+
     this.ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
       this.handleMessage(message);
     };
-    
+
     this.ws.onclose = (event) => {
       console.log('WebSocket disconnected:', event.code, event.reason);
       this.handleReconnect();
     };
-    
+
     this.ws.onerror = (error) => {
       console.error('WebSocket error:', error);
     };
   }
-  
+
   send(message) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
@@ -594,7 +594,7 @@ class SVGXWebSocket {
       console.warn('WebSocket is not connected');
     }
   }
-  
+
   handleMessage(message) {
     switch (message.type) {
       case 'handshake_ack':
@@ -613,14 +613,14 @@ class SVGXWebSocket {
         console.log('Unknown message type:', message.type);
     }
   }
-  
+
   handleReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-      
+
       console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-      
+
       setTimeout(() => {
         this.connect();
       }, delay);
@@ -628,7 +628,7 @@ class SVGXWebSocket {
       console.error('Max reconnection attempts reached');
     }
   }
-  
+
   disconnect() {
     if (this.ws) {
       this.ws.close(1000, 'User initiated disconnect');
@@ -678,26 +678,26 @@ class TestSVGXAPI:
     def setup_method(self):
         self.base_url = "http://localhost:8000"
         self.client = SVGXClient(self.base_url)
-    
+
     def test_login(self):
         """Test user login."""
         success = self.client.login("test@example.com", "password123")
         assert success
         assert self.client.token is not None
-    
+
     def test_create_canvas(self):
         """Test canvas creation."""
         self.client.login("test@example.com", "password123")
         canvas = self.client.create_canvas("Test Canvas", "Test description")
         assert canvas["name"] == "Test Canvas"
         assert canvas["description"] == "Test description"
-    
+
     def test_get_canvases(self):
         """Test canvas listing."""
         self.client.login("test@example.com", "password123")
         canvases = self.client.get_canvases()
         assert isinstance(canvases, list)
-    
+
     def test_health_check(self):
         """Test health endpoint."""
         health = self.client.get_health()
@@ -709,24 +709,24 @@ class TestSVGXAPI:
 ```javascript
 describe('SVGX WebSocket', () => {
   let ws;
-  
+
   beforeEach(() => {
     ws = new SVGXWebSocket('ws://localhost:8000', 'token', 'canvas_123', 'session_456');
   });
-  
+
   afterEach(() => {
     ws.disconnect();
   });
-  
+
   test('should connect successfully', (done) => {
     ws.onopen = () => {
       expect(ws.ws.readyState).toBe(WebSocket.OPEN);
       done();
     };
-    
+
     ws.connect();
   });
-  
+
   test('should handle edit operations', (done) => {
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
@@ -735,7 +735,7 @@ describe('SVGX WebSocket', () => {
         done();
       }
     };
-    
+
     ws.connect();
     ws.send({
       event_type: 'edit_operation',
@@ -762,4 +762,4 @@ For additional support:
 - **v1.1.0**: Added advanced lock management and conflict resolution
 - **v1.2.0**: Implemented state persistence and backup functionality
 - **v1.3.0**: Added monitoring, metrics, and health checks
-- **v1.4.0**: Enhanced security with rate limiting and RBAC 
+- **v1.4.0**: Enhanced security with rate limiting and RBAC

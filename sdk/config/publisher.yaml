@@ -15,7 +15,7 @@ languages:
       build_success_required: true
       security_scan_required: true
       documentation_required: true
-  
+
   python:
     registry: pypi
     package_manager: pip
@@ -28,7 +28,7 @@ languages:
       build_success_required: true
       security_scan_required: true
       documentation_required: true
-  
+
   go:
     registry: github
     package_manager: go
@@ -41,7 +41,7 @@ languages:
       build_success_required: true
       security_scan_required: true
       documentation_required: true
-  
+
   java:
     registry: maven
     package_manager: mvn
@@ -54,7 +54,7 @@ languages:
       build_success_required: true
       security_scan_required: true
       documentation_required: true
-  
+
   csharp:
     registry: nuget
     package_manager: dotnet
@@ -67,7 +67,7 @@ languages:
       build_success_required: true
       security_scan_required: true
       documentation_required: true
-  
+
   php:
     registry: packagist
     package_manager: composer
@@ -110,12 +110,12 @@ environments:
     dry_run: true
     auto_publish: false
     notifications: false
-  
+
   staging:
     dry_run: false
     auto_publish: false
     notifications: true
-  
+
   production:
     dry_run: false
     auto_publish: true
@@ -127,18 +127,18 @@ registries:
     token_env: NPM_TOKEN
     username_env: NPM_USERNAME
     password_env: NPM_PASSWORD
-  
+
   pypi:
     username_env: PYPI_USERNAME
     password_env: PYPI_PASSWORD
-  
+
   maven:
     username_env: MAVEN_USERNAME
     password_env: MAVEN_PASSWORD
-  
+
   nuget:
     api_key_env: NUGET_API_KEY
-  
+
   packagist:
     token_env: PACKAGIST_TOKEN
 
@@ -152,12 +152,12 @@ notifications:
     to_emails:
       - dev-team@arxos.com
       - sdk-team@arxos.com
-  
+
   slack:
     enabled: true
     webhook_url_env: SLACK_WEBHOOK_URL
     channel: "#sdk-releases"
-  
+
   webhook:
     enabled: false
     url_env: WEBHOOK_URL
@@ -174,4 +174,4 @@ error_handling:
   max_retries: 3
   retry_delay: 60  # seconds
   fail_fast: false
-  rollback_on_failure: true 
+  rollback_on_failure: true

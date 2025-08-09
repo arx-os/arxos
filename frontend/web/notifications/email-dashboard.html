@@ -339,11 +339,11 @@
             .main-content {
                 grid-template-columns: 1fr;
             }
-            
+
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .header h1 {
                 font-size: 2rem;
             }
@@ -431,21 +431,21 @@
                 <div class="stat-label">Emails Sent Today</div>
                 <div class="stat-change positive" id="sent-change">+12% from yesterday</div>
             </div>
-            
+
             <div class="card">
                 <h3><span class="icon">✅</span>Delivered</h3>
                 <div class="stat-number" id="total-delivered">-</div>
                 <div class="stat-label">Successfully Delivered</div>
                 <div class="stat-change positive" id="delivered-change">98.5% success rate</div>
             </div>
-            
+
             <div class="card">
                 <h3><span class="icon">❌</span>Failed</h3>
                 <div class="stat-number" id="total-failed">-</div>
                 <div class="stat-label">Failed Deliveries</div>
                 <div class="stat-change negative" id="failed-change">1.5% failure rate</div>
             </div>
-            
+
             <div class="card">
                 <h3><span class="icon">⏱️</span>Avg Delivery Time</h3>
                 <div class="stat-number" id="avg-delivery-time">-</div>
@@ -644,20 +644,20 @@
             try {
                 const response = await fetch('/api/notifications/email/statistics');
                 const stats = await response.json();
-                
+
                 document.getElementById('total-sent').textContent = stats.total_sent || 0;
                 document.getElementById('total-delivered').textContent = stats.total_delivered || 0;
                 document.getElementById('total-failed').textContent = stats.total_failed || 0;
-                document.getElementById('avg-delivery-time').textContent = 
+                document.getElementById('avg-delivery-time').textContent =
                     stats.average_delivery_time ? Math.round(stats.average_delivery_time) + 's' : '-';
-                
+
                 // Calculate changes
                 const deliveryRate = stats.total_sent > 0 ? (stats.total_delivered / stats.total_sent * 100).toFixed(1) : 0;
                 document.getElementById('delivered-change').textContent = `${deliveryRate}% success rate`;
-                
+
                 const failureRate = stats.total_sent > 0 ? (stats.total_failed / stats.total_sent * 100).toFixed(1) : 0;
                 document.getElementById('failed-change').textContent = `${failureRate}% failure rate`;
-                
+
             } catch (error) {
                 console.error('Failed to load dashboard:', error);
                 showNotification('Failed to load dashboard statistics', 'error');
@@ -670,18 +670,18 @@
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.style.display = 'none';
             });
-            
+
             // Remove active class from all tabs
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            
+
             // Show selected tab
             document.getElementById(tabName + '-tab').style.display = 'block';
-            
+
             // Add active class to selected tab
             event.target.classList.add('active');
-            
+
             currentTab = tabName;
         }
 
@@ -690,16 +690,16 @@
             try {
                 document.getElementById('notifications-loading').style.display = 'flex';
                 document.getElementById('notifications-content').style.display = 'none';
-                
+
                 const response = await fetch('/api/notifications/email?limit=50');
                 const data = await response.json();
                 notifications = data.emails || [];
-                
+
                 renderNotifications();
-                
+
                 document.getElementById('notifications-loading').style.display = 'none';
                 document.getElementById('notifications-content').style.display = 'block';
-                
+
             } catch (error) {
                 console.error('Failed to load notifications:', error);
                 showNotification('Failed to load notifications', 'error');
@@ -710,7 +710,7 @@
         function renderNotifications() {
             const tbody = document.getElementById('notifications-table');
             tbody.innerHTML = '';
-            
+
             notifications.forEach(email => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -733,17 +733,17 @@
             try {
                 document.getElementById('templates-loading').style.display = 'flex';
                 document.getElementById('templates-content').style.display = 'none';
-                
+
                 const response = await fetch('/api/notifications/email/templates');
                 const data = await response.json();
                 templates = data.templates || [];
-                
+
                 renderTemplates();
                 updateTemplateSelect();
-                
+
                 document.getElementById('templates-loading').style.display = 'none';
                 document.getElementById('templates-content').style.display = 'block';
-                
+
             } catch (error) {
                 console.error('Failed to load templates:', error);
                 showNotification('Failed to load templates', 'error');
@@ -754,7 +754,7 @@
         function renderTemplates() {
             const tbody = document.getElementById('templates-table');
             tbody.innerHTML = '';
-            
+
             templates.forEach(template => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -773,7 +773,7 @@
         function updateTemplateSelect() {
             const select = document.querySelector('select[name="template_id"]');
             select.innerHTML = '<option value="">No Template</option>';
-            
+
             templates.forEach(template => {
                 if (template.is_active) {
                     const option = document.createElement('option');
@@ -789,10 +789,10 @@
             try {
                 document.getElementById('config-loading').style.display = 'flex';
                 document.getElementById('config-content').style.display = 'none';
-                
+
                 const response = await fetch('/api/notifications/email/config');
                 const config = await response.json();
-                
+
                 // Populate form
                 document.querySelector('input[name="smtp_host"]').value = config.smtp_host || '';
                 document.querySelector('input[name="smtp_port"]').value = config.smtp_port || '';
@@ -800,10 +800,10 @@
                 document.querySelector('input[name="from_email"]').value = config.from_email || '';
                 document.querySelector('input[name="from_name"]').value = config.from_name || '';
                 document.querySelector('input[name="use_tls"]').checked = config.use_tls || false;
-                
+
                 document.getElementById('config-loading').style.display = 'none';
                 document.getElementById('config-content').style.display = 'block';
-                
+
             } catch (error) {
                 console.error('Failed to load email config:', error);
                 showNotification('Failed to load email configuration', 'error');
@@ -814,10 +814,10 @@
         // Form submissions
         document.getElementById('send-email-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
-            
+
             try {
                 const response = await fetch('/api/notifications/email/send', {
                     method: 'POST',
@@ -826,7 +826,7 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
+
                 if (response.ok) {
                     const result = await response.json();
                     showNotification('Email sent successfully!', 'success');
@@ -844,11 +844,11 @@
 
         document.getElementById('email-config-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
             data.use_tls = data.use_tls === 'on';
-            
+
             try {
                 const response = await fetch('/api/notifications/email/config', {
                     method: 'PUT',
@@ -857,7 +857,7 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
+
                 if (response.ok) {
                     showNotification('Email configuration saved successfully!', 'success');
                 } else {
@@ -872,11 +872,11 @@
 
         document.getElementById('template-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
             data.is_active = data.is_active === 'on';
-            
+
             try {
                 const response = await fetch('/api/notifications/email/templates', {
                     method: 'POST',
@@ -885,7 +885,7 @@
                     },
                     body: JSON.stringify(data)
                 });
-                
+
                 if (response.ok) {
                     showNotification('Template created successfully!', 'success');
                     closeTemplateModal();
@@ -914,7 +914,7 @@
         async function testEmailConfig() {
             const to = prompt('Enter test email address:');
             if (!to) return;
-            
+
             try {
                 const response = await fetch('/api/notifications/email/config/test', {
                     method: 'POST',
@@ -923,7 +923,7 @@
                     },
                     body: JSON.stringify({ to: to })
                 });
-                
+
                 if (response.ok) {
                     showNotification('Test email sent successfully!', 'success');
                 } else {
@@ -941,9 +941,9 @@
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
             notification.textContent = message;
-            
+
             document.body.appendChild(notification);
-            
+
             setTimeout(() => {
                 notification.remove();
             }, 5000);
@@ -961,12 +961,12 @@
 
         async function deleteTemplate(templateId) {
             if (!confirm('Are you sure you want to delete this template?')) return;
-            
+
             try {
                 const response = await fetch(`/api/notifications/email/templates/${templateId}`, {
                     method: 'DELETE'
                 });
-                
+
                 if (response.ok) {
                     showNotification('Template deleted successfully!', 'success');
                     loadTemplates();
@@ -989,4 +989,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

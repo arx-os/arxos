@@ -12,23 +12,23 @@ export class ObjectInteractionManager {
     constructor(viewportManager, options = {}) {
         this.viewportManager = viewportManager;
         this.options = options;
-        
+
         // Initialize modules
         this.selection = new Selection(viewportManager, options);
         this.drag = new Drag(viewportManager, this.selection, options);
         this.click = new Click(viewportManager, this.selection, options);
         this.hover = new Hover(viewportManager, options);
-        
+
         // Connect modules
         this.connectModules();
-        
+
         // Performance optimizations
         this.autoSaveTimer = null;
         this.autoSaveDelay = options.autoSaveDelay || 2000; // 2 seconds
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -44,33 +44,33 @@ export class ObjectInteractionManager {
             this.click.updateRotateHandlePosition();
             this.triggerEvent('selectionChanged');
         });
-        
+
         this.selection.addEventListener('selectionCleared', () => {
             this.click.hideRotateHandle();
             this.triggerEvent('selectionCleared');
         });
-        
+
         // Connect drag events
         this.drag.addEventListener('dragStarted', (data) => {
             this.triggerEvent('dragStarted', data);
         });
-        
+
         this.drag.addEventListener('dragEnded', (data) => {
             this.triggerEvent('dragEnded', data);
             this.triggerAutoSave();
         });
-        
+
         // Connect click events
         this.click.addEventListener('objectsDeleted', (data) => {
             this.triggerEvent('objectsDeleted', data);
             this.triggerAutoSave();
         });
-        
+
         this.click.addEventListener('objectsRotated', (data) => {
             this.triggerEvent('objectsRotated', data);
             this.triggerAutoSave();
         });
-        
+
         // Connect hover events
         this.hover.addEventListener('tooltipShown', (data) => {
             this.triggerEvent('tooltipShown', data);
@@ -80,7 +80,7 @@ export class ObjectInteractionManager {
     setupEventListeners() {
         // Global keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        
+
         // Window events
         window.addEventListener('beforeunload', () => {
             this.saveState();
@@ -108,7 +108,7 @@ export class ObjectInteractionManager {
             display: none;
             pointer-events: none;
         `;
-        
+
         document.body.appendChild(this.autoSaveIndicator);
     }
 
@@ -142,12 +142,12 @@ export class ObjectInteractionManager {
     // Auto-save functionality
     triggerAutoSave() {
         if (!this.autoSaveEnabled) return;
-        
+
         // Clear existing timer
         if (this.autoSaveTimer) {
             clearTimeout(this.autoSaveTimer);
         }
-        
+
         // Set new timer
         this.autoSaveTimer = setTimeout(() => {
             this.saveState();
@@ -166,13 +166,13 @@ export class ObjectInteractionManager {
                 })),
                 timestamp: Date.now()
             };
-            
+
             // Save to localStorage for persistence
             localStorage.setItem('objectInteractionState', JSON.stringify(state));
-            
+
             // Show auto-save indicator
             this.showAutoSaveIndicator('Auto-saved');
-            
+
             this.triggerEvent('stateSaved', { state });
         } catch (error) {
             console.error('Error saving state:', error);
@@ -196,14 +196,14 @@ export class ObjectInteractionManager {
 
     restoreState(state) {
         if (!state || !state.selectedObjects) return;
-        
+
         // Restore selected objects
         state.selectedObjects.forEach(objData => {
             const obj = document.getElementById(objData.id);
             if (obj) {
                 this.selection.selectedObjects.add(obj);
                 this.selection.highlightObject(obj);
-                
+
                 // Restore position and rotation
                 if (objData.position) {
                     this.setObjectPosition(obj, objData.position);
@@ -213,7 +213,7 @@ export class ObjectInteractionManager {
                 }
             }
         });
-        
+
         this.selection.updateSelectionCache();
     }
 
@@ -229,7 +229,7 @@ export class ObjectInteractionManager {
                 };
             }
         }
-        
+
         return {
             x: parseFloat(obj.getAttribute('x') || '0'),
             y: parseFloat(obj.getAttribute('y') || '0')
@@ -268,7 +268,7 @@ export class ObjectInteractionManager {
         this.selection.clearSelection();
         this.click.hideContextMenu();
         this.hover.hideTooltip();
-        
+
         this.triggerEvent('allOperationsCancelled');
     }
 
@@ -286,10 +286,10 @@ export class ObjectInteractionManager {
     // Auto-save indicator
     showAutoSaveIndicator(message) {
         if (!this.autoSaveIndicator) return;
-        
+
         this.autoSaveIndicator.textContent = message;
         this.autoSaveIndicator.style.display = 'block';
-        
+
         setTimeout(() => {
             this.autoSaveIndicator.style.display = 'none';
         }, 2000);
@@ -394,12 +394,12 @@ export class ObjectInteractionManager {
         if (this.autoSaveTimer) {
             clearTimeout(this.autoSaveTimer);
         }
-        
+
         // Remove auto-save indicator
         if (this.autoSaveIndicator) {
             this.autoSaveIndicator.remove();
         }
-        
+
         // Destroy modules
         if (this.selection) {
             this.selection.destroy();
@@ -413,10 +413,10 @@ export class ObjectInteractionManager {
         if (this.hover) {
             this.hover.destroy();
         }
-        
+
         // Clear event handlers
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

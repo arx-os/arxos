@@ -30,7 +30,7 @@ __description__ = "Data transfer objects for SVGX Engine"
 # Export all DTOs
 __all__ = [
     "CreateBuildingRequest",
-    "UpdateBuildingRequest", 
+    "UpdateBuildingRequest",
     "BuildingResponse",
     "BuildingSearchRequest",
     "BuildingListResponse",
@@ -44,4 +44,4 @@ __all__ = [
     "UpdateBuildingRequestDTO",
     "BuildingListResponseDTO",
     "BuildingSearchRequestDTO"
-] 
+]

@@ -27,11 +27,12 @@ from pydantic import BaseModel, Field
 import uvicorn
 
 from .advanced_ai_service import (
-from core.security.auth_middleware import get_current_user, User
     AdvancedAIService, AIModelConfig, AIModelType, LearningType,
     OptimizationType, OptimizationRequest, TrainingMetrics,
-    PredictionResult, OptimizationResult
+    PredictionResult, PredictionResult, OptimizationResult
 )
+from core.security.auth_middleware import get_current_user, User
+from fastapi import Request
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -227,7 +228,6 @@ async def create_model(request: CreateModelRequest, user: User = Depends(get_cur
     except Exception as e:
         logger.error(f"Error creating model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/train_model", response_model=TrainModelResponse)
 async def train_model(request: TrainModelRequest, user: User = Depends(get_current_user)):
     """Train an AI model"""
@@ -244,7 +244,6 @@ async def train_model(request: TrainModelRequest, user: User = Depends(get_curre
     except Exception as e:
         logger.error(f"Error training model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/predict", response_model=PredictResponse)
 async def predict(request: PredictRequest, user: User = Depends(get_current_user)):
     """Make predictions using a trained model"""
@@ -257,7 +256,6 @@ async def predict(request: PredictRequest, user: User = Depends(get_current_user
     except Exception as e:
         logger.error(f"Error making prediction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/optimize_design", response_model=OptimizeDesignResponse)
 async def optimize_design(request: OptimizeDesignRequest, user: User = Depends(get_current_user)):
     """Optimize design using AI models"""
@@ -270,7 +268,6 @@ async def optimize_design(request: OptimizeDesignRequest, user: User = Depends(g
     except Exception as e:
         logger.error(f"Error optimizing design: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/ai/advanced/model_info/{model_id}", response_model=ModelInfoResponse)
 async def get_model_info(model_id: str, user: User = Depends(get_current_user)):
     """Get information about a model"""
@@ -283,7 +280,6 @@ async def get_model_info(model_id: str, user: User = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error getting model info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.delete("/ai/advanced/delete_model/{model_id}", response_model=DeleteModelResponse)
 async def delete_model(model_id: str, user: User = Depends(get_current_user)):
     """Delete a model"""
@@ -295,7 +291,6 @@ async def delete_model(model_id: str, user: User = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error deleting model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/export_model", response_model=ExportModelResponse)
 async def export_model(request: ExportModelRequest, user: User = Depends(get_current_user)):
     """Export a model to file"""
@@ -307,7 +302,6 @@ async def export_model(request: ExportModelRequest, user: User = Depends(get_cur
     except Exception as e:
         logger.error(f"Error exporting model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/import_model", response_model=ImportModelResponse)
 async def import_model(request: ImportModelRequest, user: User = Depends(get_current_user)):
     """Import a model from file"""
@@ -320,7 +314,6 @@ async def import_model(request: ImportModelRequest, user: User = Depends(get_cur
     except Exception as e:
         logger.error(f"Error importing model: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/ai/advanced/analytics", response_model=AIAnalyticsResponse)
 async def get_ai_analytics(user: User = Depends(get_current_user)):
     """Get AI analytics"""
@@ -333,7 +326,6 @@ async def get_ai_analytics(user: User = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error getting AI analytics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/cleanup_predictions", response_model=CleanupPredictionsResponse)
 async def cleanup_old_predictions(request: CleanupPredictionsRequest, user: User = Depends(get_current_user)):
     """Clean up old predictions"""
@@ -346,7 +338,6 @@ async def cleanup_old_predictions(request: CleanupPredictionsRequest, user: User
     except Exception as e:
         logger.error(f"Error cleaning up predictions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/batch_predict", response_model=BatchPredictResponse)
 async def batch_predict(request: BatchPredictRequest, user: User = Depends(get_current_user)):
     """Perform batch predictions"""
@@ -355,7 +346,7 @@ async def batch_predict(request: BatchPredictRequest, user: User = Depends(get_c
         for input_data in request.input_data:
             result = await ai_service.predict(request.model_id, input_data)
             results.append(result)
-        
+
         return BatchPredictResponse(
             results=results,
             message="Batch predictions completed successfully"
@@ -363,7 +354,6 @@ async def batch_predict(request: BatchPredictRequest, user: User = Depends(get_c
     except Exception as e:
         logger.error(f"Error in batch prediction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/batch_train", response_model=BatchTrainResponse)
 async def batch_train(request: BatchTrainRequest, user: User = Depends(get_current_user)):
     """Perform batch training"""
@@ -377,7 +367,7 @@ async def batch_train(request: BatchTrainRequest, user: User = Depends(get_curre
                 request.validation_data
             )
             results.append(metrics)
-        
+
         return BatchTrainResponse(
             results=results,
             message="Batch training completed successfully"
@@ -385,7 +375,6 @@ async def batch_train(request: BatchTrainRequest, user: User = Depends(get_curre
     except Exception as e:
         logger.error(f"Error in batch training: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/batch_optimize", response_model=BatchOptimizeResponse)
 async def batch_optimize(request: BatchOptimizeRequest, user: User = Depends(get_current_user)):
     """Perform batch optimization"""
@@ -394,7 +383,7 @@ async def batch_optimize(request: BatchOptimizeRequest, user: User = Depends(get
         for optimization_req in request.requests:
             result = await ai_service.optimize_design(optimization_req)
             results.append(result)
-        
+
         return BatchOptimizeResponse(
             results=results,
             message="Batch optimization completed successfully"
@@ -402,7 +391,6 @@ async def batch_optimize(request: BatchOptimizeRequest, user: User = Depends(get
     except Exception as e:
         logger.error(f"Error in batch optimization: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/compare_models", response_model=CompareModelsResponse)
 async def compare_models(request: CompareModelsRequest, user: User = Depends(get_current_user)):
     """Compare multiple models"""
@@ -414,7 +402,7 @@ async def compare_models(request: CompareModelsRequest, user: User = Depends(get
                 result = await ai_service.predict(model_id, test_data)
                 model_results.append(result)
             comparison[model_id] = model_results
-        
+
         return CompareModelsResponse(
             comparison=comparison,
             message="Model comparison completed successfully"
@@ -422,7 +410,6 @@ async def compare_models(request: CompareModelsRequest, user: User = Depends(get
     except Exception as e:
         logger.error(f"Error comparing models: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/ensemble_predict", response_model=EnsemblePredictResponse)
 async def ensemble_predict(request: EnsemblePredictRequest, user: User = Depends(get_current_user)):
     """Perform ensemble prediction"""
@@ -432,10 +419,10 @@ async def ensemble_predict(request: EnsemblePredictRequest, user: User = Depends
         for model_id in request.model_ids:
             result = await ai_service.predict(model_id, request.input_data)
             predictions.append(result)
-        
+
         # Combine predictions based on method
         ensemble_result = combine_predictions(predictions, request.method, request.weights)
-        
+
         return EnsemblePredictResponse(
             result=ensemble_result,
             message="Ensemble prediction completed successfully"
@@ -443,7 +430,6 @@ async def ensemble_predict(request: EnsemblePredictRequest, user: User = Depends
     except Exception as e:
         logger.error(f"Error in ensemble prediction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/auto_ml", response_model=AutoMLResponse)
 async def auto_ml(request: AutoMLRequest, user: User = Depends(get_current_user)):
     """Perform automated machine learning"""
@@ -467,7 +453,6 @@ async def auto_ml(request: AutoMLRequest, user: User = Depends(get_current_user)
             f1_score=0.85,
             timestamp=datetime.now()
         )
-        
         return AutoMLResponse(
             best_model_id=best_model_id,
             best_metrics=best_metrics,
@@ -477,7 +462,6 @@ async def auto_ml(request: AutoMLRequest, user: User = Depends(get_current_user)
     except Exception as e:
         logger.error(f"Error in AutoML: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/hyperparameter_optimization", response_model=HyperparameterOptimizationResponse)
 async def hyperparameter_optimization(request: HyperparameterOptimizationRequest, user: User = Depends(get_current_user)):
     """Perform hyperparameter optimization"""
@@ -501,7 +485,6 @@ async def hyperparameter_optimization(request: HyperparameterOptimizationRequest
             f1_score=0.92,
             timestamp=datetime.now()
         )
-        
         return HyperparameterOptimizationResponse(
             best_hyperparameters=best_hyperparameters,
             best_metrics=best_metrics,
@@ -511,7 +494,6 @@ async def hyperparameter_optimization(request: HyperparameterOptimizationRequest
     except Exception as e:
         logger.error(f"Error in hyperparameter optimization: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/feature_importance", response_model=FeatureImportanceResponse)
 async def feature_importance(request: FeatureImportanceRequest, user: User = Depends(get_current_user)):
     """Calculate feature importance"""
@@ -519,7 +501,7 @@ async def feature_importance(request: FeatureImportanceRequest, user: User = Dep
         # Feature importance calculation would go here
         # For now, return a simple response
         importance = {}
-        
+
         return FeatureImportanceResponse(
             importance=importance,
             message="Feature importance calculated successfully"
@@ -527,7 +509,6 @@ async def feature_importance(request: FeatureImportanceRequest, user: User = Dep
     except Exception as e:
         logger.error(f"Error calculating feature importance: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/ai/advanced/model_explanation", response_model=ModelExplanationResponse)
 async def model_explanation(request: ModelExplanationRequest, user: User = Depends(get_current_user)):
     """Generate model explanation"""
@@ -535,7 +516,7 @@ async def model_explanation(request: ModelExplanationRequest, user: User = Depen
         # Model explanation generation would go here
         # For now, return a simple response
         explanation = {}
-        
+
         return ModelExplanationResponse(
             explanation=explanation,
             message="Model explanation generated successfully"
@@ -543,7 +524,6 @@ async def model_explanation(request: ModelExplanationRequest, user: User = Depen
     except Exception as e:
         logger.error(f"Error generating model explanation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 # Helper functions
 def combine_predictions(predictions: List[PredictionResult], method: str, weights: Optional[List[float]] = None) -> PredictionResult:
     """Combine predictions using different methods"""
@@ -558,7 +538,7 @@ def combine_predictions(predictions: List[PredictionResult], method: str, weight
             timestamp=datetime.now(),
             metadata={}
         )
-    
+
     if method == "average":
         return combine_predictions_average(predictions)
     elif method == "weighted":
@@ -581,23 +561,23 @@ def combine_predictions_average(predictions: List[PredictionResult]) -> Predicti
             timestamp=datetime.now(),
             metadata={}
         )
-    
+
     # Average all predictions
     combined_predictions = {}
     confidence_sum = 0.0
-    
+
     for pred in predictions:
         for key, value in pred.predictions.items():
             if key not in combined_predictions:
                 combined_predictions[key] = 0.0
             combined_predictions[key] += float(value)
         confidence_sum += pred.confidence
-    
+
     # Normalize
     num_predictions = len(predictions)
     for key in combined_predictions:
         combined_predictions[key] /= num_predictions
-    
+
     return PredictionResult(
         prediction_id="ensemble_result",
         model_id="ensemble",
@@ -622,15 +602,15 @@ def combine_predictions_weighted(predictions: List[PredictionResult], weights: O
             timestamp=datetime.now(),
             metadata={}
         )
-    
+
     # Use equal weights if not provided
     if weights is None or len(weights) != len(predictions):
         weights = [1.0 / len(predictions)] * len(predictions)
-    
+
     # Weighted average
     combined_predictions = {}
     confidence_sum = 0.0
-    
+
     for i, pred in enumerate(predictions):
         weight = weights[i]
         for key, value in pred.predictions.items():
@@ -638,7 +618,7 @@ def combine_predictions_weighted(predictions: List[PredictionResult], weights: O
                 combined_predictions[key] = 0.0
             combined_predictions[key] += float(value) * weight
         confidence_sum += pred.confidence * weight
-    
+
     return PredictionResult(
         prediction_id="ensemble_result",
         model_id="ensemble",
@@ -663,18 +643,17 @@ def combine_predictions_voting(predictions: List[PredictionResult]) -> Predictio
             timestamp=datetime.now(),
             metadata={}
         )
-    
+
     # Voting implementation would go here
     # For now, return the first prediction
     return predictions[0]
 
 # Health check endpoint
 @app.get("/health")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint"""
     return {"status": "healthy", "service": "advanced_ai_api", "timestamp": datetime.now()}
 
 # Main function to run the API server
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001) 
+    uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -16,66 +16,66 @@ from datetime import datetime
 @dataclass
 class SharedConfig:
     """Configuration settings for the core.shared package."""
-    
+
     # Package settings
     package_name: str = "core.shared"
     version: str = "1.0.0"
-    
+
     # Logging settings
     log_level: str = "INFO"
     log_format: str = "json"
     enable_structured_logging: bool = True
-    
+
     # Date/time settings
     default_timezone: str = "UTC"
     timestamp_format: str = "ISO"
-    
+
     # Object utilities settings
     max_object_depth: int = 10
     max_object_size: int = 1024 * 1024  # 1MB
     enable_object_validation: bool = True
-    
+
     # Request utilities settings
     max_request_size: int = 10 * 1024 * 1024  # 10MB
     enable_request_logging: bool = True
     enable_rate_limiting: bool = True
     rate_limit_window: int = 60  # seconds
     rate_limit_max_requests: int = 100
-    
+
     # Error handling settings
     enable_detailed_errors: bool = False
     error_log_level: str = "ERROR"
-    
+
     # Cache settings
     enable_caching: bool = True
     cache_ttl: int = 300  # 5 minutes
     max_cache_size: int = 1000
-    
+
     # Development settings
     debug_mode: bool = False
     enable_metrics: bool = True
-    
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         self._validate_settings()
-    
+
     def _validate_settings(self):
         """Validate configuration settings."""
         if self.max_object_depth < 1:
             raise ValueError("max_object_depth must be at least 1")
-        
+
         if self.max_object_size < 1024:
             raise ValueError("max_object_size must be at least 1KB")
-        
+
         if self.max_request_size < 1024:
             raise ValueError("max_request_size must be at least 1KB")
-        
+
         if self.rate_limit_window < 1:
             raise ValueError("rate_limit_window must be at least 1 second")
-        
+
         if self.rate_limit_max_requests < 1:
             raise ValueError("rate_limit_max_requests must be at least 1")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
@@ -102,12 +102,12 @@ class SharedConfig:
             "debug_mode": self.debug_mode,
             "enable_metrics": self.enable_metrics,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SharedConfig":
         """Create configuration from dictionary."""
         return cls(**data)
-    
+
     @classmethod
     def from_env(cls) -> "SharedConfig":
         """Create configuration from environment variables."""
@@ -142,10 +142,10 @@ _config: Optional[SharedConfig] = None
 def get_settings() -> SharedConfig:
     """Get the global configuration settings."""
     global _config
-    
+
     if _config is None:
         _config = SharedConfig.from_env()
-    
+
     return _config
 
 
@@ -208,4 +208,4 @@ def get_config_summary() -> Dict[str, Any]:
             "cache_ttl": config.cache_ttl,
             "max_cache_size": config.max_cache_size,
         },
-    } 
+    }

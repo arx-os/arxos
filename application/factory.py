@@ -19,17 +19,16 @@ from application.container import container
 
 class ApplicationServiceFactory:
     """Factory for creating application services with dependency injection."""
-    
+
     @staticmethod
     def create_building_service(unit_of_work: UnitOfWork) -> BuildingApplicationService:
         """Create building application service with all dependencies."""
-        # Get infrastructure services from container
         cache_service = container.get_cache_service()
         event_store = container.get_event_store()
         message_queue = container.get_message_queue()
         metrics = container.get_metrics()
         logger = container.get_logger()
-        
+
         return BuildingApplicationService(
             unit_of_work=unit_of_work,
             cache_service=cache_service,
@@ -38,17 +37,16 @@ class ApplicationServiceFactory:
             metrics=metrics,
             logger=logger
         )
-    
+
     @staticmethod
     def create_device_service(unit_of_work: UnitOfWork) -> DeviceApplicationService:
         """Create device application service with all dependencies."""
-        # Get infrastructure services from container
         cache_service = container.get_cache_service()
         event_store = container.get_event_store()
         message_queue = container.get_message_queue()
         metrics = container.get_metrics()
         logger = container.get_logger()
-        
+
         return DeviceApplicationService(
             unit_of_work=unit_of_work,
             cache_service=cache_service,
@@ -57,17 +55,16 @@ class ApplicationServiceFactory:
             metrics=metrics,
             logger=logger
         )
-    
+
     @staticmethod
     def create_room_service(unit_of_work: UnitOfWork) -> RoomApplicationService:
         """Create room application service with all dependencies."""
-        # Get infrastructure services from container
         cache_service = container.get_cache_service()
         event_store = container.get_event_store()
         message_queue = container.get_message_queue()
         metrics = container.get_metrics()
         logger = container.get_logger()
-        
+
         return RoomApplicationService(
             unit_of_work=unit_of_work,
             cache_service=cache_service,
@@ -76,17 +73,16 @@ class ApplicationServiceFactory:
             metrics=metrics,
             logger=logger
         )
-    
+
     @staticmethod
     def create_floor_service(unit_of_work: UnitOfWork) -> FloorApplicationService:
         """Create floor application service with all dependencies."""
-        # Get infrastructure services from container
         cache_service = container.get_cache_service()
         event_store = container.get_event_store()
         message_queue = container.get_message_queue()
         metrics = container.get_metrics()
         logger = container.get_logger()
-        
+
         return FloorApplicationService(
             unit_of_work=unit_of_work,
             cache_service=cache_service,
@@ -95,17 +91,16 @@ class ApplicationServiceFactory:
             metrics=metrics,
             logger=logger
         )
-    
+
     @staticmethod
     def create_user_service(unit_of_work: UnitOfWork) -> UserApplicationService:
         """Create user application service with all dependencies."""
-        # Get infrastructure services from container
         cache_service = container.get_cache_service()
         event_store = container.get_event_store()
         message_queue = container.get_message_queue()
         metrics = container.get_metrics()
         logger = container.get_logger()
-        
+
         return UserApplicationService(
             unit_of_work=unit_of_work,
             cache_service=cache_service,
@@ -114,17 +109,16 @@ class ApplicationServiceFactory:
             metrics=metrics,
             logger=logger
         )
-    
+
     @staticmethod
     def create_project_service(unit_of_work: UnitOfWork) -> ProjectApplicationService:
         """Create project application service with all dependencies."""
-        # Get infrastructure services from container
         cache_service = container.get_cache_service()
         event_store = container.get_event_store()
         message_queue = container.get_message_queue()
         metrics = container.get_metrics()
         logger = container.get_logger()
-        
+
         return ProjectApplicationService(
             unit_of_work=unit_of_work,
             cache_service=cache_service,
@@ -178,4 +172,4 @@ def get_metrics():
 
 def get_logger():
     """Get logger service."""
-    return container.get_logger() 
+    return container.get_logger()

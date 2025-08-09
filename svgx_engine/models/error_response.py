@@ -39,7 +39,7 @@ class ErrorCategory(str, Enum):
 
 class ErrorResponse(BaseModel):
     """Standardized error response model."""
-    
+
     error: str = Field(..., description="Human-readable error message")
     code: str = Field(..., description="Application-specific error code")
     details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
@@ -50,8 +50,9 @@ class ErrorResponse(BaseModel):
     error_id: Optional[str] = Field(None, description="Unique error identifier")
     suggestions: Optional[List[str]] = Field(None, description="Resolution suggestions")
     retry_after: Optional[int] = Field(None, description="Retry delay in seconds")
-    
+
     def __init__(self, **data):
+        pass
     """
     Perform __init__ operation
 
@@ -75,10 +76,10 @@ Example:
 
 class ValidationErrorResponse(ErrorResponse):
     """Specialized error response for validation errors."""
-    
+
     validation_errors: Optional[List[str]] = Field(None, description="List of validation errors")
     field_errors: Optional[Dict[str, List[str]]] = Field(None, description="Field-specific errors")
-    
+
     def __init__(self, **data):
         data.setdefault('category', ErrorCategory.VALIDATION)
         data.setdefault('code', 'VALIDATION_ERROR')
@@ -87,10 +88,10 @@ class ValidationErrorResponse(ErrorResponse):
 
 class AuthenticationErrorResponse(ErrorResponse):
     """Specialized error response for authentication failures."""
-    
+
     auth_type: Optional[str] = Field(None, description="Authentication type")
     required_scopes: Optional[List[str]] = Field(None, description="Required scopes")
-    
+
     def __init__(self, **data):
         data.setdefault('category', ErrorCategory.AUTHENTICATION)
         data.setdefault('code', 'AUTHENTICATION_ERROR')
@@ -100,10 +101,10 @@ class AuthenticationErrorResponse(ErrorResponse):
 
 class AuthorizationErrorResponse(ErrorResponse):
     """Specialized error response for authorization issues."""
-    
+
     required_permissions: Optional[List[str]] = Field(None, description="Required permissions")
     user_permissions: Optional[List[str]] = Field(None, description="User permissions")
-    
+
     def __init__(self, **data):
         data.setdefault('category', ErrorCategory.AUTHORIZATION)
         data.setdefault('code', 'AUTHORIZATION_ERROR')
@@ -113,11 +114,11 @@ class AuthorizationErrorResponse(ErrorResponse):
 
 class NotFoundErrorResponse(ErrorResponse):
     """Specialized error response for resource not found errors."""
-    
+
     resource_type: Optional[str] = Field(None, description="Type of resource not found")
     resource_id: Optional[str] = Field(None, description="ID of resource not found")
     search_criteria: Optional[Dict[str, Any]] = Field(None, description="Search criteria used")
-    
+
     def __init__(self, **data):
         data.setdefault('category', ErrorCategory.NOT_FOUND)
         data.setdefault('code', 'NOT_FOUND_ERROR')
@@ -126,10 +127,10 @@ class NotFoundErrorResponse(ErrorResponse):
 
 class ConflictErrorResponse(ErrorResponse):
     """Specialized error response for resource conflicts."""
-    
+
     conflicting_resource: Optional[str] = Field(None, description="Conflicting resource")
     conflict_reason: Optional[str] = Field(None, description="Reason for conflict")
-    
+
     def __init__(self, **data):
         data.setdefault('category', ErrorCategory.CONFLICT)
         data.setdefault('code', 'CONFLICT_ERROR')
@@ -138,11 +139,11 @@ class ConflictErrorResponse(ErrorResponse):
 
 class RateLimitErrorResponse(ErrorResponse):
     """Specialized error response for rate limiting errors."""
-    
+
     limit: Optional[int] = Field(None, description="Rate limit")
     remaining: Optional[int] = Field(None, description="Remaining requests")
     reset_time: Optional[datetime] = Field(None, description="When rate limit resets")
-    
+
     def __init__(self, **data):
         data.setdefault('category', ErrorCategory.RATE_LIMIT)
         data.setdefault('code', 'RATE_LIMIT_ERROR')
@@ -280,8 +281,8 @@ def create_general_error_response(
 def error_response_to_json_response(error_response: ErrorResponse, status_code: int = 400) -> Dict[str, Any]:
     """Convert ErrorResponse to JSON response format."""
     response_data = error_response.dict()
-    
+
     # Add HTTP status code
     response_data['status_code'] = status_code
-    
-    return response_data 
+
+    return response_data

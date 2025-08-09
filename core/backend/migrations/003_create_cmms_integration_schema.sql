@@ -122,4 +122,4 @@ CREATE INDEX idx_cmms_sync_logs_started ON cmms_sync_logs(started_at);
 
 -- Add asset_id column to assets table if it doesn't exist (for CMMS asset mapping)
 ALTER TABLE assets ADD COLUMN IF NOT EXISTS cmms_asset_id VARCHAR(255);
-CREATE INDEX IF NOT EXISTS idx_assets_cmms_id ON assets(cmms_asset_id); 
+CREATE INDEX IF NOT EXISTS idx_assets_cmms_id ON assets(cmms_asset_id);

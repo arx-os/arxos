@@ -128,7 +128,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertEqual(result, expected)
 
     @patch('requests.Session.request')
-    def test_send_notification_success(self, mock_request):
+def test_send_notification_success(self, mock_request):
         """Test successful notification sending"""
         # Mock successful response
         mock_response = Mock()
@@ -156,7 +156,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertEqual(response.message, "Notification sent successfully")
 
     @patch('requests.Session.request')
-    def test_send_notification_failure(self, mock_request):
+def test_send_notification_failure(self, mock_request):
         """Test notification sending failure"""
         # Mock failed response
         mock_request.side_effect = requests.RequestException("Network error")
@@ -175,7 +175,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertIsNotNone(response.error)
 
     @patch('requests.Session.request')
-    def test_get_notification_history(self, mock_request):
+def test_get_notification_history(self, mock_request):
         """Test getting notification history"""
         # Mock successful response
         mock_response = Mock()
@@ -210,7 +210,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertEqual(len(response["notifications"]), 1)
 
     @patch('requests.Session.request')
-    def test_get_notification_statistics(self, mock_request):
+def test_get_notification_statistics(self, mock_request):
         """Test getting notification statistics"""
         # Mock successful response
         mock_response = Mock()
@@ -234,7 +234,7 @@ class TestGoNotificationClient(unittest.TestCase):
         self.assertEqual(stats.success_rate, 95.0)
 
     @patch('requests.Session.request')
-    def test_health_check(self, mock_request):
+def test_health_check(self, mock_request):
         """Test health check functionality"""
         # Mock successful response
         mock_response = Mock()
@@ -400,7 +400,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
 
     def test_add_custom_metric(self):
         """Test adding custom metrics"""
-        def custom_metric():
+def custom_metric():
             return 42.0
 
         self.monitoring_service.add_custom_metric("test_metric", custom_metric)
@@ -408,7 +408,7 @@ class TestAdvancedMonitoringService(unittest.TestCase):
 
     def test_remove_custom_metric(self):
         """Test removing custom metrics"""
-        def custom_metric():
+def custom_metric():
             return 42.0
 
         self.monitoring_service.add_custom_metric("test_metric", custom_metric)
@@ -554,7 +554,7 @@ class TestNotificationIntegration(unittest.TestCase):
         )
 
     @patch('requests.Session.request')
-    def test_monitoring_service_with_go_notifications(self, mock_request):
+def test_monitoring_service_with_go_notifications(self, mock_request):
         """Test monitoring service integration with Go notifications"""
         # Mock successful Go API response
         mock_response = Mock()
@@ -658,7 +658,7 @@ class TestNotificationErrorHandling(unittest.TestCase):
         )
 
     @patch('requests.Session.request')
-    def test_network_timeout(self, mock_request):
+def test_network_timeout(self, mock_request):
         """Test handling of network timeouts"""
         mock_request.side_effect = requests.Timeout("Request timeout")
 
@@ -674,10 +674,9 @@ class TestNotificationErrorHandling(unittest.TestCase):
 
         self.assertFalse(response.success)
         self.assertIsNotNone(response.error)
-        self.assertIn("timeout", response.error.lower())
-
+        self.assertIn("timeout", response.error.lower()
     @patch('requests.Session.request')
-    def test_server_error(self, mock_request):
+def test_server_error(self, mock_request):
         """Test handling of server errors"""
         mock_request.side_effect = requests.HTTPError("500 Internal Server Error")
 
@@ -700,7 +699,7 @@ class TestNotificationErrorHandling(unittest.TestCase):
         variables = None  # Invalid variables
 
         result = self.client.substitute_template_variables(template, variables)
-        
+
         # Should return original template when variables are invalid
         self.assertEqual(result, template)
 
@@ -734,7 +733,7 @@ class TestNotificationPerformance(unittest.TestCase):
     def test_bulk_notification_creation(self):
         """Test creating multiple notifications efficiently"""
         start_time = time.time()
-        
+
         requests = []
         for i in range(100):
             request = NotificationRequest(
@@ -747,7 +746,7 @@ class TestNotificationPerformance(unittest.TestCase):
             requests.append(request)
 
         creation_time = time.time() - start_time
-        
+
         # Should create 100 requests quickly
         self.assertLess(creation_time, 1.0)
         self.assertEqual(len(requests), 100)
@@ -762,12 +761,12 @@ class TestNotificationPerformance(unittest.TestCase):
         }
 
         start_time = time.time()
-        
+
         for _ in range(1000):
             result = self.client.substitute_template_variables(template, variables)
 
         substitution_time = time.time() - start_time
-        
+
         # Should handle 1000 substitutions quickly
         self.assertLess(substitution_time, 1.0)
         self.assertEqual(result, "Hello Alice, your order 12345 is ready. Total: $99.99.")
@@ -781,12 +780,12 @@ class TestNotificationPerformance(unittest.TestCase):
         }
 
         start_time = time.time()
-        
+
         for _ in range(100):
             result = self.client.substitute_template_variables(template, variables)
 
         substitution_time = time.time() - start_time
-        
+
         # Should handle large variables efficiently
         self.assertLess(substitution_time, 1.0)
         self.assertIn("User", result)
@@ -795,4 +794,4 @@ class TestNotificationPerformance(unittest.TestCase):
 
 if __name__ == "__main__":
     # Run all tests
-    unittest.main(verbosity=2) 
+    unittest.main(verbosity=2)

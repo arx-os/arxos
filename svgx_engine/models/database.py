@@ -18,7 +18,7 @@ Base = declarative_base()
 
 class DatabaseConfig:
     """Database configuration for SVGX Engine."""
-    
+
     def __init__(self, database_url: str = None, echo: bool = False):
     """
     Perform __init__ operation
@@ -39,7 +39,7 @@ Example:
     """
         self.database_url = database_url or "sqlite:///svgx_engine.db"
         self.echo = echo
-    
+
     def get_engine(self):
         """Get SQLAlchemy engine."""
         if self.database_url.startswith('sqlite'):
@@ -71,19 +71,19 @@ Example:
         print(result)
     """
     """Database manager for SVGX Engine."""
-    
+
     def __init__(self, config: DatabaseConfig):
         self.config = config
         self.engine = config.get_engine()
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        
+
         # Create tables
         Base.metadata.create_all(bind=self.engine)
-    
+
     def get_session(self) -> Session:
         """Get a database session."""
         return self.SessionLocal()
-    
+
     def close(self):
         """Close database connections."""
         if hasattr(self, 'engine'):
@@ -99,9 +99,9 @@ def get_db_manager(config: DatabaseConfig = None) -> DatabaseManager:
 
 class SVGXModel(Base):
     """SVGX document model."""
-    
+
     __tablename__ = "svgx_models"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
@@ -118,9 +118,9 @@ class SVGXModel(Base):
 
 class SVGXElement(Base):
     """SVGX element model."""
-    
+
     __tablename__ = "svgx_elements"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     document_id = Column(String(36), nullable=False)
     element_type = Column(String(100), nullable=False)
@@ -133,9 +133,9 @@ class SVGXElement(Base):
 
 class SVGXObject(Base):
     """SVGX object model."""
-    
+
     __tablename__ = "svgx_objects"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     object_type = Column(String(100), nullable=False)
     system = Column(String(100), nullable=True)
@@ -147,9 +147,9 @@ class SVGXObject(Base):
 
 class SVGXBehavior(Base):
     """SVGX behavior model."""
-    
+
     __tablename__ = "svgx_behaviors"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     object_id = Column(String(36), nullable=False)
     behavior_type = Column(String(100), nullable=False)
@@ -161,9 +161,9 @@ class SVGXBehavior(Base):
 
 class SVGXPhysics(Base):
     """SVGX physics model."""
-    
+
     __tablename__ = "svgx_physics"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     object_id = Column(String(36), nullable=False)
     physics_type = Column(String(100), nullable=False)
@@ -175,9 +175,9 @@ class SVGXPhysics(Base):
 
 class SymbolLibrary(Base):
     """Symbol library model."""
-    
+
     __tablename__ = "symbol_library"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
     system = Column(String(100), nullable=True)
@@ -190,9 +190,9 @@ class SymbolLibrary(Base):
 
 class ValidationJob(Base):
     """Validation job model."""
-    
+
     __tablename__ = "validation_jobs"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     job_type = Column(String(100), nullable=False)
     status = Column(String(50), default='pending')
@@ -208,9 +208,9 @@ class ValidationJob(Base):
 
 class ExportJob(Base):
     """Export job model."""
-    
+
     __tablename__ = "export_jobs"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     job_type = Column(String(100), nullable=False)
     export_format = Column(String(50), nullable=False)
@@ -227,9 +227,9 @@ class ExportJob(Base):
 
 class User(Base):
     """User model."""
-    
+
     __tablename__ = "users"
-    
+
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String(100), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
@@ -239,4 +239,4 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) 
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

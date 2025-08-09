@@ -118,7 +118,7 @@ class AnimationBehaviorSystem:
 
 #### 1. Animation Creation and Management
 ```python
-def create_animation(self, animation_id: str, name: str, animation_type: AnimationType, 
+def create_animation(self, animation_id: str, name: str, animation_type: AnimationType,
                     target_element: str, keyframes: List[Keyframe], config: AnimationConfig) -> Animation
 async def play_animation(self, animation_id: str) -> bool
 async def pause_animation(self, animation_id: str) -> bool
@@ -170,7 +170,7 @@ def _register_animation_behavior_system():
         if event.type == EventType.SYSTEM and event.data.get('animation'):
             return None
         return None
-    
+
     event_driven_behavior_engine.register_handler(
         event_type=EventType.SYSTEM,
         handler_id='animation_behavior_system',
@@ -415,4 +415,4 @@ The Animation Behavior System represents a significant milestone in the SVGX Eng
 - ✅ Comprehensive test coverage and documentation
 - ✅ Enterprise-grade error handling and recovery
 
-The Animation Behavior System is now ready for production use and provides a solid foundation for advanced animation capabilities in the SVGX Engine. 
+The Animation Behavior System is now ready for production use and provides a solid foundation for advanced animation capabilities in the SVGX Engine.

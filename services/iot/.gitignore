@@ -234,4 +234,4 @@ docker-compose.override.yml
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl 
+.terraform.lock.hcl

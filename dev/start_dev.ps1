@@ -38,7 +38,7 @@ $env:COMPOSE_PROJECT_NAME = "arxos"
 Write-Host "📁 Creating development directories..." -ForegroundColor Yellow
 $directories = @(
     "../services/gus/data/knowledge/building_codes",
-    "../services/gus/data/knowledge/standards", 
+    "../services/gus/data/knowledge/standards",
     "../services/gus/data/knowledge/arxos",
     "../services/gus/data/vector_store",
     "../services/gus/logs"
@@ -67,7 +67,7 @@ while ($elapsed -lt $timeout) {
         Write-Host "✅ All services are healthy!" -ForegroundColor Green
         break
     }
-    
+
     Write-Host "⏳ Waiting for services... ($elapsed/$timeout seconds)" -ForegroundColor Yellow
     Start-Sleep -Seconds $interval
     $elapsed += $interval
@@ -124,4 +124,4 @@ if (-not $NoBrowser) {
 }
 
 Write-Host "✅ Development environment started successfully!" -ForegroundColor Green
-Write-Host "💡 Tip: Use 'docker-compose logs -f' to view real-time logs" -ForegroundColor Cyan 
+Write-Host "💡 Tip: Use 'docker-compose logs -f' to view real-time logs" -ForegroundColor Cyan

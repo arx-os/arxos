@@ -6,7 +6,7 @@
 
 **Goal**: Enable seamless integration between third-party CMMS platforms (WebTMA, Maximo, etc.) and Arxos through deep linking and shareable object references.
 
-**Strategic Value**: 
+**Strategic Value**:
 - Zero-friction entry into Arxos ecosystem
 - Enhanced CMMS workflows with spatial context
 - Progressive adoption path to full Arxos migration
@@ -283,4 +283,4 @@ Spatial Reference: [View in Arxos](https://app.arxos.io/viewer?building_id=centr
 - **Performance**: Optimized algorithms and caching
 - **Maintainability**: Clear code structure and documentation
 
-This implementation provides a solid foundation for CMMS integration while maintaining the flexibility to support any CMMS platform that supports hyperlinks. The architecture is scalable, secure, and ready for production deployment. 
+This implementation provides a solid foundation for CMMS integration while maintaining the flexibility to support any CMMS platform that supports hyperlinks. The architecture is scalable, secure, and ready for production deployment.

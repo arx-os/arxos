@@ -17,7 +17,7 @@ CREATE TABLE data_vendor_chat_sessions (
     updated_at TIMESTAMP DEFAULT NOW(),
     expires_at TIMESTAMP NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    
+
     -- Indexes for performance
     INDEX idx_chat_sessions_vendor_id (vendor_id),
     INDEX idx_chat_sessions_session_id (session_id),
@@ -33,7 +33,7 @@ CREATE TABLE data_vendor_chat_messages (
     message TEXT NOT NULL,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Indexes for performance
     INDEX idx_chat_messages_session_id (session_id),
     INDEX idx_chat_messages_role (role),
@@ -52,7 +52,7 @@ CREATE TABLE data_vendor_query_analytics (
     nlp_confidence DECIMAL(3,2),
     error_message TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Indexes for performance
     INDEX idx_query_analytics_vendor_id (vendor_id),
     INDEX idx_query_analytics_query_type (query_type),
@@ -70,7 +70,7 @@ CREATE TABLE data_vendor_query_templates (
     is_public BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Indexes for performance
     INDEX idx_query_templates_vendor_id (vendor_id),
     INDEX idx_query_templates_public (is_public),
@@ -87,7 +87,7 @@ CREATE TABLE data_vendor_session_analytics (
     avg_response_time_ms INTEGER,
     success_rate DECIMAL(3,2),
     created_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Indexes for performance
     INDEX idx_session_analytics_session_id (session_id),
     INDEX idx_session_analytics_vendor_id (vendor_id),
@@ -104,12 +104,12 @@ END;
 $$ language 'plpgsql';
 
 -- Create triggers for updated_at
-CREATE TRIGGER update_data_vendor_chat_sessions_updated_at 
-    BEFORE UPDATE ON data_vendor_chat_sessions 
+CREATE TRIGGER update_data_vendor_chat_sessions_updated_at
+    BEFORE UPDATE ON data_vendor_chat_sessions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_data_vendor_query_templates_updated_at 
-    BEFORE UPDATE ON data_vendor_query_templates 
+CREATE TRIGGER update_data_vendor_query_templates_updated_at
+    BEFORE UPDATE ON data_vendor_query_templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create function to clean up expired sessions
@@ -118,9 +118,9 @@ RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    DELETE FROM data_vendor_chat_sessions 
+    DELETE FROM data_vendor_chat_sessions
     WHERE expires_at < NOW() AND is_active = TRUE;
-    
+
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
     RETURN deleted_count;
 END;
@@ -137,7 +137,7 @@ RETURNS TABLE(
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         COUNT(DISTINCT cs.id)::BIGINT as total_sessions,
         COUNT(DISTINCT CASE WHEN cs.is_active = TRUE THEN cs.id END)::BIGINT as active_sessions,
         AVG(EXTRACT(EPOCH FROM (cs.updated_at - cs.created_at)))::INTEGER as avg_session_duration,
@@ -160,7 +160,7 @@ RETURNS TABLE(
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         qa.query_type,
         COUNT(*)::BIGINT as total_queries,
         AVG(qa.processing_time_ms)::INTEGER as avg_processing_time_ms,
@@ -169,7 +169,7 @@ BEGIN
             COUNT(CASE WHEN qa.error_message IS NULL THEN 1 END)::DECIMAL / COUNT(*), 2
         ) as success_rate
     FROM data_vendor_query_analytics qa
-    WHERE qa.vendor_id = vendor_id_param 
+    WHERE qa.vendor_id = vendor_id_param
     AND qa.created_at >= NOW() - INTERVAL '1 day' * days_back
     GROUP BY qa.query_type
     ORDER BY total_queries DESC;
@@ -177,7 +177,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Insert sample data for testing (optional)
--- INSERT INTO data_vendor_chat_sessions (vendor_id, session_id, expires_at) 
+-- INSERT INTO data_vendor_chat_sessions (vendor_id, session_id, expires_at)
 -- VALUES (1, 'test-session-001', NOW() + INTERVAL '24 hours');
 
 -- Grant permissions (adjust based on your security model)
@@ -189,7 +189,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create view for session summary
 CREATE VIEW data_vendor_session_summary AS
-SELECT 
+SELECT
     cs.vendor_id,
     cs.session_id,
     cs.created_at,
@@ -206,7 +206,7 @@ GROUP BY cs.id, cs.vendor_id, cs.session_id, cs.created_at, cs.updated_at, cs.ex
 
 -- Create view for vendor analytics
 CREATE VIEW data_vendor_analytics AS
-SELECT 
+SELECT
     dvak.id as vendor_id,
     dvak.vendor_name,
     dvak.access_level,

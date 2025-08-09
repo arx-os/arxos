@@ -137,4 +137,4 @@ This document explains the organization of driver-related documentation across t
 
 ---
 
-*This organization provides a clear separation between general driver contribution activities and security-specific concerns, making the platform more accessible and maintainable for all contributors.* 
+*This organization provides a clear separation between general driver contribution activities and security-specific concerns, making the platform more accessible and maintainable for all contributors.*

@@ -151,7 +151,7 @@ func getDatabaseInfo(db *sql.DB) DatabaseInfo {
 
 	// Get database name and size
 	query := `
-		SELECT 
+		SELECT
 			current_database() as name,
 			pg_size_pretty(pg_database_size(current_database())) as size,
 			(SELECT count(*) FROM pg_stat_activity) as connections,
@@ -170,13 +170,13 @@ func getTableStats(db *sql.DB) []TableStat {
 	var stats []TableStat
 
 	query := `
-		SELECT 
+		SELECT
 			t.tablename,
 			pg_size_pretty(pg_total_relation_size(t.schemaname||'.'||t.tablename)) as size,
 			COALESCE(c.reltuples, 0) as row_count,
 			COALESCE(s.seq_scan, 0) as seq_scans,
 			COALESCE(s.idx_scan, 0) as index_scans,
-			CASE 
+			CASE
 				WHEN (st.heap_blks_hit + st.heap_blks_read) = 0 THEN 0
 				ELSE ROUND(100.0 * st.heap_blks_hit / (st.heap_blks_hit + st.heap_blks_read), 2)
 			END as cache_hit_ratio,
@@ -223,7 +223,7 @@ func getIndexStats(db *sql.DB) []IndexStat {
 	var stats []IndexStat
 
 	query := `
-		SELECT 
+		SELECT
 			schemaname,
 			tablename,
 			indexname,
@@ -231,7 +231,7 @@ func getIndexStats(db *sql.DB) []IndexStat {
 			idx_tup_read as tuples_read,
 			idx_tup_fetch as tuples_fetched,
 			pg_size_pretty(pg_relation_size(indexrelid)) as index_size,
-			CASE 
+			CASE
 				WHEN idx_scan = 0 THEN 'UNUSED'
 				WHEN idx_scan < 10 THEN 'RARELY_USED'
 				WHEN idx_scan < 100 THEN 'OCCASIONALLY_USED'
@@ -283,7 +283,7 @@ func getSlowQueries(db *sql.DB) []SlowQuery {
 	}
 
 	query := `
-		SELECT 
+		SELECT
 			query,
 			calls,
 			mean_time,
@@ -324,12 +324,12 @@ func getCacheStats(db *sql.DB) []CacheStat {
 	var stats []CacheStat
 
 	query := `
-		SELECT 
+		SELECT
 			schemaname,
 			tablename,
 			heap_blks_read,
 			heap_blks_hit,
-			CASE 
+			CASE
 				WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
 				ELSE ROUND(100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read), 2)
 			END as cache_hit_ratio

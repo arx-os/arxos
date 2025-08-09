@@ -272,11 +272,11 @@ class ArxosPlugin:
     def __init__(self, name, version):
         self.name = name
         self.version = version
-    
+
     def register_commands(self, cli):
         """Register custom commands with CLI"""
         pass
-    
+
     def execute(self, command, args):
         """Execute plugin command"""
         pass
@@ -288,11 +288,11 @@ class ArxosPlugin:
 class MaintenancePlugin(ArxosPlugin):
     def __init__(self):
         super().__init__("maintenance", "1.0.0")
-    
+
     def register_commands(self, cli):
         cli.add_command("maintenance", "schedule", self.schedule_maintenance)
         cli.add_command("maintenance", "history", self.get_maintenance_history)
-    
+
     def schedule_maintenance(self, args):
         # Implementation
         pass
@@ -454,6 +454,6 @@ arxos equipment add --room room-789 --type "Computer" --model "Dell XPS"
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
+**Last Updated**: December 2024
+**Version**: 1.0.0
 **Status**: Active Development

@@ -11,7 +11,7 @@ from datetime import datetime
 
 from domain.entities.pdf_analysis import PDFAnalysis
 from domain.value_objects import (
-    TaskId, UserId, TaskStatus, ConfidenceScore, 
+    TaskId, UserId, TaskStatus, ConfidenceScore,
     FileName, FilePath, AnalysisResult, AnalysisRequirements
 )
 from domain.repositories.pdf_analysis_repository import PDFAnalysisRepository
@@ -40,7 +40,7 @@ from application.services.pdf_analysis_orchestrator import PDFAnalysisOrchestrat
 
 class CreatePDFAnalysisUseCase:
     """Use case for creating a new PDF analysis."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
     """
     Perform __init__ operation
@@ -59,17 +59,17 @@ Example:
         print(result)
     """
         self.repository = repository
-    
+
     def execute(self, request: CreatePDFAnalysisRequest) -> CreatePDFAnalysisResponse:
         """
         Execute the create PDF analysis use case.
-        
+
         Args:
             request: The create request containing analysis details
-            
+
         Returns:
             Response with created analysis details
-            
+
         Raises:
             InvalidPDFAnalysisError: If request data is invalid
             PDFAnalysisAlreadyExistsError: If analysis already exists
@@ -77,11 +77,11 @@ Example:
         try:
             # Validate request
             self._validate_create_request(request)
-            
+
             # Check if analysis already exists
             if self.repository.exists(request.task_id):
                 raise PDFAnalysisAlreadyExistsError(f"Analysis with task ID {request.task_id} already exists")
-            
+
             # Create domain entity
             pdf_analysis = PDFAnalysis(
                 task_id=request.task_id,
@@ -94,10 +94,10 @@ Example:
                 include_quantities=request.include_quantities,
                 requirements=request.requirements
             )
-            
+
             # Save to repository
             created_analysis = self.repository.create(pdf_analysis)
-            
+
             # Return response
             return CreatePDFAnalysisResponse(
                 task_id=created_analysis.task_id,
@@ -108,7 +108,7 @@ Example:
                 success=True,
                 message="PDF analysis created successfully"
             )
-            
+
         except Exception as e:
             return CreatePDFAnalysisResponse(
                 task_id=request.task_id,
@@ -118,8 +118,6 @@ Example:
                 created_at=datetime.utcnow(),
                 success=False,
                 message=str(e)
-            )
-    
     def _validate_create_request(self, request: CreatePDFAnalysisRequest) -> None:
         """Validate create request data."""
         if not request.task_id:
@@ -152,30 +150,30 @@ Example:
         print(result)
     """
     """Use case for retrieving a PDF analysis."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: GetPDFAnalysisRequest) -> GetPDFAnalysisResponse:
         """
         Execute the get PDF analysis use case.
-        
+
         Args:
             request: The get request containing task ID
-            
+
         Returns:
             Response with analysis details
-            
+
         Raises:
             PDFAnalysisNotFoundError: If analysis not found
         """
         try:
-            # Get from repository
+            # Get from repository import repository
             pdf_analysis = self.repository.get_by_id(request.task_id)
-            
+
             if not pdf_analysis:
                 raise PDFAnalysisNotFoundError(f"Analysis with task ID {request.task_id} not found")
-            
+
             # Return response
             return GetPDFAnalysisResponse(
                 task_id=pdf_analysis.task_id,
@@ -198,32 +196,29 @@ Example:
                 success=True,
                 message="PDF analysis retrieved successfully"
             )
-            
+
         except Exception as e:
             return GetPDFAnalysisResponse(
                 task_id=request.task_id,
                 success=False,
                 message=str(e)
-            )
-
-
 class StartPDFAnalysisUseCase:
     """Use case for starting a PDF analysis."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository, orchestrator: PDFAnalysisOrchestrator):
         self.repository = repository
         self.orchestrator = orchestrator
-    
+
     def execute(self, request: StartPDFAnalysisRequest) -> StartPDFAnalysisResponse:
         """
         Execute the start PDF analysis use case.
-        
+
         Args:
             request: The start request containing task ID
-            
+
         Returns:
             Response with start status
-            
+
         Raises:
             PDFAnalysisNotFoundError: If analysis not found
             InvalidTaskStatusError: If analysis cannot be started
@@ -231,19 +226,19 @@ class StartPDFAnalysisUseCase:
         try:
             # Get analysis
             pdf_analysis = self.repository.get_by_id(request.task_id)
-            
+
             if not pdf_analysis:
                 raise PDFAnalysisNotFoundError(f"Analysis with task ID {request.task_id} not found")
-            
+
             # Start analysis
             pdf_analysis.start_analysis()
-            
+
             # Update in repository
             updated_analysis = self.repository.update(pdf_analysis)
-            
+
             # Start processing in orchestrator
             self.orchestrator.start_processing(request.task_id)
-            
+
             # Return response
             return StartPDFAnalysisResponse(
                 task_id=updated_analysis.task_id,
@@ -252,31 +247,28 @@ class StartPDFAnalysisUseCase:
                 success=True,
                 message="PDF analysis started successfully"
             )
-            
+
         except Exception as e:
             return StartPDFAnalysisResponse(
                 task_id=request.task_id,
                 success=False,
                 message=str(e)
-            )
-
-
 class CompletePDFAnalysisUseCase:
     """Use case for completing a PDF analysis."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: CompletePDFAnalysisRequest) -> CompletePDFAnalysisResponse:
         """
         Execute the complete PDF analysis use case.
-        
+
         Args:
             request: The complete request containing analysis results
-            
+
         Returns:
             Response with completion status
-            
+
         Raises:
             PDFAnalysisNotFoundError: If analysis not found
             InvalidTaskStatusError: If analysis cannot be completed
@@ -284,10 +276,10 @@ class CompletePDFAnalysisUseCase:
         try:
             # Get analysis
             pdf_analysis = self.repository.get_by_id(request.task_id)
-            
+
             if not pdf_analysis:
                 raise PDFAnalysisNotFoundError(f"Analysis with task ID {request.task_id} not found")
-            
+
             # Complete analysis
             pdf_analysis.complete_analysis(
                 confidence=request.confidence,
@@ -296,10 +288,10 @@ class CompletePDFAnalysisUseCase:
                 processing_time=request.processing_time,
                 analysis_result=request.analysis_result
             )
-            
+
             # Update in repository
             updated_analysis = self.repository.update(pdf_analysis)
-            
+
             # Return response
             return CompletePDFAnalysisResponse(
                 task_id=updated_analysis.task_id,
@@ -312,31 +304,28 @@ class CompletePDFAnalysisUseCase:
                 success=True,
                 message="PDF analysis completed successfully"
             )
-            
+
         except Exception as e:
             return CompletePDFAnalysisResponse(
                 task_id=request.task_id,
                 success=False,
                 message=str(e)
-            )
-
-
 class FailPDFAnalysisUseCase:
     """Use case for failing a PDF analysis."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: FailPDFAnalysisRequest) -> FailPDFAnalysisResponse:
         """
         Execute the fail PDF analysis use case.
-        
+
         Args:
             request: The fail request containing error details
-            
+
         Returns:
             Response with failure status
-            
+
         Raises:
             PDFAnalysisNotFoundError: If analysis not found
             InvalidTaskStatusError: If analysis cannot be failed
@@ -344,19 +333,19 @@ class FailPDFAnalysisUseCase:
         try:
             # Get analysis
             pdf_analysis = self.repository.get_by_id(request.task_id)
-            
+
             if not pdf_analysis:
                 raise PDFAnalysisNotFoundError(f"Analysis with task ID {request.task_id} not found")
-            
+
             # Fail analysis
             pdf_analysis.fail_analysis(
                 error_message=request.error_message,
                 processing_time=request.processing_time
             )
-            
+
             # Update in repository
             updated_analysis = self.repository.update(pdf_analysis)
-            
+
             # Return response
             return FailPDFAnalysisResponse(
                 task_id=updated_analysis.task_id,
@@ -367,31 +356,28 @@ class FailPDFAnalysisUseCase:
                 success=True,
                 message="PDF analysis failed"
             )
-            
+
         except Exception as e:
             return FailPDFAnalysisResponse(
                 task_id=request.task_id,
                 success=False,
                 message=str(e)
-            )
-
-
 class CancelPDFAnalysisUseCase:
     """Use case for cancelling a PDF analysis."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: CancelPDFAnalysisRequest) -> CancelPDFAnalysisResponse:
         """
         Execute the cancel PDF analysis use case.
-        
+
         Args:
             request: The cancel request containing task ID
-            
+
         Returns:
             Response with cancellation status
-            
+
         Raises:
             PDFAnalysisNotFoundError: If analysis not found
             InvalidTaskStatusError: If analysis cannot be cancelled
@@ -399,16 +385,16 @@ class CancelPDFAnalysisUseCase:
         try:
             # Get analysis
             pdf_analysis = self.repository.get_by_id(request.task_id)
-            
+
             if not pdf_analysis:
                 raise PDFAnalysisNotFoundError(f"Analysis with task ID {request.task_id} not found")
-            
+
             # Cancel analysis
             pdf_analysis.cancel_analysis()
-            
+
             # Update in repository
             updated_analysis = self.repository.update(pdf_analysis)
-            
+
             # Return response
             return CancelPDFAnalysisResponse(
                 task_id=updated_analysis.task_id,
@@ -417,41 +403,38 @@ class CancelPDFAnalysisUseCase:
                 success=True,
                 message="PDF analysis cancelled successfully"
             )
-            
+
         except Exception as e:
             return CancelPDFAnalysisResponse(
                 task_id=request.task_id,
                 success=False,
                 message=str(e)
-            )
-
-
 class GetPDFAnalysisStatusUseCase:
     """Use case for getting PDF analysis status."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: GetPDFAnalysisStatusRequest) -> GetPDFAnalysisStatusResponse:
         """
         Execute the get PDF analysis status use case.
-        
+
         Args:
             request: The status request containing task ID
-            
+
         Returns:
             Response with analysis status
-            
+
         Raises:
             PDFAnalysisNotFoundError: If analysis not found
         """
         try:
             # Get analysis
             pdf_analysis = self.repository.get_by_id(request.task_id)
-            
+
             if not pdf_analysis:
                 raise PDFAnalysisNotFoundError(f"Analysis with task ID {request.task_id} not found")
-            
+
             # Return response
             return GetPDFAnalysisStatusResponse(
                 task_id=pdf_analysis.task_id,
@@ -461,41 +444,38 @@ class GetPDFAnalysisStatusUseCase:
                 success=True,
                 message="PDF analysis status retrieved successfully"
             )
-            
+
         except Exception as e:
             return GetPDFAnalysisStatusResponse(
                 task_id=request.task_id,
                 success=False,
                 message=str(e)
-            )
-
-
 class GetPDFAnalysisResultUseCase:
     """Use case for getting PDF analysis results."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: GetPDFAnalysisResultRequest) -> GetPDFAnalysisResultResponse:
         """
         Execute the get PDF analysis result use case.
-        
+
         Args:
             request: The result request containing task ID
-            
+
         Returns:
             Response with analysis results
-            
+
         Raises:
             PDFAnalysisNotFoundError: If analysis not found
         """
         try:
             # Get analysis with result
             pdf_analysis = self.repository.get_analysis_with_result(request.task_id)
-            
+
             if not pdf_analysis:
                 raise PDFAnalysisNotFoundError(f"Analysis with task ID {request.task_id} not found")
-            
+
             if not pdf_analysis.is_completed():
                 return GetPDFAnalysisResultResponse(
                     task_id=pdf_analysis.task_id,
@@ -503,7 +483,7 @@ class GetPDFAnalysisResultUseCase:
                     success=False,
                     message="Analysis is not completed yet"
                 )
-            
+
             # Return response
             return GetPDFAnalysisResultResponse(
                 task_id=pdf_analysis.task_id,
@@ -516,34 +496,31 @@ class GetPDFAnalysisResultUseCase:
                 success=True,
                 message="PDF analysis result retrieved successfully"
             )
-            
+
         except Exception as e:
             return GetPDFAnalysisResultResponse(
                 task_id=request.task_id,
                 success=False,
                 message=str(e)
-            )
-
-
 class ListPDFAnalysesUseCase:
     """Use case for listing PDF analyses."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: ListPDFAnalysesRequest) -> ListPDFAnalysesResponse:
         """
         Execute the list PDF analyses use case.
-        
+
         Args:
             request: The list request containing filters
-            
+
         Returns:
             Response with list of analyses
         """
         try:
             analyses = []
-            
+
             if request.user_id:
                 analyses = self.repository.get_by_user_id(request.user_id, request.limit)
             elif request.status:
@@ -551,7 +528,7 @@ class ListPDFAnalysesUseCase:
             else:
                 # Get all analyses (implement pagination if needed)
                 analyses = self.repository.get_by_user_id(request.user_id, request.limit)
-            
+
             # Convert to DTOs
             analysis_dtos = []
             for analysis in analyses:
@@ -567,7 +544,7 @@ class ListPDFAnalysesUseCase:
                     'created_at': analysis.created_at.isoformat(),
                     'updated_at': analysis.updated_at.isoformat()
                 })
-            
+
             # Return response
             return ListPDFAnalysesResponse(
                 analyses=analysis_dtos,
@@ -575,46 +552,42 @@ class ListPDFAnalysesUseCase:
                 success=True,
                 message=f"Retrieved {len(analysis_dtos)} PDF analyses"
             )
-            
+
         except Exception as e:
             return ListPDFAnalysesResponse(
                 analyses=[],
                 total_count=0,
                 success=False,
                 message=str(e)
-            )
-
-
 class GetPDFAnalysisStatisticsUseCase:
     """Use case for getting PDF analysis statistics."""
-    
+
     def __init__(self, repository: PDFAnalysisRepository):
         self.repository = repository
-    
+
     def execute(self, request: GetPDFAnalysisStatisticsRequest) -> GetPDFAnalysisStatisticsResponse:
         """
         Execute the get PDF analysis statistics use case.
-        
+
         Args:
             request: The statistics request
-            
+
         Returns:
             Response with analysis statistics
         """
         try:
-            # Get statistics from repository
+            # Get statistics from repository import repository
             statistics = self.repository.get_statistics()
-            
+
             # Return response
             return GetPDFAnalysisStatisticsResponse(
                 statistics=statistics,
                 success=True,
                 message="PDF analysis statistics retrieved successfully"
             )
-            
+
         except Exception as e:
             return GetPDFAnalysisStatisticsResponse(
                 statistics={},
                 success=False,
                 message=str(e)
-            ) 

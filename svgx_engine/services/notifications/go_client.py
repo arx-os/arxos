@@ -157,7 +157,7 @@ class NotificationStatistics:
 class GoNotificationClient:
     """
     Python client for Go notification API
-    
+
     Provides seamless integration between Python services and the Go notification system
     with comprehensive error handling, retry logic, and template support.
     """
@@ -172,7 +172,7 @@ class GoNotificationClient:
     ):
         """
         Initialize the Go notification client
-        
+
         Args:
             base_url: Base URL for the Go notification API
             timeout: Request timeout in seconds
@@ -185,7 +185,7 @@ class GoNotificationClient:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.session = session
-        
+
         # Configure synchronous HTTP client with retry logic
         self.http_client = requests.Session()
         retry_strategy = Retry(
@@ -219,21 +219,21 @@ class GoNotificationClient:
     ) -> requests.Response:
         """
         Make HTTP request to Go notification API
-        
+
         Args:
             method: HTTP method
             endpoint: API endpoint
             data: Request data
             params: Query parameters
-            
+
         Returns:
             HTTP response
-            
+
         Raises:
             requests.RequestException: On HTTP errors
         """
         url = f"{self.base_url}{endpoint}"
-        
+
         try:
             response = self.http_client.request(
                 method=method,
@@ -257,16 +257,16 @@ class GoNotificationClient:
     ) -> aiohttp.ClientResponse:
         """
         Make async HTTP request to Go notification API
-        
+
         Args:
             method: HTTP method
             endpoint: API endpoint
             data: Request data
             params: Query parameters
-            
+
         Returns:
             HTTP response
-            
+
         Raises:
             aiohttp.ClientError: On HTTP errors
         """
@@ -274,7 +274,7 @@ class GoNotificationClient:
             raise RuntimeError("No active session. Use async context manager.")
 
         url = f"{self.base_url}{endpoint}"
-        
+
         try:
             async with self.session.request(
                 method=method,
@@ -291,10 +291,10 @@ class GoNotificationClient:
     def send_notification(self, request: NotificationRequest) -> NotificationResponse:
         """
         Send notification synchronously
-        
+
         Args:
             request: Notification request
-            
+
         Returns:
             Notification response
         """
@@ -304,10 +304,10 @@ class GoNotificationClient:
                 endpoint="/api/notifications/send",
                 data=request.to_dict()
             )
-            
+
             response_data = response.json()
             return NotificationResponse(**response_data)
-            
+
         except Exception as e:
             logger.error(f"Failed to send notification: {e}")
             return NotificationResponse(
@@ -318,10 +318,10 @@ class GoNotificationClient:
     async def send_notification_async(self, request: NotificationRequest) -> NotificationResponse:
         """
         Send notification asynchronously
-        
+
         Args:
             request: Notification request
-            
+
         Returns:
             Notification response
         """
@@ -331,10 +331,10 @@ class GoNotificationClient:
                 endpoint="/api/notifications/send",
                 data=request.to_dict()
             )
-            
+
             response_data = await response.json()
             return NotificationResponse(**response_data)
-            
+
         except Exception as e:
             logger.error(f"Failed to send notification async: {e}")
             return NotificationResponse(
@@ -348,10 +348,10 @@ class GoNotificationClient:
     ) -> Dict[str, Any]:
         """
         Get notification history
-        
+
         Args:
             request: History request parameters
-            
+
         Returns:
             Notification history data
         """
@@ -361,9 +361,9 @@ class GoNotificationClient:
                 endpoint="/api/notifications/history",
                 params=request.to_dict()
             )
-            
+
             return response.json()
-            
+
         except Exception as e:
             logger.error(f"Failed to get notification history: {e}")
             return {"error": str(e)}
@@ -374,10 +374,10 @@ class GoNotificationClient:
     ) -> Dict[str, Any]:
         """
         Get notification history asynchronously
-        
+
         Args:
             request: History request parameters
-            
+
         Returns:
             Notification history data
         """
@@ -387,9 +387,9 @@ class GoNotificationClient:
                 endpoint="/api/notifications/history",
                 params=request.to_dict()
             )
-            
+
             return await response.json()
-            
+
         except Exception as e:
             logger.error(f"Failed to get notification history async: {e}")
             return {"error": str(e)}
@@ -400,10 +400,10 @@ class GoNotificationClient:
     ) -> Optional[NotificationStatistics]:
         """
         Get notification statistics
-        
+
         Args:
             period: Statistics period (e.g., "7d", "30d")
-            
+
         Returns:
             Notification statistics
         """
@@ -413,10 +413,10 @@ class GoNotificationClient:
                 endpoint="/api/notifications/statistics",
                 params={"period": period}
             )
-            
+
             data = response.json()
             return NotificationStatistics(**data)
-            
+
         except Exception as e:
             logger.error(f"Failed to get notification statistics: {e}")
             return None
@@ -427,10 +427,10 @@ class GoNotificationClient:
     ) -> Optional[NotificationStatistics]:
         """
         Get notification statistics asynchronously
-        
+
         Args:
             period: Statistics period (e.g., "7d", "30d")
-            
+
         Returns:
             Notification statistics
         """
@@ -440,10 +440,10 @@ class GoNotificationClient:
                 endpoint="/api/notifications/statistics",
                 params={"period": period}
             )
-            
+
             data = await response.json()
             return NotificationStatistics(**data)
-            
+
         except Exception as e:
             logger.error(f"Failed to get notification statistics async: {e}")
             return None
@@ -451,7 +451,7 @@ class GoNotificationClient:
     def health_check(self) -> Dict[str, Any]:
         """
         Check Go notification service health
-        
+
         Returns:
             Health status
         """
@@ -460,9 +460,9 @@ class GoNotificationClient:
                 method="GET",
                 endpoint="/api/notifications/health"
             )
-            
+
             return response.json()
-            
+
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return {"status": "unhealthy", "error": str(e)}
@@ -470,7 +470,7 @@ class GoNotificationClient:
     async def health_check_async(self) -> Dict[str, Any]:
         """
         Check Go notification service health asynchronously
-        
+
         Returns:
             Health status
         """
@@ -479,9 +479,9 @@ class GoNotificationClient:
                 method="GET",
                 endpoint="/api/notifications/health"
             )
-            
+
             return await response.json()
-            
+
         except Exception as e:
             logger.error(f"Health check failed async: {e}")
             return {"status": "unhealthy", "error": str(e)}
@@ -493,11 +493,11 @@ class GoNotificationClient:
     ) -> str:
         """
         Substitute variables in notification template
-        
+
         Args:
             template: Template string with {{variable}} placeholders
             variables: Dictionary of variables to substitute
-            
+
         Returns:
             Template with substituted variables
         """
@@ -524,7 +524,7 @@ class GoNotificationClient:
     ) -> NotificationRequest:
         """
         Create a notification request with template support
-        
+
         Args:
             title: Notification title
             message: Notification message (can contain template variables)
@@ -534,7 +534,7 @@ class GoNotificationClient:
             priority: Notification priority
             template_data: Variables for template substitution
             **kwargs: Additional notification parameters
-            
+
         Returns:
             Notification request
         """
@@ -565,7 +565,7 @@ class GoNotificationClient:
     ) -> NotificationResponse:
         """
         Send a simple notification (convenience method)
-        
+
         Args:
             title: Notification title
             message: Notification message
@@ -573,7 +573,7 @@ class GoNotificationClient:
             channels: List of channels (defaults to email)
             priority: Notification priority
             **kwargs: Additional parameters
-            
+
         Returns:
             Notification response
         """
@@ -603,7 +603,7 @@ class GoNotificationClient:
     ) -> NotificationResponse:
         """
         Send a simple notification asynchronously (convenience method)
-        
+
         Args:
             title: Notification title
             message: Notification message
@@ -611,7 +611,7 @@ class GoNotificationClient:
             channels: List of channels (defaults to email)
             priority: Notification priority
             **kwargs: Additional parameters
-            
+
         Returns:
             Notification response
         """
@@ -640,7 +640,7 @@ class GoNotificationWrapper:
     def __init__(self, go_client: GoNotificationClient):
         """
         Initialize wrapper with Go notification client
-        
+
         Args:
             go_client: Go notification client instance
         """
@@ -657,7 +657,7 @@ class GoNotificationWrapper:
     ) -> Dict[str, Any]:
         """
         Send email notification (backward compatibility)
-        
+
         Args:
             to_email: Recipient email
             subject: Email subject
@@ -665,13 +665,13 @@ class GoNotificationWrapper:
             html_body: HTML email body
             priority: Email priority
             **kwargs: Additional parameters
-            
+
         Returns:
             Response dictionary
         """
         # Convert priority string to enum
         priority_enum = NotificationPriority(priority.lower())
-        
+
         # Create notification request
         request = self.go_client.create_notification_request(
             title=subject,
@@ -704,13 +704,13 @@ class GoNotificationWrapper:
     ) -> Dict[str, Any]:
         """
         Send Slack notification (backward compatibility)
-        
+
         Args:
             channel: Slack channel
             message: Slack message
             message_type: Type of message
             **kwargs: Additional parameters
-            
+
         Returns:
             Response dictionary
         """
@@ -745,12 +745,12 @@ class GoNotificationWrapper:
     ) -> Dict[str, Any]:
         """
         Send SMS notification (backward compatibility)
-        
+
         Args:
             phone_number: Recipient phone number
             message: SMS message
             **kwargs: Additional parameters
-            
+
         Returns:
             Response dictionary
         """
@@ -785,13 +785,13 @@ class GoNotificationWrapper:
     ) -> Dict[str, Any]:
         """
         Send webhook notification (backward compatibility)
-        
+
         Args:
             url: Webhook URL
             payload: Webhook payload
             method: HTTP method
             **kwargs: Additional parameters
-            
+
         Returns:
             Response dictionary
         """
@@ -829,13 +829,13 @@ def create_go_notification_client(
 ) -> GoNotificationClient:
     """
     Create a Go notification client
-    
+
     Args:
         base_url: Base URL for the Go notification API
         timeout: Request timeout in seconds
         max_retries: Maximum number of retry attempts
         retry_delay: Delay between retries in seconds
-        
+
     Returns:
         Go notification client
     """
@@ -855,13 +855,13 @@ def create_go_notification_wrapper(
 ) -> GoNotificationWrapper:
     """
     Create a Go notification wrapper for backward compatibility
-    
+
     Args:
         base_url: Base URL for the Go notification API
         timeout: Request timeout in seconds
         max_retries: Maximum number of retry attempts
         retry_delay: Delay between retries in seconds
-        
+
     Returns:
         Go notification wrapper
     """
@@ -888,4 +888,4 @@ __all__ = [
     'NotificationStatus',
     'create_go_notification_client',
     'create_go_notification_wrapper'
-] 
+]

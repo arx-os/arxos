@@ -443,6 +443,6 @@ psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE arxos_dev TO arxos_dev;"
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
+**Last Updated**: December 2024
+**Version**: 1.0.0
 **Status**: Active Development

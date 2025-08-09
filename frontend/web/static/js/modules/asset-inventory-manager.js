@@ -16,28 +16,28 @@ export class AssetInventoryManager {
             enableBulkOperations: options.enableBulkOperations !== false,
             ...options
         };
-        
+
         // Initialize modules
         this.inventory = new Inventory(options);
         this.search = new Search(options);
         this.categories = new Categories(options);
         this.metadata = new Metadata(options);
-        
+
         // Connect modules
         this.connectModules();
-        
+
         // UI state
         this.selectedAssets = new Set();
         this.isLoading = false;
-        
+
         // UI elements
         this.assetModal = null;
         this.exportModal = null;
         this.charts = {};
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -51,42 +51,42 @@ export class AssetInventoryManager {
         this.inventory.addEventListener('assetsLoaded', (data) => {
             this.handleAssetsLoaded(data);
         });
-        
+
         this.inventory.addEventListener('assetCreated', (data) => {
             this.handleAssetCreated(data);
         });
-        
+
         this.inventory.addEventListener('assetUpdated', (data) => {
             this.handleAssetUpdated(data);
         });
-        
+
         this.inventory.addEventListener('assetDeleted', (data) => {
             this.handleAssetDeleted(data);
         });
-        
+
         // Connect search events
         this.search.addEventListener('searchCompleted', (data) => {
             this.handleSearchCompleted(data);
         });
-        
+
         this.search.addEventListener('advancedSearchCompleted', (data) => {
             this.handleAdvancedSearchCompleted(data);
         });
-        
+
         // Connect categories events
         this.categories.addEventListener('categoriesLoaded', (data) => {
             this.handleCategoriesLoaded(data);
         });
-        
+
         this.categories.addEventListener('categorySelected', (data) => {
             this.handleCategorySelected(data);
         });
-        
+
         // Connect metadata events
         this.metadata.addEventListener('metadataLoaded', (data) => {
             this.handleMetadataLoaded(data);
         });
-        
+
         this.metadata.addEventListener('metadataUpdated', (data) => {
             this.handleMetadataUpdated(data);
         });
@@ -97,12 +97,12 @@ export class AssetInventoryManager {
         document.addEventListener('assetSelected', (event) => {
             this.handleAssetSelection(event.detail);
         });
-        
+
         // Listen for bulk operations
         document.addEventListener('bulkOperationRequested', (event) => {
             this.handleBulkOperation(event.detail);
         });
-        
+
         // Listen for export requests
         document.addEventListener('exportRequested', (event) => {
             this.handleExportRequest(event.detail);
@@ -113,14 +113,14 @@ export class AssetInventoryManager {
     async loadAssets() {
         this.isLoading = true;
         this.triggerEvent('loadingStarted');
-        
+
         try {
             await this.inventory.loadAssets();
             await this.categories.loadCategories();
-            
+
             this.updateSummaryCards();
             this.renderCharts();
-            
+
         } catch (error) {
             console.error('Failed to load assets:', error);
             this.triggerEvent('loadingFailed', { error });
@@ -133,18 +133,18 @@ export class AssetInventoryManager {
     async createAsset(assetData) {
         try {
             const asset = await this.inventory.createAsset(assetData);
-            
+
             // Create metadata if template exists
             if (asset.asset_type) {
                 const metadata = this.metadata.createMetadataFromTemplate(asset.asset_type);
                 await this.metadata.updateAssetMetadata(asset.id, metadata);
             }
-            
+
             this.updateSummaryCards();
             this.renderCharts();
-            
+
             return asset;
-            
+
         } catch (error) {
             console.error('Failed to create asset:', error);
             throw error;
@@ -157,7 +157,7 @@ export class AssetInventoryManager {
             this.updateSummaryCards();
             this.renderCharts();
             return asset;
-            
+
         } catch (error) {
             console.error('Failed to update asset:', error);
             throw error;
@@ -168,11 +168,11 @@ export class AssetInventoryManager {
         try {
             await this.inventory.deleteAsset(assetId);
             await this.metadata.deleteAssetMetadata(assetId);
-            
+
             this.selectedAssets.delete(assetId);
             this.updateSummaryCards();
             this.renderCharts();
-            
+
         } catch (error) {
             console.error('Failed to delete asset:', error);
             throw error;
@@ -213,18 +213,18 @@ export class AssetInventoryManager {
     // Bulk operations
     async deleteSelectedAssets() {
         if (this.selectedAssets.size === 0) return;
-        
+
         try {
             const assetIds = Array.from(this.selectedAssets);
             await this.inventory.deleteSelectedAssets(assetIds);
-            
+
             // Clear selection
             this.selectedAssets.clear();
             this.updateSummaryCards();
             this.renderCharts();
-            
+
             this.triggerEvent('bulkDeleteCompleted', { assetIds });
-            
+
         } catch (error) {
             console.error('Failed to delete selected assets:', error);
             this.triggerEvent('bulkDeleteFailed', { error });
@@ -234,17 +234,17 @@ export class AssetInventoryManager {
 
     async exportSelectedAssets(format = 'csv') {
         if (this.selectedAssets.size === 0) return;
-        
+
         try {
             const assetIds = Array.from(this.selectedAssets);
             const assets = assetIds.map(id => this.inventory.getAssetById(id)).filter(Boolean);
-            
+
             const exportData = {
                 assets: assets,
                 format: format,
                 timestamp: new Date().toISOString()
             };
-            
+
             const response = await fetch('/api/assets/export', {
                 method: 'POST',
                 headers: {
@@ -253,24 +253,24 @@ export class AssetInventoryManager {
                 },
                 body: JSON.stringify(exportData)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
-            
+
             // Create download link
             const a = document.createElement('a');
             a.href = url;
             a.download = `asset_export_${Date.now()}.${format}`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             this.triggerEvent('exportCompleted', { assetIds, format });
-            
+
         } catch (error) {
             console.error('Failed to export assets:', error);
             this.triggerEvent('exportFailed', { error });
@@ -370,7 +370,7 @@ export class AssetInventoryManager {
 
     handleBulkOperation(detail) {
         const { operation, assetIds } = detail;
-        
+
         switch (operation) {
             case 'delete':
                 this.deleteSelectedAssets();
@@ -405,7 +405,7 @@ export class AssetInventoryManager {
         this.assetModal.id = 'asset-modal';
         this.assetModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         this.assetModal.style.display = 'none';
-        
+
         this.assetModal.innerHTML = `
             <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
@@ -419,7 +419,7 @@ export class AssetInventoryManager {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(this.assetModal);
         this.setupAssetModalEvents();
     }
@@ -429,7 +429,7 @@ export class AssetInventoryManager {
         this.exportModal.id = 'export-modal';
         this.exportModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         this.exportModal.style.display = 'none';
-        
+
         this.exportModal.innerHTML = `
             <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                 <div class="flex items-center justify-between mb-4">
@@ -471,7 +471,7 @@ export class AssetInventoryManager {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(this.exportModal);
         this.setupExportModalEvents();
     }
@@ -487,15 +487,15 @@ export class AssetInventoryManager {
         const closeButton = this.exportModal.querySelector('#close-export-modal');
         const cancelButton = this.exportModal.querySelector('#export-cancel');
         const confirmButton = this.exportModal.querySelector('#export-confirm');
-        
+
         closeButton.addEventListener('click', () => {
             this.closeExportModal();
         });
-        
+
         cancelButton.addEventListener('click', () => {
             this.closeExportModal();
         });
-        
+
         confirmButton.addEventListener('click', () => {
             this.handleExportConfirm();
         });
@@ -529,25 +529,25 @@ export class AssetInventoryManager {
 
     async renderAssetForm(assetId) {
         const content = this.assetModal.querySelector('#asset-modal-content');
-        
+
         if (assetId) {
             // Edit existing asset
             const asset = this.inventory.getAssetById(assetId);
             const metadata = await this.metadata.getAssetMetadata(assetId);
-            
+
             content.innerHTML = this.generateAssetForm(asset, metadata, true);
         } else {
             // Create new asset
             content.innerHTML = this.generateAssetForm(null, null, false);
         }
-        
+
         this.setupAssetFormEvents();
     }
 
     generateAssetForm(asset, metadata, isEdit) {
         const title = isEdit ? 'Edit Asset' : 'Create Asset';
         const submitText = isEdit ? 'Update Asset' : 'Create Asset';
-        
+
         return `
             <form id="asset-form" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
@@ -563,13 +563,13 @@ export class AssetInventoryManager {
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">System</label>
-                        <input type="text" id="asset-system" class="w-full border border-gray-300 rounded-md px-3 py-2" 
+                        <input type="text" id="asset-system" class="w-full border border-gray-300 rounded-md px-3 py-2"
                                value="${asset?.system || ''}" required>
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                    <input type="text" id="asset-location" class="w-full border border-gray-300 rounded-md px-3 py-2" 
+                    <input type="text" id="asset-location" class="w-full border border-gray-300 rounded-md px-3 py-2"
                            value="${asset?.location?.room || ''}" placeholder="Room/Area">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
@@ -583,7 +583,7 @@ export class AssetInventoryManager {
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Estimated Value</label>
-                        <input type="number" id="asset-value" class="w-full border border-gray-300 rounded-md px-3 py-2" 
+                        <input type="number" id="asset-value" class="w-full border border-gray-300 rounded-md px-3 py-2"
                                value="${asset?.estimated_value || ''}" placeholder="0.00">
                     </div>
                 </div>
@@ -602,12 +602,12 @@ export class AssetInventoryManager {
     setupAssetFormEvents() {
         const form = this.assetModal.querySelector('#asset-form');
         const cancelButton = this.assetModal.querySelector('#cancel-asset-form');
-        
+
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleAssetFormSubmit();
         });
-        
+
         cancelButton.addEventListener('click', () => {
             this.closeAssetModal();
         });
@@ -622,16 +622,16 @@ export class AssetInventoryManager {
             status: formData.get('asset-status'),
             estimated_value: parseFloat(formData.get('asset-value')) || null
         };
-        
+
         try {
             if (this.currentAssetId) {
                 await this.updateAsset(this.currentAssetId, assetData);
             } else {
                 await this.createAsset(assetData);
             }
-            
+
             this.closeAssetModal();
-            
+
         } catch (error) {
             console.error('Failed to save asset:', error);
             // Show error message to user
@@ -642,7 +642,7 @@ export class AssetInventoryManager {
         const format = this.exportModal.querySelector('#export-format').value;
         const includeMetadata = this.exportModal.querySelector('#include-metadata').checked;
         const includeCategories = this.exportModal.querySelector('#include-categories').checked;
-        
+
         this.exportSelectedAssets(format);
         this.closeExportModal();
     }
@@ -656,13 +656,13 @@ export class AssetInventoryManager {
             maintenance: assets.filter(a => a.status === 'Maintenance').length,
             inactive: assets.filter(a => a.status === 'Inactive').length
         };
-        
+
         this.triggerEvent('summaryUpdated', { stats });
     }
 
     renderCharts() {
         if (!this.options.enableCharts) return;
-        
+
         this.renderSystemChart();
         this.renderStatusChart();
         this.renderValueChart();
@@ -671,22 +671,22 @@ export class AssetInventoryManager {
     renderSystemChart() {
         const assets = this.inventory.getAssets();
         const systemData = {};
-        
+
         assets.forEach(asset => {
             systemData[asset.system] = (systemData[asset.system] || 0) + 1;
         });
-        
+
         this.triggerEvent('systemChartUpdated', { data: systemData });
     }
 
     renderStatusChart() {
         const assets = this.inventory.getAssets();
         const statusData = {};
-        
+
         assets.forEach(asset => {
             statusData[asset.status] = (statusData[asset.status] || 0) + 1;
         });
-        
+
         this.triggerEvent('statusChartUpdated', { data: statusData });
     }
 
@@ -698,7 +698,7 @@ export class AssetInventoryManager {
             '50k-100k': 0,
             '100k+': 0
         };
-        
+
         assets.forEach(asset => {
             const value = asset.estimated_value || 0;
             if (value <= 10000) valueRanges['0-10k']++;
@@ -706,7 +706,7 @@ export class AssetInventoryManager {
             else if (value <= 100000) valueRanges['50k-100k']++;
             else valueRanges['100k+']++;
         });
-        
+
         this.triggerEvent('valueChartUpdated', { data: valueRanges });
     }
 
@@ -809,10 +809,10 @@ export class AssetInventoryManager {
         if (this.metadata) {
             this.metadata.destroy();
         }
-        
+
         // Clear state
         this.selectedAssets.clear();
-        
+
         // Remove UI elements
         if (this.assetModal) {
             this.assetModal.remove();
@@ -820,10 +820,10 @@ export class AssetInventoryManager {
         if (this.exportModal) {
             this.exportModal.remove();
         }
-        
+
         // Clear event handlers
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

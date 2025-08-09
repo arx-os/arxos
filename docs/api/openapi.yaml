@@ -4,7 +4,7 @@ info:
   description: |
     Comprehensive API for the SVGX Engine, providing real-time collaborative SVG editing,
     user management, system monitoring, and advanced features.
-    
+
     ## Features
     - Real-time collaborative editing with WebSocket support
     - Authentication and role-based access control
@@ -12,17 +12,17 @@ info:
     - System monitoring and health checks
     - Backup and restore functionality
     - Horizontal scaling and load balancing
-    
+
     ## Authentication
     All endpoints require JWT authentication except for login and health checks.
     Include the token in the Authorization header: `Bearer <token>`
-    
+
     ## WebSocket Events
     Real-time collaboration is handled through WebSocket connections at `/runtime/events`
-    
+
     ## Rate Limiting
     API endpoints are rate-limited per user. Check response headers for rate limit information.
-    
+
     ## Error Handling
     All errors return consistent JSON responses with error codes and messages.
   version: 1.0.0
@@ -754,12 +754,12 @@ paths:
       summary: WebSocket connection
       description: |
         WebSocket endpoint for real-time collaboration.
-        
+
         ## Connection Parameters
         - `canvas_id`: Canvas identifier
         - `session_id`: Session identifier
         - `token`: JWT access token
-        
+
         ## Event Types
         - `handshake`: Initial connection handshake
         - `edit_operation`: Object edit operations
@@ -768,7 +768,7 @@ paths:
         - `user_activity`: User activity notifications
         - `navigation`: Canvas navigation events
         - `annotation`: Annotation events
-        
+
         ## Message Format
         ```json
         {
@@ -1061,4 +1061,4 @@ components:
         timestamp:
           type: string
           format: date-time
-          description: Error timestamp 
+          description: Error timestamp

@@ -1,11 +1,11 @@
-"""
+("""
 NLP Models Package
 
 This package contains data models for NLP processing including
 request/response handling, intent detection, slot filling, and CLI command generation.
 """
 
-from services.nlp_models
+from services.nlp_models import services.nlp_models
     NLPRequest, NLPResponse, Intent, Slot, SlotResult, CLICommand,
     NLPContext, ValidationResult, ProcessingStats,
     IntentType, SlotType,
@@ -15,7 +15,7 @@ from services.nlp_models
 
 __all__ = [
     "NLPRequest",
-    "NLPResponse", 
+    "NLPResponse",
     "Intent",
     "Slot",
     "SlotResult",
@@ -31,4 +31,4 @@ __all__ = [
     "nlp_context_from_dict",
     "nlp_response_from_dict",
     "nlp_response_from_json"
-] 
+]

@@ -25,18 +25,18 @@ from scripts.building_service_integration import BuildingServiceIntegrationPipel
 class HVACSystemIntegration:
     """
     Example HVAC system integration using the building service integration pipeline.
-    
+
     This example shows how to integrate a typical HVAC system with:
     - Temperature and humidity sensors
     - HVAC equipment (air handlers, chillers, etc.)
     - Energy management features
     - Real-time monitoring and control
     """
-    
+
     def __init__(self):
         self.pipeline = BuildingServiceIntegrationPipeline()
         self.hvac_config = self._create_hvac_config()
-    
+
     def _create_hvac_config(self) -> Dict[str, Any]:
         """Create configuration for HVAC system integration"""
         return {
@@ -83,84 +83,84 @@ class HVACSystemIntegration:
             "supported_formats": ["json", "xml", "csv"],
             "authentication_methods": ["oauth2", "api_key", "certificate"]
         }
-    
+
     async def run_hvac_integration(self) -> Dict[str, Any]:
         """Run the complete HVAC system integration"""
         print("🚀 Starting HVAC System Integration")
         print("=" * 60)
-        
+
         try:
             # Run the complete pipeline
             results = self.pipeline.run_complete_pipeline(self.hvac_config)
-            
+
             # Process and display results
             await self._process_integration_results(results)
-            
+
             return results
-            
+
         except Exception as e:
             print(f"❌ HVAC integration failed: {e}")
             raise
-    
+
     async def _process_integration_results(self, results: Dict[str, Any]):
         """Process and display integration results"""
         print("\n📊 Integration Results Summary")
         print("=" * 60)
-        
+
         # Phase 1: Service Discovery
         phase1 = results.get("phases", {}).get("phase1", {})
         print(f"✅ Phase 1 - Service Discovery: {phase1.get('service_name', 'Unknown')}")
         print(f"   Integration Level: {phase1.get('integration_level', 'Unknown')}")
         print(f"   Complexity: {phase1.get('complexity_assessment', {}).get('complexity_level', 'Unknown')}")
-        
+
         # Phase 2: SVGX Schema
         phase2 = results.get("phases", {}).get("phase2", {})
         print(f"✅ Phase 2 - SVGX Schema: Generated successfully")
         print(f"   Behavior Profiles: {len(phase2.get('behavior_profiles', {}))}")
         print(f"   Validation Rules: {len(phase2.get('validation_rules', []))}")
-        
+
         # Phase 3: BIM Integration
         phase3 = results.get("phases", {}).get("phase3", {})
         print(f"✅ Phase 3 - BIM Integration: Configured successfully")
         print(f"   BIM Mappings: {len(phase3.get('bim_mappings', {}))}")
         print(f"   Property Sets: {len(phase3.get('property_sets', {}))}")
-        
+
         # Phase 4: Multi-System Integration
         phase4 = results.get("phases", {}).get("phase4", {})
         print(f"✅ Phase 4 - Multi-System Integration: Configured successfully")
         print(f"   Transformation Rules: {len(phase4.get('transformation_rules', {}))}")
         print(f"   Sync Mechanisms: {len(phase4.get('sync_mechanisms', {}))}")
-        
+
         # Phase 5: Workflow Automation
         phase5 = results.get("phases", {}).get("phase5", {})
         print(f"✅ Phase 5 - Workflow Automation: Configured successfully")
         print(f"   Workflows: {len(phase5.get('workflows', {}))}")
         print(f"   Triggers: {len(phase5.get('triggers', {}))}")
-        
+
         # Phase 6: Testing & Validation
         phase6 = results.get("phases", {}).get("phase6", {})
         print(f"✅ Phase 6 - Testing & Validation: {phase6.get('overall_status', 'Unknown')}")
         print(f"   Integration Tests: {phase6.get('integration_tests', {}).get('status', 'Unknown')}")
         print(f"   Performance Tests: {phase6.get('performance_tests', {}).get('status', 'Unknown')}")
         print(f"   Compliance Tests: {phase6.get('compliance_tests', {}).get('status', 'Unknown')}")
-        
+
         # Phase 7: Deployment & Monitoring
         phase7 = results.get("phases", {}).get("phase7", {})
         print(f"✅ Phase 7 - Deployment & Monitoring: Configured successfully")
         print(f"   Monitoring Config: {len(phase7.get('monitoring_config', {}))}")
         print(f"   Alerting Rules: {len(phase7.get('alerting_rules', []))}")
-        
+
         # Overall Status
         print(f"\n🎯 Overall Status: {results.get('overall_status', 'Unknown')}")
         print(f"⏱️  Completion Time: {results.get('completion_timestamp', 'Unknown')}")
-        
+
         # Next Steps
         next_steps = results.get('next_steps', [])
         if next_steps:
             print(f"\n📋 Next Steps:")
             for i, step in enumerate(next_steps, 1):
                 print(f"   {i}. {step}")
-    
+
     def create_hvac_svgx_schema(self) -> Dict[str, Any]:
         """Create SVGX schema specific to HVAC systems"""
         return {
@@ -219,7 +219,7 @@ class HVACSystemIntegration:
                 }
             }
         }
-    
+
     def create_hvac_behavior_profiles(self) -> Dict[str, Any]:
         """Create behavior profiles for HVAC systems"""
         return {
@@ -289,7 +289,7 @@ class HVACSystemIntegration:
                 }
             }
         }
-    
+
     def create_hvac_workflows(self) -> Dict[str, Any]:
         """Create automation workflows for HVAC systems"""
         return {
@@ -342,21 +342,21 @@ async def main():
     """Main function to run the HVAC integration example"""
     print("🏢 HVAC System Integration Example")
     print("=" * 60)
-    
+
     # Create HVAC integration
     hvac_integration = HVACSystemIntegration()
-    
+
     try:
         # Run the integration
         results = await hvac_integration.run_hvac_integration()
-        
+
         # Save results
         with open("hvac_integration_results.json", "w") as f:
             json.dump(results, f, indent=2)
-        
+
         print(f"\n✅ HVAC integration completed successfully!")
         print(f"📊 Results saved to: hvac_integration_results.json")
-        
+
         # Display additional HVAC-specific information
         print(f"\n🔧 HVAC-Specific Features:")
         print(f"   - Temperature and humidity control")
@@ -364,15 +364,15 @@ async def main():
         print(f"   - Predictive maintenance scheduling")
         print(f"   - Air quality monitoring")
         print(f"   - Real-time performance tracking")
-        
+
     except Exception as e:
         print(f"❌ HVAC integration failed: {e}")
         return False
-    
+
     return True
 
 
 if __name__ == "__main__":
     # Run the HVAC integration example
     success = asyncio.run(main())
-    sys.exit(0 if success else 1) 
+    sys.exit(0 if success else 1)

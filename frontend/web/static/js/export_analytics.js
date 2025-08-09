@@ -238,7 +238,7 @@ async function loadExportActivities() {
 // Build filter query string
 function buildFilters() {
     const filters = [];
-    
+
     const userId = document.getElementById('user-filter').value;
     if (userId) filters.push(`user_id=${userId}`);
 
@@ -401,4 +401,4 @@ function logout() {
 }
 
 // Auto-refresh dashboard data every 5 minutes
-setInterval(loadDashboardData, 5 * 60 * 1000); 
+setInterval(loadDashboardData, 5 * 60 * 1000);

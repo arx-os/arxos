@@ -46,7 +46,7 @@ class TestTimeBasedTriggerSystemLogic:
             timezone="UTC",
             metadata={"test": True}
         )
-        
+
         assert trigger.id == "test_trigger"
         assert trigger.type == TriggerType.ONE_TIME
         assert trigger.name == "Test One Time Trigger"
@@ -65,7 +65,7 @@ class TestTimeBasedTriggerSystemLogic:
             description="A test periodic trigger",
             max_executions=5
         )
-        
+
         assert trigger.id == "periodic_trigger"
         assert trigger.type == TriggerType.PERIODIC
         assert trigger.interval_seconds == 60.0
@@ -79,7 +79,7 @@ class TestTimeBasedTriggerSystemLogic:
             interval_seconds=30.0,
             description="A test interval trigger"
         )
-        
+
         assert trigger.id == "interval_trigger"
         assert trigger.type == TriggerType.INTERVAL
         assert trigger.interval_seconds == 30.0
@@ -92,7 +92,7 @@ class TestTimeBasedTriggerSystemLogic:
             cron_expression="0 12 * * *",  # Daily at noon
             description="A test cron trigger"
         )
-        
+
         assert trigger.id == "cron_trigger"
         assert trigger.type == TriggerType.CRON
         assert trigger.cron_expression == "0 12 * * *"
@@ -105,12 +105,12 @@ class TestTimeBasedTriggerSystemLogic:
             name="Pause Test Trigger",
             interval_seconds=60.0
         )
-        
+
         # Pause the trigger
         result = time_based_trigger_system.pause_trigger("pause_test")
         assert result == True
         assert trigger.status == TriggerStatus.PAUSED
-        
+
         # Resume the trigger
         result = time_based_trigger_system.resume_trigger("pause_test")
         assert result == True
@@ -123,7 +123,7 @@ class TestTimeBasedTriggerSystemLogic:
             name="Resume Test Trigger",
             interval_seconds=60.0
         )
-        
+
         # Try to resume a non-paused trigger
         result = time_based_trigger_system.resume_trigger("resume_test")
         assert result == False
@@ -135,7 +135,7 @@ class TestTimeBasedTriggerSystemLogic:
             name="Cancel Test Trigger",
             interval_seconds=60.0
         )
-        
+
         # Cancel the trigger
         result = time_based_trigger_system.cancel_trigger("cancel_test")
         assert result == True
@@ -149,7 +149,7 @@ class TestTimeBasedTriggerSystemLogic:
             name="Delete Test Trigger",
             interval_seconds=60.0
         )
-        
+
         # Delete the trigger
         result = time_based_trigger_system.delete_trigger("delete_test")
         assert result == True
@@ -162,7 +162,7 @@ class TestTimeBasedTriggerSystemLogic:
             name="Get Test Trigger",
             interval_seconds=60.0
         )
-        
+
         # Get the trigger
         retrieved_trigger = time_based_trigger_system.get_trigger("get_test")
         assert retrieved_trigger is not None
@@ -176,19 +176,19 @@ class TestTimeBasedTriggerSystemLogic:
             name="Active Trigger",
             interval_seconds=60.0
         )
-        
+
         trigger2 = time_based_trigger_system.create_interval_trigger(
             trigger_id="paused_trigger",
             name="Paused Trigger",
             interval_seconds=60.0
         )
         time_based_trigger_system.pause_trigger("paused_trigger")
-        
+
         # Get active triggers
         active_triggers = time_based_trigger_system.get_triggers(TriggerStatus.ACTIVE)
         assert len(active_triggers) == 1
         assert active_triggers[0].id == "active_trigger"
-        
+
         # Get paused triggers
         paused_triggers = time_based_trigger_system.get_triggers(TriggerStatus.PAUSED)
         assert len(paused_triggers) == 1
@@ -202,7 +202,7 @@ class TestTimeBasedTriggerSystemLogic:
             name="Due Trigger",
             target_time=past_time
         )
-        
+
         # Get due triggers
         due_triggers = time_based_trigger_system.get_due_triggers()
         assert len(due_triggers) == 1
@@ -215,7 +215,7 @@ class TestTimeBasedTriggerSystemLogic:
             name="History Test Trigger",
             interval_seconds=1.0
         )
-        
+
         # Get execution history (should be empty initially)
         history = time_based_trigger_system.get_execution_history("history_test")
         assert len(history) == 0
@@ -227,7 +227,7 @@ class TestTimeBasedTriggerSystemLogic:
             name="Clear History Test Trigger",
             interval_seconds=60.0
         )
-        
+
         # Clear execution history
         time_based_trigger_system.clear_execution_history("clear_history_test")
         history = time_based_trigger_system.get_execution_history("clear_history_test")
@@ -240,16 +240,16 @@ class TestTimeBasedTriggerSystemLogic:
             name="Status Test Trigger 1",
             interval_seconds=60.0
         )
-        
+
         time_based_trigger_system.create_interval_trigger(
             trigger_id="status_test2",
             name="Status Test Trigger 2",
             interval_seconds=60.0
         )
-        
+
         # Pause one trigger
         time_based_trigger_system.pause_trigger("status_test2")
-        
+
         # Get system status
         status = time_based_trigger_system.get_system_status()
         assert status["total_triggers"] == 2
@@ -266,7 +266,7 @@ class TestTimeBasedTriggerSystemLogic:
             interval_seconds=1.0,
             max_executions=3
         )
-        
+
         assert trigger.max_executions == 3
         assert trigger.current_executions == 0
 
@@ -278,7 +278,7 @@ class TestTimeBasedTriggerSystemLogic:
             target_time=datetime.utcnow() + timedelta(hours=1),
             timezone="America/New_York"
         )
-        
+
         assert trigger.timezone == "America/New_York"
 
 class TestTimeBasedTriggerSystemAsync:
@@ -291,10 +291,10 @@ class TestTimeBasedTriggerSystemAsync:
             name="Async Test Trigger",
             target_time=past_time
         )
-        
+
         # Wait a bit for execution
         await asyncio.sleep(2)
-        
+
         # Check execution history
         history = time_based_trigger_system.get_execution_history("async_test")
         assert len(history) >= 1
@@ -309,14 +309,14 @@ class TestTimeBasedTriggerSystemAsync:
             interval_seconds=1.0,
             max_executions=2
         )
-        
+
         # Wait for executions
         await asyncio.sleep(3)
-        
+
         # Check execution history
         history = time_based_trigger_system.get_execution_history("interval_async_test")
         assert len(history) >= 1
-        
+
         # Check trigger status
         updated_trigger = time_based_trigger_system.get_trigger("interval_async_test")
         assert updated_trigger.current_executions >= 1
@@ -329,16 +329,16 @@ class TestTimeBasedTriggerSystemAsync:
             name="Pause Async Test",
             interval_seconds=1.0
         )
-        
+
         # Wait a bit for execution
         await asyncio.sleep(1)
-        
+
         # Pause the trigger
         time_based_trigger_system.pause_trigger("pause_async_test")
-        
+
         # Wait more time
         await asyncio.sleep(2)
-        
+
         # Check that trigger is paused
         updated_trigger = time_based_trigger_system.get_trigger("pause_async_test")
         assert updated_trigger.status == TriggerStatus.PAUSED
@@ -348,7 +348,7 @@ class TestTimeBasedTriggerSystemAsync:
         # Test system start/stop functionality
         await time_based_trigger_system.stop()
         assert time_based_trigger_system.running == False
-        
+
         await time_based_trigger_system.start()
         assert time_based_trigger_system.running == True
 
@@ -361,10 +361,10 @@ class TestTimeBasedTriggerSystemIntegration:
             name="Integration Test",
             target_time=datetime.utcnow() - timedelta(seconds=1)
         )
-        
+
         # Wait for execution
         await asyncio.sleep(2)
-        
+
         # Check that trigger events are processed by the behavior engine
         # This is tested indirectly through the execution history
         history = time_based_trigger_system.get_execution_history("integration_test")
@@ -380,7 +380,7 @@ class TestTimeBasedTriggerSystemIntegration:
             target_time=datetime.utcnow() + timedelta(seconds=10),
             metadata=metadata
         )
-        
+
         assert trigger.metadata == metadata
         assert trigger.metadata["user_id"] == "123"
         assert trigger.metadata["priority"] == "high"
@@ -389,13 +389,13 @@ class TestTimeBasedTriggerSystemIntegration:
         # Test handling of non-existent triggers
         result = time_based_trigger_system.pause_trigger("nonexistent")
         assert result == False
-        
+
         result = time_based_trigger_system.resume_trigger("nonexistent")
         assert result == False
-        
+
         result = time_based_trigger_system.cancel_trigger("nonexistent")
         assert result == False
-        
+
         result = time_based_trigger_system.delete_trigger("nonexistent")
         assert result == False
 
@@ -407,16 +407,16 @@ class TestTimeBasedTriggerSystemIntegration:
             name="Calculation Test",
             target_time=future_time
         )
-        
+
         # Test that next execution is calculated correctly
         assert trigger.next_execution == future_time
-        
+
         # Test interval trigger calculation
         interval_trigger = time_based_trigger_system.create_interval_trigger(
             trigger_id="interval_calc_test",
             name="Interval Calculation Test",
             interval_seconds=60.0
         )
-        
+
         # Next execution should be in the future
-        assert interval_trigger.next_execution > datetime.utcnow() 
+        assert interval_trigger.next_execution > datetime.utcnow()

@@ -38,7 +38,7 @@
             <div class="border-4 border-dashed border-gray-200 rounded-lg p-6">
                 <h1 class="text-3xl font-bold text-gray-900 mb-4">Compliance & Reporting</h1>
                 <p class="text-gray-600 mb-6">Manage data retention policies, generate compliance reports, and monitor data access for auditors.</p>
-                
+
                 <!-- Tab Navigation -->
                 <div class="border-b border-gray-200 mb-6">
                     <nav class="-mb-px flex space-x-8">
@@ -64,7 +64,7 @@
                         <div class="bg-white shadow rounded-lg p-6">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Access Logs</h2>
                             <p class="text-gray-600 mb-6">Track all data access events for auditor review and compliance reporting.</p>
-                            
+
                             <!-- Filters -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                 <div>
@@ -89,7 +89,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Search Button -->
                             <div class="flex justify-between items-center mb-4">
                                 <button onclick="searchDataAccessLogs()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
@@ -99,7 +99,7 @@
                                     Export CSV
                                 </button>
                             </div>
-                            
+
                             <!-- Results Table -->
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
@@ -118,7 +118,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            
+
                             <!-- Pagination -->
                             <div id="data-access-pagination" class="mt-4 flex items-center justify-between">
                                 <!-- Pagination controls will be loaded here -->
@@ -131,7 +131,7 @@
                         <div class="bg-white shadow rounded-lg p-6">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Change History</h2>
                             <p class="text-gray-600 mb-6">Track detailed changes to objects for compliance and audit purposes.</p>
-                            
+
                             <!-- Object Selection -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                 <div>
@@ -158,7 +158,7 @@
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <!-- Search Button -->
                             <div class="flex justify-between items-center mb-4">
                                 <button onclick="searchChangeHistory()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
@@ -168,7 +168,7 @@
                                     Export CSV
                                 </button>
                             </div>
-                            
+
                             <!-- Results Table -->
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
@@ -195,7 +195,7 @@
                         <div class="bg-white shadow rounded-lg p-6">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Export Activity Summary</h2>
                             <p class="text-gray-600 mb-6">Monitor export activities and generate compliance summaries.</p>
-                            
+
                             <!-- Period Selection -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                 <div>
@@ -216,7 +216,7 @@
                                     <input type="date" id="summary-date-to" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                             </div>
-                            
+
                             <!-- Generate Summary Button -->
                             <div class="flex justify-between items-center mb-4">
                                 <button onclick="generateExportSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
@@ -226,12 +226,12 @@
                                     Export Report
                                 </button>
                             </div>
-                            
+
                             <!-- Summary Results -->
                             <div id="export-summary-results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <!-- Summary cards will be loaded here -->
                             </div>
-                            
+
                             <!-- Detailed Statistics -->
                             <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="bg-gray-50 p-4 rounded-lg">
@@ -255,7 +255,7 @@
                         <div class="bg-white shadow rounded-lg p-6">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Data Retention Management</h2>
                             <p class="text-gray-600 mb-6">Configure and manage data retention policies for compliance requirements.</p>
-                            
+
                             <!-- Retention Policies -->
                             <div class="mb-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Retention Policies</h3>
@@ -277,7 +277,7 @@
                                     </table>
                                 </div>
                             </div>
-                            
+
                             <!-- Retention Statistics -->
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                                 <div class="bg-blue-50 p-4 rounded-lg">
@@ -299,7 +299,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Manual Operations -->
                             <div class="border-t pt-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-4">Manual Operations</h3>
@@ -344,25 +344,25 @@
                 content.classList.add('hidden');
                 content.classList.remove('active');
             });
-            
+
             // Remove active class from all tab buttons
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active', 'border-blue-500', 'text-blue-600');
                 button.classList.add('border-transparent', 'text-gray-500');
             });
-            
+
             // Show selected tab content
             document.getElementById(tabName).classList.remove('hidden');
             document.getElementById(tabName).classList.add('active');
-            
+
             // Add active class to selected tab button
             event.target.classList.add('active', 'border-blue-500', 'text-blue-600');
             event.target.classList.remove('border-transparent', 'text-gray-500');
-            
+
             // Load data for the selected tab
             loadTabData(tabName);
         }
-        
+
         function loadTabData(tabName) {
             switch(tabName) {
                 case 'data-access':
@@ -379,20 +379,20 @@
                     break;
             }
         }
-        
+
         // Data Access Logs functions
         function loadDataAccessLogs() {
             const userId = document.getElementById('user-id-filter').value;
             const action = document.getElementById('action-filter').value;
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
-            
+
             const params = new URLSearchParams();
             if (userId) params.append('user_id', userId);
             if (action) params.append('action', action);
             if (dateFrom) params.append('date_from', dateFrom);
             if (dateTo) params.append('date_to', dateTo);
-            
+
             fetch(`/api/compliance/data-access-logs?${params}`)
                 .then(response => response.json())
                 .then(data => {
@@ -401,33 +401,33 @@
                 })
                 .catch(error => console.error('Error loading data access logs:', error));
         }
-        
+
         function searchDataAccessLogs() {
             loadDataAccessLogs();
         }
-        
+
         function exportDataAccessLogs() {
             const params = new URLSearchParams();
             params.append('export', 'csv');
-            
+
             // Add current filters
             const userId = document.getElementById('user-id-filter').value;
             const action = document.getElementById('action-filter').value;
             const dateFrom = document.getElementById('date-from').value;
             const dateTo = document.getElementById('date-to').value;
-            
+
             if (userId) params.append('user_id', userId);
             if (action) params.append('action', action);
             if (dateFrom) params.append('date_from', dateFrom);
             if (dateTo) params.append('date_to', dateTo);
-            
+
             window.open(`/api/compliance/data-access-logs?${params}`, '_blank');
         }
-        
+
         function displayDataAccessLogs(logs) {
             const tbody = document.getElementById('data-access-results');
             tbody.innerHTML = '';
-            
+
             logs.forEach(log => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -441,22 +441,22 @@
                 tbody.appendChild(row);
             });
         }
-        
+
         // Change History functions
         function loadChangeHistory() {
             const objectType = document.getElementById('object-type-filter').value;
             const objectId = document.getElementById('object-id-filter').value;
             const changeType = document.getElementById('change-type-filter').value;
-            
+
             if (!objectId) {
                 document.getElementById('change-history-results').innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Enter an Object ID to view change history</td></tr>';
                 return;
             }
-            
+
             const params = new URLSearchParams();
             if (objectType) params.append('object_type', objectType);
             if (changeType) params.append('change_type', changeType);
-            
+
             fetch(`/api/compliance/change-history/${objectType || 'asset'}/${objectId}?${params}`)
                 .then(response => response.json())
                 .then(data => {
@@ -464,35 +464,35 @@
                 })
                 .catch(error => console.error('Error loading change history:', error));
         }
-        
+
         function searchChangeHistory() {
             loadChangeHistory();
         }
-        
+
         function exportChangeHistory() {
             const objectType = document.getElementById('object-type-filter').value;
             const objectId = document.getElementById('object-id-filter').value;
-            
+
             if (!objectId) {
                 alert('Please enter an Object ID to export change history');
                 return;
             }
-            
+
             const params = new URLSearchParams();
             params.append('export', 'csv');
-            
+
             window.open(`/api/compliance/change-history/${objectType || 'asset'}/${objectId}?${params}`, '_blank');
         }
-        
+
         function displayChangeHistory(changes) {
             const tbody = document.getElementById('change-history-results');
             tbody.innerHTML = '';
-            
+
             if (changes.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No changes found</td></tr>';
                 return;
             }
-            
+
             changes.forEach(change => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -506,7 +506,7 @@
                 tbody.appendChild(row);
             });
         }
-        
+
         function formatFieldChanges(fieldChanges) {
             if (!fieldChanges) return '-';
             try {
@@ -516,18 +516,18 @@
                 return '-';
             }
         }
-        
+
         // Export Summary functions
         function loadExportSummary() {
             const period = document.getElementById('period-filter').value;
             const dateFrom = document.getElementById('summary-date-from').value;
             const dateTo = document.getElementById('summary-date-to').value;
-            
+
             const params = new URLSearchParams();
             params.append('period', period);
             if (dateFrom) params.append('date_from', dateFrom);
             if (dateTo) params.append('date_to', dateTo);
-            
+
             fetch(`/api/compliance/export-activity-summary?${params}`)
                 .then(response => response.json())
                 .then(data => {
@@ -535,25 +535,25 @@
                 })
                 .catch(error => console.error('Error loading export summary:', error));
         }
-        
+
         function generateExportSummary() {
             loadExportSummary();
         }
-        
+
         function exportSummary() {
             const period = document.getElementById('period-filter').value;
             const dateFrom = document.getElementById('summary-date-from').value;
             const dateTo = document.getElementById('summary-date-to').value;
-            
+
             const params = new URLSearchParams();
             params.append('period', period);
             if (dateFrom) params.append('date_from', dateFrom);
             if (dateTo) params.append('date_to', dateTo);
             params.append('export', 'csv');
-            
+
             window.open(`/api/compliance/export-activity-summary?${params}`, '_blank');
         }
-        
+
         function displayExportSummary(summary) {
             const resultsDiv = document.getElementById('export-summary-results');
             resultsDiv.innerHTML = `
@@ -574,7 +574,7 @@
                     <div class="mt-2 text-2xl font-bold text-red-600">${summary.failed_exports}</div>
                 </div>
             `;
-            
+
             // Display top formats
             const topFormatsDiv = document.getElementById('top-formats');
             topFormatsDiv.innerHTML = '';
@@ -586,7 +586,7 @@
                     </div>
                 `;
             });
-            
+
             // Display top export types
             const topExportTypesDiv = document.getElementById('top-export-types');
             topExportTypesDiv.innerHTML = '';
@@ -599,7 +599,7 @@
                 `;
             });
         }
-        
+
         // Retention functions
         function loadRetentionData() {
             // Load retention policies
@@ -609,7 +609,7 @@
                     displayRetentionPolicies(data.policies);
                 })
                 .catch(error => console.error('Error loading retention policies:', error));
-            
+
             // Load retention statistics
             fetch('/api/compliance/retention-stats')
                 .then(response => response.json())
@@ -618,11 +618,11 @@
                 })
                 .catch(error => console.error('Error loading retention stats:', error));
         }
-        
+
         function displayRetentionPolicies(policies) {
             const tbody = document.getElementById('retention-policies');
             tbody.innerHTML = '';
-            
+
             policies.forEach(policy => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -642,7 +642,7 @@
                 tbody.appendChild(row);
             });
         }
-        
+
         function displayRetentionStats(stats) {
             // Display stats for each object type
             Object.entries(stats).forEach(([objectType, objectStats]) => {
@@ -656,11 +656,11 @@
                 }
             });
         }
-        
+
         function archiveOldLogs() {
             const objectType = document.getElementById('manual-object-type').value;
             const olderThan = document.getElementById('older-than-days').value;
-            
+
             fetch('/api/compliance/archive-old-logs', {
                 method: 'POST',
                 headers: {
@@ -682,7 +682,7 @@
                 alert('Error archiving logs');
             });
         }
-        
+
         function processRetentionPolicies() {
             fetch('/api/compliance/process-retention-policies', {
                 method: 'POST',
@@ -700,19 +700,19 @@
                 alert('Error processing retention policies');
             });
         }
-        
+
         function editPolicy(policyId) {
             // Implement policy editing functionality
             alert('Policy editing functionality to be implemented');
         }
-        
+
         // Pagination helper
         function displayPagination(data, containerId) {
             const container = document.getElementById(containerId);
             if (!container) return;
-            
+
             const { page, total_pages, total } = data;
-            
+
             container.innerHTML = `
                 <div class="flex items-center justify-between">
                     <div class="text-sm text-gray-700">
@@ -725,12 +725,12 @@
                 </div>
             `;
         }
-        
+
         function changePage(page) {
             // Implement page changing functionality
             console.log('Change to page:', page);
         }
-        
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             // Load initial data for the active tab
@@ -738,4 +738,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

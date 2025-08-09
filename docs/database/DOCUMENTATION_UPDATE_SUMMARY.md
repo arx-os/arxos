@@ -177,4 +177,4 @@ brew outdated | grep postgis
 
 *Last Updated: August 2, 2024*
 *Updated by: Development Team*
-*Migration Completed: PostgreSQL 14/15 → PostgreSQL 17 + PostGIS 3.5.3* 
+*Migration Completed: PostgreSQL 14/15 → PostgreSQL 17 + PostGIS 3.5.3*

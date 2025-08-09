@@ -1,6 +1,6 @@
 -- 007_add_partitioning.sql
 -- Migration: Add table partitioning for large audit/log/history tables
--- 
+--
 -- This migration implements table partitioning to improve performance and
 -- manageability of large tables. It follows Arxos standards for safe
 -- migrations with comprehensive rollback capabilities.
@@ -295,23 +295,23 @@ CREATE INDEX idx_chat_messages_partitioned_created_at ON chat_messages_partition
 -- Note: This is done in batches to avoid long-running transactions
 
 -- Migrate audit_logs data
-INSERT INTO audit_logs_partitioned 
-SELECT * FROM audit_logs 
+INSERT INTO audit_logs_partitioned
+SELECT * FROM audit_logs
 WHERE created_at >= '2024-01-01' AND created_at < '2025-01-01';
 
 -- Migrate object_history data
-INSERT INTO object_history_partitioned 
-SELECT * FROM object_history 
+INSERT INTO object_history_partitioned
+SELECT * FROM object_history
 WHERE changed_at >= '2024-01-01' AND changed_at < '2025-01-01';
 
 -- Migrate slow_query_log data
-INSERT INTO slow_query_log_partitioned 
-SELECT * FROM slow_query_log 
+INSERT INTO slow_query_log_partitioned
+SELECT * FROM slow_query_log
 WHERE timestamp >= '2024-01-01' AND timestamp < '2025-01-01';
 
 -- Migrate chat_messages data
-INSERT INTO chat_messages_partitioned 
-SELECT * FROM chat_messages 
+INSERT INTO chat_messages_partitioned
+SELECT * FROM chat_messages
 WHERE created_at >= '2024-01-01' AND created_at < '2025-01-01';
 
 -- =============================================================================
@@ -319,24 +319,24 @@ WHERE created_at >= '2024-01-01' AND created_at < '2025-01-01';
 -- =============================================================================
 
 -- Add foreign key constraints to partitioned tables
-ALTER TABLE audit_logs_partitioned 
-    ADD CONSTRAINT fk_audit_logs_partitioned_user_id 
+ALTER TABLE audit_logs_partitioned
+    ADD CONSTRAINT fk_audit_logs_partitioned_user_id
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE object_history_partitioned 
-    ADD CONSTRAINT fk_object_history_partitioned_user_id 
+ALTER TABLE object_history_partitioned
+    ADD CONSTRAINT fk_object_history_partitioned_user_id
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE chat_messages_partitioned 
-    ADD CONSTRAINT fk_chat_messages_partitioned_building_id 
+ALTER TABLE chat_messages_partitioned
+    ADD CONSTRAINT fk_chat_messages_partitioned_building_id
     FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE;
 
-ALTER TABLE chat_messages_partitioned 
-    ADD CONSTRAINT fk_chat_messages_partitioned_user_id 
+ALTER TABLE chat_messages_partitioned
+    ADD CONSTRAINT fk_chat_messages_partitioned_user_id
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
-ALTER TABLE chat_messages_partitioned 
-    ADD CONSTRAINT fk_chat_messages_partitioned_audit_log_id 
+ALTER TABLE chat_messages_partitioned
+    ADD CONSTRAINT fk_chat_messages_partitioned_audit_log_id
     FOREIGN KEY (audit_log_id) REFERENCES audit_logs_partitioned(id);
 
 -- =============================================================================
@@ -357,10 +357,10 @@ BEGIN
     -- Calculate partition boundaries
     start_date := DATE_TRUNC('month', partition_date);
     end_date := start_date + INTERVAL '1 month';
-    
+
     -- Generate partition name
     partition_name := parent_table || '_p' || TO_CHAR(start_date, 'YYYY_MM');
-    
+
     -- Create partition
     sql_statement := format(
         'CREATE TABLE %I PARTITION OF %I FOR VALUES FROM (%L) TO (%L)',
@@ -369,14 +369,14 @@ BEGIN
         start_date,
         end_date
     );
-    
+
     EXECUTE sql_statement;
-    
+
     -- Log the partition creation
     INSERT INTO audit_logs_partitioned (object_type, object_id, action, payload)
-    VALUES ('partition', partition_name, 'created', 
+    VALUES ('partition', partition_name, 'created',
             jsonb_build_object('parent_table', parent_table, 'start_date', start_date, 'end_date', end_date));
-    
+
     RETURN partition_name;
 END;
 $$ LANGUAGE plpgsql;
@@ -394,20 +394,20 @@ DECLARE
 BEGIN
     -- Calculate cutoff date
     cutoff_date := partition_date - (retention_months || ' months')::INTERVAL;
-    
+
     -- Generate partition name
     partition_name := parent_table || '_p' || TO_CHAR(partition_date, 'YYYY_MM');
-    
+
     -- Drop partition if it exists and is old enough
     IF EXISTS (SELECT 1 FROM pg_class WHERE relname = partition_name) THEN
         sql_statement := format('DROP TABLE %I', partition_name);
         EXECUTE sql_statement;
-        
+
         -- Log the partition drop
         INSERT INTO audit_logs_partitioned (object_type, object_id, action, payload)
-        VALUES ('partition', partition_name, 'dropped', 
+        VALUES ('partition', partition_name, 'dropped',
                 jsonb_build_object('parent_table', parent_table, 'partition_date', partition_date));
-        
+
         RETURN partition_name;
     ELSE
         RETURN NULL;
@@ -426,24 +426,24 @@ BEGIN
     -- Create partitions for next 3 months
     FOR i IN 0..2 LOOP
         partition_date := current_date + (i || ' months')::INTERVAL;
-        
+
         -- Create audit_logs partition
         SELECT create_monthly_partition('audit_logs_partitioned', partition_date);
-        
+
         -- Create object_history partition
         SELECT create_monthly_partition('object_history_partitioned', partition_date);
-        
+
         -- Create slow_query_log partition
         SELECT create_monthly_partition('slow_query_log_partitioned', partition_date);
-        
+
         -- Create chat_messages partition
         SELECT create_monthly_partition('chat_messages_partitioned', partition_date);
     END LOOP;
-    
+
     -- Drop old partitions (older than 12 months)
     FOR i IN 13..24 LOOP
         partition_date := current_date - (i || ' months')::INTERVAL;
-        
+
         -- Drop old partitions
         SELECT drop_old_partition('audit_logs_partitioned', partition_date);
         SELECT drop_old_partition('object_history_partitioned', partition_date);
@@ -459,7 +459,7 @@ $$ LANGUAGE plpgsql;
 
 -- View for partition usage statistics
 CREATE VIEW v_partition_usage AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     attname,
@@ -467,20 +467,20 @@ SELECT
     correlation,
     most_common_vals,
     most_common_freqs
-FROM pg_stats 
+FROM pg_stats
 WHERE tablename LIKE '%_partitioned'
 ORDER BY tablename, attname;
 
 -- View for partition sizes
 CREATE VIEW v_partition_sizes AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size_pretty,
     pg_total_relation_size(schemaname||'.'||tablename) as size_bytes,
     pg_relation_size(schemaname||'.'||tablename) as table_size_bytes,
     pg_indexes_size(schemaname||'.'||tablename) as index_size_bytes
-FROM pg_tables 
+FROM pg_tables
 WHERE tablename LIKE '%_partitioned'
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 
@@ -498,10 +498,10 @@ BEGIN
     RAISE NOTICE '=============================================================================';
     RAISE NOTICE 'PARTITIONING VALIDATION';
     RAISE NOTICE '=============================================================================';
-    
+
     -- Count partitions for each table
-    FOR table_name IN 
-        SELECT unnest(ARRAY['audit_logs_partitioned', 'object_history_partitioned', 
+    FOR table_name IN
+        SELECT unnest(ARRAY['audit_logs_partitioned', 'object_history_partitioned',
                             'slow_query_log_partitioned', 'chat_messages_partitioned'])
     LOOP
         SELECT COUNT(*) INTO partition_count
@@ -509,10 +509,10 @@ BEGIN
         JOIN pg_namespace n ON c.relnamespace = n.oid
         WHERE n.nspname = 'public'
         AND c.relname LIKE table_name || '_p%';
-        
+
         RAISE NOTICE 'Table % has % partitions', table_name, partition_count;
     END LOOP;
-    
+
     -- List all partitions
     RAISE NOTICE 'Partitions created:';
     FOR partition_name IN
@@ -525,7 +525,7 @@ BEGIN
     LOOP
         RAISE NOTICE '  - %', partition_name;
     END LOOP;
-    
+
     RAISE NOTICE '=============================================================================';
     RAISE NOTICE 'Partitioning migration completed successfully!';
     RAISE NOTICE '=============================================================================';
@@ -542,22 +542,22 @@ DECLARE
     partition_record RECORD;
 BEGIN
     RAISE NOTICE 'Rolling back partitioning migration...';
-    
+
     -- Drop partitioned tables and recreate original tables
     DROP TABLE IF EXISTS audit_logs_partitioned CASCADE;
     DROP TABLE IF EXISTS object_history_partitioned CASCADE;
     DROP TABLE IF EXISTS slow_query_log_partitioned CASCADE;
     DROP TABLE IF EXISTS chat_messages_partitioned CASCADE;
-    
+
     -- Drop maintenance functions
     DROP FUNCTION IF EXISTS create_monthly_partition(TEXT, DATE);
     DROP FUNCTION IF EXISTS drop_old_partition(TEXT, DATE, INTEGER);
     DROP FUNCTION IF EXISTS maintain_partitions();
-    
+
     -- Drop views
     DROP VIEW IF EXISTS v_partition_usage;
     DROP VIEW IF EXISTS v_partition_sizes;
-    
+
     RAISE NOTICE 'Partitioning rollback completed!';
 END;
 $$ LANGUAGE plpgsql;
@@ -573,6 +573,6 @@ $$ LANGUAGE plpgsql;
 -- 4. Foreign key constraints for data integrity
 -- 5. Monitoring views for partition usage
 -- 6. Rollback function for safe migration reversal
--- 
+--
 -- IMPORTANT: Test this migration thoroughly in a staging environment
--- before applying to production. The rollback function provides a safety net. 
+-- before applying to production. The rollback function provides a safety net.

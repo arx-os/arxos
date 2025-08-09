@@ -3,11 +3,10 @@ Funding Escrow System for Planarx Community Platform
 Provides secure crowdfunding management with milestone-based fund releases
 """
 
-from services.escrow_engine
-
+from services.escrow_engine import services.escrow_engine
 __all__ = [
     "escrow_engine",
-    "EscrowAccount", 
+    "EscrowAccount",
     "Milestone",
     "Transaction"
-] 
+]

@@ -11,23 +11,23 @@ import { Validation } from './validation.js';
 export class ExportImportManager {
     constructor(options = {}) {
         this.options = options;
-        
+
         // Initialize modules
         this.export = new Export(options);
         this.import = new Import(options);
         this.formats = new Formats(options);
         this.validation = new Validation(options);
-        
+
         // Connect modules
         this.connectModules();
-        
+
         // UI state
         this.ui = null;
         this.progressModal = null;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -42,65 +42,65 @@ export class ExportImportManager {
         this.export.addEventListener('exportCompleted', (data) => {
             this.triggerEvent('exportCompleted', data);
         });
-        
+
         this.export.addEventListener('exportFailed', (data) => {
             this.triggerEvent('exportFailed', data);
         });
-        
+
         this.export.addEventListener('backupCompleted', (data) => {
             this.triggerEvent('backupCompleted', data);
         });
-        
+
         this.export.addEventListener('backupFailed', (data) => {
             this.triggerEvent('backupFailed', data);
         });
-        
+
         // Connect import events
         this.import.addEventListener('importCompleted', (data) => {
             this.triggerEvent('importCompleted', data);
         });
-        
+
         this.import.addEventListener('importFailed', (data) => {
             this.triggerEvent('importFailed', data);
         });
-        
+
         this.import.addEventListener('restoreCompleted', (data) => {
             this.triggerEvent('restoreCompleted', data);
         });
-        
+
         this.import.addEventListener('restoreFailed', (data) => {
             this.triggerEvent('restoreFailed', data);
         });
-        
+
         // Connect progress events
         this.export.addEventListener('progressStarted', (data) => {
             this.showProgress(data.title, data.description);
         });
-        
+
         this.export.addEventListener('progressUpdated', (data) => {
             this.updateProgress(data.progress, data.description);
         });
-        
+
         this.export.addEventListener('progressCompleted', (data) => {
             this.completeProgress(data.message);
         });
-        
+
         this.export.addEventListener('progressFailed', (data) => {
             this.failProgress(data.message);
         });
-        
+
         this.import.addEventListener('progressStarted', (data) => {
             this.showProgress(data.title, data.description);
         });
-        
+
         this.import.addEventListener('progressUpdated', (data) => {
             this.updateProgress(data.progress, data.description);
         });
-        
+
         this.import.addEventListener('progressCompleted', (data) => {
             this.completeProgress(data.message);
         });
-        
+
         this.import.addEventListener('progressFailed', (data) => {
             this.failProgress(data.message);
         });
@@ -109,7 +109,7 @@ export class ExportImportManager {
     setupEventListeners() {
         // Global keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        
+
         // File drop events
         document.addEventListener('dragover', (e) => this.handleDragOver(e));
         document.addEventListener('drop', (e) => this.handleFileDrop(e));
@@ -144,7 +144,7 @@ export class ExportImportManager {
 
     handleFileDrop(event) {
         event.preventDefault();
-        
+
         const files = Array.from(event.dataTransfer.files);
         files.forEach(file => {
             this.processDroppedFile(file);
@@ -155,13 +155,13 @@ export class ExportImportManager {
         try {
             // Validate file
             this.validation.validateFile(file);
-            
+
             // Detect format
             const format = this.formats.detectFormat(file);
             if (!format) {
                 throw new Error('Unable to detect file format');
             }
-            
+
             // Process based on format
             switch (format) {
                 case 'json':
@@ -188,7 +188,7 @@ export class ExportImportManager {
         this.ui.id = 'export-import-panel';
         this.ui.className = 'fixed top-4 left-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-50 max-w-sm';
         this.ui.style.display = 'none';
-        
+
         this.ui.innerHTML = `
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-semibold text-gray-900">Export/Import</h3>
@@ -224,7 +224,7 @@ export class ExportImportManager {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(this.ui);
         this.setupUIEventListeners();
     }
@@ -235,29 +235,29 @@ export class ExportImportManager {
         closeButton.addEventListener('click', () => {
             this.hideExportImportPanel();
         });
-        
+
         // Export buttons
         const exportJsonButton = this.ui.querySelector('#export-json');
         exportJsonButton.addEventListener('click', () => {
             this.exportAsJSON();
         });
-        
+
         const exportSvgButton = this.ui.querySelector('#export-svg');
         exportSvgButton.addEventListener('click', () => {
             this.exportAsSVG();
         });
-        
+
         const exportBackupButton = this.ui.querySelector('#export-backup');
         exportBackupButton.addEventListener('click', () => {
             this.createBackup();
         });
-        
+
         // Import buttons
         const importFileButton = this.ui.querySelector('#import-file');
         importFileButton.addEventListener('click', () => {
             this.showFileImportDialog();
         });
-        
+
         const restoreBackupButton = this.ui.querySelector('#restore-backup');
         restoreBackupButton.addEventListener('click', () => {
             this.showBackupRestoreDialog();
@@ -269,7 +269,7 @@ export class ExportImportManager {
         this.progressModal.id = 'progress-modal';
         this.progressModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         this.progressModal.style.display = 'none';
-        
+
         this.progressModal.innerHTML = `
             <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                 <div class="flex items-center justify-between mb-4">
@@ -286,9 +286,9 @@ export class ExportImportManager {
                 <p id="progress-description" class="text-sm text-gray-600">Initializing...</p>
             </div>
         `;
-        
+
         document.body.appendChild(this.progressModal);
-        
+
         // Cancel button
         const cancelButton = this.progressModal.querySelector('#cancel-progress');
         cancelButton.addEventListener('click', () => {
@@ -312,10 +312,10 @@ export class ExportImportManager {
     showProgress(title, description) {
         if (this.progressModal) {
             this.progressModal.style.display = 'flex';
-            
+
             const titleElement = this.progressModal.querySelector('#progress-title');
             const descriptionElement = this.progressModal.querySelector('#progress-description');
-            
+
             if (titleElement) titleElement.textContent = title;
             if (descriptionElement) descriptionElement.textContent = description;
         }
@@ -325,11 +325,11 @@ export class ExportImportManager {
         if (this.progressModal) {
             const progressBar = this.progressModal.querySelector('#progress-bar');
             const descriptionElement = this.progressModal.querySelector('#progress-description');
-            
+
             if (progressBar) {
                 progressBar.style.width = `${progress}%`;
             }
-            
+
             if (descriptionElement && description) {
                 descriptionElement.textContent = description;
             }
@@ -342,7 +342,7 @@ export class ExportImportManager {
             if (descriptionElement) {
                 descriptionElement.textContent = message;
             }
-            
+
             // Hide after delay
             setTimeout(() => {
                 this.hideProgressModal();
@@ -357,7 +357,7 @@ export class ExportImportManager {
                 descriptionElement.textContent = `Error: ${message}`;
                 descriptionElement.className = 'text-sm text-red-600';
             }
-            
+
             // Hide after delay
             setTimeout(() => {
                 this.hideProgressModal();
@@ -368,13 +368,13 @@ export class ExportImportManager {
     hideProgressModal() {
         if (this.progressModal) {
             this.progressModal.style.display = 'none';
-            
+
             // Reset progress bar
             const progressBar = this.progressModal.querySelector('#progress-bar');
             if (progressBar) {
                 progressBar.style.width = '0%';
             }
-            
+
             // Reset description
             const descriptionElement = this.progressModal.querySelector('#progress-description');
             if (descriptionElement) {
@@ -391,7 +391,7 @@ export class ExportImportManager {
             if (!currentVersion) {
                 throw new Error('No current version available');
             }
-            
+
             await this.export.exportVersionAsJSON(currentVersion.id);
         } catch (error) {
             console.error('JSON export failed:', error);
@@ -405,7 +405,7 @@ export class ExportImportManager {
             if (!currentVersion) {
                 throw new Error('No current version available');
             }
-            
+
             await this.export.exportVersionAsSVG(currentVersion.id);
         } catch (error) {
             console.error('SVG export failed:', error);
@@ -419,7 +419,7 @@ export class ExportImportManager {
             if (!currentFloor) {
                 throw new Error('No current floor available');
             }
-            
+
             await this.export.createFloorBackup(currentFloor.id);
         } catch (error) {
             console.error('Backup creation failed:', error);
@@ -432,14 +432,14 @@ export class ExportImportManager {
         input.type = 'file';
         input.accept = '.json,.svg,.zip';
         input.multiple = false;
-        
+
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
                 this.processDroppedFile(file);
             }
         });
-        
+
         input.click();
     }
 
@@ -448,14 +448,14 @@ export class ExportImportManager {
         input.type = 'file';
         input.accept = '.zip';
         input.multiple = false;
-        
+
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
                 this.import.restoreFromBackup(file);
             }
         });
-        
+
         input.click();
     }
 
@@ -463,7 +463,7 @@ export class ExportImportManager {
         // Cancel current operations
         this.export.cancelCurrentOperation();
         this.import.cancelCurrentOperation();
-        
+
         this.hideProgressModal();
         this.triggerEvent('operationCancelled');
     }
@@ -517,13 +517,13 @@ export class ExportImportManager {
         try {
             // Validate file
             this.validation.validateFile(file);
-            
+
             // Detect format
             const format = this.formats.detectFormat(file);
             if (!format) {
                 throw new Error('Unable to detect file format');
             }
-            
+
             // Import based on format
             switch (format) {
                 case 'json':
@@ -614,7 +614,7 @@ export class ExportImportManager {
         if (this.validation) {
             this.validation.destroy();
         }
-        
+
         // Remove UI elements
         if (this.ui) {
             this.ui.remove();
@@ -622,10 +622,10 @@ export class ExportImportManager {
         if (this.progressModal) {
             this.progressModal.remove();
         }
-        
+
         // Clear event handlers
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

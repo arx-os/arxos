@@ -16,9 +16,9 @@ function loadAssets() {
   if (assetType) url += `assetType=${encodeURIComponent(assetType)}&`;
   if (room) url += `roomId=${encodeURIComponent(room)}&`;
   if (status) url += `status=${encodeURIComponent(status)}&`;
-  
+
   const startTime = performance.now();
-  
+
   // Log the asset loading request
   if (window.arxLogger) {
     window.arxLogger.info('Loading assets', {
@@ -27,7 +27,7 @@ function loadAssets() {
       url: url
     });
   }
-  
+
   fetch(url, {
     headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {}
   })
@@ -44,7 +44,7 @@ function loadAssets() {
       renderAssetTable();
       updateSummaryCards();
       renderCharts();
-      
+
       if (window.arxLogger) {
         window.arxLogger.businessEvent('asset_inventory', 'assets_loaded', {
           asset_count: data.length,
@@ -69,7 +69,7 @@ function loadAssets() {
 
 function renderAssetTable() {
   const startTime = performance.now();
-  
+
   let sorted = [...assets];
   sorted.sort((a, b) => {
     let v1 = a[sortField], v2 = b[sortField];
@@ -104,7 +104,7 @@ function renderAssetTable() {
   }
   document.getElementById('asset-count').textContent = `${assets.length} assets`;
   document.getElementById('page-info').textContent = `Page ${currentPage} of ${Math.ceil(assets.length / pageSize)}`;
-  
+
   const duration = performance.now() - startTime;
   if (window.arxLogger) {
     window.arxLogger.performance('render_asset_table', duration, {
@@ -125,7 +125,7 @@ function sortAssets(field) {
       previous_ascending: sortAsc
     });
   }
-  
+
   if (sortField === field) {
     sortAsc = !sortAsc;
   } else {
@@ -165,9 +165,9 @@ function toggleSelectAllAssets() {
   const checked = document.getElementById('select-all-assets').checked;
   const checkboxes = document.querySelectorAll('.asset-checkbox');
   const checkedCount = checked ? checkboxes.length : 0;
-  
+
   checkboxes.forEach(cb => cb.checked = checked);
-  
+
   if (window.arxLogger) {
     window.arxLogger.info('Toggled select all assets', {
       selected: checked,
@@ -180,7 +180,7 @@ function toggleSelectAllAssets() {
 function exportAssets(format) {
   const building = document.getElementById('filter-building').value;
   let url = `/api/buildings/${building}/inventory/export?format=${format}`;
-  
+
   if (window.arxLogger) {
     window.arxLogger.info('Exporting assets', {
       format: format,
@@ -188,7 +188,7 @@ function exportAssets(format) {
       url: url
     });
   }
-  
+
   window.open(url, '_blank');
 }
 
@@ -202,7 +202,7 @@ function exportAssetsAdvanced() {
   const includeHistory = document.getElementById('export-include-history').checked;
   const includeMaintenance = document.getElementById('export-include-maintenance').checked;
   const includeValuations = document.getElementById('export-include-valuations').checked;
-  
+
   let url = `/api/buildings/${building}/inventory/export?format=${format}`;
   if (system) url += `&system=${encodeURIComponent(system)}`;
   if (status) url += `&status=${encodeURIComponent(status)}`;
@@ -211,12 +211,12 @@ function exportAssetsAdvanced() {
   if (includeHistory) url += `&includeHistory=true`;
   if (includeMaintenance) url += `&includeMaintenance=true`;
   if (includeValuations) url += `&includeValuations=true`;
-  
+
   const progress = document.getElementById('export-progress');
   progress.textContent = 'Preparing export...';
-  
+
   const startTime = performance.now();
-  
+
   if (window.arxLogger) {
     window.arxLogger.info('Starting advanced asset export', {
       format: format,
@@ -226,7 +226,7 @@ function exportAssetsAdvanced() {
       url: url
     });
   }
-  
+
   fetch(url, {
     headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {}
   })
@@ -235,7 +235,7 @@ function exportAssetsAdvanced() {
       if (window.arxLogger) {
         window.arxLogger.apiRequest('GET', url, res.status, duration);
       }
-      
+
       if (!res.ok) throw new Error('Export failed');
       progress.textContent = 'Downloading...';
       return res.blob();
@@ -250,7 +250,7 @@ function exportAssetsAdvanced() {
       progress.textContent = 'Download complete.';
       setTimeout(() => { progress.textContent = ''; }, 2000);
       showToast('Export complete.', 'success');
-      
+
       if (window.arxLogger) {
         window.arxLogger.businessEvent('asset_inventory', 'export_completed', {
           format: format,
@@ -269,7 +269,7 @@ function exportAssetsAdvanced() {
           error: error.message
         });
       }
-      
+
       progress.textContent = 'Export failed.';
       setTimeout(() => { progress.textContent = ''; }, 2000);
       showToast('Export failed.', 'error');
@@ -284,7 +284,7 @@ function deleteSelectedAssets() {
     }
     return alert('No assets selected.');
   }
-  
+
   if (!confirm(`Delete ${selected.length} assets?`)) {
     if (window.arxLogger) {
       window.arxLogger.info('Asset deletion cancelled by user', {
@@ -293,16 +293,16 @@ function deleteSelectedAssets() {
     }
     return;
   }
-  
+
   if (window.arxLogger) {
     window.arxLogger.info('Deleting selected assets', {
       selected_count: selected.length,
       asset_ids: selected
     });
   }
-  
+
   const startTime = performance.now();
-  
+
   Promise.all(selected.map(id => fetch(`/api/assets/${id}`, {
     method: 'DELETE',
     headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {}
@@ -310,7 +310,7 @@ function deleteSelectedAssets() {
     const duration = performance.now() - startTime;
     const successCount = responses.filter(r => r.ok).length;
     const failureCount = responses.length - successCount;
-    
+
     if (window.arxLogger) {
       window.arxLogger.businessEvent('asset_inventory', 'assets_deleted', {
         total_requested: selected.length,
@@ -319,7 +319,7 @@ function deleteSelectedAssets() {
         duration_ms: duration
       });
     }
-    
+
     loadAssets();
     showToast('Assets deleted successfully.', 'success');
   }).catch((error) => {
@@ -338,16 +338,16 @@ function deleteSelectedAssets() {
 function openAssetModal(assetId) {
   const modal = document.getElementById('asset-modal');
   modal.classList.remove('hidden');
-  
+
   if (window.arxLogger) {
     window.arxLogger.info('Opening asset modal', {
       asset_id: assetId
     });
   }
-  
+
   if (assetId) {
     const startTime = performance.now();
-    
+
     fetch(`/api/assets/${assetId}`, {
       headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {}
     })
@@ -362,7 +362,7 @@ function openAssetModal(assetId) {
         document.getElementById('asset-modal-title').textContent = `Edit Asset: ${asset.id}`;
         renderAssetForm(asset, true);
         loadAssetDetails(asset);
-        
+
         if (window.arxLogger) {
           window.arxLogger.info('Asset details loaded', {
             asset_id: asset.id,
@@ -370,7 +370,7 @@ function openAssetModal(assetId) {
             system: asset.system
           });
         }
-        
+
         // Add highlight on SVG button if asset has symbol_id
         if (asset.symbol_id) {
           addHighlightOnSVGButton(asset);
@@ -400,7 +400,7 @@ function renderAssetForm(asset, isEdit) {
       asset_id: asset.id || null
     });
   }
-  
+
   // Fetch buildings and floors for dropdowns
   const startTime = performance.now();
   fetch('/api/buildings', {
@@ -468,7 +468,7 @@ function renderAssetForm(asset, isEdit) {
       if (asset.building_id) {
         loadFloorsForAsset(asset.floor_id);
       }
-      
+
       if (window.arxLogger) {
         window.arxLogger.info('Asset form rendered', {
           building_count: buildings.length,
@@ -483,14 +483,14 @@ function loadFloorsForAsset(selectedFloorId) {
   const buildingId = document.getElementById('asset-building').value;
   const floorSelect = document.getElementById('asset-floor');
   floorSelect.innerHTML = '<option value="">-- Select --</option>';
-  
+
   if (window.arxLogger) {
     window.arxLogger.info('Loading floors for asset', {
       building_id: buildingId,
       selected_floor_id: selectedFloorId
     });
   }
-  
+
   if (buildingId) {
     const startTime = performance.now();
     fetch(`/api/buildings/${buildingId}/floors`, {
@@ -507,7 +507,7 @@ function loadFloorsForAsset(selectedFloorId) {
         for (const f of floors) {
           floorSelect.innerHTML += `<option value="${f.id}"${selectedFloorId == f.id ? ' selected' : ''}>${f.name}</option>`;
         }
-        
+
         if (window.arxLogger) {
           window.arxLogger.info('Floors loaded for asset', {
             building_id: buildingId,
@@ -526,7 +526,7 @@ function submitAssetForm(assetId) {
       asset_id: assetId || null
     });
   }
-  
+
   // Validate and collect form data
   const buildingId = document.getElementById('asset-building').value;
   const floorId = document.getElementById('asset-floor').value;
@@ -581,9 +581,9 @@ function submitAssetForm(assetId) {
   };
   const method = assetId ? 'PUT' : 'POST';
   const url = assetId ? `/api/assets/${assetId}` : `/api/buildings/${buildingId}/assets`;
-  
+
   const startTime = performance.now();
-  
+
   if (window.arxLogger) {
     window.arxLogger.info('Submitting asset data', {
       method: method,
@@ -598,7 +598,7 @@ function submitAssetForm(assetId) {
       }
     });
   }
-  
+
   fetch(url, {
     method,
     headers: {
@@ -612,11 +612,11 @@ function submitAssetForm(assetId) {
       if (window.arxLogger) {
         window.arxLogger.apiRequest(method, url, res.status, duration);
       }
-      
+
       if (res.ok) {
         closeAssetModal();
         loadAssets();
-        
+
         if (window.arxLogger) {
           window.arxLogger.businessEvent('asset_inventory', assetId ? 'asset_updated' : 'asset_created', {
             asset_id: assetId || 'new',
@@ -626,7 +626,7 @@ function submitAssetForm(assetId) {
             funding_source: fundingSource
           });
         }
-        
+
         showToast(assetId ? 'Asset updated successfully.' : 'Asset created successfully.', 'success');
       } else {
         res.text().then(t => {
@@ -663,7 +663,7 @@ function loadAssetDetails(asset) {
       asset_type: asset.asset_type
     });
   }
-  
+
   // Fetch and render history
   const startTime = performance.now();
   fetch(`/api/assets/${asset.id}/history`, { headers: localStorage.getItem('arx_jwt') ? { 'Authorization': 'Bearer ' + localStorage.getItem('arx_jwt') } : {} })
@@ -734,7 +734,7 @@ function renderCharts() {
     }
   });
   charts = {};
-  
+
   renderSystemChart();
   renderAgeChart();
   renderEfficiencyChart();
@@ -860,17 +860,17 @@ function renderMaintenanceChart() {
 function addHighlightOnSVGButton(asset) {
   const modalTitle = document.getElementById('asset-modal-title');
   const existingButton = document.getElementById('highlight-svg-button');
-  
+
   if (existingButton) {
     existingButton.remove();
   }
-  
+
   const highlightButton = document.createElement('button');
   highlightButton.id = 'highlight-svg-button';
   highlightButton.className = 'ml-2 bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded';
   highlightButton.textContent = 'Show on SVG';
   highlightButton.onclick = () => highlightAssetOnSVG(asset.id);
-  
+
   modalTitle.appendChild(highlightButton);
 }
 
@@ -891,7 +891,7 @@ function showToast(message, type = 'info') {
       type: type
     });
   }
-  
+
   const toastArea = document.getElementById('toast-area');
   const toast = document.createElement('div');
   toast.className = `px-4 py-2 rounded shadow text-white mb-2 ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`;
@@ -906,7 +906,7 @@ function addAssetFromSymbol() {
       integration_point: 'symbol_placement'
     });
   }
-  
+
   // This function should pre-fill the asset form from a selected symbol (integration point)
   // For demo, just show a toast
   showToast('Symbol placement integration coming soon!', 'info');
@@ -919,9 +919,9 @@ document.addEventListener('DOMContentLoaded', () => {
       url: window.location.href
     });
   }
-  
+
   loadBuildings();
   loadAssets();
   updateSummaryCards();
   renderCharts();
-}); 
+});

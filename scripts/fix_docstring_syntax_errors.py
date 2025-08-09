@@ -25,10 +25,10 @@ from typing import List, Dict, Any, Optional
 
 class DocstringSyntaxFixer:
     """Fixes docstring syntax errors"""
-    
+
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
-        
+
         # Files with known docstring syntax errors
         self.files_with_syntax_errors = [
             "plugins/example_behavior_plugin.py",
@@ -170,92 +170,92 @@ class DocstringSyntaxFixer:
             "core/security/auth_middleware.py",
             "core/shared/models/error.py"
         ]
-    
+
     def fix_docstring_syntax_errors(self):
         """Fix docstring syntax errors"""
         print("🔧 Fixing Docstring Syntax Errors")
         print("=" * 60)
-        
+
         success_count = 0
         error_count = 0
-        
+
         for file_path in self.files_with_syntax_errors:
             full_path = self.project_root / file_path
-            
+
             if not full_path.exists():
                 print(f"⚠️  File not found: {file_path}")
                 continue
-            
+
             try:
                 if self._fix_file_docstring_syntax(full_path):
                     print(f"✅ Fixed docstring syntax errors in: {file_path}")
                     success_count += 1
                 else:
                     print(f"ℹ️  No docstring syntax errors found in: {file_path}")
-                    
+
             except Exception as e:
                 print(f"❌ Error fixing {file_path}: {e}")
                 error_count += 1
-        
+
         print("\n" + "=" * 60)
         print(f"📊 Summary:")
         print(f"   ✅ Successfully fixed: {success_count} files")
         print(f"   ❌ Errors: {error_count} files")
         print(f"   📁 Total processed: {len(self.files_with_syntax_errors)} files")
-    
+
     def _fix_file_docstring_syntax(self, file_path: Path) -> bool:
         """Fix docstring syntax errors in a single file"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             original_content = content
-            
+
             # Fix missing function bodies after docstrings
             content = self._fix_missing_function_bodies(content)
-            
+
             # Fix improper docstring placement
             content = self._fix_docstring_placement(content)
-            
+
             # Fix class docstring issues
             content = self._fix_class_docstring_issues(content)
-            
+
             # Validate syntax
             if not self._validate_syntax(content):
                 print(f"⚠️  Syntax validation failed for {file_path}")
                 return False
-            
+
             # Only write if content changed
             if content != original_content:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
                 return True
-            
+
             return False
-            
+
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             return False
-    
+
     def _fix_missing_function_bodies(self, content: str) -> str:
         """Fix missing function bodies after docstrings"""
         lines = content.split('\n')
         fixed_lines = []
-        
+
         i = 0
         while i < len(lines):
             line = lines[i]
-            
+
             # Check for function definition followed by docstring without body
             if (line.strip().startswith('def ') or line.strip().startswith('async def ')) and ':' in line:
                 # Look ahead for docstring
-                if i + 1 < len(lines) and lines[i + 1].strip() == '"""':
+                if i + 1 < len(lines) and lines[i + 1].strip() == '""":"
                     # Find the end of the docstring
                     docstring_end = i + 1
-                    while docstring_end < len(lines) and '"""' not in lines[docstring_end][1:]:
+                    while docstring_end < len(lines) and '""" not in lines[docstring_end][1:]:"
                         docstring_end += 1
-                    
-                    # Check if there's no function body after docstring
+
+                    # Check if there's no function body after docstring'
                     if docstring_end + 1 >= len(lines) or not lines[docstring_end + 1].strip():
                         # Add a pass statement as function body
                         fixed_lines.append(line)
@@ -266,61 +266,61 @@ class DocstringSyntaxFixer:
                         fixed_lines.append('    pass')
                         i = docstring_end + 1
                         continue
-            
+
             fixed_lines.append(line)
             i += 1
-        
+
         return '\n'.join(fixed_lines)
-    
+
     def _fix_docstring_placement(self, content: str) -> str:
         """Fix improper docstring placement"""
         lines = content.split('\n')
         fixed_lines = []
-        
+
         i = 0
         while i < len(lines):
             line = lines[i]
-            
+
             # Check for function definition with docstring on same line
-            if (line.strip().startswith('def ') or line.strip().startswith('async def ')) and '"""' in line:
+            if (line.strip().startswith('def ') or line.strip().startswith('async def ')) and '""" in line:"
                 # Split the line into function definition and docstring
                 if ':' in line:
                     func_part = line[:line.find(':') + 1]
-                    docstring_part = line[line.find('"""'):]
-                    
+                    docstring_part = line[line.find('"""):]"
+
                     fixed_lines.append(func_part)
-                    fixed_lines.append('    """')
+                    fixed_lines.append('    """)
                     fixed_lines.append(f'    {docstring_part[3:-3]}')
-                    fixed_lines.append('    """')
+                    fixed_lines.append('    """)
                     fixed_lines.append('    pass')
                 else:
                     fixed_lines.append(line)
             else:
                 fixed_lines.append(line)
-            
+
             i += 1
-        
+
         return '\n'.join(fixed_lines)
-    
+
     def _fix_class_docstring_issues(self, content: str) -> str:
         """Fix class docstring issues"""
         lines = content.split('\n')
         fixed_lines = []
-        
+
         i = 0
         while i < len(lines):
             line = lines[i]
-            
+
             # Check for class definition followed by docstring without body
             if line.strip().startswith('class ') and ':' in line:
                 # Look ahead for docstring
-                if i + 1 < len(lines) and lines[i + 1].strip() == '"""':
+                if i + 1 < len(lines) and lines[i + 1].strip() == '""":"
                     # Find the end of the docstring
                     docstring_end = i + 1
-                    while docstring_end < len(lines) and '"""' not in lines[docstring_end][1:]:
+                    while docstring_end < len(lines) and '""" not in lines[docstring_end][1:]:"
                         docstring_end += 1
-                    
-                    # Check if there's no class body after docstring
+
+                    # Check if there's no class body after docstring'
                     if docstring_end + 1 >= len(lines) or not lines[docstring_end + 1].strip():
                         # Add a pass statement as class body
                         fixed_lines.append(line)
@@ -331,12 +331,12 @@ class DocstringSyntaxFixer:
                         fixed_lines.append('    pass')
                         i = docstring_end + 1
                         continue
-            
+
             fixed_lines.append(line)
             i += 1
-        
+
         return '\n'.join(fixed_lines)
-    
+
     def _validate_syntax(self, content: str) -> bool:
         """Validate that the content has valid Python syntax"""
         try:
@@ -344,7 +344,7 @@ class DocstringSyntaxFixer:
             return True
         except SyntaxError:
             return False
-    
+
     def create_docstring_fix_example(self):
         """Create an example of proper docstring syntax"""
         example = '''
@@ -360,38 +360,38 @@ logger = logging.getLogger(__name__)
 class ExampleClass:
     """
     Example class with proper docstring syntax.
-    
+
     Attributes:
         config: Configuration dictionary
-        
+
     Methods:
         process_data: Process input data
         validate_input: Validate input parameters
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize the class.
-        
+
         Args:
             config: Configuration dictionary
-            
+
         Returns:
             None
         """
         self.config = config or {}
         self.logger = logger
-    
+
     async def process_data(self, data: str) -> Dict[str, Any]:
         """
         Process input data asynchronously.
-        
+
         Args:
             data: Input data to process
-            
+
         Returns:
             Processed data dictionary
-            
+
         Raises:
             ValueError: If data is invalid
         """
@@ -405,32 +405,31 @@ class ExampleClass:
         except Exception as e:
             self.logger.error(f"Error processing data: {e}")
             raise ValueError(f"Invalid data: {e}")
-    
+
     def validate_input(self, input_data: str) -> bool:
         """
         Validate input parameters.
-        
+
         Args:
             input_data: Input data to validate
-            
+
         Returns:
             True if valid, False otherwise
         """
-        return bool(input_data and input_data.strip())
-
+        return bool(input_data and input_data.strip()
 # Usage example
 if __name__ == "__main__":
     example = ExampleClass({"test": "value"})
     result = await example.process_data("test_data")
     print(result)
 '''
-        
+
         example_path = self.project_root / "docs" / "proper_docstring_syntax_example.py"
         example_path.parent.mkdir(exist_ok=True)
-        
+
         with open(example_path, 'w') as f:
             f.write(example)
-        
+
         print(f"📝 Created proper docstring syntax example: {example_path}")
 
 
@@ -439,16 +438,16 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/fix_docstring_syntax_errors.py [--dry-run] [--example]")
         sys.exit(1)
-    
+
     project_root = "."
     dry_run = "--dry-run" in sys.argv
     create_example = "--example" in sys.argv
-    
+
     fixer = DocstringSyntaxFixer(project_root)
-    
+
     if create_example:
         fixer.create_docstring_fix_example()
-    
+
     if not dry_run:
         fixer.fix_docstring_syntax_errors()
     else:
@@ -463,4 +462,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

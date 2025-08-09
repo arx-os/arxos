@@ -136,14 +136,14 @@ const ConstraintEditor: React.FC<{
   onSave: (constraint: Constraint) => void;
   onCancel: () => void;
 }> = ({ constraint, objects, onSave, onCancel }) => {
-  const [type, setType] = useState(constraint?.type || 'distance');
+  const [type, setType] = useState<Constraint['type']>(constraint?.type || 'distance');
   const [selectedObjects, setSelectedObjects] = useState<string[]>(constraint?.objects || []);
   const [value, setValue] = useState(constraint?.parameters.value || 0);
   const [expression, setExpression] = useState(constraint?.parameters.expression || '');
   const [tolerance, setTolerance] = useState(constraint?.parameters.tolerance || 0.001);
   const [units, setUnits] = useState(constraint?.parameters.units || 'inches');
   const [description, setDescription] = useState(constraint?.metadata?.description || '');
-  const [autoSolve, setAutoSolve] = useState(constraint?.metadata?.autoSolve || true);
+  const [autoSolve, setAutoSolve] = useState<boolean>(constraint?.metadata?.autoSolve ?? true);
 
   const constraintType = CONSTRAINT_TYPES[type as keyof typeof CONSTRAINT_TYPES];
 
@@ -181,7 +181,7 @@ const ConstraintEditor: React.FC<{
             <InputLabel>Constraint Type</InputLabel>
             <Select
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => setType(e.target.value as Constraint['type'])}
               label="Constraint Type"
             >
               {Object.entries(CONSTRAINT_TYPES).map(([key, config]) => (
@@ -415,7 +415,7 @@ export const AdvancedConstraints: React.FC<AdvancedConstraintsProps> = ({
             <Accordion
               key={constraint.id}
               expanded={expandedConstraint === constraint.id}
-              onChange={(_, isExpanded) => setExpandedConstraint(isExpanded ? constraint.id : false)}
+              onChange={(_: React.SyntheticEvent, isExpanded: boolean) => setExpandedConstraint(isExpanded ? constraint.id : false)}
               sx={{ mb: 1 }}
             >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -437,7 +437,7 @@ export const AdvancedConstraints: React.FC<AdvancedConstraintsProps> = ({
                   <Tooltip title="Edit Constraint">
                     <IconButton
                       size="small"
-                      onClick={(e) => {
+                      onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         handleEditConstraint(constraint);
                       }}
@@ -448,7 +448,7 @@ export const AdvancedConstraints: React.FC<AdvancedConstraintsProps> = ({
                   <Tooltip title="Solve Constraint">
                     <IconButton
                       size="small"
-                      onClick={(e) => {
+                      onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         handleSolveConstraint(constraint.id);
                       }}
@@ -459,7 +459,7 @@ export const AdvancedConstraints: React.FC<AdvancedConstraintsProps> = ({
                   <Tooltip title="Delete Constraint">
                     <IconButton
                       size="small"
-                      onClick={(e) => {
+                      onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         handleDeleteConstraint(constraint.id);
                       }}
@@ -553,4 +553,4 @@ export const AdvancedConstraints: React.FC<AdvancedConstraintsProps> = ({
       )}
     </Box>
   );
-}; 
+};

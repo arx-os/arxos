@@ -163,11 +163,11 @@ logger = logging.getLogger(__name__)
 
 class MyFirstPlugin(BehaviorHandlerPlugin):
     """My first plugin implementation."""
-    
+
     def __init__(self):
         self.initialized = False
         self.config = {}
-    
+
     def initialize(self, config: Dict[str, Any]) -> bool:
         """Initialize the plugin with configuration."""
         try:
@@ -178,12 +178,12 @@ class MyFirstPlugin(BehaviorHandlerPlugin):
         except Exception as e:
             logger.error(f"Failed to initialize MyFirstPlugin: {e}")
             return False
-    
+
     def cleanup(self) -> None:
         """Clean up plugin resources."""
         self.initialized = False
         logger.info("MyFirstPlugin cleaned up")
-    
+
     def get_metadata(self) -> PluginMetadata:
         """Get plugin metadata."""
         return PluginMetadata(
@@ -195,15 +195,15 @@ class MyFirstPlugin(BehaviorHandlerPlugin):
             security_level=PluginSecurityLevel.VERIFIED,
             tags=["example", "first", "demo"]
         )
-    
+
     async def handle_behavior(self, behavior_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle a behavior event."""
         if not self.initialized:
             raise RuntimeError("Plugin not initialized")
-        
+
         # Your custom behavior logic here
         behavior_type = behavior_data.get('type', 'unknown')
-        
+
         result = {
             'processed': True,
             'behavior_type': behavior_type,
@@ -211,7 +211,7 @@ class MyFirstPlugin(BehaviorHandlerPlugin):
             'timestamp': datetime.now(timezone.utc).isoformat(),
             'message': f"Processed {behavior_type} behavior"
         }
-        
+
         logger.info(f"MyFirstPlugin processed behavior: {behavior_type}")
         return result
 
@@ -393,31 +393,31 @@ class TestMyPlugin:
     def setup_method(self):
         self.plugin_info = plugin_manager.load_plugin("plugins/my_plugin.py")
         self.plugin = plugin_manager.get_plugin("MyPlugin_1.0.0")
-    
+
     def teardown_method(self):
         plugin_manager.unload_plugin("MyPlugin_1.0.0")
-    
+
     def test_plugin_initialization(self):
         """Test plugin initialization."""
         assert self.plugin.initialize({}) == True
         assert self.plugin.initialized == True
-    
+
     def test_plugin_metadata(self):
         """Test plugin metadata."""
         metadata = self.plugin.get_metadata()
         assert metadata.name == "MyPlugin"
         assert metadata.version == "1.0.0"
-    
+
     @pytest.mark.asyncio
     async def test_behavior_handling(self):
         """Test behavior handling."""
         self.plugin.initialize({})
-        
+
         result = await self.plugin.handle_behavior(
             {"type": "click", "canvas_id": "test"},
             {"user_id": "test_user"}
         )
-        
+
         assert result["processed"] == True
         assert result["behavior_type"] == "click"
 ```
@@ -430,11 +430,11 @@ from svgx_engine.services.plugin_system import plugin_manager
 
 async def test_plugin_integration():
     """Test plugin integration with the engine."""
-    
+
     # Load plugin
     plugin_info = plugin_manager.load_plugin("plugins/my_plugin.py")
     assert plugin_info is not None
-    
+
     # Test plugin execution
     result = await plugin_manager.execute_plugin(
         "MyPlugin_1.0.0",
@@ -442,13 +442,13 @@ async def test_plugin_integration():
         {"type": "click", "canvas_id": "test_canvas"},
         {"user_id": "test_user"}
     )
-    
+
     assert result["processed"] == True
-    
+
     # Test plugin metrics
     metrics = plugin_manager.get_plugin_metrics()
     assert "MyPlugin_1.0.0" in metrics["active_plugins"]
-    
+
     # Cleanup
     plugin_manager.unload_plugin("MyPlugin_1.0.0")
 
@@ -465,13 +465,13 @@ from svgx_engine.services.plugin_system import plugin_manager
 
 async def test_plugin_performance():
     """Test plugin performance."""
-    
+
     plugin_name = "MyPlugin_1.0.0"
     plugin_manager.load_plugin("plugins/my_plugin.py")
-    
+
     # Test execution time
     start_time = time.time()
-    
+
     for i in range(100):
         await plugin_manager.execute_plugin(
             plugin_name,
@@ -479,13 +479,13 @@ async def test_plugin_performance():
             {"type": "click", "canvas_id": f"canvas_{i}"},
             {"user_id": "test_user"}
         )
-    
+
     end_time = time.time()
     total_time = end_time - start_time
-    
+
     print(f"Processed 100 behaviors in {total_time:.2f} seconds")
     print(f"Average time per behavior: {total_time/100:.3f} seconds")
-    
+
     # Check performance metrics
     performance = plugin_manager.get_plugin_performance(plugin_name)
     print(f"Plugin performance: {performance}")
@@ -573,16 +573,16 @@ logger = logging.getLogger(__name__)
 
 class WellOrganizedPlugin(BehaviorHandlerPlugin):
     """Well-organized plugin with proper structure."""
-    
+
     def __init__(self):
         self.initialized = False
         self.config = {}
         self._setup_logging()
-    
+
     def _setup_logging(self):
         """Setup plugin-specific logging."""
         self.logger = logging.getLogger(f"{__name__}.WellOrganizedPlugin")
-    
+
     def initialize(self, config: Dict[str, Any]) -> bool:
         """Initialize the plugin with proper error handling."""
         try:
@@ -595,19 +595,19 @@ class WellOrganizedPlugin(BehaviorHandlerPlugin):
         except Exception as e:
             self.logger.error(f"Initialization failed: {e}")
             return False
-    
+
     def _validate_config(self):
         """Validate plugin configuration."""
         required_keys = ["api_key", "endpoint"]
         for key in required_keys:
             if key not in self.config:
                 raise ValueError(f"Missing required config key: {key}")
-    
+
     def _setup_resources(self):
         """Setup plugin resources."""
         # Initialize connections, caches, etc.
         pass
-    
+
     def cleanup(self) -> None:
         """Clean up plugin resources properly."""
         try:
@@ -616,12 +616,12 @@ class WellOrganizedPlugin(BehaviorHandlerPlugin):
             self.logger.info("Plugin cleaned up successfully")
         except Exception as e:
             self.logger.error(f"Cleanup failed: {e}")
-    
+
     def _cleanup_resources(self):
         """Clean up plugin resources."""
         # Close connections, free memory, etc.
         pass
-    
+
     def get_metadata(self) -> PluginMetadata:
         """Get comprehensive plugin metadata."""
         return PluginMetadata(
@@ -637,12 +637,12 @@ class WellOrganizedPlugin(BehaviorHandlerPlugin):
             homepage="https://github.com/your-org/svgx-plugin",
             license="MIT"
         )
-    
+
     async def handle_behavior(self, behavior_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle behavior with proper error handling and logging."""
         if not self.initialized:
             raise RuntimeError("Plugin not initialized")
-        
+
         try:
             result = await self._process_behavior(behavior_data, context)
             self.logger.info(f"Behavior processed successfully: {behavior_data.get('type')}")
@@ -654,11 +654,11 @@ class WellOrganizedPlugin(BehaviorHandlerPlugin):
                 "error": str(e),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-    
+
     async def _process_behavior(self, behavior_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Process behavior with custom logic."""
         behavior_type = behavior_data.get('type', 'unknown')
-        
+
         # Your custom behavior logic here
         result = {
             "processed": True,
@@ -667,7 +667,7 @@ class WellOrganizedPlugin(BehaviorHandlerPlugin):
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "custom_data": "your_custom_data"
         }
-        
+
         return result
 ```
 
@@ -680,16 +680,16 @@ def handle_behavior(self, behavior_data: Dict[str, Any], context: Dict[str, Any]
         # Validate input
         if not behavior_data:
             raise ValueError("Behavior data is required")
-        
+
         # Process behavior
         result = self._process_behavior(behavior_data, context)
-        
+
         # Validate output
         if not isinstance(result, dict):
             raise ValueError("Result must be a dictionary")
-        
+
         return result
-        
+
     except ValueError as e:
         logger.error(f"Validation error: {e}")
         return {"processed": False, "error": str(e)}
@@ -705,7 +705,7 @@ class OptimizedPlugin(BehaviorHandlerPlugin):
     def __init__(self):
         self.cache = {}
         self.cache_ttl = 300  # 5 minutes
-    
+
     def _get_cached_result(self, key: str) -> Optional[Dict[str, Any]]:
         """Get cached result if available and not expired."""
         if key in self.cache:
@@ -715,26 +715,26 @@ class OptimizedPlugin(BehaviorHandlerPlugin):
             else:
                 del self.cache[key]
         return None
-    
+
     def _cache_result(self, key: str, result: Dict[str, Any]):
         """Cache result with timestamp."""
         self.cache[key] = (time.time(), result)
-    
+
     async def handle_behavior(self, behavior_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle behavior with caching for performance."""
         cache_key = f"{behavior_data.get('type')}_{behavior_data.get('canvas_id')}"
-        
+
         # Check cache first
         cached_result = self._get_cached_result(cache_key)
         if cached_result:
             return cached_result
-        
+
         # Process behavior
         result = await self._process_behavior(behavior_data, context)
-        
+
         # Cache result
         self._cache_result(cache_key, result)
-        
+
         return result
 ```
 
@@ -799,10 +799,10 @@ class SimpleBehaviorPlugin(BehaviorHandlerPlugin):
     def initialize(self, config: Dict[str, Any]) -> bool:
         self.initialized = True
         return True
-    
+
     def cleanup(self) -> None:
         self.initialized = False
-    
+
     def get_metadata(self) -> PluginMetadata:
         return PluginMetadata(
             name="SimpleBehaviorPlugin",
@@ -812,7 +812,7 @@ class SimpleBehaviorPlugin(BehaviorHandlerPlugin):
             plugin_type=PluginType.BEHAVIOR_HANDLER,
             security_level=PluginSecurityLevel.VERIFIED
         )
-    
+
     async def handle_behavior(self, behavior_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "processed": True,
@@ -828,15 +828,15 @@ class AdvancedEventProcessorPlugin(EventProcessorPlugin):
     def __init__(self):
         self.event_count = 0
         self.event_types = set()
-    
+
     def initialize(self, config: Dict[str, Any]) -> bool:
         self.config = config
         self.initialized = True
         return True
-    
+
     def cleanup(self) -> None:
         self.initialized = False
-    
+
     def get_metadata(self) -> PluginMetadata:
         return PluginMetadata(
             name="AdvancedEventProcessorPlugin",
@@ -847,12 +847,12 @@ class AdvancedEventProcessorPlugin(EventProcessorPlugin):
             security_level=PluginSecurityLevel.VERIFIED,
             tags=["advanced", "analytics", "event-processing"]
         )
-    
+
     async def process_event(self, event_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         self.event_count += 1
         event_type = event_data.get("type", "unknown")
         self.event_types.add(event_type)
-        
+
         # Advanced event processing logic
         processed_event = {
             "original_event": event_data,
@@ -863,7 +863,7 @@ class AdvancedEventProcessorPlugin(EventProcessorPlugin):
                 "event_types": list(self.event_types)
             }
         }
-        
+
         return {
             "processed": True,
             "processed_event": processed_event,
@@ -880,4 +880,4 @@ For additional support:
 - **Plugin Examples**: [https://github.com/svgx-engine/plugins](https://github.com/svgx-engine/plugins)
 - **API Documentation**: [https://docs.svgx-engine.com/plugins](https://docs.svgx-engine.com/plugins)
 - **Community Forum**: [https://community.svgx-engine.com](https://community.svgx-engine.com)
-- **Support Email**: plugins@svgx-engine.com 
+- **Support Email**: plugins@svgx-engine.com

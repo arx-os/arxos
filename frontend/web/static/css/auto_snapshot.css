@@ -392,15 +392,15 @@
     .stats-grid {
         @apply grid-cols-1;
     }
-    
+
     .floor-activity-controls {
         @apply flex-col items-start space-y-2;
     }
-    
+
     .config-actions {
         @apply flex-col space-y-2;
     }
-    
+
     .config-actions .config-btn {
         @apply w-full;
     }
@@ -411,36 +411,36 @@
     .auto-snapshot-container {
         @apply bg-gray-800 border-gray-700;
     }
-    
+
     .auto-snapshot-header {
         @apply bg-gradient-to-r from-gray-700 to-gray-800;
     }
-    
+
     .auto-snapshot-title {
         @apply text-gray-100;
     }
-    
+
     .config-form-group label {
         @apply text-gray-300;
     }
-    
+
     .config-form-group input[type="number"],
     .config-form-group input[type="text"] {
         @apply bg-gray-700 border-gray-600 text-gray-100;
     }
-    
+
     .stats-card {
         @apply bg-gray-700 border-gray-600;
     }
-    
+
     .floor-activity-content {
         @apply bg-gray-700 border-gray-600;
     }
-    
+
     .floor-activity-label {
         @apply text-gray-300;
     }
-    
+
     .floor-activity-value {
         @apply text-gray-100;
     }
@@ -462,10 +462,10 @@
     .auto-snapshot-container {
         @apply shadow-none border-none;
     }
-    
+
     .config-actions,
     .stats-actions,
     .floor-activity-controls {
         @apply hidden;
     }
-} 
+}

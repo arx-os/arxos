@@ -36,7 +36,7 @@ def safe_deserialize(data: str) -> dict:
 # Secure Error Handling
 def handle_errors(func):
     """Decorator to handle errors securely"""
-    def wrapper(*args, **kwargs):
+def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except ValueError as e:
@@ -53,18 +53,17 @@ def process_user_input(user_input: str) -> str:
     """Process user input securely"""
     # Prevent XSS
     safe_input = safe_render_content(user_input)
-    
+
     # Hash sensitive data
     input_hash = secure_hash(safe_input)
-    
-    return f"Processed: {safe_input} (hash: {input_hash})"
 
+    return f"Processed: {safe_input} (hash: {input_hash})
 @handle_errors
 def authenticate_user(username: str, password: str) -> bool:
     """Authenticate user securely"""
     # Hash password for comparison
     hashed_password = hash_password(password)
-    
+
     # Compare with stored hash (in real app)
     stored_hash = "stored_hash_here"
     return hashed_password == stored_hash

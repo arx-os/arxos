@@ -284,7 +284,7 @@ result = service.handle_operation("av_scenario", {
 
 # Start video conference
 result = service.handle_operation("av_scenario", {
-    "system": "audiovisual", 
+    "system": "audiovisual",
     "room_id": "conference_room_1",
     "scenario": "video_conference"
 })
@@ -326,7 +326,7 @@ result = service.handle_operation("av_content_schedule", {
     "signage_id": "lobby_signage",
     "schedule": {
         "09:00": "morning_content",
-        "12:00": "afternoon_content", 
+        "12:00": "afternoon_content",
         "17:00": "evening_content"
     }
 })
@@ -345,17 +345,17 @@ class DisplayBehavior:
         """Power on the display"""
         self.state.power_state = "on"
         return {"status": "powered_on"}
-    
+
     def set_brightness(self, level):
         """Set display brightness (0-100)"""
         self.state.brightness = max(0, min(100, level))
         return {"status": "brightness_set", "level": self.state.brightness}
-    
+
     def set_input_source(self, input_source):
         """Switch input source"""
         self.state.input_source = input_source
         return {"status": "input_changed", "source": input_source}
-    
+
     def calibrate_display(self):
         """Run display calibration"""
         return {"status": "calibration_complete"}
@@ -387,17 +387,17 @@ class ProjectorBehavior:
         """Power on the projector"""
         self.state.power_state = "on"
         return {"status": "powered_on"}
-    
+
     def set_brightness(self, level):
         """Set projector brightness (0-100)"""
         self.state.brightness = max(0, min(100, level))
         return {"status": "brightness_set", "level": self.state.brightness}
-    
+
     def adjust_keystone(self, keystone_value):
         """Adjust keystone correction (-30 to 30)"""
         self.state.keystone = max(-30, min(30, keystone_value))
         return {"status": "keystone_adjusted", "value": self.state.keystone}
-    
+
     def get_lamp_status(self):
         """Get lamp status and hours"""
         return {
@@ -526,20 +526,20 @@ def get_status(self):
 # Conference room AV system integration
 def setup_conference_room(room_id: str):
     """Setup complete conference room AV system"""
-    
+
     # Initialize control system
     control_result = service.handle_operation("av_initialize_control", {
         "system": "audiovisual",
         "room_id": room_id
     })
-    
+
     # Configure displays
     display_result = service.handle_operation("av_configure_displays", {
         "system": "audiovisual",
         "room_id": room_id,
         "displays": ["AV_Display_001", "AV_Display_002"]
     })
-    
+
     # Configure audio system
     audio_result = service.handle_operation("av_configure_audio", {
         "system": "audiovisual",
@@ -547,7 +547,7 @@ def setup_conference_room(room_id: str):
         "speakers": ["AV_Speaker_001", "AV_Speaker_002"],
         "microphones": ["AV_Microphone_001", "AV_Microphone_002"]
     })
-    
+
     # Configure video system
     video_result = service.handle_operation("av_configure_video", {
         "system": "audiovisual",
@@ -555,7 +555,7 @@ def setup_conference_room(room_id: str):
         "projector": "AV_Projector_001",
         "camera": "AV_Camera_001"
     })
-    
+
     return all([control_result, display_result, audio_result, video_result])
 ```
 
@@ -564,27 +564,27 @@ def setup_conference_room(room_id: str):
 # Digital signage system integration
 def setup_digital_signage(location_id: str):
     """Setup digital signage system"""
-    
+
     # Initialize signage system
     signage_result = service.handle_operation("av_initialize_signage", {
         "system": "audiovisual",
         "location_id": location_id
     })
-    
+
     # Configure displays
     displays_result = service.handle_operation("av_configure_signage_displays", {
         "system": "audiovisual",
         "location_id": location_id,
         "displays": ["AV_Display_001", "AV_Display_002", "AV_Display_003"]
     })
-    
+
     # Configure media player
     media_result = service.handle_operation("av_configure_media_player", {
         "system": "audiovisual",
         "location_id": location_id,
         "media_player": "AV_MediaPlayer_001"
     })
-    
+
     # Setup content schedule
     schedule_result = service.handle_operation("av_setup_content_schedule", {
         "system": "audiovisual",
@@ -595,7 +595,7 @@ def setup_digital_signage(location_id: str):
             "evening": ["closing_message", "next_day_preview"]
         }
     })
-    
+
     return all([signage_result, displays_result, media_result, schedule_result])
 ```
 
@@ -604,13 +604,13 @@ def setup_digital_signage(location_id: str):
 # Auditorium AV system integration
 def setup_auditorium(auditorium_id: str):
     """Setup auditorium AV system"""
-    
+
     # Initialize auditorium system
     auditorium_result = service.handle_operation("av_initialize_auditorium", {
         "system": "audiovisual",
         "auditorium_id": auditorium_id
     })
-    
+
     # Configure main projection system
     projection_result = service.handle_operation("av_configure_projection", {
         "system": "audiovisual",
@@ -618,7 +618,7 @@ def setup_auditorium(auditorium_id: str):
         "projector": "AV_Projector_001",
         "screen": "AV_Screen_001"
     })
-    
+
     # Configure audio system
     audio_result = service.handle_operation("av_configure_auditorium_audio", {
         "system": "audiovisual",
@@ -627,14 +627,14 @@ def setup_auditorium(auditorium_id: str):
         "amplifier": "AV_Amplifier_001",
         "mixer": "AV_Mixer_001"
     })
-    
+
     # Configure lighting system
     lighting_result = service.handle_operation("av_configure_lighting", {
         "system": "audiovisual",
         "auditorium_id": auditorium_id,
         "lighting_control": "AV_LightingControl_001"
     })
-    
+
     return all([auditorium_result, projection_result, audio_result, lighting_result])
 ```
 
@@ -654,12 +654,12 @@ def setup_auditorium(auditorium_id: str):
 # Get AV system performance metrics
 def get_av_performance_metrics(system_id: str):
     """Get comprehensive AV performance metrics"""
-    
+
     metrics = service.handle_operation("av_get_performance_metrics", {
         "system": "audiovisual",
         "system_id": system_id
     })
-    
+
     return {
         "uptime": metrics.get("uptime_percentage", 0),
         "response_time": metrics.get("avg_response_time", 0),
@@ -684,4 +684,4 @@ The Audiovisual (AV) system is now fully integrated into Arxos as an official bu
 
 The system includes complete schema definitions, symbol libraries, behavior profiles, and integration with the Arxos pipeline for automated deployment and management.
 
-**The AV system is ready for production use! 🎬** 
+**The AV system is ready for production use! 🎬**

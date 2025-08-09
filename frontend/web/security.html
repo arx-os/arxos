@@ -308,20 +308,20 @@
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.add('hidden');
             });
-            
+
             // Remove active class from all tab buttons
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active', 'border-blue-500', 'text-blue-600');
                 button.classList.add('border-transparent', 'text-gray-500');
             });
-            
+
             // Show selected tab content
             document.getElementById(tabName).classList.remove('hidden');
-            
+
             // Add active class to selected tab button
             event.target.classList.add('active', 'border-blue-500', 'text-blue-600');
             event.target.classList.remove('border-transparent', 'text-gray-500');
-            
+
             // Load tab-specific data
             if (tabName === 'api-keys') {
                 loadAPIKeys();
@@ -341,7 +341,7 @@
                     document.getElementById('api-requests').textContent = data.api_usage.total_requests.toLocaleString();
                     document.getElementById('success-rate').textContent = data.api_usage.success_rate.toFixed(1) + '%';
                     document.getElementById('active-keys').textContent = data.active_keys || '-';
-                    
+
                     // Load recent events
                     const recentEvents = document.getElementById('recent-events');
                     recentEvents.innerHTML = '';
@@ -357,7 +357,7 @@
                         `;
                         recentEvents.appendChild(eventDiv);
                     });
-                    
+
                     // Load top IPs
                     const topIPs = document.getElementById('top-ips');
                     topIPs.innerHTML = '';
@@ -383,7 +383,7 @@
                 .then(data => {
                     const tableBody = document.getElementById('api-keys-table');
                     tableBody.innerHTML = '';
-                    
+
                     data.forEach(key => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
@@ -416,19 +416,19 @@
         function loadSecurityAlerts() {
             const typeFilter = document.getElementById('alert-filter').value;
             const severityFilter = document.getElementById('severity-filter').value;
-            
+
             let url = '/api/security/alerts';
             const params = new URLSearchParams();
             if (typeFilter) params.append('type', typeFilter);
             if (severityFilter) params.append('severity', severityFilter);
             if (params.toString()) url += '?' + params.toString();
-            
+
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     const tableBody = document.getElementById('alerts-table');
                     tableBody.innerHTML = '';
-                    
+
                     data.forEach(alert => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
@@ -483,7 +483,7 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
-            
+
             fetch('/api/security/api-keys', {
                 method: 'POST',
                 headers: {
@@ -508,7 +508,7 @@
             const formData = new FormData(e.target);
             const alertId = formData.get('alert_id');
             const notes = formData.get('notes');
-            
+
             fetch(`/api/security/alerts/${alertId}/resolve`, {
                 method: 'PUT',
                 headers: {
@@ -570,4 +570,4 @@
         loadAPIKeys();
     </script>
 </body>
-</html> 
+</html>

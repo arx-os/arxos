@@ -504,18 +504,18 @@ try:
         "type": "commercial",
         "address": "123 Main St"
     })
-    
+
     # Add systems
     client.buildings.systems.create(building.id, {
         "type": "hvac",
         "name": "Main HVAC System"
     })
-    
+
     # Export building
     export_data = client.buildings.export(building.id, format="ifc")
-    
+
     print(f"Successfully created building: {building.name}")
-    
+
 except arxos.AuthenticationError:
     print("Authentication failed. Check your API key.")
 except arxos.PermissionError:
@@ -540,18 +540,18 @@ const client = new ArxosClient({
 app.get('/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
-    
+
     // Verify state parameter
     if (state !== req.session.oauthState) {
       throw new Error('State mismatch');
     }
-    
+
     // Exchange code for token
     const token = await client.auth.exchangeCodeForToken(code);
-    
+
     // Store token securely
     req.session.accessToken = token.access_token;
-    
+
     res.redirect('/dashboard');
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -564,7 +564,7 @@ app.get('/buildings', async (req, res) => {
     const buildings = await client.buildings.list({
       accessToken: req.session.accessToken
     });
-    
+
     res.json(buildings);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -590,4 +590,4 @@ app.get('/buildings', async (req, res) => {
 
 ---
 
-**Need Help?** Contact our support team or check the [API Reference](../reference/) for detailed endpoint documentation. 
+**Need Help?** Contact our support team or check the [API Reference](../reference/) for detailed endpoint documentation.

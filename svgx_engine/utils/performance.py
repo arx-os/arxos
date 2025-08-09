@@ -18,59 +18,59 @@ logger = get_logger()
 
 class PerformanceMonitor:
     """Performance monitoring utility for SVGX Engine."""
-    
+
     def __init__(self):
         """Initialize the performance monitor."""
         self.metrics = defaultdict(list)
         self.active_operations = {}
         self.lock = threading.Lock()
-    
+
     @contextmanager
-    def monitor(self, operation_name: str):
+def monitor(self, operation_name: str):
         """
         Context manager for monitoring operation performance.
-        
+
         Args:
             operation_name: Name of the operation to monitor
         """
         start_time = time.time()
         thread_id = threading.get_ident()
-        
+
         try:
             with self.lock:
                 self.active_operations[thread_id] = {
                     'operation': operation_name,
                     'start_time': start_time
                 }
-            
+
             yield
-            
+
         finally:
             end_time = time.time()
             duration = end_time - start_time
-            
+
             with self.lock:
                 if thread_id in self.active_operations:
                     del self.active_operations[thread_id]
-                
+
                 self.metrics[operation_name].append({
                     'start_time': start_time,
                     'end_time': end_time,
                     'duration': duration,
                     'timestamp': datetime.now().isoformat()
                 })
-            
+
             logger.debug(
                 "Operation completed",
                 operation=operation_name,
                 duration=duration
             )
-    
+
     def get_metrics(self) -> Dict[str, Any]:
         """Get current performance metrics."""
         with self.lock:
             result = {}
-            
+
             for operation_name, measurements in self.metrics.items():
                 if measurements:
                     durations = [m['duration'] for m in measurements]
@@ -82,7 +82,7 @@ class PerformanceMonitor:
                         'max_time': max(durations),
                         'recent_measurements': measurements[-10:]  # Last 10 measurements
                     }
-            
+
             result['active_operations'] = len(self.active_operations)
             result['active_operation_details'] = [
                 {
@@ -92,18 +92,18 @@ class PerformanceMonitor:
                 }
                 for op in self.active_operations.values()
             ]
-            
+
             return result
-    
+
     def get_operation_metrics(self, operation_name: str) -> Optional[Dict[str, Any]]:
         """Get metrics for a specific operation."""
         metrics = self.get_metrics()
         return metrics.get(operation_name)
-    
+
     def record_operation(self, operation_name: str, duration: float):
         """
         Record an operation with its duration.
-        
+
         Args:
             operation_name: Name of the operation
             duration: Duration in seconds
@@ -115,23 +115,23 @@ class PerformanceMonitor:
                 'duration': duration,
                 'timestamp': datetime.now().isoformat()
             })
-        
+
         logger.debug(
             "Operation recorded",
             operation=operation_name,
             duration=duration
         )
-    
+
     def clear_metrics(self):
         """Clear all performance metrics."""
         with self.lock:
             self.metrics.clear()
             self.active_operations.clear()
-    
+
     def get_slow_operations(self, threshold_seconds: float = 1.0) -> List[Dict[str, Any]]:
         """Get operations that took longer than the threshold."""
         slow_operations = []
-        
+
         with self.lock:
             for operation_name, measurements in self.metrics.items():
                 for measurement in measurements:
@@ -141,29 +141,29 @@ class PerformanceMonitor:
                             'duration': measurement['duration'],
                             'timestamp': measurement['timestamp']
                         })
-        
+
         return sorted(slow_operations, key=lambda x: x['duration'], reverse=True)
-    
+
     def get_performance_summary(self) -> Dict[str, Any]:
         """Get a comprehensive performance summary."""
         metrics = self.get_metrics()
-        
+
         if not metrics:
             return {'message': 'No performance data available'}
-        
+
         # Calculate overall statistics
         all_durations = []
         for operation_data in metrics.values():
             if isinstance(operation_data, dict) and 'recent_measurements' in operation_data:
                 all_durations.extend([m['duration'] for m in operation_data['recent_measurements']])
-        
+
         summary = {
             'total_operations': sum(
-                data['count'] for data in metrics.values() 
+                data['count'] for data in metrics.values()
                 if isinstance(data, dict) and 'count' in data
             ),
             'total_time': sum(
-                data['total_time'] for data in metrics.values() 
+                data['total_time'] for data in metrics.values()
                 if isinstance(data, dict) and 'total_time' in data
             ),
             'average_operation_time': sum(all_durations) / len(all_durations) if all_durations else 0,
@@ -171,11 +171,11 @@ class PerformanceMonitor:
             'fastest_operation': min(all_durations) if all_durations else 0,
             'active_operations': metrics.get('active_operations', 0),
             'operation_breakdown': {
-                name: data for name, data in metrics.items() 
+                name: data for name, data in metrics.items()
                 if isinstance(data, dict) and 'count' in data
             }
         }
-        
+
         return summary
 
 
@@ -193,7 +193,7 @@ def get_performance_monitor() -> PerformanceMonitor:
 
 def monitor_operation(operation_name: str):
     """Decorator for monitoring function performance."""
-    def decorator(func):
+def decorator(func):
     """
     Perform decorator operation
 
@@ -210,7 +210,7 @@ Example:
         result = decorator(param)
         print(result)
     """
-        def wrapper(*args, **kwargs):
+def wrapper(*args, **kwargs):
             monitor = get_performance_monitor()
             with monitor.monitor(operation_name):
                 return func(*args, **kwargs)
@@ -227,4 +227,4 @@ def get_performance_report() -> Dict[str, Any]:
 def clear_performance_data():
     """Clear all performance data."""
     monitor = get_performance_monitor()
-    monitor.clear_metrics() 
+    monitor.clear_metrics()

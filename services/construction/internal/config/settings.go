@@ -40,4 +40,4 @@ func (s *Settings) IsDevelopment() bool {
 // IsProduction returns true if running in production mode
 func (s *Settings) IsProduction() bool {
 	return s.Environment == "production"
-} 
+}

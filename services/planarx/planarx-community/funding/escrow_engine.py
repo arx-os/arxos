@@ -60,8 +60,9 @@ class Milestone:
     approved_by: Optional[str] = None
     rejection_reason: Optional[str] = None
     evidence_urls: List[str] = None
-    
+
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -93,7 +94,7 @@ class Transaction:
     timestamp: datetime
     user_id: Optional[str] = None
     metadata: Dict = None
-    
+
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
@@ -114,7 +115,7 @@ class EscrowAccount:
     governance_board: List[str]
     auto_release_enabled: bool = True
     dispute_resolution: Optional[str] = None
-    
+
     def __post_init__(self):
         if self.milestones is None:
             self.milestones = []
@@ -142,12 +143,12 @@ Example:
         print(result)
     """
     """Core escrow management engine"""
-    
+
     def __init__(self):
         self.escrow_accounts: Dict[str, EscrowAccount] = {}
         self.pending_approvals: Dict[str, List[str]] = {}
         self.logger = logging.getLogger(__name__)
-    
+
     def create_escrow_account(
         self,
         project_id: str,
@@ -158,9 +159,8 @@ Example:
         auto_release: bool = True
     ) -> EscrowAccount:
         """Create a new escrow account for a project"""
-        
-        escrow_id = str(uuid.uuid4())
-        
+
+        escrow_id = str(uuid.uuid4()
         # Convert milestone dicts to Milestone objects
         milestone_objects = []
         for i, milestone_data in enumerate(milestones):
@@ -173,7 +173,7 @@ Example:
                 status=MilestoneStatus.PENDING
             )
             milestone_objects.append(milestone)
-        
+
         escrow_account = EscrowAccount(
             id=escrow_id,
             project_id=project_id,
@@ -187,7 +187,7 @@ Example:
             governance_board=governance_board,
             auto_release_enabled=auto_release
         )
-        
+
         # Add initial transaction
         initial_transaction = Transaction(
             id=str(uuid.uuid4()),
@@ -203,25 +203,25 @@ Example:
             }
         )
         escrow_account.transactions.append(initial_transaction)
-        
+
         self.escrow_accounts[escrow_id] = escrow_account
         self.logger.info(f"Created escrow account {escrow_id} for project {project_id}")
-        
+
         return escrow_account
-    
+
     def deposit_funds(self, escrow_id: str, amount: Decimal, user_id: str) -> bool:
         """Deposit funds into escrow account"""
-        
+
         if escrow_id not in self.escrow_accounts:
             raise ValueError(f"Escrow account {escrow_id} not found")
-        
+
         escrow = self.escrow_accounts[escrow_id]
-        
+
         if escrow.status != EscrowStatus.PENDING and escrow.status != EscrowStatus.ACTIVE:
             raise ValueError(f"Cannot deposit funds to escrow in {escrow.status} status")
-        
+
         escrow.current_balance += amount
-        
+
         # Add transaction record
         transaction = Transaction(
             id=str(uuid.uuid4()),
@@ -233,15 +233,15 @@ Example:
             user_id=user_id
         )
         escrow.transactions.append(transaction)
-        
+
         # Activate escrow if target reached
         if escrow.current_balance >= escrow.total_amount:
             escrow.status = EscrowStatus.ACTIVE
             self.logger.info(f"Escrow account {escrow_id} activated")
-        
+
         self.logger.info(f"Deposited {amount} to escrow {escrow_id}")
         return True
-    
+
     def submit_milestone(
         self,
         escrow_id: str,
@@ -250,33 +250,33 @@ Example:
         creator_id: str
     ) -> bool:
         """Submit a milestone for approval"""
-        
+
         if escrow_id not in self.escrow_accounts:
             raise ValueError(f"Escrow account {escrow_id} not found")
-        
+
         escrow = self.escrow_accounts[escrow_id]
-        
+
         if escrow.status != EscrowStatus.ACTIVE:
             raise ValueError(f"Cannot submit milestone to escrow in {escrow.status} status")
-        
+
         # Find milestone
         milestone = None
         for m in escrow.milestones:
             if m.id == milestone_id:
                 milestone = m
                 break
-        
+
         if not milestone:
             raise ValueError(f"Milestone {milestone_id} not found")
-        
+
         if milestone.status != MilestoneStatus.PENDING:
             raise ValueError(f"Milestone {milestone_id} already submitted or completed")
-        
+
         # Update milestone
         milestone.status = MilestoneStatus.SUBMITTED
         milestone.submitted_at = datetime.utcnow()
         milestone.evidence_urls = evidence_urls
-        
+
         # Add transaction
         transaction = Transaction(
             id=str(uuid.uuid4()),
@@ -292,13 +292,13 @@ Example:
             }
         )
         escrow.transactions.append(transaction)
-        
+
         # Notify governance board
         self._notify_governance_board(escrow_id, milestone_id)
-        
+
         self.logger.info(f"Milestone {milestone_id} submitted for approval")
         return True
-    
+
     def approve_milestone(
         self,
         escrow_id: str,
@@ -307,37 +307,37 @@ Example:
         is_override: bool = False
     ) -> bool:
         """Approve a milestone and release funds"""
-        
+
         if escrow_id not in self.escrow_accounts:
             raise ValueError(f"Escrow account {escrow_id} not found")
-        
+
         escrow = self.escrow_accounts[escrow_id]
-        
+
         # Verify approver is on governance board
         if approver_id not in escrow.governance_board:
             raise ValueError(f"User {approver_id} not authorized to approve milestones")
-        
+
         # Find milestone
         milestone = None
         for m in escrow.milestones:
             if m.id == milestone_id:
                 milestone = m
                 break
-        
+
         if not milestone:
             raise ValueError(f"Milestone {milestone_id} not found")
-        
+
         if milestone.status != MilestoneStatus.SUBMITTED:
             raise ValueError(f"Milestone {milestone_id} not in submitted status")
-        
+
         # Update milestone
         milestone.status = MilestoneStatus.OVERRIDE_APPROVED if is_override else MilestoneStatus.APPROVED
         milestone.approved_at = datetime.utcnow()
         milestone.approved_by = approver_id
-        
+
         # Release funds
         escrow.current_balance -= milestone.amount
-        
+
         # Add transaction
         transaction_type = TransactionType.OVERRIDE_APPROVED if is_override else TransactionType.MILESTONE_APPROVED
         transaction = Transaction(
@@ -354,7 +354,7 @@ Example:
             }
         )
         escrow.transactions.append(transaction)
-        
+
         # Add fund release transaction
         release_transaction = Transaction(
             id=str(uuid.uuid4()),
@@ -370,15 +370,15 @@ Example:
             }
         )
         escrow.transactions.append(release_transaction)
-        
+
         # Check if all milestones completed
         if self._all_milestones_completed(escrow):
             escrow.status = EscrowStatus.COMPLETED
             self.logger.info(f"Escrow account {escrow_id} completed")
-        
+
         self.logger.info(f"Milestone {milestone_id} approved and funds released")
         return True
-    
+
     def reject_milestone(
         self,
         escrow_id: str,
@@ -387,33 +387,33 @@ Example:
         reason: str
     ) -> bool:
         """Reject a milestone"""
-        
+
         if escrow_id not in self.escrow_accounts:
             raise ValueError(f"Escrow account {escrow_id} not found")
-        
+
         escrow = self.escrow_accounts[escrow_id]
-        
+
         # Verify rejector is on governance board
         if rejector_id not in escrow.governance_board:
             raise ValueError(f"User {rejector_id} not authorized to reject milestones")
-        
+
         # Find milestone
         milestone = None
         for m in escrow.milestones:
             if m.id == milestone_id:
                 milestone = m
                 break
-        
+
         if not milestone:
             raise ValueError(f"Milestone {milestone_id} not found")
-        
+
         if milestone.status != MilestoneStatus.SUBMITTED:
             raise ValueError(f"Milestone {milestone_id} not in submitted status")
-        
+
         # Update milestone
         milestone.status = MilestoneStatus.REJECTED
         milestone.rejection_reason = reason
-        
+
         # Add transaction
         transaction = Transaction(
             id=str(uuid.uuid4()),
@@ -429,24 +429,24 @@ Example:
             }
         )
         escrow.transactions.append(transaction)
-        
+
         self.logger.info(f"Milestone {milestone_id} rejected: {reason}")
         return True
-    
+
     def get_escrow_summary(self, escrow_id: str) -> Dict:
         """Get comprehensive escrow account summary"""
-        
+
         if escrow_id not in self.escrow_accounts:
             raise ValueError(f"Escrow account {escrow_id} not found")
-        
+
         escrow = self.escrow_accounts[escrow_id]
-        
+
         # Calculate statistics
         total_milestones = len(escrow.milestones)
         completed_milestones = len([m for m in escrow.milestones if m.status in [MilestoneStatus.APPROVED, MilestoneStatus.OVERRIDE_APPROVED]])
         pending_milestones = len([m for m in escrow.milestones if m.status == MilestoneStatus.SUBMITTED])
         total_released = sum(m.amount for m in escrow.milestones if m.status in [MilestoneStatus.APPROVED, MilestoneStatus.OVERRIDE_APPROVED])
-        
+
         return {
             "escrow_id": escrow_id,
             "project_id": escrow.project_id,
@@ -477,24 +477,24 @@ Example:
                 for t in sorted(escrow.transactions, key=lambda x: x.timestamp, reverse=True)[:10]
             ]
         }
-    
+
     def get_milestone_details(self, escrow_id: str, milestone_id: str) -> Dict:
         """Get detailed milestone information"""
-        
+
         if escrow_id not in self.escrow_accounts:
             raise ValueError(f"Escrow account {escrow_id} not found")
-        
+
         escrow = self.escrow_accounts[escrow_id]
-        
+
         milestone = None
         for m in escrow.milestones:
             if m.id == milestone_id:
                 milestone = m
                 break
-        
+
         if not milestone:
             raise ValueError(f"Milestone {milestone_id} not found")
-        
+
         return {
             "id": milestone.id,
             "title": milestone.title,
@@ -509,26 +509,26 @@ Example:
             "evidence_urls": milestone.evidence_urls,
             "is_overdue": datetime.utcnow() > milestone.due_date and milestone.status == MilestoneStatus.PENDING
         }
-    
+
     def _notify_governance_board(self, escrow_id: str, milestone_id: str):
         """Notify governance board of milestone submission"""
         if escrow_id not in self.pending_approvals:
             self.pending_approvals[escrow_id] = []
-        
+
         if milestone_id not in self.pending_approvals[escrow_id]:
             self.pending_approvals[escrow_id].append(milestone_id)
-    
+
     def _all_milestones_completed(self, escrow: EscrowAccount) -> bool:
         """Check if all milestones are completed"""
         return all(
             m.status in [MilestoneStatus.APPROVED, MilestoneStatus.OVERRIDE_APPROVED]
             for m in escrow.milestones
         )
-    
+
     def get_pending_approvals(self, user_id: str) -> List[Dict]:
         """Get pending approvals for a governance board member"""
         pending = []
-        
+
         for escrow_id, milestone_ids in self.pending_approvals.items():
             if escrow_id in self.escrow_accounts:
                 escrow = self.escrow_accounts[escrow_id]
@@ -544,9 +544,9 @@ Example:
                                 "amount": str(milestone.amount),
                                 "submitted_at": milestone.submitted_at.isoformat() if milestone.submitted_at else None
                             })
-        
+
         return pending
 
 
 # Global escrow engine instance
-escrow_engine = EscrowEngine() 
+escrow_engine = EscrowEngine()

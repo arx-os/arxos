@@ -46,35 +46,35 @@ This guide provides comprehensive training for users of the Arxos SVG-BIM viewpo
 ### Mouse Controls
 
 #### Zoom Operations
-- **Zoom In**: 
+- **Zoom In**:
   - Scroll wheel up
   - Double-click on area
   - Use zoom slider (+ button)
-- **Zoom Out**: 
+- **Zoom Out**:
   - Scroll wheel down
   - Use zoom slider (- button)
-- **Zoom to Fit**: 
+- **Zoom to Fit**:
   - Double-click empty space
   - Press 'F' key
 
 #### Pan Operations
-- **Pan View**: 
+- **Pan View**:
   - Click and drag with left mouse button
   - Hold middle mouse button and drag
-- **Pan to Center**: 
+- **Pan to Center**:
   - Right-click on location
   - Select "Center View"
 
 ### Touch Controls (Mobile/Tablet)
 
 #### Gesture Support
-- **Pinch to Zoom**: 
+- **Pinch to Zoom**:
   - Two-finger pinch in/out
   - Smooth zoom with momentum
-- **Pan**: 
+- **Pan**:
   - Single finger drag
   - Momentum scrolling
-- **Double Tap**: 
+- **Double Tap**:
   - Zoom to fit
   - Reset view
 
@@ -327,4 +327,4 @@ Status Bar: X: 123.456 Y: 789.012 Scale: 1:100 Zoom: 1.5x
 
 **Last Updated**: [Current Date]
 **Version**: 1.0.0
-**Training Level**: Beginner to Advanced 
+**Training Level**: Beginner to Advanced

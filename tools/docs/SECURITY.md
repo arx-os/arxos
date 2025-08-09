@@ -160,4 +160,4 @@ rules:
 ### Version History
 - **2024-01-15**: Initial security documentation
 - **2024-01-15**: Dependency management procedures added
-- **2024-01-15**: Vulnerability response procedures defined 
+- **2024-01-15**: Vulnerability response procedures defined

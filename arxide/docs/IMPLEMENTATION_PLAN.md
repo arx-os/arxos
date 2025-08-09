@@ -115,7 +115,7 @@ class ArxIDEMain {
         contextIsolation: false
       }
     })
-    
+
     await this.mainWindow.loadFile('src/renderer/index.html')
     this.arxIDE = new ArxIDEApplication(this.mainWindow)
   }
@@ -199,7 +199,7 @@ export const SVGXLanguage = {
   id: 'svgx',
   extensions: ['.svgx'],
   aliases: ['SVGX', 'svgx'],
-  
+
   configuration: {
     comments: {
       lineComment: '//',
@@ -307,7 +307,7 @@ async def process_natural_language_command(request: NaturalLanguageCommand):
     try:
         # Process command through Arxos Agent
         result = await arxos_agent.process_command(request.command)
-        
+
         return {
             "success": True,
             "svgx_code": result.svgx_code,

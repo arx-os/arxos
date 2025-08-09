@@ -186,4 +186,4 @@ class TestSelectionHandlerIntegration:
         assert feedback.success is True
         assert feedback.result['handler_results'][0]['result']['selected'] == ["obj1"]
         # State should be updated
-        assert selection_handler.get_selection("canvas1") == ["obj1"] 
+        assert selection_handler.get_selection("canvas1") == ["obj1"]

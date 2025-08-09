@@ -423,4 +423,4 @@ By the end of this 12-week development cycle, the Arxos Construction Management 
 7. **✅ Integrated**: Seamless SVGX BIM integration
 8. **✅ Maintainable**: Clean, well-structured, and maintainable code
 
-The system will be ready for immediate use by construction firms and can be extended with additional features as needed. 
+The system will be ready for immediate use by construction firms and can be extended with additional features as needed.

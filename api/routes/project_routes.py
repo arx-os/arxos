@@ -74,7 +74,7 @@ async def create_project(
             status=request.status,
             created_by=user.user_id
         )
-        
+
         # Use application service to create project
         result = project_service.create_project(
             name=create_request.name,
@@ -82,7 +82,7 @@ async def create_project(
             building_id=create_request.building_id,
             created_by=create_request.created_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -102,7 +102,7 @@ async def create_project(
                 message=result.error_message or "Failed to create project",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to create project: {str(e)}")
         return format_error_response(
@@ -135,7 +135,7 @@ async def list_projects(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -166,7 +166,7 @@ async def list_projects(
                 message=result.error_message or "Failed to retrieve projects",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to list projects: {str(e)}")
         return format_error_response(
@@ -191,7 +191,7 @@ async def get_project(
     try:
         # Use application service to get project
         result = project_service.get_project(project_id=project_id)
-        
+
         if result.success and result.project:
             project = result.project
             return format_success_response(
@@ -213,7 +213,7 @@ async def get_project(
                 message=result.error_message or "Project not found",
                 details={"project_id": project_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get project {project_id}: {str(e)}")
         return format_error_response(
@@ -246,7 +246,7 @@ async def update_project(
             status=request.status,
             updated_by=user.user_id
         )
-        
+
         # Use application service to update project
         result = project_service.update_project(
             project_id=project_id,
@@ -256,7 +256,7 @@ async def update_project(
             status=update_request.status,
             updated_by=update_request.updated_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -276,7 +276,7 @@ async def update_project(
                 message=result.error_message or "Failed to update project",
                 details={"error": result.error_message, "project_id": project_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to update project {project_id}: {str(e)}")
         return format_error_response(
@@ -304,7 +304,7 @@ async def delete_project(
             project_id=project_id,
             deleted_by=user.user_id
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -320,7 +320,7 @@ async def delete_project(
                 message=result.error_message or "Failed to delete project",
                 details={"error": result.error_message, "project_id": project_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to delete project {project_id}: {str(e)}")
         return format_error_response(
@@ -345,7 +345,7 @@ async def get_project_statistics(
     try:
         # Use application service to get project statistics
         result = project_service.get_project_statistics(project_id=project_id)
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -368,11 +368,11 @@ async def get_project_statistics(
                 message=result.error_message or "Failed to retrieve project statistics",
                 details={"error": result.error_message, "project_id": project_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get statistics for project {project_id}: {str(e)}")
         return format_error_response(
             error_code="PROJECT_STATISTICS_ERROR",
             message="Failed to retrieve project statistics",
             details={"error": str(e), "project_id": project_id}
-        ) 
+        )

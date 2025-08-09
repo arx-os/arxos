@@ -1,7 +1,7 @@
 /**
  * Arxos CAD UI Manager
  * Handles user interface interactions and integrates all CAD components
- * 
+ *
  * @author Arxos Team
  * @version 1.0.0
  * @license MIT
@@ -14,116 +14,116 @@ class CadApplication {
         this.aiAssistant = null;
         this.apiClient = null;
         this.isInitialized = false;
-        
+
         // UI state
         this.currentTool = 'select';
         this.selectedObjects = new Set();
         this.previewMode = false;
-        
+
         // Project management
         this.currentProject = null;
         this.currentBuilding = null;
         this.currentFloor = null;
-        
+
         // Performance tracking
         this.lastRenderTime = 0;
         this.frameCount = 0;
         this.fps = 60;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         // Auto-save interval
         this.autoSaveInterval = null;
         this.autoSaveEnabled = true;
     }
-    
+
     /**
      * Initialize the CAD application
      */
     async initialize() {
         try {
             console.log('Initializing Arxos CAD Application...');
-            
+
             // Initialize CAD Engine
             this.cadEngine = new CadEngine();
             await this.cadEngine.initialize();
-            
+
             // Initialize ArxObject System
             this.arxObjectSystem = new ArxObjectSystem();
-            
+
             // Initialize AI Assistant
             this.aiAssistant = new AiAssistant();
-            
+
             // Initialize API Client
             this.apiClient = new CadApiClient();
-            
+
             // Initialize Collaboration System
             this.collaboration = new CadCollaboration(this, this.apiClient);
-            
+
             // Initialize AI Integration System
             this.aiIntegration = new CadAiIntegration(this, this.apiClient);
-            
+
             // Initialize UI components
             this.initializeUI();
-            
+
             // Initialize event handlers
             this.initializeEventHandlers();
-            
+
             // Load ArxObjects library
             this.loadArxObjectsLibrary();
-            
+
             // Initialize project management
             this.initializeProjectManagement();
-            
+
             // Start auto-save
             this.startAutoSave();
-            
+
             // Initialize collaboration if project is loaded
             if (this.currentProject) {
                 this.initializeCollaboration();
             }
-            
+
             // Initialize AI integration
             this.initializeAiIntegration();
-            
+
             this.isInitialized = true;
             console.log('Arxos CAD Application initialized successfully');
-            
+
         } catch (error) {
             console.error('Failed to initialize CAD Application:', error);
             throw error;
         }
     }
-    
+
     /**
      * Initialize UI components
      */
     initializeUI() {
         // Initialize tool buttons
         this.initializeToolButtons();
-        
+
         // Initialize precision controls
         this.initializePrecisionControls();
-        
+
         // Initialize constraint tools
         this.initializeConstraintTools();
-        
+
         // Initialize save/export buttons
         this.initializeActionButtons();
-        
+
         // Initialize project management buttons
         this.initializeProjectButtons();
-        
+
         // Initialize AI assistant
         this.initializeAiAssistant();
-        
+
         // Initialize properties panel
         this.initializePropertiesPanel();
-        
+
         console.log('UI components initialized');
     }
-    
+
     /**
      * Initialize tool buttons
      */
@@ -133,17 +133,17 @@ class CadApplication {
             button.addEventListener('click', (e) => {
                 const tool = button.dataset.tool;
                 this.setCurrentTool(tool);
-                
+
                 // Update active state
                 toolButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                
+
                 // Update cursor
                 this.updateCursor(tool);
             });
         });
     }
-    
+
     /**
      * Initialize precision controls
      */
@@ -157,7 +157,7 @@ class CadApplication {
                 this.updatePrecisionUI(level);
             });
         }
-        
+
         // Grid size selector
         const gridSizeSelect = document.getElementById('grid-size');
         if (gridSizeSelect) {
@@ -167,7 +167,7 @@ class CadApplication {
                 this.updateGridUI(gridSize);
             });
         }
-        
+
         // Grid snap toggle
         const gridSnapCheckbox = document.getElementById('grid-snap');
         if (gridSnapCheckbox) {
@@ -189,7 +189,7 @@ class CadApplication {
                 this.setCurrentTool('distance-constraint');
             });
         }
-        
+
         // Parallel constraint tool
         const parallelConstraintBtn = document.getElementById('parallel-constraint');
         if (parallelConstraintBtn) {
@@ -197,7 +197,7 @@ class CadApplication {
                 this.setCurrentTool('parallel-constraint');
             });
         }
-        
+
         // Perpendicular constraint tool
         const perpendicularConstraintBtn = document.getElementById('perpendicular-constraint');
         if (perpendicularConstraintBtn) {
@@ -205,7 +205,7 @@ class CadApplication {
                 this.setCurrentTool('perpendicular-constraint');
             });
         }
-        
+
         // Clear constraints button
         const clearConstraintsBtn = document.getElementById('clear-constraints');
         if (clearConstraintsBtn) {
@@ -226,7 +226,7 @@ class CadApplication {
                 this.saveProject();
             });
         }
-        
+
                     // Export drawing button
             const exportButton = document.getElementById('export-drawing');
             if (exportButton) {
@@ -235,7 +235,7 @@ class CadApplication {
                 });
             }
         }
-        
+
         /**
          * Initialize project management buttons
          */
@@ -247,7 +247,7 @@ class CadApplication {
                     this.showNewProjectModal();
                 });
             }
-            
+
             // Save project button
             const saveButton = document.getElementById('save-project');
             if (saveButton) {
@@ -256,20 +256,20 @@ class CadApplication {
                 });
             }
         }
-        
+
         /**
          * Initialize collaboration chat
          */
         initializeCollaborationChat() {
             const chatInput = document.getElementById('chat-input');
             const sendChatButton = document.getElementById('send-chat');
-            
+
             if (sendChatButton) {
                 sendChatButton.addEventListener('click', () => {
                     this.sendCollaborationMessage();
                 });
             }
-            
+
             if (chatInput) {
                 chatInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
@@ -278,21 +278,21 @@ class CadApplication {
                 });
             }
         }
-        
+
         /**
          * Send collaboration chat message
          */
         sendCollaborationMessage() {
             const chatInput = document.getElementById('chat-input');
             if (!chatInput || !this.collaboration) return;
-            
+
             const message = chatInput.value.trim();
             if (!message) return;
-            
+
             this.collaboration.sendChatMessage(message);
             chatInput.value = '';
         }
-    
+
     /**
      * Initialize AI assistant
      */
@@ -302,25 +302,25 @@ class CadApplication {
         const closeButton = document.getElementById('close-ai-modal');
         const aiInput = document.getElementById('ai-input');
         const aiSend = document.getElementById('ai-send');
-        
+
         if (aiButton) {
             aiButton.addEventListener('click', () => {
                 this.openAiAssistant();
             });
         }
-        
+
         if (closeButton) {
             closeButton.addEventListener('click', () => {
                 this.closeAiAssistant();
             });
         }
-        
+
         if (aiSend) {
             aiSend.addEventListener('click', () => {
                 this.sendAiMessage();
             });
         }
-        
+
         if (aiInput) {
             aiInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
@@ -329,7 +329,7 @@ class CadApplication {
             });
         }
     }
-    
+
     /**
      * Initialize properties panel
      */
@@ -337,7 +337,7 @@ class CadApplication {
         // Properties panel will be updated dynamically
         // based on selected objects
     }
-    
+
     /**
      * Initialize event handlers
      */
@@ -346,41 +346,41 @@ class CadApplication {
         document.addEventListener('keydown', (e) => {
             this.handleKeyboardShortcut(e);
         });
-        
+
         // Window resize
         window.addEventListener('resize', () => {
             this.handleWindowResize();
         });
-        
+
         // Selection changes - we'll handle this manually for now
         // this.cadEngine.addEventListener('selectionChanged', (e) => {
         //     this.handleSelectionChanged(e);
         // });
-        
+
         // Object creation - we'll handle this manually for now
         // this.cadEngine.addEventListener('objectCreated', (e) => {
         //     this.handleObjectCreated(e);
         // });
-        
+
         // Object deletion - we'll handle this manually for now
         // this.cadEngine.addEventListener('objectDeleted', (e) => {
         //     this.handleObjectDeleted(e);
         // });
     }
-    
+
     /**
      * Load ArxObjects library
      */
     loadArxObjectsLibrary() {
         const arxObjectsList = document.getElementById('arx-objects-list');
         if (!arxObjectsList) return;
-        
+
         // Clear existing list
         arxObjectsList.innerHTML = '';
-        
+
         // Get all object types
         const objectTypes = this.arxObjectSystem.objectTypes;
-        
+
         // Group by category
         const categories = {};
         for (const [type, objectType] of objectTypes) {
@@ -389,58 +389,58 @@ class CadApplication {
             }
             categories[objectType.category].push({ type, ...objectType });
         }
-        
+
         // Create UI for each category
         for (const [category, objects] of Object.entries(categories)) {
             const categoryDiv = document.createElement('div');
             categoryDiv.className = 'mb-4';
-            
+
             const categoryTitle = document.createElement('h4');
             categoryTitle.className = 'text-sm font-semibold text-gray-300 mb-2';
             categoryTitle.textContent = this.capitalizeFirst(category);
             categoryDiv.appendChild(categoryTitle);
-            
+
             // Create object buttons
             for (const object of objects) {
                 const objectButton = document.createElement('button');
                 objectButton.className = 'w-full text-left p-2 rounded hover:bg-gray-700 text-sm';
                 objectButton.textContent = object.name;
                 objectButton.dataset.objectType = object.type;
-                
+
                 objectButton.addEventListener('click', () => {
                     this.selectArxObjectType(object.type);
                 });
-                
+
                 categoryDiv.appendChild(objectButton);
             }
-            
+
             arxObjectsList.appendChild(categoryDiv);
         }
     }
-    
+
     /**
      * Set current drawing tool
      */
     setCurrentTool(tool) {
         this.currentTool = tool;
-        
+
         // Update CAD engine tool
         if (this.cadEngine) {
             this.cadEngine.setCurrentTool(tool);
         }
-        
+
         // Update UI
         this.updateToolUI(tool);
         this.updateCursor(tool);
-        
+
         // Handle constraint tools
         if (tool.includes('constraint')) {
             this.handleConstraintTool(tool);
         }
-        
+
         console.log(`Current tool set to: ${tool}`);
     }
-    
+
     /**
      * Set precision level
      */
@@ -448,24 +448,24 @@ class CadApplication {
         this.cadEngine.setPrecision(precision);
         console.log('Precision set to:', precision);
     }
-    
+
     /**
      * Update cursor based on current tool
      */
     updateCursor(tool) {
         const canvas = document.getElementById('cad-canvas');
         if (!canvas) return;
-        
+
         const cursors = {
             select: 'default',
             line: 'crosshair',
             rectangle: 'crosshair',
             circle: 'crosshair'
         };
-        
+
         canvas.style.cursor = cursors[tool] || 'default';
     }
-    
+
     /**
      * Update tool UI
      */
@@ -476,7 +476,7 @@ class CadApplication {
             toolInfo.textContent = `Current Tool: ${this.capitalizeFirst(tool)}`;
         }
     }
-    
+
     /**
      * Select ArxObject type for creation
      */
@@ -484,12 +484,12 @@ class CadApplication {
         // This would switch to object creation mode
         // and set the current ArxObject type
         console.log('Selected ArxObject type:', objectType);
-        
+
         // Update UI to show object creation mode
         this.setCurrentTool('arxobject');
         this.currentArxObjectType = objectType;
     }
-    
+
     /**
      * Handle keyboard shortcuts
      */
@@ -522,18 +522,18 @@ class CadApplication {
                 break;
         }
     }
-    
+
     /**
      * Handle window resize
      */
     handleWindowResize() {
         // Resize canvas
         this.cadEngine.resizeCanvas();
-        
+
         // Update UI layout if needed
         this.updateUILayout();
     }
-    
+
     /**
      * Handle selection changes
      */
@@ -542,56 +542,56 @@ class CadApplication {
         this.updatePropertiesPanel();
         this.updateSelectionUI();
     }
-    
+
     /**
      * Handle object creation
      */
     handleObjectCreated(event) {
         const arxObject = event.object;
-        
+
         // Add to ArxObject system
         this.arxObjectSystem.arxObjects.set(arxObject.id, arxObject);
-        
+
         // Update UI
         this.updateArxObjectsList();
         this.updateStatistics();
-        
+
         console.log('Object created:', arxObject);
     }
-    
+
     /**
      * Handle object deletion
      */
     handleObjectDeleted(event) {
         const objectId = event.objectId;
-        
+
         // Remove from ArxObject system
         this.arxObjectSystem.deleteArxObject(objectId);
-        
+
         // Update UI
         this.updateArxObjectsList();
         this.updateStatistics();
-        
+
         console.log('Object deleted:', objectId);
     }
-    
+
     /**
      * Update properties panel
      */
     updatePropertiesPanel() {
         const propertiesContent = document.getElementById('properties-content');
         if (!propertiesContent) return;
-        
+
         if (this.selectedObjects.size === 0) {
             propertiesContent.innerHTML = '<div class="text-gray-400 text-sm">Select an object to view properties</div>';
             return;
         }
-        
+
         if (this.selectedObjects.size === 1) {
             // Show properties for single selected object
             const objectId = Array.from(this.selectedObjects)[0];
             const arxObject = this.arxObjectSystem.getArxObject(objectId);
-            
+
             if (arxObject) {
                 propertiesContent.innerHTML = this.generateObjectPropertiesHTML(arxObject);
             }
@@ -600,25 +600,25 @@ class CadApplication {
             propertiesContent.innerHTML = this.generateMultiSelectionPropertiesHTML();
         }
     }
-    
+
     /**
      * Generate HTML for object properties
      */
     generateObjectPropertiesHTML(arxObject) {
         const objectType = this.arxObjectSystem.objectTypes.get(arxObject.type);
-        
+
         let html = `
             <div class="space-y-3">
                 <div class="border-b border-gray-600 pb-2">
                     <h4 class="font-semibold text-white">${objectType ? objectType.name : arxObject.type}</h4>
                     <p class="text-sm text-gray-400">ID: ${arxObject.id}</p>
                 </div>
-                
+
                 <div>
                     <h5 class="font-medium text-gray-300 mb-2">Properties</h5>
                     <div class="space-y-1">
         `;
-        
+
         // Add properties
         for (const [key, value] of Object.entries(arxObject.properties)) {
             html += `
@@ -628,16 +628,16 @@ class CadApplication {
                 </div>
             `;
         }
-        
+
         html += `
                     </div>
                 </div>
-                
+
                 <div>
                     <h5 class="font-medium text-gray-300 mb-2">Measurements</h5>
                     <div class="space-y-1">
         `;
-        
+
         // Add measurements
         for (const measurement of arxObject.measurements) {
             html += `
@@ -647,16 +647,16 @@ class CadApplication {
                 </div>
             `;
         }
-        
+
         html += `
                     </div>
                 </div>
-                
+
                 <div>
                     <h5 class="font-medium text-gray-300 mb-2">Constraints</h5>
                     <div class="space-y-1">
         `;
-        
+
         // Add constraints
         for (const constraint of arxObject.constraints) {
             html += `
@@ -666,16 +666,16 @@ class CadApplication {
                 </div>
             `;
         }
-        
+
         html += `
                     </div>
                 </div>
             </div>
         `;
-        
+
         return html;
     }
-    
+
     /**
      * Generate HTML for multi-selection properties
      */
@@ -686,7 +686,7 @@ class CadApplication {
                     <h4 class="font-semibold text-white">Multiple Selection</h4>
                     <p class="text-sm text-gray-400">${this.selectedObjects.size} objects selected</p>
                 </div>
-                
+
                 <div>
                     <h5 class="font-medium text-gray-300 mb-2">Actions</h5>
                     <div class="space-y-2">
@@ -701,7 +701,7 @@ class CadApplication {
             </div>
         `;
     }
-    
+
     /**
      * Update selection UI
      */
@@ -712,7 +712,7 @@ class CadApplication {
             selectionInfo.textContent = `${this.selectedObjects.size} object(s) selected`;
         }
     }
-    
+
     /**
      * Update ArxObjects list
      */
@@ -720,26 +720,26 @@ class CadApplication {
         // This would update the ArxObjects library panel
         // to reflect current objects in the drawing
     }
-    
+
     /**
      * Update statistics
      */
     updateStatistics() {
         const stats = this.arxObjectSystem.getStatistics();
-        
+
         // Update statistics display
         const statsElement = document.getElementById('drawing-statistics');
         if (statsElement) {
             statsElement.innerHTML = `
                 <div class="text-sm text-gray-400">
-                    Objects: ${stats.totalObjects} | 
-                    Relationships: ${stats.totalRelationships} | 
+                    Objects: ${stats.totalObjects} |
+                    Relationships: ${stats.totalRelationships} |
                     Area: ${(stats.totalArea / 144).toFixed(1)} sq ft
                 </div>
             `;
         }
     }
-    
+
     /**
      * Open AI assistant
      */
@@ -749,7 +749,7 @@ class CadApplication {
             aiModal.classList.remove('hidden');
         }
     }
-    
+
     /**
      * Close AI assistant
      */
@@ -759,25 +759,25 @@ class CadApplication {
             aiModal.classList.add('hidden');
         }
     }
-    
+
     /**
      * Send AI message
      */
     sendAiMessage() {
         const aiInput = document.getElementById('ai-input');
         const aiChat = document.getElementById('ai-chat');
-        
+
         if (!aiInput || !aiChat) return;
-        
+
         const message = aiInput.value.trim();
         if (!message) return;
-        
+
         // Add user message to chat
         this.addChatMessage('user', message);
-        
+
         // Clear input
         aiInput.value = '';
-        
+
         // Process with AI assistant
         this.aiAssistant.processMessage(message, this.arxObjectSystem)
             .then(response => {
@@ -788,22 +788,22 @@ class CadApplication {
                 this.addChatMessage('assistant', 'Sorry, I encountered an error. Please try again.');
             });
     }
-    
+
     /**
      * Add message to chat
      */
     addChatMessage(sender, message) {
         const aiChat = document.getElementById('ai-chat');
         if (!aiChat) return;
-        
+
         const messageDiv = document.createElement('div');
         messageDiv.className = `mb-3 p-2 rounded ${sender === 'user' ? 'bg-blue-600 ml-8' : 'bg-gray-700 mr-8'}`;
         messageDiv.textContent = message;
-        
+
         aiChat.appendChild(messageDiv);
         aiChat.scrollTop = aiChat.scrollHeight;
     }
-    
+
     /**
      * Save project
      */
@@ -817,26 +817,26 @@ class CadApplication {
                     name: 'Arxos Project'
                 }
             };
-            
+
             // Create download link
             const dataStr = JSON.stringify(projectData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(dataBlob);
-            
+
             const link = document.createElement('a');
             link.href = url;
             link.download = 'arxos-project.json';
             link.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             console.log('Project saved successfully');
-            
+
         } catch (error) {
             console.error('Failed to save project:', error);
         }
     }
-    
+
     /**
      * Export drawing
      */
@@ -844,25 +844,25 @@ class CadApplication {
         try {
             // Export as SVG
             const svgData = this.cadEngine.exportToSVG();
-            
+
             // Create download link
             const dataBlob = new Blob([svgData], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(dataBlob);
-            
+
             const link = document.createElement('a');
             link.href = url;
             link.download = 'arxos-drawing.svg';
             link.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             console.log('Drawing exported successfully');
-            
+
         } catch (error) {
             console.error('Failed to export drawing:', error);
         }
     }
-    
+
     /**
      * Cancel current operation
      */
@@ -870,7 +870,7 @@ class CadApplication {
         this.cadEngine.cancelDrawing();
         this.setCurrentTool('select');
     }
-    
+
     /**
      * Delete selected objects
      */
@@ -878,43 +878,43 @@ class CadApplication {
         for (const objectId of this.selectedObjects) {
             this.arxObjectSystem.deleteArxObject(objectId);
         }
-        
+
         this.selectedObjects.clear();
         this.updatePropertiesPanel();
         this.updateSelectionUI();
-        
+
         console.log('Selected objects deleted');
     }
-    
+
     /**
      * Select all objects
      */
     selectAllObjects() {
         this.selectedObjects.clear();
-        
+
         for (const [id, arxObject] of this.arxObjectSystem.arxObjects) {
             this.selectedObjects.add(id);
         }
-        
+
         this.updatePropertiesPanel();
         this.updateSelectionUI();
-        
+
         console.log('All objects selected');
     }
-    
+
     /**
      * Update UI layout
      */
     updateUILayout() {
         // Update any layout-dependent UI elements
     }
-    
+
     /**
      * Initialize collaboration for current project
      */
     async initializeCollaboration() {
         if (!this.currentProject || !this.collaboration) return;
-        
+
         try {
             const user = await this.apiClient.getCurrentUser();
             await this.collaboration.initializeCollaboration(this.currentProject.id, user.id);
@@ -924,13 +924,13 @@ class CadApplication {
             console.error('Failed to initialize collaboration:', error);
         }
     }
-    
+
     /**
      * Initialize AI integration
      */
     async initializeAiIntegration() {
         if (!this.aiIntegration) return;
-        
+
         try {
             await this.aiIntegration.initializeAiIntegration();
             this.updateAiIntegrationUI();
@@ -939,16 +939,16 @@ class CadApplication {
             console.error('Failed to initialize AI integration:', error);
         }
     }
-    
+
     /**
      * Update AI integration UI
      */
     updateAiIntegrationUI() {
         const aiStatus = document.getElementById('ai-status');
         if (!aiStatus || !this.aiIntegration) return;
-        
+
         const stats = this.aiIntegration.getAiStats();
-        
+
         aiStatus.innerHTML = `
             <div class="text-sm">
                 <div class="font-semibold">AI Assistant</div>
@@ -961,16 +961,16 @@ class CadApplication {
             </div>
         `;
     }
-    
+
     /**
      * Update collaboration UI
      */
     updateCollaborationUI() {
         const collaborationStatus = document.getElementById('collaboration-status');
         if (!collaborationStatus) return;
-        
+
         const stats = this.collaboration.getCollaborationStats();
-        
+
         collaborationStatus.innerHTML = `
             <div class="text-sm">
                 <div class="font-semibold">Collaboration</div>
@@ -983,7 +983,7 @@ class CadApplication {
             </div>
         `;
     }
-    
+
     /**
      * Show new project modal
      */
@@ -996,7 +996,7 @@ class CadApplication {
                 <form id="new-project-form">
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-2">Project Name</label>
-                        <input type="text" id="project-name" required 
+                        <input type="text" id="project-name" required
                                class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
                     </div>
                     <div class="mb-4">
@@ -1015,17 +1015,17 @@ class CadApplication {
                 </form>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
-        
+
         // Handle form submission
         const form = modal.querySelector('#new-project-form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const name = document.getElementById('project-name').value;
             const description = document.getElementById('project-description').value;
-            
+
             try {
                 await this.createNewProject({ name, description });
                 modal.remove();
@@ -1033,14 +1033,14 @@ class CadApplication {
                 this.showNotification('Failed to create project', 'error');
             }
         });
-        
+
         // Handle cancel
         const cancelButton = modal.querySelector('#cancel-new-project');
         cancelButton.addEventListener('click', () => {
             modal.remove();
         });
     }
-    
+
     /**
      * Project Management Methods
      */
@@ -1049,16 +1049,16 @@ class CadApplication {
             // Get current user
             const user = await this.apiClient.getCurrentUser();
             console.log('Current user:', user);
-            
+
             // Load recent projects
             const projects = await this.apiClient.getProjects({ limit: 5 });
             this.updateProjectList(projects);
-            
+
         } catch (error) {
             console.error('Failed to initialize project management:', error);
         }
     }
-    
+
     async createNewProject(projectData) {
         try {
             const project = await this.apiClient.createProject(projectData);
@@ -1071,12 +1071,12 @@ class CadApplication {
             throw error;
         }
     }
-    
+
     async loadProject(projectId) {
         try {
             const project = await this.apiClient.getProject(projectId);
             this.currentProject = project;
-            
+
             // Load CAD data if available
             try {
                 const cadData = await this.apiClient.loadCadProject(projectId);
@@ -1084,7 +1084,7 @@ class CadApplication {
             } catch (error) {
                 console.log('No existing CAD data found, starting fresh');
             }
-            
+
             this.updateProjectUI();
             console.log('Loaded project:', project);
             return project;
@@ -1093,12 +1093,12 @@ class CadApplication {
             throw error;
         }
     }
-    
+
     async saveProject() {
         if (!this.currentProject) {
             throw new Error('No project selected');
         }
-        
+
         try {
             const cadData = {
                 arxObjects: Array.from(this.arxObjectSystem.arxObjects.values()),
@@ -1110,96 +1110,96 @@ class CadApplication {
                     objectCount: this.arxObjectSystem.arxObjects.size
                 }
             };
-            
+
             await this.apiClient.saveCadProject(this.currentProject.id, cadData);
             console.log('Project saved successfully');
             this.showNotification('Project saved successfully', 'success');
-            
+
         } catch (error) {
             console.error('Failed to save project:', error);
             this.showNotification('Failed to save project', 'error');
             throw error;
         }
     }
-    
+
     async exportToSVGX() {
         if (!this.currentProject) {
             throw new Error('No project selected');
         }
-        
+
         try {
             const cadData = {
                 arxObjects: Array.from(this.arxObjectSystem.arxObjects.values()),
                 svg: this.cadEngine.exportToSVG()
             };
-            
+
             const svgxData = await this.apiClient.exportCadToSVGX(this.currentProject.id, cadData);
             console.log('Exported to SVGX:', svgxData);
             this.showNotification('Exported to SVGX successfully', 'success');
             return svgxData;
-            
+
         } catch (error) {
             console.error('Failed to export to SVGX:', error);
             this.showNotification('Failed to export to SVGX', 'error');
             throw error;
         }
     }
-    
+
     async importFromSVGX(svgxData) {
         if (!this.currentProject) {
             throw new Error('No project selected');
         }
-        
+
         try {
             const cadData = await this.apiClient.importCadFromSVGX(this.currentProject.id, svgxData);
             this.loadCadData(cadData);
             console.log('Imported from SVGX successfully');
             this.showNotification('Imported from SVGX successfully', 'success');
-            
+
         } catch (error) {
             console.error('Failed to import from SVGX:', error);
             this.showNotification('Failed to import from SVGX', 'error');
             throw error;
         }
     }
-    
+
     loadCadData(cadData) {
         if (cadData.arxObjects) {
             // Clear existing objects
             this.arxObjectSystem.arxObjects.clear();
-            
+
             // Load objects
             for (const arxObject of cadData.arxObjects) {
                 this.arxObjectSystem.arxObjects.set(arxObject.id, arxObject);
             }
-            
+
             // Load relationships
             if (cadData.relationships) {
                 for (const relationship of cadData.relationships) {
                     this.arxObjectSystem.relationships.set(relationship.id, relationship);
                 }
             }
-            
+
             // Load constraints
             if (cadData.constraints) {
                 for (const constraint of cadData.constraints) {
                     this.arxObjectSystem.constraints.set(constraint.id, constraint);
                 }
             }
-            
+
             // Update CAD engine
             this.cadEngine.arxObjects = this.arxObjectSystem.arxObjects;
-            
+
             console.log('Loaded CAD data:', cadData.arxObjects.length, 'objects');
         }
     }
-    
+
     updateProjectList(projects) {
         const projectList = document.getElementById('project-list');
         if (!projectList) return;
-        
+
         projectList.innerHTML = '';
-        
+
         for (const project of projects) {
             const projectItem = document.createElement('div');
             projectItem.className = 'p-2 hover:bg-gray-700 cursor-pointer rounded';
@@ -1210,11 +1210,11 @@ class CadApplication {
             projectList.appendChild(projectItem);
         }
     }
-    
+
     updateProjectUI() {
         const projectInfo = document.getElementById('project-info');
         if (!projectInfo || !this.currentProject) return;
-        
+
         projectInfo.innerHTML = `
             <div class="text-sm">
                 <div class="font-semibold">${this.currentProject.name}</div>
@@ -1223,7 +1223,7 @@ class CadApplication {
             </div>
         `;
     }
-    
+
     /**
      * Auto-save functionality
      */
@@ -1231,7 +1231,7 @@ class CadApplication {
         if (this.autoSaveInterval) {
             clearInterval(this.autoSaveInterval);
         }
-        
+
         this.autoSaveInterval = setInterval(() => {
             if (this.autoSaveEnabled && this.currentProject && this.isInitialized) {
                 this.saveProject().catch(error => {
@@ -1239,10 +1239,10 @@ class CadApplication {
                 });
             }
         }, 30000); // Auto-save every 30 seconds
-        
+
         console.log('Auto-save started');
     }
-    
+
     stopAutoSave() {
         if (this.autoSaveInterval) {
             clearInterval(this.autoSaveInterval);
@@ -1250,12 +1250,12 @@ class CadApplication {
             console.log('Auto-save stopped');
         }
     }
-    
+
     toggleAutoSave() {
         this.autoSaveEnabled = !this.autoSaveEnabled;
         console.log('Auto-save:', this.autoSaveEnabled ? 'enabled' : 'disabled');
     }
-    
+
     /**
      * Notification system
      */
@@ -1267,14 +1267,14 @@ class CadApplication {
             type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600'
         } text-white`;
         notification.textContent = message;
-        
+
         document.body.appendChild(notification);
-        
+
         setTimeout(() => {
             notification.remove();
         }, 3000);
     }
-    
+
     /**
      * Utility function to capitalize first letter
      */
@@ -1291,7 +1291,7 @@ class CadApplication {
         if (precisionLevelSelect) {
             precisionLevelSelect.value = level;
         }
-        
+
         // Update status bar
         const drawingInfo = document.getElementById('drawing-info');
         if (drawingInfo) {
@@ -1299,7 +1299,7 @@ class CadApplication {
             const newText = currentText.replace(/Precision: [^|]+/, `Precision: ${level}`);
             drawingInfo.textContent = newText;
         }
-        
+
         console.log(`Precision level updated to: ${level}`);
     }
 
@@ -1312,7 +1312,7 @@ class CadApplication {
         if (gridSizeSelect) {
             gridSizeSelect.value = gridSize.toString();
         }
-        
+
         // Update status bar
         const drawingInfo = document.getElementById('drawing-info');
         if (drawingInfo) {
@@ -1320,7 +1320,7 @@ class CadApplication {
             const newText = currentText.replace(/Grid: [^|]+/, `Grid: ${gridSize}"`);
             drawingInfo.textContent = newText;
         }
-        
+
         console.log(`Grid size updated to: ${gridSize}"`);
     }
 
@@ -1333,7 +1333,7 @@ class CadApplication {
         if (gridSnapCheckbox) {
             gridSnapCheckbox.checked = enabled;
         }
-        
+
         console.log(`Grid snap ${enabled ? 'enabled' : 'disabled'}`);
     }
 
@@ -1343,21 +1343,21 @@ class CadApplication {
      */
     setCurrentTool(tool) {
         this.currentTool = tool;
-        
+
         // Update CAD engine tool
         if (this.cadEngine) {
             this.cadEngine.setCurrentTool(tool);
         }
-        
+
         // Update UI
         this.updateToolUI(tool);
         this.updateCursor(tool);
-        
+
         // Handle constraint tools
         if (tool.includes('constraint')) {
             this.handleConstraintTool(tool);
         }
-        
+
         console.log(`Current tool set to: ${tool}`);
     }
 
@@ -1387,10 +1387,10 @@ class CadApplication {
     enableDistanceConstraintMode() {
         this.constraintMode = 'distance';
         this.constraintSelection = [];
-        
+
         // Update UI to show constraint mode
         this.showNotification('Distance Constraint Mode: Select two objects to constrain', 'info');
-        
+
         // Add event listeners for object selection
         this.addConstraintSelectionListeners();
     }
@@ -1401,7 +1401,7 @@ class CadApplication {
     enableParallelConstraintMode() {
         this.constraintMode = 'parallel';
         this.constraintSelection = [];
-        
+
         this.showNotification('Parallel Constraint Mode: Select two lines to make parallel', 'info');
         this.addConstraintSelectionListeners();
     }
@@ -1412,7 +1412,7 @@ class CadApplication {
     enablePerpendicularConstraintMode() {
         this.constraintMode = 'perpendicular';
         this.constraintSelection = [];
-        
+
         this.showNotification('Perpendicular Constraint Mode: Select two lines to make perpendicular', 'info');
         this.addConstraintSelectionListeners();
     }
@@ -1458,10 +1458,10 @@ class CadApplication {
     handleConstraintObjectSelection(event) {
         const point = this.cadEngine.getCanvasPoint(event);
         const selectedObject = this.cadEngine.selectObjectAtPoint(point);
-        
+
         if (selectedObject) {
             this.constraintSelection.push(selectedObject);
-            
+
             if (this.constraintSelection.length === 2) {
                 this.applyConstraint();
             } else {
@@ -1475,12 +1475,12 @@ class CadApplication {
      */
     applyConstraint() {
         if (this.constraintSelection.length !== 2) return;
-        
+
         const [obj1, obj2] = this.constraintSelection;
-        
+
         try {
             let constraintId;
-            
+
             switch (this.constraintMode) {
                 case 'distance':
                     const distance = this.cadEngine.calculateDistance(obj1, obj2);
@@ -1490,14 +1490,14 @@ class CadApplication {
                         distance: distance
                     });
                     break;
-                    
+
                 case 'parallel':
                     constraintId = this.cadEngine.constraintSolver.addConstraint('parallel', {
                         object1Id: obj1.id,
                         object2Id: obj2.id
                     });
                     break;
-                    
+
                 case 'perpendicular':
                     constraintId = this.cadEngine.constraintSolver.addConstraint('perpendicular', {
                         object1Id: obj1.id,
@@ -1505,13 +1505,13 @@ class CadApplication {
                     });
                     break;
             }
-            
+
             if (constraintId) {
                 this.showNotification(`${this.constraintMode} constraint applied successfully`, 'success');
                 this.updateConstraintsList();
                 this.disableConstraintMode();
             }
-            
+
         } catch (error) {
             console.error('Error applying constraint:', error);
             this.showNotification('Failed to apply constraint', 'error');
@@ -1535,14 +1535,14 @@ class CadApplication {
     updateConstraintsList() {
         const constraintsList = document.getElementById('constraints-list');
         if (!constraintsList || !this.cadEngine || !this.cadEngine.constraintSolver) return;
-        
+
         const constraints = Array.from(this.cadEngine.constraintSolver.constraints.values());
-        
+
         if (constraints.length === 0) {
             constraintsList.innerHTML = '<div class="text-gray-400 text-sm">No constraints</div>';
             return;
         }
-        
+
         const constraintsHTML = constraints.map(constraint => {
             const type = constraint.type.charAt(0).toUpperCase() + constraint.type.slice(1);
             return `
@@ -1551,16 +1551,16 @@ class CadApplication {
                         <div class="font-medium">${type}</div>
                         <div class="text-gray-400 text-xs">${constraint.id}</div>
                     </div>
-                    <button class="text-red-400 hover:text-red-300 text-xs" 
+                    <button class="text-red-400 hover:text-red-300 text-xs"
                             onclick="cadApp.removeConstraint('${constraint.id}')">
                         ×
                     </button>
                 </div>
             `;
         }).join('');
-        
+
         constraintsList.innerHTML = constraintsHTML;
-        
+
         // Update performance info
         this.updatePerformanceInfo();
     }
@@ -1583,14 +1583,14 @@ class CadApplication {
     updatePerformanceInfo() {
         const performanceInfo = document.getElementById('performance-info');
         if (!performanceInfo) return;
-        
+
         const objectCount = this.cadEngine ? this.cadEngine.arxObjects.size : 0;
-        const constraintCount = this.cadEngine && this.cadEngine.constraintSolver ? 
+        const constraintCount = this.cadEngine && this.cadEngine.constraintSolver ?
             this.cadEngine.constraintSolver.constraints.size : 0;
-        
+
         performanceInfo.textContent = `FPS: ${this.fps} | Objects: ${objectCount} | Constraints: ${constraintCount}`;
     }
 }
 
 // Export for global use
-window.CadApplication = CadApplication; 
+window.CadApplication = CadApplication;

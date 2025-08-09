@@ -260,7 +260,7 @@
                     }
                 });
                 const health = await response.json();
-                
+
                 const healthHtml = `
                     <div class="col-span-1">
                         <div class="flex items-center">
@@ -296,7 +296,7 @@
                         </div>
                     </div>
                 `;
-                
+
                 document.getElementById('health-status').innerHTML = healthHtml;
             } catch (error) {
                 console.error('Error loading health status:', error);
@@ -312,7 +312,7 @@
                     }
                 });
                 const metrics = await response.json();
-                
+
                 // Update metric cards
                 document.getElementById('api-requests').textContent = metrics.api_requests || '-';
                 document.getElementById('export-jobs').textContent = metrics.export_jobs || '-';
@@ -326,16 +326,16 @@
         // Load charts
         async function loadCharts() {
             const period = document.getElementById('period-selector').value;
-            
+
             // Load API usage chart
             await loadAPIUsageChart(period);
-            
+
             // Load export jobs chart
             await loadExportJobsChart(period);
-            
+
             // Load error rates chart
             await loadErrorRatesChart(period);
-            
+
             // Load performance chart
             await loadPerformanceChart();
         }
@@ -349,13 +349,13 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 const ctx = document.getElementById('api-usage-chart').getContext('2d');
-                
+
                 if (charts.apiUsage) {
                     charts.apiUsage.destroy();
                 }
-                
+
                 charts.apiUsage = new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -391,13 +391,13 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 const ctx = document.getElementById('export-jobs-chart').getContext('2d');
-                
+
                 if (charts.exportJobs) {
                     charts.exportJobs.destroy();
                 }
-                
+
                 charts.exportJobs = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
@@ -437,13 +437,13 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 const ctx = document.getElementById('error-rates-chart').getContext('2d');
-                
+
                 if (charts.errorRates) {
                     charts.errorRates.destroy();
                 }
-                
+
                 charts.errorRates = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -480,16 +480,16 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 const ctx = document.getElementById('performance-chart').getContext('2d');
-                
+
                 if (charts.performance) {
                     charts.performance.destroy();
                 }
-                
+
                 const operations = Object.keys(data);
                 const avgTimes = operations.map(op => data[op]?.avg_time || 0);
-                
+
                 charts.performance = new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -525,7 +525,7 @@
                     }
                 });
                 const alerts = await response.json();
-                
+
                 const alertsHtml = alerts.map(alert => `
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div class="flex items-center">
@@ -542,7 +542,7 @@
                         </span>
                     </div>
                 `).join('');
-                
+
                 document.getElementById('system-alerts').innerHTML = alertsHtml || '<p class="text-gray-500">No recent alerts</p>';
             } catch (error) {
                 console.error('Error loading alerts:', error);
@@ -554,14 +554,14 @@
             try {
                 const levelFilter = document.getElementById('log-level-filter').value;
                 const url = levelFilter ? `/api/monitoring/logs?level=${levelFilter}&limit=50` : '/api/monitoring/logs?limit=50';
-                
+
                 const response = await fetch(url, {
                     headers: {
                         'Authorization': 'Bearer ' + getToken()
                     }
                 });
                 const data = await response.json();
-                
+
                 const logsHtml = data.logs?.map(log => `
                     <div class="flex items-center justify-between py-2 border-b border-gray-200">
                         <div class="flex items-center space-x-4">
@@ -574,7 +574,7 @@
                         <span class="text-sm text-gray-500">${new Date(log.timestamp).toLocaleString()}</span>
                     </div>
                 `).join('');
-                
+
                 document.getElementById('system-logs').innerHTML = logsHtml || '<p class="text-gray-500">No logs found</p>';
             } catch (error) {
                 console.error('Error loading logs:', error);
@@ -586,13 +586,13 @@
             try {
                 const levelFilter = document.getElementById('log-level-filter').value;
                 const url = levelFilter ? `/api/monitoring/logs/export?level=${levelFilter}&format=csv` : '/api/monitoring/logs/export?format=csv';
-                
+
                 const response = await fetch(url, {
                     headers: {
                         'Authorization': 'Bearer ' + getToken()
                     }
                 });
-                
+
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -659,4 +659,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

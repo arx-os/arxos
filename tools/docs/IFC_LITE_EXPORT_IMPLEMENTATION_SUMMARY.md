@@ -18,11 +18,11 @@ This document summarizes the implementation of comprehensive IFC-lite export fun
 
 **Key Enhancements:**
 ```python
-def export_ifc_lite(self, data: Dict[str, Any], output_path: Union[str, Path], 
+def export_ifc_lite(self, data: Dict[str, Any], output_path: Union[str, Path],
                     options: Optional[Dict[str, Any]] = None) -> Path:
     """
     Export BIM data to IFC-lite format.
-    
+
     Maps internal SVGX objects to IFC-lite JSON schema with comprehensive
     object metadata support and proper IFC entity mapping.
     """
@@ -48,7 +48,7 @@ def export_ifc_lite(self, data: Dict[str, Any], output_path: Union[str, Path],
 ```python
 type_mapping = {
     "wall": "WALL",
-    "door": "DOOR", 
+    "door": "DOOR",
     "window": "WINDOW",
     "slab": "SLAB",
     "floor": "SLAB",
@@ -66,7 +66,7 @@ type_mapping = {
 ```python
 system_mapping = {
     "electrical": "ELECTRICAL_EQUIPMENT",
-    "mechanical": "MECHANICAL_EQUIPMENT", 
+    "mechanical": "MECHANICAL_EQUIPMENT",
     "plumbing": "PLUMBING_EQUIPMENT",
     "hvac": "MECHANICAL_EQUIPMENT",
     "fire": "FIRE_PROTECTION_EQUIPMENT"
@@ -368,4 +368,4 @@ The IFC-lite export implementation provides:
 - **Flexible Configuration**: Configurable export options for various use cases
 - **Robust Testing**: Comprehensive test coverage ensuring reliability and accuracy
 
-This implementation establishes a solid foundation for BIM data interoperability while maintaining the rich metadata and object relationships inherent in the SVGX format. 
+This implementation establishes a solid foundation for BIM data interoperability while maintaining the rich metadata and object relationships inherent in the SVGX format.

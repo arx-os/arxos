@@ -10,9 +10,9 @@ from datetime import datetime
 import json
 import logging
 
-from services.realtime_editor
-from services.annotations
-from services.notifications.collab_events
+from services.realtime_editor import realtime_editor
+from services.annotations import annotation_manager
+from services.notifications.collab_events import collab_notification_service
 from ..auth.auth_utils import get_current_user
 from ..models.draft import Draft
 from ..models.user import User
@@ -30,30 +30,30 @@ async def websocket_endpoint(
     token: str
 ):
     """WebSocket endpoint for real-time collaboration"""
-    
+
     try:
         await websocket.accept()
-        
+
         # Validate token and get user
         try:
             user = get_current_user(token)
         except Exception as e:
             await websocket.close(code=4001, reason="Invalid token")
             return
-        
+
         # Join collaboration session
         session_id = await realtime_editor.join_session(
             websocket, user.id, draft_id, user.display_name
         )
-        
+
         # Add to notification service
         collab_notification_service.add_websocket_connection(user.id, websocket)
-        
+
         try:
             async for message in websocket:
                 data = json.loads(message)
                 await realtime_editor.handle_client(websocket, data)
-                
+
         except WebSocketDisconnect:
             logger.info(f"WebSocket disconnected for user {user.id}")
         finally:
@@ -61,7 +61,7 @@ async def websocket_endpoint(
             if session_id:
                 await realtime_editor.leave_session(session_id, user.id)
             collab_notification_service.remove_websocket_connection(user.id, websocket)
-            
+
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         await websocket.close(code=4000, reason="Internal error")
@@ -78,9 +78,10 @@ async def create_thread(
     description: str,
     priority: str = "normal",
     tags: List[str] = None,
-    current_user: User = Depends(get_current_user):
+    current_user: User = Depends(get_current_user)
+):
     """Create a new comment thread"""
-    
+
     try:
         thread = annotation_manager.create_thread(
             draft_id=draft_id,
@@ -93,11 +94,11 @@ async def create_thread(
             priority=priority,
             tags=tags or []
         )
-        
+
         # Notify draft subscribers
         # This would typically get subscribers from draft model
         subscribers = [current_user.id]  # Placeholder
-        
+
         collab_notification_service.notify_comment_added(
             draft_id=draft_id,
             draft_title="Draft",  # Would get from draft model
@@ -107,12 +108,12 @@ async def create_thread(
             comment_preview=description,
             subscribers=subscribers
         )
-        
+
         return {
             "success": True,
             "thread": annotation_manager.get_thread_summary(thread.id)
         }
-        
+
     except Exception as e:
         logger.error(f"Error creating thread: {e}")
         raise HTTPException(status_code=500, detail="Failed to create thread")
@@ -123,11 +124,11 @@ async def get_thread(
     thread_id: str,
     current_user: User = Depends(get_current_user):
     """Get a comment thread"""
-    
+
     thread = annotation_manager.get_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail="Thread not found")
-    
+
     return {
         "success": True,
         "thread": annotation_manager.get_thread_summary(thread_id)
@@ -143,10 +144,10 @@ async def add_comment(
     metadata: Dict = None,
     current_user: User = Depends(get_current_user):
     """Add a comment to a thread"""
-    
+
     try:
         from services.planarx.planarx_community.notifications.collab_events import NotificationType
-        
+
         comment = annotation_manager.add_comment(
             thread_id=thread_id,
             author_id=current_user.id,
@@ -156,7 +157,7 @@ async def add_comment(
             parent_id=parent_id,
             metadata=metadata or {}
         )
-        
+
         # Get thread for notification
         thread = annotation_manager.get_thread(thread_id)
         if thread:
@@ -170,7 +171,7 @@ async def add_comment(
                 comment_preview=content,
                 subscribers=thread.subscribers
             )
-            
+
             # Notify mentioned users
             for mentioned_user_id in comment.mentions:
                 collab_notification_service.notify_mention(
@@ -182,7 +183,7 @@ async def add_comment(
                     author_name=current_user.display_name,
                     mention_preview=content
                 )
-        
+
         return {
             "success": True,
             "comment": {
@@ -195,7 +196,7 @@ async def add_comment(
                 "mentions": comment.mentions
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Error adding comment: {e}")
         raise HTTPException(status_code=500, detail="Failed to add comment")
@@ -207,14 +208,14 @@ async def resolve_thread(
     resolution_note: str = "",
     current_user: User = Depends(get_current_user):
     """Resolve a comment thread"""
-    
+
     success = annotation_manager.resolve_thread(
         thread_id, current_user.id, resolution_note
     )
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Thread not found")
-    
+
     # Get thread for notification
     thread = annotation_manager.get_thread(thread_id)
     if thread:
@@ -225,7 +226,7 @@ async def resolve_thread(
             resolver_name=current_user.display_name,
             subscribers=thread.subscribers
         )
-    
+
     return {"success": True, "message": "Thread resolved"}
 
 
@@ -235,14 +236,14 @@ async def assign_thread(
     assigned_to: str,
     current_user: User = Depends(get_current_user):
     """Assign a thread to a user"""
-    
+
     success = annotation_manager.assign_thread(
         thread_id, assigned_to, current_user.id
     )
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Thread not found")
-    
+
     collab_notification_service.notify_thread_assigned(
         thread_id=thread_id,
         thread_title="Thread",  # Would get from thread import *
@@ -250,7 +251,7 @@ async def assign_thread(
         assigner_id=current_user.id,
         assigner_name=current_user.display_name
     )
-    
+
     return {"success": True, "message": "Thread assigned"}
 
 
@@ -259,12 +260,12 @@ async def subscribe_to_thread(
     thread_id: str,
     current_user: User = Depends(get_current_user):
     """Subscribe to a thread"""
-    
+
     success = annotation_manager.subscribe_to_thread(thread_id, current_user.id)
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Thread not found")
-    
+
     return {"success": True, "message": "Subscribed to thread"}
 
 
@@ -273,12 +274,12 @@ async def unsubscribe_from_thread(
     thread_id: str,
     current_user: User = Depends(get_current_user):
     """Unsubscribe from a thread"""
-    
+
     success = annotation_manager.unsubscribe_from_thread(thread_id, current_user.id)
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Thread not found")
-    
+
     return {"success": True, "message": "Unsubscribed from thread"}
 
 
@@ -287,9 +288,9 @@ async def get_draft_threads(
     draft_id: str,
     current_user: User = Depends(get_current_user):
     """Get all threads for a draft"""
-    
+
     threads = annotation_manager.get_threads_by_draft(draft_id)
-    
+
     return {
         "success": True,
         "threads": [
@@ -304,9 +305,9 @@ async def get_object_threads(
     object_id: str,
     current_user: User = Depends(get_current_user):
     """Get all threads for an ArxObject"""
-    
+
     threads = annotation_manager.get_threads_by_object(object_id)
-    
+
     return {
         "success": True,
         "threads": [
@@ -318,11 +319,13 @@ async def get_object_threads(
 
 @router.get("/user/threads")
 async def get_user_threads(
+    current_user: User = Depends(get_current_user)
+):
     current_user: User = Depends(get_current_user):
     """Get threads for current user"""
-    
+
     threads = annotation_manager.get_user_threads(current_user.id)
-    
+
     return {
         "success": True,
         "threads": [
@@ -342,7 +345,7 @@ async def add_annotation(
     style: Dict = None,
     current_user: User = Depends(get_current_user):
     """Add a visual annotation to a thread"""
-    
+
     try:
         annotation = annotation_manager.add_annotation(
             thread_id=thread_id,
@@ -352,7 +355,7 @@ async def add_annotation(
             created_by=current_user.id,
             style=style or {}
         )
-        
+
         return {
             "success": True,
             "annotation": {
@@ -365,7 +368,7 @@ async def add_annotation(
                 "created_by": annotation.created_by
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Error adding annotation: {e}")
         raise HTTPException(status_code=500, detail="Failed to add annotation")
@@ -376,9 +379,9 @@ async def get_thread_annotations(
     thread_id: str,
     current_user: User = Depends(get_current_user):
     """Get all annotations for a thread"""
-    
+
     annotations = annotation_manager.get_annotations(thread_id)
-    
+
     return {
         "success": True,
         "annotations": [
@@ -404,17 +407,17 @@ async def get_notifications(
     offset: int = 0,
     current_user: User = Depends(get_current_user):
     """Get notifications for current user"""
-    
+
     from services.planarx.planarx_community.notifications.collab_events import NotificationStatus
-    
+
     status_enum = None
     if status:
         status_enum = NotificationStatus(status)
-    
+
     notifications = collab_notification_service.get_user_notifications(
         current_user.id, status_enum, limit, offset
     )
-    
+
     return {
         "success": True,
         "notifications": [
@@ -437,11 +440,13 @@ async def get_notifications(
 
 @router.get("/notifications/unread-count")
 async def get_unread_count(
+    current_user: User = Depends(get_current_user)
+):
     current_user: User = Depends(get_current_user):
     """Get unread notification count"""
-    
+
     count = collab_notification_service.get_unread_count(current_user.id)
-    
+
     return {
         "success": True,
         "unread_count": count
@@ -450,11 +455,13 @@ async def get_unread_count(
 
 @router.get("/notifications/stats")
 async def get_notification_stats(
+    current_user: User = Depends(get_current_user)
+):
     current_user: User = Depends(get_current_user):
     """Get notification statistics"""
-    
+
     stats = collab_notification_service.get_notification_stats(current_user.id)
-    
+
     return {
         "success": True,
         "stats": stats
@@ -466,24 +473,26 @@ async def mark_notification_read(
     notification_id: str,
     current_user: User = Depends(get_current_user):
     """Mark a notification as read"""
-    
+
     success = collab_notification_service.mark_notification_read(
         notification_id, current_user.id
     )
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Notification not found")
-    
+
     return {"success": True, "message": "Notification marked as read"}
 
 
 @router.put("/notifications/read-all")
 async def mark_all_notifications_read(
+    current_user: User = Depends(get_current_user)
+):
     current_user: User = Depends(get_current_user):
     """Mark all notifications as read"""
-    
+
     count = collab_notification_service.mark_all_notifications_read(current_user.id)
-    
+
     return {
         "success": True,
         "message": f"Marked {count} notifications as read"
@@ -495,14 +504,14 @@ async def delete_notification(
     notification_id: str,
     current_user: User = Depends(get_current_user):
     """Delete a notification"""
-    
+
     success = collab_notification_service.delete_notification(
         notification_id, current_user.id
     )
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Notification not found")
-    
+
     return {"success": True, "message": "Notification deleted"}
 
 
@@ -512,7 +521,7 @@ async def get_session_stats(
     draft_id: str,
     current_user: User = Depends(get_current_user):
     """Get collaboration session statistics"""
-    
+
     # Find session for draft
     session_id = realtime_editor.draft_sessions.get(draft_id)
     if not session_id:
@@ -525,9 +534,9 @@ async def get_session_stats(
                 "is_active": False
             }
         }
-    
+
     stats = realtime_editor.get_session_stats(session_id)
-    
+
     return {
         "success": True,
         "stats": stats
@@ -536,16 +545,18 @@ async def get_session_stats(
 
 @router.get("/sessions/user")
 async def get_user_sessions(
+    current_user: User = Depends(get_current_user)
+):
     current_user: User = Depends(get_current_user):
     """Get sessions user is participating in"""
-    
+
     session_ids = realtime_editor.get_user_sessions(current_user.id)
     sessions = []
-    
+
     for session_id in session_ids:
         stats = realtime_editor.get_session_stats(session_id)
         sessions.append(stats)
-    
+
     return {
         "success": True,
         "sessions": sessions
@@ -559,9 +570,9 @@ async def search_threads(
     draft_id: Optional[str] = None,
     current_user: User = Depends(get_current_user):
     """Search comment threads"""
-    
+
     threads = annotation_manager.search_threads(query, draft_id)
-    
+
     return {
         "success": True,
         "threads": [
@@ -578,14 +589,14 @@ async def add_reaction(
     reaction_type: str,
     current_user: User = Depends(get_current_user):
     """Add a reaction to a comment"""
-    
+
     success = annotation_manager.add_reaction(
         comment_id, current_user.id, reaction_type
     )
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Comment not found")
-    
+
     return {"success": True, "message": "Reaction added"}
 
 
@@ -595,12 +606,12 @@ async def remove_reaction(
     reaction_type: str,
     current_user: User = Depends(get_current_user):
     """Remove a reaction from a comment"""
-    
+
     success = annotation_manager.remove_reaction(
         comment_id, current_user.id, reaction_type
     )
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Comment not found")
-    
-    return {"success": True, "message": "Reaction removed"} 
+
+    return {"success": True, "message": "Reaction removed"}

@@ -47,7 +47,7 @@ The `users` table is referenced by many other tables:
 -- Projects table
 projects.user_id -> users.id (CASCADE)
 
--- Buildings table  
+-- Buildings table
 buildings.owner_id -> users.id (SET NULL)
 
 -- BIM Objects (rooms, walls, doors, windows, devices, labels, zones)
@@ -83,7 +83,7 @@ PRIMARY KEY (id)
 -- Email uniqueness
 CREATE UNIQUE INDEX idx_users_email ON users(email);
 
--- Username uniqueness  
+-- Username uniqueness
 CREATE UNIQUE INDEX idx_users_username ON users(username);
 ```
 
@@ -121,19 +121,19 @@ ALTER TABLE users ALTER COLUMN updated_at SET NOT NULL;
 ### CHECK Constraints
 ```sql
 -- Email format validation
-ALTER TABLE users ADD CONSTRAINT chk_users_email_format 
+ALTER TABLE users ADD CONSTRAINT chk_users_email_format
 CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
 
 -- Username format validation
-ALTER TABLE users ADD CONSTRAINT chk_users_username_format 
+ALTER TABLE users ADD CONSTRAINT chk_users_username_format
 CHECK (username ~* '^[a-zA-Z0-9_-]{3,50}$');
 
 -- Role domain validation
-ALTER TABLE users ADD CONSTRAINT chk_users_role_domain 
+ALTER TABLE users ADD CONSTRAINT chk_users_role_domain
 CHECK (role IN ('admin', 'manager', 'user', 'viewer'));
 
 -- Password hash format validation
-ALTER TABLE users ADD CONSTRAINT chk_users_password_hash_format 
+ALTER TABLE users ADD CONSTRAINT chk_users_password_hash_format
 CHECK (password_hash ~* '^[a-f0-9]{64}$');
 ```
 
@@ -153,46 +153,46 @@ ALTER TABLE users ADD CONSTRAINT uq_users_username UNIQUE (username);
 #### **User Authentication**
 ```sql
 -- Authenticate user by email
-SELECT id, username, password_hash, role 
-FROM users 
+SELECT id, username, password_hash, role
+FROM users
 WHERE email = ? AND role != 'inactive';
 
 -- Authenticate user by username
-SELECT id, email, password_hash, role 
-FROM users 
+SELECT id, email, password_hash, role
+FROM users
 WHERE username = ? AND role != 'inactive';
 ```
 
 #### **User Management**
 ```sql
 -- List all users with role
-SELECT id, username, email, role, created_at 
-FROM users 
+SELECT id, username, email, role, created_at
+FROM users
 ORDER BY created_at DESC;
 
 -- Find users by role
-SELECT id, username, email 
-FROM users 
+SELECT id, username, email
+FROM users
 WHERE role = ?;
 
 -- Search users by email or username
-SELECT id, username, email, role 
-FROM users 
+SELECT id, username, email, role
+FROM users
 WHERE email ILIKE ? OR username ILIKE ?;
 ```
 
 #### **User Activity Analysis**
 ```sql
 -- Recent user registrations
-SELECT id, username, email, role, created_at 
-FROM users 
+SELECT id, username, email, role, created_at
+FROM users
 WHERE created_at >= NOW() - INTERVAL '30 days'
 ORDER BY created_at DESC;
 
 -- User count by role
-SELECT role, COUNT(*) as user_count 
-FROM users 
-GROUP BY role 
+SELECT role, COUNT(*) as user_count
+FROM users
+GROUP BY role
 ORDER BY user_count DESC;
 ```
 
@@ -279,4 +279,4 @@ ORDER BY user_count DESC;
 - [User Category Permissions Table](./user_category_permissions.md) - User permissions
 - [Migration Guide](../migrations.md) - Database migration procedures
 - [Performance Guide](../performance_guide.md) - Query optimization
-- [Security Guide](../security_guide.md) - Database security practices 
+- [Security Guide](../security_guide.md) - Database security practices

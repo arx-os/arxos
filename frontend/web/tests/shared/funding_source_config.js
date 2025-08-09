@@ -1,6 +1,6 @@
 /**
  * Funding Source Configuration
- * 
+ *
  * Centralized configuration for funding_source feature across all components
  */
 
@@ -17,7 +17,7 @@ export const FUNDING_SOURCE_CONFIG = {
         defaultValue: null,
         indexName: 'idx_funding_source'
     },
-    
+
     // Validation rules
     validation: {
         required: true,
@@ -26,7 +26,7 @@ export const FUNDING_SOURCE_CONFIG = {
         pattern: /^[a-zA-Z0-9\s\-\(\)]+$/,
         allowedCharacters: 'Letters, numbers, spaces, hyphens, and parentheses'
     },
-    
+
     // UI configuration
     ui: {
         fieldType: 'text', // or 'select'
@@ -38,7 +38,7 @@ export const FUNDING_SOURCE_CONFIG = {
         autoComplete: true,
         recentSourcesLimit: 10
     },
-    
+
     // Export configuration
     export: {
         includeInCSV: true,
@@ -46,7 +46,7 @@ export const FUNDING_SOURCE_CONFIG = {
         columnName: 'Funding Source',
         sortOrder: 5 // Position in export columns
     },
-    
+
     // API configuration
     api: {
         endpoints: {
@@ -61,7 +61,7 @@ export const FUNDING_SOURCE_CONFIG = {
             delete: 'DELETE'
         }
     },
-    
+
     // Test configuration
     test: {
         baseUrl: 'http://localhost:8080',
@@ -94,7 +94,7 @@ export const FUNDING_SOURCE_OPTIONS = {
         'State Funding',
         'Local Funding'
     ],
-    
+
     // Industry-specific funding sources
     industry: {
         healthcare: [
@@ -126,7 +126,7 @@ export const FUNDING_SOURCE_OPTIONS = {
             'Project Budget'
         ]
     },
-    
+
     // Custom funding sources (user-defined)
     custom: []
 };
@@ -165,7 +165,7 @@ export const ERROR_CODES = {
 export const FEATURE_FLAGS = {
     // Enable/disable funding source feature
     enabled: true,
-    
+
     // Enable advanced features
     advanced: {
         customFundingSources: true,
@@ -174,7 +174,7 @@ export const FEATURE_FLAGS = {
         bulkUpdate: true,
         importExport: true
     },
-    
+
     // UI features
     ui: {
         autoComplete: true,
@@ -183,7 +183,7 @@ export const FEATURE_FLAGS = {
         validation: true,
         helpText: true
     },
-    
+
     // API features
     api: {
         filtering: true,
@@ -204,14 +204,14 @@ export const PERFORMANCE_CONFIG = {
         ttl: 300000, // 5 minutes
         maxSize: 1000
     },
-    
+
     // Debouncing
     debounce: {
         input: 300, // 300ms
         search: 500, // 500ms
         validation: 200 // 200ms
     },
-    
+
     // Pagination
     pagination: {
         defaultPageSize: 25,
@@ -231,14 +231,14 @@ export const SECURITY_CONFIG = {
         allowedTags: [],
         allowedAttributes: []
     },
-    
+
     // Rate limiting
     rateLimit: {
         enabled: true,
         maxRequests: 100,
         windowMs: 900000 // 15 minutes
     },
-    
+
     // Validation
     validation: {
         strict: true,
@@ -254,7 +254,7 @@ export const SECURITY_CONFIG = {
 export const LOGGING_CONFIG = {
     // Log levels
     level: process.env.NODE_ENV === 'production' ? 'warn' : 'debug',
-    
+
     // What to log
     log: {
         validationErrors: true,
@@ -262,7 +262,7 @@ export const LOGGING_CONFIG = {
         userActions: true,
         performance: true
     },
-    
+
     // Log format
     format: {
         includeTimestamp: true,
@@ -277,7 +277,7 @@ export const LOGGING_CONFIG = {
 
 export const getEnvironmentConfig = () => {
     const env = process.env.NODE_ENV || 'development';
-    
+
     const configs = {
         development: {
             ...FUNDING_SOURCE_CONFIG,
@@ -323,7 +323,7 @@ export const getEnvironmentConfig = () => {
             }
         }
     };
-    
+
     return configs[env] || configs.development;
 };
 
@@ -336,7 +336,7 @@ export const ConfigUtils = {
     get(key, defaultValue = null) {
         const keys = key.split('.');
         let value = FUNDING_SOURCE_CONFIG;
-        
+
         for (const k of keys) {
             if (value && typeof value === 'object' && k in value) {
                 value = value[k];
@@ -344,20 +344,20 @@ export const ConfigUtils = {
                 return defaultValue;
             }
         }
-        
+
         return value;
     },
-    
+
     // Check if feature is enabled
     isFeatureEnabled(feature) {
         return FEATURE_FLAGS[feature] === true;
     },
-    
+
     // Get validation rules
     getValidationRules() {
         return FUNDING_SOURCE_CONFIG.validation;
     },
-    
+
     // Get funding source options
     getFundingSourceOptions(industry = null) {
         if (industry && FUNDING_SOURCE_OPTIONS.industry[industry]) {
@@ -368,7 +368,7 @@ export const ConfigUtils = {
         }
         return FUNDING_SOURCE_OPTIONS.standard;
     },
-    
+
     // Get error message by code
     getErrorMessage(code) {
         return VALIDATION_MESSAGES[code] || 'An unknown error occurred';
@@ -390,4 +390,4 @@ export default {
     LOGGING_CONFIG,
     getEnvironmentConfig,
     ConfigUtils
-}; 
+};

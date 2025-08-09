@@ -21,7 +21,7 @@ __description__ = "Use cases for SVGX Engine"
 __all__ = [
     "CreateBuildingUseCase",
     "UpdateBuildingUseCase",
-    "GetBuildingUseCase", 
+    "GetBuildingUseCase",
     "DeleteBuildingUseCase",
     "ListBuildingsUseCase"
-] 
+]

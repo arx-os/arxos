@@ -1,10 +1,10 @@
 /**
  * Logging Replacement System for Arxos Frontend
- * 
+ *
  * This script provides automated replacement of console.log calls with ArxLogger calls.
  * It analyzes the content and context of console.log calls to determine the appropriate
  * log level and method to use.
- * 
+ *
  * Usage:
  * 1. Include this script after arx-logger.js
  * 2. Call LoggingReplacer.initialize() to set up automatic replacement
@@ -20,26 +20,26 @@ class LoggingReplacer {
                 pattern: /console\.log\('([^']+)'\)/g,
                 replacement: (match, message) => this.determineLogLevel(message, 'info')
             },
-            
+
             // Template literal messages
             {
                 pattern: /console\.log\(`([^`]+)`\)/g,
                 replacement: (match, message) => this.determineLogLevel(message, 'info')
             },
-            
+
             // Variable/expression logging
             {
                 pattern: /console\.log\(([^)]+)\)/g,
                 replacement: (match, expression) => this.determineLogLevel(expression, 'info')
             },
-            
+
             // Multi-argument console.log
             {
                 pattern: /console\.log\(([^)]+(?:,\s*[^)]+)*)\)/g,
                 replacement: (match, args) => this.determineLogLevel(args, 'info')
             }
         ];
-        
+
         this.logLevelPatterns = {
             error: [
                 /error/i, /failed/i, /failure/i, /exception/i, /crash/i, /broken/i,
@@ -60,7 +60,7 @@ class LoggingReplacer {
                 /deleted/i, /moved/i, /resized/i, /selected/i, /deselected/i
             ]
         };
-        
+
         this.contextPatterns = {
             performance: [
                 /performance/i, /benchmark/i, /timing/i, /duration/i, /ms/i, /milliseconds/i,
@@ -83,11 +83,11 @@ class LoggingReplacer {
                 /cache/i, /storage/i, /database/i, /query/i
             ]
         };
-        
+
         this.isInitialized = false;
         this.processedFiles = new Set();
     }
-    
+
     /**
      * Initialize the logging replacement system
      */
@@ -96,7 +96,7 @@ class LoggingReplacer {
             console.warn('LoggingReplacer already initialized');
             return;
         }
-        
+
         // Ensure ArxLogger is available
         if (typeof window.arxLogger === 'undefined') {
             console.warn('ArxLogger not found. Creating default instance...');
@@ -107,36 +107,36 @@ class LoggingReplacer {
                 remoteEndpoint: '/api/logs/aggregate'
             });
         }
-        
+
         // Override console.log globally
         this.overrideConsoleLog();
-        
+
         // Process existing scripts
         this.replaceAll();
-        
+
         // Set up mutation observer for dynamically loaded scripts
         this.setupMutationObserver();
-        
+
         this.isInitialized = true;
         console.log('LoggingReplacer initialized successfully');
     }
-    
+
     /**
      * Override console.log to automatically use ArxLogger
      */
     overrideConsoleLog() {
         const originalConsoleLog = console.log;
         const self = this;
-        
+
         console.log = function(...args) {
             // Determine log level and context
-            const message = args.map(arg => 
+            const message = args.map(arg =>
                 typeof arg === 'string' ? arg : JSON.stringify(arg)
             ).join(' ');
-            
+
             const logLevel = self.determineLogLevel(message, 'info');
             const context = self.determineContext(message);
-            
+
             // Use ArxLogger instead
             if (window.arxLogger) {
                 const metadata = { context, originalArgs: args };
@@ -147,51 +147,51 @@ class LoggingReplacer {
             }
         };
     }
-    
+
     /**
      * Determine appropriate log level based on message content
      */
     determineLogLevel(message, defaultLevel = 'info') {
         const lowerMessage = message.toLowerCase();
-        
+
         // Check for error patterns
         for (const pattern of this.logLevelPatterns.error) {
             if (pattern.test(lowerMessage)) {
                 return 'error';
             }
         }
-        
+
         // Check for warning patterns
         for (const pattern of this.logLevelPatterns.warning) {
             if (pattern.test(lowerMessage)) {
                 return 'warning';
             }
         }
-        
+
         // Check for debug patterns
         for (const pattern of this.logLevelPatterns.debug) {
             if (pattern.test(lowerMessage)) {
                 return 'debug';
             }
         }
-        
+
         // Check for info patterns
         for (const pattern of this.logLevelPatterns.info) {
             if (pattern.test(lowerMessage)) {
                 return 'info';
             }
         }
-        
+
         return defaultLevel;
     }
-    
+
     /**
      * Determine context based on message content
      */
     determineContext(message) {
         const lowerMessage = message.toLowerCase();
         const contexts = [];
-        
+
         for (const [context, patterns] of Object.entries(this.contextPatterns)) {
             for (const pattern of patterns) {
                 if (pattern.test(lowerMessage)) {
@@ -200,10 +200,10 @@ class LoggingReplacer {
                 }
             }
         }
-        
+
         return contexts.length > 0 ? contexts : ['general'];
     }
-    
+
     /**
      * Replace console.log calls in a file content
      */
@@ -211,10 +211,10 @@ class LoggingReplacer {
         if (this.processedFiles.has(fileName)) {
             return fileContent;
         }
-        
+
         let modifiedContent = fileContent;
         let replacements = 0;
-        
+
         for (const replacement of this.replacements) {
             const matches = fileContent.match(replacement.pattern);
             if (matches) {
@@ -223,7 +223,7 @@ class LoggingReplacer {
                     const message = args[0];
                     const logLevel = this.determineLogLevel(message, 'info');
                     const context = this.determineContext(message);
-                    
+
                     // Handle different argument patterns
                     if (match.includes('`')) {
                         // Template literal
@@ -238,21 +238,21 @@ class LoggingReplacer {
                 });
             }
         }
-        
+
         if (replacements > 0) {
             console.log(`LoggingReplacer: Replaced ${replacements} console.log calls in ${fileName}`);
         }
-        
+
         this.processedFiles.add(fileName);
         return modifiedContent;
     }
-    
+
     /**
      * Replace console.log calls in all loaded scripts
      */
     replaceAll() {
         const scripts = document.querySelectorAll('script[src*=".js"]');
-        
+
         scripts.forEach(script => {
             const src = script.getAttribute('src');
             if (src && !this.processedFiles.has(src)) {
@@ -262,7 +262,7 @@ class LoggingReplacer {
             }
         });
     }
-    
+
     /**
      * Set up mutation observer to handle dynamically loaded scripts
      */
@@ -287,11 +287,11 @@ class LoggingReplacer {
                 });
             });
         });
-        
+
         observer.observe(document.head, { childList: true, subtree: true });
         observer.observe(document.body, { childList: true, subtree: true });
     }
-    
+
     /**
      * Process a specific file by fetching and replacing console.log calls
      */
@@ -300,12 +300,12 @@ class LoggingReplacer {
             const response = await fetch(filePath);
             const content = await response.text();
             const processedContent = this.replaceInFile(content, filePath);
-            
+
             // Create a new script element with processed content
             const script = document.createElement('script');
             script.textContent = processedContent;
             script.setAttribute('data-processed', 'true');
-            
+
             // Replace the original script if it exists
             const originalScript = document.querySelector(`script[src="${filePath}"]`);
             if (originalScript) {
@@ -313,14 +313,14 @@ class LoggingReplacer {
             } else {
                 document.head.appendChild(script);
             }
-            
+
             return processedContent;
         } catch (error) {
             console.error(`LoggingReplacer: Error processing file ${filePath}:`, error);
             return null;
         }
     }
-    
+
     /**
      * Get statistics about processed files and replacements
      */
@@ -331,7 +331,7 @@ class LoggingReplacer {
             isInitialized: this.isInitialized
         };
     }
-    
+
     /**
      * Reset the replacement system
      */
@@ -357,4 +357,4 @@ if (document.readyState === 'loading') {
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = LoggingReplacer;
-} 
+}

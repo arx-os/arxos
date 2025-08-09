@@ -183,8 +183,8 @@ func (ms *MonitoringService) collectSystemMetrics() {
 		Count int64
 	}
 	ms.db.Raw(`
-		SELECT role, COUNT(*) as count 
-		FROM users 
+		SELECT role, COUNT(*) as count
+		FROM users
 		WHERE last_activity > NOW() - INTERVAL '1 hour'
 		GROUP BY role
 	`).Scan(&activeUsers)
@@ -347,13 +347,13 @@ func (ms *MonitoringService) GetAPIUsageStats(period string) (map[string]interfa
 	}
 
 	err := ms.db.Raw(`
-		SELECT 
+		SELECT
 			endpoint,
 			method,
 			COUNT(*) as count,
 			AVG(response_time) as avg_duration,
 			COUNT(CASE WHEN status >= 400 THEN 1 END) as error_count
-		FROM api_key_usage 
+		FROM api_key_usage
 		WHERE created_at > NOW() - INTERVAL '` + timeFilter + `'
 		GROUP BY endpoint, method
 		ORDER BY count DESC
@@ -394,7 +394,7 @@ func (ms *MonitoringService) GetExportJobStats(period string) (map[string]interf
 	}
 
 	err := ms.db.Raw(`
-		SELECT 
+		SELECT
 			export_type,
 			format,
 			COUNT(*) as count,
@@ -402,7 +402,7 @@ func (ms *MonitoringService) GetExportJobStats(period string) (map[string]interf
 			SUM(file_size) as total_file_size,
 			COUNT(CASE WHEN status = 'failed' THEN 1 END) as error_count,
 			(COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*)) as success_rate
-		FROM export_activities 
+		FROM export_activities
 		WHERE created_at > NOW() - INTERVAL '` + timeFilter + `'
 		GROUP BY export_type, format
 		ORDER BY count DESC
@@ -439,11 +439,11 @@ func (ms *MonitoringService) GetErrorRateStats(period string) (map[string]interf
 	}
 
 	err := ms.db.Raw(`
-		SELECT 
+		SELECT
 			alert_type as error_type,
 			COUNT(*) as count,
 			(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM security_alerts WHERE created_at > NOW() - INTERVAL '` + timeFilter + `')) as percentage
-		FROM security_alerts 
+		FROM security_alerts
 		WHERE created_at > NOW() - INTERVAL '` + timeFilter + `'
 		GROUP BY alert_type
 		ORDER BY count DESC

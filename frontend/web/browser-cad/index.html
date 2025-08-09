@@ -4,24 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arxos Browser CAD</title>
-    
+
     <!-- HTMX for dynamic interactions -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
-    
+
     <!-- Tailwind CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    
+
     <!-- Custom CAD Styles -->
     <link rel="stylesheet" href="../static/css/cad.css">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="../static/images/favicon.svg">
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <!-- CAD Application Container -->
     <div id="cad-app" class="flex flex-col h-screen">
-        
+
         <!-- CAD Toolbar -->
         <div id="cad-toolbar" class="bg-gray-800 border-b border-gray-700 p-4">
             <div class="flex items-center justify-between">
@@ -30,7 +30,7 @@
                     <div class="text-2xl font-bold text-blue-400">Arxos CAD</div>
                     <div class="text-sm text-gray-400">Building Information Modeling</div>
                 </div>
-                
+
                 <!-- Tool Groups -->
                 <div class="flex items-center space-x-6">
                     <!-- Drawing Tools -->
@@ -60,7 +60,7 @@
                             <span>Circle</span>
                         </button>
                     </div>
-                    
+
                     <!-- Enhanced Precision Controls -->
                     <div class="flex items-center space-x-4">
                         <div class="flex items-center space-x-2">
@@ -71,7 +71,7 @@
                                 <option value="COMPUTE">Compute (0.0001")</option>
                             </select>
                         </div>
-                        
+
                         <div class="flex items-center space-x-2">
                             <label class="text-sm text-gray-400">Grid:</label>
                             <select id="grid-size" class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
@@ -81,13 +81,13 @@
                                 <option value="12">12"</option>
                             </select>
                         </div>
-                        
+
                         <div class="flex items-center space-x-2">
                             <input type="checkbox" id="grid-snap" class="rounded" checked>
                             <label for="grid-snap" class="text-sm text-gray-400">Snap</label>
                         </div>
                     </div>
-                    
+
                     <!-- Constraint Tools -->
                     <div class="flex items-center space-x-2">
                         <button id="distance-constraint" class="cad-tool-btn" data-tool="distance-constraint">
@@ -109,7 +109,7 @@
                             <span>Perpendicular</span>
                         </button>
                     </div>
-                    
+
                     <!-- AI Assistant -->
                     <div class="flex items-center space-x-2">
                         <button id="ai-assistant" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium">
@@ -120,24 +120,24 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- User Controls -->
                 <div class="flex items-center space-x-4">
                     <!-- Project Info -->
                     <div id="project-info" class="text-sm text-gray-400">
                         <div>No project selected</div>
                     </div>
-                    
+
                     <!-- Collaboration Status -->
                     <div id="collaboration-status" class="text-sm text-gray-400">
                         <div>Collaboration: Inactive</div>
                     </div>
-                    
+
                     <!-- AI Status -->
                     <div id="ai-status" class="text-sm text-gray-400">
                         <div>AI Assistant: Disconnected</div>
                     </div>
-                    
+
                     <!-- Project Controls -->
                     <button id="new-project" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-medium">
                         New Project
@@ -151,7 +151,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- CAD Workspace -->
         <div id="cad-workspace" class="flex-1 flex">
             <!-- Left Panel - Projects & ArxObjects -->
@@ -163,7 +163,7 @@
                         <!-- Projects will be loaded here -->
                     </div>
                 </div>
-                
+
                 <!-- ArxObjects Tab -->
                 <div class="p-4">
                     <h3 class="text-lg font-semibold mb-4">ArxObjects</h3>
@@ -171,7 +171,7 @@
                         <!-- ArxObjects will be loaded here -->
                     </div>
                 </div>
-                
+
                 <!-- Constraints Panel -->
                 <div class="p-4 border-t border-gray-700">
                     <h3 class="text-lg font-semibold mb-4">Constraints</h3>
@@ -183,16 +183,16 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- Center - Canvas Area -->
             <div id="canvas-container" class="flex-1 relative">
                 <canvas id="cad-canvas" class="w-full h-full bg-white"></canvas>
-                
+
                 <!-- Canvas Overlay for UI -->
                 <div id="canvas-overlay" class="absolute inset-0 pointer-events-none">
                     <!-- Grid lines, measurements, etc. -->
                 </div>
-                
+
                 <!-- Status Bar -->
                 <div id="status-bar" class="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-2">
                     <div class="flex items-center justify-between text-sm">
@@ -208,7 +208,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Right Panel - Properties & Collaboration -->
             <div id="properties-panel" class="w-80 bg-gray-800 border-l border-gray-700">
                 <!-- Properties Tab -->
@@ -219,7 +219,7 @@
                         <div class="text-gray-400 text-sm">Select an object to view properties</div>
                     </div>
                 </div>
-                
+
                 <!-- Collaboration Tab -->
                 <div class="p-4">
                     <h3 class="text-lg font-semibold mb-4">Collaboration</h3>
@@ -232,7 +232,7 @@
                             <!-- Chat messages will be loaded here -->
                         </div>
                         <div class="flex space-x-2">
-                            <input type="text" id="chat-input" placeholder="Type a message..." 
+                            <input type="text" id="chat-input" placeholder="Type a message..."
                                    class="flex-1 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
                             <button id="send-chat" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">
                                 Send
@@ -260,7 +260,7 @@
                     <!-- AI chat messages will appear here -->
                 </div>
                 <div class="flex space-x-2">
-                    <input type="text" id="ai-input" placeholder="Ask GUS to create a room, add a door, etc..." 
+                    <input type="text" id="ai-input" placeholder="Ask GUS to create a room, add a door, etc..."
                            class="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white">
                     <button id="ai-send" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
                         Send
@@ -288,7 +288,7 @@
     <script src="../static/js/cad-ai-integration.js"></script>
     <script src="../static/js/cad-ui.js"></script>
     <script src="../static/js/ai-assistant.js"></script>
-    
+
     <!-- Initialize CAD Application -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -298,57 +298,57 @@
                 cadUI: null,
                 isInitialized: false
             };
-            
+
             async function initializeCadApplication() {
                 try {
                     console.log('Initializing Arxos CAD Application...');
-                    
+
                     // Initialize CAD Engine with enhanced precision
                     window.cadApp.cadEngine = new CadEngine();
                     await window.cadApp.cadEngine.initialize();
-                    
+
                     // Initialize CAD UI with enhanced integration
                     window.cadApp.cadUI = new CadUI(window.cadApp.cadEngine);
                     await window.cadApp.cadUI.initialize();
-                    
+
                     // Set up cross-component communication
                     window.cadApp.cadEngine.addEventListener('objectSelected', (data) => {
                         window.cadApp.cadUI.updatePropertiesPanel(data.object);
                     });
-                    
+
                     window.cadApp.cadEngine.addEventListener('constraintAdded', (data) => {
                         window.cadApp.cadUI.updateConstraintsList();
                     });
-                    
+
                     window.cadApp.cadEngine.addEventListener('precisionChanged', (data) => {
                         window.cadApp.cadUI.updatePrecisionDisplay(data);
                     });
-                    
+
                     // Initialize additional components
                     if (typeof ArxObjectSystem !== 'undefined') {
                         window.cadApp.arxObjectSystem = new ArxObjectSystem();
                     }
-                    
+
                     if (typeof CadApiClient !== 'undefined') {
                         window.cadApp.apiClient = new CadApiClient();
                     }
-                    
+
                     if (typeof AiAssistant !== 'undefined') {
                         window.cadApp.aiAssistant = new AiAssistant();
                     }
-                    
+
                     window.cadApp.isInitialized = true;
                     console.log('Arxos CAD Application initialized successfully');
-                    
+
                     // Hide loading indicator
                     const loadingIndicator = document.getElementById('loading');
                     if (loadingIndicator) {
                         loadingIndicator.classList.add('hidden');
                     }
-                    
+
                 } catch (error) {
                     console.error('Failed to initialize CAD Application:', error);
-                    
+
                     // Show error message
                     const errorMessage = document.createElement('div');
                     errorMessage.className = 'fixed inset-0 bg-red-900 bg-opacity-75 flex items-center justify-center z-50';
@@ -364,10 +364,10 @@
                     document.body.appendChild(errorMessage);
                 }
             }
-            
+
             // Start initialization
             initializeCadApplication();
         });
     </script>
 </body>
-</html> 
+</html>

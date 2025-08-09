@@ -86,7 +86,7 @@ async def create_user(
             status=request.status,
             created_by=user.user_id
         )
-        
+
         # Use application service to create user
         result = user_service.create_user(
             username=create_request.username,
@@ -98,7 +98,7 @@ async def create_user(
             department=create_request.department,
             created_by=create_request.created_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -122,7 +122,7 @@ async def create_user(
                 message=result.error_message or "Failed to create user",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to create user: {str(e)}")
         return format_error_response(
@@ -157,7 +157,7 @@ async def list_users(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -192,7 +192,7 @@ async def list_users(
                 message=result.error_message or "Failed to retrieve users",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to list users: {str(e)}")
         return format_error_response(
@@ -217,7 +217,7 @@ async def get_user(
     try:
         # Use application service to get user
         result = user_service.get_user(user_id=user_id)
-        
+
         if result.success and result.user:
             user_data = result.user
             return format_success_response(
@@ -243,7 +243,7 @@ async def get_user(
                 message=result.error_message or "User not found",
                 details={"user_id": user_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get user {user_id}: {str(e)}")
         return format_error_response(
@@ -280,7 +280,7 @@ async def update_user(
             status=request.status,
             updated_by=user.user_id
         )
-        
+
         # Use application service to update user
         result = user_service.update_user(
             user_id=user_id,
@@ -294,7 +294,7 @@ async def update_user(
             status=update_request.status,
             updated_by=update_request.updated_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -318,7 +318,7 @@ async def update_user(
                 message=result.error_message or "Failed to update user",
                 details={"error": result.error_message, "user_id": user_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to update user {user_id}: {str(e)}")
         return format_error_response(
@@ -346,7 +346,7 @@ async def delete_user(
             user_id=user_id,
             deleted_by=user.user_id
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -362,7 +362,7 @@ async def delete_user(
                 message=result.error_message or "Failed to delete user",
                 details={"error": result.error_message, "user_id": user_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to delete user {user_id}: {str(e)}")
         return format_error_response(
@@ -387,7 +387,7 @@ async def get_user_statistics(
     try:
         # Use application service to get user statistics
         result = user_service.get_user_statistics(user_id=user_id)
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -411,11 +411,11 @@ async def get_user_statistics(
                 message=result.error_message or "Failed to retrieve user statistics",
                 details={"error": result.error_message, "user_id": user_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get statistics for user {user_id}: {str(e)}")
         return format_error_response(
             error_code="USER_STATISTICS_ERROR",
             message="Failed to retrieve user statistics",
             details={"error": str(e), "user_id": user_id}
-        ) 
+        )

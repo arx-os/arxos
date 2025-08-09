@@ -71,7 +71,7 @@ check_root() {
 # Check system requirements
 check_system_requirements() {
     print_header "Checking System Requirements"
-    
+
     # Check Python
     if command -v python3 &> /dev/null; then
         PYTHON_VER=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
@@ -84,7 +84,7 @@ check_system_requirements() {
         print_error "Python3 not found"
         exit 1
     fi
-    
+
     # Check Go
     if command -v go &> /dev/null; then
         GO_VER=$(go version | cut -d' ' -f3 | cut -d'.' -f1,2)
@@ -97,7 +97,7 @@ check_system_requirements() {
         print_error "Go not found"
         exit 1
     fi
-    
+
     # Check Git
     if command -v git &> /dev/null; then
         print_success "Git found"
@@ -105,7 +105,7 @@ check_system_requirements() {
         print_error "Git not found"
         exit 1
     fi
-    
+
     # Check Docker (optional)
     if command -v docker &> /dev/null; then
         print_success "Docker found"
@@ -117,17 +117,17 @@ check_system_requirements() {
 # Install Python dependencies
 install_python_dependencies() {
     print_header "Installing Python Dependencies"
-    
+
     # Upgrade pip
     python3 -m pip install --upgrade pip
-    
+
     # Install required packages
     for package in "${REQUIRED_PYTHON_PACKAGES[@]}"; do
         print_info "Installing $package..."
         python3 -m pip install "$package"
         print_success "Installed $package"
     done
-    
+
     # Install project dependencies
     if [[ -f "requirements.txt" ]]; then
         print_info "Installing project dependencies..."
@@ -139,20 +139,20 @@ install_python_dependencies() {
 # Install Go dependencies
 install_go_dependencies() {
     print_header "Installing Go Dependencies"
-    
+
     # Go to backend directory
     cd arx-backend
-    
+
     # Download dependencies
     print_info "Downloading Go dependencies..."
     go mod download
     print_success "Downloaded Go dependencies"
-    
+
     # Tidy modules
     print_info "Tidying Go modules..."
     go mod tidy
     print_success "Tidied Go modules"
-    
+
     # Go back to root
     cd ..
 }
@@ -160,23 +160,23 @@ install_go_dependencies() {
 # Create necessary directories
 create_directories() {
     print_header "Creating Pipeline Directories"
-    
+
     # Create schema directories
     mkdir -p schemas/{electrical,mechanical,plumbing,fire_alarm,audiovisual}
     print_success "Created schema directories"
-    
+
     # Create symbol library directories
     mkdir -p arx-symbol-library/{electrical,mechanical,plumbing,fire_alarm,audiovisual}/metadata
     print_success "Created symbol library directories"
-    
+
     # Create behavior directories
     mkdir -p svgx_engine/behavior
     print_success "Created behavior directories"
-    
+
     # Create documentation directories
     mkdir -p docs/systems/{electrical,mechanical,plumbing,fire_alarm,audiovisual}
     print_success "Created documentation directories"
-    
+
     # Create test directories
     mkdir -p tests/{unit,integration,performance}
     print_success "Created test directories"
@@ -185,11 +185,11 @@ create_directories() {
 # Setup database
 setup_database() {
     print_header "Setting Up Database"
-    
+
     # Check if PostgreSQL is available
     if command -v psql &> /dev/null; then
         print_info "PostgreSQL found"
-        
+
         # Create database if it doesn't exist
         if ! psql -lqt | cut -d \| -f 1 | grep -qw arxos; then
             print_info "Creating arxos database..."
@@ -198,7 +198,7 @@ setup_database() {
         else
             print_success "arxos database already exists"
         fi
-        
+
         # Run migrations
         print_info "Running database migrations..."
         cd arx-backend
@@ -218,17 +218,17 @@ setup_database() {
 # Run tests
 run_tests() {
     print_header "Running Pipeline Tests"
-    
+
     # Run unit tests
     print_info "Running unit tests..."
     python3 -m pytest tests/test_pipeline_integration.py -v
     print_success "Unit tests completed"
-    
+
     # Run comprehensive tests
     print_info "Running comprehensive tests..."
     python3 tests/test_pipeline_comprehensive.py
     print_success "Comprehensive tests completed"
-    
+
     # Run Go tests
     print_info "Running Go tests..."
     cd arx-backend
@@ -240,19 +240,19 @@ run_tests() {
 # Validate installation
 validate_installation() {
     print_header "Validating Pipeline Installation"
-    
+
     # Test Python bridge service
     print_info "Testing Python bridge service..."
     cd svgx_engine
     python3 services/pipeline_integration.py --operation validate-schema --params '{"system": "test"}' || true
     cd ..
     print_success "Python bridge service test completed"
-    
+
     # Test CLI tool
     print_info "Testing CLI tool..."
     python3 scripts/arx_pipeline.py --list-systems || true
     print_success "CLI tool test completed"
-    
+
     # Test demonstration
     print_info "Testing demonstration..."
     python3 examples/pipeline_demo.py || true
@@ -262,11 +262,11 @@ validate_installation() {
 # Setup CI/CD
 setup_cicd() {
     print_header "Setting Up CI/CD"
-    
+
     # Check if GitHub Actions directory exists
     if [[ -d ".github/workflows" ]]; then
         print_success "GitHub Actions directory found"
-        
+
         # Check if pipeline workflow exists
         if [[ -f ".github/workflows/arxos-pipeline.yml" ]]; then
             print_success "Pipeline workflow found"
@@ -276,7 +276,7 @@ setup_cicd() {
     else
         print_warning "GitHub Actions directory not found"
     fi
-    
+
     # Setup pre-commit hooks (optional)
     if command -v pre-commit &> /dev/null; then
         print_info "Setting up pre-commit hooks..."
@@ -290,7 +290,7 @@ setup_cicd() {
 # Generate configuration
 generate_configuration() {
     print_header "Generating Pipeline Configuration"
-    
+
     # Create pipeline config file
     cat > pipeline_config.json << EOF
 {
@@ -312,21 +312,21 @@ generate_configuration() {
     },
     "systems": [
         "electrical",
-        "mechanical", 
+        "mechanical",
         "plumbing",
         "fire_alarm",
         "audiovisual"
     ]
 }
 EOF
-    
+
     print_success "Generated pipeline configuration"
 }
 
 # Create deployment summary
 create_deployment_summary() {
     print_header "Deployment Summary"
-    
+
     cat > DEPLOYMENT_SUMMARY.md << EOF
 # Arxos Pipeline Deployment Summary
 
@@ -394,7 +394,7 @@ python3 examples/pipeline_demo.py
 ## Support
 For issues and questions, please refer to the documentation in \`docs/PIPELINE_IMPLEMENTATION_SUMMARY.md\`
 EOF
-    
+
     print_success "Created deployment summary"
 }
 
@@ -403,34 +403,34 @@ main() {
     print_header "Arxos Pipeline Deployment"
     print_info "Version: $PIPELINE_VERSION"
     print_info "Starting deployment..."
-    
+
     # Check requirements
     check_root
     check_system_requirements
-    
+
     # Install dependencies
     install_python_dependencies
     install_go_dependencies
-    
+
     # Setup infrastructure
     create_directories
     setup_database
-    
+
     # Run tests
     run_tests
-    
+
     # Setup CI/CD
     setup_cicd
-    
+
     # Generate configuration
     generate_configuration
-    
+
     # Validate installation
     validate_installation
-    
+
     # Create summary
     create_deployment_summary
-    
+
     print_header "Deployment Complete"
     print_success "Arxos Pipeline has been successfully deployed!"
     print_info "Check DEPLOYMENT_SUMMARY.md for details"
@@ -438,4 +438,4 @@ main() {
 }
 
 # Run main function
-main "$@" 
+main "$@"

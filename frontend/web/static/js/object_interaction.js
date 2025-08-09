@@ -9,7 +9,7 @@ class SVGObjectInteraction {
         this.undoStack = [];
         this.redoStack = [];
         this.maxUndoSteps = 50;
-        
+
         // Performance optimizations
         this.objectPool = new Map();
         this.dragThrottleTimer = null;
@@ -17,21 +17,21 @@ class SVGObjectInteraction {
         this.selectionCache = new Map();
         this.autoSaveTimer = null;
         this.autoSaveDelay = 2000; // 2 seconds
-        
+
         // UX improvements
         this.loadingStates = new Set();
         this.notifications = [];
         this.helpOverlay = null;
-        
+
         // Marquee selection
         this.isMarqueeSelecting = false;
         this.marqueeStart = null;
         this.marqueeElement = null;
         this.autoSaveIndicator = null;
-        
+
         // Viewport manager integration
         this.viewportManager = null;
-        
+
         this.init();
     }
 
@@ -39,7 +39,7 @@ class SVGObjectInteraction {
         this.svgContainer = document.getElementById('svg-container');
         this.svgElement = this.svgContainer ? this.svgContainer.querySelector('svg') : null;
         if (!this.svgContainer || !this.svgElement) return;
-        
+
         this.connectToViewportManager();
         this.setupEventListeners();
         this.setupInteractJS();
@@ -57,12 +57,12 @@ class SVGObjectInteraction {
             if (window.viewportManager) {
                 this.viewportManager = window.viewportManager;
                 window.arxLogger.info('SVGObjectInteraction connected to ViewportManager', { file: 'object_interaction.js' });
-                
+
                 // Listen for viewport changes
                 this.viewportManager.addEventListener('zoomChanged', () => {
                     this.updateRotateHandlePosition();
                 });
-                
+
                 this.viewportManager.addEventListener('viewReset', () => {
                     this.updateRotateHandlePosition();
                 });
@@ -165,14 +165,14 @@ class SVGObjectInteraction {
     getObjectsInRect(rect) {
         const objects = [];
         const placedSymbols = this.svgElement.querySelectorAll('.placed-symbol');
-        
+
         placedSymbols.forEach(symbol => {
             const symbolRect = symbol.getBoundingClientRect();
             if (this.rectsIntersect(rect, symbolRect)) {
                 objects.push(symbol);
             }
         });
-        
+
         return objects;
     }
 
@@ -181,18 +181,18 @@ class SVGObjectInteraction {
      */
     getObjectsInMarqueeSelection() {
         if (!this.marqueeElement) return [];
-        
+
         const marqueeRect = this.marqueeElement.getBoundingClientRect();
         const objects = [];
         const placedSymbols = this.svgElement.querySelectorAll('.placed-symbol');
-        
+
         placedSymbols.forEach(symbol => {
             const symbolRect = symbol.getBoundingClientRect();
             if (this.rectsIntersect(marqueeRect, symbolRect)) {
                 objects.push(symbol);
             }
         });
-        
+
         return objects;
     }
 
@@ -202,26 +202,26 @@ class SVGObjectInteraction {
     startMarqueeSelection(e) {
         this.isMarqueeSelecting = true;
         this.marqueeStart = this.getMousePosition(e);
-        
+
         this.marqueeElement = document.createElement('div');
         this.marqueeElement.className = 'marquee-selection';
         this.marqueeElement.style.left = this.marqueeStart.x + 'px';
         this.marqueeElement.style.top = this.marqueeStart.y + 'px';
         this.marqueeElement.style.width = '0px';
         this.marqueeElement.style.height = '0px';
-        
+
         this.svgContainer.appendChild(this.marqueeElement);
     }
 
     updateMarqueeSelection(e) {
         if (!this.isMarqueeSelecting || !this.marqueeElement) return;
-        
+
         const currentPos = this.getMousePosition(e);
         const startX = Math.min(this.marqueeStart.x, currentPos.x);
         const startY = Math.min(this.marqueeStart.y, currentPos.y);
         const width = Math.abs(currentPos.x - this.marqueeStart.x);
         const height = Math.abs(currentPos.y - this.marqueeStart.y);
-        
+
         this.marqueeElement.style.left = startX + 'px';
         this.marqueeElement.style.top = startY + 'px';
         this.marqueeElement.style.width = width + 'px';
@@ -230,29 +230,29 @@ class SVGObjectInteraction {
 
     endMarqueeSelection(e) {
         if (!this.isMarqueeSelecting) return;
-        
+
         this.isMarqueeSelecting = false;
-        
+
         if (this.marqueeElement) {
             const selectedObjects = this.getObjectsInMarqueeSelection();
-            
+
             if (e.shiftKey) {
                 selectedObjects.forEach(obj => this.toggleObjectSelection(obj));
             } else {
                 this.clearSelection();
                 selectedObjects.forEach(obj => this.selectObject(obj));
             }
-            
+
             this.marqueeElement.remove();
             this.marqueeElement = null;
         }
-        
+
         this.marqueeStart = null;
     }
 
     rectsIntersect(rect1, rect2) {
-        return !(rect2.left > rect1.right || 
-                rect2.right < rect1.left || 
+        return !(rect2.left > rect1.right ||
+                rect2.right < rect1.left ||
                 rect2.top > rect1.bottom ||
                 rect2.bottom < rect1.top);
     }
@@ -269,7 +269,7 @@ class SVGObjectInteraction {
 
     setupInteractJS() {
         if (typeof interact === 'undefined') return;
-        
+
         interact('.placed-symbol', { context: this.svgElement })
             .draggable({
                 listeners: {
@@ -281,7 +281,7 @@ class SVGObjectInteraction {
                     move: (event) => {
                         // Enhanced throttling with requestAnimationFrame
                         if (this.dragThrottleTimer) return;
-                        
+
                         this.dragThrottleTimer = requestAnimationFrame(() => {
                             this.handleDragMove(event);
                             this.dragThrottleTimer = null;
@@ -299,50 +299,50 @@ class SVGObjectInteraction {
 
     handleDragMove(event) {
         const target = event.target;
-        
+
         // Get current position in SVG coordinates
         let currentX = parseFloat(target.getAttribute('data-x')) || 0;
         let currentY = parseFloat(target.getAttribute('data-y')) || 0;
-        
+
         // Convert drag delta to SVG coordinates if viewport manager is available
         let deltaX = event.dx;
         let deltaY = event.dy;
-        
+
         if (this.viewportManager && this.viewportManager.currentZoom) {
             // Convert screen delta to SVG delta based on current zoom
             deltaX = deltaX / this.viewportManager.currentZoom;
             deltaY = deltaY / this.viewportManager.currentZoom;
         }
-        
+
         let newX = currentX + deltaX;
         let newY = currentY + deltaY;
-        
+
         // Snap to grid (optional)
         const gridSize = 5;
         newX = Math.round(newX / gridSize) * gridSize;
         newY = Math.round(newY / gridSize) * gridSize;
-        
+
         // Update object position
         target.setAttribute('data-x', newX);
         target.setAttribute('data-y', newY);
         const rotation = target.getAttribute('data-rotation') || 0;
         target.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
-        
+
         // Move selected objects together
         if (this.selectedObjects.has(target)) {
             this.selectedObjects.forEach(obj => {
                 if (obj !== target) {
                     let objX = parseFloat(obj.getAttribute('data-x')) || 0;
                     let objY = parseFloat(obj.getAttribute('data-y')) || 0;
-                    
+
                     // Apply same delta to other selected objects
                     let objNewX = objX + deltaX;
                     let objNewY = objY + deltaY;
-                    
+
                     // Snap to grid
                     objNewX = Math.round(objNewX / gridSize) * gridSize;
                     objNewY = Math.round(objNewY / gridSize) * gridSize;
-                    
+
                     obj.setAttribute('data-x', objNewX);
                     obj.setAttribute('data-y', objNewY);
                     const objRotation = obj.getAttribute('data-rotation') || 0;
@@ -350,10 +350,10 @@ class SVGObjectInteraction {
                 }
             });
         }
-        
+
         // Update rotate handle position if visible
         this.updateRotateHandlePosition();
-        
+
         // Trigger viewport manager event
         if (this.viewportManager) {
             this.viewportManager.triggerEvent('objectMoved', {
@@ -370,22 +370,22 @@ class SVGObjectInteraction {
         if (target.classList.contains('placed-symbol')) {
             return target;
         }
-        
+
         // Use cached selection for better performance
         const cacheKey = `${target.offsetLeft},${target.offsetTop}`;
         if (this.selectionCache.has(cacheKey)) {
             return this.selectionCache.get(cacheKey);
         }
-        
+
         const closest = target.closest('.placed-symbol');
         this.selectionCache.set(cacheKey, closest);
-        
+
         // Limit cache size
         if (this.selectionCache.size > 1000) {
             const firstKey = this.selectionCache.keys().next().value;
             this.selectionCache.delete(firstKey);
         }
-        
+
         return closest;
     }
 
@@ -441,7 +441,7 @@ class SVGObjectInteraction {
     rotateSelectedObjects(angle) {
         this.saveStateBeforeOperation('rotate');
         this.setLoadingState(Array.from(this.selectedObjects), true);
-        
+
         this.selectedObjects.forEach(obj => {
             let rotation = parseFloat(obj.getAttribute('data-rotation') || 0) + angle;
             obj.setAttribute('data-rotation', rotation);
@@ -449,7 +449,7 @@ class SVGObjectInteraction {
             let y = obj.getAttribute('data-y') || 0;
             obj.setAttribute('transform', `translate(${x},${y}) rotate(${rotation})`);
         });
-        
+
         this.setLoadingState(Array.from(this.selectedObjects), false);
         this.saveStateAfterOperation();
         this.triggerAutoSave();
@@ -463,16 +463,16 @@ class SVGObjectInteraction {
             // Smaller steps at higher zoom levels for finer control
             step = Math.max(0.5, 1 / this.viewportManager.currentZoom);
         }
-        
+
         let deltaX = 0, deltaY = 0;
-        
+
         switch (key) {
             case 'ArrowUp': deltaY = -step; break;
             case 'ArrowDown': deltaY = step; break;
             case 'ArrowLeft': deltaX = -step; break;
             case 'ArrowRight': deltaX = step; break;
         }
-        
+
         if (deltaX !== 0 || deltaY !== 0) {
             this.saveStateBeforeOperation('move');
             this.selectedObjects.forEach(obj => {
@@ -480,13 +480,13 @@ class SVGObjectInteraction {
                 const currentY = parseFloat(obj.getAttribute('data-y') || 0);
                 const newX = currentX + deltaX;
                 const newY = currentY + deltaY;
-                
+
                 obj.setAttribute('data-x', newX);
                 obj.setAttribute('data-y', newY);
-                
+
                 const rotation = obj.getAttribute('data-rotation') || 0;
                 obj.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
-                
+
                 // Trigger viewport manager event
                 if (this.viewportManager) {
                     this.viewportManager.triggerEvent('objectMoved', {
@@ -497,10 +497,10 @@ class SVGObjectInteraction {
                     });
                 }
             });
-            
+
             // Update rotate handle position
             this.updateRotateHandlePosition();
-            
+
             this.saveStateAfterOperation();
             this.triggerAutoSave();
         }
@@ -509,14 +509,14 @@ class SVGObjectInteraction {
     showRotateHandle(obj) {
         this.removeRotateHandle();
         if (!obj) return;
-        
+
         const bbox = obj.getBBox();
         const handle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        
+
         // Calculate handle position in SVG coordinates
         const handleX = bbox.x + bbox.width + 10;
         const handleY = bbox.y + bbox.height / 2;
-        
+
         handle.setAttribute('cx', handleX);
         handle.setAttribute('cy', handleY);
         handle.setAttribute('r', 8);
@@ -525,22 +525,22 @@ class SVGObjectInteraction {
         handle.setAttribute('stroke-width', 2);
         handle.setAttribute('class', 'rotate-handle');
         handle.style.cursor = 'pointer';
-        
+
         // Store object reference for position updates
         handle.setAttribute('data-target-object', obj.getAttribute('data-id'));
-        
+
         let startAngle = 0, startRotation = 0;
         handle.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             this.saveStateBeforeOperation('rotate');
             this.setLoadingState(obj, true);
-            
+
             const svg = this.svgElement;
             const objCenter = {
                 x: bbox.x + bbox.width / 2,
                 y: bbox.y + bbox.height / 2
             };
-            
+
             const mouseMove = (ev) => {
                 // Convert mouse position to SVG coordinates
                 let svgP;
@@ -548,25 +548,25 @@ class SVGObjectInteraction {
                     svgP = this.viewportManager.screenToSVG(ev.clientX, ev.clientY);
                 } else {
                     const pt = svg.createSVGPoint();
-                    pt.x = ev.clientX; 
+                    pt.x = ev.clientX;
                     pt.y = ev.clientY;
                     svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
                 }
-                
+
                 const dx = svgP.x - objCenter.x;
                 const dy = svgP.y - objCenter.y;
                 const angle = Math.atan2(dy, dx) * 180 / Math.PI;
                 const rotation = angle;
-                
+
                 obj.setAttribute('data-rotation', rotation);
                 let x = obj.getAttribute('data-x') || 0;
                 let y = obj.getAttribute('data-y') || 0;
                 obj.setAttribute('transform', `translate(${x},${y}) rotate(${rotation})`);
-                
+
                 // Update rotate handle position
                 this.updateRotateHandlePosition();
             };
-            
+
             const mouseUp = () => {
                 document.removeEventListener('mousemove', mouseMove);
                 document.removeEventListener('mouseup', mouseUp);
@@ -575,11 +575,11 @@ class SVGObjectInteraction {
                 this.triggerAutoSave();
                 this.showNotification('Object rotated', 'success');
             };
-            
+
             document.addEventListener('mousemove', mouseMove);
             document.addEventListener('mouseup', mouseUp);
         });
-        
+
         obj.parentNode.appendChild(handle);
         this.rotateHandle = handle;
     }
@@ -589,19 +589,19 @@ class SVGObjectInteraction {
      */
     updateRotateHandlePosition() {
         if (!this.rotateHandle) return;
-        
+
         const targetId = this.rotateHandle.getAttribute('data-target-object');
         const target = document.querySelector(`[data-id="${targetId}"]`);
-        
+
         if (!target) {
             this.removeRotateHandle();
             return;
         }
-        
+
         const bbox = target.getBBox();
         const handleX = bbox.x + bbox.width + 10;
         const handleY = bbox.y + bbox.height / 2;
-        
+
         this.rotateHandle.setAttribute('cx', handleX);
         this.rotateHandle.setAttribute('cy', handleY);
     }
@@ -616,24 +616,24 @@ class SVGObjectInteraction {
     deleteSelectedObjects() {
         if (this.selectedObjects.size === 0) return;
         if (!confirm(`Delete ${this.selectedObjects.size} selected object(s)?`)) return;
-        
+
         this.saveStateBeforeOperation('delete');
         this.setLoadingState(Array.from(this.selectedObjects), true);
-        
+
         const deletedObjects = Array.from(this.selectedObjects).map(obj => ({
             element: obj,
             data: this.extractObjectData(obj)
         }));
-        
+
         this.selectedObjects.forEach(obj => {
             obj.remove();
             this.deleteObjectBackend(obj.getAttribute('data-id'));
         });
-        
+
         this.selectedObjects.clear();
         this.removeRotateHandle();
         this.updateContextPanel();
-        
+
         this.setLoadingState(Array.from(this.selectedObjects), false);
         this.currentOperation.deletedObjects = deletedObjects;
         this.saveStateAfterOperation();
@@ -686,24 +686,24 @@ class SVGObjectInteraction {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
-        
+
         // Add icon based on type
         const icon = document.createElement('span');
         icon.className = 'mr-2';
         icon.innerHTML = type === 'success' ? '✓' : type === 'error' ? '✗' : type === 'warning' ? '⚠' : 'ℹ';
         notification.insertBefore(icon, notification.firstChild);
-        
+
         document.body.appendChild(notification);
-        
+
         // Animate in
         setTimeout(() => notification.classList.add('show'), 10);
-        
+
         // Remove after 3 seconds
         setTimeout(() => {
             notification.classList.remove('show');
             setTimeout(() => notification.remove(), 300);
         }, 3000);
-        
+
         this.notifications.push(notification);
     }
 
@@ -753,14 +753,14 @@ class SVGObjectInteraction {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(this.helpOverlay);
-        
+
         // Close button
         this.helpOverlay.querySelector('#close-help').addEventListener('click', () => {
             this.hideHelpOverlay();
         });
-        
+
         // Click outside to close
         this.helpOverlay.addEventListener('click', (e) => {
             if (e.target === this.helpOverlay) {
@@ -805,11 +805,11 @@ class SVGObjectInteraction {
         if (this.currentOperation) {
             this.undoStack.push(this.currentOperation);
             this.redoStack = [];
-            
+
             if (this.undoStack.length > this.maxUndoSteps) {
                 this.undoStack.shift();
             }
-            
+
             this.currentOperation = null;
         }
     }
@@ -820,10 +820,10 @@ class SVGObjectInteraction {
 
     undo() {
         if (this.undoStack.length === 0) return;
-        
+
         const operation = this.undoStack.pop();
         this.redoStack.push(operation);
-        
+
         switch (operation.type) {
             case 'move':
             case 'drag':
@@ -834,17 +834,17 @@ class SVGObjectInteraction {
                 this.restoreDeletedObjects(operation.deletedObjects);
                 break;
         }
-        
+
         this.updateContextPanel();
         this.showNotification('Undo completed', 'success');
     }
 
     redo() {
         if (this.redoStack.length === 0) return;
-        
+
         const operation = this.redoStack.pop();
         this.undoStack.push(operation);
-        
+
         switch (operation.type) {
             case 'move':
             case 'drag':
@@ -855,7 +855,7 @@ class SVGObjectInteraction {
                 this.deleteSelectedObjects();
                 break;
         }
-        
+
         this.updateContextPanel();
         this.showNotification('Redo completed', 'success');
     }
@@ -927,7 +927,7 @@ class SVGObjectInteraction {
             const realWorldX = obj.getAttribute('data-real-world-x');
             const realWorldY = obj.getAttribute('data-real-world-y');
             const unit = obj.getAttribute('data-unit');
-            
+
             if (realWorldX && realWorldY && unit) {
                 if (!baseData.coordinates) {
                     baseData.coordinates = {};
@@ -948,11 +948,11 @@ class SVGObjectInteraction {
         try {
             // Show auto-save indicator
             this.autoSaveIndicator.classList.add('show');
-            
+
             const response = await fetch('/api/bim/objects/bulk-update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     bim_object_ids: objects.map(obj => parseInt(obj.id)),
                     updates: {
                         x: objects[0].x,
@@ -970,7 +970,7 @@ class SVGObjectInteraction {
 
             const result = await response.json();
             this.showNotification('Changes saved successfully with scale metadata', 'success');
-            
+
             // Update element attributes with saved data
             objects.forEach(objData => {
                 const element = document.querySelector(`[data-id="${objData.id}"]`);
@@ -982,7 +982,7 @@ class SVGObjectInteraction {
                     }
                 }
             });
-            
+
         } catch (error) {
             console.error('Error saving object positions:', error);
             this.showNotification('Failed to save changes. Use Ctrl+Z to undo.', 'error');
@@ -1048,7 +1048,7 @@ class SVGObjectInteraction {
         }
 
         window.arxLogger.debug('=== Testing Multi-Object Selection with Zoom ===', { file: 'object_interaction.js' });
-        
+
         const placedSymbols = document.querySelectorAll('.placed-symbol');
         if (placedSymbols.length < 2) {
             console.warn('Need at least 2 objects for multi-selection testing');
@@ -1057,40 +1057,40 @@ class SVGObjectInteraction {
 
         // Test at different zoom levels
         const zoomLevels = [0.5, 1.0, 2.0, 3.0];
-        
+
         zoomLevels.forEach((zoom, zoomIndex) => {
             window.arxLogger.debug(`\n--- Testing at Zoom Level ${zoom} ---`, { file: 'object_interaction.js' });
-            
+
             // Set zoom level
             this.viewportManager.setZoom(zoom);
-            
+
             // Clear selection
             this.clearSelection();
-            
+
             // Select multiple objects
             const objectsToSelect = Array.from(placedSymbols).slice(0, 3);
             objectsToSelect.forEach((obj, index) => {
                 this.selectObject(obj);
                 window.arxLogger.debug(`Selected object ${index + 1}: ${obj.getAttribute('data-id')}`, { file: 'object_interaction.js' });
             });
-            
+
             // Test selection state
             window.arxLogger.debug(`Total selected objects: ${this.selectedObjects.size}`, { file: 'object_interaction.js' });
-            
+
             // Test object positions
             this.selectedObjects.forEach((obj, index) => {
                 const x = parseFloat(obj.getAttribute('data-x')) || 0;
                 const y = parseFloat(obj.getAttribute('data-y')) || 0;
                 window.arxLogger.debug(`Object ${index + 1} position: (${x.toFixed(2)}, ${y.toFixed(2)})`, { file: 'object_interaction.js' });
             });
-            
+
             // Test rotate handle
             if (this.selectedObjects.size > 0) {
                 const firstObject = Array.from(this.selectedObjects)[0];
                 this.showRotateHandle(firstObject);
                 window.arxLogger.debug('Rotate handle displayed', { file: 'object_interaction.js' });
             }
-            
+
             // Wait before next test
             setTimeout(() => {
                 if (zoomIndex < zoomLevels.length - 1) {
@@ -1101,7 +1101,7 @@ class SVGObjectInteraction {
                 }
             }, 1000);
         });
-        
+
         // Reset to original zoom
         setTimeout(() => {
             this.viewportManager.setZoom(1.0);
@@ -1114,19 +1114,19 @@ class SVGObjectInteraction {
      */
     getSelectionBounds() {
         if (this.selectedObjects.size === 0) return null;
-        
+
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        
+
         this.selectedObjects.forEach(obj => {
             const x = parseFloat(obj.getAttribute('data-x')) || 0;
             const y = parseFloat(obj.getAttribute('data-y')) || 0;
-            
+
             minX = Math.min(minX, x);
             minY = Math.min(minY, y);
             maxX = Math.max(maxX, x);
             maxY = Math.max(maxY, y);
         });
-        
+
         return {
             minX, minY, maxX, maxY,
             width: maxX - minX,
@@ -1142,34 +1142,34 @@ class SVGObjectInteraction {
     centerSelection() {
         const bounds = this.getSelectionBounds();
         if (!bounds || !this.viewportManager) return;
-        
+
         const containerRect = this.svgContainer.getBoundingClientRect();
         const centerX = containerRect.width / 2;
         const centerY = containerRect.height / 2;
-        
+
         // Convert screen center to SVG coordinates
         const svgCenter = this.screenToSVGCoordinates(centerX, centerY);
-        
+
         // Calculate offset to move selection to center
         const offsetX = svgCenter.x - bounds.centerX;
         const offsetY = svgCenter.y - bounds.centerY;
-        
+
         // Move all selected objects
         this.selectedObjects.forEach(obj => {
             const currentX = parseFloat(obj.getAttribute('data-x')) || 0;
             const currentY = parseFloat(obj.getAttribute('data-y')) || 0;
             const newX = currentX + offsetX;
             const newY = currentY + offsetY;
-            
+
             obj.setAttribute('data-x', newX);
             obj.setAttribute('data-y', newY);
             const rotation = obj.getAttribute('data-rotation') || 0;
             obj.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
         });
-        
+
         // Update rotate handle
         this.updateRotateHandlePosition();
-        
+
         window.arxLogger.info('Selection centered', { file: 'object_interaction.js' });
     }
 
@@ -1188,7 +1188,7 @@ class SVGObjectInteraction {
             }
 
             const bimModel = await response.json();
-            
+
             // Process all BIM objects and restore scale metadata
             const allObjects = [
                 ...bimModel.rooms || [],
@@ -1206,7 +1206,7 @@ class SVGObjectInteraction {
 
             window.arxLogger.info(`Loaded ${allObjects.length} objects with scale metadata`, { file: 'object_interaction.js' });
             this.showNotification(`Loaded ${allObjects.length} objects with scale metadata`, 'success');
-            
+
         } catch (error) {
             console.error('Error loading objects with scale metadata:', error);
             this.showNotification('Failed to load objects with scale metadata', 'error');
@@ -1226,10 +1226,10 @@ class SVGObjectInteraction {
         // Restore scale factors if available
         if (bimObject.scale_factors) {
             try {
-                const scaleFactors = typeof bimObject.scale_factors === 'string' 
-                    ? JSON.parse(bimObject.scale_factors) 
+                const scaleFactors = typeof bimObject.scale_factors === 'string'
+                    ? JSON.parse(bimObject.scale_factors)
                     : bimObject.scale_factors;
-                
+
                 element.setAttribute('data-scale-x', scaleFactors.x.toString());
                 element.setAttribute('data-scale-y', scaleFactors.y.toString());
             } catch (error) {
@@ -1249,10 +1249,10 @@ class SVGObjectInteraction {
         // Restore SVG coordinates if available
         if (bimObject.svg_coordinates) {
             try {
-                const svgCoords = typeof bimObject.svg_coordinates === 'string' 
-                    ? JSON.parse(bimObject.svg_coordinates) 
+                const svgCoords = typeof bimObject.svg_coordinates === 'string'
+                    ? JSON.parse(bimObject.svg_coordinates)
                     : bimObject.svg_coordinates;
-                
+
                 element.setAttribute('data-svg-x', svgCoords.x.toString());
                 element.setAttribute('data-svg-y', svgCoords.y.toString());
             } catch (error) {
@@ -1263,10 +1263,10 @@ class SVGObjectInteraction {
         // Restore real-world coordinates if available
         if (bimObject.real_world_coords) {
             try {
-                const realWorldCoords = typeof bimObject.real_world_coords === 'string' 
-                    ? JSON.parse(bimObject.real_world_coords) 
+                const realWorldCoords = typeof bimObject.real_world_coords === 'string'
+                    ? JSON.parse(bimObject.real_world_coords)
                     : bimObject.real_world_coords;
-                
+
                 element.setAttribute('data-real-world-x', realWorldCoords.x.toString());
                 element.setAttribute('data-real-world-y', realWorldCoords.y.toString());
             } catch (error) {
@@ -1277,10 +1277,10 @@ class SVGObjectInteraction {
         // Update scale manager if this is the first object with scale metadata
         if (window.scaleManager && bimObject.scale_factors && !window.scaleManager.scaleFactors.x) {
             try {
-                const scaleFactors = typeof bimObject.scale_factors === 'string' 
-                    ? JSON.parse(bimObject.scale_factors) 
+                const scaleFactors = typeof bimObject.scale_factors === 'string'
+                    ? JSON.parse(bimObject.scale_factors)
                     : bimObject.scale_factors;
-                
+
                 window.scaleManager.setScaleFactors(scaleFactors.x, scaleFactors.y, bimObject.units || 'pixels');
                 window.arxLogger.info(`Restored scale factors from object ${bimObject.object_id}:`, scaleFactors, { file: 'object_interaction.js' });
             } catch (error) {
@@ -1294,11 +1294,11 @@ class SVGObjectInteraction {
      */
     testCoordinatePersistence() {
         window.arxLogger.debug('=== Testing Coordinate Persistence ===', { file: 'object_interaction.js' });
-        
+
         // Test 1: Save objects with scale metadata
         window.arxLogger.debug('1. Testing save with scale metadata...', { file: 'object_interaction.js' });
         this.saveObjectPositions();
-        
+
         setTimeout(() => {
             // Test 2: Simulate session reload
             window.arxLogger.debug('2. Simulating session reload...', { file: 'object_interaction.js' });

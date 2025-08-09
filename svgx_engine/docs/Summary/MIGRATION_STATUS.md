@@ -273,4 +273,4 @@ This document serves as the single source of truth for SVGX Engine migration pro
 - Add advanced CAD tools
 - Complete professional CAD functionality
 
-This migration status document provides a comprehensive view of progress and ensures all stakeholders have access to current, accurate information about the SVGX Engine migration effort. 
+This migration status document provides a comprehensive view of progress and ensures all stakeholders have access to current, accurate information about the SVGX Engine migration effort.

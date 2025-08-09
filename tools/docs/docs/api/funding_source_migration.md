@@ -203,7 +203,7 @@ def test_json_funding_source_extraction():
     """Test that funding_source is properly extracted from symbol library JSON files"""
     library = JSONSymbolLibrary()
     symbols = library.get_all_symbols()
-    
+
     for symbol in symbols:
         if hasattr(symbol, 'funding_source'):
             assert isinstance(symbol.funding_source, str)
@@ -236,7 +236,7 @@ def validate_funding_source(funding_source: str) -> bool:
     """Validate funding source format in JSON"""
     if not funding_source:
         return True  # Optional field
-    
+
     pattern = r'^[a-zA-Z0-9_]+$'
     return bool(re.match(pattern, funding_source))
 ```
@@ -293,4 +293,4 @@ def validate_funding_source(funding_source: str) -> bool:
 - **Funding Source Categories**: Categorize funding sources
 - **Funding Source History**: Track funding source changes
 - **Funding Source Integration**: Integrate with external funding systems
-- **Funding Source Analytics**: Advanced analytics and reporting 
+- **Funding Source Analytics**: Advanced analytics and reporting

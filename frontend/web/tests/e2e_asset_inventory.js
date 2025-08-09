@@ -2,7 +2,7 @@
 
 /**
  * E2E Tests for Asset Inventory with Funding Source Feature
- * 
+ *
  * These tests cover the complete asset inventory workflows including:
  * - Asset creation with funding_source
  * - Asset editing with funding_source
@@ -146,8 +146,8 @@ class AssetCreationTests {
 
         // Mock API responses
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/bim/devices', 
+            page,
+            '**/api/bim/devices',
             mockAssetInventoryAPI.assets
         );
 
@@ -182,10 +182,10 @@ class AssetCreationTests {
 
         // Mock successful asset creation
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/bim/devices', 
-            { 
-                success: true, 
+            page,
+            '**/api/bim/devices',
+            {
+                success: true,
                 object_id: 'NEW_ASSET_001',
                 ...testAsset
             }
@@ -246,8 +246,8 @@ class AssetEditingTests {
 
         // Mock API responses
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/bim/devices', 
+            page,
+            '**/api/bim/devices',
             mockAssetInventoryAPI.assets
         );
 
@@ -277,10 +277,10 @@ class AssetEditingTests {
 
         // Mock successful asset update
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/bim/devices/ASSET001', 
-            { 
-                success: true, 
+            page,
+            '**/api/bim/devices/ASSET001',
+            {
+                success: true,
                 funding_source: newFundingSource
             }
         );
@@ -306,8 +306,8 @@ class AssetListingTests {
 
         // Mock API responses
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/bim/devices', 
+            page,
+            '**/api/bim/devices',
             mockAssetInventoryAPI.assets
         );
 
@@ -345,8 +345,8 @@ class AssetListingTests {
 
         // Mock API responses
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/bim/devices', 
+            page,
+            '**/api/bim/devices',
             mockAssetInventoryAPI.assets
         );
 
@@ -399,8 +399,8 @@ class AssetExportTests {
 
         // Mock API responses
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/bim/devices', 
+            page,
+            '**/api/bim/devices',
             mockAssetInventoryAPI.assets
         );
 
@@ -432,8 +432,8 @@ class AssetExportTests {
 
         // Mock export API response
         await AssetInventoryTestUtils.mockAPIResponse(
-            page, 
-            '**/api/export/assets', 
+            page,
+            '**/api/export/assets',
             {
                 success: true,
                 download_url: '/downloads/assets_export.csv',
@@ -475,7 +475,7 @@ class FormValidationTests {
         // Test required field validation
         await page.fill('#asset-name', 'Test Asset');
         await page.selectOption('#asset-type', 'HVAC');
-        
+
         // Try to submit without funding_source
         await page.click('#submit-asset-btn');
         await AssetInventoryTestUtils.wait(500);

@@ -97,18 +97,18 @@ class ModelNotAvailableError(AIAgentError):
 class AIAgent(ABC):
     """
     Abstract AI Agent domain entity
-    
+
     This is the core business logic for AI operations, completely
     independent of any framework or external dependencies.
     """
-    
+
     def __init__(self, config: AIAgentConfig):
         """
         Initialize AI Agent with configuration.
-        
+
         Args:
             config: AI agent configuration
-            
+
         Raises:
             InvalidConfigurationError: If configuration is invalid
         """
@@ -117,24 +117,23 @@ class AIAgent(ABC):
         self._status = AgentStatus.INITIALIZING
         self._conversation_history: List[AIQuery] = []
         self._domain_events: List[Any] = []
-        self._id = str(uuid.uuid4())
-        
+        self._id = str(uuid.uuid4()
         self._initialize_agent()
-    
+
     def _validate_config(self, config: AIAgentConfig) -> None:
         """Validate AI agent configuration."""
         if not config.api_key:
             raise InvalidConfigurationError("API key is required")
-        
+
         if config.max_tokens <= 0:
             raise InvalidConfigurationError("Max tokens must be positive")
-        
+
         if not 0 <= config.temperature <= 1:
             raise InvalidConfigurationError("Temperature must be between 0 and 1")
-        
+
         if config.timeout <= 0:
             raise InvalidConfigurationError("Timeout must be positive")
-    
+
     def _initialize_agent(self) -> None:
         """Initialize the AI agent."""
         try:
@@ -147,55 +146,55 @@ class AIAgent(ABC):
         except Exception as e:
             self._status = AgentStatus.ERROR
             raise AIAgentError(f"Failed to initialize AI agent: {e}")
-    
+
     @property
-    def id(self) -> str:
+def id(self) -> str:
         """Get AI agent ID."""
         return self._id
-    
+
     @property
-    def status(self) -> AgentStatus:
+def status(self) -> AgentStatus:
         """Get AI agent status."""
         return self._status
-    
+
     @property
-    def config(self) -> AIAgentConfig:
+def config(self) -> AIAgentConfig:
         """Get AI agent configuration."""
         return self._config
-    
+
     @property
-    def domain_events(self) -> List[Any]:
+def domain_events(self) -> List[Any]:
         """Get domain events."""
         return self._domain_events.copy()
-    
+
     def process_query(self, query: AIQuery) -> AIResponse:
         """
         Process an AI query.
-        
+
         Args:
             query: AI query to process
-            
+
         Returns:
             AI response
-            
+
         Raises:
             AIAgentError: If processing fails
         """
         if self._status != AgentStatus.READY:
             raise AIAgentError(f"Agent is not ready. Status: {self._status}")
-        
+
         try:
             self._status = AgentStatus.BUSY
-            
+
             # Validate query
             self._validate_query(query)
-            
+
             # Process query using abstract method
             response = self._process_query_implementation(query)
-            
+
             # Update conversation history
             self._conversation_history.append(query)
-            
+
             # Add domain event
             self._add_domain_event("AIAgentQueryProcessed", {
                 "query_id": query.id,
@@ -203,10 +202,10 @@ class AIAgent(ABC):
                 "processing_time": response.processing_time,
                 "timestamp": datetime.utcnow()
             })
-            
+
             self._status = AgentStatus.READY
             return response
-            
+
         except Exception as e:
             self._status = AgentStatus.ERROR
             self._add_domain_event("AIAgentErrorOccurred", {
@@ -215,34 +214,34 @@ class AIAgent(ABC):
                 "timestamp": datetime.utcnow()
             })
             raise AIAgentError(f"Failed to process query: {e}")
-    
+
     def _validate_query(self, query: AIQuery) -> None:
         """Validate AI query."""
         if not query.query.strip():
             raise AIAgentError("Query cannot be empty")
-        
+
         if not query.user_id:
             raise AIAgentError("User ID is required")
-        
+
         if query.model not in ModelType:
             raise ModelNotAvailableError(f"Model {query.model} is not available")
-    
+
     @abstractmethod
-    def _process_query_implementation(self, query: AIQuery) -> AIResponse:
+def _process_query_implementation(self, query: AIQuery) -> AIResponse:
         """
         Abstract method for processing queries.
-        
+
         This must be implemented by concrete AI agent implementations.
         """
         pass
-    
+
     def get_conversation_history(self, user_id: str, limit: int = 10) -> List[AIQuery]:
         """Get conversation history for a user."""
         return [
             query for query in self._conversation_history[-limit:]
             if query.user_id == user_id
         ]
-    
+
     def clear_conversation_history(self, user_id: Optional[str] = None) -> None:
         """Clear conversation history."""
         if user_id:
@@ -252,13 +251,13 @@ class AIAgent(ABC):
             ]
         else:
             self._conversation_history.clear()
-    
+
     def shutdown(self) -> None:
         """Shutdown the AI agent."""
         self._status = AgentStatus.SHUTDOWN
         self._conversation_history.clear()
         self._domain_events.clear()
-    
+
     def _add_domain_event(self, event_type: str, data: Dict[str, Any]) -> None:
         """Add domain event."""
         event = {
@@ -266,4 +265,4 @@ class AIAgent(ABC):
             "data": data,
             "timestamp": datetime.utcnow()
         }
-        self._domain_events.append(event) 
+        self._domain_events.append(event)

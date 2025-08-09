@@ -36,7 +36,7 @@ try:
 except ImportError:
     PROMETHEUS_AVAILABLE = False
     # Mock classes for when prometheus_client is not available
-    class Counter:
+class Counter:
     """
     Class for Counter functionality
 
@@ -52,9 +52,9 @@ Example:
         result = instance.method()
         print(result)
     """
-        def __init__(self, *args, **kwargs): pass
-        def inc(self, *args, **kwargs): pass
-    class Histogram:
+def __init__(self, *args, **kwargs): pass
+def inc(self, *args, **kwargs): pass
+class Histogram:
     """
     Class for Gauge functionality
 
@@ -72,16 +72,16 @@ Example:
         result = instance.method()
         print(result)
     """
+def __init__(self, *args, **kwargs): pass
+def observe(self, *args, **kwargs): pass
+class Gauge:
         def __init__(self, *args, **kwargs): pass
-        def observe(self, *args, **kwargs): pass
-    class Gauge:
+def set(self, *args, **kwargs): pass
+def inc(self, *args, **kwargs): pass
+def dec(self, *args, **kwargs): pass
+class Summary:
         def __init__(self, *args, **kwargs): pass
-        def set(self, *args, **kwargs): pass
-        def inc(self, *args, **kwargs): pass
-        def dec(self, *args, **kwargs): pass
-    class Summary:
-        def __init__(self, *args, **kwargs): pass
-        def observe(self, *args, **kwargs): pass
+def observe(self, *args, **kwargs): pass
 
 from .go_client import (
     NotificationChannelType,
@@ -152,7 +152,7 @@ class AlertEvent:
 
 class StructuredLogger:
     """Structured logger with correlation IDs"""
-    
+
     def __init__(self, logger_name: str = "notification_system"):
     """
     Perform __init__ operation
@@ -173,36 +173,36 @@ Example:
         self.logger = logging.getLogger(logger_name)
         self.correlation_id = None
         self._lock = threading.Lock()
-    
+
     def set_correlation_id(self, correlation_id: str):
         """Set correlation ID for current context"""
         self.correlation_id = correlation_id
-    
+
     def _get_extra_fields(self) -> Dict[str, Any]:
         """Get extra fields for structured logging"""
         extra = {}
         if self.correlation_id:
             extra['correlation_id'] = self.correlation_id
         return extra
-    
+
     def info(self, message: str, **kwargs):
         """Log info message with structured data"""
         extra = self._get_extra_fields()
         extra.update(kwargs)
         self.logger.info(message, extra=extra)
-    
+
     def warning(self, message: str, **kwargs):
         """Log warning message with structured data"""
         extra = self._get_extra_fields()
         extra.update(kwargs)
         self.logger.warning(message, extra=extra)
-    
+
     def error(self, message: str, **kwargs):
         """Log error message with structured data"""
         extra = self._get_extra_fields()
         extra.update(kwargs)
         self.logger.error(message, extra=extra)
-    
+
     def critical(self, message: str, **kwargs):
         """Log critical message with structured data"""
         extra = self._get_extra_fields()
@@ -228,31 +228,31 @@ Example:
         print(result)
     """
     """Prometheus metrics for notification system"""
-    
+
     def __init__(self):
         if not PROMETHEUS_AVAILABLE:
             logger.warning("Prometheus client not available, metrics disabled")
             return
-        
+
         # Notification counters
         self.notifications_sent = Counter(
             'notifications_sent_total',
             'Total notifications sent',
             ['channel', 'type', 'priority']
         )
-        
+
         self.notifications_delivered = Counter(
             'notifications_delivered_total',
             'Total notifications delivered',
             ['channel', 'type', 'priority']
         )
-        
+
         self.notifications_failed = Counter(
             'notifications_failed_total',
             'Total notifications failed',
             ['channel', 'type', 'priority', 'error_type']
         )
-        
+
         # Response time histograms
         self.notification_duration = Histogram(
             'notification_duration_seconds',
@@ -260,38 +260,38 @@ Example:
             ['channel', 'type'],
             buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
         )
-        
+
         self.api_response_time = Histogram(
             'api_response_time_seconds',
             'API response time',
             ['endpoint', 'method'],
             buckets=[0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]
         )
-        
+
         # Gauges
         self.active_notifications = Gauge(
             'active_notifications',
             'Number of active notifications',
             ['status']
         )
-        
+
         self.cache_hit_ratio = Gauge(
             'cache_hit_ratio',
             'Cache hit ratio'
         )
-        
+
         self.rate_limit_remaining = Gauge(
             'rate_limit_remaining',
             'Remaining rate limit capacity'
         )
-        
+
         # Summaries
         self.notification_size = Summary(
             'notification_size_bytes',
             'Notification size in bytes',
             ['channel', 'type']
         )
-    
+
     def record_notification_sent(self, channel: str, notification_type: str, priority: str):
         """Record notification sent"""
         if PROMETHEUS_AVAILABLE:
@@ -300,7 +300,7 @@ Example:
                 type=notification_type,
                 priority=priority
             ).inc()
-    
+
     def record_notification_delivered(self, channel: str, notification_type: str, priority: str):
         """Record notification delivered"""
         if PROMETHEUS_AVAILABLE:
@@ -309,7 +309,7 @@ Example:
                 type=notification_type,
                 priority=priority
             ).inc()
-    
+
     def record_notification_failed(self, channel: str, notification_type: str, priority: str, error_type: str):
         """Record notification failed"""
         if PROMETHEUS_AVAILABLE:
@@ -319,7 +319,7 @@ Example:
                 priority=priority,
                 error_type=error_type
             ).inc()
-    
+
     def record_delivery_duration(self, channel: str, notification_type: str, duration: float):
         """Record delivery duration"""
         if PROMETHEUS_AVAILABLE:
@@ -327,7 +327,7 @@ Example:
                 channel=channel,
                 type=notification_type
             ).observe(duration)
-    
+
     def record_api_response_time(self, endpoint: str, method: str, duration: float):
         """Record API response time"""
         if PROMETHEUS_AVAILABLE:
@@ -335,22 +335,22 @@ Example:
                 endpoint=endpoint,
                 method=method
             ).observe(duration)
-    
+
     def set_active_notifications(self, status: str, count: int):
         """Set active notifications count"""
         if PROMETHEUS_AVAILABLE:
             self.active_notifications.labels(status=status).set(count)
-    
+
     def set_cache_hit_ratio(self, ratio: float):
         """Set cache hit ratio"""
         if PROMETHEUS_AVAILABLE:
             self.cache_hit_ratio.set(ratio)
-    
+
     def set_rate_limit_remaining(self, remaining: int):
         """Set rate limit remaining capacity"""
         if PROMETHEUS_AVAILABLE:
             self.rate_limit_remaining.set(remaining)
-    
+
     def record_notification_size(self, channel: str, notification_type: str, size: int):
         """Record notification size"""
         if PROMETHEUS_AVAILABLE:
@@ -362,17 +362,17 @@ Example:
 
 class HealthChecker:
     """Health checker for notification channels"""
-    
+
     def __init__(self, go_client):
         self.go_client = go_client
         self.channel_health: Dict[NotificationChannelType, ChannelHealth] = {}
         self._lock = threading.Lock()
         self.structured_logger = StructuredLogger("health_checker")
-    
+
     async def check_channel_health(self, channel: NotificationChannelType) -> ChannelHealth:
         """Check health of a specific channel"""
         start_time = time.time()
-        
+
         try:
             # Create a test notification for health check
             test_request = {
@@ -383,12 +383,12 @@ class HealthChecker:
                 "priority": "normal",
                 "recipient_id": 1
             }
-            
+
             # Send health check notification
             response = await self.go_client.send_notification_async(test_request)
-            
+
             response_time = time.time() - start_time
-            
+
             # Determine status based on response
             if response.success:
                 status = "healthy"
@@ -398,7 +398,7 @@ class HealthChecker:
                 status = "unhealthy"
                 success_rate = 0.0
                 error_count = 1
-            
+
             health = ChannelHealth(
                 channel=channel,
                 status=status,
@@ -408,10 +408,10 @@ class HealthChecker:
                 error_count=error_count,
                 total_requests=1
             )
-            
+
             with self._lock:
                 self.channel_health[channel] = health
-            
+
             self.structured_logger.info(
                 f"Channel health check completed",
                 channel=channel.value,
@@ -419,12 +419,12 @@ class HealthChecker:
                 response_time=response_time,
                 success_rate=success_rate
             )
-            
+
             return health
-            
+
         except Exception as e:
             response_time = time.time() - start_time
-            
+
             health = ChannelHealth(
                 channel=channel,
                 status="unhealthy",
@@ -434,19 +434,19 @@ class HealthChecker:
                 error_count=1,
                 total_requests=1
             )
-            
+
             with self._lock:
                 self.channel_health[channel] = health
-            
+
             self.structured_logger.error(
                 f"Channel health check failed",
                 channel=channel.value,
                 error=str(e),
                 response_time=response_time
             )
-            
+
             return health
-    
+
     async def check_all_channels(self) -> Dict[NotificationChannelType, ChannelHealth]:
         """Check health of all channels"""
         channels = [
@@ -457,10 +457,10 @@ class HealthChecker:
             NotificationChannelType.PUSH,
             NotificationChannelType.IN_APP
         ]
-        
+
         tasks = [self.check_channel_health(channel) for channel in channels]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         health_results = {}
         for channel, result in zip(channels, results):
             if isinstance(result, Exception):
@@ -475,14 +475,14 @@ class HealthChecker:
                 )
             else:
                 health_results[channel] = result
-        
+
         return health_results
-    
+
     def get_channel_health(self, channel: NotificationChannelType) -> Optional[ChannelHealth]:
         """Get cached health status for a channel"""
         with self._lock:
             return self.channel_health.get(channel)
-    
+
     def get_all_channel_health(self) -> Dict[NotificationChannelType, ChannelHealth]:
         """Get all cached channel health status"""
         with self._lock:
@@ -491,17 +491,17 @@ class HealthChecker:
 
 class AlertManager:
     """Alert manager for notification failures"""
-    
+
     def __init__(self):
         self.alerts: List[AlertEvent] = []
         self.alert_handlers: List[Callable] = []
         self._lock = threading.Lock()
         self.structured_logger = StructuredLogger("alert_manager")
-    
+
     def add_alert_handler(self, handler: Callable[[AlertEvent], None]):
         """Add alert handler"""
         self.alert_handlers.append(handler)
-    
+
     def create_alert(
         self,
         severity: AlertSeverity,
@@ -520,10 +520,10 @@ class AlertManager:
             correlation_id=correlation_id,
             metadata=metadata
         )
-        
+
         with self._lock:
             self.alerts.append(alert)
-        
+
         # Dispatch to handlers
         for handler in self.alert_handlers:
             try:
@@ -533,8 +533,6 @@ class AlertManager:
                     f"Alert handler failed",
                     handler=str(handler),
                     error=str(e)
-                )
-        
         self.structured_logger.warning(
             f"Alert created",
             alert_id=alert.id,
@@ -542,9 +540,9 @@ class AlertManager:
             title=alert.title,
             correlation_id=alert.correlation_id
         )
-        
+
         return alert
-    
+
     def get_alerts(
         self,
         severity: Optional[AlertSeverity] = None,
@@ -552,20 +550,20 @@ class AlertManager:
     ) -> List[AlertEvent]:
         """Get alerts with optional filtering"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
-        
+
         with self._lock:
             filtered_alerts = [
                 alert for alert in self.alerts
                 if alert.timestamp >= cutoff_time
                 and (severity is None or alert.severity == severity)
             ]
-        
+
         return filtered_alerts
-    
+
     def clear_old_alerts(self, hours: int = 168):  # 7 days
         """Clear old alerts"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
-        
+
         with self._lock:
             self.alerts = [
                 alert for alert in self.alerts
@@ -575,29 +573,29 @@ class AlertManager:
 
 class NotificationDashboard:
     """Dashboard for notification statistics"""
-    
+
     def __init__(self, go_client, metrics: PrometheusMetrics, health_checker: HealthChecker, alert_manager: AlertManager):
         self.go_client = go_client
         self.metrics = metrics
         self.health_checker = health_checker
         self.alert_manager = alert_manager
         self.structured_logger = StructuredLogger("dashboard")
-    
+
     async def get_dashboard_data(self) -> Dict[str, Any]:
         """Get comprehensive dashboard data"""
         try:
             # Get notification statistics
             stats = await self.go_client.get_notification_statistics_async()
-            
+
             # Get channel health
             channel_health = await self.health_checker.check_all_channels()
-            
+
             # Get recent alerts
             recent_alerts = self.alert_manager.get_alerts(hours=24)
-            
+
             # Get performance metrics
             performance_metrics = self.go_client.get_performance_metrics()
-            
+
             dashboard_data = {
                 "timestamp": datetime.now().isoformat(),
                 "statistics": {
@@ -635,26 +633,23 @@ class NotificationDashboard:
                     "background_jobs": performance_metrics.get("background_jobs", 0)
                 }
             }
-            
+
             self.structured_logger.info(
                 "Dashboard data generated",
                 total_sent=dashboard_data["statistics"]["total_sent"],
                 success_rate=dashboard_data["statistics"]["success_rate"],
                 alert_count=len(dashboard_data["recent_alerts"])
-            )
-            
             return dashboard_data
-            
+
         except Exception as e:
             self.structured_logger.error(
                 "Failed to generate dashboard data",
                 error=str(e)
-            )
             return {
                 "error": str(e),
                 "timestamp": datetime.now().isoformat()
             }
-    
+
     def get_prometheus_metrics(self) -> str:
         """Get Prometheus metrics in text format"""
         if PROMETHEUS_AVAILABLE:
@@ -665,7 +660,7 @@ class NotificationDashboard:
 
 class NotificationMonitoring:
     """Comprehensive notification monitoring system"""
-    
+
     def __init__(
         self,
         go_client,
@@ -675,7 +670,7 @@ class NotificationMonitoring:
     ):
         self.go_client = go_client
         self.structured_logger = StructuredLogger("notification_monitoring")
-        
+
         # Initialize components
         self.metrics = PrometheusMetrics() if enable_prometheus else None
         self.health_checker = HealthChecker(go_client)
@@ -683,46 +678,44 @@ class NotificationMonitoring:
         self.dashboard = NotificationDashboard(
             go_client, self.metrics, self.health_checker, self.alert_manager
         )
-        
+
         # Configuration
         self.health_check_interval = health_check_interval
         self.alert_retention_hours = alert_retention_hours
-        
+
         # Background tasks
         self._health_check_task = None
         self._cleanup_task = None
         self._running = False
-    
+
     async def start_monitoring(self):
         """Start monitoring background tasks"""
         if self._running:
             return
-        
+
         self._running = True
-        
+
         # Start health check task
-        self._health_check_task = asyncio.create_task(self._health_check_loop())
-        
+        self._health_check_task = asyncio.create_task(self._health_check_loop()
         # Start cleanup task
-        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-        
+        self._cleanup_task = asyncio.create_task(self._cleanup_loop()
         self.structured_logger.info("Notification monitoring started")
-    
+
     async def stop_monitoring(self):
         """Stop monitoring background tasks"""
         if not self._running:
             return
-        
+
         self._running = False
-        
+
         if self._health_check_task:
             self._health_check_task.cancel()
-        
+
         if self._cleanup_task:
             self._cleanup_task.cancel()
-        
+
         self.structured_logger.info("Notification monitoring stopped")
-    
+
     async def _health_check_loop(self):
         """Background health check loop"""
         while self._running:
@@ -734,7 +727,7 @@ class NotificationMonitoring:
             except Exception as e:
                 self.structured_logger.error(f"Health check loop error: {e}")
                 await asyncio.sleep(60)  # Wait before retry
-    
+
     async def _cleanup_loop(self):
         """Background cleanup loop"""
         while self._running:
@@ -746,7 +739,7 @@ class NotificationMonitoring:
             except Exception as e:
                 self.structured_logger.error(f"Cleanup loop error: {e}")
                 await asyncio.sleep(300)  # Wait before retry
-    
+
     def record_notification_event(
         self,
         event_type: str,
@@ -760,7 +753,7 @@ class NotificationMonitoring:
     ):
         """Record notification event for monitoring"""
         self.structured_logger.set_correlation_id(correlation_id or str(uuid.uuid4()))
-        
+
         if self.metrics:
             if event_type == "sent":
                 self.metrics.record_notification_sent(channel, notification_type, priority)
@@ -769,7 +762,7 @@ class NotificationMonitoring:
                 self.metrics.record_delivery_duration(channel, notification_type, duration)
             elif event_type == "failed":
                 self.metrics.record_notification_failed(channel, notification_type, priority, error_type or "unknown")
-        
+
         # Create alert for failures
         if event_type == "failed":
             self.alert_manager.create_alert(
@@ -784,7 +777,7 @@ class NotificationMonitoring:
                     "error_type": error_type
                 }
             )
-        
+
         self.structured_logger.info(
             f"Notification event recorded",
             event_type=event_type,
@@ -795,18 +788,18 @@ class NotificationMonitoring:
             success=success,
             error_type=error_type
         )
-    
+
     async def get_monitoring_summary(self) -> Dict[str, Any]:
         """Get comprehensive monitoring summary"""
         dashboard_data = await self.dashboard.get_dashboard_data()
-        
+
         summary = {
             "monitoring_status": "active" if self._running else "inactive",
             "dashboard": dashboard_data,
             "health_check_interval": self.health_check_interval,
             "alert_retention_hours": self.alert_retention_hours
         }
-        
+
         return summary
 
 
@@ -819,13 +812,13 @@ def create_notification_monitoring(
 ) -> NotificationMonitoring:
     """
     Create notification monitoring system
-    
+
     Args:
         go_client: Go notification client
         enable_prometheus: Enable Prometheus metrics
         health_check_interval: Health check interval in seconds
         alert_retention_hours: Alert retention period in hours
-        
+
     Returns:
         Notification monitoring system
     """
@@ -840,10 +833,10 @@ def create_notification_monitoring(
 def create_structured_logger(logger_name: str = "notification_system") -> StructuredLogger:
     """
     Create structured logger
-    
+
     Args:
         logger_name: Logger name
-        
+
     Returns:
         Structured logger
     """
@@ -864,4 +857,4 @@ __all__ = [
     'NotificationMetrics',
     'create_notification_monitoring',
     'create_structured_logger'
-] 
+]

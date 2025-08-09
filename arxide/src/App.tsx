@@ -46,7 +46,7 @@ function App() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cadEngineRef = useRef<any>(null);
 
@@ -62,13 +62,13 @@ function App() {
 
       // Initialize Tauri backend
       await invoke('initialize_arxide');
-      
+
       // Load recent projects
       await loadRecentProjects();
-      
+
       // Initialize CAD engine
       await initializeCadEngine();
-      
+
       console.log('ArxIDE initialized successfully');
     } catch (err) {
       console.error('Failed to initialize ArxIDE:', err);
@@ -96,7 +96,7 @@ function App() {
       if (CadEngine) {
         cadEngineRef.current = new CadEngine();
         await cadEngineRef.current.initialize(canvasRef.current.id);
-        
+
         // Set up event listeners
         cadEngineRef.current.addEventListener('objectSelected', (data: any) => {
           setCadState(prev => ({
@@ -104,14 +104,14 @@ function App() {
             selectedObjects: [data.object.id]
           }));
         });
-        
+
         cadEngineRef.current.addEventListener('objectCreated', (data: any) => {
           setCadState(prev => ({
             ...prev,
             objects: [...prev.objects, data.object]
           }));
         });
-        
+
         console.log('CAD Engine initialized');
       }
     } catch (err) {
@@ -121,7 +121,7 @@ function App() {
 
   const greet = async () => {
     if (name === '') return;
-    
+
     try {
       const msg = await invoke('greet', { name });
       setGreetMsg(msg as string);
@@ -134,19 +134,19 @@ function App() {
   const createNewProject = async () => {
     try {
       setIsLoading(true);
-      
+
       const projectName = prompt('Enter project name:');
       if (!projectName) return;
-      
+
       const projectData = await invoke('create_project', {
         name: projectName,
         description: 'New ArxIDE project'
       });
-      
+
       const newProject = projectData as Project;
       setCurrentProject(newProject);
       setProjects(prev => [newProject, ...prev]);
-      
+
       // Reset CAD state
       setCadState({
         objects: [],
@@ -156,7 +156,7 @@ function App() {
         gridSize: 0.1,
         gridSnap: true
       });
-      
+
       console.log('New project created:', newProject);
     } catch (err) {
       console.error('Failed to create project:', err);
@@ -175,7 +175,7 @@ function App() {
           extensions: ['arx', 'json']
         }]
       });
-      
+
       if (selected && typeof selected === 'string') {
         await loadProject(selected);
       }
@@ -188,13 +188,13 @@ function App() {
   const loadProject = async (filePath: string) => {
     try {
       setIsLoading(true);
-      
+
       const fileContent = await readTextFile(filePath);
       const projectData = JSON.parse(fileContent);
-      
+
       setCurrentProject(projectData.project);
       setCadState(projectData.cadState);
-      
+
       console.log('Project loaded:', projectData.project.name);
     } catch (err) {
       console.error('Failed to load project:', err);
@@ -209,10 +209,10 @@ function App() {
       setError('No project to save');
       return;
     }
-    
+
     try {
       setIsLoading(true);
-      
+
       const projectData = {
         project: currentProject,
         cadState: cadState,
@@ -221,7 +221,7 @@ function App() {
           version: '1.1.0'
         }
       };
-      
+
       const filePath = await open({
         directory: false,
         multiple: false,
@@ -230,7 +230,7 @@ function App() {
           extensions: ['arx']
         }]
       });
-      
+
       if (filePath && typeof filePath === 'string') {
         await writeTextFile(filePath, JSON.stringify(projectData, null, 2));
         console.log('Project saved:', filePath);
@@ -246,13 +246,13 @@ function App() {
   const exportToSVGX = async () => {
     try {
       setIsLoading(true);
-      
+
       if (!cadEngineRef.current) {
         throw new Error('CAD Engine not initialized');
       }
-      
+
       const svgxData = await cadEngineRef.current.exportToSVGX();
-      
+
       const filePath = await open({
         directory: false,
         multiple: false,
@@ -261,7 +261,7 @@ function App() {
           extensions: ['svgx']
         }]
       });
-      
+
       if (filePath && typeof filePath === 'string') {
         await writeTextFile(filePath, svgxData);
         console.log('Exported to SVGX:', filePath);
@@ -276,7 +276,7 @@ function App() {
 
   const setCurrentTool = (tool: string) => {
     setCadState(prev => ({ ...prev, currentTool: tool }));
-    
+
     if (cadEngineRef.current) {
       cadEngineRef.current.setCurrentTool(tool);
     }
@@ -284,16 +284,16 @@ function App() {
 
   const setPrecision = (precision: number) => {
     setCadState(prev => ({ ...prev, precision }));
-    
+
     if (cadEngineRef.current) {
-      cadEngineRef.current.setPrecisionLevel(precision === 0.01 ? 'UI' : 
+      cadEngineRef.current.setPrecisionLevel(precision === 0.01 ? 'UI' :
                                            precision === 0.001 ? 'EDIT' : 'COMPUTE');
     }
   };
 
   const setGridSize = (gridSize: number) => {
     setCadState(prev => ({ ...prev, gridSize }));
-    
+
     if (cadEngineRef.current) {
       cadEngineRef.current.gridSize = gridSize;
     }
@@ -301,7 +301,7 @@ function App() {
 
   const toggleGridSnap = () => {
     setCadState(prev => ({ ...prev, gridSnap: !prev.gridSnap }));
-    
+
     if (cadEngineRef.current) {
       cadEngineRef.current.gridSnappingEnabled = !cadState.gridSnap;
     }
@@ -324,7 +324,7 @@ function App() {
         <div className="bg-red-900 rounded-lg p-6 max-w-md">
           <div className="text-red-400 text-xl font-semibold mb-4">Error</div>
           <div className="text-white mb-4">{error}</div>
-          <button 
+          <button
             onClick={() => setError(null)}
             className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
           >
@@ -344,28 +344,28 @@ function App() {
             <h1 className="text-2xl font-bold text-blue-400">ArxIDE</h1>
             <div className="text-sm text-gray-400">Professional Desktop CAD</div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {currentProject && (
               <div className="text-sm text-gray-400">
                 Project: {currentProject.name}
               </div>
             )}
-            
+
             <button
               onClick={createNewProject}
               className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm"
             >
               New Project
             </button>
-            
+
             <button
               onClick={openProject}
               className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-sm"
             >
               Open Project
             </button>
-            
+
             <button
               onClick={saveProject}
               disabled={!currentProject}
@@ -373,7 +373,7 @@ function App() {
             >
               Save Project
             </button>
-            
+
             <button
               onClick={exportToSVGX}
               disabled={!currentProject}
@@ -390,7 +390,7 @@ function App() {
         {/* Left Panel - Tools */}
         <div className="w-64 bg-gray-800 border-r border-gray-700 p-4">
           <h3 className="text-lg font-semibold mb-4">Tools</h3>
-          
+
           {/* Drawing Tools */}
           <div className="mb-6">
             <h4 className="text-sm font-medium text-gray-300 mb-2">Drawing</h4>
@@ -410,7 +410,7 @@ function App() {
               ))}
             </div>
           </div>
-          
+
           {/* Precision Controls */}
           <div className="mb-6">
             <h4 className="text-sm font-medium text-gray-300 mb-2">Precision</h4>
@@ -426,7 +426,7 @@ function App() {
               </select>
             </div>
           </div>
-          
+
           {/* Grid Controls */}
           <div className="mb-6">
             <h4 className="text-sm font-medium text-gray-300 mb-2">Grid</h4>
@@ -441,7 +441,7 @@ function App() {
                 <option value={1}>1"</option>
                 <option value={12}>12"</option>
               </select>
-              
+
               <label className="flex items-center space-x-2 text-sm">
                 <input
                   type="checkbox"
@@ -453,7 +453,7 @@ function App() {
               </label>
             </div>
           </div>
-          
+
           {/* Project Info */}
           {currentProject && (
             <div className="border-t border-gray-700 pt-4">
@@ -474,7 +474,7 @@ function App() {
             id="arxide-canvas"
             className="w-full h-full bg-white"
           />
-          
+
           {/* Status Bar */}
           <div className="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-2">
             <div className="flex items-center justify-between text-sm">
@@ -491,7 +491,7 @@ function App() {
         {/* Right Panel - Properties */}
         <div className="w-80 bg-gray-800 border-l border-gray-700 p-4">
           <h3 className="text-lg font-semibold mb-4">Properties</h3>
-          
+
           {cadState.selectedObjects.length === 0 ? (
             <div className="text-gray-400 text-sm">Select an object to view properties</div>
           ) : (
@@ -499,7 +499,7 @@ function App() {
               {cadState.selectedObjects.map(objectId => {
                 const object = cadState.objects.find(obj => obj.id === objectId);
                 if (!object) return null;
-                
+
                 return (
                   <div key={objectId} className="border border-gray-700 rounded p-3">
                     <h4 className="font-medium text-white mb-2">{object.type}</h4>
@@ -536,4 +536,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

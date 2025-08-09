@@ -98,6 +98,7 @@ Once running, services are available at:
 - [Development Guide](docs/development/README.md)
 - [User Guides](docs/user-guides/README.md)
 - [API Reference](docs/api/README.md)
+- [Phase 5 Implementation](docs/DEVELOPMENT/PHASE5_ENTERPRISE_DEPLOYMENT_PLAN.md) - Enterprise deployment roadmap
 
 ## 🤝 Contributing
 

@@ -21,7 +21,7 @@ from svgx_engine.runtime.event_driven_behavior_engine import Event, EventType, E
 
 class TestAdvancedRuleEngineLogic:
     """Test core rule engine logic and functionality."""
-    
+
     def test_register_business_rule(self):
         """Test registering a business rule."""
         # Create test rule
@@ -32,7 +32,7 @@ class TestAdvancedRuleEngineLogic:
         actions = [
             RuleAction(action_type="activate_cooling", parameters={"power": 80}, target_element="hvac_01")
         ]
-        
+
         rule = Rule(
             id="test_business_rule",
             name="Temperature Control Rule",
@@ -42,17 +42,17 @@ class TestAdvancedRuleEngineLogic:
             conditions=conditions,
             actions=actions
         )
-        
+
         # Register rule
         result = advanced_rule_engine.register_business_rule(rule)
         assert result is True
-        
+
         # Verify registration
         registered_rule = advanced_rule_engine.get_rule("test_business_rule")
         assert registered_rule is not None
         assert registered_rule.name == "Temperature Control Rule"
         assert registered_rule.rule_type == RuleType.BUSINESS
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_business_rule")
 
@@ -65,7 +65,7 @@ class TestAdvancedRuleEngineLogic:
         actions = [
             RuleAction(action_type="emergency_shutdown", parameters={"reason": "high_pressure"}, target_element="system_01")
         ]
-        
+
         rule = Rule(
             id="test_safety_rule",
             name="High Pressure Safety Rule",
@@ -75,16 +75,16 @@ class TestAdvancedRuleEngineLogic:
             conditions=conditions,
             actions=actions
         )
-        
+
         result = advanced_rule_engine.register_safety_rule(rule)
         assert result is True
-        
+
         # Verify registration
         registered_rule = advanced_rule_engine.get_rule("test_safety_rule")
         assert registered_rule is not None
         assert registered_rule.rule_type == RuleType.SAFETY
         assert registered_rule.priority == RulePriority.CRITICAL
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_safety_rule")
 
@@ -96,7 +96,7 @@ class TestAdvancedRuleEngineLogic:
         actions = [
             RuleAction(action_type="schedule_maintenance", parameters={"type": "preventive"}, target_element="equipment_01")
         ]
-        
+
         rule = Rule(
             id="test_operational_rule",
             name="Maintenance Scheduling Rule",
@@ -106,10 +106,10 @@ class TestAdvancedRuleEngineLogic:
             conditions=conditions,
             actions=actions
         )
-        
+
         result = advanced_rule_engine.register_operational_rule(rule)
         assert result is True
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_operational_rule")
 
@@ -122,7 +122,7 @@ class TestAdvancedRuleEngineLogic:
         actions = [
             RuleAction(action_type="flag_for_maintenance", parameters={"priority": "high"}, target_element="motor_01")
         ]
-        
+
         rule = Rule(
             id="test_maintenance_rule",
             name="Maintenance Due Rule",
@@ -132,10 +132,10 @@ class TestAdvancedRuleEngineLogic:
             conditions=conditions,
             actions=actions
         )
-        
+
         result = advanced_rule_engine.register_maintenance_rule(rule)
         assert result is True
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_maintenance_rule")
 
@@ -147,7 +147,7 @@ class TestAdvancedRuleEngineLogic:
         actions = [
             RuleAction(action_type="notify_compliance", parameters={"type": "certification_expiry"}, target_element="system_01")
         ]
-        
+
         rule = Rule(
             id="test_compliance_rule",
             name="Certification Expiry Rule",
@@ -157,10 +157,10 @@ class TestAdvancedRuleEngineLogic:
             conditions=conditions,
             actions=actions
         )
-        
+
         result = advanced_rule_engine.register_compliance_rule(rule)
         assert result is True
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_compliance_rule")
 
@@ -176,7 +176,7 @@ class TestAdvancedRuleEngineLogic:
             conditions=[],
             actions=[]
         )
-        
+
         result = advanced_rule_engine.register_business_rule(invalid_rule)
         assert result is False
 
@@ -255,22 +255,22 @@ class TestAdvancedRuleEngineLogic:
             "status": "active",
             "name": "test_system"
         }
-        
+
         # Test equals
         condition = RuleCondition(field="status", operator="equals", value="active")
         result = advanced_rule_engine._evaluate_condition(condition, context)
         assert result is True
-        
+
         # Test greater
         condition = RuleCondition(field="temperature", operator="greater", value=25.0)
         result = advanced_rule_engine._evaluate_condition(condition, context)
         assert result is True
-        
+
         # Test less
         condition = RuleCondition(field="humidity", operator="less", value=60.0)
         result = advanced_rule_engine._evaluate_condition(condition, context)
         assert result is True
-        
+
         # Test contains
         condition = RuleCondition(field="name", operator="contains", value="test")
         result = advanced_rule_engine._evaluate_condition(condition, context)
@@ -288,34 +288,34 @@ class TestAdvancedRuleEngineLogic:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="test_action", parameters={})]
         )
-        
+
         # Register rule
         assert advanced_rule_engine.register_business_rule(rule) is True
-        
+
         # Test get by type
         business_rules = advanced_rule_engine.get_rules_by_type(RuleType.BUSINESS)
         assert len(business_rules) >= 1
         assert any(r.id == "test_management_rule" for r in business_rules)
-        
+
         # Test get by priority
         normal_rules = advanced_rule_engine.get_rules_by_priority(RulePriority.NORMAL)
         assert len(normal_rules) >= 1
         assert any(r.id == "test_management_rule" for r in normal_rules)
-        
+
         # Test update rule
         updates = {"description": "Updated description"}
         assert advanced_rule_engine.update_rule("test_management_rule", updates) is True
-        
+
         updated_rule = advanced_rule_engine.get_rule("test_management_rule")
         assert updated_rule.description == "Updated description"
-        
+
         # Test delete rule
         assert advanced_rule_engine.delete_rule("test_management_rule") is True
         assert advanced_rule_engine.get_rule("test_management_rule") is None
 
 class TestAdvancedRuleEngineAsync:
     """Test asynchronous rule evaluation."""
-    
+
     @pytest.mark.asyncio
     async def test_evaluate_rules(self):
         """Test rule evaluation with context."""
@@ -334,36 +334,36 @@ class TestAdvancedRuleEngineAsync:
                 RuleAction(action_type="test_action", parameters={"power": 50}, target_element="test_element")
             ]
         )
-        
+
         # Register rule
         assert advanced_rule_engine.register_business_rule(rule) is True
-        
+
         # Test context that should trigger rule
         context_trigger = {
             "temperature": 30.0,
             "humidity": 50.0
         }
-        
+
         results = await advanced_rule_engine.evaluate_rules(context_trigger)
         assert len(results) >= 1
-        
+
         # Find our rule result
         rule_result = next((r for r in results if r.rule_id == "test_evaluation_rule"), None)
         assert rule_result is not None
         assert rule_result.triggered is True
         assert len(rule_result.actions_executed) >= 1
-        
+
         # Test context that should not trigger rule
         context_no_trigger = {
             "temperature": 20.0,
             "humidity": 70.0
         }
-        
+
         results = await advanced_rule_engine.evaluate_rules(context_no_trigger)
         rule_result = next((r for r in results if r.rule_id == "test_evaluation_rule"), None)
         assert rule_result is not None
         assert rule_result.triggered is False
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_evaluation_rule")
 
@@ -380,7 +380,7 @@ class TestAdvancedRuleEngineAsync:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="business_action", parameters={})]
         )
-        
+
         safety_rule = Rule(
             id="safety_rule",
             name="Safety Rule",
@@ -390,22 +390,22 @@ class TestAdvancedRuleEngineAsync:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="safety_action", parameters={})]
         )
-        
+
         # Register rules
         assert advanced_rule_engine.register_business_rule(business_rule) is True
         assert advanced_rule_engine.register_safety_rule(safety_rule) is True
-        
+
         # Test evaluation with business rules only
         context = {"value": 1}
         results = await advanced_rule_engine.evaluate_rules(context, [RuleType.BUSINESS])
-        
+
         # Should only have business rule results
         business_results = [r for r in results if r.rule_id == "business_rule"]
         safety_results = [r for r in results if r.rule_id == "safety_rule"]
-        
+
         assert len(business_results) >= 1
         assert len(safety_results) == 0
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("business_rule")
         advanced_rule_engine.delete_rule("safety_rule")
@@ -423,30 +423,30 @@ class TestAdvancedRuleEngineAsync:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="history_action", parameters={})]
         )
-        
+
         # Register rule
         assert advanced_rule_engine.register_business_rule(rule) is True
-        
+
         # Execute rule multiple times
         context = {"value": 1}
         await advanced_rule_engine.evaluate_rules(context)
         await advanced_rule_engine.evaluate_rules(context)
-        
+
         # Check execution history
         history = advanced_rule_engine.get_execution_history("test_history_rule")
         assert len(history) >= 2
-        
+
         # Check rule statistics
         rule = advanced_rule_engine.get_rule("test_history_rule")
         assert rule.execution_count >= 2
         assert rule.last_executed is not None
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_history_rule")
 
 class TestAdvancedRuleEngineIntegration:
     """Test integration with event-driven behavior engine."""
-    
+
     @pytest.mark.asyncio
     async def test_rule_event_integration(self):
         """Test rule integration with event-driven behavior engine."""
@@ -460,10 +460,10 @@ class TestAdvancedRuleEngineIntegration:
             conditions=[RuleCondition(field="event_type", operator="equals", value="system_alert")],
             actions=[RuleAction(action_type="handle_alert", parameters={"level": "warning"}, target_element="alert_system")]
         )
-        
+
         # Register rule
         assert advanced_rule_engine.register_business_rule(rule) is True
-        
+
         # Create system event
         event = Event(
             id="test_system_event",
@@ -476,16 +476,16 @@ class TestAdvancedRuleEngineIntegration:
                 "message": "Test alert"
             }
         )
-        
+
         # Process event through behavior engine
         result = event_driven_behavior_engine.process_event(event)
         if hasattr(result, '__await__'):
             await result
-        
+
         # Check if rule was triggered
         history = advanced_rule_engine.get_execution_history("test_integration_rule")
         assert len(history) >= 1
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_integration_rule")
 
@@ -493,7 +493,7 @@ class TestAdvancedRuleEngineIntegration:
         """Test performance statistics tracking."""
         # Get initial stats
         initial_stats = advanced_rule_engine.get_performance_stats()
-        
+
         # Create and register a test rule
         rule = Rule(
             id="test_performance_rule",
@@ -504,13 +504,13 @@ class TestAdvancedRuleEngineIntegration:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="performance_action", parameters={})]
         )
-        
+
         assert advanced_rule_engine.register_business_rule(rule) is True
-        
+
         # Check that stats are updated
         current_stats = advanced_rule_engine.get_performance_stats()
         assert current_stats['total_evaluations'] >= initial_stats['total_evaluations']
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("test_performance_rule")
 
@@ -526,7 +526,7 @@ class TestAdvancedRuleEngineIntegration:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="low_action", parameters={})]
         )
-        
+
         high_priority_rule = Rule(
             id="high_priority",
             name="High Priority Rule",
@@ -536,18 +536,18 @@ class TestAdvancedRuleEngineIntegration:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="high_action", parameters={})]
         )
-        
+
         # Register rules
         assert advanced_rule_engine.register_business_rule(low_priority_rule) is True
         assert advanced_rule_engine.register_business_rule(high_priority_rule) is True
-        
+
         # Get rules by priority to verify ordering
         high_rules = advanced_rule_engine.get_rules_by_priority(RulePriority.HIGH)
         low_rules = advanced_rule_engine.get_rules_by_priority(RulePriority.LOW)
-        
+
         assert len(high_rules) >= 1
         assert len(low_rules) >= 1
-        
+
         # Clean up
         advanced_rule_engine.delete_rule("low_priority")
         advanced_rule_engine.delete_rule("high_priority")
@@ -564,7 +564,7 @@ class TestAdvancedRuleEngineIntegration:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="business_action", parameters={})]
         )
-        
+
         safety_rule = Rule(
             id="safety_clear_rule",
             name="Safety Clear Rule",
@@ -574,20 +574,20 @@ class TestAdvancedRuleEngineIntegration:
             conditions=[RuleCondition(field="value", operator="equals", value=1)],
             actions=[RuleAction(action_type="safety_action", parameters={})]
         )
-        
+
         # Register rules
         assert advanced_rule_engine.register_business_rule(business_rule) is True
         assert advanced_rule_engine.register_safety_rule(safety_rule) is True
-        
+
         # Clear business rules only
         advanced_rule_engine.clear_rules(RuleType.BUSINESS)
-        
+
         # Check that business rule is gone but safety rule remains
         assert advanced_rule_engine.get_rule("business_clear_rule") is None
         assert advanced_rule_engine.get_rule("safety_clear_rule") is not None
-        
+
         # Clear all rules
         advanced_rule_engine.clear_rules()
-        
+
         # Check that all rules are gone
-        assert advanced_rule_engine.get_rule("safety_clear_rule") is None 
+        assert advanced_rule_engine.get_rule("safety_clear_rule") is None

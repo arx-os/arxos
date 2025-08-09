@@ -550,4 +550,4 @@ For technical support or questions about the Floor Version Control System:
 
 ---
 
-*This documentation covers the complete Floor Version Control System implementation. For additional information, refer to the API reference and developer guides.* 
+*This documentation covers the complete Floor Version Control System implementation. For additional information, refer to the API reference and developer guides.*

@@ -28,22 +28,22 @@ ASCII-BIM serves as the perfect bridge between IT departments and building manag
 # arxos/services/ascii_bim/integration_bridge.py
 class ITBuildingIntegrationBridge:
     """Bridge between IT and Building Management departments"""
-    
+
     def __init__(self):
         self.it_asset_manager = ITAssetManager()
         self.building_asset_manager = BuildingAssetManager()
         self.network_planner = NetworkPlanner()
         self.facility_manager = FacilityManager()
-    
+
     async def create_unified_ascii_model(self, building_id: str) -> ASCIIBIMModel:
         """Create unified ASCII-BIM model combining IT and building assets"""
-        
+
     async def plan_network_infrastructure(self, ascii_model: ASCIIBIMModel) -> NetworkPlan:
         """Plan network infrastructure using ASCII-BIM representation"""
-        
+
     async def coordinate_maintenance(self, asset_id: str) -> MaintenancePlan:
         """Coordinate maintenance between IT and building departments"""
-        
+
     async def generate_cross_department_report(self, ascii_model: ASCIIBIMModel) -> Report:
         """Generate reports for both departments"""
 ```
@@ -81,28 +81,28 @@ Building Plan → ASCII-BIM Parser → ASCII Art
 # arxos/services/ascii_bim/conversion_pipeline.py
 class ASCIIBIMConversionPipeline:
     """Complete conversion pipeline through SVGX engine"""
-    
+
     def __init__(self):
         self.svgx_parser = SVGXParser()
         self.ascii_renderer = ASCIIBIMRenderer()
         self.object_mapper = ArxObjectMapper()
         self.layout_optimizer = LayoutOptimizer()
-    
+
     async def convert_building_plan_to_ascii(self, building_plan: BuildingPlan) -> ASCIIArt:
         """Convert building plan to ASCII art via SVGX engine"""
-        
+
         # Step 1: Parse building plan through SVGX engine
         svgx_model = await self.svgx_parser.parse_building_plan(building_plan)
-        
+
         # Step 2: Extract arxobjects and relationships
         arxobjects = await self.object_mapper.extract_arxobjects(svgx_model)
-        
+
         # Step 3: Optimize layout for ASCII representation
         optimized_layout = await self.layout_optimizer.optimize_for_ascii(arxobjects)
-        
+
         # Step 4: Render to ASCII art
         ascii_art = await self.ascii_renderer.render_with_arxobjects(optimized_layout)
-        
+
         return ascii_art
 ```
 
@@ -117,39 +117,39 @@ class ASCIIBIMConversionPipeline:
 # arxos/services/ascii_bim/arxobject_mapper.py
 class ArxObjectMapper:
     """Map arxobjects to ASCII representations"""
-    
+
     def __init__(self):
         self.symbol_mappings = self.load_symbol_mappings()
         self.context_analyzer = ContextAnalyzer()
-    
+
     async def map_arxobject_to_ascii(self, arxobject: ArxObject, context: Context) -> ASCIIElement:
         """Map arxobject to ASCII representation based on context"""
-        
+
         # Get base symbol for object type
         base_symbol = self.symbol_mappings.get(arxobject.type, "?")
-        
+
         # Apply context-specific modifications
         if context.is_it_asset:
             base_symbol = self.modify_for_it_context(base_symbol, arxobject)
         elif context.is_building_asset:
             base_symbol = self.modify_for_building_context(base_symbol, arxobject)
-        
+
         # Add status indicators
         status_symbol = self.get_status_symbol(arxobject.status)
-        
+
         return ASCIIElement(
             symbol=base_symbol + status_symbol,
             object_id=arxobject.id,
             properties=arxobject.properties,
             position=arxobject.position
         )
-    
+
     def load_symbol_mappings(self) -> Dict[str, str]:
         """Load arxobject to ASCII symbol mappings"""
         return {
             # IT Assets
             "network_switch": "S",
-            "access_point": "A", 
+            "access_point": "A",
             "server": "V",
             "router": "R",
             "firewall": "F",
@@ -157,7 +157,7 @@ class ArxObjectMapper:
             "patch_panel": "P",
             "cable": "-",
             "fiber": "=",
-            
+
             # Building Assets
             "electrical_panel": "E",
             "hvac_unit": "H",
@@ -167,7 +167,7 @@ class ArxObjectMapper:
             "window": "W",
             "wall": "#",
             "room": " ",
-            
+
             # Shared Assets
             "sensor": "O",
             "controller": "T",
@@ -182,11 +182,11 @@ class ArxObjectMapper:
 # arxos/services/ascii_bim/context_aware_renderer.py
 class ContextAwareRenderer:
     """Render ASCII-BIM with context awareness"""
-    
+
     async def render_it_focused(self, ascii_model: ASCIIBIMModel) -> str:
         """Render ASCII-BIM focused on IT infrastructure"""
         lines = []
-        
+
         for element in ascii_model.elements:
             if element.is_it_asset:
                 # Highlight IT assets
@@ -194,15 +194,15 @@ class ContextAwareRenderer:
             else:
                 # Dim building assets
                 symbol = f"({element.symbol})"
-            
+
             lines.append(self.format_element_line(element, symbol))
-        
+
         return "\n".join(lines)
-    
+
     async def render_building_focused(self, ascii_model: ASCIIBIMModel) -> str:
         """Render ASCII-BIM focused on building infrastructure"""
         lines = []
-        
+
         for element in ascii_model.elements:
             if element.is_building_asset:
                 # Highlight building assets
@@ -210,20 +210,20 @@ class ContextAwareRenderer:
             else:
                 # Dim IT assets
                 symbol = f"({element.symbol})"
-            
+
             lines.append(self.format_element_line(element, symbol))
-        
+
         return "\n".join(lines)
-    
+
     async def render_unified(self, ascii_model: ASCIIBIMModel) -> str:
         """Render unified view with all assets"""
         lines = []
-        
+
         for element in ascii_model.elements:
             # Show all assets equally
             symbol = element.symbol
             lines.append(self.format_element_line(element, symbol))
-        
+
         return "\n".join(lines)
 ```
 
@@ -236,19 +236,19 @@ class ContextAwareRenderer:
 # arxos/services/ascii_bim/multi_resolution_renderer.py
 class MultiResolutionRenderer:
     """Render ASCII-BIM at different resolutions for accuracy"""
-    
+
     async def render_high_resolution(self, model: ASCIIBIMModel) -> str:
         """Render at high resolution for detailed view"""
         # Use more characters per unit area
         # Show detailed object properties
         # Include connection lines
-        
+
     async def render_medium_resolution(self, model: ASCIIBIMModel) -> str:
         """Render at medium resolution for standard view"""
         # Balance between detail and readability
         # Show key properties
         # Include main connections
-        
+
     async def render_low_resolution(self, model: ASCIIBIMModel) -> str:
         """Render at low resolution for overview"""
         # Simplified representation
@@ -261,25 +261,25 @@ class MultiResolutionRenderer:
 # arxos/services/ascii_bim/precision_optimizer.py
 class PrecisionOptimizer:
     """Optimize ASCII representation for accuracy"""
-    
+
     async def optimize_symbol_placement(self, elements: List[ASCIIElement]) -> List[ASCIIElement]:
         """Optimize symbol placement for accuracy"""
-        
+
         # Calculate optimal grid size
         grid_size = self.calculate_optimal_grid(elements)
-        
+
         # Place symbols at grid intersections
         placed_elements = []
         for element in elements:
             grid_position = self.map_to_grid(element.position, grid_size)
             element.grid_position = grid_position
             placed_elements.append(element)
-        
+
         return placed_elements
-    
+
     async def optimize_connection_lines(self, elements: List[ASCIIElement]) -> List[ConnectionLine]:
         """Optimize connection line rendering"""
-        
+
         connections = []
         for element in elements:
             for connection in element.connections:
@@ -291,7 +291,7 @@ class PrecisionOptimizer:
                     path=path,
                     type=connection.type
                 ))
-        
+
         return connections
 ```
 
@@ -304,22 +304,22 @@ class PrecisionOptimizer:
 # arxos/services/ascii_bim/network_planner.py
 class NetworkPlanner:
     """Plan network infrastructure using ASCII-BIM"""
-    
+
     async def plan_network_deployment(self, ascii_model: ASCIIBIMModel) -> NetworkPlan:
         """Plan network deployment using ASCII-BIM representation"""
-        
+
         # Analyze building layout
         layout_analysis = await self.analyze_building_layout(ascii_model)
-        
+
         # Identify optimal access point locations
         ap_locations = await self.identify_ap_locations(layout_analysis)
-        
+
         # Plan cable routes
         cable_routes = await self.plan_cable_routes(ascii_model, ap_locations)
-        
+
         # Generate ASCII representation of network plan
         network_ascii = await self.generate_network_ascii(ap_locations, cable_routes)
-        
+
         return NetworkPlan(
             access_points=ap_locations,
             cable_routes=cable_routes,
@@ -332,25 +332,25 @@ class NetworkPlanner:
 # arxos/services/ascii_bim/maintenance_coordinator.py
 class MaintenanceCoordinator:
     """Coordinate maintenance between IT and building departments"""
-    
+
     async def coordinate_asset_maintenance(self, asset_id: str) -> MaintenancePlan:
         """Coordinate maintenance for shared assets"""
-        
+
         # Get asset details
         asset = await self.get_asset_details(asset_id)
-        
+
         # Check IT maintenance requirements
         it_requirements = await self.check_it_maintenance(asset)
-        
+
         # Check building maintenance requirements
         building_requirements = await self.check_building_maintenance(asset)
-        
+
         # Generate coordinated maintenance plan
         plan = await self.generate_coordinated_plan(it_requirements, building_requirements)
-        
+
         # Create ASCII representation of maintenance plan
         ascii_plan = await self.create_maintenance_ascii(plan)
-        
+
         return MaintenancePlan(
             asset_id=asset_id,
             it_tasks=it_requirements,
@@ -365,19 +365,19 @@ class MaintenanceCoordinator:
 # arxos/services/ascii_bim/asset_inventory.py
 class AssetInventoryManager:
     """Manage unified asset inventory"""
-    
+
     async def create_unified_inventory(self, building_id: str) -> UnifiedInventory:
         """Create unified inventory of IT and building assets"""
-        
+
         # Get IT assets
         it_assets = await self.get_it_assets(building_id)
-        
+
         # Get building assets
         building_assets = await self.get_building_assets(building_id)
-        
+
         # Create unified ASCII representation
         unified_ascii = await self.create_unified_ascii(it_assets, building_assets)
-        
+
         return UnifiedInventory(
             it_assets=it_assets,
             building_assets=building_assets,

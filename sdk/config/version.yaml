@@ -21,15 +21,15 @@ services:
     release_notes_template: |
       ## What's New
       {features}
-      
+
       ## Bug Fixes
       {bugfixes}
-      
+
       ## Breaking Changes
       {breaking_changes}
-  
 
-  
+
+
   arx-cmms:
     current_version: "1.0.0"
     version_file: package.json
@@ -39,13 +39,13 @@ services:
     release_notes_template: |
       ## What's New
       {features}
-      
+
       ## Bug Fixes
       {bugfixes}
-      
+
       ## Breaking Changes
       {breaking_changes}
-  
+
   arx-database:
     current_version: "1.0.0"
     version_file: package.json
@@ -55,10 +55,10 @@ services:
     release_notes_template: |
       ## What's New
       {features}
-      
+
       ## Bug Fixes
       {bugfixes}
-      
+
       ## Breaking Changes
       {breaking_changes}
 
@@ -69,31 +69,31 @@ languages:
     version_field: version
     update_strategy: replace
     backup_original: true
-  
+
   python:
     version_file: setup.py
     version_field: version
     update_strategy: regex
     backup_original: true
-  
+
   go:
     version_file: go.mod
     version_field: version
     update_strategy: regex
     backup_original: true
-  
+
   java:
     version_file: pom.xml
     version_field: version
     update_strategy: xml
     backup_original: true
-  
+
   csharp:
     version_file: "*.csproj"
     version_field: Version
     update_strategy: xml
     backup_original: true
-  
+
   php:
     version_file: composer.json
     version_field: version
@@ -115,7 +115,7 @@ changelog:
     - performance
     - security
     - other
-  
+
   type_labels:
     feature: "✨ Features"
     bugfix: "🐛 Bug Fixes"
@@ -134,7 +134,7 @@ git:
   require_clean_working_directory: true
   tag_format: "{service}-v{version}"
   commit_message_format: "chore: release {service} v{version}"
-  
+
   # Branch naming conventions
   branches:
     main: main
@@ -149,20 +149,20 @@ release:
   require_approval: true
   approval_team: ["sdk-team", "dev-team"]
   minimum_changes_for_release: 1
-  
+
   # Release types and their triggers
   types:
     patch:
       triggers: ["bugfix", "documentation", "other"]
       auto_approve: true
       require_tests: true
-    
+
     minor:
       triggers: ["feature", "performance"]
       auto_approve: false
       require_tests: true
       require_review: true
-    
+
     major:
       triggers: ["breaking"]
       auto_approve: false
@@ -181,7 +181,7 @@ commit_parsing:
     performance: "^(perf|performance)"
     security: "^(sec|security)"
     other: ".*"
-  
+
   # Extract scope from commit messages
   scope_extraction: true
   scope_pattern: "\\(([^)]+)\\)"
@@ -192,12 +192,12 @@ notifications:
     email: true
     slack: true
     webhook: false
-  
+
   release_failed:
     email: true
     slack: true
     webhook: true
-  
+
   approval_required:
     email: true
     slack: true
@@ -210,7 +210,7 @@ validation:
   require_security_scan: true
   require_documentation: true
   require_changelog: true
-  
+
   # Version format validation
   version_format: "^\\d+\\.\\d+\\.\\d+$"
   allow_prerelease: false
@@ -222,8 +222,8 @@ backup:
   backup_version_files: true
   backup_changelog: true
   retention_days: 30
-  
+
 rollback:
   enabled: true
   max_rollback_versions: 3
-  require_approval: true 
+  require_approval: true

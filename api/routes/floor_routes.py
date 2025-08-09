@@ -79,7 +79,7 @@ async def create_floor(
             status=request.status,
             created_by=user.user_id
         )
-        
+
         # Use application service to create floor
         result = floor_service.create_floor(
             building_id=create_request.building_id,
@@ -89,7 +89,7 @@ async def create_floor(
             total_area=create_request.total_area,
             created_by=create_request.created_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -111,7 +111,7 @@ async def create_floor(
                 message=result.error_message or "Failed to create floor",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to create floor: {str(e)}")
         return format_error_response(
@@ -144,7 +144,7 @@ async def list_floors(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -177,7 +177,7 @@ async def list_floors(
                 message=result.error_message or "Failed to retrieve floors",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to list floors: {str(e)}")
         return format_error_response(
@@ -202,7 +202,7 @@ async def get_floor(
     try:
         # Use application service to get floor
         result = floor_service.get_floor(floor_id=floor_id)
-        
+
         if result.success and result.floor:
             floor = result.floor
             return format_success_response(
@@ -226,7 +226,7 @@ async def get_floor(
                 message=result.error_message or "Floor not found",
                 details={"floor_id": floor_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get floor {floor_id}: {str(e)}")
         return format_error_response(
@@ -260,7 +260,7 @@ async def update_floor(
             status=request.status,
             updated_by=user.user_id
         )
-        
+
         # Use application service to update floor
         result = floor_service.update_floor(
             floor_id=floor_id,
@@ -271,7 +271,7 @@ async def update_floor(
             status=update_request.status,
             updated_by=update_request.updated_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -293,7 +293,7 @@ async def update_floor(
                 message=result.error_message or "Failed to update floor",
                 details={"error": result.error_message, "floor_id": floor_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to update floor {floor_id}: {str(e)}")
         return format_error_response(
@@ -321,7 +321,7 @@ async def delete_floor(
             floor_id=floor_id,
             deleted_by=user.user_id
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -337,7 +337,7 @@ async def delete_floor(
                 message=result.error_message or "Failed to delete floor",
                 details={"error": result.error_message, "floor_id": floor_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to delete floor {floor_id}: {str(e)}")
         return format_error_response(
@@ -372,7 +372,7 @@ async def get_floor_rooms(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -406,7 +406,7 @@ async def get_floor_rooms(
                 message=result.error_message or "Failed to retrieve floor rooms",
                 details={"error": result.error_message, "floor_id": floor_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get rooms for floor {floor_id}: {str(e)}")
         return format_error_response(
@@ -431,7 +431,7 @@ async def get_floor_statistics(
     try:
         # Use application service to get floor statistics
         result = floor_service.get_floor_statistics(floor_id=floor_id)
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -455,11 +455,11 @@ async def get_floor_statistics(
                 message=result.error_message or "Failed to retrieve floor statistics",
                 details={"error": result.error_message, "floor_id": floor_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get statistics for floor {floor_id}: {str(e)}")
         return format_error_response(
             error_code="FLOOR_STATISTICS_ERROR",
             message="Failed to retrieve floor statistics",
             details={"error": str(e), "floor_id": floor_id}
-        ) 
+        )

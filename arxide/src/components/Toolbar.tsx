@@ -1,8 +1,8 @@
 import React from 'react'
-import { 
-  AppBar, 
-  Toolbar as MuiToolbar, 
-  IconButton, 
+import {
+  AppBar,
+  Toolbar as MuiToolbar,
+  IconButton,
   Button,
   Box,
   Divider
@@ -34,9 +34,9 @@ export const Toolbar: React.FC = () => {
   }
 
   return (
-    <AppBar 
-      position="static" 
-      sx={{ 
+    <AppBar
+      position="static"
+      sx={{
         backgroundColor: 'background.paper',
         color: 'text.primary',
         borderBottom: 1,
@@ -53,7 +53,7 @@ export const Toolbar: React.FC = () => {
           >
             Open
           </Button>
-          
+
           <Button
             variant="outlined"
             size="small"
@@ -75,7 +75,7 @@ export const Toolbar: React.FC = () => {
           >
             Run
           </Button>
-          
+
           <Button
             variant="outlined"
             size="small"
@@ -92,7 +92,7 @@ export const Toolbar: React.FC = () => {
           <IconButton size="small" title="Code View">
             <CodeIcon />
           </IconButton>
-          
+
           <IconButton size="small" title="3D View">
             <View3DIcon />
           </IconButton>
@@ -100,4 +100,4 @@ export const Toolbar: React.FC = () => {
       </MuiToolbar>
     </AppBar>
   )
-} 
+}

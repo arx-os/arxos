@@ -101,7 +101,7 @@ class EventDrivenBehaviorEngine:
     Comprehensive event-driven behavior engine with high performance
     and enterprise-grade features for SVGX elements.
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
     """
     Perform __init__ operation
@@ -121,13 +121,13 @@ Example:
     """
         self.config = config or {}
         self.performance_monitor = PerformanceMonitor()
-        
+
         # Event processing state
         self.event_handlers: Dict[EventType, List[EventHandler]] = defaultdict(list)
         self.event_queue: deque = deque()
         self.processing_results: Dict[str, EventResult] = {}
         self.event_history: List[Event] = []
-        
+
         # Performance tracking
         self.event_stats = {
             'total_events': 0,
@@ -135,17 +135,17 @@ Example:
             'failed_events': 0,
             'avg_processing_time': 0.0
         }
-        
+
         # Threading and concurrency
         self.executor = ThreadPoolExecutor(max_workers=10)
         self.processing_lock = threading.Lock()
         self.running = False
-        
+
         # Initialize default handlers
         self._initialize_default_handlers()
-        
+
         logger.info("Event-driven behavior engine initialized")
-    
+
     def _initialize_default_handlers(self):
         """Initialize default event handlers for all event types."""
         default_handlers = {
@@ -180,7 +180,7 @@ Example:
                 ('operational_events', self._handle_operational_events)
             ]
         }
-        
+
         for event_type, handlers in default_handlers.items():
             for handler_id, handler_func in handlers:
                 self.register_handler(
@@ -189,20 +189,20 @@ Example:
                     handler=handler_func,
                     priority=EventPriority.NORMAL
                 )
-    
-    def register_handler(self, event_type: EventType, handler_id: str, 
+
+    def register_handler(self, event_type: EventType, handler_id: str,
                         handler: Callable, priority: EventPriority = EventPriority.NORMAL,
                         timeout: float = 5.0) -> bool:
         """
         Register an event handler.
-        
+
         Args:
             event_type: Type of event to handle
             handler_id: Unique identifier for the handler
             handler: Callable function to handle the event
             priority: Priority level for handler execution
             timeout: Maximum processing time for the handler
-            
+
         Returns:
             True if registration successful, False otherwise
         """
@@ -214,27 +214,27 @@ Example:
                 priority=priority,
                 timeout=timeout
             )
-            
+
             self.event_handlers[event_type].append(event_handler)
-            
+
             # Sort handlers by priority (lower number = higher priority)
             self.event_handlers[event_type].sort(key=lambda h: h.priority.value)
-            
+
             logger.info(f"Registered handler {handler_id} for {event_type.value}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to register handler {handler_id}: {e}")
             return False
-    
+
     def unregister_handler(self, event_type: EventType, handler_id: str) -> bool:
         """
         Unregister an event handler.
-        
+
         Args:
             event_type: Type of event
             handler_id: Handler identifier to remove
-            
+
         Returns:
             True if unregistration successful, False otherwise
         """
@@ -243,43 +243,43 @@ Example:
             self.event_handlers[event_type] = [
                 h for h in handlers if h.id != handler_id
             ]
-            
+
             logger.info(f"Unregistered handler {handler_id} for {event_type.value}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to unregister handler {handler_id}: {e}")
             return False
-    
+
     async def process_event(self, event: Event) -> EventResult:
         """
         Process a single event with all registered handlers.
-        
+
         Args:
             event: Event to process
-            
+
         Returns:
             EventResult with processing outcome
         """
         start_time = time.time()
         event_result = EventResult(event_id=event.id)
-        
+
         try:
             # Get handlers for this event type
             handlers = self.event_handlers.get(event.type, [])
-            
+
             if not handlers:
                 logger.warning(f"No handlers registered for event type {event.type.value}")
                 event_result.success = False
                 event_result.error = f"No handlers for event type {event.type.value}"
                 return event_result
-            
+
             # Process with all enabled handlers
             results = []
             for handler in handlers:
                 if not handler.enabled:
                     continue
-                
+
                 try:
                     # Execute handler with timeout
                     handler_result = await asyncio.wait_for(
@@ -287,15 +287,15 @@ Example:
                         timeout=handler.timeout
                     )
                     results.append(handler_result)
-                    
+
                 except asyncio.TimeoutError:
                     logger.error(f"Handler {handler.id} timed out after {handler.timeout}s")
                     event_result.error = f"Handler {handler.id} timed out"
-                    
+
                 except Exception as e:
                     logger.error(f"Handler {handler.id} failed: {e}")
                     event_result.error = f"Handler {handler.id} failed: {str(e)}"
-            
+
             # Aggregate results
             if results:
                 event_result.success = all(r.get('success', False) for r in results)
@@ -307,48 +307,48 @@ Example:
             else:
                 event_result.success = False
                 event_result.error = "No handlers executed successfully"
-            
+
         except Exception as e:
             logger.error(f"Event processing failed: {e}")
             event_result.success = False
             event_result.error = str(e)
-        
+
         finally:
             # Update processing time and stats
             event_result.processing_time = time.time() - start_time
             self._update_event_stats(event_result)
-            
+
             # Store result
             self.processing_results[event.id] = event_result
-            
+
             # Add to history (keep last 1000 events)
             self.event_history.append(event)
             if len(self.event_history) > 1000:
                 self.event_history = self.event_history[-1000:]
-        
+
         return event_result
-    
+
     async def _execute_handler(self, handler: EventHandler, event: Event) -> Dict[str, Any]:
         """
         Execute a single event handler.
-        
+
         Args:
             handler: Handler to execute
             event: Event to process
-            
+
         Returns:
             Handler execution result
         """
         try:
             # Execute handler
             result = await handler.handler(event)
-            
+
             return {
                 'handler_id': handler.id,
                 'success': True,
                 'result': result
             }
-            
+
         except Exception as e:
             logger.error(f"Handler {handler.id} execution failed: {e}")
             return {
@@ -356,25 +356,25 @@ Example:
                 'success': False,
                 'error': str(e)
             }
-    
+
     def _update_event_stats(self, event_result: EventResult):
         """Update event processing statistics."""
         with self.processing_lock:
             self.event_stats['total_events'] += 1
-            
+
             if event_result.success:
                 self.event_stats['processed_events'] += 1
             else:
                 self.event_stats['failed_events'] += 1
-            
+
             # Update average processing time
             current_avg = self.event_stats['avg_processing_time']
             total_events = self.event_stats['total_events']
-            
+
             self.event_stats['avg_processing_time'] = (
                 (current_avg * (total_events - 1) + event_result.processing_time) / total_events
             )
-    
+
     def get_event_stats(self) -> Dict[str, Any]:
         """Get current event processing statistics."""
         with self.processing_lock:
@@ -384,16 +384,16 @@ Example:
                 'active_handlers': sum(len(handlers) for handlers in self.event_handlers.values()),
                 'event_history_size': len(self.event_history)
             }
-    
+
     def get_event_history(self, limit: int = 100) -> List[Event]:
         """Get recent event history."""
         return self.event_history[-limit:]
-    
+
     def clear_event_history(self):
         """Clear event history."""
         self.event_history.clear()
         self.processing_results.clear()
-    
+
     # Default event handlers
     async def _handle_mouse_events(self, event: Event) -> Dict[str, Any]:
         """Handle mouse interaction events."""
@@ -403,7 +403,7 @@ Example:
             'coordinates': event.data.get('coordinates'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_keyboard_events(self, event: Event) -> Dict[str, Any]:
         """Handle keyboard interaction events."""
         return {
@@ -412,7 +412,7 @@ Example:
             'modifiers': event.data.get('modifiers'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_touch_events(self, event: Event) -> Dict[str, Any]:
         """Handle touch interaction events."""
         return {
@@ -421,7 +421,7 @@ Example:
             'touches': event.data.get('touches'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_gesture_events(self, event: Event) -> Dict[str, Any]:
         """Handle gesture interaction events."""
         return {
@@ -430,7 +430,7 @@ Example:
             'parameters': event.data.get('parameters'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_timer_events(self, event: Event) -> Dict[str, Any]:
         """Handle timer system events."""
         return {
@@ -439,7 +439,7 @@ Example:
             'interval': event.data.get('interval'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_state_change_events(self, event: Event) -> Dict[str, Any]:
         """Handle state change system events."""
         return {
@@ -448,7 +448,7 @@ Example:
             'new_state': event.data.get('new_state'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_condition_events(self, event: Event) -> Dict[str, Any]:
         """Handle condition system events."""
         return {
@@ -457,7 +457,7 @@ Example:
             'evaluated': event.data.get('evaluated'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_system_events(self, event: Event) -> Dict[str, Any]:
         """Handle general system events."""
         return {
@@ -466,7 +466,7 @@ Example:
             'parameters': event.data.get('parameters'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_collision_events(self, event: Event) -> Dict[str, Any]:
         """Handle physics collision events."""
         return {
@@ -475,7 +475,7 @@ Example:
             'collision_data': event.data.get('collision_data'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_force_events(self, event: Event) -> Dict[str, Any]:
         """Handle physics force events."""
         return {
@@ -484,7 +484,7 @@ Example:
             'force_data': event.data.get('force_data'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_motion_events(self, event: Event) -> Dict[str, Any]:
         """Handle physics motion events."""
         return {
@@ -493,7 +493,7 @@ Example:
             'motion_data': event.data.get('motion_data'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_physics_events(self, event: Event) -> Dict[str, Any]:
         """Handle general physics events."""
         return {
@@ -502,7 +502,7 @@ Example:
             'parameters': event.data.get('parameters'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_weather_events(self, event: Event) -> Dict[str, Any]:
         """Handle environmental weather events."""
         return {
@@ -511,7 +511,7 @@ Example:
             'weather_data': event.data.get('weather_data'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_temperature_events(self, event: Event) -> Dict[str, Any]:
         """Handle environmental temperature events."""
         return {
@@ -520,7 +520,7 @@ Example:
             'temperature_unit': event.data.get('temperature_unit'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_pressure_events(self, event: Event) -> Dict[str, Any]:
         """Handle environmental pressure events."""
         return {
@@ -529,7 +529,7 @@ Example:
             'pressure_unit': event.data.get('pressure_unit'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_environmental_events(self, event: Event) -> Dict[str, Any]:
         """Handle general environmental events."""
         return {
@@ -538,7 +538,7 @@ Example:
             'parameters': event.data.get('parameters'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_start_events(self, event: Event) -> Dict[str, Any]:
         """Handle operational start events."""
         return {
@@ -547,7 +547,7 @@ Example:
             'start_parameters': event.data.get('start_parameters'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_stop_events(self, event: Event) -> Dict[str, Any]:
         """Handle operational stop events."""
         return {
@@ -556,7 +556,7 @@ Example:
             'stop_parameters': event.data.get('stop_parameters'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_maintenance_events(self, event: Event) -> Dict[str, Any]:
         """Handle operational maintenance events."""
         return {
@@ -565,7 +565,7 @@ Example:
             'maintenance_data': event.data.get('maintenance_data'),
             'element_id': event.element_id
         }
-    
+
     async def _handle_operational_events(self, event: Event) -> Dict[str, Any]:
         """Handle general operational events."""
         return {
@@ -577,4 +577,4 @@ Example:
 
 
 # Global instance for easy access
-event_driven_behavior_engine = EventDrivenBehaviorEngine() 
+event_driven_behavior_engine = EventDrivenBehaviorEngine()

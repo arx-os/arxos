@@ -219,6 +219,6 @@ These examples are part of the Arxos platform and follow the same licensing term
 
 ---
 
-**Last Updated**: 2024-01-01  
-**Version**: 1.0.0  
-**Maintainer**: Arxos Engineering Team 
+**Last Updated**: 2024-01-01
+**Version**: 1.0.0
+**Maintainer**: Arxos Engineering Team

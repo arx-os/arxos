@@ -1,6 +1,20 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
-import { ArxIDEApplication } from './ArxIDEApplication'
+// This file is commented out because ArxIDE uses Tauri, not Electron
+// The main process functionality is handled by Tauri's Rust backend
+
+/*
+import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron'
+// import { ArxIDEApplication } from './ArxIDEApplication'
 import path from 'path'
+
+// Temporary interface for ArxIDEApplication until the file is created
+interface ArxIDEApplication {
+  openFile(filePath: string): Promise<any>;
+  saveFile(filePath: string, content: string): Promise<any>;
+  validateSVGX(code: string): Promise<any>;
+  compileSVGX(code: string): Promise<any>;
+  render3DModel(modelData: any): Promise<any>;
+  processAICommand(command: string): Promise<any>;
+}
 
 class ArxIDEMain {
   private mainWindow: BrowserWindow | null = null
@@ -57,12 +71,12 @@ class ArxIDEMain {
       this.mainWindow?.show()
     })
 
-    this.arxIDE = new ArxIDEApplication(this.mainWindow)
+    // this.arxIDE = new ArxIDEApplication(this.mainWindow)
   }
 
   private setupIPCHandlers(): void {
     // File operations
-    ipcMain.handle('file:open', async (_, filePath: string) => {
+    ipcMain.handle('file:open', async (event: IpcMainInvokeEvent, filePath: string) => {
       try {
         return await this.arxIDE?.openFile(filePath)
       } catch (error) {
@@ -71,7 +85,7 @@ class ArxIDEMain {
       }
     })
 
-    ipcMain.handle('file:save', async (_, filePath: string, content: string) => {
+    ipcMain.handle('file:save', async (event: IpcMainInvokeEvent, filePath: string, content: string) => {
       try {
         return await this.arxIDE?.saveFile(filePath, content)
       } catch (error) {
@@ -81,7 +95,7 @@ class ArxIDEMain {
     })
 
     // SVGX operations
-    ipcMain.handle('svgx:validate', async (_, code: string) => {
+    ipcMain.handle('svgx:validate', async (event: IpcMainInvokeEvent, code: string) => {
       try {
         return await this.arxIDE?.validateSVGX(code)
       } catch (error) {
@@ -90,7 +104,7 @@ class ArxIDEMain {
       }
     })
 
-    ipcMain.handle('svgx:compile', async (_, code: string) => {
+    ipcMain.handle('svgx:compile', async (event: IpcMainInvokeEvent, code: string) => {
       try {
         return await this.arxIDE?.compileSVGX(code)
       } catch (error) {
@@ -100,7 +114,7 @@ class ArxIDEMain {
     })
 
     // 3D operations
-    ipcMain.handle('3d:render', async (_, modelData: any) => {
+    ipcMain.handle('3d:render', async (event: IpcMainInvokeEvent, modelData: any) => {
       try {
         return await this.arxIDE?.render3DModel(modelData)
       } catch (error) {
@@ -110,7 +124,7 @@ class ArxIDEMain {
     })
 
     // AI operations
-    ipcMain.handle('ai:process-command', async (_, command: string) => {
+    ipcMain.handle('ai:process-command', async (event: IpcMainInvokeEvent, command: string) => {
       try {
         return await this.arxIDE?.processAICommand(command)
       } catch (error) {
@@ -120,6 +134,4 @@ class ArxIDEMain {
     })
   }
 }
-
-// Initialize the application
-new ArxIDEMain() 
+*/

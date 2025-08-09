@@ -21,24 +21,24 @@ logger = logging.getLogger(__name__)
 
 class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
     """Example behavior handler plugin that adds custom behaviors."""
-    
+
     def __init__(self):
         """
         Initialize the plugin.
-        
+
         Args:
             None
-            
+
         Returns:
             None
-            
+
         Raises:
             None
         """
         self.initialized = False
         self.config = {}
         self.behavior_count = 0
-    
+
     def initialize(self, config: Dict[str, Any]) -> bool:
         """Initialize the plugin with configuration."""
         try:
@@ -49,12 +49,12 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
         except Exception as e:
             logger.error(f"Failed to initialize ExampleBehaviorPlugin: {e}")
             return False
-    
+
     def cleanup(self) -> None:
         """Clean up plugin resources."""
         self.initialized = False
         logger.info("ExampleBehaviorPlugin cleaned up")
-    
+
     def get_metadata(self) -> PluginMetadata:
         """Get plugin metadata."""
         return PluginMetadata(
@@ -70,22 +70,22 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
             homepage="https://github.com/svgx-engine/plugins",
             license="MIT"
         )
-    
+
     async def handle_behavior(self, behavior_data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle a behavior event with custom logic."""
         if not self.initialized:
             raise RuntimeError("Plugin not initialized")
-        
+
         self.behavior_count += 1
-        
+
         # Extract behavior information
         behavior_type = behavior_data.get('type', 'unknown')
         canvas_id = behavior_data.get('canvas_id')
         object_id = behavior_data.get('object_id')
         user_id = context.get('user_id', 'unknown')
-        
+
         logger.info(f"Processing behavior: {behavior_type} for object {object_id} on canvas {canvas_id}")
-        
+
         # Apply custom behavior logic based on type
         result = {
             'processed': True,
@@ -95,7 +95,7 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
             'behavior_count': self.behavior_count,
             'modifications': {}
         }
-        
+
         if behavior_type == 'select':
             # Add selection highlighting
             result['modifications'] = {
@@ -103,14 +103,14 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
                 'highlight_color': '#ffeb3b',
                 'highlight_width': 2
             }
-        
+
         elif behavior_type == 'hover':
             # Add hover effects
             result['modifications'] = {
                 'cursor': 'pointer',
                 'tooltip': f"Object {object_id} (hovered by {user_id})"
             }
-        
+
         elif behavior_type == 'click':
             # Add click effects
             result['modifications'] = {
@@ -118,7 +118,7 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
                 'click_sound': 'click.mp3',
                 'click_animation': 'pulse'
             }
-        
+
         elif behavior_type == 'drag':
             # Add drag effects
             result['modifications'] = {
@@ -126,7 +126,7 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
                 'drag_cursor': 'grabbing',
                 'drag_preview': True
             }
-        
+
         elif behavior_type == 'resize':
             # Add resize effects
             result['modifications'] = {
@@ -137,14 +137,14 @@ class ExampleBehaviorPlugin(BehaviorHandlerPlugin):
                     'aspect_ratio': 'free'
                 }
             }
-        
+
         # Log the behavior processing
         logger.info(f"Behavior processed successfully: {behavior_type} -> {result['modifications']}")
-        
+
         return result
 
 
 # Plugin factory function for dynamic loading
 def create_plugin() -> ExampleBehaviorPlugin:
     """Factory function to create plugin instance."""
-    return ExampleBehaviorPlugin() 
+    return ExampleBehaviorPlugin()

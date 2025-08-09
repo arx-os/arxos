@@ -134,7 +134,7 @@ def _register_advanced_rule_engine():
         if event.type == EventType.SYSTEM and event.data.get('rule_evaluation'):
             return None
         return None
-    
+
     event_driven_behavior_engine.register_handler(
         event_type=EventType.SYSTEM,
         handler_id='advanced_rule_engine',
@@ -290,4 +290,4 @@ The Advanced Rule Engine represents a significant milestone in the SVGX Engine d
 - ✅ Comprehensive test coverage and documentation
 - ✅ Enterprise-grade error handling and recovery
 
-The Advanced Rule Engine is now ready for production use and provides a solid foundation for complex rule-based behavior systems in the SVGX Engine. 
+The Advanced Rule Engine is now ready for production use and provides a solid foundation for complex rule-based behavior systems in the SVGX Engine.

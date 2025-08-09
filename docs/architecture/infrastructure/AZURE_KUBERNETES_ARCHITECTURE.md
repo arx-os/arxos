@@ -51,7 +51,7 @@ network_architecture:
       - name: management
         cidr: 10.0.5.0/24
         purpose: Management and monitoring
-  
+
   secondary_region:
     vnet: arxos-vnet-secondary
     address_space: 10.1.0.0/16
@@ -72,7 +72,7 @@ network_security:
       - name: allow-k8s-api
         port: 6443
         source: management-subnet
-  
+
   database_nsg:
     inbound_rules:
       - name: allow-db-access
@@ -88,7 +88,7 @@ aks_cluster:
   name: arxos-aks-cluster
   version: "1.28"
   resource_group: arxos-rg
-  
+
   node_pools:
     system_pool:
       name: systempool
@@ -99,7 +99,7 @@ aks_cluster:
       labels:
         pool: system
         environment: production
-    
+
     user_pool:
       name: userpool
       vm_size: Standard_D4s_v3
@@ -109,7 +109,7 @@ aks_cluster:
       labels:
         pool: user
         environment: production
-    
+
     spot_pool:
       name: spotpool
       vm_size: Standard_D4s_v3
@@ -129,25 +129,25 @@ kubernetes_namespaces:
     resource_quota:
       cpu: "4"
       memory: "8Gi"
-  
+
   - name: arxos-apps
     purpose: Main application services
     resource_quota:
       cpu: "16"
       memory: "32Gi"
-  
+
   - name: arxos-construction
     purpose: Construction management service
     resource_quota:
       cpu: "8"
       memory: "16Gi"
-  
+
   - name: arxos-ai
     purpose: AI services
     resource_quota:
       cpu: "12"
       memory: "24Gi"
-  
+
   - name: arxos-iot
     purpose: IoT platform services
     resource_quota:
@@ -192,7 +192,7 @@ deployment_config:
       min_replicas: 2
       max_replicas: 10
       target_cpu_utilization: 70
-  
+
   arxos-construction:
     replicas: 2
     resources:
@@ -225,7 +225,7 @@ key_vault_config:
       type: secret
     - name: api-keys
       type: secret
-  
+
   access_policies:
     - object_id: aks-service-principal
       permissions:
@@ -241,7 +241,7 @@ pod_security:
   namespace: arxos-apps
   level: restricted
   version: v1.28
-  
+
   policies:
     - name: disallow-privileged
       rule: disallow-privileged
@@ -287,12 +287,12 @@ monitoring_stack:
       - kubernetes_logs
       - kubernetes_metrics
       - application_insights
-  
+
   prometheus:
     enabled: true
     retention: 15d
     storage: azure-managed-disk
-  
+
   grafana:
     enabled: true
     admin_password: key-vault-secret
@@ -311,7 +311,7 @@ application_insights:
     - enable_logs_ingestion
     - enable_metrics_ingestion
     - enable_traces_ingestion
-  
+
   components:
     - name: arxos-frontend
       connection_string: key-vault-secret
@@ -328,17 +328,17 @@ alerting_rules:
     condition: cpu_usage > 80%
     duration: 5m
     action: email-notification
-    
+
   - name: high-memory-usage
     condition: memory_usage > 85%
     duration: 5m
     action: email-notification
-    
+
   - name: pod-restart-frequent
     condition: pod_restart_count > 5
     duration: 10m
     action: pager-duty
-    
+
   - name: service-unavailable
     condition: http_5xx_rate > 5%
     duration: 2m
@@ -356,7 +356,7 @@ azure_devops_pipeline:
       include:
         - main
         - develop
-  
+
   stages:
     - name: build
       jobs:
@@ -368,7 +368,7 @@ azure_devops_pipeline:
                 repository: arxos-frontend
                 dockerfile: '**/Dockerfile'
                 containerRegistry: arxos-acr
-    
+
     - name: security-scan
       jobs:
         - name: security-scan
@@ -377,7 +377,7 @@ azure_devops_pipeline:
               inputs:
                 dockerFilePath: '**/Dockerfile'
                 dockerImageName: arxos-frontend
-    
+
     - name: deploy-dev
       jobs:
         - name: deploy-to-dev
@@ -392,7 +392,7 @@ azure_devops_pipeline:
                 chartType: 'FilePath'
                 chartPath: '$(Pipeline.Workspace)/charts/arxos-platform'
                 releaseName: 'arxos-dev'
-    
+
     - name: deploy-prod
       jobs:
         - name: deploy-to-prod
@@ -418,23 +418,23 @@ github_actions:
   on:
     push:
       branches: [ main, develop ]
-  
+
   jobs:
     build-and-deploy:
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v3
-        
+
         - name: Set up Docker Buildx
           uses: docker/setup-buildx-action@v2
-        
+
         - name: Build and push Docker images
           uses: docker/build-push-action@v4
           with:
             context: .
             push: true
             tags: arxosacr.azurecr.io/arxos-frontend:${{ github.sha }}
-        
+
         - name: Deploy to AKS
           uses: azure/k8s-deploy@v1
           with:
@@ -455,12 +455,12 @@ database_config:
   storage_gb: 100
   backup_retention_days: 35
   geo_redundant_backup: true
-  
+
   firewall_rules:
     - name: aks-access
       start_ip: 10.0.2.0
       end_ip: 10.0.2.255
-  
+
   databases:
     - name: arxos_main
       charset: utf8
@@ -479,7 +479,7 @@ storage_config:
   name: arxosstorage
   sku: Standard_LRS
   access_tier: Hot
-  
+
   containers:
     - name: arxos-documents
       public_access: Private
@@ -503,7 +503,7 @@ terraform {
       version = "~> 3.0"
     }
   }
-  
+
   backend "azurerm" {
     resource_group_name  = "arxos-terraform-rg"
     storage_account_name = "arxostfstate"
@@ -601,6 +601,6 @@ resource "azurerm_kubernetes_cluster" "arxos" {
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Ready for Implementation 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Ready for Implementation

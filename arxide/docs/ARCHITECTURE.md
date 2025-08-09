@@ -1,286 +1,294 @@
-# ArxIDE Architecture Design
+# ArxIDE Architecture Documentation
 
-## 🏗️ System Overview
+## Overview
 
-ArxIDE is a professional desktop CAD IDE built on a modern, modular architecture with three main components working together to provide a seamless building information modeling experience.
+ArxIDE follows Clean Architecture principles with a clear separation of concerns across multiple layers. The architecture is designed to be maintainable, testable, and scalable while adhering to the ARXOS project standards.
 
-## 🎯 Core Design Principles
+## Architecture Layers
 
-1. **Modularity**: Each component is self-contained with clear interfaces
-2. **Performance**: Native desktop performance with optimized rendering
-3. **Extensibility**: Plugin-based architecture for system-specific extensions
-4. **Security**: Sandboxed extensions and secure IPC communication
-5. **Scalability**: Support for large building models and multi-user collaboration
+### 1. Domain Layer (`src/domain.rs`)
 
-## 🏛️ High-Level Architecture
+The innermost layer containing the core business logic and domain entities.
 
+#### **Domain Entities**
+- **Project**: Aggregate root representing a CAD project
+- **CadObject**: Individual CAD objects (lines, circles, walls, etc.)
+- **Constraint**: Geometric and business constraints
+- **Position**: 2D/3D position value object
+- **Dimensions**: Size and dimension value object
+
+#### **Domain Events**
+- `ProjectCreated`: When a new project is created
+- `ProjectOpened`: When a project is opened
+- `ProjectSaved`: When a project is saved
+- `ProjectExported`: When a project is exported
+- `ObjectAdded`: When a CAD object is added
+- `ObjectModified`: When a CAD object is modified
+- `ObjectDeleted`: When a CAD object is deleted
+- `ConstraintAdded`: When a constraint is added
+- `ConstraintViolated`: When a constraint is violated
+
+#### **Domain Services**
+- **ProjectService**: Orchestrates project operations
+- **ProjectRepository**: Data access interface
+- **ExportService**: Export functionality interface
+- **EventPublisher**: Event publishing interface
+
+#### **Value Objects**
+- **ExportFormat**: Supported export formats (SVGX, DXF, IFC, PDF, PNG)
+- **ConstraintSeverity**: Constraint violation levels (Info, Warning, Error, Critical)
+
+### 2. Application Layer (`src/application.rs`)
+
+Contains use cases and application services that orchestrate domain operations.
+
+#### **Use Cases**
+- **CreateProjectUseCase**: Creates new projects
+- **LoadProjectUseCase**: Loads existing projects
+- **SaveProjectUseCase**: Saves projects
+- **AddObjectUseCase**: Adds CAD objects to projects
+- **UpdateObjectUseCase**: Updates CAD objects
+- **RemoveObjectUseCase**: Removes CAD objects
+- **AddConstraintUseCase**: Adds constraints to projects
+- **ExportProjectUseCase**: Exports projects to various formats
+- **ValidateProjectUseCase**: Validates project constraints
+- **ListRecentProjectsUseCase**: Lists recent projects
+
+#### **Application Services**
+- **ProjectApplicationService**: Orchestrates all project operations
+- **ApplicationConfig**: Application configuration management
+
+#### **DTOs (Data Transfer Objects)**
+- **CreateProjectRequest/Response**: Project creation
+- **AddObjectRequest/Response**: Object addition
+- **AddConstraintRequest/Response**: Constraint addition
+- **ExportProjectRequest/Response**: Project export
+- **ProjectInfo**: Project summary information
+- **ConstraintViolationDto**: Constraint violation details
+
+### 3. Infrastructure Layer (`src/infrastructure.rs`)
+
+Handles external concerns like file I/O, persistence, and external services.
+
+#### **Repository Implementations**
+- **FileProjectRepository**: File-based project persistence
+- **InMemoryProjectRepository**: In-memory repository for testing
+
+#### **Service Implementations**
+- **ArxideExportService**: Export functionality implementation
+- **LoggingEventPublisher**: Event publishing with logging
+
+#### **Infrastructure Services**
+- **InfrastructureServices**: Main infrastructure service container
+- **ConfigurationManager**: Configuration management
+- **FileSystemService**: File system operations
+- **BackupService**: Project backup and restore
+
+## Design Patterns
+
+### 1. Clean Architecture
+- **Dependency Rule**: Dependencies point inward
+- **Domain Independence**: Domain layer has no external dependencies
+- **Framework Independence**: Domain logic is framework-agnostic
+
+### 2. Domain-Driven Design (DDD)
+- **Aggregates**: Project as the main aggregate root
+- **Entities**: CadObject, Constraint with identity
+- **Value Objects**: Position, Dimensions, ExportFormat
+- **Domain Events**: Event-driven communication
+- **Repository Pattern**: Abstract data access
+
+### 3. SOLID Principles
+- **Single Responsibility**: Each class has one reason to change
+- **Open/Closed**: Open for extension, closed for modification
+- **Liskov Substitution**: Repository implementations are substitutable
+- **Interface Segregation**: Small, focused interfaces
+- **Dependency Inversion**: Depend on abstractions, not concretions
+
+### 4. Hexagonal Architecture
+- **Ports**: Repository, ExportService, EventPublisher interfaces
+- **Adapters**: FileProjectRepository, ArxideExportService implementations
+- **Domain Core**: Independent of external concerns
+
+## Data Flow
+
+### 1. Project Creation Flow
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ArxIDE Desktop Application                  │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   Main Process  │  │  Renderer Proc  │  │   Extensions    │ │
-│  │   (Electron)    │◄─┤   (Electron)    │◄─┤   (TypeScript)  │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    VS Code Integration Layer                  │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   VS Code API   │  │  Language Server│  │  Debug Adapter  │ │
-│  │   Communication │  │  Protocol (LSP) │  │  Protocol (DAP) │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Go Backend Services                        │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │   API Gateway   │  │  File Manager   │  │  Database Ops   │ │
-│  │   (REST/GraphQL)│  │  (CAD Files)    │  │  (Performance)  │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  Python AI/CAD Services                       │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │  Arxos Agent    │  │  SVGX Engine    │  │  CAD Processor  │ │
-│  │  (NLP Commands) │  │  (BIM Core)     │  │  (Operations)   │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## 📦 Component Details
-
-### 1. Desktop Application (Electron + TypeScript)
-
-#### Main Process
-- **Window Management**: Application lifecycle, window creation/destruction
-- **IPC Bridge**: Secure communication between main and renderer processes
-- **File System Access**: Native file system operations
-- **Extension Management**: Loading, validation, and lifecycle of extensions
-- **Update System**: Auto-update functionality
-- **VS Code Integration**: Communication with VS Code via Language Server Protocol
-
-#### Renderer Process
-- **Monaco Editor**: Advanced code editing with SVGX language support
-- **Three.js Canvas**: 3D building visualization and CAD operations
-- **UI Framework**: React-based interface with TypeScript
-- **Extension Host**: Sandboxed extension execution
-- **Real-time Collaboration**: Multi-user editing capabilities
-- **VS Code Bridge**: Seamless integration with VS Code features
-
-#### Extension System
-- **CAD Extensions**: System-specific extensions (Electrical, HVAC, Plumbing)
-- **Symbol Libraries**: Custom symbol registration and management
-- **Command Extensions**: Custom CAD commands and operations
-- **Validation Rules**: System-specific validation and compliance checking
-- **VS Code Extensions**: Extensions that work in both ArxIDE and VS Code
-
-### 2. VS Code Integration Layer
-
-#### VS Code API Communication
-- **Language Server Protocol (LSP)**: Standardized communication with VS Code
-- **Debug Adapter Protocol (DAP)**: Debugging integration with VS Code
-- **Extension Host**: VS Code extension compatibility
-- **File System Integration**: Seamless file operations between ArxIDE and VS Code
-- **IntelliSense**: Shared language services and autocompletion
-
-#### Language Server
-- **SVGX Language Server**: Provides syntax highlighting, IntelliSense, and validation
-- **Multi-language Support**: Support for SVGX, YAML, JSON, and other formats
-- **Real-time Validation**: Live error checking and suggestions
-- **Code Actions**: Refactoring and code generation capabilities
-- **Documentation**: Inline documentation and hover information
-
-#### Debug Adapter
-- **SVGX Debugger**: Debug SVGX code with breakpoints and step-through
-- **Building Simulation**: Debug building system simulations
-- **Performance Profiling**: Profile SVGX operations and building simulations
-- **Error Tracking**: Comprehensive error tracking and reporting
-
-### 3. Backend Services (Go)
-
-#### API Gateway
-- **REST Endpoints**: File operations, user management, collaboration
-- **GraphQL Support**: Complex queries and real-time subscriptions
-- **Authentication**: JWT-based authentication and authorization
-- **Rate Limiting**: API usage monitoring and throttling
-- **CORS Management**: Cross-origin resource sharing
-- **VS Code Integration**: API endpoints for VS Code extension communication
-
-#### File Management
-- **CAD File Operations**: Open, save, export, import
-- **Version Control**: Git integration for file versioning
-- **Collaboration**: Real-time file sharing and conflict resolution
-- **Backup System**: Automatic backup and recovery
-- **File Formats**: Support for DWG, DXF, SVGX, and custom formats
-- **VS Code Sync**: Synchronization with VS Code workspace
-
-#### Database Operations
-- **Direct Access**: High-performance database operations
-- **Connection Pooling**: Optimized database connections
-- **Transaction Management**: ACID compliance for critical operations
-- **Caching Layer**: Redis-based caching for performance
-- **Migration System**: Database schema versioning
-
-### 4. AI/CAD Services (Python)
-
-#### Arxos Agent
-- **Natural Language Processing**: Understanding CAD commands in plain English
-- **Context Management**: Maintaining conversation context and building state
-- **Command Generation**: Converting natural language to SVGX code
-- **Validation**: Real-time command validation and suggestions
-- **Learning**: Continuous improvement from user interactions
-- **VS Code Integration**: Agent services available to VS Code extensions
-
-#### SVGX Engine Integration
-- **Building Model**: Core building information modeling
-- **System Simulation**: Real-time building system behavior
-- **Physics Engine**: Accurate physical modeling of building systems
-- **Logic Engine**: Complex building system logic and relationships
-- **Real-time Collaboration**: Multi-user building model editing
-- **VS Code Language Server**: SVGX language services for VS Code
-
-#### CAD Processing
-- **Geometric Operations**: Advanced CAD geometry processing
-- **System Analysis**: Building system analysis and optimization
-- **Code Generation**: SVGX code generation from high-level commands
-- **Validation**: Building code compliance checking
-- **Simulation**: Real-time building system simulation
-
-## 🔄 Data Flow
-
-### 1. Natural Language Command Flow
-```
-User Input → Arxos Agent → Command Analysis → SVGX Generation → Validation → Execution
+Frontend → Tauri Command → Application Service → Use Case → Domain Service → Repository
 ```
 
-### 2. File Operation Flow
+### 2. Project Export Flow
 ```
-User Action → Renderer Process → IPC → Main Process → File System → Database → Response
-```
-
-### 3. Extension Execution Flow
-```
-Extension Call → Sandbox → Validation → Execution → Result → UI Update
+Frontend → Tauri Command → Application Service → Use Case → Domain Service → Export Service
 ```
 
-### 4. Collaboration Flow
+### 3. Event Publishing Flow
 ```
-User Edit → Local Validation → Server Sync → Conflict Resolution → Broadcast → UI Update
-```
-
-### 5. VS Code Integration Flow
-```
-VS Code Extension → Language Server → ArxIDE Services → Backend → AI/CAD Services → Response
+Domain Event → Event Publisher → Logging/External Systems
 ```
 
-## 🔌 Integration Points
+## Error Handling
 
-### 1. IPC Communication
-- **Main ↔ Renderer**: File operations, extension management, window control
-- **Security**: Sandboxed communication with validation
-- **Performance**: Optimized for large data transfers
-- **Error Handling**: Comprehensive error handling and recovery
+### 1. Error Types
+- **DomainError**: Business rule violations
+- **ApplicationError**: Use case validation errors
+- **InfrastructureError**: File system, serialization errors
 
-### 2. API Communication
-- **Desktop ↔ Backend**: REST/GraphQL API calls
-- **Authentication**: JWT token management
-- **Caching**: Intelligent caching for performance
-- **Error Handling**: Graceful degradation and retry logic
+### 2. Error Propagation
+- Errors bubble up through layers
+- Each layer adds context
+- Final error messages are user-friendly
 
-### 3. Service Communication
-- **Backend ↔ AI Services**: gRPC for high-performance communication
-- **Real-time**: WebSocket connections for live updates
-- **Load Balancing**: Intelligent load distribution
-- **Monitoring**: Comprehensive service monitoring
+## Configuration Management
 
-### 4. VS Code Integration
-- **Language Server Protocol**: Standardized communication with VS Code
-- **Extension API**: VS Code extension compatibility
-- **File System**: Seamless file operations between ArxIDE and VS Code
-- **Debugging**: Integrated debugging capabilities
-- **IntelliSense**: Shared language services and autocompletion
+### 1. ApplicationConfig
+- **max_project_name_length**: Maximum project name length
+- **max_project_description_length**: Maximum description length
+- **max_recent_projects**: Number of recent projects to track
+- **default_export_format**: Default export format
+- **enable_constraint_validation**: Enable/disable constraint validation
+- **enable_event_publishing**: Enable/disable event publishing
 
-## 🛡️ Security Architecture
+### 2. Configuration Sources
+- Default values
+- Configuration files
+- Environment variables
+- Runtime updates
 
-### 1. Extension Security
-- **Sandboxing**: Isolated extension execution
-- **Permission System**: Granular permission controls
-- **Code Validation**: Static and dynamic code analysis
-- **Resource Limits**: Memory and CPU usage limits
+## Testing Strategy
 
-### 2. Communication Security
-- **Encryption**: End-to-end encryption for sensitive data
-- **Authentication**: Multi-factor authentication support
-- **Authorization**: Role-based access control
-- **Audit Logging**: Comprehensive security audit trails
+### 1. Unit Testing
+- **Domain Layer**: Test entities, value objects, domain services
+- **Application Layer**: Test use cases with mocked dependencies
+- **Infrastructure Layer**: Test repository implementations
 
-### 3. Data Security
-- **Encryption at Rest**: Database and file encryption
-- **Secure Transmission**: TLS/SSL for all communications
-- **Access Controls**: Fine-grained data access controls
-- **Backup Security**: Encrypted backup storage
+### 2. Integration Testing
+- **End-to-End**: Test complete workflows
+- **Repository Testing**: Test with real file system
+- **Service Integration**: Test service interactions
 
-### 4. VS Code Security
-- **Extension Validation**: Secure extension loading and execution
-- **API Security**: Secure communication with VS Code APIs
-- **File Access**: Controlled file system access
-- **Network Security**: Secure network communication
+### 3. Test Utilities
+- **InMemoryProjectRepository**: For fast, isolated testing
+- **MockEventPublisher**: For testing event publishing
+- **TestDataBuilder**: For creating test data
 
-## 📊 Performance Considerations
+## Security Considerations
 
-### 1. Rendering Performance
-- **WebGL Optimization**: Hardware-accelerated 3D rendering
-- **Level of Detail**: Dynamic LOD for large models
-- **Culling**: Frustum and occlusion culling
-- **Memory Management**: Efficient memory usage and garbage collection
+### 1. Input Validation
+- All inputs validated at application layer
+- Domain entities validate business rules
+- File paths sanitized before use
 
-### 2. Database Performance
-- **Connection Pooling**: Optimized database connections
-- **Query Optimization**: Efficient database queries
-- **Caching**: Multi-level caching strategy
-- **Indexing**: Strategic database indexing
+### 2. Error Information
+- Sensitive data not exposed in error messages
+- Logging levels appropriate for data sensitivity
+- User-friendly error messages
 
-### 3. Network Performance
-- **Compression**: Data compression for network transfers
-- **Batching**: Batch operations for efficiency
-- **Caching**: Intelligent client-side caching
-- **CDN**: Content delivery network for static assets
+### 3. File System Security
+- Path validation and sanitization
+- Permission checks
+- Safe file operations
 
-### 4. VS Code Performance
-- **Language Server**: Optimized language server performance
-- **Extension Loading**: Fast extension loading and initialization
-- **Memory Usage**: Efficient memory usage for VS Code integration
-- **Response Time**: Sub-second response times for VS Code operations
+## Performance Optimizations
 
-## 🔧 Development Guidelines
+### 1. Async Operations
+- All I/O operations are asynchronous
+- Non-blocking event publishing
+- Efficient file operations
+
+### 2. Memory Management
+- Efficient data structures
+- Proper resource cleanup
+- Lazy loading where appropriate
+
+### 3. Caching
+- Recent projects cached in memory
+- Configuration cached after loading
+- Export results cached temporarily
+
+## Deployment Architecture
+
+### 1. Tauri Integration
+- **Commands**: Tauri commands interface with application layer
+- **State Management**: Global infrastructure services
+- **Error Handling**: Proper error propagation to frontend
+
+### 2. File System Layout
+```
+~/.local/share/arxide/
+├── projects/
+│   ├── project1.json
+│   ├── project2.json
+│   └── ...
+├── backups/
+│   ├── project1_20231201_143022.json
+│   └── ...
+├── recent_projects.json
+└── config.json
+```
+
+### 3. Cross-Platform Support
+- **macOS**: `~/Library/Application Support/arxide/`
+- **Linux**: `~/.local/share/arxide/`
+- **Windows**: `%APPDATA%\arxide\`
+
+## Development Guidelines
 
 ### 1. Code Organization
-- **Modular Design**: Clear separation of concerns
-- **Type Safety**: Comprehensive TypeScript usage
-- **Documentation**: Comprehensive API documentation
-- **Testing**: Unit and integration testing
-- **VS Code Compatibility**: Ensure extensions work in both ArxIDE and VS Code
+- **Layers**: Clear separation between domain, application, infrastructure
+- **Modules**: Logical grouping within layers
+- **Naming**: Consistent naming conventions
 
-### 2. Performance Guidelines
-- **Optimization**: Continuous performance optimization
-- **Profiling**: Regular performance profiling
-- **Monitoring**: Comprehensive performance monitoring
-- **Caching**: Strategic caching implementation
+### 2. Documentation
+- **API Documentation**: Complete documentation for all public APIs
+- **Architecture Decisions**: ADRs for significant decisions
+- **Code Comments**: Inline documentation for complex logic
 
-### 3. Security Guidelines
-- **Validation**: Input validation and sanitization
-- **Authentication**: Secure authentication mechanisms
-- **Authorization**: Role-based access control
-- **Auditing**: Comprehensive audit logging
+### 3. Testing
+- **Test Coverage**: High test coverage for all layers
+- **Test Organization**: Tests mirror source code structure
+- **Test Data**: Reusable test data builders
 
-### 4. VS Code Guidelines
-- **Extension Development**: Follow VS Code extension best practices
-- **Language Server**: Implement standard LSP features
-- **Debug Adapter**: Provide comprehensive debugging support
-- **Documentation**: Clear documentation for VS Code integration
+### 4. Error Handling
+- **Comprehensive**: All error scenarios handled
+- **User-Friendly**: Clear error messages for users
+- **Logging**: Appropriate logging for debugging
 
-This architecture ensures that ArxIDE can communicate seamlessly with VS Code while maintaining its own powerful CAD capabilities, similar to how Cursor enhances VS Code with AI capabilities.
+## Future Enhancements
+
+### 1. Database Integration
+- **PostgreSQL**: For production data storage
+- **Migrations**: Database schema management
+- **Connection Pooling**: Efficient database connections
+
+### 2. Cloud Integration
+- **Cloud Storage**: Project backup to cloud
+- **Collaboration**: Real-time collaboration features
+- **Sync**: Multi-device synchronization
+
+### 3. Advanced Features
+- **Plugin System**: Extensible architecture for plugins
+- **AI Integration**: AI-powered design assistance
+- **Version Control**: Project versioning and history
+
+## Compliance with ARXOS Standards
+
+### 1. Architecture Alignment
+- **Clean Architecture**: Follows ARXOS Clean Architecture patterns
+- **Domain-Driven Design**: Consistent with ARXOS DDD approach
+- **SOLID Principles**: Adheres to ARXOS coding standards
+
+### 2. Technology Stack
+- **Rust**: Consistent with ARXOS backend technology
+- **Tauri**: Desktop application framework
+- **Async/Await**: Modern async programming patterns
+
+### 3. Quality Standards
+- **Error Handling**: Comprehensive error handling
+- **Testing**: Thorough testing strategy
+- **Documentation**: Complete documentation
+- **Security**: Security best practices
+
+## Conclusion
+
+ArxIDE's architecture provides a solid foundation for a professional CAD IDE while maintaining flexibility for future enhancements. The Clean Architecture approach ensures maintainability, testability, and scalability while adhering to ARXOS project standards.

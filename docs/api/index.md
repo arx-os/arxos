@@ -270,6 +270,6 @@ The API specifications are automatically validated in CI/CD:
 
 ---
 
-**Last Updated**: 2024-12-19  
-**Version**: 1.0.0  
-**Maintainer**: Arxos Development Team 
+**Last Updated**: 2024-12-19
+**Version**: 1.0.0
+**Maintainer**: Arxos Development Team

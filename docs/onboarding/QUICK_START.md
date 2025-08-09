@@ -68,7 +68,7 @@ Once setup is complete, access the services at:
 
 ### API Documentation
 - **SVG Parser**: http://localhost:8000/docs
-- **Backend**: http://localhost:8080/docs  
+- **Backend**: http://localhost:8080/docs
 - **SVGX Engine**: http://localhost:8001/docs
 
 ## 🧪 Test Your Setup
@@ -245,4 +245,4 @@ After successful setup:
 
 ---
 
-**Note**: This is a development setup. For production deployment, see the deployment documentation in `infrastructure/deploy/`. 
+**Note**: This is a development setup. For production deployment, see the deployment documentation in `infrastructure/deploy/`.

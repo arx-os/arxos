@@ -12,26 +12,26 @@ export class ViewportManager {
     constructor(svgElement, options = {}) {
         this.svgElement = svgElement;
         this.options = options;
-        
+
         // Initialize modules
         this.viewport = new Viewport(svgElement, options);
         this.camera = new Camera(this.viewport, options);
         this.zoom = new Zoom(this.viewport, options);
         this.pan = new Pan(this.viewport, options);
-        
+
         // Connect modules
         this.connectModules();
-        
+
         // Performance optimization
         this.isUpdating = false;
         this.updateQueue = [];
         this.lastUpdateTime = 0;
         this.updateThrottle = options.updateThrottle || 16; // ~60fps
-        
+
         // Throttled update manager integration
         this.throttledUpdateManager = null;
         this.enableThrottledUpdates = options.enableThrottledUpdates !== false;
-        
+
         this.initialize();
     }
 
@@ -43,16 +43,16 @@ export class ViewportManager {
     connectModules() {
         // Connect camera to viewport
         this.viewport.camera = this.camera;
-        
+
         // Listen for viewport changes
         this.viewport.addEventListener('viewportChanged', () => {
             this.handleViewportChange();
         });
-        
+
         this.viewport.addEventListener('zoomChanged', () => {
             this.handleZoomChange();
         });
-        
+
         this.viewport.addEventListener('panChanged', () => {
             this.handlePanChange();
         });
@@ -60,22 +60,22 @@ export class ViewportManager {
 
     connectToThrottledUpdateManager() {
         if (!this.enableThrottledUpdates) return;
-        
+
         const checkThrottledUpdateManager = () => {
             if (window.throttledUpdateManager) {
                 this.throttledUpdateManager = window.throttledUpdateManager;
                 this.throttledUpdateManager.addEventListener('update', (data) => {
                     this.handleThrottledUpdate(data);
                 });
-                
+
                 this.throttledUpdateManager.addEventListener('batchedUpdate', (data) => {
                     this.handleBatchedUpdate(data);
                 });
-                
+
                 this.throttledUpdateManager.addEventListener('updateProcessed', (data) => {
                     this.handleUpdateProcessed(data);
                 });
-                
+
                 console.log('ViewportManager connected to ThrottledUpdateManager');
             } else {
                 setTimeout(checkThrottledUpdateManager, 100);
@@ -89,7 +89,7 @@ export class ViewportManager {
         window.addEventListener('resize', () => {
             this.handleResize();
         });
-        
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             this.handleKeyDown(e);
@@ -146,15 +146,15 @@ export class ViewportManager {
     // Performance optimization
     queueUpdate() {
         if (this.isUpdating) return;
-        
+
         const currentTime = performance.now();
         if (currentTime - this.lastUpdateTime < this.updateThrottle) {
             return;
         }
-        
+
         this.isUpdating = true;
         this.lastUpdateTime = currentTime;
-        
+
         requestAnimationFrame(() => {
             this.performUpdate();
             this.isUpdating = false;
@@ -318,7 +318,7 @@ export class ViewportManager {
     // Cleanup
     destroy() {
         this.cancelOperations();
-        
+
         if (this.viewport) {
             this.viewport.destroy();
         }
@@ -331,9 +331,9 @@ export class ViewportManager {
         if (this.pan) {
             this.pan.destroy();
         }
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

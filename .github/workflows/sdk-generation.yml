@@ -38,22 +38,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      
+
       - name: Install OpenAPI tools
         run: |
           npm install -g @apidevtools/swagger-cli
           npm install -g @openapitools/openapi-generator-cli
-      
+
       - name: Validate OpenAPI specs
         run: |
           echo "🔍 Validating OpenAPI specifications..."
-          
+
           # Validate all API specs
           for spec in arx-docs/api/*_api_spec.yaml; do
             if [ -f "$spec" ]; then
@@ -67,7 +67,7 @@ jobs:
               fi
             fi
           done
-          
+
           echo "🎉 All OpenAPI specifications are valid!"
 
   generate-sdks:
@@ -77,55 +77,55 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      
+
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
-      
+
       - name: Install dependencies
         run: |
           echo "📦 Installing dependencies..."
-          
+
           # Python dependencies
           pip install pyyaml jinja2 requests aiohttp pydantic
-          
+
           # Node.js dependencies
           npm install -g @openapitools/openapi-generator-cli prettier
-          
+
           # Go dependencies
           go install golang.org/x/tools/cmd/goimports@latest
-          
+
           # Java dependencies
           # Maven is included with the Java setup
-          
+
           echo "✅ Dependencies installed"
-      
+
       - name: Generate SDKs
         run: |
           echo "🚀 Generating SDKs..."
-          
+
           cd sdk
-          
+
           # Generate based on workflow inputs
           if [ "${{ github.event.inputs.service }}" != "" ] && [ "${{ github.event.inputs.language }}" != "" ]; then
             echo "Generating ${{ github.event.inputs.language }} SDK for ${{ github.event.inputs.service }}..."
@@ -140,9 +140,9 @@ jobs:
             echo "Generating all SDKs..."
             python scripts/generate_sdks.py
           fi
-          
+
           echo "✅ SDK generation completed"
-      
+
       - name: Upload generated SDKs
         uses: actions/upload-artifact@v4
         with:
@@ -160,37 +160,37 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Test TypeScript SDK
         run: |
           cd sdk/generated/typescript/${{ matrix.service }}
-          
+
           echo "🧪 Testing TypeScript SDK for ${{ matrix.service }}..."
-          
+
           # Check if directory exists
           if [ ! -d "sdk/generated/typescript/${{ matrix.service }}" ]; then
             echo "⚠️ SDK directory for ${{ matrix.service }} not found, skipping..."
             exit 0
           fi
-          
+
           # Install dependencies
           npm install
-          
+
           # Run tests
           npm test
-          
+
           echo "✅ TypeScript SDK tests passed for ${{ matrix.service }}"
 
   test-python:
@@ -203,31 +203,31 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Test Python SDK
         run: |
           cd sdk/generated/python/${{ matrix.service }}
-          
+
           echo "🧪 Testing Python SDK for ${{ matrix.service }}..."
-          
+
           # Install package
           pip install -e .
-          
+
           # Run tests
           python -m pytest tests/ -v
-          
+
           echo "✅ Python SDK tests passed for ${{ matrix.service }}"
 
   test-go:
@@ -240,31 +240,31 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Test Go SDK
         run: |
           cd sdk/generated/go/${{ matrix.service }}
-          
+
           echo "🧪 Testing Go SDK for ${{ matrix.service }}..."
-          
+
           # Initialize module
           go mod tidy
-          
+
           # Run tests
           go test ./... -v
-          
+
           echo "✅ Go SDK tests passed for ${{ matrix.service }}"
 
   test-java:
@@ -277,28 +277,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Test Java SDK
         run: |
           cd sdk/generated/java/${{ matrix.service }}
-          
+
           echo "🧪 Testing Java SDK for ${{ matrix.service }}..."
-          
+
           # Run tests
           mvn test
-          
+
           echo "✅ Java SDK tests passed for ${{ matrix.service }}"
 
   test-csharp:
@@ -311,30 +311,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Test C# SDK
         run: |
           cd sdk/generated/csharp/${{ matrix.service }}
-          
+
           echo "🧪 Testing C# SDK for ${{ matrix.service }}..."
-          
+
           # Restore dependencies
           dotnet restore
-          
+
           # Run tests
           dotnet test
-          
+
           echo "✅ C# SDK tests passed for ${{ matrix.service }}"
 
   test-php:
@@ -347,32 +347,32 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
           extensions: mbstring, xml, ctype, iconv, intl, pcre, session, simplexml, spl, standard, tokenizer, xmlreader, xmlwriter
           tools: composer
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Test PHP SDK
         run: |
           cd sdk/generated/php/${{ matrix.service }}
-          
+
           echo "🧪 Testing PHP SDK for ${{ matrix.service }}..."
-          
+
           # Install dependencies
           composer install
-          
+
           # Run tests
           vendor/bin/phpunit
-          
+
           echo "✅ PHP SDK tests passed for ${{ matrix.service }}"
 
   build-packages:
@@ -383,53 +383,53 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-      
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
-      
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
           extensions: mbstring, xml, ctype, iconv, intl, pcre, session, simplexml, spl, standard, tokenizer, xmlreader, xmlwriter
           tools: composer
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Build TypeScript packages
         run: |
           echo "📦 Building TypeScript packages..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/typescript/$service" ]; then
               cd sdk/generated/typescript/$service
@@ -437,11 +437,11 @@ jobs:
               cd ../../../..
             fi
           done
-      
+
       - name: Build Python packages
         run: |
           echo "📦 Building Python packages..."
-          
+
           for service in arx_backend svgx_engine arx_cmms arx_database; do
             if [ -d "sdk/generated/python/$service" ]; then
               cd sdk/generated/python/$service
@@ -449,11 +449,11 @@ jobs:
               cd ../../../..
             fi
           done
-      
+
       - name: Build Go packages
         run: |
           echo "📦 Building Go packages..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/go/$service" ]; then
               cd sdk/generated/go/$service
@@ -461,11 +461,11 @@ jobs:
               cd ../../../..
             fi
           done
-      
+
       - name: Build Java packages
         run: |
           echo "📦 Building Java packages..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/java/$service" ]; then
               cd sdk/generated/java/$service
@@ -473,11 +473,11 @@ jobs:
               cd ../../../..
             fi
           done
-      
+
       - name: Build C# packages
         run: |
           echo "📦 Building C# packages..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/csharp/$service" ]; then
               cd sdk/generated/csharp/$service
@@ -485,11 +485,11 @@ jobs:
               cd ../../../..
             fi
           done
-      
+
       - name: Build PHP packages
         run: |
           echo "📦 Building PHP packages..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/php/$service" ]; then
               cd sdk/generated/php/$service
@@ -497,7 +497,7 @@ jobs:
               cd ../../../..
             fi
           done
-      
+
       - name: Upload built packages
         uses: actions/upload-artifact@v4
         with:
@@ -513,29 +513,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
-      
+
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: sdk/generated/
-      
+
       - name: Publish TypeScript packages to npm
         run: |
           echo "📤 Publishing TypeScript packages to npm..."
-          
+
           # Validate token exists
           if [ -z "$NODE_AUTH_TOKEN" ]; then
             echo "❌ NPM_TOKEN not found"
             exit 1
           fi
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/typescript/$service" ]; then
               cd sdk/generated/typescript/$service
@@ -554,24 +554,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      
+
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: sdk/generated/
-      
+
       - name: Publish Python packages to PyPI
         run: |
           echo "📤 Publishing Python packages to PyPI..."
-          
+
           pip install twine
-          
+
           for service in arx_backend svgx_engine arx_cmms arx_database; do
             if [ -d "sdk/generated/python/$service" ]; then
               cd sdk/generated/python/$service
@@ -591,23 +591,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
-      
+
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: sdk/generated/
-      
+
       - name: Publish Java packages to Maven Central
         run: |
           echo "📤 Publishing Java packages to Maven Central..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/java/$service" ]; then
               cd sdk/generated/java/$service
@@ -627,22 +627,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '6.0.x'
-      
+
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: sdk/generated/
-      
+
       - name: Publish C# packages to NuGet
         run: |
           echo "📤 Publishing C# packages to NuGet..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/csharp/$service" ]; then
               cd sdk/generated/csharp/$service
@@ -661,24 +661,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
           extensions: mbstring, xml, ctype, iconv, intl, pcre, session, simplexml, spl, standard, tokenizer, xmlreader, xmlwriter
           tools: composer
-      
+
       - name: Download built packages
         uses: actions/download-artifact@v4
         with:
           name: built-packages
           path: sdk/generated/
-      
+
       - name: Publish PHP packages to Packagist
         run: |
           echo "📤 Publishing PHP packages to Packagist..."
-          
+
           for service in arx-backend svgx-engine arx-cmms arx-database; do
             if [ -d "sdk/generated/php/$service" ]; then
               cd sdk/generated/php/$service
@@ -696,28 +696,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
-      
+
       - name: Download generated SDKs
         uses: actions/download-artifact@v4
         with:
           name: generated-sdks
           path: sdk/generated/
-      
+
       - name: Generate documentation
         run: |
           echo "📚 Generating documentation..."
-          
+
           cd sdk
           python scripts/generate_docs.py
-          
+
           echo "✅ Documentation generated"
-      
+
       - name: Upload documentation
         uses: actions/upload-artifact@v4
         with:
@@ -750,4 +750,4 @@ jobs:
       - name: Notify failure
         run: |
           echo "❌ SDK generation and publishing failed!"
-          echo "Please check the logs for details." 
+          echo "Please check the logs for details."

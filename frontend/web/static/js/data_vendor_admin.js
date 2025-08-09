@@ -244,9 +244,9 @@ class DataVendorAdmin {
                     ${key.last_used_at ? this.formatTime(key.last_used_at) : 'Never'}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="dataVendorAdmin.viewAPIKey('${key.id}')" 
+                    <button onclick="dataVendorAdmin.viewAPIKey('${key.id}')"
                             class="text-blue-600 hover:text-blue-900 mr-3">View</button>
-                    <button onclick="dataVendorAdmin.toggleAPIKeyStatus('${key.id}', ${!key.is_active})" 
+                    <button onclick="dataVendorAdmin.toggleAPIKeyStatus('${key.id}', ${!key.is_active})"
                             class="text-${key.is_active ? 'red' : 'green'}-600 hover:text-${key.is_active ? 'red' : 'green'}-900">
                         ${key.is_active ? 'Deactivate' : 'Activate'}
                     </button>
@@ -587,4 +587,4 @@ document.getElementById('create-key-form')?.addEventListener('submit', (e) => {
         expires_at: formData.get('expires_at')
     };
     dataVendorAdmin?.createAPIKey(data);
-}); 
+});

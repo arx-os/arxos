@@ -51,21 +51,21 @@ data:
     events {
       worker_connections 1024;
     }
-    
+
     http {
       upstream svgx_backend {
         server svgx-engine-service:80;
         keepalive 32;
       }
-      
+
       # Rate limiting
       limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
       limit_req_zone $binary_remote_addr zone=websocket:10m rate=100r/s;
-      
+
       server {
         listen 80;
         server_name svgx-engine.arxos.com;
-        
+
         # API rate limiting
         location / {
           limit_req zone=api burst=20 nodelay;
@@ -80,7 +80,7 @@ data:
           proxy_read_timeout 300s;
           proxy_send_timeout 300s;
         }
-        
+
         # WebSocket rate limiting
         location /ws {
           limit_req zone=websocket burst=50 nodelay;
@@ -95,7 +95,7 @@ data:
           proxy_read_timeout 300s;
           proxy_send_timeout 300s;
         }
-        
+
         # Health checks
         location /health {
           proxy_pass http://svgx_backend;
@@ -104,7 +104,7 @@ data:
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
           proxy_set_header X-Forwarded-Proto $scheme;
         }
-        
+
         # Metrics endpoint
         location /metrics {
           proxy_pass http://svgx_backend;
@@ -114,4 +114,4 @@ data:
           proxy_set_header X-Forwarded-Proto $scheme;
         }
       }
-    } 
+    }

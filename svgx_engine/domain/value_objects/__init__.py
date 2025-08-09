@@ -20,9 +20,9 @@ __description__ = "Domain value objects for SVGX Engine"
 # Export all value objects
 __all__ = [
     "Address",
-    "Coordinates", 
+    "Coordinates",
     "Dimensions",
     "Identifier",
     "Money",
     "Status"
-] 
+]

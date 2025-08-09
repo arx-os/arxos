@@ -57,7 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_api_key_usage_created_at ON api_key_usage(created
 -- Add security-related columns to existing tables
 
 -- Add security fields to data_vendor_api_keys
-ALTER TABLE data_vendor_api_keys 
+ALTER TABLE data_vendor_api_keys
 ADD COLUMN IF NOT EXISTS last_used_at TIMESTAMP,
 ADD COLUMN IF NOT EXISTS failed_attempts INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP,
@@ -66,7 +66,7 @@ ADD COLUMN IF NOT EXISTS allowed_user_agents TEXT[],
 ADD COLUMN IF NOT EXISTS security_level VARCHAR(20) DEFAULT 'standard'; -- standard, enhanced, strict
 
 -- Add security fields to users table
-ALTER TABLE users 
+ALTER TABLE users
 ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP,
 ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP,
@@ -92,8 +92,8 @@ END;
 $$ language 'plpgsql';
 
 -- Create trigger for security_alerts
-CREATE TRIGGER update_security_alerts_updated_at 
-    BEFORE UPDATE ON security_alerts 
+CREATE TRIGGER update_security_alerts_updated_at
+    BEFORE UPDATE ON security_alerts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create function to log API key usage
@@ -121,10 +121,10 @@ BEGIN
         p_request_size, p_response_size, p_ip_address, p_user_agent,
         p_error_code, p_error_message, p_rate_limit_hit
     );
-    
+
     -- Update last_used_at for the API key
-    UPDATE data_vendor_api_keys 
-    SET last_used_at = CURRENT_TIMESTAMP 
+    UPDATE data_vendor_api_keys
+    SET last_used_at = CURRENT_TIMESTAMP
     WHERE id = p_api_key_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -140,29 +140,29 @@ DECLARE
 BEGIN
     IF p_success THEN
         -- Reset failed attempts on successful login
-        UPDATE users 
-        SET failed_login_attempts = 0, 
+        UPDATE users
+        SET failed_login_attempts = 0,
             locked_until = NULL,
             last_login_at = CURRENT_TIMESTAMP
         WHERE id = p_user_id;
         RETURN TRUE;
     ELSE
         -- Increment failed attempts
-        UPDATE users 
+        UPDATE users
         SET failed_login_attempts = failed_login_attempts + 1,
-            locked_until = CASE 
-                WHEN failed_login_attempts + 1 >= max_attempts 
-                THEN CURRENT_TIMESTAMP + lock_duration 
-                ELSE locked_until 
+            locked_until = CASE
+                WHEN failed_login_attempts + 1 >= max_attempts
+                THEN CURRENT_TIMESTAMP + lock_duration
+                ELSE locked_until
             END
         WHERE id = p_user_id;
-        
+
         -- Check if account is now locked
         SELECT locked_until IS NOT NULL AND locked_until > CURRENT_TIMESTAMP
         INTO p_success
-        FROM users 
+        FROM users
         WHERE id = p_user_id;
-        
+
         RETURN NOT p_success;
     END IF;
 END;
@@ -173,4 +173,4 @@ INSERT INTO data_retention_policies (object_type, retention_period, archive_afte
 ('security_alerts', 2555, 90, 2555, true, 'Security alerts retained for 7 years with 90-day archive'),
 ('api_key_usage', 1095, 30, 1095, true, 'API key usage logs retained for 3 years with 30-day archive'),
 ('audit_logs', 1825, 90, 1825, true, 'Audit logs retained for 5 years with 90-day archive')
-ON CONFLICT (object_type) DO NOTHING; 
+ON CONFLICT (object_type) DO NOTHING;

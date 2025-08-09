@@ -80,11 +80,11 @@ class DrawingView:
     visible: bool = True
     locked: bool = False
     content: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self):
         """Validate view after initialization."""
         self._validate_view()
-    
+
     def _validate_view(self) -> None:
         """Validate view parameters."""
         if not self.view_id:
@@ -93,26 +93,26 @@ class DrawingView:
             raise ValueError("View name cannot be empty")
         if self.width <= 0 or self.height <= 0:
             raise ValueError("View dimensions must be positive")
-    
+
     def get_transform_matrix(self) -> List[List[Decimal]]:
         """Get transformation matrix for the view."""
         # Convert rotation to radians
         angle_rad = self.rotation * Decimal(str(math.pi)) / Decimal("180")
         cos_angle = Decimal(str(math.cos(float(angle_rad))))
         sin_angle = Decimal(str(math.sin(float(angle_rad))))
-        
+
         # Get scale factor
         if isinstance(self.config.scale, ViewScale):
             scale_factor = self._get_scale_factor(self.config.scale)
         else:
             scale_factor = self.config.scale
-        
+
         return [
             [scale_factor * cos_angle, -scale_factor * sin_angle, self.origin.x],
             [scale_factor * sin_angle, scale_factor * cos_angle, self.origin.y],
             [Decimal("0"), Decimal("0"), Decimal("1")]
         ]
-    
+
     def _get_scale_factor(self, scale: ViewScale) -> Decimal:
         """Get scale factor from ViewScale enum."""
         scale_map = {
@@ -125,23 +125,23 @@ class DrawingView:
             ViewScale.SCALE_10_1: Decimal("10")
         }
         return scale_map.get(scale, Decimal("1"))
-    
+
     def transform_point(self, point: PrecisionPoint) -> PrecisionPoint:
         """Transform a point using the view's transformation."""
         matrix = self.get_transform_matrix()
-        
+
         x = point.x * matrix[0][0] + point.y * matrix[0][1] + matrix[0][2]
         y = point.x * matrix[1][0] + point.y * matrix[1][1] + matrix[1][2]
-        
+
         return PrecisionPoint(x, y, precision_level=point.precision_level)
-    
+
     def is_point_in_view(self, point: PrecisionPoint) -> bool:
         """Check if a point is within the view boundaries."""
         transformed_point = self.transform_point(point)
-        
-        return (0 <= transformed_point.x <= self.width and 
+
+        return (0 <= transformed_point.x <= self.width and
                 0 <= transformed_point.y <= self.height)
-    
+
     def get_view_center(self) -> PrecisionPoint:
         """Get the center point of the view."""
         return PrecisionPoint(
@@ -149,7 +149,7 @@ class DrawingView:
             self.origin.y + self.height / 2,
             precision_level=self.origin.precision_level
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert view to dictionary representation."""
         return {
@@ -179,12 +179,12 @@ class DrawingView:
 
 class ViewGenerator:
     """Generates different types of drawing views."""
-    
+
     def __init__(self):
         """Initialize view generator."""
         logger.info("View generator initialized")
-    
-    def generate_front_view(self, assembly_data: Dict[str, Any], 
+
+    def generate_front_view(self, assembly_data: Dict[str, Any],
                            config: ViewConfig) -> DrawingView:
         """Generate a front view of an assembly."""
         view = DrawingView(
@@ -192,7 +192,7 @@ class ViewGenerator:
             name="Front View",
             config=config
         )
-        
+
         # Simplified front view generation
         # In practice, this would project 3D geometry to 2D
         view.content = {
@@ -200,11 +200,11 @@ class ViewGenerator:
             "assembly_data": assembly_data,
             "projection_matrix": self._get_front_projection_matrix()
         }
-        
+
         logger.debug("Generated front view")
         return view
-    
-    def generate_top_view(self, assembly_data: Dict[str, Any], 
+
+    def generate_top_view(self, assembly_data: Dict[str, Any],
                          config: ViewConfig) -> DrawingView:
         """Generate a top view of an assembly."""
         view = DrawingView(
@@ -212,17 +212,17 @@ class ViewGenerator:
             name="Top View",
             config=config
         )
-        
+
         view.content = {
             "type": "top_projection",
             "assembly_data": assembly_data,
             "projection_matrix": self._get_top_projection_matrix()
         }
-        
+
         logger.debug("Generated top view")
         return view
-    
-    def generate_side_view(self, assembly_data: Dict[str, Any], 
+
+    def generate_side_view(self, assembly_data: Dict[str, Any],
                           config: ViewConfig) -> DrawingView:
         """Generate a side view of an assembly."""
         view = DrawingView(
@@ -230,17 +230,17 @@ class ViewGenerator:
             name="Side View",
             config=config
         )
-        
+
         view.content = {
             "type": "side_projection",
             "assembly_data": assembly_data,
             "projection_matrix": self._get_side_projection_matrix()
         }
-        
+
         logger.debug("Generated side view")
         return view
-    
-    def generate_isometric_view(self, assembly_data: Dict[str, Any], 
+
+    def generate_isometric_view(self, assembly_data: Dict[str, Any],
                               config: ViewConfig) -> DrawingView:
         """Generate an isometric view of an assembly."""
         view = DrawingView(
@@ -248,17 +248,17 @@ class ViewGenerator:
             name="Isometric View",
             config=config
         )
-        
+
         view.content = {
             "type": "isometric_projection",
             "assembly_data": assembly_data,
             "projection_matrix": self._get_isometric_projection_matrix()
         }
-        
+
         logger.debug("Generated isometric view")
         return view
-    
-    def generate_section_view(self, assembly_data: Dict[str, Any], 
+
+    def generate_section_view(self, assembly_data: Dict[str, Any],
                             section_plane: Dict[str, Any], config: ViewConfig) -> DrawingView:
         """Generate a section view of an assembly."""
         view = DrawingView(
@@ -266,17 +266,17 @@ class ViewGenerator:
             name="Section View",
             config=config
         )
-        
+
         view.content = {
             "type": "section_projection",
             "assembly_data": assembly_data,
             "section_plane": section_plane,
             "projection_matrix": self._get_section_projection_matrix(section_plane)
         }
-        
+
         logger.debug("Generated section view")
         return view
-    
+
     def _get_front_projection_matrix(self) -> List[List[Decimal]]:
         """Get front projection matrix."""
         return [
@@ -284,7 +284,7 @@ class ViewGenerator:
             [Decimal("0"), Decimal("1"), Decimal("0")],
             [Decimal("0"), Decimal("0"), Decimal("0")]
         ]
-    
+
     def _get_top_projection_matrix(self) -> List[List[Decimal]]:
         """Get top projection matrix."""
         return [
@@ -292,7 +292,7 @@ class ViewGenerator:
             [Decimal("0"), Decimal("0"), Decimal("0")],
             [Decimal("0"), Decimal("1"), Decimal("0")]
         ]
-    
+
     def _get_side_projection_matrix(self) -> List[List[Decimal]]:
         """Get side projection matrix."""
         return [
@@ -300,19 +300,19 @@ class ViewGenerator:
             [Decimal("0"), Decimal("1"), Decimal("0")],
             [Decimal("1"), Decimal("0"), Decimal("0")]
         ]
-    
+
     def _get_isometric_projection_matrix(self) -> List[List[Decimal]]:
         """Get isometric projection matrix."""
         # Standard isometric projection
         cos_30 = Decimal(str(math.cos(math.radians(30))))
         sin_30 = Decimal(str(math.sin(math.radians(30))))
-        
+
         return [
             [cos_30, -sin_30, Decimal("0")],
             [sin_30, cos_30, Decimal("0")],
             [Decimal("0"), Decimal("0"), Decimal("0")]
         ]
-    
+
     def _get_section_projection_matrix(self, section_plane: Dict[str, Any]) -> List[List[Decimal]]:
         """Get section projection matrix."""
         # Simplified section projection
@@ -326,7 +326,7 @@ class ViewGenerator:
 
 class DrawingViewManager:
     """Main drawing view management system for CAD operations."""
-    
+
     def __init__(self):
         """Initialize drawing view manager."""
         self.views: Dict[str, DrawingView] = {}
@@ -334,31 +334,31 @@ class DrawingViewManager:
         self.next_view_id = 1
         self.projection_type = ProjectionType.THIRD_ANGLE
         logger.info("Drawing view manager initialized")
-    
-    def create_view(self, name: str, view_type: ViewType, 
+
+    def create_view(self, name: str, view_type: ViewType,
                    config: Optional[ViewConfig] = None) -> str:
         """Create a new drawing view."""
         view_id = f"view_{self.next_view_id}"
-        
+
         if config is None:
             config = ViewConfig(view_type=view_type)
-        
+
         view = DrawingView(
             view_id=view_id,
             name=name,
             config=config
         )
-        
+
         self.views[view_id] = view
         self.next_view_id += 1
-        
+
         logger.info(f"Created drawing view: {name} (ID: {view_id})")
         return view_id
-    
+
     def generate_standard_views(self, assembly_data: Dict[str, Any]) -> Dict[str, str]:
         """Generate standard views (front, top, side) for an assembly."""
         view_ids = {}
-        
+
         # Generate front view
         front_config = ViewConfig(view_type=ViewType.FRONT)
         front_view = self.view_generator.generate_front_view(assembly_data, front_config)
@@ -366,7 +366,7 @@ class DrawingViewManager:
         self.views[front_view.view_id] = front_view
         view_ids["front"] = front_view.view_id
         self.next_view_id += 1
-        
+
         # Generate top view
         top_config = ViewConfig(view_type=ViewType.TOP)
         top_view = self.view_generator.generate_top_view(assembly_data, top_config)
@@ -374,7 +374,7 @@ class DrawingViewManager:
         self.views[top_view.view_id] = top_view
         view_ids["top"] = top_view.view_id
         self.next_view_id += 1
-        
+
         # Generate side view
         side_config = ViewConfig(view_type=ViewType.SIDE)
         side_view = self.view_generator.generate_side_view(assembly_data, side_config)
@@ -382,10 +382,10 @@ class DrawingViewManager:
         self.views[side_view.view_id] = side_view
         view_ids["side"] = side_view.view_id
         self.next_view_id += 1
-        
+
         logger.info("Generated standard views for assembly")
         return view_ids
-    
+
     def generate_isometric_view(self, assembly_data: Dict[str, Any]) -> str:
         """Generate an isometric view for an assembly."""
         isometric_config = ViewConfig(view_type=ViewType.ISOMETRIC)
@@ -393,11 +393,11 @@ class DrawingViewManager:
         isometric_view.view_id = f"isometric_{self.next_view_id}"
         self.views[isometric_view.view_id] = isometric_view
         self.next_view_id += 1
-        
+
         logger.info("Generated isometric view for assembly")
         return isometric_view.view_id
-    
-    def generate_section_view(self, assembly_data: Dict[str, Any], 
+
+    def generate_section_view(self, assembly_data: Dict[str, Any],
                             section_plane: Dict[str, Any]) -> str:
         """Generate a section view for an assembly."""
         section_config = ViewConfig(view_type=ViewType.SECTION)
@@ -405,14 +405,14 @@ class DrawingViewManager:
         section_view.view_id = f"section_{self.next_view_id}"
         self.views[section_view.view_id] = section_view
         self.next_view_id += 1
-        
+
         logger.info("Generated section view for assembly")
         return section_view.view_id
-    
+
     def get_view(self, view_id: str) -> Optional[DrawingView]:
         """Get a view by ID."""
         return self.views.get(view_id)
-    
+
     def remove_view(self, view_id: str) -> bool:
         """Remove a view."""
         if view_id in self.views:
@@ -420,7 +420,7 @@ class DrawingViewManager:
             logger.info(f"Removed drawing view: {view_id}")
             return True
         return False
-    
+
     def update_view_config(self, view_id: str, config: ViewConfig) -> bool:
         """Update view configuration."""
         view = self.views.get(view_id)
@@ -429,7 +429,7 @@ class DrawingViewManager:
             logger.debug(f"Updated view configuration: {view_id}")
             return True
         return False
-    
+
     def update_view_position(self, view_id: str, origin: PrecisionPoint) -> bool:
         """Update view position."""
         view = self.views.get(view_id)
@@ -438,7 +438,7 @@ class DrawingViewManager:
             logger.debug(f"Updated view position: {view_id}")
             return True
         return False
-    
+
     def update_view_scale(self, view_id: str, scale: Union[ViewScale, Decimal]) -> bool:
         """Update view scale."""
         view = self.views.get(view_id)
@@ -447,29 +447,29 @@ class DrawingViewManager:
             logger.debug(f"Updated view scale: {view_id}")
             return True
         return False
-    
+
     def get_views_by_type(self, view_type: ViewType) -> List[DrawingView]:
         """Get all views of a specific type."""
         return [view for view in self.views.values() if view.config.view_type == view_type]
-    
+
     def get_visible_views(self) -> List[DrawingView]:
         """Get all visible views."""
         return [view for view in self.views.values() if view.visible]
-    
+
     def get_system_statistics(self) -> Dict[str, Any]:
         """Get drawing view manager statistics."""
         view_types = {}
         for view in self.views.values():
             view_type = view.config.view_type.value
             view_types[view_type] = view_types.get(view_type, 0) + 1
-        
+
         return {
             "total_views": len(self.views),
             "visible_views": len(self.get_visible_views()),
             "view_types": view_types,
             "projection_type": self.projection_type.value
         }
-    
+
     def export_data(self) -> Dict[str, Any]:
         """Export drawing view manager data."""
         return {
@@ -501,7 +501,7 @@ def create_drawing_view(view_id: str, name: str, view_type: ViewType,
     """Create a drawing view."""
     if config is None:
         config = ViewConfig(view_type=view_type)
-    
+
     return DrawingView(
         view_id=view_id,
         name=name,
@@ -516,4 +516,4 @@ def create_view_generator() -> ViewGenerator:
 
 def create_drawing_view_manager() -> DrawingViewManager:
     """Create a new drawing view manager."""
-    return DrawingViewManager() 
+    return DrawingViewManager()

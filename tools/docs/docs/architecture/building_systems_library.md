@@ -274,7 +274,7 @@ All connectors must have a valid `floor_id` that:
 
 Standard connector symbols for different types:
 - **Electrical:** ⚡ or ▭ with "E" label
-- **HVAC:** ❄️ or ▭ with "H" label  
+- **HVAC:** ❄️ or ▭ with "H" label
 - **Plumbing:** 💧 or ▭ with "P" label
 - **Data:** 📡 or ▭ with "D" label
 - **Security:** 🔒 or ▭ with "S" label

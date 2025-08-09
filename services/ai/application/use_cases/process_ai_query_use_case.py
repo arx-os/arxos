@@ -45,30 +45,30 @@ class ProcessAIQueryResponse:
 class ProcessAIQueryUseCase:
     """
     Use case for processing AI queries.
-    
+
     This use case encapsulates the business logic for processing AI queries,
     following Clean Architecture principles by being independent of frameworks.
     """
-    
+
     def __init__(self, ai_agent: AIAgent):
         """
         Initialize the use case.
-        
+
         Args:
             ai_agent: AI agent instance for processing queries
         """
         self.ai_agent = ai_agent
-    
+
     def execute(self, request: ProcessAIQueryRequest) -> ProcessAIQueryResponse:
         """
         Execute the AI query processing use case.
-        
+
         Args:
             request: AI query request
-            
+
         Returns:
             AI query response
-            
+
         Raises:
             AIAgentError: If processing fails
         """
@@ -82,10 +82,10 @@ class ProcessAIQueryUseCase:
                 session_id=request.session_id,
                 model=request.model
             )
-            
+
             # Process query using domain entity
             response = self.ai_agent.process_query(query)
-            
+
             # Convert to response DTO
             return ProcessAIQueryResponse(
                 success=True,
@@ -96,7 +96,7 @@ class ProcessAIQueryUseCase:
                 processing_time=response.processing_time,
                 metadata=response.metadata
             )
-            
+
         except AIAgentError as e:
             return ProcessAIQueryResponse(
                 success=False,
@@ -116,4 +116,4 @@ class ProcessAIQueryUseCase:
                 model_used="",
                 processing_time=0.0,
                 error_message=f"Unexpected error: {str(e)}"
-            ) 
+            )

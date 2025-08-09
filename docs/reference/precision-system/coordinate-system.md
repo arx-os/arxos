@@ -583,4 +583,4 @@ print(f"Validation rules: {config.validation_rules}")
 3. **Real-time Applications**
    - AR/VR coordinate transformations
    - Real-time tracking systems
-   - Mobile device coordinate systems 
+   - Mobile device coordinate systems

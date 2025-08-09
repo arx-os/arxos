@@ -29,7 +29,7 @@ language_configs:
       nullSafe: true
       stringEnums: true
     template_dir: "./templates/typescript"
-    
+
   python:
     generator: "python"
     additional_properties:
@@ -42,7 +42,7 @@ language_configs:
       pythonVersion: "3.8"
       withInterfaces: true
     template_dir: "./templates/python"
-    
+
   go:
     generator: "go"
     additional_properties:
@@ -53,7 +53,7 @@ language_configs:
       withGoModules: true
       withSeparateModelsAndApi: true
     template_dir: "./templates/go"
-    
+
   java:
     generator: "java"
     additional_properties:
@@ -66,7 +66,7 @@ language_configs:
       useBeanValidation: true
       useOptional: true
     template_dir: "./templates/java"
-    
+
   csharp:
     generator: "csharp"
     additional_properties:
@@ -79,7 +79,7 @@ language_configs:
       useDateTimeOffset: true
       useCollection: true
     template_dir: "./templates/csharp"
-    
+
   php:
     generator: "php"
     additional_properties:
@@ -110,4 +110,4 @@ ci_cd:
   auto_generate: true
   auto_test: true
   auto_publish: true
-  version_management: true 
+  version_management: true

@@ -154,7 +154,7 @@ def _analyze_line_pattern(self, drawing):
         'is_straight': self._is_straight_line(drawing),
         'orientation': self._calculate_line_orientation(drawing)
     }
-    
+
     # Classify based on properties
     if line_props['thickness'] > 2 and line_props['length'] > 50:
         return {'type': 'wall', 'subtype': 'exterior_wall', 'confidence': 0.85}
@@ -224,17 +224,17 @@ def _calculate_overall_confidence(self, recognized_objects, system_components):
     """Calculate overall confidence score"""
     if not recognized_objects:
         return 0.0
-    
+
     # Calculate average confidence
     total_confidence = sum(obj.get('confidence', 0.0) for obj in recognized_objects)
     avg_confidence = total_confidence / len(recognized_objects)
-    
+
     # Adjust based on component distribution
     total_components = sum(len(comps) for comps in system_components.values())
     if total_components > 0:
         distribution_factor = min(total_components / 20, 1.0)
         avg_confidence = avg_confidence * (0.8 + 0.2 * distribution_factor)
-    
+
     return min(avg_confidence, 1.0)
 ```
 
@@ -250,20 +250,20 @@ def _validate_schedule(self, schedule):
         'issues': [],
         'recommendations': []
     }
-    
+
     # Check completeness
     systems = schedule.get('systems', {})
     total_components = sum(len(sys.get('components', [])) for sys in systems.values())
-    
+
     if total_components > 0:
         validation_result['completeness'] = min(total_components / 10, 1.0)
     else:
         validation_result['issues'].append("No system components found")
-    
+
     # Check confidence
     confidence = schedule.get('confidence', 0.0)
     validation_result['accuracy'] = confidence
-    
+
     return validation_result
 ```
 
@@ -374,4 +374,4 @@ The system is ready for production use and can handle the three specified use ca
 2. **Wall Structure + Network IDFs + HVAC/R PDFs**
 3. **Full MEP PDFs** (Wall + Electrical + HVAC/R + AV + Telecom + Plumbing)
 
-Users can now upload PDFs and automatically generate comprehensive system schedules with confidence scoring, cost estimation, and timeline generation. 
+Users can now upload PDFs and automatically generate comprehensive system schedules with confidence scoring, cost estimation, and timeline generation.

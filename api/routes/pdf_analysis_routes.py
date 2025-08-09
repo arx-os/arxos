@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from domain.value_objects import TaskId, UserId, TaskStatus
 from domain.exceptions import (
-    PDFAnalysisNotFoundError, InvalidPDFAnalysisError, 
+    PDFAnalysisNotFoundError, InvalidPDFAnalysisError,
     InvalidTaskStatusError, RepositoryError
 )
 from application.use_cases.pdf_analysis_use_cases import (
@@ -127,18 +127,18 @@ def get_pdf_analysis_orchestrator() -> PDFAnalysisOrchestrator:
     from infrastructure.database.connection_manager import DatabaseConnectionManager
     from infrastructure.repository_factory import SQLAlchemyRepositoryFactory
     from sqlalchemy.orm import sessionmaker
-    
+
     # Create session factory
     connection_manager = DatabaseConnectionManager()
     session_factory = sessionmaker(bind=connection_manager.get_engine())
-    
+
     # Create Unit of Work
     unit_of_work = SQLAlchemyUnitOfWork(session_factory)
-    
+
     # Initialize services
     gus_service = GUSService("http://localhost:8001")  # GUS service URL
     file_storage_service = FileStorageService("/tmp/arxos/pdf_analysis")
-    
+
     return PDFAnalysisOrchestrator(unit_of_work, gus_service, file_storage_service)
 
 
@@ -155,12 +155,12 @@ async def upload_pdf_for_analysis(
 ):
     """
     Upload a PDF file for analysis.
-    
+
     Args:
         file: PDF file to upload
         request: Analysis requirements
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         PDF analysis response with task ID
     """
@@ -168,15 +168,15 @@ async def upload_pdf_for_analysis(
         # Validate file
         if not file.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-        
+
         # Read file content
         file_content = await file.read()
         if not file_content:
             raise HTTPException(status_code=400, detail="Empty file")
-        
+
         # Create analysis (using orchestrator which handles use cases)
         response = await orchestrator.create_pdf_analysis(
-            user_id=UserId("default_user"),  # TODO: Get from authentication
+            user_id=UserId("default_user"),  # TODO: Get from authentication import authentication
             filename=file.filename,
             file_content=file_content,
             include_cost_estimation=request.include_cost_estimation,
@@ -184,10 +184,10 @@ async def upload_pdf_for_analysis(
             include_quantities=request.include_quantities,
             requirements=request.requirements
         )
-        
+
         if not response.success:
             raise HTTPException(status_code=400, detail=response.message)
-        
+
         # Convert to API response
         return PDFAnalysisResponse(
             task_id=str(response.task_id),
@@ -199,7 +199,7 @@ async def upload_pdf_for_analysis(
             success=response.success,
             message=response.message
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -214,20 +214,20 @@ async def start_pdf_analysis(
 ):
     """
     Start PDF analysis processing.
-    
+
     Args:
         task_id: Task ID to start
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Status response
     """
     try:
         response = await orchestrator.start_pdf_analysis(TaskId(task_id))
-        
+
         if not response.success:
             raise HTTPException(status_code=400, detail=response.message)
-        
+
         return PDFAnalysisStatusResponse(
             task_id=str(response.task_id),
             status=str(response.status),
@@ -236,7 +236,7 @@ async def start_pdf_analysis(
             success=response.success,
             message=response.message
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -251,20 +251,20 @@ async def get_pdf_analysis_status(
 ):
     """
     Get PDF analysis status.
-    
+
     Args:
         task_id: Task ID to check
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Status response
     """
     try:
         response = await orchestrator.get_pdf_analysis_status(TaskId(task_id))
-        
+
         if not response.success:
             raise HTTPException(status_code=404, detail=response.message)
-        
+
         return PDFAnalysisStatusResponse(
             task_id=str(response.task_id),
             status=str(response.status),
@@ -273,7 +273,7 @@ async def get_pdf_analysis_status(
             success=response.success,
             message=response.message
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -288,20 +288,20 @@ async def get_pdf_analysis_result(
 ):
     """
     Get PDF analysis result.
-    
+
     Args:
         task_id: Task ID to retrieve result for
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Analysis result response
     """
     try:
         response = await orchestrator.get_pdf_analysis_result(TaskId(task_id))
-        
+
         if not response.success:
             raise HTTPException(status_code=404, detail=response.message)
-        
+
         # Extract analysis result data
         analysis_result = response.analysis_result
         project_info = analysis_result.project_info if analysis_result else None
@@ -310,7 +310,7 @@ async def get_pdf_analysis_result(
         cost_estimates = analysis_result.cost_estimates if analysis_result else None
         timeline = analysis_result.timeline if analysis_result else None
         metadata = analysis_result.metadata if analysis_result else None
-        
+
         return PDFAnalysisResultResponse(
             task_id=str(response.task_id),
             status=str(response.status),
@@ -327,7 +327,7 @@ async def get_pdf_analysis_result(
             success=response.success,
             message=response.message
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -342,20 +342,20 @@ async def cancel_pdf_analysis(
 ):
     """
     Cancel PDF analysis.
-    
+
     Args:
         task_id: Task ID to cancel
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Status response
     """
     try:
         response = await orchestrator.cancel_pdf_analysis(TaskId(task_id))
-        
+
         if not response.success:
             raise HTTPException(status_code=400, detail=response.message)
-        
+
         return PDFAnalysisStatusResponse(
             task_id=str(response.task_id),
             status=str(response.status),
@@ -364,7 +364,7 @@ async def cancel_pdf_analysis(
             success=response.success,
             message=response.message
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -381,13 +381,13 @@ async def list_pdf_analyses(
 ):
     """
     List PDF analyses with filters.
-    
+
     Args:
         user_id: Optional user ID filter
         status: Optional status filter
         limit: Maximum number of results
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         List of PDF analyses
     """
@@ -399,20 +399,20 @@ async def list_pdf_analyses(
                 status_enum = TaskStatus(status)
             except ValueError:
                 raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
-        
+
         response = await orchestrator.list_pdf_analyses(
             user_id=UserId(user_id) if user_id else None,
             status=status_enum,
             limit=limit
         )
-        
+
         return PDFAnalysisListResponse(
             analyses=response.analyses,
             total_count=response.total_count,
             success=response.success,
             message=response.message
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -429,13 +429,13 @@ async def get_pdf_analysis_statistics(
 ):
     """
     Get PDF analysis statistics.
-    
+
     Args:
         user_id: Optional user ID filter
         date_from: Optional start date
         date_to: Optional end date
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Statistics response
     """
@@ -445,13 +445,13 @@ async def get_pdf_analysis_statistics(
             date_from=date_from,
             date_to=date_to
         )
-        
+
         return PDFAnalysisStatisticsResponse(
             statistics=response.statistics,
             success=response.success,
             message=response.message
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -468,13 +468,13 @@ async def export_pdf_analysis(
 ):
     """
     Export PDF analysis result.
-    
+
     Args:
         task_id: Task ID to export
         export_format: Export format (json, csv, pdf, excel)
         include_metadata: Whether to include metadata
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Exported file as streaming response
     """
@@ -483,24 +483,24 @@ async def export_pdf_analysis(
         valid_formats = ["json", "csv", "pdf", "excel"]
         if export_format not in valid_formats:
             raise HTTPException(status_code=400, detail=f"Invalid export format. Must be one of: {valid_formats}")
-        
-        # Get file storage service from orchestrator
+
+        # Get file storage service from orchestrator import orchestrator
         file_storage_service = orchestrator.file_storage_service
-        
+
         # Export file
         content, filename = await file_storage_service.export_analysis_result(
             task_id=task_id,
             export_format=export_format,
             include_metadata=include_metadata
         )
-        
+
         # Return as streaming response
         return StreamingResponse(
             iter([content]),
             media_type="application/octet-stream",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -515,28 +515,28 @@ async def validate_pdf_analysis(
 ):
     """
     Validate PDF analysis result.
-    
+
     Args:
         task_id: Task ID to validate
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Validation response
     """
     try:
-        # Get GUS service from orchestrator
+        # Get GUS service from orchestrator import orchestrator
         gus_service = orchestrator.gus_service
-        
+
         # Validate analysis
         validation_result = await gus_service.validate_analysis(task_id)
-        
+
         return {
             "task_id": task_id,
             "validation_result": validation_result,
             "success": True,
             "message": "Analysis validation completed"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -551,34 +551,34 @@ async def delete_pdf_analysis(
 ):
     """
     Delete PDF analysis and associated files.
-    
+
     Args:
         task_id: Task ID to delete
         orchestrator: PDF analysis orchestrator
-        
+
     Returns:
         Deletion response
     """
     try:
-        # Get repository from orchestrator
+        # Get repository from orchestrator import orchestrator
         repository = orchestrator.repository
-        
-        # Delete from repository
+
+        # Delete from repository import repository
         deleted = repository.delete(TaskId(task_id))
-        
+
         if not deleted:
             raise HTTPException(status_code=404, detail=f"PDF analysis {task_id} not found")
-        
+
         # Clean up files
         file_storage_service = orchestrator.file_storage_service
         await file_storage_service.cleanup_task_files(task_id)
-        
+
         return {
             "task_id": task_id,
             "success": True,
             "message": "PDF analysis deleted successfully"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -590,7 +590,7 @@ async def delete_pdf_analysis(
 async def pdf_analysis_health_check():
     """
     Health check for PDF analysis service.
-    
+
     Returns:
         Health status
     """
@@ -602,7 +602,7 @@ async def pdf_analysis_health_check():
             "timestamp": datetime.utcnow().isoformat(),
             "version": "1.0.0"
         }
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unhealthy") 
+        raise HTTPException(status_code=503, detail="Service unhealthy")

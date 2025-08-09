@@ -36,4 +36,4 @@ __all__ = [
     'TaskExecutionError',
     'KnowledgeQueryError',
     'PDFAnalysisError'
-] 
+]

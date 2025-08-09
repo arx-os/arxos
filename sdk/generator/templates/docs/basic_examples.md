@@ -494,4 +494,4 @@ Basic usage examples for the Arxos {{ language.title() }} SDK.
 
 ```{{ language }}
 {{ monitoring_example_code }}
-``` 
+```

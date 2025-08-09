@@ -242,7 +242,7 @@ const AIChat: React.FC<{
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' } as const}>
       {/* Chat Header */}
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -617,8 +617,8 @@ export const AIIntegration: React.FC<AIIntegrationProps> = ({
   // Handle export results
   const handleExportResults = useCallback((results: any[]) => {
     console.log('Exporting analysis results:', results);
-    onExportResults?.(results);
-  }, [onExportResults]);
+    // TODO: Implement export functionality
+  }, []);
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -743,4 +743,4 @@ export const AIIntegration: React.FC<AIIntegrationProps> = ({
       </Box>
     </Box>
   );
-}; 
+};

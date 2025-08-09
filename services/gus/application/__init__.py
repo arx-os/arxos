@@ -30,4 +30,4 @@ __all__ = [
     'ExecuteGUSTaskUseCase',
     'ExecuteGUSTaskRequest',
     'ExecuteGUSTaskResponse'
-] 
+]

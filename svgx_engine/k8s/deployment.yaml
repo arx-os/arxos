@@ -247,7 +247,7 @@ data:
       name: "SVGX Engine"
       version: "1.0.0"
       environment: "production"
-    
+
     # Performance Configuration
     performance:
       ui_response_time_target_ms: 16
@@ -256,7 +256,7 @@ data:
       batch_processing_enabled: true
       cache_enabled: true
       cache_ttl_seconds: 3600
-    
+
     # Security Configuration
     security:
       input_validation_enabled: true
@@ -267,7 +267,7 @@ data:
       allowed_origins:
         - "https://svgx-engine.example.com"
         - "https://app.example.com"
-    
+
     # Database Configuration
     database:
       type: "sqlite"
@@ -275,7 +275,7 @@ data:
       connection_timeout_seconds: 30
       query_timeout_seconds: 60
       enable_logging: true
-    
+
     # Logging Configuration
     logging:
       level: "INFO"
@@ -284,21 +284,21 @@ data:
       file_enabled: false
       performance_logging: true
       security_logging: true
-    
+
     # Telemetry Configuration
     telemetry:
       enabled: true
       endpoint: "https://telemetry.example.com"
       batch_size: 100
       flush_interval_seconds: 30
-    
+
     # Cache Configuration
     cache:
       backend: "memory"
       max_size: 1000
       policy: "lru"
       ttl_seconds: 3600
-    
+
     # API Configuration
     api:
       docs_enabled: true
@@ -395,4 +395,4 @@ spec:
     scrapeTimeout: 10s
   namespaceSelector:
     matchNames:
-    - svgx-engine 
+    - svgx-engine

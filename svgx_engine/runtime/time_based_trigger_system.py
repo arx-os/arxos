@@ -55,8 +55,9 @@ class Trigger:
     last_executed: Optional[datetime] = None
     next_execution: Optional[datetime] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -99,7 +100,7 @@ Example:
         # Simplified cron parsing - in production, use a proper cron library
         if not self.cron_expression:
             return None
-        
+
         # Basic cron format: minute hour day month weekday
         # For now, return a placeholder - implement full cron parsing
         return datetime.utcnow() + timedelta(minutes=1)
@@ -109,7 +110,7 @@ class TimeBasedTriggerSystem:
     Handles time-based trigger scheduling, execution, and management for SVGX elements.
     Supports various trigger types with timezone awareness and calendar integration.
     """
-    def __init__(self):
+def __init__(self):
         # {trigger_id: Trigger}
         self.triggers: Dict[str, Trigger] = {}
         # {trigger_id: List[Dict[str, Any]]}
@@ -125,9 +126,9 @@ class TimeBasedTriggerSystem:
         if self.running:
             logger.warning("Trigger system is already running")
             return
-        
+
         self.running = True
-        self.monitor_task = asyncio.create_task(self._monitor_triggers())
+        self.monitor_task = asyncio.create_task(self._monitor_triggers()
         logger.info("Time-based trigger system started")
 
     async def stop(self):
@@ -135,7 +136,7 @@ class TimeBasedTriggerSystem:
         if not self.running:
             logger.warning("Trigger system is not running")
             return
-        
+
         self.running = False
         if self.monitor_task:
             self.monitor_task.cancel()
@@ -151,19 +152,19 @@ class TimeBasedTriggerSystem:
             try:
                 current_time = datetime.utcnow()
                 triggers_to_execute = []
-                
+
                 for trigger in self.triggers.values():
-                    if (trigger.status == TriggerStatus.ACTIVE and 
-                        trigger.next_execution and 
+                    if (trigger.status == TriggerStatus.ACTIVE and
+                        trigger.next_execution and
                         current_time >= trigger.next_execution):
                         triggers_to_execute.append(trigger)
-                
+
                 # Execute triggers
                 for trigger in triggers_to_execute:
                     await self._execute_trigger(trigger)
-                
+
                 await asyncio.sleep(self.monitor_interval)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -188,35 +189,35 @@ class TimeBasedTriggerSystem:
                     "metadata": trigger.metadata
                 }
             )
-            
+
             # Process event through the behavior engine
             # Import here to avoid circular imports
             from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
             result = event_driven_behavior_engine.process_event(event)
             if hasattr(result, '__await__'):
                 await result
-            
+
             # Update trigger state
             trigger.last_executed = datetime.utcnow()
             trigger.current_executions += 1
-            
+
             # Check if trigger should be completed
-            if (trigger.max_executions and 
+            if (trigger.max_executions and
                 trigger.current_executions >= trigger.max_executions):
                 trigger.status = TriggerStatus.COMPLETED
                 trigger.next_execution = None
             else:
                 trigger.next_execution = trigger._calculate_next_execution()
-            
+
             # Record execution
             self._record_execution(trigger.id, {
                 "execution_time": trigger.last_executed,
                 "success": True,
                 "event_id": event.id
             })
-            
+
             logger.info(f"Trigger {trigger.id} executed successfully")
-            
+
         except Exception as e:
             logger.error(f"Error executing trigger {trigger.id}: {e}")
             trigger.status = TriggerStatus.FAILED
@@ -307,7 +308,7 @@ class TimeBasedTriggerSystem:
         if not trigger:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         trigger.status = TriggerStatus.PAUSED
         logger.info(f"Paused trigger: {trigger_id}")
         return True
@@ -318,11 +319,11 @@ class TimeBasedTriggerSystem:
         if not trigger:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         if trigger.status != TriggerStatus.PAUSED:
             logger.warning(f"Trigger {trigger_id} is not paused")
             return False
-        
+
         trigger.status = TriggerStatus.ACTIVE
         trigger.next_execution = trigger._calculate_next_execution()
         logger.info(f"Resumed trigger: {trigger_id}")
@@ -334,7 +335,7 @@ class TimeBasedTriggerSystem:
         if not trigger:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         trigger.status = TriggerStatus.CANCELLED
         trigger.next_execution = None
         logger.info(f"Cancelled trigger: {trigger_id}")
@@ -345,7 +346,7 @@ class TimeBasedTriggerSystem:
         if trigger_id not in self.triggers:
             logger.warning(f"Trigger {trigger_id} not found")
             return False
-        
+
         del self.triggers[trigger_id]
         if trigger_id in self.execution_history:
             del self.execution_history[trigger_id]
@@ -358,7 +359,7 @@ class TimeBasedTriggerSystem:
 
     def get_triggers(self, status: Optional[TriggerStatus] = None) -> List[Trigger]:
         """Get all triggers, optionally filtered by status."""
-        triggers = list(self.triggers.values())
+        triggers = list(self.triggers.values()
         if status:
             triggers = [t for t in triggers if t.status == status]
         return triggers
@@ -381,7 +382,7 @@ class TimeBasedTriggerSystem:
         """Record trigger execution in history."""
         if trigger_id not in self.execution_history:
             self.execution_history[trigger_id] = []
-        
+
         self.execution_history[trigger_id].append(execution_data)
 
     def clear_execution_history(self, trigger_id: str):
@@ -396,7 +397,7 @@ class TimeBasedTriggerSystem:
         paused_triggers = len([t for t in self.triggers.values() if t.status == TriggerStatus.PAUSED])
         completed_triggers = len([t for t in self.triggers.values() if t.status == TriggerStatus.COMPLETED])
         failed_triggers = len([t for t in self.triggers.values() if t.status == TriggerStatus.FAILED])
-        
+
         return {
             "running": self.running,
             "total_triggers": total_triggers,
@@ -404,7 +405,7 @@ class TimeBasedTriggerSystem:
             "paused_triggers": paused_triggers,
             "completed_triggers": completed_triggers,
             "failed_triggers": failed_triggers,
-            "due_triggers": len(self.get_due_triggers())
+            "due_triggers": len(self.get_due_triggers()
         }
 
 # Global instance
@@ -428,12 +429,12 @@ Example:
         result = _register_time_based_trigger_system(param)
         print(result)
     """
-    def handler(event: Event):
+def handler(event: Event):
         if event.type == EventType.SYSTEM and event.data.get('trigger_id'):
             # Trigger events are handled internally by the system
             return None
         return None
-    
+
     # Import here to avoid circular imports
     from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
     event_driven_behavior_engine.register_handler(
@@ -443,4 +444,4 @@ Example:
         priority=0
     )
 
-_register_time_based_trigger_system() 
+_register_time_based_trigger_system()

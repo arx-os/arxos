@@ -14,17 +14,17 @@ export class LinkGenerator {
             enableAnalytics: options.enableAnalytics !== false,
             ...options
         };
-        
+
         // Link storage
         this.generatedLinks = new Map();
         this.linkAnalytics = new Map();
-        
+
         // QR code library (if available)
         this.qrCodeLibrary = null;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -38,7 +38,7 @@ export class LinkGenerator {
         document.addEventListener('generateLink', (event) => {
             this.handleLinkGenerationRequest(event.detail);
         });
-        
+
         // Listen for link access
         document.addEventListener('linkAccessed', (event) => {
             this.handleLinkAccess(event.detail);
@@ -47,7 +47,7 @@ export class LinkGenerator {
 
     async loadQRCodeLibrary() {
         if (!this.options.enableQRCode) return;
-        
+
         try {
             // Try to load QR code library dynamically
             if (typeof QRCode !== 'undefined') {
@@ -85,17 +85,17 @@ export class LinkGenerator {
             zoom = true,
             customParams = {}
         } = params;
-        
+
         try {
             // Validate parameters
             const validationResult = this.validateLinkParams(params);
             if (!validationResult.valid) {
                 throw new Error(validationResult.error);
             }
-            
+
             // Generate unique link ID
             const linkId = this.generateLinkId();
-            
+
             // Create link URL
             const linkUrl = this.createLinkUrl({
                 linkId,
@@ -107,7 +107,7 @@ export class LinkGenerator {
                 zoom,
                 customParams
             });
-            
+
             // Create link object
             const link = {
                 id: linkId,
@@ -126,22 +126,22 @@ export class LinkGenerator {
                 accessCount: 0,
                 lastAccessed: null
             };
-            
+
             // Store link
             this.generatedLinks.set(linkId, link);
-            
+
             // Save to server
             await this.saveLinkToServer(link);
-            
+
             // Track analytics
             if (this.options.enableAnalytics) {
                 this.trackLinkGeneration(link);
             }
-            
+
             this.triggerEvent('linkGenerated', { link });
-            
+
             return link;
-            
+
         } catch (error) {
             console.error('Link generation failed:', error);
             this.triggerEvent('linkGenerationFailed', { params, error });
@@ -151,25 +151,25 @@ export class LinkGenerator {
 
     validateLinkParams(params) {
         const errors = [];
-        
+
         if (!params.objectId) {
             errors.push('objectId is required');
         }
-        
+
         if (!params.buildingId) {
             errors.push('buildingId is required');
         }
-        
+
         if (!params.floorId) {
             errors.push('floorId is required');
         }
-        
+
         // Validate access type
         const validAccessTypes = ['public', 'private', 'expiring'];
         if (params.accessType && !validAccessTypes.includes(params.accessType)) {
             errors.push(`Invalid access type: ${params.accessType}`);
         }
-        
+
         // Validate expiry date
         if (params.expiresAt) {
             const expiryDate = new Date(params.expiresAt);
@@ -179,7 +179,7 @@ export class LinkGenerator {
                 errors.push('Expiry date must be in the future');
             }
         }
-        
+
         return {
             valid: errors.length === 0,
             error: errors.join(', ')
@@ -204,47 +204,47 @@ export class LinkGenerator {
             zoom,
             customParams
         } = params;
-        
+
         const url = new URL(`${this.options.baseUrl}/viewer`);
-        
+
         // Add required parameters
         url.searchParams.set('link_id', linkId);
         url.searchParams.set('building_id', buildingId);
         url.searchParams.set('floor_id', floorId);
         url.searchParams.set('object_id', objectId);
-        
+
         // Add view options
         if (viewOptions.zoom !== undefined) {
             url.searchParams.set('zoom', viewOptions.zoom);
         }
-        
+
         if (viewOptions.pan) {
             url.searchParams.set('pan', JSON.stringify(viewOptions.pan));
         }
-        
+
         if (viewOptions.rotation !== undefined) {
             url.searchParams.set('rotation', viewOptions.rotation);
         }
-        
+
         // Add highlighting and zoom options
         if (highlight !== undefined) {
             url.searchParams.set('highlight', highlight.toString());
         }
-        
+
         if (zoom !== undefined) {
             url.searchParams.set('zoom_to_object', zoom.toString());
         }
-        
+
         // Add custom parameters
         Object.entries(customParams).forEach(([key, value]) => {
             url.searchParams.set(key, value.toString());
         });
-        
+
         // Validate URL length
         if (url.toString().length > this.options.maxLinkLength) {
             throw new Error('Generated link exceeds maximum length');
         }
-        
+
         return url.toString();
     }
 
@@ -257,7 +257,7 @@ export class LinkGenerator {
         if (!this.qrCodeLibrary) {
             throw new Error('QR code library not available');
         }
-        
+
         const {
             size = this.options.qrCodeSize,
             margin = 2,
@@ -265,7 +265,7 @@ export class LinkGenerator {
             backgroundColor = '#FFFFFF',
             errorCorrectionLevel = 'M'
         } = options;
-        
+
         try {
             const qrCodeDataUrl = await this.qrCodeLibrary.toDataURL(link.url, {
                 width: size,
@@ -276,18 +276,18 @@ export class LinkGenerator {
                 },
                 errorCorrectionLevel: errorCorrectionLevel
             });
-            
+
             const qrCode = {
                 dataUrl: qrCodeDataUrl,
                 url: link.url,
                 size: size,
                 linkId: link.id
             };
-            
+
             this.triggerEvent('qrCodeGenerated', { qrCode, link });
-            
+
             return qrCode;
-            
+
         } catch (error) {
             console.error('QR code generation failed:', error);
             this.triggerEvent('qrCodeGenerationFailed', { link, error });
@@ -301,18 +301,18 @@ export class LinkGenerator {
         if (!link) {
             return { valid: false, reason: 'Link not found' };
         }
-        
+
         // Check if link has expired
         if (link.expiresAt && Date.now() > link.expiresAt) {
             return { valid: false, reason: 'Link has expired' };
         }
-        
+
         // Check access permissions
         const accessResult = await this.checkLinkAccess(link);
         if (!accessResult.granted) {
             return { valid: false, reason: accessResult.reason };
         }
-        
+
         return { valid: true, link };
     }
 
@@ -331,14 +331,14 @@ export class LinkGenerator {
                     buildingId: link.buildingId
                 })
             });
-            
+
             if (!response.ok) {
                 return { granted: false, reason: 'Access denied' };
             }
-            
+
             const result = await response.json();
             return { granted: result.granted, reason: result.reason };
-            
+
         } catch (error) {
             console.error('Link access check failed:', error);
             return { granted: false, reason: 'Access check failed' };
@@ -348,19 +348,19 @@ export class LinkGenerator {
     async recordLinkAccess(linkId) {
         const link = this.generatedLinks.get(linkId);
         if (!link) return;
-        
+
         // Update access count
         link.accessCount++;
         link.lastAccessed = Date.now();
-        
+
         // Track analytics
         if (this.options.enableAnalytics) {
             this.trackLinkAccess(link);
         }
-        
+
         // Update on server
         await this.updateLinkOnServer(link);
-        
+
         this.triggerEvent('linkAccessed', { link });
     }
 
@@ -370,21 +370,21 @@ export class LinkGenerator {
         if (!link) {
             throw new Error(`Link '${linkId}' not found`);
         }
-        
+
         // Update link properties
         const updatedLink = {
             ...link,
             ...updates,
             updatedAt: Date.now()
         };
-        
+
         this.generatedLinks.set(linkId, updatedLink);
-        
+
         // Update on server
         await this.updateLinkOnServer(updatedLink);
-        
+
         this.triggerEvent('linkUpdated', { link: updatedLink, updates });
-        
+
         return updatedLink;
     }
 
@@ -393,15 +393,15 @@ export class LinkGenerator {
         if (!link) {
             return false;
         }
-        
+
         // Remove from local storage
         this.generatedLinks.delete(linkId);
-        
+
         // Remove from server
         await this.deleteLinkFromServer(linkId);
-        
+
         this.triggerEvent('linkDeleted', { link });
-        
+
         return true;
     }
 
@@ -439,9 +439,9 @@ export class LinkGenerator {
             timestamp: Date.now(),
             userId: this.getCurrentUserId()
         };
-        
+
         this.linkAnalytics.set(link.id, analytics);
-        
+
         // Send to analytics service
         this.sendAnalytics('link_generated', analytics);
     }
@@ -455,7 +455,7 @@ export class LinkGenerator {
             timestamp: Date.now(),
             userId: this.getCurrentUserId()
         };
-        
+
         // Send to analytics service
         this.sendAnalytics('link_accessed', analytics);
     }
@@ -490,13 +490,13 @@ export class LinkGenerator {
                 },
                 body: JSON.stringify(link)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to save link: ${response.status}`);
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to save link to server:', error);
             throw error;
@@ -513,13 +513,13 @@ export class LinkGenerator {
                 },
                 body: JSON.stringify(link)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to update link: ${response.status}`);
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to update link on server:', error);
             throw error;
@@ -532,11 +532,11 @@ export class LinkGenerator {
                 method: 'DELETE',
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to delete link: ${response.status}`);
             }
-            
+
         } catch (error) {
             console.error('Failed to delete link from server:', error);
             throw error;
@@ -560,14 +560,14 @@ export class LinkGenerator {
         if (!object) {
             throw new Error(`Object '${objectId}' not found`);
         }
-        
+
         const params = {
             objectId: object.id,
             buildingId: object.building_id,
             floorId: object.floor_id,
             ...options
         };
-        
+
         return this.generateLink(params);
     }
 
@@ -576,7 +576,7 @@ export class LinkGenerator {
         if (!link) {
             throw new Error(`Link '${linkId}' not found`);
         }
-        
+
         return this.generateQRCode(link, options);
     }
 
@@ -587,7 +587,7 @@ export class LinkGenerator {
     getGeneratorStats() {
         return {
             totalLinks: this.generatedLinks.size,
-            activeLinks: this.getAllLinks().filter(link => 
+            activeLinks: this.getAllLinks().filter(link =>
                 !link.expiresAt || link.expiresAt > Date.now()
             ).length,
             expiredLinks: this.getExpiredLinks().length,
@@ -610,13 +610,13 @@ export class LinkGenerator {
             const response = await fetch(`/api/objects/${objectId}`, {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 return null;
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to get object details:', error);
             return null;
@@ -658,9 +658,9 @@ export class LinkGenerator {
     destroy() {
         this.generatedLinks.clear();
         this.linkAnalytics.clear();
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

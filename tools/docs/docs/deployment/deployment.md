@@ -447,4 +447,4 @@ curl -X GET http://localhost:8000/metrics
 - **Resource Monitoring**: Monitor CPU, memory, and disk usage
 - **Resource Limits**: Set appropriate resource limits
 - **Performance Tuning**: Optimize application performance
-- **Capacity Planning**: Plan for future growth 
+- **Capacity Planning**: Plan for future growth

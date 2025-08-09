@@ -50,7 +50,8 @@ import {
   Warning as WarningIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
-import { io, Socket } from 'socket.io-client';
+// import { io } from 'socket.io-client';
+// import type { Socket } from 'socket.io-client';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
@@ -473,8 +474,8 @@ export const CollaborationSystem: React.FC<CollaborationSystemProps> = ({
         });
 
         socket.on('comment-resolved', (commentId: string) => {
-          setComments(prev => 
-            prev.map(c => 
+          setComments(prev =>
+            prev.map(c =>
               c.id === commentId ? { ...c, resolved: true } : c
             )
           );
@@ -707,4 +708,4 @@ export const CollaborationSystem: React.FC<CollaborationSystemProps> = ({
       </Dialog>
     </Box>
   );
-}; 
+};

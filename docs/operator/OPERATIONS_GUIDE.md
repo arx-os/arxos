@@ -443,7 +443,7 @@ limit_req_zone $binary_remote_addr zone=websocket:10m rate=100r/s;
 server {
     listen 80;
     server_name svgx-engine.example.com;
-    
+
     # API rate limiting
     location / {
         limit_req zone=api burst=20 nodelay;
@@ -458,7 +458,7 @@ server {
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
     }
-    
+
     # WebSocket rate limiting
     location /ws {
         limit_req zone=websocket burst=50 nodelay;
@@ -979,4 +979,4 @@ curl -X POST \
 
 This operations guide provides comprehensive coverage of all operational aspects of the SVGX Engine. Regular review and updates of this guide ensure smooth operation and quick resolution of issues.
 
-For additional support or questions, please refer to the documentation or contact the support team. 
+For additional support or questions, please refer to the documentation or contact the support team.

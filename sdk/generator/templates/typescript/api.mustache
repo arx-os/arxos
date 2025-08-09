@@ -13,7 +13,7 @@ export const {{operationId}} = async (
     const url = `{{{path}}}`{{#pathParams}}.replace(/\{([^}]+)\}/g, (match, param) => {
         return String({{paramName}});
     }){{/pathParams}};
-    
+
     const requestConfig: RequestConfig = {
         method: '{{httpMethod}}',
         url,
@@ -29,9 +29,9 @@ export const {{operationId}} = async (
         {{/hasBodyParam}}
         ...config
     };
-    
+
     return makeRequest(requestConfig);
 };
 
 {{/operation}}
-{{/operations}} 
+{{/operations}}

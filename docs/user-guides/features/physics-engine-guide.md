@@ -280,23 +280,23 @@ async def monitor_physics_simulation(integration, session_id):
     """Real-time physics simulation monitoring."""
     while True:
         status = integration.get_simulation_status(session_id)
-        
+
         print(f"\n=== Physics-BIM Simulation Status ===")
         print(f"Time: {datetime.now().strftime('%H:%M:%S')}")
         print(f"Total Elements: {status['total_elements']}")
         print(f"Physics Enabled: {status['physics_enabled']}")
         print(f"Behavior Enabled: {status['behavior_enabled']}")
-        
+
         # Display performance metrics
         perf = status['performance_metrics']
         print(f"Avg Physics Time: {perf['avg_physics_time']:.4f}s")
         print(f"Avg Behavior Time: {perf['avg_behavior_time']:.4f}s")
         print(f"Total Calculations: {perf['total_calculations']}")
-        
+
         # Display state distribution
         print(f"Physics States: {status['physics_states']}")
         print(f"Behavior States: {status['behavior_states']}")
-        
+
         await asyncio.sleep(5)  # Update every 5 seconds
 
 # Start monitoring
@@ -309,23 +309,23 @@ asyncio.run(monitor_physics_simulation(integration, session_id))
 def analyze_physics_performance(integration, session_id):
     """Analyze physics simulation performance."""
     summary = integration.get_integration_summary()
-    
+
     print("=== Physics-BIM Integration Performance ===")
     print(f"Total Sessions: {summary['total_sessions']}")
     print(f"Total Calculations: {summary['total_calculations']}")
-    
+
     perf = summary['performance_metrics']
     print(f"Average Physics Time: {perf['avg_physics_time']:.4f}s")
     print(f"Average Behavior Time: {perf['avg_behavior_time']:.4f}s")
     print(f"Average Integration Time: {perf['avg_integration_time']:.4f}s")
-    
+
     # Performance recommendations
     if perf['avg_physics_time'] > 0.1:
         print("⚠️  Physics calculations are slow - consider optimization")
-    
+
     if perf['avg_behavior_time'] > 0.1:
         print("⚠️  Behavior calculations are slow - consider optimization")
-    
+
     return summary
 ```
 
@@ -342,23 +342,23 @@ class PhysicsConfig:
     calculation_interval: float = 0.1      # seconds
     max_iterations: int = 100              # maximum iterations
     convergence_tolerance: float = 1e-6    # convergence tolerance
-    
+
     # Physics constants
     gravity: float = 9.81                  # m/s²
     air_density: float = 1.225            # kg/m³
     water_density: float = 998.0          # kg/m³
     air_viscosity: float = 1.81e-5        # Pa·s
     water_viscosity: float = 1.002e-3     # Pa·s
-    
+
     # Thermal constants
     air_heat_capacity: float = 1005.0     # J/(kg·K)
     water_heat_capacity: float = 4186.0   # J/(kg·K)
     steel_heat_capacity: float = 460.0    # J/(kg·K)
-    
+
     # Electrical constants
     standard_voltage: float = 120.0        # V
     frequency: float = 60.0               # Hz
-    
+
     # Structural constants
     steel_elastic_modulus: float = 200e9   # Pa
     concrete_elastic_modulus: float = 30e9 # Pa
@@ -374,16 +374,16 @@ class PhysicsBIMConfig:
     physics_enabled: bool = True
     physics_update_interval: float = 1.0   # seconds
     physics_accuracy_threshold: float = 0.95
-    
+
     # BIM behavior settings
     behavior_enabled: bool = True
     behavior_update_interval: float = 1.0  # seconds
-    
+
     # Integration settings
     integration_enabled: bool = True
     real_time_simulation: bool = True
     performance_monitoring: bool = True
-    
+
     # Validation settings
     validate_physics_data: bool = True
     validate_bim_data: bool = True
@@ -483,12 +483,12 @@ integration.logger.setLevel(logging.DEBUG)
 class CustomPhysicsModel:
     def __init__(self, parameters):
         self.parameters = parameters
-    
+
     def calculate(self, data):
         # Custom physics calculation
         result = self._custom_calculation(data)
         return result
-    
+
     def _custom_calculation(self, data):
         # Implement custom physics logic
         pass
@@ -505,16 +505,16 @@ def integrate_with_external_physics(physics_engine, external_data):
     """Integrate with external physics software."""
     # Convert data format
     converted_data = convert_data_format(external_data)
-    
+
     # Run physics calculation
     result = physics_engine.calculate_physics(
-        PhysicsType.FLUID_DYNAMICS, 
+        PhysicsType.FLUID_DYNAMICS,
         converted_data
     )
-    
+
     # Compare with external results
     comparison = compare_results(result, external_data)
-    
+
     return comparison
 ```
 
@@ -524,7 +524,7 @@ def integrate_with_external_physics(physics_engine, external_data):
 def optimize_building_physics(integration, session_id):
     """Optimize building systems based on physics analysis."""
     results = integration.run_integrated_simulation_step(session_id)
-    
+
     optimizations = []
     for element_id, result in results.items():
         if result.physics_result:
@@ -535,7 +535,7 @@ def optimize_building_physics(integration, session_id):
                     'type': 'physics_optimization',
                     'recommendation': 'Optimize physics parameters'
                 })
-    
+
     return optimizations
 ```
 
@@ -579,4 +579,4 @@ def optimize_building_physics(integration, session_id):
 
 ---
 
-*This guide provides comprehensive documentation for the Enhanced Physics Engine Integration. For additional support or feature requests, please refer to the project documentation or create an issue in the repository.* 
+*This guide provides comprehensive documentation for the Enhanced Physics Engine Integration. For additional support or feature requests, please refer to the project documentation or create an issue in the repository.*

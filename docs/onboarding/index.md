@@ -214,4 +214,4 @@ All repositories support ArxIDE Dev Containers for consistent development enviro
 
 ---
 
-*This index is maintained by the Arxos development team. Last updated: 2024-01-15* 
+*This index is maintained by the Arxos development team. Last updated: 2024-01-15*

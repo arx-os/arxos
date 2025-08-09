@@ -231,33 +231,33 @@ function Get-ArxLocation {
     <#
     .SYNOPSIS
         Get current location or location information.
-    
+
     .DESCRIPTION
         Retrieves current user location or information about a specific location.
-    
+
     .PARAMETER Location
         Specific location to get information about.
-    
+
     .PARAMETER Detailed
         Show detailed location information.
-    
+
     .EXAMPLE
         Get-ArxLocation
         # Returns current location
-    
+
     .EXAMPLE
         Get-ArxLocation -Location "Room 205" -Detailed
         # Returns detailed information about Room 205
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)]
         [string]$Location,
-        
+
         [switch]$Detailed
     )
-    
+
     try {
         if (-not $Location) {
             # Get current location
@@ -285,38 +285,38 @@ function Get-ArxAssetsAtLocation {
     <#
     .SYNOPSIS
         Get all assets at a specific location.
-    
+
     .DESCRIPTION
         Retrieves all assets found at the specified location.
-    
+
     .PARAMETER Location
         Location to search for assets.
-    
+
     .PARAMETER AssetType
         Filter by asset type.
-    
+
     .PARAMETER Status
         Filter by asset status.
-    
+
     .EXAMPLE
         Get-ArxAssetsAtLocation -Location "Room 205"
         # Returns all assets in Room 205
-    
+
     .EXAMPLE
         Get-ArxAssetsAtLocation -Location "Room 205" -AssetType "electrical_outlet" -Status "inactive"
         # Returns inactive electrical outlets in Room 205
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Location,
-        
+
         [string]$AssetType,
-        
+
         [string]$Status
     )
-    
+
     try {
         $assets = Find-ArxAssets -Location $Location -AssetType $AssetType -Status $Status
         return $assets
@@ -334,50 +334,50 @@ function Find-ArxAsset {
     <#
     .SYNOPSIS
         Find assets by type and criteria.
-    
+
     .DESCRIPTION
         Searches for assets based on type, location, and status criteria.
-    
+
     .PARAMETER AssetType
         Type of asset to search for.
-    
+
     .PARAMETER Location
         Location to search in.
-    
+
     .PARAMETER Status
         Asset status filter.
-    
+
     .PARAMETER Detailed
         Show detailed asset information.
-    
+
     .EXAMPLE
         Find-ArxAsset -AssetType "electrical_outlet" -Location "Room 205" -Status "inactive"
         # Finds inactive electrical outlets in Room 205
-    
+
     .EXAMPLE
         Find-ArxAsset -AssetType "hvac_unit" -Location "Floor 2" -Status "warning"
         # Finds HVAC units with warning status on Floor 2
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$AssetType,
-        
+
         [string]$Location,
-        
+
         [string]$Status,
-        
+
         [switch]$Detailed
     )
-    
+
     try {
         $assets = Invoke-ArxAssetSearch -AssetType $AssetType -Location $Location -Status $Status
-        
+
         if ($Detailed) {
             return $assets | ForEach-Object { Get-ArxAssetDetails -AssetId $_.Id }
         }
-        
+
         return $assets
     }
     catch {
@@ -389,41 +389,41 @@ function Get-ArxAsset {
     <#
     .SYNOPSIS
         Get detailed information about a specific asset.
-    
+
     .DESCRIPTION
         Retrieves comprehensive information about an asset including connections and history.
-    
+
     .PARAMETER AssetId
         ID of the asset to get information about.
-    
+
     .PARAMETER Detailed
         Show all available asset details.
-    
+
     .EXAMPLE
         Get-ArxAsset -AssetId "E_Outlet_205_02"
         # Returns basic asset information
-    
+
     .EXAMPLE
         Get-ArxAsset -AssetId "E_Outlet_205_02" -Detailed
         # Returns comprehensive asset details
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$AssetId,
-        
+
         [switch]$Detailed
     )
-    
+
     try {
         $asset = Get-ArxAssetDetails -AssetId $AssetId
-        
+
         if ($Detailed) {
             $asset | Add-Member -NotePropertyName "Connections" -NotePropertyValue (Get-ArxAssetConnections -AssetId $AssetId)
             $asset | Add-Member -NotePropertyName "History" -NotePropertyValue (Get-ArxAssetHistory -AssetId $AssetId)
         }
-        
+
         return $asset
     }
     catch {
@@ -435,45 +435,45 @@ function Trace-ArxAsset {
     <#
     .SYNOPSIS
         Trace asset connections upstream or downstream.
-    
+
     .DESCRIPTION
         Traces connections from an asset in the specified direction.
-    
+
     .PARAMETER AssetId
         ID of the asset to trace from.
-    
+
     .PARAMETER Direction
         Direction to trace (upstream/downstream).
-    
+
     .PARAMETER MaxDepth
         Maximum depth for tracing.
-    
+
     .EXAMPLE
         Trace-ArxAsset -AssetId "E_Outlet_205_02" -Direction "upstream"
         # Traces upstream connections from electrical outlet
-    
+
     .EXAMPLE
         Trace-ArxAsset -AssetId "H_HVAC_2A" -Direction "downstream" -MaxDepth 3
         # Traces downstream connections from HVAC unit up to 3 levels
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$AssetId,
-        
+
         [ValidateSet("upstream", "downstream")]
         [string]$Direction = "downstream",
-        
+
         [int]$MaxDepth = 3
     )
-    
+
     try {
         $connections = Invoke-ArxAssetTrace -AssetId $AssetId -Direction $Direction -MaxDepth $MaxDepth
-        
+
         # Format output as tree structure
         $formattedConnections = Format-ArxConnectionTree -Connections $connections -Direction $Direction
-        
+
         return $formattedConnections
     }
     catch {
@@ -489,59 +489,59 @@ function New-ArxWorkOrder {
     <#
     .SYNOPSIS
         Create a new work order.
-    
+
     .DESCRIPTION
         Creates a new work order for a specific asset with priority and category.
-    
+
     .PARAMETER AssetId
         ID of the asset for the work order.
-    
+
     .PARAMETER Description
         Description of the work order.
-    
+
     .PARAMETER Priority
         Priority level (low/medium/high/critical).
-    
+
     .PARAMETER Category
         Work order category (electrical/hvac/security/network).
-    
+
     .PARAMETER Urgency
         Urgency level (normal/urgent/immediate).
-    
+
     .EXAMPLE
         New-ArxWorkOrder -AssetId "E_Outlet_205_02" -Description "Electrical outlet has no power" -Priority "high" -Category "electrical" -Urgency "immediate"
         # Creates high priority electrical work order
-    
+
     .EXAMPLE
         New-ArxWorkOrder -AssetId "H_HVAC_2A" -Description "HVAC unit temperature above normal" -Priority "medium" -Category "hvac"
         # Creates medium priority HVAC work order
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$AssetId,
-        
+
         [Parameter(Mandatory = $true, Position = 1)]
         [string]$Description,
-        
+
         [ValidateSet("low", "medium", "high", "critical")]
         [string]$Priority = "medium",
-        
+
         [ValidateSet("electrical", "hvac", "security", "network", "plumbing", "general")]
         [string]$Category,
-        
+
         [ValidateSet("normal", "urgent", "immediate")]
         [string]$Urgency = "normal"
     )
-    
+
     try {
         # Validate asset exists
         $asset = Get-ArxAsset -AssetId $AssetId
         if (-not $asset) {
             throw "Asset $AssetId not found"
         }
-        
+
         # Create work order
         $workOrder = [ArxWorkOrder]::new(
             (New-ArxWorkOrderId -AssetId $AssetId),
@@ -551,13 +551,13 @@ function New-ArxWorkOrder {
             $Category,
             $Urgency
         )
-        
+
         # Save to database
         Save-ArxWorkOrder -WorkOrder $workOrder
-        
+
         # Send notifications
         Send-ArxWorkOrderNotification -WorkOrder $workOrder
-        
+
         # Format output
         $output = [PSCustomObject]@{
             Id = $workOrder.Id
@@ -570,7 +570,7 @@ function New-ArxWorkOrder {
             AssignedTo = $workOrder.AssignedTo
             CreatedAt = $workOrder.CreatedAt
         }
-        
+
         Write-Host "✅ Work Order Created: $($workOrder.Id)" -ForegroundColor Green
         return $output
     }
@@ -583,55 +583,55 @@ function New-ArxQuickWorkOrder {
     <#
     .SYNOPSIS
         Create a work order with automatic asset detection.
-    
+
     .DESCRIPTION
         Creates a work order by automatically detecting the most likely asset based on description and location.
-    
+
     .PARAMETER Description
         Description of the issue.
-    
+
     .PARAMETER Location
         Location where the issue occurred.
-    
+
     .PARAMETER Priority
         Priority level (low/medium/high/critical).
-    
+
     .EXAMPLE
         New-ArxQuickWorkOrder -Description "electrical outlet no power" -Location "Room 205" -Priority "high"
         # Creates work order with automatic asset detection
-    
+
     .EXAMPLE
         New-ArxQuickWorkOrder -Description "HVAC not cooling properly" -Location "Floor 2" -Priority "medium"
         # Creates HVAC work order with automatic asset detection
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Description,
-        
+
         [Parameter(Mandatory = $true, Position = 1)]
         [string]$Location,
-        
+
         [ValidateSet("low", "medium", "high", "critical")]
         [string]$Priority = "medium"
     )
-    
+
     try {
         # Find assets at location
         $assets = Get-ArxAssetsAtLocation -Location $Location
-        
+
         # Determine most likely asset based on description
         $targetAsset = Find-MostLikelyAsset -Description $Description -Assets $assets
-        
+
         if (-not $targetAsset) {
             throw "Could not identify target asset from description"
         }
-        
+
         # Determine category and urgency
         $category = Determine-ArxCategory -Description $Description
         $urgency = Determine-ArxUrgency -Priority $Priority
-        
+
         # Create work order
         return New-ArxWorkOrder -AssetId $targetAsset.Id -Description $Description -Priority $Priority -Category $category -Urgency $urgency
     }
@@ -644,27 +644,27 @@ function Get-ArxWorkOrder {
     <#
     .SYNOPSIS
         Get work order details.
-    
+
     .DESCRIPTION
         Retrieves detailed information about a work order.
-    
+
     .PARAMETER WorkOrderId
         ID of the work order to retrieve.
-    
+
     .EXAMPLE
         Get-ArxWorkOrder -WorkOrderId "WO_2024_001_205_02"
         # Returns work order details
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$WorkOrderId
     )
-    
+
     try {
         $workOrder = Get-ArxWorkOrderDetails -WorkOrderId $WorkOrderId
-        
+
         if ($workOrder) {
             # Format output
             $output = [PSCustomObject]@{
@@ -679,7 +679,7 @@ function Get-ArxWorkOrder {
                 CreatedAt = $workOrder.CreatedAt
                 UpdatedAt = $workOrder.UpdatedAt
             }
-            
+
             return $output
         }
         else {
@@ -699,65 +699,65 @@ function Show-ArxAscii {
     <#
     .SYNOPSIS
         Render location as ASCII art.
-    
+
     .DESCRIPTION
         Renders a location as ASCII art with context-specific symbols.
-    
+
     .PARAMETER Location
         Location to render.
-    
+
     .PARAMETER Context
         Rendering context (it/building/unified).
-    
+
     .PARAMETER Resolution
         Resolution level (low/medium/high).
-    
+
     .PARAMETER FocusAsset
         Asset to focus on in the rendering.
-    
+
     .EXAMPLE
         Show-ArxAscii -Location "Room 205" -Context "electrical"
         # Renders Room 205 with electrical context
-    
+
     .EXAMPLE
         Show-ArxAscii -Location "Floor 2" -Context "hvac" -FocusAsset "H_HVAC_2A"
         # Renders Floor 2 with HVAC context, focusing on specific HVAC unit
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Location,
-        
+
         [ValidateSet("it", "building", "unified", "electrical", "hvac", "security")]
         [string]$Context = "unified",
-        
+
         [ValidateSet("low", "medium", "high")]
         [string]$Resolution = "medium",
-        
+
         [string]$FocusAsset
     )
-    
+
     try {
         # Get location data
         $locationData = Get-ArxLocationData -Location $Location
-        
+
         # Get assets at location
         $assets = Get-ArxAssetsAtLocation -Location $Location
-        
+
         # Create rendering context
         $renderingContext = [PSCustomObject]@{
             ContextType = $Context
             Resolution = $Resolution
             FocusAsset = $FocusAsset
         }
-        
+
         # Generate ASCII art
         $asciiArt = ConvertTo-ArxAscii -LocationData $locationData -Assets $assets -Context $renderingContext
-        
+
         # Display ASCII art
         Write-Host $asciiArt -ForegroundColor White
-        
+
         # Show legend if needed
         if ($Context -ne "unified") {
             Show-ArxAsciiLegend -Context $Context
@@ -772,55 +772,55 @@ function Show-ArxAsciiFocus {
     <#
     .SYNOPSIS
         Render focused view around specific asset.
-    
+
     .DESCRIPTION
         Renders a focused ASCII view around a specific asset with configurable radius.
-    
+
     .PARAMETER AssetId
         ID of the asset to focus on.
-    
+
     .PARAMETER Radius
         Focus radius around the asset.
-    
+
     .PARAMETER Context
         Rendering context.
-    
+
     .EXAMPLE
         Show-ArxAsciiFocus -AssetId "E_Outlet_205_02" -Radius 5 -Context "electrical"
         # Renders focused view around electrical outlet
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$AssetId,
-        
+
         [int]$Radius = 5,
-        
+
         [ValidateSet("it", "building", "unified", "electrical", "hvac", "security")]
         [string]$Context = "unified"
     )
-    
+
     try {
         # Get asset details
         $asset = Get-ArxAsset -AssetId $AssetId
-        
+
         # Get surrounding assets
         $surroundingAssets = Get-ArxSurroundingAssets -AssetId $AssetId -Radius $Radius
-        
+
         # Create focused rendering context
         $renderingContext = [PSCustomObject]@{
             ContextType = $Context
             FocusAsset = $AssetId
             FocusRadius = $Radius
         }
-        
+
         # Generate focused ASCII art
         $asciiArt = ConvertTo-ArxAsciiFocus -Asset $asset -SurroundingAssets $surroundingAssets -Context $renderingContext
-        
+
         # Display ASCII art
         Write-Host $asciiArt -ForegroundColor White
-        
+
         # Show focus indicator
         Write-Host "Focus: $($asset.Name) ($AssetId)" -ForegroundColor Yellow
     }
@@ -833,35 +833,35 @@ function Show-ArxAsciiBuilding {
     <#
     .SYNOPSIS
         Render building as ASCII art.
-    
+
     .DESCRIPTION
         Renders an entire building or floor as ASCII art.
-    
+
     .PARAMETER BuildingId
         ID of the building to render.
-    
+
     .PARAMETER Floor
         Specific floor to render.
-    
+
     .PARAMETER Context
         Rendering context.
-    
+
     .EXAMPLE
         Show-ArxAsciiBuilding -BuildingId "Building A" -Floor 2 -Context "unified"
         # Renders Floor 2 of Building A
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$BuildingId,
-        
+
         [string]$Floor,
-        
+
         [ValidateSet("it", "building", "unified", "electrical", "hvac", "security")]
         [string]$Context = "unified"
     )
-    
+
     try {
         if ($Floor) {
             $location = "$BuildingId\Floor $Floor"
@@ -869,16 +869,16 @@ function Show-ArxAsciiBuilding {
         else {
             $location = $BuildingId
         }
-        
+
         # Get building data
         $buildingData = Get-ArxBuildingData -BuildingId $BuildingId -Floor $Floor
-        
+
         # Generate building ASCII art
         $asciiArt = ConvertTo-ArxAsciiBuilding -BuildingData $buildingData -Context $Context
-        
+
         # Display ASCII art
         Write-Host $asciiArt -ForegroundColor White
-        
+
         # Show building info
         Write-Host "Building: $BuildingId" -ForegroundColor Cyan
         if ($Floor) {
@@ -898,60 +898,60 @@ function Get-ArxSystemStatus {
     <#
     .SYNOPSIS
         Get system status for various building systems.
-    
+
     .DESCRIPTION
         Retrieves status information for electrical, HVAC, security, and network systems.
-    
+
     .PARAMETER System
         System type to check (electrical/hvac/security/network/all).
-    
+
     .PARAMETER Zone
         Zone to check (building/floor/room).
-    
+
     .PARAMETER Detailed
         Show detailed status information.
-    
+
     .EXAMPLE
         Get-ArxSystemStatus -System "electrical" -Zone "Floor 2"
         # Gets electrical system status for Floor 2
-    
+
     .EXAMPLE
         Get-ArxSystemStatus -System "all" -Zone "Building A" -Detailed
         # Gets detailed status for all systems in Building A
     #>
-    
+
     [CmdletBinding()]
     param(
         [ValidateSet("electrical", "hvac", "security", "network", "all")]
         [string]$System = "all",
-        
+
         [string]$Zone,
-        
+
         [switch]$Detailed
     )
-    
+
     try {
         $systems = @()
-        
+
         if ($System -eq "all") {
             $systems = @("electrical", "hvac", "security", "network")
         }
         else {
             $systems = @($System)
         }
-        
+
         $results = @()
-        
+
         foreach ($sys in $systems) {
             $status = Get-ArxSystemStatusData -System $sys -Zone $Zone
-            
+
             if ($Detailed) {
                 $status | Add-Member -NotePropertyName "Details" -NotePropertyValue (Get-ArxSystemDetails -System $sys -Zone $Zone)
             }
-            
+
             $results += $status
         }
-        
+
         return $results
     }
     catch {
@@ -972,16 +972,16 @@ function Connect-ArxDatabase {
     .SYNOPSIS
         Connect to Arxos database.
     #>
-    
+
     param()
-    
+
     try {
         $config = Get-ArxConfig
         $connectionString = "Server=$($config.Database.Host);Database=$($config.Database.Name);User Id=$($config.Database.User);Password=$($config.Database.Password)"
-        
+
         $connection = New-Object System.Data.SqlClient.SqlConnection($connectionString)
         $connection.Open()
-        
+
         return $connection
     }
     catch {
@@ -994,24 +994,24 @@ function Invoke-ArxQuery {
     .SYNOPSIS
         Execute database query.
     #>
-    
+
     param(
         [string]$Query,
         [hashtable]$Parameters = @{}
     )
-    
+
     try {
         $connection = Connect-ArxDatabase
-        
+
         $command = New-Object System.Data.SqlClient.SqlCommand($Query, $connection)
-        
+
         foreach ($param in $Parameters.GetEnumerator()) {
             $command.Parameters.AddWithValue($param.Key, $param.Value) | Out-Null
         }
-        
+
         $reader = $command.ExecuteReader()
         $results = @()
-        
+
         while ($reader.Read()) {
             $row = @{}
             for ($i = 0; $i -lt $reader.FieldCount; $i++) {
@@ -1019,10 +1019,10 @@ function Invoke-ArxQuery {
             }
             $results += [PSCustomObject]$row
         }
-        
+
         $reader.Close()
         $connection.Close()
-        
+
         return $results
     }
     catch {
@@ -1039,38 +1039,38 @@ function Invoke-ArxAPI {
     .SYNOPSIS
         Make API call to Arxos backend.
     #>
-    
+
     param(
         [string]$Endpoint,
         [string]$Method = "GET",
         [hashtable]$Body = @{}
     )
-    
+
     try {
         $config = Get-ArxConfig
         $baseUrl = $config.API.BaseUrl
         $timeout = $config.API.Timeout
-        
+
         $uri = "$baseUrl/$Endpoint"
-        
+
         $headers = @{
             "Content-Type" = "application/json"
             "Authorization" = "Bearer $($config.API.Token)"
         }
-        
+
         $params = @{
             Uri = $uri
             Method = $Method
             Headers = $headers
             TimeoutSec = $timeout
         }
-        
+
         if ($Body.Count -gt 0) {
             $params.Body = $Body | ConvertTo-Json -Depth 10
         }
-        
+
         $response = Invoke-RestMethod @params
-        
+
         return $response
     }
     catch {
@@ -1087,36 +1087,36 @@ function ConvertTo-ArxAscii {
     .SYNOPSIS
         Convert location data to ASCII art.
     #>
-    
+
     param(
         [PSCustomObject]$LocationData,
         [ArxAsset[]]$Assets,
         [PSCustomObject]$Context
     )
-    
+
     try {
         # Load symbol mappings
         $symbolMappings = Get-ArxSymbolMappings
-        
+
         # Create grid
         $grid = Initialize-ArxGrid -LocationData $LocationData -Resolution $Context.Resolution
-        
+
         # Place assets on grid
         foreach ($asset in $Assets) {
             $symbol = Get-ArxSymbol -Asset $asset -Context $Context.ContextType -Mappings $symbolMappings
             $position = Get-ArxAssetPosition -Asset $asset -LocationData $LocationData
-            
+
             Set-ArxGridSymbol -Grid $grid -Position $position -Symbol $symbol
         }
-        
+
         # Apply focus if specified
         if ($Context.FocusAsset) {
             Apply-ArxFocus -Grid $grid -FocusAsset $Context.FocusAsset -Assets $Assets
         }
-        
+
         # Convert grid to ASCII string
         $asciiArt = Convert-ArxGridToString -Grid $grid
-        
+
         return $asciiArt
     }
     catch {
@@ -1129,18 +1129,18 @@ function Get-ArxSymbol {
     .SYNOPSIS
         Get ASCII symbol for asset.
     #>
-    
+
     param(
         [ArxAsset]$Asset,
         [string]$Context,
         [hashtable]$Mappings
     )
-    
+
     $baseSymbol = $Mappings[$Asset.Type]
     if (-not $baseSymbol) {
         $baseSymbol = "?"
     }
-    
+
     # Apply context-specific modifications
     if ($Context -eq "it" -and $Asset.Type -in @("electrical_outlet", "network_switch")) {
         $baseSymbol = "I$baseSymbol"
@@ -1148,11 +1148,11 @@ function Get-ArxSymbol {
     elseif ($Context -eq "building") {
         $baseSymbol = "B$baseSymbol"
     }
-    
+
     # Add status indicator
     $statusSymbol = Get-ArxStatusSymbol -Status $Asset.Status
     $baseSymbol += $statusSymbol
-    
+
     return $baseSymbol
 }
 
@@ -1161,9 +1161,9 @@ function Get-ArxStatusSymbol {
     .SYNOPSIS
         Get status indicator symbol.
     #>
-    
+
     param([string]$Status)
-    
+
     $statusSymbols = @{
         "active" = ""
         "inactive" = "!"
@@ -1171,7 +1171,7 @@ function Get-ArxStatusSymbol {
         "error" = "X"
         "maintenance" = "M"
     }
-    
+
     return $statusSymbols[$Status] ?? ""
 }
 ```
@@ -1191,20 +1191,20 @@ function Get-ArxStatusSymbol {
         User = "arxos_user"
         Password = ""
     }
-    
+
     API = @{
         BaseUrl = "http://localhost:8080"
         Timeout = 30
         Token = ""
     }
-    
+
     CLI = @{
         DefaultContext = "unified"
         DefaultResolution = "medium"
         AutoComplete = $true
         ColorOutput = $true
     }
-    
+
     Notifications = @{
         Email = $true
         Slack = $false
@@ -1227,7 +1227,7 @@ function Get-ArxStatusSymbol {
     "patch_panel" = "P"
     "cable" = "-"
     "fiber" = "="
-    
+
     # Building Assets
     "electrical_panel" = "E"
     "electrical_outlet" = "O"
@@ -1238,7 +1238,7 @@ function Get-ArxStatusSymbol {
     "window" = "W"
     "wall" = "#"
     "room" = " "
-    
+
     # Shared Assets
     "sensor" = "O"
     "controller" = "T"
@@ -1304,45 +1304,45 @@ Describe "Arxos CLI Module" {
     BeforeAll {
         Import-Module ArxosCLI -Force
     }
-    
+
     Describe "Location Services" {
         It "Should get current location" {
             $location = Get-ArxLocation
             $location | Should Not BeNullOrEmpty
         }
-        
+
         It "Should get assets at location" {
             $assets = Get-ArxAssetsAtLocation -Location "Room 205"
             $assets | Should Not BeNullOrEmpty
         }
     }
-    
+
     Describe "Asset Discovery" {
         It "Should find assets by type" {
             $assets = Find-ArxAsset -AssetType "electrical_outlet" -Location "Room 205"
             $assets | Should Not BeNullOrEmpty
         }
-        
+
         It "Should get asset details" {
             $asset = Get-ArxAsset -AssetId "E_Outlet_205_02"
             $asset | Should Not BeNullOrEmpty
             $asset.Id | Should Be "E_Outlet_205_02"
         }
     }
-    
+
     Describe "Work Order Creation" {
         It "Should create work order" {
             $workOrder = New-ArxWorkOrder -AssetId "E_Outlet_205_02" -Description "Test work order" -Priority "medium"
             $workOrder | Should Not BeNullOrEmpty
             $workOrder.Id | Should Not BeNullOrEmpty
         }
-        
+
         It "Should create quick work order" {
             $workOrder = New-ArxQuickWorkOrder -Description "electrical outlet no power" -Location "Room 205" -Priority "high"
             $workOrder | Should Not BeNullOrEmpty
         }
     }
-    
+
     Describe "ASCII Rendering" {
         It "Should render ASCII art" {
             $ascii = Show-ArxAscii -Location "Room 205" -Context "electrical"

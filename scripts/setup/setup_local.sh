@@ -46,20 +46,20 @@ wait_for_service() {
     local service_name=$3
     local max_attempts=30
     local attempt=1
-    
+
     print_status "Waiting for $service_name to be ready..."
-    
+
     while [ $attempt -le $max_attempts ]; do
         if nc -z $host $port 2>/dev/null; then
             print_success "$service_name is ready!"
             return 0
         fi
-        
+
         echo -n "."
         sleep 2
         attempt=$((attempt + 1))
     done
-    
+
     print_error "$service_name failed to start within expected time"
     return 1
 }
@@ -67,46 +67,46 @@ wait_for_service() {
 # Main setup function
 main() {
     print_status "Starting Arxos Local Development Setup..."
-    
+
     # Check if we're in the right directory
     if [ ! -f "docker-compose.yml" ]; then
         print_error "Please run this script from the arxos directory"
         exit 1
     fi
-    
+
     # Check prerequisites
     print_status "Checking prerequisites..."
-    
+
     local missing_deps=()
-    
+
     if ! command_exists docker; then
         missing_deps+=("docker")
     fi
-    
+
     if ! command_exists docker-compose; then
         missing_deps+=("docker-compose")
     fi
-    
+
     if ! command_exists python3; then
         missing_deps+=("python3")
     fi
-    
+
     if ! command_exists go; then
         missing_deps+=("go")
     fi
-    
+
     if [ ${#missing_deps[@]} -ne 0 ]; then
         print_error "Missing required dependencies: ${missing_deps[*]}"
         print_status "Please install the missing dependencies and try again"
         exit 1
     fi
-    
+
     print_success "All prerequisites are installed"
-    
+
     # Create necessary directories
     print_status "Creating necessary directories..."
     mkdir -p logs data cache
-    
+
     # Set up environment file
     if [ ! -f ".env" ]; then
         print_status "Creating .env file..."
@@ -143,24 +143,24 @@ EOF
     else
         print_warning ".env file already exists, skipping creation"
     fi
-    
+
     # Check if Docker is running
     if ! docker info >/dev/null 2>&1; then
         print_error "Docker is not running. Please start Docker and try again."
         exit 1
     fi
-    
+
     # Check for port conflicts
     print_status "Checking for port conflicts..."
     local ports_to_check=(5432 6379 8000 8001 8080 3000 9090 3001)
     local conflicting_ports=()
-    
+
     for port in "${ports_to_check[@]}"; do
         if port_in_use $port; then
             conflicting_ports+=($port)
         fi
     done
-    
+
     if [ ${#conflicting_ports[@]} -ne 0 ]; then
         print_warning "The following ports are already in use: ${conflicting_ports[*]}"
         print_status "Please stop the services using these ports or modify the configuration"
@@ -170,51 +170,51 @@ EOF
             exit 1
         fi
     fi
-    
+
     # Start services with Docker Compose
     print_status "Starting services with Docker Compose..."
-    
+
     # Pull latest images
     docker-compose pull
-    
+
     # Start services
     docker-compose up -d
-    
+
     # Wait for services to be ready
     print_status "Waiting for services to start..."
-    
+
     # Wait for PostgreSQL
     wait_for_service localhost 5432 "PostgreSQL"
-    
+
     # Wait for Redis
     wait_for_service localhost 6379 "Redis"
-    
+
     # Wait for SVG Parser
     wait_for_service localhost 8000 "SVG Parser"
-    
+
     # Wait for Backend
     wait_for_service localhost 8080 "Backend"
-    
+
     # Wait for SVGX Engine
     wait_for_service localhost 8001 "SVGX Engine"
-    
+
     # Wait for Web Frontend
     wait_for_service localhost 3000 "Web Frontend"
-    
+
     # Run database migrations
     print_status "Running database migrations..."
     docker-compose exec svg-parser alembic upgrade head || {
         print_warning "Database migrations failed, but continuing..."
     }
-    
+
     # Create test data
     print_status "Creating test data..."
     create_test_data
-    
+
     # Health checks
     print_status "Performing health checks..."
     perform_health_checks
-    
+
     # Final status
     print_success "Arxos local development environment is ready!"
     print_status ""
@@ -238,7 +238,7 @@ EOF
 # Function to create test data
 create_test_data() {
     print_status "Creating test data..."
-    
+
     # Create test user
     curl -s -X POST http://localhost:8080/api/register \
         -H "Content-Type: application/json" \
@@ -247,7 +247,7 @@ create_test_data() {
             "email": "test@arxos.com",
             "password": "password123"
         }' > /dev/null || print_warning "Failed to create test user"
-    
+
     # Create test building
     curl -s -X POST http://localhost:8080/api/buildings \
         -H "Content-Type: application/json" \
@@ -257,7 +257,7 @@ create_test_data() {
             "address": "123 Test Street",
             "description": "Test building for development"
         }' > /dev/null || print_warning "Failed to create test building"
-    
+
     print_success "Test data created"
 }
 
@@ -269,7 +269,7 @@ get_test_token() {
             "username": "testuser",
             "password": "password123"
         }')
-    
+
     echo $response | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || echo ""
 }
 
@@ -277,7 +277,7 @@ get_test_token() {
 perform_health_checks() {
     local checks_passed=0
     local total_checks=0
-    
+
     # Check SVG Parser
     total_checks=$((total_checks + 1))
     if curl -s http://localhost:8000/health > /dev/null; then
@@ -286,7 +286,7 @@ perform_health_checks() {
     else
         print_error "SVG Parser health check failed"
     fi
-    
+
     # Check Backend
     total_checks=$((total_checks + 1))
     if curl -s http://localhost:8080/api/health > /dev/null; then
@@ -295,7 +295,7 @@ perform_health_checks() {
     else
         print_error "Backend health check failed"
     fi
-    
+
     # Check SVGX Engine
     total_checks=$((total_checks + 1))
     if curl -s http://localhost:8001/health > /dev/null; then
@@ -304,7 +304,7 @@ perform_health_checks() {
     else
         print_error "SVGX Engine health check failed"
     fi
-    
+
     # Check Web Interface
     total_checks=$((total_checks + 1))
     if curl -s http://localhost:3000 > /dev/null; then
@@ -313,7 +313,7 @@ perform_health_checks() {
     else
         print_error "Web Interface health check failed"
     fi
-    
+
     if [ $checks_passed -eq $total_checks ]; then
         print_success "All health checks passed ($checks_passed/$total_checks)"
     else
@@ -370,4 +370,4 @@ main
 if [ "$SHOW_LOGS" = true ]; then
     print_status "Showing logs (press Ctrl+C to exit)..."
     docker-compose logs -f
-fi 
+fi

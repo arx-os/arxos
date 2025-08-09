@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS data_retention_policies (
     description TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     INDEX idx_data_retention_policies_object_type (object_type),
     INDEX idx_data_retention_policies_is_active (is_active)
 );
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS archived_audit_logs (
     context JSONB,
     created_at TIMESTAMP NOT NULL,
     archived_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     INDEX idx_archived_audit_logs_original_id (original_id),
     INDEX idx_archived_audit_logs_user_id (user_id),
     INDEX idx_archived_audit_logs_object_type (object_type),
@@ -69,12 +69,12 @@ CREATE TABLE IF NOT EXISTS compliance_reports (
     expires_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     completed_at TIMESTAMP,
-    
+
     INDEX idx_compliance_reports_type (report_type),
     INDEX idx_compliance_reports_generated_by (generated_by),
     INDEX idx_compliance_reports_status (status),
     INDEX idx_compliance_reports_created_at (created_at),
-    
+
     CONSTRAINT fk_compliance_reports_generated_by FOREIGN KEY (generated_by) REFERENCES users(id)
 );
 
@@ -94,18 +94,18 @@ CREATE TABLE IF NOT EXISTS data_access_logs (
     export_id BIGINT,
     access_level VARCHAR(50), -- basic, premium, enterprise, admin
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     INDEX idx_data_access_logs_user_id (user_id),
     INDEX idx_data_access_logs_action (action),
     INDEX idx_data_access_logs_object_type (object_type),
     INDEX idx_data_access_logs_created_at (created_at),
     INDEX idx_data_access_logs_ip_address (ip_address),
-    
+
     CONSTRAINT fk_data_access_logs_user_id FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- Add archived column to existing audit_logs table
-ALTER TABLE audit_logs 
+ALTER TABLE audit_logs
 ADD COLUMN IF NOT EXISTS archived BOOLEAN DEFAULT false;
 
 -- Create index for archived column
@@ -116,4 +116,4 @@ COMMENT ON TABLE data_retention_policies IS 'Defines retention policies for diff
 COMMENT ON TABLE archived_audit_logs IS 'Long-term storage for archived audit logs';
 COMMENT ON TABLE compliance_reports IS 'Stores generated compliance reports';
 COMMENT ON TABLE data_access_logs IS 'Detailed tracking of data access for auditors';
-COMMENT ON COLUMN audit_logs.archived IS 'Flag indicating if log has been archived'; 
+COMMENT ON COLUMN audit_logs.archived IS 'Flag indicating if log has been archived';

@@ -3,7 +3,7 @@ AI Service Main Application
 
 This module contains the FastAPI application for the AI service, following
 Clean Architecture principles by keeping the presentation layer separate
-from domain logic.
+from domain import domain
 
 Presentation Layer:
 - FastAPI application setup
@@ -95,14 +95,14 @@ ai_query_use_case: ProcessAIQueryUseCase = None
     async def lifespan(app: FastAPI, user: User = Depends(get_current_user)):
     """Application lifespan manager"""
     global ai_query_use_case
-    
+
     # Startup
     logger.info("Starting Arx AI Services...")
-    
+
     try:
         # Initialize domain and application layers
         settings = get_settings()
-        
+
         # Create domain configuration
         config = AIAgentConfig(
             model_type=ModelType.GPT_4,
@@ -111,21 +111,21 @@ ai_query_use_case: ProcessAIQueryUseCase = None
             temperature=settings.temperature,
             timeout=settings.timeout
         )
-        
+
         # Create infrastructure implementation
         ai_agent = ConcreteAIAgent(config)
-        
+
         # Create use case with dependency injection
         ai_query_use_case = ProcessAIQueryUseCase(ai_agent)
-        
+
         logger.info("AI Service initialized successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"Failed to initialize AI Service: {e}")
         raise
-    
+
     finally:
         # Shutdown
         logger.info("Shutting down Arx AI Services...")
@@ -181,7 +181,7 @@ app.add_middleware(
     async def process_ai_query(request: AIQueryRequest, user: User = Depends(get_current_user)):
     """
     Process AI query endpoint.
-    
+
     This endpoint uses the use case to process AI queries while keeping
     the presentation layer separate from business logic.
     """
@@ -194,10 +194,10 @@ app.add_middleware(
             session_id=request.session_id,
             model=request.model
         )
-        
+
         # Execute use case
         response = ai_query_use_case.execute(use_case_request)
-        
+
         # Convert use case response to API response
         if response.success:
             return {
@@ -214,7 +214,7 @@ app.add_middleware(
                 status_code=400,
                 detail=response.error_message
             )
-            
+
     except Exception as e:
         logger.error(f"Error processing AI query: {e}")
         raise HTTPException(
@@ -298,4 +298,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=True
-    ) 
+    )

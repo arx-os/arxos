@@ -43,14 +43,14 @@ logger = logging.getLogger(__name__)
 
 class TestAdvancedBehaviorEngine:
     """Test suite for AdvancedBehaviorEngine."""
-    
+
     @pytest.fixture
-    def behavior_engine(self):
+def behavior_engine(self):
         """Create a behavior engine instance for testing."""
         return AdvancedBehaviorEngine()
-    
+
     @pytest.fixture
-    def sample_context(self):
+def sample_context(self):
         """Create sample context for testing."""
         return {
             'element_id': 'test_element',
@@ -63,9 +63,9 @@ class TestAdvancedBehaviorEngine:
             'connections': ['connection1', 'connection2'],
             'parent': 'parent_element'
         }
-    
+
     @pytest.fixture
-    def sample_rule(self):
+def sample_rule(self):
         """Create a sample behavior rule."""
         return BehaviorRule(
             rule_id='test_rule_1',
@@ -99,9 +99,9 @@ class TestAdvancedBehaviorEngine:
             priority=2,
             metadata={'target_elements': ['test_element']}
         )
-    
+
     @pytest.fixture
-    def sample_state_machine(self):
+def sample_state_machine(self):
         """Create a sample state machine."""
         states = [
             BehaviorState(
@@ -216,9 +216,9 @@ class TestAdvancedBehaviorEngine:
             )
         ]
         return states
-    
+
     @pytest.fixture
-    def sample_time_trigger(self):
+def sample_time_trigger(self):
         """Create a sample time trigger."""
         return TimeTrigger(
             trigger_id='test_trigger_1',
@@ -240,9 +240,9 @@ class TestAdvancedBehaviorEngine:
                 }
             ]
         )
-    
+
     @pytest.fixture
-    def sample_condition(self):
+def sample_condition(self):
         """Create a sample complex condition."""
         return Condition(
             condition_id='test_condition_1',
@@ -264,7 +264,7 @@ class TestAdvancedBehaviorEngine:
     def test_register_rule(self, behavior_engine, sample_rule):
         """Test rule registration."""
         behavior_engine.register_rule(sample_rule)
-        
+
         assert 'test_rule_1' in behavior_engine.rules
         assert behavior_engine.rules['test_rule_1'] == sample_rule
         assert len(behavior_engine.get_registered_rules()) == 1
@@ -273,9 +273,9 @@ class TestAdvancedBehaviorEngine:
         """Test state machine registration."""
         element_id = 'test_equipment'
         initial_state = 'off'
-        
+
         behavior_engine.register_state_machine(element_id, sample_state_machine, initial_state)
-        
+
         assert element_id in behavior_engine.state_machines
         assert len(behavior_engine.state_machines[element_id]) == 3
         assert behavior_engine.get_element_state(element_id) == initial_state
@@ -284,7 +284,7 @@ class TestAdvancedBehaviorEngine:
     def test_register_time_trigger(self, behavior_engine, sample_time_trigger):
         """Test time trigger registration."""
         behavior_engine.register_time_trigger(sample_time_trigger)
-        
+
         assert 'test_trigger_1' in behavior_engine.time_triggers
         assert behavior_engine.time_triggers['test_trigger_1'] == sample_time_trigger
         assert len(behavior_engine.get_registered_time_triggers()) == 1
@@ -292,7 +292,7 @@ class TestAdvancedBehaviorEngine:
     def test_register_condition(self, behavior_engine, sample_condition):
         """Test condition registration."""
         behavior_engine.register_condition(sample_condition)
-        
+
         assert 'test_condition_1' in behavior_engine.conditions
         assert behavior_engine.conditions['test_condition_1'] == sample_condition
 
@@ -300,13 +300,13 @@ class TestAdvancedBehaviorEngine:
     async def test_evaluate_rules_simple(self, behavior_engine, sample_rule, sample_context):
         """Test simple rule evaluation."""
         behavior_engine.register_rule(sample_rule)
-        
+
         # Test with conditions that should match
         sample_context['temperature'] = 35.0
         sample_context['status'] = 'active'
-        
+
         applicable_rules = await behavior_engine.evaluate_rules('test_element', sample_context)
-        
+
         assert len(applicable_rules) == 1
         assert applicable_rules[0]['rule_id'] == 'test_rule_1'
         assert applicable_rules[0]['rule_type'] == 'safety'
@@ -316,13 +316,13 @@ class TestAdvancedBehaviorEngine:
     async def test_evaluate_rules_no_match(self, behavior_engine, sample_rule, sample_context):
         """Test rule evaluation when conditions don't match."""
         behavior_engine.register_rule(sample_rule)
-        
-        # Test with conditions that shouldn't match
+
+        # Test with conditions that shouldn't match'
         sample_context['temperature'] = 25.0  # Below threshold
         sample_context['status'] = 'active'
-        
+
         applicable_rules = await behavior_engine.evaluate_rules('test_element', sample_context)
-        
+
         assert len(applicable_rules) == 0
 
     @pytest.mark.asyncio
@@ -336,7 +336,7 @@ class TestAdvancedBehaviorEngine:
             actions=[{'type': 'log', 'message': 'Low priority action', 'level': 'info'}],
             priority=1
         )
-        
+
         rule2 = BehaviorRule(
             rule_id='high_priority',
             rule_type=RuleType.SAFETY,
@@ -344,12 +344,12 @@ class TestAdvancedBehaviorEngine:
             actions=[{'type': 'log', 'message': 'High priority action', 'level': 'warning'}],
             priority=3
         )
-        
+
         behavior_engine.register_rule(rule1)
         behavior_engine.register_rule(rule2)
-        
+
         applicable_rules = await behavior_engine.evaluate_rules('test_element', sample_context)
-        
+
         assert len(applicable_rules) == 2
         assert applicable_rules[0]['rule_id'] == 'high_priority'  # Higher priority first
         assert applicable_rules[1]['rule_id'] == 'low_priority'
@@ -359,11 +359,11 @@ class TestAdvancedBehaviorEngine:
         """Test valid state transition."""
         element_id = 'test_equipment'
         behavior_engine.register_state_machine(element_id, sample_state_machine, 'off')
-        
+
         # Test transition from 'off' to 'on'
         context = {'power_command': 'start'}
         await behavior_engine.execute_state_transition(element_id, 'on', context)
-        
+
         assert behavior_engine.get_element_state(element_id) == 'on'
 
     @pytest.mark.asyncio
@@ -371,11 +371,11 @@ class TestAdvancedBehaviorEngine:
         """Test invalid state transition."""
         element_id = 'test_equipment'
         behavior_engine.register_state_machine(element_id, sample_state_machine, 'off')
-        
-        # Test transition that doesn't meet conditions
+
+        # Test transition that doesn't meet conditions'
         context = {'power_command': 'invalid'}
         await behavior_engine.execute_state_transition(element_id, 'on', context)
-        
+
         # State should remain unchanged
         assert behavior_engine.get_element_state(element_id) == 'off'
 
@@ -384,19 +384,19 @@ class TestAdvancedBehaviorEngine:
         """Test state transition with entry/exit actions."""
         element_id = 'test_equipment'
         behavior_engine.register_state_machine(element_id, sample_state_machine, 'off')
-        
+
         # Mock the action execution by capturing log messages
         with pytest.MonkeyPatch().context() as m:
             log_messages = []
-            def mock_log(level, message):
+def mock_log(level, message):
                 log_messages.append(f"{level}: {message}")
-            
+
             m.setattr(behavior_engine, '_execute_actions', mock_log)
-            
+
             # Execute transition
             context = {'power_command': 'start'}
             await behavior_engine.execute_state_transition(element_id, 'on', context)
-            
+
             # Check that actions were executed
             assert behavior_engine.get_element_state(element_id) == 'on'
 
@@ -404,12 +404,12 @@ class TestAdvancedBehaviorEngine:
     async def test_time_trigger_execution(self, behavior_engine, sample_time_trigger):
         """Test time trigger execution."""
         behavior_engine.register_time_trigger(sample_time_trigger)
-        
+
         # Set next execution to now
         sample_time_trigger.next_execution = datetime.now()
-        
+
         await behavior_engine.execute_time_triggers()
-        
+
         # Check that trigger was executed
         assert sample_time_trigger.last_execution is not None
 
@@ -421,11 +421,11 @@ class TestAdvancedBehaviorEngine:
             'operator': '>',
             'threshold': 30.0
         }
-        
+
         # Test condition that should be true
         sample_context['temperature'] = 35.0
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is True
-        
+
         # Test condition that should be false
         sample_context['temperature'] = 25.0
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is False
@@ -439,9 +439,9 @@ class TestAdvancedBehaviorEngine:
             'start_time': current_time - timedelta(hours=1),
             'end_time': current_time + timedelta(hours=1)
         }
-        
+
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is True
-        
+
         # Test condition outside time range
         condition['start_time'] = current_time + timedelta(hours=1)
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is False
@@ -454,10 +454,10 @@ class TestAdvancedBehaviorEngine:
             'target_position': {'x': 10, 'y': 20, 'z': 0},
             'max_distance': 5.0
         }
-        
+
         # Test condition that should be true (positions are the same)
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is True
-        
+
         # Test condition that should be false (positions are far apart)
         sample_context['position'] = {'x': 100, 'y': 200, 'z': 0}
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is False
@@ -470,10 +470,10 @@ class TestAdvancedBehaviorEngine:
             'dependent_element': 'parent_element',
             'required_status': 'active'
         }
-        
+
         # Test condition that should be true
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is True
-        
+
         # Test condition that should be false
         sample_context['dependencies']['parent_element'] = 'inactive'
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is False
@@ -485,12 +485,12 @@ class TestAdvancedBehaviorEngine:
             'expression': 'temperature > 30 and pressure < 95',
             'variables': {'temperature': 35, 'pressure': 90}
         }
-        
+
         # Test condition that should be true
         sample_context['temperature'] = 35
         sample_context['pressure'] = 90
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is True
-        
+
         # Test condition that should be false
         sample_context['temperature'] = 25
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is False
@@ -503,10 +503,10 @@ class TestAdvancedBehaviorEngine:
             'operator': '==',
             'value': 'active'
         }
-        
+
         # Test condition that should be true
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is True
-        
+
         # Test condition that should be false
         sample_context['status'] = 'inactive'
         assert behavior_engine._evaluate_single_condition(condition, sample_context) is False
@@ -518,18 +518,17 @@ class TestAdvancedBehaviorEngine:
             'cad_action_type': 'dimension',
             'dimension_type': 'linear'
         }
-        
+
         # Mock the action execution
         with pytest.MonkeyPatch().context() as m:
             executed_actions = []
-            def mock_execute(action_type, element_id, context):
+def mock_execute(action_type, element_id, context):
                 executed_actions.append(action_type)
-            
+
             m.setattr(behavior_engine, '_execute_dimension_action', mock_execute)
-            
+
             # Execute action
-            asyncio.run(behavior_engine._execute_cad_parity_action(action, 'test_element', {}))
-            
+            asyncio.run(behavior_engine._execute_cad_parity_action(action, 'test_element', {})
             # Check that action was executed
             assert 'dimension' in executed_actions
 
@@ -540,18 +539,17 @@ class TestAdvancedBehaviorEngine:
             'system_type': 'hvac',
             'hvac_action': 'temperature_control'
         }
-        
+
         # Mock the action execution
         with pytest.MonkeyPatch().context() as m:
             executed_actions = []
-            def mock_execute(action_type, element_id, context):
+def mock_execute(action_type, element_id, context):
                 executed_actions.append(action_type)
-            
+
             m.setattr(behavior_engine, '_execute_hvac_action', mock_execute)
-            
+
             # Execute action
-            asyncio.run(behavior_engine._execute_infrastructure_action(action, 'test_element', {}))
-            
+            asyncio.run(behavior_engine._execute_infrastructure_action(action, 'test_element', {})
             # Check that action was executed
             assert 'temperature_control' in executed_actions
 
@@ -562,12 +560,12 @@ class TestAdvancedBehaviorEngine:
         pos2 = {'x': 3, 'y': 4, 'z': 0}
         distance = behavior_engine._calculate_distance(pos1, pos2)
         assert distance == 5.0
-        
+
         # Test point in boundary
         point = {'x': 5, 'y': 5}
         boundary = {'min_x': 0, 'max_x': 10, 'min_y': 0, 'max_y': 10}
         assert behavior_engine._is_point_in_boundary(point, boundary) is True
-        
+
         # Test bounds intersection
         bounds1 = {'min_x': 0, 'max_x': 5, 'min_y': 0, 'max_y': 5}
         bounds2 = {'min_x': 3, 'max_x': 8, 'min_y': 3, 'max_y': 8}
@@ -576,10 +574,10 @@ class TestAdvancedBehaviorEngine:
     def test_behavior_engine_lifecycle(self, behavior_engine):
         """Test behavior engine start/stop lifecycle."""
         assert not behavior_engine.running
-        
+
         behavior_engine.start()
         assert behavior_engine.running
-        
+
         behavior_engine.stop()
         assert not behavior_engine.running
 
@@ -594,17 +592,17 @@ class TestAdvancedBehaviorEngine:
             actions=[{'type': 'log', 'message': 'User interaction detected', 'level': 'info'}]
         )
         behavior_engine.register_rule(rule)
-        
+
         # Handle a user interaction event
         event_data = {'type': 'click', 'position': {'x': 100, 'y': 200}}
         await behavior_engine._handle_event('test_element', 'user_interaction', event_data)
-        
+
         # Verify rule was evaluated (would need to mock action execution to verify)
 
     def test_condition_registration_and_retrieval(self, behavior_engine, sample_condition):
         """Test condition registration and retrieval."""
         behavior_engine.register_condition(sample_condition)
-        
+
         assert 'test_condition_1' in behavior_engine.conditions
         retrieved_condition = behavior_engine.conditions['test_condition_1']
         assert retrieved_condition.condition_id == 'test_condition_1'
@@ -624,9 +622,9 @@ class TestAdvancedBehaviorEngine:
                 'description': 'Test rule with metadata'
             }
         )
-        
+
         behavior_engine.register_rule(rule)
-        
+
         # Test element targeting
         context = {'element_id': 'element1', 'element_type': 'equipment'}
         assert behavior_engine._rule_applies_to_element(rule, 'element1', context) is True
@@ -640,9 +638,9 @@ class TestAdvancedBehaviorEngine:
             schedule_data={'interval': 3600},  # 1 hour
             actions=[]
         )
-        
+
         behavior_engine.register_time_trigger(trigger)
-        
+
         # Verify next execution was calculated
         assert trigger.next_execution is not None
         assert trigger.next_execution > datetime.now()
@@ -651,11 +649,11 @@ class TestAdvancedBehaviorEngine:
         """Test state machine property handling."""
         element_id = 'test_equipment'
         behavior_engine.register_state_machine(element_id, sample_state_machine, 'off')
-        
+
         # Get current state properties
         current_state_id = behavior_engine.get_element_state(element_id)
         current_state = behavior_engine.state_machines[element_id][current_state_id]
-        
+
         assert current_state.properties['power'] is False
         assert current_state.properties['status'] == 'inactive'
 
@@ -664,10 +662,10 @@ class TestAdvancedBehaviorEngine:
         # Test invalid rule registration
         invalid_rule = None
         behavior_engine.register_rule(invalid_rule)  # Should handle gracefully
-        
+
         # Test invalid state machine registration
         behavior_engine.register_state_machine('test', [], 'invalid_state')  # Should handle gracefully
-        
+
         # Test invalid condition evaluation
         invalid_condition = {'type': 'invalid_type'}
         result = behavior_engine._evaluate_single_condition(invalid_condition, {})
@@ -677,7 +675,7 @@ class TestAdvancedBehaviorEngine:
         """Test a comprehensive behavior scenario."""
         # Create a complex scenario with multiple rules, states, and triggers
         element_id = 'complex_equipment'
-        
+
         # Register multiple rules
         safety_rule = BehaviorRule(
             rule_id='safety_rule',
@@ -686,7 +684,7 @@ class TestAdvancedBehaviorEngine:
             actions=[{'type': 'update', 'target_property': 'alert', 'value': 'critical'}],
             priority=3
         )
-        
+
         operational_rule = BehaviorRule(
             rule_id='operational_rule',
             rule_type=RuleType.OPERATIONAL,
@@ -694,20 +692,19 @@ class TestAdvancedBehaviorEngine:
             actions=[{'type': 'log', 'message': 'Equipment operational', 'level': 'info'}],
             priority=1
         )
-        
+
         behavior_engine.register_rule(safety_rule)
         behavior_engine.register_rule(operational_rule)
-        
+
         # Test scenario with high temperature
         context = {
             'element_id': element_id,
             'temperature': 85,
             'status': 'active'
         }
-        
+
         # Evaluate rules
-        applicable_rules = asyncio.run(behavior_engine.evaluate_rules(element_id, context))
-        
+        applicable_rules = asyncio.run(behavior_engine.evaluate_rules(element_id, context)
         # Should have both rules applicable, safety rule first due to priority
         assert len(applicable_rules) == 2
         assert applicable_rules[0]['rule_id'] == 'safety_rule'
@@ -726,7 +723,6 @@ def test_handle_selection_event(engine):
         user_id="u1",
         canvas_id="c1",
         payload=SelectionPayload(selection_mode="single", selected_ids=["obj1"], selection_origin=None, modifiers=None)
-    )
     feedback = engine._handle_selection_event(event)
     assert feedback["status"] == "updated"
     assert engine.get_selection_state("c1") == ["obj1"]
@@ -739,7 +735,6 @@ def test_handle_editing_event(engine):
         user_id="u1",
         canvas_id="c1",
         payload=EditingPayload(target_id="obj1", edit_type="move", before={"position": {"x": 0, "y": 0}}, after={"position": {"x": 1, "y": 2}}, property_changed=None)
-    )
     feedback = engine._handle_editing_event(event)
     assert feedback["status"] == "edited"
     assert engine.edit_history["c1"][-1]["edit_type"] == "move"
@@ -752,7 +747,6 @@ def test_handle_navigation_event(engine):
         user_id="u1",
         canvas_id="c1",
         payload=NavigationPayload(action="zoom", zoom_level=2.0, camera_position=None, target_object_id=None, floor_id=None)
-    )
     feedback = engine._handle_navigation_event(event)
     assert feedback["status"] == "navigation_updated"
     assert engine.get_navigation_state("c1")["zoom_level"] == 2.0
@@ -765,7 +759,6 @@ def test_handle_annotation_event(engine):
         user_id="u1",
         canvas_id="c1",
         payload=AnnotationPayload(target_id="obj2", annotation_type="note", content="Test", location={"x": 1, "y": 2}, media=None, tag=["t"])
-    )
     feedback = engine._handle_annotation_event(event)
     assert feedback["status"] == "annotation_added"
     ann = engine.get_annotations("c1")["obj2"]
@@ -774,4 +767,4 @@ def test_handle_annotation_event(engine):
 
 
 if __name__ == '__main__':
-    pytest.main([__file__]) 
+    pytest.main([__file__])

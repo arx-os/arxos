@@ -73,22 +73,22 @@ class MaintenanceSummary:
 class PartitionMaintainer:
     """
     Maintainer for automated partition management.
-    
+
     Follows Arxos logging standards with structured logging, performance monitoring,
     and comprehensive maintenance operations.
     """
-    
+
     def __init__(self, database_url: str):
         """
         Initialize the partition maintainer.
-        
+
         Args:
             database_url: PostgreSQL connection URL
         """
         self.database_url = database_url
         self.connection = None
         self.maintenance_results = None
-        
+
         # Performance tracking
         self.metrics = {
             'operations_executed': 0,
@@ -96,7 +96,7 @@ class PartitionMaintainer:
             'errors': 0,
             'warnings': 0
         }
-        
+
         # Partitioned tables configuration
         self.partitioned_tables = {
             'audit_logs_partitioned': {
@@ -120,10 +120,9 @@ class PartitionMaintainer:
                 'create_ahead_months': 3
             }
         }
-        
+
         logger.info("partition_maintainer_initialized",
-                   database_url=self._mask_password(database_url))
-    
+                    database_url=self._mask_password(database_url))
     def _mask_password(self, url: str) -> str:
         """Mask password in database URL for logging."""
         if '@' in url and ':' in url:
@@ -139,11 +138,11 @@ class PartitionMaintainer:
                             user = credentials.split(':')[0]
                             return f"{protocol}://{user}:***@{parts[1]}"
         return url
-    
+
     def connect(self) -> bool:
         """
         Establish database connection.
-        
+
         Returns:
             True if connection successful, False otherwise
         """
@@ -153,176 +152,175 @@ class PartitionMaintainer:
             return True
         except Exception as e:
             logger.error("database_connection_failed",
-                        error=str(e))
+                         error=str(e))
             return False
-    
+
     def disconnect(self) -> None:
         """Close database connection."""
         if self.connection:
             self.connection.close()
             logger.info("database_connection_closed")
-    
+
     def run_maintenance(self) -> bool:
         """
         Run comprehensive partition maintenance.
-        
+
         Returns:
             True if maintenance successful, False otherwise
         """
         start_time = datetime.now()
-        
+
         if not self.connect():
             return False
-        
+
         try:
             logger.info("starting_partition_maintenance")
-            
+
             # Get database information
             db_info = self._get_database_info()
-            
+
             # Run maintenance for each partitioned table
             maintenance_results = []
-            
+
             for table_name, config in self.partitioned_tables.items():
                 logger.info("maintaining_table",
                            table_name=table_name,
                            retention_months=config['retention_months'])
-                
+
                 # Create new partitions
                 create_results = self._create_new_partitions(table_name, config)
                 maintenance_results.extend(create_results)
-                
+
                 # Drop old partitions
                 drop_results = self._drop_old_partitions(table_name, config)
                 maintenance_results.extend(drop_results)
-                
+
                 # Validate partitions
                 validation_results = self._validate_partitions(table_name)
                 maintenance_results.extend(validation_results)
-            
+
             # Generate maintenance summary
             self.maintenance_results = self._generate_maintenance_summary(
                 db_info, maintenance_results)
-            
+
             # Calculate processing time
             processing_time = (datetime.now() - start_time).total_seconds() * 1000
             self.metrics['total_execution_time_ms'] = processing_time
-            
+
             logger.info("partition_maintenance_completed",
-                       operations_executed=self.metrics['operations_executed'],
-                       processing_time_ms=round(processing_time, 2))
-            
+                        operations_executed=self.metrics['operations_executed'],
+                        processing_time_ms=round(processing_time, 2))
             return True
-            
+
         except Exception as e:
             logger.error("partition_maintenance_failed",
-                        error=str(e))
+                         error=str(e))
             return False
         finally:
             self.disconnect()
-    
+
     def _get_database_info(self) -> Dict[str, Any]:
         """Get basic database information."""
         with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("SELECT current_database() as database_name")
             result = cursor.fetchone()
             return dict(result)
-    
+
     def _create_new_partitions(self, table_name: str, config: Dict[str, Any]) -> List[MaintenanceResult]:
         """
         Create new partitions for the specified table.
-        
+
         Args:
             table_name: Name of the partitioned table
             config: Table configuration
-            
+
         Returns:
             List of maintenance results
         """
         results = []
         create_ahead_months = config['create_ahead_months']
         partition_key = config['partition_key']
-        
+
         # Get existing partitions
         existing_partitions = self._get_existing_partitions(table_name)
-        
+
         # Calculate date range for new partitions
         current_date = datetime.now()
         end_date = current_date + timedelta(days=30 * create_ahead_months)
-        
+
         # Create partitions for each month
         partition_date = current_date
         while partition_date <= end_date:
             partition_name = self._generate_partition_name(table_name, partition_date)
-            
+
             # Check if partition already exists
             if not any(p.partition_name == partition_name for p in existing_partitions):
                 result = self._create_single_partition(table_name, partition_name, partition_date, partition_key)
                 results.append(result)
-            
+
             # Move to next month
             partition_date = partition_date + timedelta(days=30)
-        
+
         return results
-    
+
     def _drop_old_partitions(self, table_name: str, config: Dict[str, Any]) -> List[MaintenanceResult]:
         """
         Drop old partitions based on retention policy.
-        
+
         Args:
             table_name: Name of the partitioned table
             config: Table configuration
-            
+
         Returns:
             List of maintenance results
         """
         results = []
         retention_months = config['retention_months']
-        
+
         # Get existing partitions
         existing_partitions = self._get_existing_partitions(table_name)
-        
+
         # Calculate cutoff date
         cutoff_date = datetime.now() - timedelta(days=30 * retention_months)
-        
+
         # Drop partitions older than retention period
         for partition in existing_partitions:
             if partition.start_date < cutoff_date and not partition.is_active:
                 result = self._drop_single_partition(table_name, partition.partition_name)
                 results.append(result)
-        
+
         return results
-    
+
     def _validate_partitions(self, table_name: str) -> List[MaintenanceResult]:
         """
         Validate partition integrity and performance.
-        
+
         Args:
             table_name: Name of the partitioned table
-            
+
         Returns:
             List of maintenance results
         """
         results = []
-        
+
         # Get existing partitions
         existing_partitions = self._get_existing_partitions(table_name)
-        
+
         # Validate each partition
         for partition in existing_partitions:
             result = self._validate_single_partition(table_name, partition)
             results.append(result)
-        
+
         return results
-    
+
     def _get_existing_partitions(self, table_name: str) -> List[PartitionInfo]:
         """Get information about existing partitions."""
         partitions = []
-        
+
         try:
             with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
                 cursor.execute("""
-                    SELECT 
+                    SELECT
                         c.relname as partition_name,
                         pg_get_expr(c.relpartbound, c.oid) as partition_expression,
                         pg_size_pretty(pg_total_relation_size(c.oid)) as size_pretty,
@@ -335,17 +333,16 @@ class PartitionMaintainer:
                     AND c.relispartition = true
                     ORDER BY c.relname
                 """, (f"{table_name}_p%",))
-                
                 for row in cursor.fetchall():
                     partition_name = row['partition_name']
                     partition_expression = row['partition_expression']
-                    
-                    # Parse partition boundaries from expression
+
+                    # Parse partition boundaries from expression import expression
                     start_date, end_date = self._parse_partition_boundaries(partition_expression)
-                    
+
                     # Check if partition is active (has data)
                     is_active = row['row_count'] > 0
-                    
+
                     partitions.append(PartitionInfo(
                         partition_name=partition_name,
                         parent_table=table_name,
@@ -355,63 +352,61 @@ class PartitionMaintainer:
                         size_mb=row['size_bytes'] / (1024 * 1024),
                         is_active=is_active
                     ))
-        
+
         except Exception as e:
             logger.error("failed_to_get_existing_partitions",
-                        table_name=table_name,
-                        error=str(e))
-        
+                         table_name=table_name,
+                         error=str(e))
         return partitions
-    
+
     def _parse_partition_boundaries(self, partition_expression: str) -> Tuple[datetime, datetime]:
         """Parse partition boundaries from PostgreSQL expression."""
         try:
-            # Extract date values from expression like "FOR VALUES FROM ('2024-01-01') TO ('2024-02-01')"
+            # Extract date values from expression like "FOR VALUES FROM ('2024-01-01') TO ('2024-02-01')
             if "FROM ('" in partition_expression and "') TO ('" in partition_expression:
                 start_str = partition_expression.split("FROM ('")[1].split("') TO")[0]
                 end_str = partition_expression.split("') TO ('")[1].split("')")[0]
-                
+
                 start_date = datetime.strptime(start_str, '%Y-%m-%d')
                 end_date = datetime.strptime(end_str, '%Y-%m-%d')
-                
+
                 return start_date, end_date
         except Exception as e:
             logger.warning("failed_to_parse_partition_boundaries",
-                          expression=partition_expression,
-                          error=str(e))
-        
+                           expression=partition_expression,
+                           error=str(e))
         # Return default values if parsing fails
         return datetime.now(), datetime.now() + timedelta(days=30)
-    
+
     def _generate_partition_name(self, table_name: str, partition_date: datetime) -> str:
         """Generate partition name based on table and date."""
         return f"{table_name}_p{partition_date.strftime('%Y_%m')}"
-    
-    def _create_single_partition(self, table_name: str, partition_name: str, 
+
+    def _create_single_partition(self, table_name: str, partition_name: str,
                                 partition_date: datetime, partition_key: str) -> MaintenanceResult:
         """Create a single partition."""
         start_time = time.time()
-        
+
         try:
             # Calculate partition boundaries
             start_date = partition_date.replace(day=1)
             end_date = (start_date + timedelta(days=32)).replace(day=1)
-            
+
             # Create partition SQL
             sql = f"""
                 CREATE TABLE {partition_name} PARTITION OF {table_name}
-                FOR VALUES FROM ('{start_date.strftime('%Y-%m-%d')}') 
+                FOR VALUES FROM ('{start_date.strftime('%Y-%m-%d')}')
                 TO ('{end_date.strftime('%Y-%m-%d')}')
             """
-            
+
             with self.connection.cursor() as cursor:
                 cursor.execute(sql)
-            
+
             execution_time_ms = (time.time() - start_time) * 1000
-            
+
             # Log the operation
             self._log_maintenance_operation(table_name, 'create_partition', partition_name)
-            
+
             return MaintenanceResult(
                 operation='create_partition',
                 table_name=table_name,
@@ -421,14 +416,13 @@ class PartitionMaintainer:
                 rows_affected=0,
                 error_message=None
             )
-            
+
         except Exception as e:
             execution_time_ms = (time.time() - start_time) * 1000
             logger.error("failed_to_create_partition",
-                        table_name=table_name,
-                        partition_name=partition_name,
-                        error=str(e))
-            
+                         table_name=table_name,
+                         partition_name=partition_name,
+                         error=str(e))
             return MaintenanceResult(
                 operation='create_partition',
                 table_name=table_name,
@@ -438,28 +432,27 @@ class PartitionMaintainer:
                 rows_affected=0,
                 error_message=str(e)
             )
-    
     def _drop_single_partition(self, table_name: str, partition_name: str) -> MaintenanceResult:
         """Drop a single partition."""
         start_time = time.time()
-        
+
         try:
             # Get row count before dropping
             with self.connection.cursor() as cursor:
                 cursor.execute(f"SELECT COUNT(*) FROM {partition_name}")
                 row_count = cursor.fetchone()[0]
-            
+
             # Drop partition
             sql = f"DROP TABLE {partition_name}"
-            
+
             with self.connection.cursor() as cursor:
                 cursor.execute(sql)
-            
+
             execution_time_ms = (time.time() - start_time) * 1000
-            
+
             # Log the operation
             self._log_maintenance_operation(table_name, 'drop_partition', partition_name)
-            
+
             return MaintenanceResult(
                 operation='drop_partition',
                 table_name=table_name,
@@ -469,14 +462,13 @@ class PartitionMaintainer:
                 rows_affected=row_count,
                 error_message=None
             )
-            
+
         except Exception as e:
             execution_time_ms = (time.time() - start_time) * 1000
             logger.error("failed_to_drop_partition",
-                        table_name=table_name,
-                        partition_name=partition_name,
-                        error=str(e))
-            
+                         table_name=table_name,
+                         partition_name=partition_name,
+                         error=str(e))
             return MaintenanceResult(
                 operation='drop_partition',
                 table_name=table_name,
@@ -486,22 +478,21 @@ class PartitionMaintainer:
                 rows_affected=0,
                 error_message=str(e)
             )
-    
     def _validate_single_partition(self, table_name: str, partition: PartitionInfo) -> MaintenanceResult:
         """Validate a single partition."""
         start_time = time.time()
-        
+
         try:
             # Check partition integrity
             with self.connection.cursor() as cursor:
                 cursor.execute(f"SELECT COUNT(*) FROM {partition.partition_name}")
                 actual_row_count = cursor.fetchone()[0]
-            
+
             # Validate row count matches expected
             is_valid = actual_row_count == partition.row_count
-            
+
             execution_time_ms = (time.time() - start_time) * 1000
-            
+
             return MaintenanceResult(
                 operation='validate_partition',
                 table_name=table_name,
@@ -511,14 +502,13 @@ class PartitionMaintainer:
                 rows_affected=actual_row_count,
                 error_message=None if is_valid else "Row count mismatch"
             )
-            
+
         except Exception as e:
             execution_time_ms = (time.time() - start_time) * 1000
             logger.error("failed_to_validate_partition",
-                        table_name=table_name,
-                        partition_name=partition.partition_name,
-                        error=str(e))
-            
+                         table_name=table_name,
+                         partition_name=partition.partition_name,
+                         error=str(e))
             return MaintenanceResult(
                 operation='validate_partition',
                 table_name=table_name,
@@ -528,7 +518,6 @@ class PartitionMaintainer:
                 rows_affected=0,
                 error_message=str(e)
             )
-    
     def _log_maintenance_operation(self, table_name: str, operation: str, partition_name: str) -> None:
         """Log maintenance operation to audit log."""
         try:
@@ -536,13 +525,16 @@ class PartitionMaintainer:
                 cursor.execute("""
                     INSERT INTO audit_logs_partitioned (object_type, object_id, action, payload)
                     VALUES (%s, %s, %s, %s)
-                """, ('partition_maintenance', partition_name, operation, 
-                      json.dumps({'table_name': table_name, 'timestamp': datetime.now().isoformat()})))
+                """, (
+                    'partition_maintenance',
+                    partition_name,
+                    operation,
+                    json.dumps({'table_name': table_name, 'timestamp': datetime.now().isoformat()})
+                ))
         except Exception as e:
             logger.warning("failed_to_log_maintenance_operation",
-                          error=str(e))
-    
-    def _generate_maintenance_summary(self, db_info: Dict[str, Any], 
+                           error=str(e))
+    def _generate_maintenance_summary(self, db_info: Dict[str, Any],
                                     maintenance_results: List[MaintenanceResult]) -> MaintenanceSummary:
         """Generate summary of maintenance operations."""
         if not maintenance_results:
@@ -558,20 +550,20 @@ class PartitionMaintainer:
                 maintenance_results=[],
                 recommendations=[]
             )
-        
+
         # Calculate summary statistics
         total_operations = len(maintenance_results)
         successful_operations = len([r for r in maintenance_results if r.success])
         failed_operations = total_operations - successful_operations
-        partitions_created = len([r for r in maintenance_results 
+        partitions_created = len([r for r in maintenance_results
                                 if r.operation == 'create_partition' and r.success])
-        partitions_dropped = len([r for r in maintenance_results 
+        partitions_dropped = len([r for r in maintenance_results
                                 if r.operation == 'drop_partition' and r.success])
         total_time_ms = sum(r.execution_time_ms for r in maintenance_results)
-        
+
         # Generate recommendations
         recommendations = self._generate_recommendations(maintenance_results)
-        
+
         return MaintenanceSummary(
             maintenance_timestamp=datetime.now(),
             database_name=db_info['database_name'],
@@ -584,11 +576,11 @@ class PartitionMaintainer:
             maintenance_results=maintenance_results,
             recommendations=recommendations
         )
-    
+
     def _generate_recommendations(self, maintenance_results: List[MaintenanceResult]) -> List[str]:
         """Generate recommendations based on maintenance results."""
         recommendations = []
-        
+
         # Analyze operation success rates
         operation_types = {}
         for result in maintenance_results:
@@ -597,51 +589,51 @@ class PartitionMaintainer:
             operation_types[result.operation]['total'] += 1
             if result.success:
                 operation_types[result.operation]['success'] += 1
-        
+
         for operation, stats in operation_types.items():
             success_rate = (stats['success'] / stats['total']) * 100
             if success_rate < 100:
                 recommendations.append(f"{operation}: {success_rate:.1f}% success rate - review needed")
             else:
                 recommendations.append(f"{operation}: 100% success rate - excellent")
-        
+
         # Analyze performance
         avg_execution_time = sum(r.execution_time_ms for r in maintenance_results) / len(maintenance_results)
         if avg_execution_time > 1000:
             recommendations.append(f"Average execution time: {avg_execution_time:.1f}ms - consider optimization")
         else:
             recommendations.append(f"Average execution time: {avg_execution_time:.1f}ms - good performance")
-        
+
         # Analyze partition distribution
         created_count = len([r for r in maintenance_results if r.operation == 'create_partition' and r.success])
         dropped_count = len([r for r in maintenance_results if r.operation == 'drop_partition' and r.success])
-        
+
         if created_count > 0:
             recommendations.append(f"Created {created_count} new partitions")
         if dropped_count > 0:
             recommendations.append(f"Dropped {dropped_count} old partitions")
-        
+
         return recommendations
-    
+
     def generate_report(self, output_format: str = "json", output_file: Optional[str] = None) -> str:
         """
         Generate maintenance report in specified format.
-        
+
         Args:
             output_format: 'json' or 'markdown'
             output_file: Optional output file path
-            
+
         Returns:
             Generated report content
         """
         if not self.maintenance_results:
             logger.warning("no_maintenance_results_to_report")
             return ""
-        
+
         logger.info("generating_maintenance_report",
                    format=output_format,
                    total_operations=self.maintenance_results.total_operations)
-        
+
         if output_format.lower() == "json":
             return self._generate_json_report(output_file)
         elif output_format.lower() == "markdown":
@@ -650,7 +642,7 @@ class PartitionMaintainer:
             logger.error("unsupported_output_format",
                         format=output_format)
             return ""
-    
+
     def _generate_json_report(self, output_file: Optional[str] = None) -> str:
         """Generate JSON format report."""
         report = {
@@ -670,23 +662,23 @@ class PartitionMaintainer:
             },
             'maintenance_results': [asdict(result) for result in self.maintenance_results.maintenance_results]
         }
-        
+
         content = json.dumps(report, indent=2, default=str)
-        
+
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(content)
             logger.info("json_report_saved",
                        file=output_file)
-        
+
         return content
-    
+
     def _generate_markdown_report(self, output_file: Optional[str] = None) -> str:
         """Generate Markdown format report."""
-        content = f"""# Partition Maintenance Report
+        content = f"""# Partition Maintenance Report"
 
-**Generated:** {self.maintenance_results.maintenance_timestamp.strftime('%Y-%m-%d %H:%M:%S')}  
-**Database:** {self.maintenance_results.database_name}  
+**Generated:** {self.maintenance_results.maintenance_timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+**Database:** {self.maintenance_results.database_name}
 **Total Operations:** {self.maintenance_results.total_operations}
 
 ## Executive Summary
@@ -700,12 +692,12 @@ class PartitionMaintainer:
 ## Maintenance Recommendations
 
 """
-        
+
         for rec in self.maintenance_results.recommendations:
             content += f"- {rec}\n"
-        
+
         content += "\n## Detailed Results\n\n"
-        
+
         for result in self.maintenance_results.maintenance_results:
             status = "✅" if result.success else "❌"
             content += f"### {status} {result.operation.title()}\n\n"
@@ -713,18 +705,18 @@ class PartitionMaintainer:
             content += f"- **Partition:** {result.partition_name}\n"
             content += f"- **Execution Time:** {result.execution_time_ms:.2f}ms\n"
             content += f"- **Rows Affected:** {result.rows_affected}\n"
-            
+
             if result.error_message:
                 content += f"- **Error:** {result.error_message}\n"
-            
+
             content += "\n"
-        
+
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(content)
             logger.info("markdown_report_saved",
-                       file=output_file)
-        
+                        file=output_file)
+
         return content
 
 
@@ -753,9 +745,9 @@ def main():
         action="store_true",
         help="Enable verbose logging"
     )
-    
+
     args = parser.parse_args()
-    
+
     # Configure logging
     if args.verbose:
         structlog.configure(
@@ -774,18 +766,18 @@ def main():
             wrapper_class=structlog.stdlib.BoundLogger,
             cache_logger_on_first_use=True,
         )
-    
+
     # Run maintenance
     maintainer = PartitionMaintainer(args.database_url)
     success = maintainer.run_maintenance()
-    
+
     if success:
         # Generate report
         report_content = maintainer.generate_report(
             output_format=args.output_format,
             output_file=args.output_file
         )
-        
+
         # Print summary
         if maintainer.maintenance_results:
             print("\n" + "="*60)
@@ -800,14 +792,14 @@ def main():
             for rec in maintainer.maintenance_results.recommendations:
                 print(f"- {rec}")
             print("="*60)
-        
+
         # Print report if no output file specified
         if not args.output_file and report_content:
             print("\n" + report_content)
-    
+
     # Exit with appropriate code
     sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

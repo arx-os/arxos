@@ -18,7 +18,7 @@ class SelectionHandler:
     Handles selection state for SVGX canvases and objects.
     Supports single-select, multi-select, and deselect operations.
     """
-    def __init__(self):
+def __init__(self):
     """
     Perform __init__ operation
 
@@ -41,25 +41,25 @@ Example:
     def handle_selection_event(self, event: Event) -> Optional[Dict[str, Any]]:
         """
         Handle selection events (select, deselect, toggle, clear).
-        
+
         Args:
             event: Selection event with action and parameters
-            
+
         Returns:
             Dict with action result and feedback, or None if invalid
         """
         try:
             canvas_id = event.data.get('canvas_id')
             action = event.data.get('action')
-            
+
             if not canvas_id or not action:
                 logger.warning(f"Invalid selection event: missing canvas_id or action")
                 return None
-            
+
             # Initialize selection state if not exists
             if canvas_id not in self.selection_state:
                 self.selection_state[canvas_id] = set()
-            
+
             if action == 'select':
                 return self._handle_select(event, canvas_id)
             elif action == 'deselect':
@@ -73,7 +73,7 @@ Example:
             else:
                 logger.warning(f"Unknown selection action: {action}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Error handling selection event: {e}")
             return None
@@ -82,18 +82,18 @@ Example:
         """Handle single object selection."""
         object_id = event.data.get('object_id')
         clear_previous = event.data.get('clear_previous', True)
-        
+
         if not object_id:
             logger.warning("Select action requires object_id")
             return None
-        
+
         old_selection = self.selection_state[canvas_id].copy()
-        
+
         if clear_previous:
             self.selection_state[canvas_id].clear()
-        
+
         self.selection_state[canvas_id].add(object_id)
-        
+
         return {
             'action': 'select',
             'object_id': object_id,
@@ -106,16 +106,16 @@ Example:
     def _handle_deselect(self, event: Event, canvas_id: str) -> Dict[str, Any]:
         """Handle object deselection."""
         object_id = event.data.get('object_id')
-        
+
         if not object_id:
             logger.warning("Deselect action requires object_id")
             return None
-        
+
         old_selection = self.selection_state[canvas_id].copy()
         was_selected = object_id in self.selection_state[canvas_id]
-        
+
         self.selection_state[canvas_id].discard(object_id)
-        
+
         return {
             'action': 'deselect',
             'object_id': object_id,
@@ -128,19 +128,19 @@ Example:
     def _handle_toggle(self, event: Event, canvas_id: str) -> Dict[str, Any]:
         """Handle selection toggle."""
         object_id = event.data.get('object_id')
-        
+
         if not object_id:
             logger.warning("Toggle action requires object_id")
             return None
-        
+
         old_selection = self.selection_state[canvas_id].copy()
         was_selected = object_id in self.selection_state[canvas_id]
-        
+
         if was_selected:
             self.selection_state[canvas_id].discard(object_id)
         else:
             self.selection_state[canvas_id].add(object_id)
-        
+
         return {
             'action': 'toggle',
             'object_id': object_id,
@@ -155,9 +155,9 @@ Example:
         """Handle clear all selections."""
         old_selection = self.selection_state[canvas_id].copy()
         cleared_count = len(old_selection)
-        
+
         self.selection_state[canvas_id].clear()
-        
+
         return {
             'action': 'clear',
             'cleared_count': cleared_count,
@@ -170,20 +170,20 @@ Example:
         """Handle multiple object selection."""
         object_ids = event.data.get('object_ids', [])
         clear_previous = event.data.get('clear_previous', True)
-        
+
         if not object_ids:
             logger.warning("Select multiple action requires object_ids")
             return None
-        
+
         old_selection = self.selection_state[canvas_id].copy()
-        
+
         if clear_previous:
             self.selection_state[canvas_id].clear()
-        
+
         # Add all object IDs to selection
         for object_id in object_ids:
             self.selection_state[canvas_id].add(object_id)
-        
+
         return {
             'action': 'select_multiple',
             'object_ids': object_ids,
@@ -199,8 +199,7 @@ Example:
 
     def is_selected(self, canvas_id: str, object_id: str) -> bool:
         """Check if object is selected in canvas."""
-        return object_id in self.selection_state.get(canvas_id, set())
-
+        return object_id in self.selection_state.get(canvas_id, set()
     def get_selection_count(self, canvas_id: str) -> int:
         """Get number of selected objects in canvas."""
         return len(self.selection_state.get(canvas_id, set()))
@@ -231,11 +230,11 @@ Example:
         result = _register_selection_handler(param)
         print(result)
     """
-    def handler(event: Event):
+def handler(event: Event):
         if event.type == EventType.USER_INTERACTION and event.data.get('event_subtype') == 'selection':
             return selection_handler.handle_selection_event(event)
         return None
-    
+
     # Import here to avoid circular imports
     from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
     event_driven_behavior_engine.register_handler(
@@ -245,4 +244,4 @@ Example:
         priority=0
     )
 
-_register_selection_handler() 
+_register_selection_handler()

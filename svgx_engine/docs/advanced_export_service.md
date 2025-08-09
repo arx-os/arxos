@@ -319,10 +319,10 @@ batch_id = service.create_export_batch(jobs, priority=1)
 try:
     job_id = service.create_advanced_export_job(...)
     job = service.get_advanced_export_job_status(job_id)
-    
+
     if job.status == AdvancedExportStatus.FAILED:
         print(f"Export failed: {job.error_message}")
-        
+
 except AdvancedExportError as e:
     print(f"Service error: {e}")
 ```
@@ -444,4 +444,4 @@ The service is designed for easy extension:
 
 The SVGX Advanced Export Service provides enterprise-grade export capabilities with comprehensive features for production environments. With its thread-safe architecture, comprehensive error handling, and advanced analytics, it's ready for deployment in mission-critical applications.
 
-For more information, see the [SVGX Engine Documentation](README.md) and [API Reference](api_reference.md). 
+For more information, see the [SVGX Engine Documentation](README.md) and [API Reference](api_reference.md).

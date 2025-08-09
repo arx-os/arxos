@@ -7,30 +7,30 @@ export class Drag {
     constructor(viewportManager, selection, options = {}) {
         this.viewportManager = viewportManager;
         this.selection = selection;
-        
+
         // Drag state
         this.isDragging = false;
         this.currentDragTarget = null;
         this.dragStartPosition = null;
         this.dragOffset = { x: 0, y: 0 };
-        
+
         // Performance optimizations
         this.dragThrottleTimer = null;
         this.dragThrottleDelay = options.dragThrottleDelay || 16; // ~60fps
-        
+
         // Drag constraints
         this.dragEnabled = options.dragEnabled !== false;
         this.dragBoundaries = options.dragBoundaries || {
             enabled: true,
             padding: 50
         };
-        
+
         // Object pool for performance
         this.objectPool = new Map();
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -41,14 +41,14 @@ export class Drag {
 
     setupEventListeners() {
         if (!this.viewportManager || !this.viewportManager.svg) return;
-        
+
         const svg = this.viewportManager.svg;
-        
+
         // Mouse events for drag
         svg.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         svg.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         svg.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        
+
         // Keyboard events for drag
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
     }
@@ -81,34 +81,34 @@ export class Drag {
 
     handleMouseDown(event) {
         if (!this.dragEnabled) return;
-        
+
         const target = this.findDraggableObject(event.target);
         if (!target) return;
-        
+
         // Check if target is selected
         if (!this.selection.isObjectSelected(target)) {
             this.selection.selectObject(target);
         }
-        
+
         this.startDrag(event, target);
     }
 
     handleMouseMove(event) {
         if (!this.isDragging) return;
-        
+
         event.preventDefault();
         this.updateDrag(event);
     }
 
     handleMouseUp(event) {
         if (!this.isDragging) return;
-        
+
         this.endDrag(event);
     }
 
     handleKeyDown(event) {
         if (!this.isDragging) return;
-        
+
         switch (event.key) {
             case 'Escape':
                 this.cancelDrag();
@@ -128,10 +128,10 @@ export class Drag {
 
     handleInteractDragMove(event) {
         if (!this.isDragging) return;
-        
+
         const deltaX = event.delta.x;
         const deltaY = event.delta.y;
-        
+
         this.moveSelectedObjects(deltaX, deltaY);
     }
 
@@ -143,43 +143,43 @@ export class Drag {
     startDrag(event, target) {
         this.isDragging = true;
         this.currentDragTarget = target;
-        
+
         const mousePos = this.getMousePosition(event);
         const targetPos = this.getObjectPosition(target);
-        
+
         this.dragStartPosition = mousePos;
         this.dragOffset = {
             x: mousePos.x - targetPos.x,
             y: mousePos.y - targetPos.y
         };
-        
+
         // Save state before drag
         this.saveStateBeforeDrag();
-        
+
         // Add drag visual feedback
         this.addDragVisualFeedback();
-        
+
         this.triggerEvent('dragStarted', { target, position: mousePos });
     }
 
     updateDrag(event) {
         if (!this.isDragging || !this.currentDragTarget) return;
-        
+
         // Throttle drag updates for performance
         if (this.dragThrottleTimer) return;
-        
+
         this.dragThrottleTimer = setTimeout(() => {
             this.dragThrottleTimer = null;
         }, this.dragThrottleDelay);
-        
+
         const mousePos = this.getMousePosition(event);
         const deltaX = mousePos.x - this.dragStartPosition.x;
         const deltaY = mousePos.y - this.dragStartPosition.y;
-        
+
         this.moveSelectedObjects(deltaX, deltaY);
-        
-        this.triggerEvent('dragUpdated', { 
-            target: this.currentDragTarget, 
+
+        this.triggerEvent('dragUpdated', {
+            target: this.currentDragTarget,
             position: mousePos,
             delta: { x: deltaX, y: deltaY }
         });
@@ -187,38 +187,38 @@ export class Drag {
 
     endDrag(event) {
         if (!this.isDragging) return;
-        
+
         this.isDragging = false;
-        
+
         // Save state after drag
         this.saveStateAfterDrag();
-        
+
         // Remove drag visual feedback
         this.removeDragVisualFeedback();
-        
+
         // Update object positions in backend
         this.saveObjectPositions();
-        
-        this.triggerEvent('dragEnded', { 
+
+        this.triggerEvent('dragEnded', {
             target: this.currentDragTarget,
             finalPosition: this.getObjectPosition(this.currentDragTarget)
         });
-        
+
         this.currentDragTarget = null;
         this.dragStartPosition = null;
     }
 
     cancelDrag() {
         if (!this.isDragging) return;
-        
+
         // Restore original positions
         this.restoreObjectPositions();
-        
+
         this.isDragging = false;
         this.removeDragVisualFeedback();
-        
+
         this.triggerEvent('dragCancelled');
-        
+
         this.currentDragTarget = null;
         this.dragStartPosition = null;
     }
@@ -226,7 +226,7 @@ export class Drag {
     // Object movement methods
     moveSelectedObjects(deltaX, deltaY) {
         const selectedObjects = this.selection.getSelectedObjects();
-        
+
         selectedObjects.forEach(obj => {
             this.moveObject(obj, deltaX, deltaY);
         });
@@ -234,19 +234,19 @@ export class Drag {
 
     moveObject(obj, deltaX, deltaY) {
         if (!obj) return;
-        
+
         const currentPos = this.getObjectPosition(obj);
         const newPos = {
             x: currentPos.x + deltaX,
             y: currentPos.y + deltaY
         };
-        
+
         // Apply constraints
         const constrainedPos = this.applyDragConstraints(newPos, obj);
-        
+
         // Update object position
         this.setObjectPosition(obj, constrainedPos);
-        
+
         // Update drag start position for next frame
         this.dragStartPosition = {
             x: this.dragStartPosition.x + deltaX,
@@ -257,7 +257,7 @@ export class Drag {
     // Utility methods
     findDraggableObject(target) {
         if (!target) return null;
-        
+
         // Walk up the DOM tree to find the closest draggable object
         let element = target;
         while (element && element !== this.viewportManager.svg) {
@@ -266,7 +266,7 @@ export class Drag {
             }
             element = element.parentElement;
         }
-        
+
         return null;
     }
 
@@ -299,7 +299,7 @@ export class Drag {
                 };
             }
         }
-        
+
         return {
             x: parseFloat(obj.getAttribute('x') || '0'),
             y: parseFloat(obj.getAttribute('y') || '0')
@@ -310,7 +310,7 @@ export class Drag {
         // Update transform attribute
         const transform = `translate(${position.x}, ${position.y})`;
         obj.setAttribute('transform', transform);
-        
+
         // Update data attributes for persistence
         obj.setAttribute('data-x', position.x.toString());
         obj.setAttribute('data-y', position.y.toString());
@@ -320,21 +320,21 @@ export class Drag {
         if (!this.dragBoundaries.enabled) {
             return position;
         }
-        
+
         const svgBounds = this.viewportManager.svg.getBoundingClientRect();
         const objBounds = obj.getBoundingClientRect();
         const padding = this.dragBoundaries.padding;
-        
+
         const constrainedX = Math.max(
             -objBounds.width + padding,
             Math.min(svgBounds.width - padding, position.x)
         );
-        
+
         const constrainedY = Math.max(
             -objBounds.height + padding,
             Math.min(svgBounds.height - padding, position.y)
         );
-        
+
         return {
             x: constrainedX,
             y: constrainedY
@@ -345,7 +345,7 @@ export class Drag {
     saveStateBeforeDrag() {
         const selectedObjects = this.selection.getSelectedObjects();
         this.dragStartStates = new Map();
-        
+
         selectedObjects.forEach(obj => {
             this.dragStartStates.set(obj, this.getObjectPosition(obj));
         });
@@ -358,7 +358,7 @@ export class Drag {
 
     restoreObjectPositions() {
         if (!this.dragStartStates) return;
-        
+
         this.dragStartStates.forEach((position, obj) => {
             this.setObjectPosition(obj, position);
         });
@@ -367,7 +367,7 @@ export class Drag {
     // Visual feedback
     addDragVisualFeedback() {
         const selectedObjects = this.selection.getSelectedObjects();
-        
+
         selectedObjects.forEach(obj => {
             obj.classList.add('dragging');
             obj.style.cursor = 'grabbing';
@@ -376,7 +376,7 @@ export class Drag {
 
     removeDragVisualFeedback() {
         const selectedObjects = this.selection.getSelectedObjects();
-        
+
         selectedObjects.forEach(obj => {
             obj.classList.remove('dragging');
             obj.style.cursor = 'grab';
@@ -388,7 +388,7 @@ export class Drag {
         if (!this.objectPool.has(type)) {
             this.objectPool.set(type, []);
         }
-        
+
         const pool = this.objectPool.get(type);
         return pool.length > 0 ? pool.pop() : null;
     }
@@ -397,22 +397,22 @@ export class Drag {
         if (!this.objectPool.has(type)) {
             this.objectPool.set(type, []);
         }
-        
+
         this.objectPool.get(type).push(object);
     }
 
     // Backend integration
     async saveObjectPositions() {
         const selectedObjects = this.selection.getSelectedObjects();
-        
+
         if (selectedObjects.length === 0) return;
-        
+
         const positions = selectedObjects.map(obj => ({
             id: obj.id,
             position: this.getObjectPosition(obj),
             type: obj.getAttribute('data-type')
         }));
-        
+
         try {
             // Send to backend
             const response = await fetch('/api/objects/positions', {
@@ -422,11 +422,11 @@ export class Drag {
                 },
                 body: JSON.stringify({ positions })
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to save object positions');
             }
-            
+
             this.triggerEvent('positionsSaved', { positions });
         } catch (error) {
             console.error('Error saving object positions:', error);
@@ -490,11 +490,11 @@ export class Drag {
         if (this.isDragging) {
             this.cancelDrag();
         }
-        
+
         this.objectPool.clear();
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

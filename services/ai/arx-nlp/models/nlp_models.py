@@ -51,7 +51,7 @@ class Intent:
     required_slots: List[SlotType] = field(default_factory=list)
     optional_slots: List[SlotType] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -75,7 +75,7 @@ class Slot:
     end_pos: int = -1
     original_value: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -96,7 +96,7 @@ class SlotResult:
     slots: List[Slot]
     confidence: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -114,7 +114,7 @@ class CLICommand:
     options: Dict[str, Any] = field(default_factory=dict)
     subcommand: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -124,16 +124,16 @@ class CLICommand:
             'subcommand': self.subcommand,
             'metadata': self.metadata
         }
-    
+
     def to_string(self) -> str:
         """Convert to command string"""
         cmd_parts = [self.command]
-        
+
         if self.subcommand:
             cmd_parts.append(self.subcommand)
-        
+
         cmd_parts.extend(self.arguments)
-        
+
         for key, value in self.options.items():
             if isinstance(value, bool):
                 if value:
@@ -141,7 +141,7 @@ class CLICommand:
             else:
                 cmd_parts.append(f"--{key}")
                 cmd_parts.append(str(value))
-        
+
         return " ".join(cmd_parts)
 
 
@@ -156,7 +156,7 @@ class NLPContext:
     object_context: Dict[str, Any] = field(default_factory=dict)
     permissions: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -178,7 +178,7 @@ class NLPRequest:
     context: Optional[NLPContext] = None
     config: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -201,7 +201,7 @@ class NLPResponse:
     timestamp: datetime
     error: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -215,7 +215,7 @@ class NLPResponse:
             'error': self.error,
             'metadata': self.metadata
         }
-    
+
     def to_json(self) -> str:
         """Convert to JSON string"""
         return json.dumps(self.to_dict(), indent=2)
@@ -229,7 +229,7 @@ class ValidationResult:
     warnings: List[str] = field(default_factory=list)
     suggestions: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -252,7 +252,7 @@ class ProcessingStats:
     intent_distribution: Dict[str, int] = field(default_factory=dict)
     slot_distribution: Dict[str, int] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -337,4 +337,4 @@ def nlp_response_from_dict(data: Dict[str, Any]) -> NLPResponse:
 def nlp_response_from_json(json_str: str) -> NLPResponse:
     """Create NLPResponse from JSON string"""
     data = json.loads(json_str)
-    return nlp_response_from_dict(data) 
+    return nlp_response_from_dict(data)

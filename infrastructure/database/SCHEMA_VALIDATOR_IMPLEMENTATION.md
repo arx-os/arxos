@@ -101,7 +101,7 @@ class SchemaValidator:
 -- 001_create_users.sql
 CREATE TABLE users (id INTEGER PRIMARY KEY);
 
--- 002_create_posts.sql  
+-- 002_create_posts.sql
 CREATE TABLE posts (
     user_id INTEGER,
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -283,4 +283,4 @@ The schema validator implementation is **100% complete** and provides:
 - **Extensive Testing**: Full test coverage for all scenarios
 - **Error Prevention**: Prevents common migration issues before deployment
 
-The implementation successfully prevents invalid migrations with foreign key misordering and missing indexes, ensuring database schema consistency and performance across the Arxos Platform. 
+The implementation successfully prevents invalid migrations with foreign key misordering and missing indexes, ensuring database schema consistency and performance across the Arxos Platform.

@@ -11,7 +11,7 @@ class CollaborationSystem {
             enableCollaborativeIndicators: true,
             ...options
         };
-        
+
         this.currentUser = null;
         this.currentFloor = null;
         this.floorLock = null;
@@ -19,12 +19,12 @@ class CollaborationSystem {
         this.userActivity = new Map();
         this.conflictQueue = [];
         this.isProcessing = false;
-        
+
         this.lockTimer = null;
         this.activityTimer = null;
         this.conflictTimer = null;
         this.presenceTimer = null;
-        
+
         this.initializeSystem();
     }
 
@@ -45,7 +45,7 @@ class CollaborationSystem {
             avatar: localStorage.getItem('user_avatar') || null,
             sessionId: this.generateSessionId()
         };
-        
+
         // Store user info if not already stored
         if (!localStorage.getItem('user_id')) {
             localStorage.setItem('user_id', this.currentUser.id);
@@ -58,12 +58,12 @@ class CollaborationSystem {
         document.addEventListener('floorSelected', (event) => {
             this.handleFloorSelection(event.detail);
         });
-        
+
         // Listen for user activity
         document.addEventListener('mousedown', () => this.updateUserActivity());
         document.addEventListener('keydown', () => this.updateUserActivity());
         document.addEventListener('touchstart', () => this.updateUserActivity());
-        
+
         // Listen for page visibility changes
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -72,21 +72,21 @@ class CollaborationSystem {
                 this.handlePageVisible();
             }
         });
-        
+
         // Listen for beforeunload
         window.addEventListener('beforeunload', () => {
             this.releaseFloorLock();
         });
-        
+
         // Listen for version control operations
         document.addEventListener('versionRestoreStarted', () => {
             this.handleVersionRestoreStarted();
         });
-        
+
         document.addEventListener('versionRestoreCompleted', () => {
             this.handleVersionRestoreCompleted();
         });
-        
+
         document.addEventListener('versionRestoreFailed', () => {
             this.handleVersionRestoreFailed();
         });
@@ -167,9 +167,9 @@ class CollaborationSystem {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(statusBar);
-        
+
         // Create user presence panel
         const presencePanel = document.createElement('div');
         presencePanel.id = 'user-presence-panel';
@@ -186,9 +186,9 @@ class CollaborationSystem {
                 <!-- User list will be populated here -->
             </div>
         `;
-        
+
         document.body.appendChild(presencePanel);
-        
+
         // Create conflict resolution modal
         const conflictModal = document.createElement('div');
         conflictModal.id = 'conflict-resolution-modal';
@@ -215,9 +215,9 @@ class CollaborationSystem {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(conflictModal);
-        
+
         // Add event listeners
         this.setupUIEventListeners();
     }
@@ -228,27 +228,27 @@ class CollaborationSystem {
         document.getElementById('collaboration-settings')?.addEventListener('click', () => {
             this.showCollaborationSettings();
         });
-        
+
         // Active users click to show presence panel
         document.getElementById('active-users')?.addEventListener('click', () => {
             this.togglePresencePanel();
         });
-        
+
         // Close presence panel
         document.getElementById('close-presence-panel')?.addEventListener('click', () => {
             this.hidePresencePanel();
         });
-        
+
         // Close conflict modal
         document.getElementById('close-conflict-modal')?.addEventListener('click', () => {
             this.hideConflictModal();
         });
-        
+
         // Resolve conflicts
         document.getElementById('resolve-conflicts')?.addEventListener('click', () => {
             this.resolveConflicts();
         });
-        
+
         // Ignore conflicts
         document.getElementById('ignore-conflicts')?.addEventListener('click', () => {
             this.ignoreConflicts();
@@ -259,20 +259,20 @@ class CollaborationSystem {
     async handleFloorSelection(floorData) {
         const previousFloor = this.currentFloor;
         this.currentFloor = floorData;
-        
+
         // Release lock on previous floor
         if (previousFloor && previousFloor.id !== floorData.id) {
             await this.releaseFloorLock();
         }
-        
+
         // Request lock on new floor
         if (this.options.enableFloorLocking) {
             await this.requestFloorLock();
         }
-        
+
         // Update collaboration status
         this.updateCollaborationStatus();
-        
+
         // Update user presence
         this.updateUserPresence();
     }
@@ -280,7 +280,7 @@ class CollaborationSystem {
     // Request floor lock
     async requestFloorLock() {
         if (!this.currentFloor || !this.options.enableFloorLocking) return;
-        
+
         try {
             const response = await fetch(`/api/floors/${this.currentFloor.id}/lock`, {
                 method: 'POST',
@@ -294,7 +294,7 @@ class CollaborationSystem {
                     expires_at: new Date(Date.now() + this.options.floorLockTimeout).toISOString()
                 })
             });
-            
+
             if (response.ok) {
                 const lockData = await response.json();
                 this.floorLock = lockData;
@@ -316,7 +316,7 @@ class CollaborationSystem {
     // Refresh floor lock
     async refreshFloorLock() {
         if (!this.floorLock || !this.currentFloor) return;
-        
+
         try {
             const response = await fetch(`/api/floors/${this.currentFloor.id}/lock/refresh`, {
                 method: 'POST',
@@ -329,7 +329,7 @@ class CollaborationSystem {
                     expires_at: new Date(Date.now() + this.options.floorLockTimeout).toISOString()
                 })
             });
-            
+
             if (response.ok) {
                 const lockData = await response.json();
                 this.floorLock = lockData;
@@ -347,7 +347,7 @@ class CollaborationSystem {
     // Release floor lock
     async releaseFloorLock() {
         if (!this.floorLock || !this.currentFloor) return;
-        
+
         try {
             await fetch(`/api/floors/${this.currentFloor.id}/lock/release`, {
                 method: 'POST',
@@ -359,7 +359,7 @@ class CollaborationSystem {
                     session_id: this.currentUser.sessionId
                 })
             });
-            
+
             this.floorLock = null;
             this.updateFloorLockStatus(false);
             console.log('Floor lock released successfully');
@@ -371,13 +371,13 @@ class CollaborationSystem {
     // Handle floor locked by other user
     handleFloorLockedByOther(lockInfo) {
         this.updateFloorLockStatus(false, lockInfo.locked_by);
-        
+
         // Show notification
         this.showNotification(
             `Floor is locked by ${lockInfo.locked_by_name || 'another user'}`,
             'warning'
         );
-        
+
         // Emit event
         this.emitEvent('floorLockedByOther', lockInfo);
     }
@@ -386,15 +386,15 @@ class CollaborationSystem {
     handleFloorLockExpired() {
         this.floorLock = null;
         this.updateFloorLockStatus(false);
-        
+
         // Show notification
         this.showNotification('Floor lock expired', 'warning');
-        
+
         // Try to reacquire lock
         setTimeout(() => {
             this.requestFloorLock();
         }, 1000);
-        
+
         // Emit event
         this.emitEvent('floorLockExpired');
     }
@@ -403,10 +403,10 @@ class CollaborationSystem {
     handleFloorLockError(error) {
         this.floorLock = null;
         this.updateFloorLockStatus(false);
-        
+
         // Show notification
         this.showNotification('Failed to acquire floor lock', 'error');
-        
+
         // Emit event
         this.emitEvent('floorLockError', error);
     }
@@ -415,7 +415,7 @@ class CollaborationSystem {
     updateFloorLockStatus(locked, lockedBy = null) {
         const statusElement = document.getElementById('floor-lock-status');
         if (!statusElement) return;
-        
+
         if (locked) {
             statusElement.innerHTML = `
                 <i class="fas fa-lock text-green-400"></i>
@@ -437,7 +437,7 @@ class CollaborationSystem {
     // Update user activity
     updateUserActivity() {
         this.userActivity.set(this.currentUser.id, Date.now());
-        
+
         // Update activity indicator
         const activityElement = document.getElementById('user-activity');
         if (activityElement) {
@@ -452,13 +452,13 @@ class CollaborationSystem {
     checkUserActivity() {
         const now = Date.now();
         const inactiveThreshold = this.options.userActivityTimeout;
-        
+
         // Check current user activity
         const lastActivity = this.userActivity.get(this.currentUser.id);
         if (lastActivity && (now - lastActivity) > inactiveThreshold) {
             this.handleUserInactive();
         }
-        
+
         // Check other users' activity
         for (const [userId, lastActivity] of this.userActivity.entries()) {
             if (userId !== this.currentUser.id && (now - lastActivity) > inactiveThreshold) {
@@ -476,7 +476,7 @@ class CollaborationSystem {
                 <span>Inactive</span>
             `;
         }
-        
+
         // Emit event
         this.emitEvent('userInactive', { userId: this.currentUser.id });
     }
@@ -485,10 +485,10 @@ class CollaborationSystem {
     handleUserBecameInactive(userId) {
         this.activeUsers.delete(userId);
         this.userActivity.delete(userId);
-        
+
         // Update presence panel
         this.updatePresencePanel();
-        
+
         // Emit event
         this.emitEvent('userBecameInactive', { userId });
     }
@@ -496,7 +496,7 @@ class CollaborationSystem {
     // Update user presence
     async updateUserPresence() {
         if (!this.currentFloor) return;
-        
+
         try {
             const response = await fetch(`/api/floors/${this.currentFloor.id}/presence`, {
                 method: 'POST',
@@ -512,7 +512,7 @@ class CollaborationSystem {
                     last_activity: Date.now()
                 })
             });
-            
+
             if (response.ok) {
                 const presenceData = await response.json();
                 this.updateActiveUsers(presenceData.active_users);
@@ -525,14 +525,14 @@ class CollaborationSystem {
     // Update active users
     updateActiveUsers(users) {
         this.activeUsers.clear();
-        
+
         users.forEach(user => {
             if (user.user_id !== this.currentUser.id) {
                 this.activeUsers.set(user.user_id, user);
                 this.userActivity.set(user.user_id, user.last_activity);
             }
         });
-        
+
         // Update UI
         this.updateActiveUsersCount();
         this.updatePresencePanel();
@@ -554,9 +554,9 @@ class CollaborationSystem {
     updatePresencePanel() {
         const userList = document.getElementById('user-list');
         if (!userList) return;
-        
+
         userList.innerHTML = '';
-        
+
         this.activeUsers.forEach(user => {
             const userElement = document.createElement('div');
             userElement.className = 'flex items-center space-x-3 p-2 bg-gray-50 rounded';
@@ -596,7 +596,7 @@ class CollaborationSystem {
     // Check for conflicts
     async checkForConflicts() {
         if (!this.currentFloor || this.isProcessing) return;
-        
+
         try {
             const response = await fetch(`/api/floors/${this.currentFloor.id}/conflicts`);
             if (response.ok) {
@@ -613,7 +613,7 @@ class CollaborationSystem {
     // Handle conflicts detected
     handleConflictsDetected(conflicts) {
         this.conflictQueue = conflicts;
-        
+
         // Update conflict status
         const conflictElement = document.getElementById('conflict-status');
         if (conflictElement) {
@@ -623,10 +623,10 @@ class CollaborationSystem {
                 <span>${conflicts.length} conflict${conflicts.length !== 1 ? 's' : ''} detected</span>
             `;
         }
-        
+
         // Show notification
         this.showNotification(`${conflicts.length} conflict(s) detected`, 'warning');
-        
+
         // Emit event
         this.emitEvent('conflictsDetected', conflicts);
     }
@@ -635,11 +635,11 @@ class CollaborationSystem {
     showConflictModal() {
         const modal = document.getElementById('conflict-resolution-modal');
         const conflictList = document.getElementById('conflict-list');
-        
+
         if (!modal || !conflictList) return;
-        
+
         conflictList.innerHTML = '';
-        
+
         this.conflictQueue.forEach(conflict => {
             const conflictElement = document.createElement('div');
             conflictElement.className = 'border border-red-200 bg-red-50 p-3 rounded';
@@ -655,7 +655,7 @@ class CollaborationSystem {
             `;
             conflictList.appendChild(conflictElement);
         });
-        
+
         modal.style.display = 'flex';
     }
 
@@ -670,9 +670,9 @@ class CollaborationSystem {
     // Resolve conflicts
     async resolveConflicts() {
         if (this.isProcessing) return;
-        
+
         this.isProcessing = true;
-        
+
         try {
             const response = await fetch(`/api/floors/${this.currentFloor.id}/conflicts/resolve`, {
                 method: 'POST',
@@ -684,7 +684,7 @@ class CollaborationSystem {
                     conflicts: this.conflictQueue
                 })
             });
-            
+
             if (response.ok) {
                 const result = await response.json();
                 this.handleConflictsResolved(result);
@@ -702,19 +702,19 @@ class CollaborationSystem {
     // Handle conflicts resolved
     handleConflictsResolved(result) {
         this.conflictQueue = [];
-        
+
         // Hide conflict status
         const conflictElement = document.getElementById('conflict-status');
         if (conflictElement) {
             conflictElement.style.display = 'none';
         }
-        
+
         // Hide modal
         this.hideConflictModal();
-        
+
         // Show success notification
         this.showNotification('Conflicts resolved successfully', 'success');
-        
+
         // Emit event
         this.emitEvent('conflictsResolved', result);
     }
@@ -722,19 +722,19 @@ class CollaborationSystem {
     // Ignore conflicts
     ignoreConflicts() {
         this.conflictQueue = [];
-        
+
         // Hide conflict status
         const conflictElement = document.getElementById('conflict-status');
         if (conflictElement) {
             conflictElement.style.display = 'none';
         }
-        
+
         // Hide modal
         this.hideConflictModal();
-        
+
         // Show notification
         this.showNotification('Conflicts ignored', 'info');
-        
+
         // Emit event
         this.emitEvent('conflictsIgnored');
     }
@@ -806,18 +806,18 @@ class CollaborationSystem {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
-        
+
         // Add event listeners
         modal.querySelector('#enable-floor-locking').addEventListener('change', (e) => {
             this.options.enableFloorLocking = e.target.checked;
         });
-        
+
         modal.querySelector('#enable-conflict-resolution').addEventListener('change', (e) => {
             this.options.enableConflictResolution = e.target.checked;
         });
-        
+
         modal.querySelector('#show-user-presence').addEventListener('change', (e) => {
             this.options.showUserPresence = e.target.checked;
             this.updateCollaborationStatus();
@@ -832,10 +832,10 @@ class CollaborationSystem {
             enableConflictResolution: this.options.enableConflictResolution,
             showUserPresence: this.options.showUserPresence
         }));
-        
+
         // Close modal
         document.querySelector('.fixed.inset-0').remove();
-        
+
         // Show notification
         this.showNotification('Settings saved successfully', 'success');
     }
@@ -898,24 +898,24 @@ class CollaborationSystem {
         if (this.activityTimer) clearInterval(this.activityTimer);
         if (this.conflictTimer) clearInterval(this.conflictTimer);
         if (this.presenceTimer) clearInterval(this.presenceTimer);
-        
+
         // Release floor lock
         this.releaseFloorLock();
-        
+
         // Remove UI elements
         const elements = [
             'collaboration-status-bar',
             'user-presence-panel',
             'conflict-resolution-modal'
         ];
-        
+
         elements.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
                 element.remove();
             }
         });
-        
+
         // Clear data
         this.activeUsers.clear();
         this.userActivity.clear();
@@ -929,4 +929,4 @@ const collaborationSystem = new CollaborationSystem();
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CollaborationSystem;
-} 
+}

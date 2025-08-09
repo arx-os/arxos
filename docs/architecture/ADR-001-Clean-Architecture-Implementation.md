@@ -201,4 +201,4 @@ svgx_engine/
 - Clean Architecture by Robert C. Martin
 - Domain-Driven Design by Eric Evans
 - Implementing Domain-Driven Design by Vaughn Vernon
-- Hexagonal Architecture by Alistair Cockburn 
+- Hexagonal Architecture by Alistair Cockburn

@@ -326,11 +326,11 @@ class TestWorkflow:
     def test_parse_and_simulate(self):
         parser = SVGXParser()
         runtime = SVGXRuntime()
-        
+
         content = self.load_test_svgx()
         ast = parser.parse(content)
         result = runtime.simulate(ast)
-        
+
         assert result.is_success()
         assert result.get_duration() > 0
 ```
@@ -348,11 +348,11 @@ class TestPerformance:
     def test_parse_performance(self):
         parser = SVGXParser()
         content = self.load_large_svgx()
-        
+
         start_time = time.time()
         ast = parser.parse(content)
         duration = time.time() - start_time
-        
+
         assert duration < 1.0  # Should parse in under 1 second
         assert ast is not None
 ```
@@ -412,20 +412,20 @@ Follow PEP 8 with these additions:
 # Good
 def parse_svgx_content(content: str, config: Optional[ParserConfig] = None) -> SVGXAST:
     """Parse SVGX content into an AST.
-    
+
     Args:
         content: SVGX content as string
         config: Optional parser configuration
-        
+
     Returns:
         Parsed abstract syntax tree
-        
+
     Raises:
         ParseError: If content cannot be parsed
     """
     if not content:
         raise ValueError("Content cannot be empty")
-    
+
     parser = SVGXParser(config or ParserConfig())
     return parser.parse(content)
 
@@ -449,33 +449,33 @@ def parse_svgx_content(content,config=None):
 ```python
 class SVGXParser:
     """Parser for SVGX content.
-    
+
     This class provides functionality to parse SVGX content into a structured
     Abstract Syntax Tree (AST) for further processing.
-    
+
     Attributes:
         config: Parser configuration
         errors: List of parsing errors
     """
-    
+
     def __init__(self, config: Optional[ParserConfig] = None):
         """Initialize the parser.
-        
+
         Args:
             config: Optional parser configuration
         """
         self.config = config or ParserConfig()
         self.errors = []
-    
+
     def parse(self, content: str) -> SVGXAST:
         """Parse SVGX content into an AST.
-        
+
         Args:
             content: SVGX content as string
-            
+
         Returns:
             Parsed abstract syntax tree
-            
+
         Raises:
             ParseError: If content cannot be parsed
             ValidationError: If content fails validation
@@ -488,7 +488,7 @@ class SVGXParser:
 ```python
 class SVGXError(Exception):
     """Base exception for SVGX Engine errors."""
-    
+
     def __init__(self, message: str, code: str = None, context: Dict[str, Any] = None):
         super().__init__(message)
         self.code = code
@@ -496,7 +496,7 @@ class SVGXError(Exception):
 
 class ParseError(SVGXError):
     """Exception raised during parsing operations."""
-    
+
     def __init__(self, message: str, line: int, column: int, code: str = None):
         super().__init__(message, code)
         self.line = line
@@ -524,7 +524,7 @@ logger = logging.getLogger(__name__)
 class SVGXParser:
     def parse(self, content: str) -> SVGXAST:
         logger.debug(f"Parsing content of length {len(content)}")
-        
+
         try:
             ast = self._parse_content(content)
             logger.info("Content parsed successfully")
@@ -541,7 +541,7 @@ class SVGXParser:
 1. **Caching**
    ```python
    from functools import lru_cache
-   
+
    @lru_cache(maxsize=128)
    def parse_svgx_content(content: str) -> SVGXAST:
        # Expensive parsing operation
@@ -553,7 +553,7 @@ class SVGXParser:
    class SVGXParser:
        def __init__(self):
            self._validator = None
-       
+
        @property
        def validator(self):
            if self._validator is None:
@@ -580,13 +580,13 @@ class MemoryManager:
     def __init__(self, max_memory: int = 100 * 1024 * 1024):  # 100MB
         self.max_memory = max_memory
         self.current_usage = 0
-    
+
     def check_memory(self, estimated_size: int) -> bool:
         if self.current_usage + estimated_size > self.max_memory:
             self._cleanup()
             return False
         return True
-    
+
     def _cleanup(self):
         # Implement cleanup logic
         pass
@@ -602,16 +602,16 @@ import pstats
 def profile_function(func, *args, **kwargs):
     profiler = cProfile.Profile()
     profiler.enable()
-    
+
     start_time = time.time()
     result = func(*args, **kwargs)
     duration = time.time() - start_time
-    
+
     profiler.disable()
     stats = pstats.Stats(profiler)
     stats.sort_stats('cumulative')
     stats.print_stats(10)
-    
+
     return result, duration
 ```
 
@@ -629,18 +629,18 @@ class InputValidator:
         """Validate SVGX content for security."""
         if not content or len(content) > 10 * 1024 * 1024:  # 10MB limit
             return False
-        
+
         # Check for potentially dangerous patterns
         dangerous_patterns = [
             r'<script[^>]*>',
             r'javascript:',
             r'data:text/html',
         ]
-        
+
         for pattern in dangerous_patterns:
             if re.search(pattern, content, re.IGNORECASE):
                 return False
-        
+
         return True
 ```
 
@@ -650,15 +650,15 @@ class InputValidator:
 class SecurityService:
     def __init__(self):
         self.sessions = {}
-    
+
     def authenticate(self, credentials: Dict[str, str]) -> AuthResult:
         # Implement secure authentication
         pass
-    
+
     def authorize(self, user: User, resource: str, action: str) -> bool:
         # Implement role-based access control
         pass
-    
+
     def validate_session(self, session_id: str) -> bool:
         # Validate session token
         pass
@@ -677,7 +677,7 @@ class DataProtector:
         salt = secrets.token_hex(16)
         hash_obj = hashlib.pbkdf2_hmac('sha256', data.encode(), salt.encode(), 100000)
         return f"{salt}${hash_obj.hex()}"
-    
+
     @staticmethod
     def encrypt_data(data: str, key: bytes) -> bytes:
         """Encrypt sensitive data."""
@@ -709,29 +709,29 @@ class DataProtector:
 ```python
 def parse_svgx_content(content: str, config: Optional[ParserConfig] = None) -> SVGXAST:
     """Parse SVGX content into an Abstract Syntax Tree.
-    
+
     This function takes SVGX content as a string and parses it into a structured
     AST that can be used for further processing, simulation, or compilation.
-    
+
     Args:
         content: The SVGX content to parse. Must be a valid SVGX string.
         config: Optional parser configuration. If not provided, default settings
                will be used.
-    
+
     Returns:
         An SVGXAST object representing the parsed content.
-    
+
     Raises:
         ParseError: If the content cannot be parsed due to syntax errors.
         ValidationError: If the content fails validation checks.
         ValueError: If the content is empty or None.
-    
+
     Example:
         >>> content = '<svg xmlns:arx="http://arxos.io/svgx"><rect arx:object="test"/></svg>'
         >>> ast = parse_svgx_content(content)
         >>> print(ast.get_root().get_type())
         'svg'
-    
+
     Note:
         The parser is thread-safe and can be used concurrently.
     """
@@ -883,4 +883,4 @@ except Exception as e:
 
 ---
 
-This development guide provides comprehensive instructions for contributing to the SVGX Engine project. Follow these guidelines to ensure high-quality, maintainable code that meets the project's standards. 
+This development guide provides comprehensive instructions for contributing to the SVGX Engine project. Follow these guidelines to ensure high-quality, maintainable code that meets the project's standards.

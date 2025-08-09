@@ -63,6 +63,7 @@ class BIMRelationship:
     updated_at: datetime = field(default_factory=datetime.now)
 
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -133,7 +134,7 @@ Example:
         dep_graph = {}
         for rel in self.dependency:
             dep_graph.setdefault(rel.source_id, []).append(rel.target_id)
-        def visit(node, stack):
+def visit(node, stack):
             if node in stack:
                 errors.append(f"Cycle detected in dependencies: {' -> '.join(stack + [node])}")
                 return
@@ -143,4 +144,4 @@ Example:
             stack.pop()
         for node in dep_graph:
             visit(node, [])
-        return errors 
+        return errors

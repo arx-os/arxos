@@ -255,11 +255,11 @@ type Mutation {
   createFile(input: CreateFileInput!): File!
   updateFile(id: ID!, input: UpdateFileInput!): File!
   deleteFile(id: ID!): Boolean!
-  
+
   createCollaborationSession(input: CreateSessionInput!): CollaborationSession!
   joinSession(sessionId: ID!, userId: ID!): SessionUser!
   leaveSession(sessionId: ID!, userId: ID!): Boolean!
-  
+
   installExtension(extensionId: ID!, version: String): Extension!
   uninstallExtension(extensionId: ID!): Boolean!
   executeExtension(extensionId: ID!, command: String!, params: JSON): JSON!
@@ -477,29 +477,29 @@ enum ErrorCodes {
   AUTH_INVALID_CREDENTIALS = 'AUTH_001',
   AUTH_TOKEN_EXPIRED = 'AUTH_002',
   AUTH_INSUFFICIENT_PERMISSIONS = 'AUTH_003',
-  
+
   // File Operations
   FILE_NOT_FOUND = 'FILE_001',
   FILE_ACCESS_DENIED = 'FILE_002',
   FILE_CORRUPTED = 'FILE_003',
   FILE_VERSION_CONFLICT = 'FILE_004',
-  
+
   // Extension System
   EXTENSION_NOT_FOUND = 'EXT_001',
   EXTENSION_LOAD_FAILED = 'EXT_002',
   EXTENSION_EXECUTION_ERROR = 'EXT_003',
   EXTENSION_PERMISSION_DENIED = 'EXT_004',
-  
+
   // AI/CAD Services
   AI_SERVICE_UNAVAILABLE = 'AI_001',
   AI_COMMAND_INVALID = 'AI_002',
   AI_PROCESSING_ERROR = 'AI_003',
-  
+
   // SVGX Engine
   SVGX_PARSE_ERROR = 'SVGX_001',
   SVGX_VALIDATION_ERROR = 'SVGX_002',
   SVGX_SIMULATION_ERROR = 'SVGX_003',
-  
+
   // Collaboration
   SESSION_NOT_FOUND = 'COLLAB_001',
   SESSION_ACCESS_DENIED = 'COLLAB_002',

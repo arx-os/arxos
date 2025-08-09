@@ -339,17 +339,17 @@ export class MyPlugin {
 interface PluginContext {
   // CAD Engine access
   cadEngine: CadEngine;
-  
+
   // Object management
   objects: ThreeDObject[];
   constraints: Constraint[];
-  
+
   // UI integration
   ui: UIManager;
-  
+
   // File system access
   fileSystem: FileSystem;
-  
+
   // Settings
   settings: PluginSettings;
 }
@@ -496,7 +496,7 @@ class MyPlugin {
     if (!this.validateParameters(parameters)) {
       throw new Error('Invalid parameters');
     }
-    
+
     // Execute plugin logic
   }
 }
@@ -569,4 +569,4 @@ interface PluginSystemProps {
 
 **ArxIDE Advanced Features** - Professional CAD capabilities for the modern world.
 
-*Built with ❤️ by the Arxos Team* 
+*Built with ❤️ by the Arxos Team*

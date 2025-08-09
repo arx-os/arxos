@@ -26,7 +26,7 @@ from application.dto.user_dto import (
 
 class CreateUserUseCase:
     """Use case for creating a new user."""
-    
+
     def __init__(self, user_repository: UserRepository):
     """
     Perform __init__ operation
@@ -45,7 +45,7 @@ Example:
         print(result)
     """
         self.user_repository = user_repository
-    
+
     def execute(self, request: CreateUserRequest) -> CreateUserResponse:
         """Execute the create user use case."""
         try:
@@ -55,13 +55,13 @@ Example:
                     success=False,
                     error_message="Username is required"
                 )
-            
+
             if not request.email or len(request.email.strip()) == 0:
                 return CreateUserResponse(
                     success=False,
                     error_message="Email is required"
                 )
-            
+
             # Validate email format
             try:
                 email = Email(request.email)
@@ -70,17 +70,17 @@ Example:
                     success=False,
                     error_message="Invalid email format"
                 )
-            
+
             # Check if user already exists
             if self.user_repository.exists_by_email(request.email):
                 return CreateUserResponse(
                     success=False,
                     error_message="User with this email already exists"
                 )
-            
+
             # Create domain objects
             user_id = UserId()
-            
+
             # Create phone number if provided
             phone_number = None
             if request.phone_number:
@@ -91,7 +91,7 @@ Example:
                         success=False,
                         error_message="Invalid phone number format"
                     )
-            
+
             # Create user entity
             user = User(
                 id=user_id,
@@ -104,18 +104,16 @@ Example:
                 created_by=request.created_by,
                 metadata=request.metadata or {}
             )
-            
+
             # Save to repository
             self.user_repository.save(user)
-            
+
             # Return success response
             return CreateUserResponse(
                 success=True,
                 user_id=str(user_id),
                 message="User created successfully",
                 created_at=datetime.utcnow()
-            )
-            
         except DuplicateUserError as e:
             return CreateUserResponse(
                 success=False,
@@ -151,10 +149,10 @@ Example:
         print(result)
     """
     """Use case for updating a user."""
-    
+
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
-    
+
     def execute(self, request: UpdateUserRequest) -> UpdateUserResponse:
         """Execute the update user use case."""
         try:
@@ -164,17 +162,17 @@ Example:
                     success=False,
                     error_message="User ID is required"
                 )
-            
+
             # Get existing user
             user_id = UserId(request.user_id)
             user = self.user_repository.get_by_id(user_id)
-            
+
             if not user:
                 return UpdateUserResponse(
                     success=False,
                     error_message="User not found"
                 )
-            
+
             # Update user fields
             if request.username is not None:
                 if len(request.username.strip()) == 0:
@@ -184,7 +182,7 @@ Example:
                     )
                 user.username = request.username.strip()
                 user.updated_at = datetime.utcnow()
-            
+
             if request.email is not None:
                 try:
                     new_email = Email(request.email)
@@ -194,15 +192,15 @@ Example:
                         success=False,
                         error_message="Invalid email format"
                     )
-            
+
             if request.first_name is not None:
                 user.first_name = request.first_name
                 user.updated_at = datetime.utcnow()
-            
+
             if request.last_name is not None:
                 user.last_name = request.last_name
                 user.updated_at = datetime.utcnow()
-            
+
             if request.phone_number is not None:
                 try:
                     phone_number = PhoneNumber(request.phone_number)
@@ -213,7 +211,7 @@ Example:
                         success=False,
                         error_message="Invalid phone number format"
                     )
-            
+
             if request.role is not None:
                 try:
                     new_role = UserRole(request.role)
@@ -223,28 +221,26 @@ Example:
                         success=False,
                         error_message=f"Invalid user role: {request.role}"
                     )
-            
+
             if request.is_active is not None:
                 if request.is_active:
                     user.activate(request.updated_by or "system")
                 else:
                     user.deactivate(request.updated_by or "system")
-            
+
             if request.metadata is not None:
                 user.metadata.update(request.metadata)
                 user.updated_at = datetime.utcnow()
-            
+
             # Save to repository
             self.user_repository.save(user)
-            
+
             # Return success response
             return UpdateUserResponse(
                 success=True,
                 user_id=str(user_id),
                 message="User updated successfully",
                 updated_at=datetime.utcnow()
-            )
-            
         except InvalidUserError as e:
             return UpdateUserResponse(
                 success=False,
@@ -264,10 +260,10 @@ Example:
 
 class GetUserUseCase:
     """Use case for getting a user by ID."""
-    
+
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
-    
+
     def execute(self, user_id: str) -> GetUserResponse:
         """Execute the get user use case."""
         try:
@@ -277,16 +273,15 @@ class GetUserUseCase:
                     success=False,
                     error_message="User ID is required"
                 )
-            
-            # Get user from repository
-            user = self.user_repository.get_by_id(UserId(user_id))
-            
+
+            # Get user from repository import repository
+            user = self.user_repository.get_by_id(UserId(user_id)
             if not user:
                 return GetUserResponse(
                     success=False,
                     error_message="User not found"
                 )
-            
+
             # Convert to dictionary
             user_dict = {
                 "id": str(user.id),
@@ -302,16 +297,16 @@ class GetUserUseCase:
                 "created_by": user.created_by,
                 "metadata": user.metadata
             }
-            
+
             # Add phone number if available
             if user.phone_number:
                 user_dict["phone_number"] = str(user.phone_number)
-            
+
             return GetUserResponse(
                 success=True,
                 user=user_dict
             )
-            
+
         except Exception as e:
             return GetUserResponse(
                 success=False,
@@ -321,10 +316,10 @@ class GetUserUseCase:
 
 class ListUsersUseCase:
     """Use case for listing users."""
-    
+
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
-    
+
     def execute(self, role: Optional[str] = None, active_only: bool = True,
                 page: int = 1, page_size: int = 10) -> ListUsersResponse:
         """Execute the list users use case."""
@@ -334,10 +329,10 @@ class ListUsersUseCase:
                 page = 1
             if page_size < 1 or page_size > 100:
                 page_size = 10
-            
-            # Get users from repository
+
+            # Get users from repository import repository
             users = []
-            
+
             if role:
                 # Get users by role
                 try:
@@ -354,13 +349,13 @@ class ListUsersUseCase:
             else:
                 # Get all users
                 users = self.user_repository.get_all()
-            
+
             # Apply pagination
             total_count = len(users)
             start_index = (page - 1) * page_size
             end_index = start_index + page_size
             paginated_users = users[start_index:end_index]
-            
+
             # Convert to dictionaries
             user_dicts = []
             for user in paginated_users:
@@ -377,13 +372,13 @@ class ListUsersUseCase:
                     "updated_at": user.updated_at.isoformat(),
                     "created_by": user.created_by
                 }
-                
+
                 # Add phone number if available
                 if user.phone_number:
                     user_dict["phone_number"] = str(user.phone_number)
-                
+
                 user_dicts.append(user_dict)
-            
+
             return ListUsersResponse(
                 success=True,
                 users=user_dicts,
@@ -391,7 +386,7 @@ class ListUsersUseCase:
                 page=page,
                 page_size=page_size
             )
-            
+
         except Exception as e:
             return ListUsersResponse(
                 success=False,
@@ -401,10 +396,10 @@ class ListUsersUseCase:
 
 class DeleteUserUseCase:
     """Use case for deleting a user."""
-    
+
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
-    
+
     def execute(self, user_id: str) -> DeleteUserResponse:
         """Execute the delete user use case."""
         try:
@@ -414,28 +409,24 @@ class DeleteUserUseCase:
                     success=False,
                     error_message="User ID is required"
                 )
-            
+
             # Check if user exists
-            user = self.user_repository.get_by_id(UserId(user_id))
-            
+            user = self.user_repository.get_by_id(UserId(user_id)
             if not user:
                 return DeleteUserResponse(
                     success=False,
                     error_message="User not found"
                 )
-            
-            # Delete from repository
-            self.user_repository.delete(UserId(user_id))
-            
+
+            # Delete from repository import repository
+            self.user_repository.delete(UserId(user_id)
             return DeleteUserResponse(
                 success=True,
                 user_id=user_id,
                 message="User deleted successfully",
                 deleted_at=datetime.utcnow()
-            )
-            
         except Exception as e:
             return DeleteUserResponse(
                 success=False,
                 error_message=f"Failed to delete user: {str(e)}"
-            ) 
+            )

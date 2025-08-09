@@ -103,16 +103,16 @@ func monitorConnectionPool(sqlDB *sql.DB) {
         select {
         case <-ticker.C:
             updatePoolStats(sqlDB)
-            
+
             // Log warnings for high connection usage
             stats := sqlDB.Stats()
             usagePercent := float64(stats.InUse) / float64(stats.MaxOpenConnections) * 100
-            
+
             if usagePercent > 80 {
                 log.Printf("⚠️  High connection pool usage: %.1f%% (%d/%d connections in use)",
                     usagePercent, stats.InUse, stats.MaxOpenConnections)
             }
-            
+
             if stats.WaitCount > 0 {
                 log.Printf("⚠️  Connection pool wait detected: %d waits, total duration: %v",
                     stats.WaitCount, stats.WaitDuration)
@@ -457,4 +457,4 @@ The database connection pooling implementation provides significant improvements
 5. **Security**: Enhanced security through parameterized queries and proper timeouts
 6. **Reliability**: Comprehensive health checks and error handling
 
-The implementation maintains backward compatibility while providing enhanced functionality and performance for the Arxos platform. The monitoring and health check systems ensure reliable database operations in production environments. 
+The implementation maintains backward compatibility while providing enhanced functionality and performance for the Arxos platform. The monitoring and health check systems ensure reliable database operations in production environments.

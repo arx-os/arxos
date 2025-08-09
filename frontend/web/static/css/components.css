@@ -534,28 +534,28 @@
         z-index: 100;
         width: 280px;
     }
-    
+
     .canvas-toolbar {
         flex-wrap: wrap;
         gap: 0.5rem;
     }
-    
+
     .canvas-toolbar-center {
         order: 3;
         width: 100%;
         justify-content: center;
     }
-    
+
     .zoom-controls {
         bottom: 0.5rem;
         right: 0.5rem;
     }
-    
+
     .zoom-button {
         width: 36px;
         height: 36px;
     }
-    
+
     .modal-dialog {
         min-width: 90vw;
         margin: 1rem;
@@ -571,8 +571,8 @@
     .context-menu {
         display: none !important;
     }
-    
+
     .canvas-viewport {
         border: none !important;
     }
-} 
+}

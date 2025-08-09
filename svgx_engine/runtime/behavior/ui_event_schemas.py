@@ -95,4 +95,4 @@ class AnnotationEvent(UIEventBase):
     payload: AnnotationPayload
 
 # Union for validation/dispatch
-UIEvent = Union[SelectionEvent, EditingEvent, NavigationEvent, AnnotationEvent] 
+UIEvent = Union[SelectionEvent, EditingEvent, NavigationEvent, AnnotationEvent]

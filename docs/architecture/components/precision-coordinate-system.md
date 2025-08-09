@@ -358,4 +358,4 @@ except ValueError as e:
 
 The Precision Coordinate System provides the foundation for professional CAD functionality with sub-millimeter accuracy. Its comprehensive validation, transformation, and serialization capabilities ensure reliable operation in demanding engineering and design applications.
 
-The system's modular design allows for easy integration with other CAD components while maintaining the precision and performance required for professional use. 
+The system's modular design allows for easy integration with other CAD components while maintaining the precision and performance required for professional use.

@@ -77,4 +77,4 @@ The `.devcontainer/data` directory is mounted into the container at `/workspaces
 - `redis/` - Redis data files
 - `logs/` - Application log files
 
-This ensures that data persists between container restarts. 
+This ensures that data persists between container restarts.

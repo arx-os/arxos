@@ -18,13 +18,12 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Depends, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from pydantic.json import pydantic_encoder
 
 from ..services.export.advanced_export_system import (
-from core.security.auth_middleware import get_current_user, User
     AdvancedExportSystem,
     ExportFormat,
     ExportQuality,
@@ -33,6 +32,7 @@ from core.security.auth_middleware import get_current_user, User
     create_advanced_export_system,
     create_export_config
 )
+from core.security.auth_middleware import get_current_user, User
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,6 @@ async def shutdown_event(user: User = Depends(get_current_user)):
 
 # Health check endpoint
 @app.get("/health")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint."""
     return {"status": "healthy", "service": "export-api"}
@@ -123,14 +122,14 @@ async def export_data(request: ExportDataRequest, user: User = Depends(get_curre
     """Export data to the specified format."""
     try:
         start_time = time.time()
-        
+
         # Create export config if not provided
         if request.config is None:
             request.config = create_export_config(
                 format=request.format,
                 quality=ExportQuality.MEDIUM
             )
-        
+
         # Perform export
         result = export_system.export_data(
             data=request.data,
@@ -138,9 +137,9 @@ async def export_data(request: ExportDataRequest, user: User = Depends(get_curre
             format=request.format,
             config=request.config
         )
-        
+
         export_time = time.time() - start_time
-        
+
         return ExportDataResponse(
             success=result.success,
             output_path=str(result.output_path),
@@ -149,7 +148,7 @@ async def export_data(request: ExportDataRequest, user: User = Depends(get_curre
             metadata=result.metadata,
             error=result.error if not result.success else None
         )
-        
+
     except Exception as e:
         logger.error(f"Export failed: {e}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
@@ -198,7 +197,6 @@ async def export_to_parasolid(request: ExportDataRequest, user: User = Depends(g
 
 # Get supported formats endpoint
 @app.get("/export/formats")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def get_supported_formats(user: User = Depends(get_current_user)):
     """Get list of supported export formats."""
     formats = [
@@ -216,12 +214,11 @@ async def get_supported_formats(user: User = Depends(get_current_user)):
 
 # Get export history endpoint
 @app.get("/export/history")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def get_export_history(limit: int = 50, user: User = Depends(get_current_user)):
     """Get export history."""
     try:
         history = export_system.export_history[-limit:] if export_system.export_history else []
-        
+
         responses = []
         for result in history:
             response = ExportDataResponse(
@@ -233,9 +230,9 @@ async def get_export_history(limit: int = 50, user: User = Depends(get_current_u
                 error=result.error if not result.success else None
             )
             responses.append(response)
-        
+
         return {"history": responses}
-        
+
     except Exception as e:
         logger.error(f"Failed to get export history: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get export history: {str(e)}")
@@ -246,22 +243,22 @@ async def get_export_statistics(user: User = Depends(get_current_user)):
     """Get export statistics."""
     try:
         history = export_system.export_history
-        
+
         total_exports = len(history)
         successful_exports = sum(1 for result in history if result.success)
         failed_exports = total_exports - successful_exports
-        
+
         if history:
             average_export_time = sum(result.export_time for result in history) / len(history)
         else:
             average_export_time = 0.0
-        
+
         # Calculate format usage
         format_usage = {}
         for result in history:
             format_name = result.metadata.get("format", "unknown")
             format_usage[format_name] = format_usage.get(format_name, 0) + 1
-        
+
         # Get recent exports
         recent_exports = []
         for result in history[-10:]:  # Last 10 exports
@@ -274,7 +271,7 @@ async def get_export_statistics(user: User = Depends(get_current_user)):
                 error=result.error if not result.success else None
             )
             recent_exports.append(response)
-        
+
         return ExportStatisticsResponse(
             total_exports=total_exports,
             successful_exports=successful_exports,
@@ -283,7 +280,7 @@ async def get_export_statistics(user: User = Depends(get_current_user)):
             format_usage=format_usage,
             recent_exports=recent_exports
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to get export statistics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get export statistics: {str(e)}")
@@ -299,7 +296,7 @@ async def validate_export_data(request: ValidateExportRequest, user: User = Depe
                 valid=False,
                 message="No data provided"
             )
-        
+
         # Check if data has required fields for the format
         if request.format == ExportFormat.IFC:
             if "elements" not in request.data:
@@ -331,12 +328,12 @@ async def validate_export_data(request: ValidateExportRequest, user: User = Depe
                     valid=False,
                     message="IGES export requires 'elements' field"
                 )
-        
+
         return ValidateExportResponse(
             valid=True,
             message="Data validation passed"
         )
-        
+
     except Exception as e:
         logger.error(f"Validation failed: {e}")
         return ValidateExportResponse(
@@ -350,7 +347,7 @@ async def batch_export(request: BatchExportRequest, user: User = Depends(get_cur
     """Perform batch export operations."""
     try:
         results = []
-        
+
         for export_request in request.exports:
             try:
                 # Create export config if not provided
@@ -359,7 +356,7 @@ async def batch_export(request: BatchExportRequest, user: User = Depends(get_cur
                         format=export_request.format,
                         quality=ExportQuality.MEDIUM
                     )
-                
+
                 # Perform export
                 result = export_system.export_data(
                     data=export_request.data,
@@ -367,7 +364,7 @@ async def batch_export(request: BatchExportRequest, user: User = Depends(get_cur
                     format=export_request.format,
                     config=export_request.config
                 )
-                
+
                 response = ExportDataResponse(
                     success=result.success,
                     output_path=str(result.output_path),
@@ -377,7 +374,7 @@ async def batch_export(request: BatchExportRequest, user: User = Depends(get_cur
                     error=result.error if not result.success else None
                 )
                 results.append(response)
-                
+
             except Exception as e:
                 logger.error(f"Batch export item failed: {e}")
                 response = ExportDataResponse(
@@ -389,9 +386,9 @@ async def batch_export(request: BatchExportRequest, user: User = Depends(get_cur
                     error=str(e)
                 )
                 results.append(response)
-        
+
         return BatchExportResponse(results=results)
-        
+
     except Exception as e:
         logger.error(f"Batch export failed: {e}")
         raise HTTPException(status_code=500, detail=f"Batch export failed: {str(e)}")
@@ -403,31 +400,31 @@ async def background_export_job(job_id: str, request: ExportDataRequest, user: U
         export_jobs[job_id]["status"] = "running"
         export_jobs[job_id]["progress"] = 0.0
         export_jobs[job_id]["start_time"] = time.time()
-        
+
         # Simulate progress updates
         for i in range(1, 11):
             await asyncio.sleep(0.1)  # Simulate work
             export_jobs[job_id]["progress"] = i * 10.0
-        
+
         # Perform actual export
         if request.config is None:
             request.config = create_export_config(
                 format=request.format,
                 quality=ExportQuality.MEDIUM
             )
-        
+
         result = export_system.export_data(
             data=request.data,
             output_path=request.output_path,
             format=request.format,
             config=request.config
         )
-        
+
         export_jobs[job_id]["status"] = "completed"
         export_jobs[job_id]["progress"] = 100.0
         export_jobs[job_id]["end_time"] = time.time()
         export_jobs[job_id]["result"] = result
-        
+
     except Exception as e:
         logger.error(f"Background export job failed: {e}")
         export_jobs[job_id]["status"] = "failed"
@@ -436,12 +433,10 @@ async def background_export_job(job_id: str, request: ExportDataRequest, user: U
 
 # Start background export job
 @app.post("/export/start-job")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def start_export_job(request: ExportDataRequest, background_tasks: BackgroundTasks, user: User = Depends(get_current_user)):
     """Start a background export job."""
     try:
         job_id = str(uuid.uuid4())
-        
         # Initialize job
         export_jobs[job_id] = {
             "status": "queued",
@@ -451,27 +446,26 @@ async def start_export_job(request: ExportDataRequest, background_tasks: Backgro
             "result": None,
             "error": None
         }
-        
+
         # Start background task
         background_tasks.add_task(background_export_job, job_id, request)
-        
+
         return {"job_id": job_id, "status": "queued"}
-        
+
     except Exception as e:
         logger.error(f"Failed to start export job: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to start export job: {str(e)}")
 
 # Get export progress endpoint
 @app.get("/export/progress/{job_id}")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def get_export_progress(job_id: str, user: User = Depends(get_current_user)):
     """Get export progress for a specific job."""
     try:
         if job_id not in export_jobs:
             raise HTTPException(status_code=404, detail="Job not found")
-        
+
         job = export_jobs[job_id]
-        
+
         return ExportProgressResponse(
             job_id=job_id,
             status=job["status"],
@@ -481,7 +475,6 @@ async def get_export_progress(job_id: str, user: User = Depends(get_current_user
             end_time=job["end_time"],
             metadata=job.get("metadata", {})
         )
-        
     except HTTPException:
         raise
     except Exception as e:
@@ -490,22 +483,21 @@ async def get_export_progress(job_id: str, user: User = Depends(get_current_user
 
 # Cancel export job endpoint
 @app.post("/export/cancel/{job_id}")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def cancel_export_job(job_id: str, user: User = Depends(get_current_user)):
     """Cancel an export job."""
     try:
         if job_id not in export_jobs:
             raise HTTPException(status_code=404, detail="Job not found")
-        
+
         job = export_jobs[job_id]
         if job["status"] in ["completed", "failed", "cancelled"]:
             raise HTTPException(status_code=400, detail="Job cannot be cancelled")
-        
+
         job["status"] = "cancelled"
         job["end_time"] = time.time()
-        
+
         return {"message": "Export job cancelled successfully"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -514,20 +506,19 @@ async def cancel_export_job(job_id: str, user: User = Depends(get_current_user))
 
 # Download export file endpoint
 @app.get("/export/download/{filename}")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def download_export_file(filename: str, user: User = Depends(get_current_user)):
     """Download an exported file."""
     try:
         # Security check - prevent path traversal
         if ".." in filename or "/" in filename or "\\" in filename:
             raise HTTPException(status_code=400, detail="Invalid filename")
-        
+
         # Construct file path
         file_path = Path("exports") / filename
-        
+
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="File not found")
-        
+
         # Determine content type based on file extension
         content_type = "application/octet-stream"
         if filename.endswith(".ifc"):
@@ -548,13 +539,13 @@ async def download_export_file(filename: str, user: User = Depends(get_current_u
             content_type = "application/octet-stream"
         elif filename.endswith(".geojson"):
             content_type = "application/geo+json"
-        
+
         return FileResponse(
             path=str(file_path),
             filename=filename,
             media_type=content_type
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -563,34 +554,32 @@ async def download_export_file(filename: str, user: User = Depends(get_current_u
 
 # Upload file for export endpoint
 @app.post("/export/upload")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def upload_file_for_export(file: UploadFile = File(...)):
     """Upload a file for export processing."""
     try:
-        # Create uploads directory if it doesn't exist
+        # Create uploads directory if it doesn't exist'
         upload_dir = Path("uploads")
         upload_dir.mkdir(exist_ok=True)
-        
+
         # Save uploaded file
         file_path = upload_dir / file.filename
         with open(file_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
-        
+
         return {
             "filename": file.filename,
             "file_path": str(file_path),
             "file_size": len(content),
             "message": "File uploaded successfully"
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to upload file: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 # Get export system info endpoint
 @app.get("/export/info")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def get_export_system_info(user: User = Depends(get_current_user)):
     """Get export system information."""
     try:
@@ -616,7 +605,7 @@ async def get_export_system_info(user: User = Depends(get_current_user)):
             "active_jobs": len([job for job in export_jobs.values() if job["status"] == "running"]),
             "total_jobs": len(export_jobs)
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to get system info: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get system info: {str(e)}")
@@ -633,11 +622,11 @@ async def global_exception_handler(request, exc, user: User = Depends(get_curren
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     # Create necessary directories
     Path("exports").mkdir(exist_ok=True)
     Path("uploads").mkdir(exist_ok=True)
-    
+
     # Run the application
     uvicorn.run(
         "export_api:app",
@@ -645,4 +634,4 @@ if __name__ == "__main__":
         port=8001,
         reload=True,
         log_level="info"
-    ) 
+    )

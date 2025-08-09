@@ -87,4 +87,4 @@ Implement comprehensive integration framework for CMMS, ERP, SCADA, BMS, and IoT
 - Authentication and authorization system
 - Audit logging infrastructure
 - Performance monitoring tools
-- Security team review and approval 
+- Security team review and approval

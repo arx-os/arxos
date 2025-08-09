@@ -270,11 +270,11 @@ CREATE INDEX IF NOT EXISTS idx_spatial_floors ON floors USING gist (ST_Transform
 -- ============================================================================
 
 -- Active assignments only
-CREATE INDEX IF NOT EXISTS idx_assignments_active ON assignments (assigned_to, object_type, object_id) 
+CREATE INDEX IF NOT EXISTS idx_assignments_active ON assignments (assigned_to, object_type, object_id)
 WHERE status = 'active';
 
 -- Recent comments only
-CREATE INDEX IF NOT EXISTS idx_comments_recent ON comments (object_type, object_id, created_at) 
+CREATE INDEX IF NOT EXISTS idx_comments_recent ON comments (object_type, object_id, created_at)
 WHERE created_at > CURRENT_DATE - INTERVAL '30 days';
 
 -- Active BIM objects only
@@ -334,7 +334,7 @@ BEGIN
     REINDEX INDEX CONCURRENTLY idx_doors_project_status;
     REINDEX INDEX CONCURRENTLY idx_windows_project_status;
     REINDEX INDEX CONCURRENTLY idx_devices_project_status;
-    
+
     -- Update statistics
     ANALYZE;
 END;
@@ -349,7 +349,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create view for active BIM objects by project
 CREATE OR REPLACE VIEW active_bim_objects AS
-SELECT 
+SELECT
     'wall' as object_type,
     id,
     name,
@@ -364,7 +364,7 @@ SELECT
     updated_at
 FROM walls WHERE status = 'active'
 UNION ALL
-SELECT 
+SELECT
     'room' as object_type,
     id,
     name,
@@ -379,7 +379,7 @@ SELECT
     updated_at
 FROM rooms WHERE status = 'active'
 UNION ALL
-SELECT 
+SELECT
     'door' as object_type,
     id,
     name,
@@ -394,7 +394,7 @@ SELECT
     updated_at
 FROM doors WHERE status = 'active'
 UNION ALL
-SELECT 
+SELECT
     'window' as object_type,
     id,
     name,
@@ -409,7 +409,7 @@ SELECT
     updated_at
 FROM windows WHERE status = 'active'
 UNION ALL
-SELECT 
+SELECT
     'device' as object_type,
     id,
     name,
@@ -436,7 +436,7 @@ CREATE INDEX IF NOT EXISTS idx_active_bim_objects_assigned ON active_bim_objects
 
 -- Create view to monitor index usage
 CREATE OR REPLACE VIEW index_usage_stats AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -449,11 +449,11 @@ ORDER BY idx_scan DESC;
 
 -- Create view to identify unused indexes
 CREATE OR REPLACE VIEW unused_indexes AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
     pg_size_pretty(pg_relation_size(indexrelid)) as index_size
 FROM pg_stat_user_indexes
 WHERE idx_scan = 0
-ORDER BY pg_relation_size(indexrelid) DESC; 
+ORDER BY pg_relation_size(indexrelid) DESC;

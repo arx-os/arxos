@@ -98,18 +98,18 @@ export const SVGXCanvas: React.FC<SVGXCanvasProps> = ({
   collaborationEnabled = true
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
-  const { 
-    elements, 
-    selectedElements, 
+  const {
+    elements,
+    selectedElements,
     handleElementClick,
     handleElementDrag,
-    handleElementResize 
+    handleElementResize
   } = useSVGXCanvas(svgxContent, onContentChange);
-  
-  const { 
-    collaborators, 
-    userCursors, 
-    handleCollaborationUpdate 
+
+  const {
+    collaborators,
+    userCursors,
+    handleCollaborationUpdate
   } = useCollaboration(canvasRef.current);
 
   return (
@@ -125,7 +125,7 @@ export const SVGXCanvas: React.FC<SVGXCanvasProps> = ({
           onResize={handleElementResize}
         />
       ))}
-      
+
       {/* Collaboration Cursors */}
       {collaborationEnabled && userCursors.map(cursor => (
         <UserCursor key={cursor.userId} cursor={cursor} />
@@ -156,17 +156,17 @@ export const useCollaboration = (canvasElement: HTMLElement | null) => {
     if (!canvasElement) return;
 
     const ws = websocketClient.connect();
-    
+
     ws.on('user_joined', (user: Collaborator) => {
       setCollaborators(prev => [...prev, user]);
     });
-    
+
     ws.on('user_left', (userId: string) => {
       setCollaborators(prev => prev.filter(c => c.userId !== userId));
     });
-    
+
     ws.on('cursor_update', (cursorData: Collaborator) => {
-      setUserCursors(prev => 
+      setUserCursors(prev =>
         prev.map(c => c.userId === cursorData.userId ? cursorData : c)
       );
     });
@@ -336,17 +336,17 @@ def validate_svgx(file_path: str):
     try:
         with open(file_path, 'r') as f:
             content = f.read()
-        
+
         parser = SVGXParser()
         elements = parser.parse(content)
-        
+
         click.echo(f"✅ SVGX file is valid")
         click.echo(f"📊 Found {len(elements)} elements")
-        
+
         # Detailed validation
         for element in elements:
             click.echo(f"  - {element.type}: {element.id}")
-            
+
     except Exception as e:
         click.echo(f"❌ Validation failed: {e}")
 
@@ -357,13 +357,13 @@ def simulate_svgx(file_path: str):
     try:
         with open(file_path, 'r') as f:
             content = f.read()
-        
+
         runtime = SVGXRuntime()
         results = runtime.simulate(content)
-        
+
         click.echo("🎮 Simulation Results:")
         click.echo(json.dumps(results, indent=2))
-        
+
     except Exception as e:
         click.echo(f"❌ Simulation failed: {e}")
 
@@ -375,22 +375,22 @@ def export_svgx(file_path: str, format: str):
     try:
         with open(file_path, 'r') as f:
             content = f.read()
-        
+
         runtime = SVGXRuntime()
-        
+
         if format == 'svg':
             result = runtime.compile_to_svg(content)
         elif format == 'json':
             result = runtime.compile_to_json(content)
         elif format == 'ifc':
             result = runtime.compile_to_ifc(content)
-        
+
         output_path = file_path.replace('.svgx', f'.{format}')
         with open(output_path, 'w') as f:
             f.write(result)
-        
+
         click.echo(f"✅ Exported to {output_path}")
-        
+
     except Exception as e:
         click.echo(f"❌ Export failed: {e}")
 
@@ -427,7 +427,7 @@ export const OptimizedCanvas: React.FC = () => {
     );
   }, []);
 
-  const memoizedElements = useMemo(() => 
+  const memoizedElements = useMemo(() =>
     visibleElements.map(renderElement),
     [visibleElements, renderElement]
   );
@@ -514,4 +514,4 @@ export const updateElementAsync = createAsyncThunk(
 
 ---
 
-**This frontend integration will provide a complete, production-ready user interface for the SVGX Engine, enabling real-time collaboration and advanced CAD-grade functionality.** 
+**This frontend integration will provide a complete, production-ready user interface for the SVGX Engine, enabling real-time collaboration and advanced CAD-grade functionality.**

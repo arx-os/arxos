@@ -305,7 +305,7 @@ response = requests.get(f"{API_BASE_URL}/buildings", headers=headers)
 if response.status_code == 200:
     buildings = response.json()
     print(f"Found {len(buildings['buildings'])} buildings")
-    
+
     # Get inventory for first building
     if buildings['buildings']:
         building_id = buildings['buildings'][0]['id']
@@ -480,4 +480,4 @@ For technical support or questions about the Data Vendor API:
 - Initial release of Data Vendor API
 - Support for building inventory and industry benchmarks
 - API key authentication and rate limiting
-- Admin management interface and CLI tool 
+- Admin management interface and CLI tool

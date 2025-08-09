@@ -29,18 +29,18 @@ class DisplayState:
 class DisplayBehavior:
     """
     Behavior profile for AV display devices
-    
+
     Handles power management, input switching, calibration,
     and performance monitoring for display devices.
     """
-    
+
     def __init__(self, display_id: str, properties: Dict[str, Any]):
         """
         Initialize display behavior
-        
+
         Args:
             display_id: Unique identifier for the display
-            properties: Display properties from schema
+            properties: Display properties from schema import schema
         """
         self.display_id = display_id
         self.properties = properties
@@ -50,15 +50,15 @@ class DisplayBehavior:
         self.max_brightness = properties.get("brightness", 400)
         self.contrast_ratio = properties.get("contrast_ratio", "3000:1")
         self.refresh_rate = properties.get("refresh_rate", 60)
-        
+
         # Performance tracking
         self.start_time = time.time()
         self.operation_log = []
-    
+
     def power_on(self) -> Dict[str, Any]:
         """
         Power on the display device
-        
+
         Returns:
             Dict containing operation result and new state
         """
@@ -67,7 +67,7 @@ class DisplayBehavior:
                 self.state.power_state = "on"
                 self.state.uptime_hours = 0.0
                 self.log_operation("power_on", "success")
-                
+
                 return {
                     "success": True,
                     "operation": "power_on",
@@ -90,11 +90,11 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def power_off(self) -> Dict[str, Any]:
         """
         Power off the display device
-        
+
         Returns:
             Dict containing operation result and new state
         """
@@ -102,7 +102,7 @@ class DisplayBehavior:
             if self.state.power_state == "on":
                 self.state.power_state = "off"
                 self.log_operation("power_off", "success")
-                
+
                 return {
                     "success": True,
                     "operation": "power_off",
@@ -125,14 +125,14 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def set_input_source(self, input_source: str) -> Dict[str, Any]:
         """
         Switch to specified input source
-        
+
         Args:
             input_source: Name of input source to switch to
-            
+
         Returns:
             Dict containing operation result and new state
         """
@@ -145,7 +145,7 @@ class DisplayBehavior:
                     "valid_sources": self.input_sources,
                     "timestamp": time.time()
                 }
-            
+
             if self.state.power_state != "on":
                 return {
                     "success": False,
@@ -153,10 +153,10 @@ class DisplayBehavior:
                     "message": "Display must be powered on to change input source",
                     "timestamp": time.time()
                 }
-            
+
             self.state.input_source = input_source
             self.log_operation("set_input_source", "success", input_source)
-            
+
             return {
                 "success": True,
                 "operation": "set_input_source",
@@ -172,14 +172,14 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def set_brightness(self, brightness: int) -> Dict[str, Any]:
         """
         Set display brightness
-        
+
         Args:
             brightness: Brightness level (0-100)
-            
+
         Returns:
             Dict containing operation result and new state
         """
@@ -191,7 +191,7 @@ class DisplayBehavior:
                     "message": f"Brightness must be between 0 and 100, got {brightness}",
                     "timestamp": time.time()
                 }
-            
+
             if self.state.power_state != "on":
                 return {
                     "success": False,
@@ -199,10 +199,10 @@ class DisplayBehavior:
                     "message": "Display must be powered on to adjust brightness",
                     "timestamp": time.time()
                 }
-            
+
             self.state.brightness = brightness
             self.log_operation("set_brightness", "success", str(brightness))
-            
+
             return {
                 "success": True,
                 "operation": "set_brightness",
@@ -218,14 +218,14 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def set_volume(self, volume: int) -> Dict[str, Any]:
         """
         Set display volume (if applicable)
-        
+
         Args:
             volume: Volume level (0-100)
-            
+
         Returns:
             Dict containing operation result and new state
         """
@@ -237,7 +237,7 @@ class DisplayBehavior:
                     "message": f"Volume must be between 0 and 100, got {volume}",
                     "timestamp": time.time()
                 }
-            
+
             if self.state.power_state != "on":
                 return {
                     "success": False,
@@ -245,10 +245,10 @@ class DisplayBehavior:
                     "message": "Display must be powered on to adjust volume",
                     "timestamp": time.time()
                 }
-            
+
             self.state.volume = volume
             self.log_operation("set_volume", "success", str(volume))
-            
+
             return {
                 "success": True,
                 "operation": "set_volume",
@@ -264,11 +264,11 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def calibrate_display(self) -> Dict[str, Any]:
         """
         Run display calibration
-        
+
         Returns:
             Dict containing calibration result
         """
@@ -280,12 +280,12 @@ class DisplayBehavior:
                     "message": "Display must be powered on for calibration",
                     "timestamp": time.time()
                 }
-            
+
             # Simulate calibration process
             time.sleep(0.1)  # Simulate calibration time
-            
+
             self.log_operation("calibrate_display", "success")
-            
+
             return {
                 "success": True,
                 "operation": "calibrate_display",
@@ -306,11 +306,11 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def get_status(self) -> Dict[str, Any]:
         """
         Get current display status
-        
+
         Returns:
             Dict containing current status information
         """
@@ -318,7 +318,7 @@ class DisplayBehavior:
             # Update uptime
             if self.state.power_state == "on":
                 self.state.uptime_hours = (time.time() - self.start_time) / 3600
-            
+
             return {
                 "success": True,
                 "operation": "get_status",
@@ -344,26 +344,26 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def validate_connections(self, connections: List[str]) -> Dict[str, Any]:
         """
         Validate display connections
-        
+
         Args:
             connections: List of connected devices
-            
+
         Returns:
             Dict containing validation result
         """
         try:
             required_connections = ["power", "control"]
             optional_connections = ["video", "audio", "network"]
-            
+
             missing_required = [conn for conn in required_connections if conn not in connections]
             present_optional = [conn for conn in optional_connections if conn in connections]
-            
+
             is_valid = len(missing_required) == 0
-            
+
             return {
                 "success": is_valid,
                 "operation": "validate_connections",
@@ -380,7 +380,7 @@ class DisplayBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def log_operation(self, operation: str, status: str, details: str = ""):
         """Log an operation for tracking purposes"""
         log_entry = {
@@ -391,26 +391,26 @@ class DisplayBehavior:
             "display_id": self.display_id
         }
         self.operation_log.append(log_entry)
-    
+
     def get_operation_log(self) -> List[Dict[str, Any]]:
         """Get the operation log"""
         return self.operation_log
-    
+
     def reset_operation_log(self):
         """Reset the operation log"""
         self.operation_log = []
-    
+
     def get_performance_metrics(self) -> Dict[str, Any]:
         """
         Get performance metrics for the display
-        
+
         Returns:
             Dict containing performance metrics
         """
         try:
             uptime_hours = self.state.uptime_hours
             error_rate = self.state.error_count / max(uptime_hours, 1) * 100
-            
+
             return {
                 "success": True,
                 "operation": "get_performance_metrics",
@@ -437,12 +437,11 @@ class DisplayBehavior:
 def create_display_behavior(display_id: str, properties: Dict[str, Any]) -> DisplayBehavior:
     """
     Factory function to create a display behavior instance
-    
+
     Args:
         display_id: Unique identifier for the display
-        properties: Display properties from schema
-        
+        properties: Display properties from schema import schema
     Returns:
         DisplayBehavior instance
     """
-    return DisplayBehavior(display_id, properties) 
+    return DisplayBehavior(display_id, properties)

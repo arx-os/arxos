@@ -34,15 +34,15 @@
 ```python
 class InterfaceSelectionSystem:
     """Allow users to choose between agent-driven and traditional interfaces"""
-    
+
     def __init__(self):
         self.agent_onboarding = AgentDrivenOnboarding()
         self.traditional_onboarding = TraditionalWIMPOnboarding()
         self.preference_detector = PreferenceDetector()
-    
+
     def present_interface_options(self, user_id: str) -> InterfaceOptions:
         """Present interface options to the user"""
-        
+
         return InterfaceOptions(
             primary_option={
                 'type': 'agent_conversational',
@@ -73,15 +73,15 @@ class InterfaceSelectionSystem:
                 'default': False
             }
         )
-    
+
     def detect_user_preference(self, user_behavior: dict) -> str:
         """Detect user preference based on behavior and characteristics"""
-        
+
         # Analyze user characteristics
         technical_comfort = user_behavior.get('technical_comfort', 'unknown')
         communication_style = user_behavior.get('communication_style', 'unknown')
         previous_experience = user_behavior.get('previous_ai_experience', False)
-        
+
         # Determine preference
         if technical_comfort == 'high' and communication_style == 'conversational':
             return 'agent_conversational'
@@ -110,19 +110,19 @@ Instead of a traditional form-based onboarding, users have a **conversational ex
 ```python
 class AgentDrivenOnboarding:
     """Agent-driven onboarding using natural conversation"""
-    
+
     def __init__(self):
         self.agent = ArxosAgent()
         self.conversation_manager = ConversationManager()
         self.profile_builder = ProfileBuilder()
         self.context_analyzer = ContextAnalyzer()
-    
+
     def start_conversational_onboarding(self, user_id: str) -> ConversationSession:
         """Start agent-driven onboarding conversation"""
-        
+
         # Initialize agent with onboarding persona
         onboarding_agent = self.agent.create_onboarding_persona()
-        
+
         # Start conversation
         session = ConversationSession(
             user_id=user_id,
@@ -131,15 +131,15 @@ class AgentDrivenOnboarding:
             profile_in_progress={},
             created_at=datetime.now()
         )
-        
+
         # Generate opening message
         opening_message = self.generate_opening_message(session)
-        
+
         return session, opening_message
-    
+
     def generate_opening_message(self, session: ConversationSession) -> AgentMessage:
         """Generate natural opening message for onboarding"""
-        
+
         return AgentMessage(
             sender='agent',
             content="Hi! I'm here to help you get started with Arxos. I'd love to understand how you work with buildings so I can set up the perfect experience for you. What brings you to Arxos today?",
@@ -153,22 +153,22 @@ class AgentDrivenOnboarding:
                 "I'm not sure yet - can you help me understand?"
             ]
         )
-    
+
     def process_user_response(self, session: ConversationSession, user_message: str) -> AgentResponse:
         """Process user response and generate intelligent follow-up"""
-        
+
         # Analyze user response
         analysis = self.analyze_user_response(user_message, session.context)
-        
+
         # Update profile in progress
         self.update_profile_from_response(session, analysis)
-        
+
         # Determine next conversational step
         next_step = self.determine_next_conversational_step(session, analysis)
-        
+
         # Generate agent response
         agent_response = self.generate_agent_response(session, next_step, analysis)
-        
+
         return agent_response
 ```
 
@@ -180,53 +180,53 @@ class AgentDrivenOnboarding:
 ```python
 class OnboardingQuestionEngine:
     """Dynamic Q&A engine for adaptive onboarding"""
-    
+
     def __init__(self):
         self.question_flow = OnboardingFlow()
         self.response_analyzer = ResponseAnalyzer()
         self.profile_builder = ProfileBuilder()
-    
+
     def start_onboarding(self, user_id: str) -> OnboardingSession:
         """Start the adaptive onboarding process"""
-        
+
         session = OnboardingSession(
             user_id=user_id,
             current_phase='identity',
             responses={},
             created_at=datetime.now()
         )
-        
+
         # Get first question
         first_question = self.question_flow.get_question('identity', 'primary_role')
-        
+
         return session, first_question
-    
+
     def get_next_question(self, session: OnboardingSession, response: str) -> Tuple[Question, bool]:
         """Get next question based on previous response"""
-        
+
         # Analyze current response
         analysis = self.response_analyzer.analyze_response(
-            session.current_phase, 
-            session.current_question, 
+            session.current_phase,
+            session.current_question,
             response
         )
-        
+
         # Update session with response
         session.responses[session.current_question] = {
             'answer': response,
             'analysis': analysis,
             'timestamp': datetime.now()
         }
-        
+
         # Determine next question based on response
         next_question, is_complete = self.question_flow.get_next_question(
-            session, 
+            session,
             analysis
         )
-        
+
         session.current_question = next_question.id
         session.current_phase = next_question.phase
-        
+
         return next_question, is_complete
 ```
 
@@ -234,14 +234,14 @@ class OnboardingQuestionEngine:
 ```python
 class OnboardingFlow:
     """Define the adaptive question flow"""
-    
+
     def __init__(self):
         self.questions = self.initialize_questions()
         self.logic_rules = self.initialize_logic_rules()
-    
+
     def initialize_questions(self) -> Dict[str, Question]:
         """Initialize all onboarding questions"""
-        
+
         return {
             # Phase 1: Identity & Role
             'primary_role': Question(
@@ -270,7 +270,7 @@ class OnboardingFlow:
                     'Other': ['role_description', 'building_involvement']
                 }
             ),
-            
+
             # Phase 2: Use Cases & Goals
             'primary_use_case': Question(
                 id='primary_use_case',
@@ -289,7 +289,7 @@ class OnboardingFlow:
                     'Other'
                 ]
             ),
-            
+
             # Phase 3: Technical Expertise
             'technical_expertise': Question(
                 id='technical_expertise',
@@ -314,15 +314,15 @@ class OnboardingFlow:
 ```python
 class TraditionalWIMPOnboarding:
     """Traditional form-based onboarding interface"""
-    
+
     def __init__(self):
         self.form_engine = FormEngine()
         self.validation_engine = ValidationEngine()
         self.progress_tracker = ProgressTracker()
-    
+
     def start_traditional_onboarding(self, user_id: str) -> FormSession:
         """Start traditional form-based onboarding"""
-        
+
         session = FormSession(
             user_id=user_id,
             current_step=1,
@@ -330,41 +330,41 @@ class TraditionalWIMPOnboarding:
             form_data={},
             created_at=datetime.now()
         )
-        
+
         # Get first form step
         first_step = self.form_engine.get_step(1)
-        
+
         return session, first_step
-    
+
     def get_form_step(self, session: FormSession, step_number: int) -> FormStep:
         """Get specific form step"""
-        
+
         return self.form_engine.get_step(step_number)
-    
+
     def validate_step(self, session: FormSession, step_data: dict) -> ValidationResult:
         """Validate current step data"""
-        
+
         return self.validation_engine.validate_step(
             session.current_step,
             step_data
         )
-    
+
     def submit_step(self, session: FormSession, step_data: dict) -> FormSession:
         """Submit step data and move to next step"""
-        
+
         # Validate step data
         validation = self.validate_step(session, step_data)
-        
+
         if not validation.is_valid:
             raise ValidationError(validation.errors)
-        
+
         # Update session with step data
         session.form_data[f"step_{session.current_step}"] = step_data
         session.current_step += 1
-        
+
         # Update progress
         session.progress = (session.current_step - 1) / session.total_steps
-        
+
         return session
 ```
 
@@ -372,10 +372,10 @@ class TraditionalWIMPOnboarding:
 ```python
 class FormEngine:
     """Traditional form step engine"""
-    
+
     def get_step(self, step_number: int) -> FormStep:
         """Get form step by number"""
-        
+
         steps = {
             1: FormStep(
                 id=1,
@@ -404,7 +404,7 @@ class FormEngine:
                     )
                 ]
             ),
-            
+
             2: FormStep(
                 id=2,
                 title="Role & Responsibilities",
@@ -441,7 +441,7 @@ class FormEngine:
                 ]
             )
         }
-        
+
         return steps.get(step_number)
 ```
 
@@ -453,17 +453,17 @@ class FormEngine:
 ```python
 class InterfaceSwitchingSystem:
     """Handle switching between onboarding interfaces"""
-    
+
     def __init__(self):
         self.progress_converter = ProgressConverter()
         self.session_manager = SessionManager()
-    
+
     def switch_to_agent(self, form_session: FormSession) -> ConversationSession:
         """Switch from traditional form to agent conversation"""
-        
+
         # Convert form progress to conversation context
         conversation_context = self.progress_converter.form_to_conversation(form_session)
-        
+
         # Create new conversation session
         conversation_session = ConversationSession(
             user_id=form_session.user_id,
@@ -472,21 +472,21 @@ class InterfaceSwitchingSystem:
             profile_in_progress=form_session.form_data,
             created_at=datetime.now()
         )
-        
+
         # Generate contextual opening message
         opening_message = self.generate_contextual_opening(conversation_context)
-        
+
         return conversation_session, opening_message
-    
+
     def switch_to_traditional(self, conversation_session: ConversationSession) -> FormSession:
         """Switch from agent conversation to traditional form"""
-        
+
         # Convert conversation progress to form data
         form_data = self.progress_converter.conversation_to_form(conversation_session)
-        
+
         # Determine current form step based on progress
         current_step = self.determine_form_step(form_data)
-        
+
         # Create new form session
         form_session = FormSession(
             user_id=conversation_session.user_id,
@@ -495,7 +495,7 @@ class InterfaceSwitchingSystem:
             form_data=form_data,
             created_at=datetime.now()
         )
-        
+
         return form_session
 ```
 
@@ -507,27 +507,27 @@ class InterfaceSwitchingSystem:
 ```python
 class ProfileBuilder:
     """Build user profiles from onboarding data"""
-    
+
     def __init__(self):
         self.role_mapper = RoleMapper()
         self.preference_analyzer = PreferenceAnalyzer()
         self.feature_recommender = FeatureRecommender()
-    
+
     def build_user_profile(self, onboarding_data: dict) -> UserProfile:
         """Build comprehensive user profile from onboarding"""
-        
+
         # Extract role information
         role_info = self.role_mapper.map_role(onboarding_data.get('primary_role'))
-        
+
         # Analyze preferences
         preferences = self.preference_analyzer.analyze_preferences(onboarding_data)
-        
+
         # Recommend features
         recommended_features = self.feature_recommender.recommend_features(
-            role_info, 
+            role_info,
             preferences
         )
-        
+
         # Build profile
         profile = UserProfile(
             user_id=onboarding_data.get('user_id'),
@@ -538,7 +538,7 @@ class ProfileBuilder:
             use_cases=onboarding_data.get('use_cases', []),
             created_at=datetime.now()
         )
-        
+
         return profile
 ```
 
@@ -677,4 +677,4 @@ flake8>=6.0.0
 5. **User Testing**: Conduct user research and testing
 6. **Iterative Development**: Implement in phases with continuous feedback
 
-This consolidated approach provides a comprehensive onboarding system that offers users choice while maintaining the power of intelligent, personalized experiences. 
+This consolidated approach provides a comprehensive onboarding system that offers users choice while maintaining the power of intelligent, personalized experiences.

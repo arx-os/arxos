@@ -74,7 +74,7 @@ class ConnectorManager {
     async loadConnectors() {
         try {
             const params = new URLSearchParams();
-            
+
             // Add filters to query parameters
             Object.entries(this.filters).forEach(([key, value]) => {
                 if (value) params.append(key, value);
@@ -110,7 +110,7 @@ class ConnectorManager {
             container.innerHTML = `
                 <div class="text-center py-8 text-gray-500">
                     <p>No connectors found</p>
-                    <button onclick="connectorManager.showCreateConnectorModal()" 
+                    <button onclick="connectorManager.showCreateConnectorModal()"
                             class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                         Create First Connector
                     </button>
@@ -315,7 +315,7 @@ class ConnectorManager {
             document.getElementById('edit-max-capacity').value = connector.max_capacity || '';
             document.getElementById('edit-current-load').value = connector.current_load || '';
             document.getElementById('edit-connector-description').value = connector.description || '';
-            
+
             // Store connector ID for update
             modal.setAttribute('data-connector-id', connector.object_id);
             modal.classList.remove('hidden');
@@ -470,4 +470,4 @@ class ConnectorManager {
 // Initialize connector manager when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.connectorManager = new ConnectorManager();
-}); 
+});

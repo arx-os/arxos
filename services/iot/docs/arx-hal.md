@@ -264,4 +264,4 @@ See the `arx-hal/examples/` directory for complete device definitions:
 - [ArxHAL Schema Specification](https://arxos.dev/specs/arxhal.schema.json)
 - [Validation Tool Documentation](tools/validate_schema.py)
 - [Device Type Catalog](examples/)
-- [Contributing Guidelines](contributing.md) 
+- [Contributing Guidelines](contributing.md)

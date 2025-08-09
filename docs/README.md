@@ -265,6 +265,6 @@ This is the master index for all Arxos documentation. Use this as your primary n
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
+**Last Updated**: December 2024
+**Version**: 1.0.0
 **Status**: Active Development

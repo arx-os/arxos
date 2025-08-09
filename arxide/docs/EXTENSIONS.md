@@ -155,12 +155,12 @@ export function activate(context: ExtensionContext) {
     'electrical.createPanel',
     createElectricalPanel
   )
-  
+
   const analyzeCircuitCommand = arxide.commands.registerCommand(
     'electrical.analyzeCircuit',
     analyzeCircuit
   )
-  
+
   context.subscriptions.push(createPanelCommand, analyzeCircuitCommand)
 }
 
@@ -170,14 +170,14 @@ async function createElectricalPanel() {
     prompt: 'Enter panel name',
     placeHolder: 'Main Panel'
   })
-  
+
   if (panel) {
     const svgxCode = generatePanelSVGX(panel)
     const document = await arxide.workspace.openTextDocument({
       content: svgxCode,
       language: 'svgx'
     })
-    
+
     await arxide.window.showTextDocument(document)
   }
 }
@@ -188,10 +188,10 @@ async function analyzeCircuit() {
     arxide.window.showErrorMessage('No active editor')
     return
   }
-  
+
   const svgxCode = editor.document.getText()
   const analysis = await analyzeElectricalCircuit(svgxCode)
-  
+
   // Show results in a new panel
   const panel = arxide.window.createWebviewPanel(
     'circuitAnalysis',
@@ -199,7 +199,7 @@ async function analyzeCircuit() {
     arxide.ViewColumn.Beside,
     {}
   )
-  
+
   panel.webview.html = generateAnalysisHTML(analysis)
 }
 ```
@@ -215,13 +215,13 @@ class SVGXLanguageProvider implements arxide.DocumentSymbolProvider {
   ): arxide.ProviderResult<arxide.SymbolInformation[] | arxide.DocumentSymbol[]> {
     const symbols: arxide.DocumentSymbol[] = []
     const text = document.getText()
-    
+
     // Parse SVGX code and extract symbols
     const lines = text.split('\n')
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      
+
       // Match electrical components
       const panelMatch = line.match(/panel\s+(\w+)/)
       if (panelMatch) {
@@ -234,7 +234,7 @@ class SVGXLanguageProvider implements arxide.DocumentSymbolProvider {
         )
         symbols.push(symbol)
       }
-      
+
       // Match circuit definitions
       const circuitMatch = line.match(/circuit\s+(\w+)/)
       if (circuitMatch) {
@@ -248,7 +248,7 @@ class SVGXLanguageProvider implements arxide.DocumentSymbolProvider {
         symbols.push(symbol)
       }
     }
-    
+
     return symbols
   }
 }
@@ -260,9 +260,9 @@ class SVGXLanguageProvider implements arxide.DocumentSymbolProvider {
 // Circuit Analysis Webview
 class CircuitAnalysisProvider implements arxide.WebviewViewProvider {
   public static readonly viewType = 'circuitAnalysis'
-  
+
   constructor(private readonly _extensionUri: arxide.Uri) {}
-  
+
   public resolveWebviewView(
     webviewView: arxide.WebviewView,
     context: arxide.WebviewViewResolveContext,
@@ -272,9 +272,9 @@ class CircuitAnalysisProvider implements arxide.WebviewViewProvider {
       enableScripts: true,
       localResourceRoots: [this._extensionUri]
     }
-    
+
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview)
-    
+
     // Handle messages from webview
     webviewView.webview.onDidReceiveMessage(
       message => {
@@ -286,7 +286,7 @@ class CircuitAnalysisProvider implements arxide.WebviewViewProvider {
       }
     )
   }
-  
+
   private _getHtmlForWebview(webview: arxide.Webview) {
     return `
       <!DOCTYPE html>
@@ -305,7 +305,7 @@ class CircuitAnalysisProvider implements arxide.WebviewViewProvider {
         <script>
           // Webview JavaScript
           const arxide = acquireArxIDEApi()
-          
+
           function analyzeCircuit(circuitData) {
             arxide.postMessage({
               command: 'analyzeCircuit',
@@ -329,48 +329,48 @@ class CircuitAnalysisProvider implements arxide.WebviewViewProvider {
 class ElectricalComponentsProvider implements arxide.TreeDataProvider<ElectricalComponent> {
   private _onDidChangeTreeData: arxide.EventEmitter<ElectricalComponent | undefined | null | undefined> = new arxide.EventEmitter<ElectricalComponent | undefined | null | undefined>()
   readonly onDidChangeTreeData: arxide.Event<ElectricalComponent | undefined | null | undefined> = this._onDidChangeTreeData.event
-  
+
   constructor(private workspaceRoot: string | undefined) {}
-  
+
   refresh(): void {
     this._onDidChangeTreeData.fire()
   }
-  
+
   getTreeItem(element: ElectricalComponent): arxide.TreeItem {
     return element
   }
-  
+
   getChildren(element?: ElectricalComponent): Thenable<ElectricalComponent[]> {
     if (!this.workspaceRoot) {
       return Promise.resolve([])
     }
-    
+
     if (element) {
       return Promise.resolve(element.children || [])
     } else {
       return this.getElectricalComponents()
     }
   }
-  
+
   private async getElectricalComponents(): Promise<ElectricalComponent[]> {
     const components: ElectricalComponent[] = []
-    
+
     // Scan workspace for SVGX files
     const files = await arxide.workspace.findFiles('**/*.svgx')
-    
+
     for (const file of files) {
       const document = await arxide.workspace.openTextDocument(file)
       const componentsInFile = this.parseElectricalComponents(document.getText())
       components.push(...componentsInFile)
     }
-    
+
     return components
   }
-  
+
   private parseElectricalComponents(svgxCode: string): ElectricalComponent[] {
     const components: ElectricalComponent[] = []
     const lines = svgxCode.split('\n')
-    
+
     for (const line of lines) {
       // Parse electrical components from SVGX code
       const panelMatch = line.match(/panel\s+(\w+)/)
@@ -381,7 +381,7 @@ class ElectricalComponentsProvider implements arxide.TreeDataProvider<Electrical
           arxide.TreeItemCollapsibleState.Collapsed
         ))
       }
-      
+
       const circuitMatch = line.match(/circuit\s+(\w+)/)
       if (circuitMatch) {
         components.push(new ElectricalComponent(
@@ -391,7 +391,7 @@ class ElectricalComponentsProvider implements arxide.TreeDataProvider<Electrical
         ))
       }
     }
-    
+
     return components
   }
 }
@@ -404,10 +404,10 @@ class ElectricalComponent extends arxide.TreeItem {
     public readonly children?: ElectricalComponent[]
   ) {
     super(label, collapsibleState)
-    
+
     this.tooltip = `${this.type}: ${this.label}`
     this.description = this.type
-    
+
     // Set icon based on type
     this.iconPath = {
       light: arxide.Uri.file(path.join(__filename, '..', '..', 'resources', 'light', `${this.type}.svg`)),
@@ -423,7 +423,7 @@ class ElectricalComponent extends arxide.TreeItem {
 // Electrical Status Bar
 class ElectricalStatusBar {
   private statusBarItem: arxide.StatusBarItem
-  
+
   constructor() {
     this.statusBarItem = arxide.window.createStatusBarItem(
       arxide.StatusBarAlignment.Right,
@@ -432,26 +432,26 @@ class ElectricalStatusBar {
     this.statusBarItem.command = 'electrical.showStatus'
     this.updateStatus()
   }
-  
+
   updateStatus() {
     const editor = arxide.window.activeTextEditor
     if (editor && editor.document.languageId === 'svgx') {
       const text = editor.document.getText()
       const componentCount = this.countElectricalComponents(text)
-      
+
       this.statusBarItem.text = `$(circuit-board) ${componentCount} Electrical Components`
       this.statusBarItem.show()
     } else {
       this.statusBarItem.hide()
     }
   }
-  
+
   private countElectricalComponents(svgxCode: string): number {
     const panelMatches = svgxCode.match(/panel\s+\w+/g) || []
     const circuitMatches = svgxCode.match(/circuit\s+\w+/g) || []
     return panelMatches.length + circuitMatches.length
   }
-  
+
   dispose() {
     this.statusBarItem.dispose()
   }
@@ -470,16 +470,16 @@ import * as path from 'path'
 
 suite('Electrical Extension Test Suite', () => {
   arxide.window.showInformationMessage('Start all tests.')
-  
+
   test('Should create electrical panel', async () => {
     // Test panel creation
     const panelName = 'TestPanel'
     const svgxCode = generatePanelSVGX(panelName)
-    
+
     assert.strictEqual(svgxCode.includes(`panel ${panelName}`), true)
     assert.strictEqual(svgxCode.includes('voltage: 120'), true)
   })
-  
+
   test('Should analyze circuit', async () => {
     // Test circuit analysis
     const svgxCode = `
@@ -493,14 +493,14 @@ suite('Electrical Extension Test Suite', () => {
         ]
       }
     `
-    
+
     const analysis = await analyzeElectricalCircuit(svgxCode)
-    
+
     assert.strictEqual(analysis.totalLoad, 15)
     assert.strictEqual(analysis.panels.length, 1)
     assert.strictEqual(analysis.circuits.length, 1)
   })
-  
+
   test('Should validate electrical code', async () => {
     // Test validation
     const svgxCode = `
@@ -514,9 +514,9 @@ suite('Electrical Extension Test Suite', () => {
         ]
       }
     `
-    
+
     const validation = await validateElectricalCode(svgxCode)
-    
+
     assert.strictEqual(validation.isValid, true)
     assert.strictEqual(validation.errors.length, 0)
   })
@@ -534,23 +534,23 @@ suite('Electrical Extension Integration Tests', () => {
   test('Should register commands', async () => {
     // Test command registration
     const commands = await arxide.commands.getCommands()
-    
+
     assert.strictEqual(commands.includes('electrical.createPanel'), true)
     assert.strictEqual(commands.includes('electrical.analyzeCircuit'), true)
   })
-  
+
   test('Should show electrical components in explorer', async () => {
     // Test tree view
     const treeDataProvider = new ElectricalComponentsProvider(arxide.workspace.rootPath)
     const components = await treeDataProvider.getChildren()
-    
+
     assert.strictEqual(components.length > 0, true)
   })
-  
+
   test('Should update status bar', async () => {
     // Test status bar
     const statusBar = new ElectricalStatusBar()
-    
+
     // Create test document
     const document = await arxide.workspace.openTextDocument({
       content: `
@@ -566,10 +566,10 @@ suite('Electrical Extension Integration Tests', () => {
       `,
       language: 'svgx'
     })
-    
+
     await arxide.window.showTextDocument(document)
     statusBar.updateStatus()
-    
+
     // Verify status bar shows component count
     assert.strictEqual(statusBar.statusBarItem.text.includes('2'), true)
   })
@@ -630,10 +630,10 @@ suite('Electrical Extension Integration Tests', () => {
 class ExtensionDevTools {
   static async createTestWorkspace(): Promise<arxide.WorkspaceFolder> {
     const testWorkspacePath = path.join(__dirname, 'test-workspace')
-    
+
     // Create test workspace with sample SVGX files
     await fs.mkdir(testWorkspacePath, { recursive: true })
-    
+
     const sampleFile = path.join(testWorkspacePath, 'sample.svgx')
     await fs.writeFile(sampleFile, `
       panel MainPanel {
@@ -650,10 +650,10 @@ class ExtensionDevTools {
         ]
       }
     `)
-    
+
     return arxide.workspace.addWorkspaceFolder(testWorkspacePath)
   }
-  
+
   static async cleanupTestWorkspace(): Promise<void> {
     const testWorkspacePath = path.join(__dirname, 'test-workspace')
     await fs.rm(testWorkspacePath, { recursive: true, force: true })

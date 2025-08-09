@@ -15,11 +15,11 @@ class VersionControlPanel {
             onVersionCompare: null,
             ...options
         };
-        
+
         this.versions = [];
         this.selectedVersion = null;
         this.isCollapsed = false;
-        
+
         this.render();
         this.initializeEventListeners();
         this.loadVersions();
@@ -48,7 +48,7 @@ class VersionControlPanel {
                             </button>
                         </div>
                     </div>
-                    
+
                     ${this.options.showUndoRedo ? `
                         <div class="undo-redo-controls mt-3 flex items-center space-x-2">
                             <button class="undo-btn bg-gray-500 hover:bg-gray-600 text-white text-xs px-2 py-1 rounded disabled:opacity-50" disabled>
@@ -59,11 +59,11 @@ class VersionControlPanel {
                             </button>
                         </div>
                     ` : ''}
-                    
+
                     ${(this.options.showSearch || this.options.showFilter) ? `
                         <div class="version-controls mt-3 flex items-center space-x-2">
                             ${this.options.showSearch ? `
-                                <input type="text" class="version-search border border-gray-300 rounded px-2 py-1 text-sm flex-1" 
+                                <input type="text" class="version-search border border-gray-300 rounded px-2 py-1 text-sm flex-1"
                                        placeholder="Search versions...">
                             ` : ''}
                             ${this.options.showFilter ? `
@@ -77,7 +77,7 @@ class VersionControlPanel {
                         </div>
                     ` : ''}
                 </div>
-                
+
                 <!-- Version List -->
                 <div class="version-list-container" style="max-height: ${this.options.maxHeight}; overflow-y: auto;">
                     <div class="version-list divide-y divide-gray-200">
@@ -87,7 +87,7 @@ class VersionControlPanel {
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Quick Actions -->
                 <div class="p-3 border-t border-gray-200 bg-gray-50">
                     <div class="flex items-center justify-between text-xs text-gray-600">
@@ -160,7 +160,7 @@ class VersionControlPanel {
         this.isCollapsed = !this.isCollapsed;
         const listContainer = this.container.querySelector('.version-list-container');
         const collapseBtn = this.container.querySelector('.collapse-btn i');
-        
+
         if (this.isCollapsed) {
             listContainer.style.display = 'none';
             collapseBtn.className = 'fas fa-chevron-down';
@@ -194,14 +194,14 @@ class VersionControlPanel {
     // Render version list
     renderVersionList() {
         const container = this.container.querySelector('.version-list');
-        
+
         if (this.versions.length === 0) {
             this.showEmptyState('No versions found');
             return;
         }
 
         container.innerHTML = this.versions.map(version => this.createVersionItem(version)).join('');
-        
+
         // Add event listeners
         container.querySelectorAll('.version-item').forEach((item, index) => {
             item.addEventListener('click', () => this.selectVersion(this.versions[index]));
@@ -213,7 +213,7 @@ class VersionControlPanel {
         const date = new Date(version.created_at).toLocaleDateString();
         const time = new Date(version.created_at).toLocaleTimeString();
         const tags = this.getVersionTags(version);
-        
+
         return `
             <div class="version-item p-3 cursor-pointer hover:bg-gray-50 transition-colors ${version.type}" data-version-id="${version.id}">
                 <div class="flex justify-between items-start">
@@ -229,17 +229,17 @@ class VersionControlPanel {
                             ${version.changes_count || 0} changes
                         </div>
                     </div>
-                    
+
                     <div class="version-actions ml-2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button class="compare-btn text-purple-600 hover:text-purple-800 p-1" 
+                        <button class="compare-btn text-purple-600 hover:text-purple-800 p-1"
                                 onclick="event.stopPropagation(); this.closest('.version-control-panel').versionControlPanel.compareVersion('${version.id}')">
                             <i class="fas fa-exchange-alt text-xs"></i>
                         </button>
-                        <button class="restore-btn text-blue-600 hover:text-blue-800 p-1" 
+                        <button class="restore-btn text-blue-600 hover:text-blue-800 p-1"
                                 onclick="event.stopPropagation(); this.closest('.version-control-panel').versionControlPanel.restoreVersion('${version.id}')">
                             <i class="fas fa-undo text-xs"></i>
                         </button>
-                        <button class="export-btn text-green-600 hover:text-green-800 p-1" 
+                        <button class="export-btn text-green-600 hover:text-green-800 p-1"
                                 onclick="event.stopPropagation(); this.closest('.version-control-panel').versionControlPanel.exportVersion('${version.id}')">
                             <i class="fas fa-download text-xs"></i>
                         </button>
@@ -252,7 +252,7 @@ class VersionControlPanel {
     // Get version tags
     getVersionTags(version) {
         const tags = [];
-        
+
         if (version.type === 'auto-save') {
             tags.push('<span class="version-tag tag-auto-save text-xs px-1 py-0.5 rounded bg-gray-100 text-gray-600 ml-1">Auto</span>');
         }
@@ -262,7 +262,7 @@ class VersionControlPanel {
         if (version.is_restored) {
             tags.push('<span class="version-tag tag-restored text-xs px-1 py-0.5 rounded bg-yellow-100 text-yellow-700 ml-1">Restored</span>');
         }
-        
+
         return tags.join('');
     }
 
@@ -288,17 +288,17 @@ class VersionControlPanel {
     // Select version
     selectVersion(version) {
         this.selectedVersion = version;
-        
+
         // Update UI
         this.container.querySelectorAll('.version-item').forEach(item => {
             item.classList.remove('selected', 'bg-blue-50', 'border-l-4', 'border-blue-500');
         });
-        
+
         const selectedItem = this.container.querySelector(`[data-version-id="${version.id}"]`);
         if (selectedItem) {
             selectedItem.classList.add('selected', 'bg-blue-50', 'border-l-4', 'border-blue-500');
         }
-        
+
         // Call callback
         if (this.options.onVersionSelect) {
             this.options.onVersionSelect(version);
@@ -309,7 +309,7 @@ class VersionControlPanel {
     filterVersions(searchTerm) {
         const items = this.container.querySelectorAll('.version-item');
         const term = searchTerm.toLowerCase();
-        
+
         items.forEach(item => {
             const text = item.textContent.toLowerCase();
             item.style.display = text.includes(term) ? 'block' : 'none';
@@ -319,7 +319,7 @@ class VersionControlPanel {
     // Filter versions by type
     filterVersionsByType(type) {
         const items = this.container.querySelectorAll('.version-item');
-        
+
         items.forEach(item => {
             if (type === 'all' || item.classList.contains(type)) {
                 item.style.display = 'block';
@@ -342,21 +342,21 @@ class VersionControlPanel {
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                
+
                 <form class="create-version-form">
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                        <textarea class="w-full border border-gray-300 rounded px-3 py-2 text-sm" 
+                        <textarea class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                                   rows="3" placeholder="Describe this version..."></textarea>
                     </div>
-                    
+
                     <div class="mb-4">
                         <label class="flex items-center">
                             <input type="checkbox" class="mr-2">
                             <span class="text-sm text-gray-700">Auto-save version</span>
                         </label>
                     </div>
-                    
+
                     <div class="flex justify-end space-x-3">
                         <button type="button" class="cancel-create bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded text-sm">
                             Cancel
@@ -368,18 +368,18 @@ class VersionControlPanel {
                 </form>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
-        
+
         // Event listeners
         modal.querySelector('.close-modal').addEventListener('click', () => {
             document.body.removeChild(modal);
         });
-        
+
         modal.querySelector('.cancel-create').addEventListener('click', () => {
             document.body.removeChild(modal);
         });
-        
+
         modal.querySelector('.create-version-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.createVersion(modal);
@@ -390,7 +390,7 @@ class VersionControlPanel {
     async createVersion(modal) {
         const description = modal.querySelector('textarea').value;
         const isAutoSave = modal.querySelector('input[type="checkbox"]').checked;
-        
+
         try {
             const response = await fetch(`/api/floors/${this.options.floorId}/versions`, {
                 method: 'POST',
@@ -402,7 +402,7 @@ class VersionControlPanel {
                     type: isAutoSave ? 'auto-save' : 'manual'
                 })
             });
-            
+
             if (response.ok) {
                 const newVersion = await response.json();
                 this.versions.unshift(newVersion);
@@ -439,7 +439,7 @@ class VersionControlPanel {
                     const response = await fetch(`/api/floors/${this.options.floorId}/versions/${versionId}/restore`, {
                         method: 'POST'
                     });
-                    
+
                     if (response.ok) {
                         this.showNotification('Version restored successfully', 'success');
                         this.loadVersions();
@@ -501,9 +501,9 @@ class VersionControlPanel {
             type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600'
         }`;
         toast.textContent = message;
-        
+
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
             if (toast.parentElement) {
                 document.body.removeChild(toast);

@@ -50,4 +50,4 @@ For use with the `arx-backend` Go project, you can:
 
 Downloaded from: https://www.sqlite.org/download.html
 Version: 3.50.1 (2025-06-06)
-Platform: Windows x64 
+Platform: Windows x64

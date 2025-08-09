@@ -253,10 +253,10 @@ const ProcessingTimeTarget = time.Millisecond
 
 func (ls *LoggingService) processLogEntry(entry LogEntry) {
     start := time.Now()
-    
+
     // Process the log entry
     ls.logger.Log(entry.Level.toZapLevel(), entry.Message, entry.Fields...)
-    
+
     // Track processing time
     duration := time.Since(start)
     if duration > ProcessingTimeTarget {
@@ -274,10 +274,10 @@ PROCESSING_TIME_TARGET = 0.001  # 1ms target
 
 def _process_log_entry(self, entry):
     start_time = time.time()
-    
+
     // Process log entry
     self.logger.handle(record)
-    
+
     // Track processing time
     processing_time = time.time() - start_time
     if processing_time > PROCESSING_TIME_TARGET:
@@ -355,14 +355,14 @@ func (ls *LoggingService) cleanupOldLogsByLevel(now time.Time) {
     for _, file := range logFiles {
         age := now.Sub(info.ModTime())
         shouldDelete := false
-        
+
         // Determine retention based on file type
         if strings.Contains(file, "debug") || strings.Contains(file, "DEBUG") {
             shouldDelete = age > time.Duration(ls.retentionPolicy.DebugRetentionDays)*24*time.Hour
         } else {
             shouldDelete = age > time.Duration(ls.retentionPolicy.InfoRetentionDays)*24*time.Hour
         }
-        
+
         if shouldDelete {
             os.Remove(file)
         }
@@ -374,16 +374,16 @@ func (ls *LoggingService) cleanupOldLogsByLevel(now time.Time) {
 # Python - Retention cleanup
 def _cleanup_old_logs(self):
     now = datetime.now()
-    
+
     for log_file in self.log_dir.glob("*.log*"):
         file_age = now - datetime.fromtimestamp(log_file.stat().st_mtime)
-        
+
         // Determine retention based on file type
         retention_days = LOG_RETENTION_DAYS.get('INFO', 30)  # Default
-        
+
         if 'debug' in log_file.name.lower():
             retention_days = LOG_RETENTION_DAYS.get('DEBUG', 7)
-        
+
         if file_age.days > retention_days:
             log_file.unlink()
 ```
@@ -400,12 +400,12 @@ const BATCH_TIMEOUT = 5000; // 5 seconds timeout
 
 addToBatch(logEntry) {
     this.logBuffer.push(logEntry);
-    
+
     // Process batch if it's full
     if (this.logBuffer.length >= BATCH_SIZE) {
         this.processBatch();
     }
-    
+
     // Set timeout for batch processing
     if (!this.batchTimeout) {
         this.batchTimeout = setTimeout(() => {
@@ -563,7 +563,7 @@ logger.info("Processing file", {"file_path": file_path})
 log.Printf("User %d logged in", userID)
 
 // After
-loggingService.Log(services.LogLevelInfo, "User logged in", ctx, 
+loggingService.Log(services.LogLevelInfo, "User logged in", ctx,
     zap.Uint("user_id", userID))
 ```
 
@@ -629,4 +629,4 @@ find /var/log/arxos -name "*.log*" -mtime +30 -ls
 
 ---
 
-This guide ensures consistent, performant, and maintainable logging across the entire Arxos platform while meeting production requirements for performance and storage efficiency. 
+This guide ensures consistent, performant, and maintainable logging across the entire Arxos platform while meeting production requirements for performance and storage efficiency.

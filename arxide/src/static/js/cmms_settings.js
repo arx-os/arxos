@@ -157,4 +157,4 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     loadConnections();
-}); 
+});

@@ -38,7 +38,7 @@ The Advanced Export & Interoperability feature provides comprehensive BIM data e
 - **Purpose**: Industry Foundation Classes for BIM tool interoperability
 - **Extensions**: `.ifc`
 - **Use Cases**: Revit, AutoCAD, ArchiCAD integration
-- **Features**: 
+- **Features**:
   - Building element representation
   - Spatial relationships
   - Material and property data
@@ -326,4 +326,4 @@ The Advanced Export & Interoperability feature provides a comprehensive, product
 
 **Status**: ✅ **COMPLETED** - Ready for production deployment
 
-**Next Steps**: Proceed to next high-priority feature or conduct user acceptance testing. 
+**Next Steps**: Proceed to next high-priority feature or conduct user acceptance testing.

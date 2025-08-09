@@ -182,7 +182,7 @@ class ConstraintSolver {
         this.precision = 0.001; // 0.001 inches
         this.anglePrecision = 0.1; // 0.1 degrees
     }
-    
+
     solveConstraints(objects) {
         // Apply all active constraints
         for (const [constraintId, constraint] of this.constraints) {
@@ -350,7 +350,7 @@ const updatedObjects = constraintSolver.solveConstraints([line1, line2]);
 canvas.addEventListener('mousemove', (event) => {
     const point = cadEngine.getCanvasPoint(event);
     cadEngine.updateMouseCoordinates(point);
-    
+
     // Apply grid snapping if enabled
     if (cadEngine.gridSnappingEnabled) {
         const snappedPoint = cadEngine.snapToGrid(point);
@@ -463,6 +463,6 @@ The implementation follows engineering best practices with comprehensive testing
 
 ---
 
-**Version**: 1.1.0  
-**Last Updated**: December 2024  
-**Status**: Production Ready ✅ 
+**Version**: 1.1.0
+**Last Updated**: December 2024
+**Status**: Production Ready ✅

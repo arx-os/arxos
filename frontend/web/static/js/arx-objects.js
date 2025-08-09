@@ -1,7 +1,7 @@
 /**
  * ArxObject System - Building Information Modeling
  * Represents every building component as data with measurements, relationships, and constraints
- * 
+ *
  * @author Arxos Team
  * @version 1.0.0
  * @license MIT
@@ -14,17 +14,17 @@ class ArxObjectSystem {
         this.relationships = new Map();
         this.constraints = new Map();
         this.measurements = new Map();
-        
+
         // Initialize object types
         this.initializeObjectTypes();
-        
+
         // Initialize relationships
         this.initializeRelationships();
-        
+
         // Initialize constraints
         this.initializeConstraints();
     }
-    
+
     /**
      * Initialize ArxObject types
      */
@@ -37,7 +37,7 @@ class ArxObjectSystem {
             measurements: ['length', 'area', 'volume'],
             constraints: ['perpendicular', 'parallel', 'distance']
         });
-        
+
         this.objectTypes.set('floor', {
             name: 'Floor',
             category: 'structural',
@@ -45,7 +45,7 @@ class ArxObjectSystem {
             measurements: ['area', 'volume'],
             constraints: ['level', 'slope']
         });
-        
+
         this.objectTypes.set('ceiling', {
             name: 'Ceiling',
             category: 'structural',
@@ -53,7 +53,7 @@ class ArxObjectSystem {
             measurements: ['area'],
             constraints: ['height', 'level']
         });
-        
+
         this.objectTypes.set('column', {
             name: 'Column',
             category: 'structural',
@@ -61,7 +61,7 @@ class ArxObjectSystem {
             measurements: ['height', 'volume'],
             constraints: ['vertical', 'spacing']
         });
-        
+
         this.objectTypes.set('beam', {
             name: 'Beam',
             category: 'structural',
@@ -69,7 +69,7 @@ class ArxObjectSystem {
             measurements: ['length', 'volume'],
             constraints: ['horizontal', 'spacing']
         });
-        
+
         // Openings
         this.objectTypes.set('door', {
             name: 'Door',
@@ -78,7 +78,7 @@ class ArxObjectSystem {
             measurements: ['area', 'clearance'],
             constraints: ['width', 'height', 'clearance']
         });
-        
+
         this.objectTypes.set('window', {
             name: 'Window',
             category: 'opening',
@@ -86,7 +86,7 @@ class ArxObjectSystem {
             measurements: ['area', 'glazingArea'],
             constraints: ['width', 'height', 'sillHeight']
         });
-        
+
         this.objectTypes.set('opening', {
             name: 'Opening',
             category: 'opening',
@@ -94,7 +94,7 @@ class ArxObjectSystem {
             measurements: ['area'],
             constraints: ['width', 'height']
         });
-        
+
         // MEP Systems
         this.objectTypes.set('electrical_outlet', {
             name: 'Electrical Outlet',
@@ -103,7 +103,7 @@ class ArxObjectSystem {
             measurements: ['height'],
             constraints: ['height', 'spacing']
         });
-        
+
         this.objectTypes.set('light_fixture', {
             name: 'Light Fixture',
             category: 'electrical',
@@ -111,7 +111,7 @@ class ArxObjectSystem {
             measurements: ['height'],
             constraints: ['height', 'spacing']
         });
-        
+
         this.objectTypes.set('hvac_register', {
             name: 'HVAC Register',
             category: 'mechanical',
@@ -119,7 +119,7 @@ class ArxObjectSystem {
             measurements: ['area'],
             constraints: ['size', 'spacing']
         });
-        
+
         this.objectTypes.set('plumbing_fixture', {
             name: 'Plumbing Fixture',
             category: 'plumbing',
@@ -127,7 +127,7 @@ class ArxObjectSystem {
             measurements: ['area'],
             constraints: ['clearance', 'spacing']
         });
-        
+
         // Interior Elements
         this.objectTypes.set('room', {
             name: 'Room',
@@ -136,7 +136,7 @@ class ArxObjectSystem {
             measurements: ['area', 'perimeter', 'volume'],
             constraints: ['area', 'clearance']
         });
-        
+
         this.objectTypes.set('furniture', {
             name: 'Furniture',
             category: 'interior',
@@ -144,7 +144,7 @@ class ArxObjectSystem {
             measurements: ['area', 'volume'],
             constraints: ['clearance', 'spacing']
         });
-        
+
         // Site Elements
         this.objectTypes.set('site_boundary', {
             name: 'Site Boundary',
@@ -153,7 +153,7 @@ class ArxObjectSystem {
             measurements: ['area', 'perimeter'],
             constraints: ['setback', 'coverage']
         });
-        
+
         this.objectTypes.set('parking_space', {
             name: 'Parking Space',
             category: 'site',
@@ -162,7 +162,7 @@ class ArxObjectSystem {
             constraints: ['size', 'spacing']
         });
     }
-    
+
     /**
      * Initialize relationship types
      */
@@ -173,76 +173,76 @@ class ArxObjectSystem {
             description: 'Objects are physically connected',
             bidirectional: true
         });
-        
+
         this.relationships.set('supported_by', {
             name: 'Supported By',
             description: 'One object supports another',
             bidirectional: false
         });
-        
+
         this.relationships.set('contains', {
             name: 'Contains',
             description: 'One object contains another',
             bidirectional: false
         });
-        
+
         this.relationships.set('adjacent', {
             name: 'Adjacent',
             description: 'Objects are adjacent to each other',
             bidirectional: true
         });
-        
+
         this.relationships.set('parallel', {
             name: 'Parallel',
             description: 'Objects are parallel to each other',
             bidirectional: true
         });
-        
+
         this.relationships.set('perpendicular', {
             name: 'Perpendicular',
             description: 'Objects are perpendicular to each other',
             bidirectional: true
         });
-        
+
         // MEP relationships
         this.relationships.set('served_by', {
             name: 'Served By',
             description: 'One object is served by another (e.g., outlet served by panel)',
             bidirectional: false
         });
-        
+
         this.relationships.set('connected_to', {
             name: 'Connected To',
             description: 'MEP objects are connected to each other',
             bidirectional: true
         });
-        
+
         // Spatial relationships
         this.relationships.set('above', {
             name: 'Above',
             description: 'One object is above another',
             bidirectional: false
         });
-        
+
         this.relationships.set('below', {
             name: 'Below',
             description: 'One object is below another',
             bidirectional: false
         });
-        
+
         this.relationships.set('inside', {
             name: 'Inside',
             description: 'One object is inside another',
             bidirectional: false
         });
-        
+
         this.relationships.set('outside', {
             name: 'Outside',
             description: 'One object is outside another',
             bidirectional: false
         });
     }
-    
+
     /**
      * Initialize constraint types
      */
@@ -254,28 +254,28 @@ class ArxObjectSystem {
             parameters: ['value', 'tolerance'],
             unit: 'inches'
         });
-        
+
         this.constraints.set('angle', {
             name: 'Angle',
             description: 'Angle between objects',
             parameters: ['value', 'tolerance'],
             unit: 'degrees'
         });
-        
+
         this.constraints.set('parallel', {
             name: 'Parallel',
             description: 'Objects must be parallel',
             parameters: ['tolerance'],
             unit: 'degrees'
         });
-        
+
         this.constraints.set('perpendicular', {
             name: 'Perpendicular',
             description: 'Objects must be perpendicular',
             parameters: ['tolerance'],
             unit: 'degrees'
         });
-        
+
         // Size constraints
         this.constraints.set('width', {
             name: 'Width',
@@ -283,28 +283,28 @@ class ArxObjectSystem {
             parameters: ['value', 'tolerance'],
             unit: 'inches'
         });
-        
+
         this.constraints.set('height', {
             name: 'Height',
             description: 'Height constraint',
             parameters: ['value', 'tolerance'],
             unit: 'inches'
         });
-        
+
         this.constraints.set('length', {
             name: 'Length',
             description: 'Length constraint',
             parameters: ['value', 'tolerance'],
             unit: 'inches'
         });
-        
+
         this.constraints.set('area', {
             name: 'Area',
             description: 'Area constraint',
             parameters: ['value', 'tolerance'],
             unit: 'square_inches'
         });
-        
+
         // Code constraints
         this.constraints.set('clearance', {
             name: 'Clearance',
@@ -312,21 +312,21 @@ class ArxObjectSystem {
             parameters: ['value'],
             unit: 'inches'
         });
-        
+
         this.constraints.set('spacing', {
             name: 'Spacing',
             description: 'Required spacing between objects',
             parameters: ['value'],
             unit: 'inches'
         });
-        
+
         this.constraints.set('setback', {
             name: 'Setback',
             description: 'Required setback from property line',
             parameters: ['value'],
             unit: 'inches'
         });
-        
+
         this.constraints.set('coverage', {
             name: 'Coverage',
             description: 'Maximum site coverage percentage',
@@ -334,7 +334,7 @@ class ArxObjectSystem {
             unit: 'percentage'
         });
     }
-    
+
     /**
      * Create a new ArxObject
      */
@@ -343,9 +343,9 @@ class ArxObjectSystem {
         if (!objectType) {
             throw new Error(`Unknown ArxObject type: ${type}`);
         }
-        
+
         const id = this.generateObjectId();
-        
+
         const arxObject = {
             id: id,
             type: type,
@@ -363,17 +363,17 @@ class ArxObjectSystem {
                 version: '1.0.0'
             }
         };
-        
+
         // Calculate initial measurements
         this.calculateMeasurements(arxObject);
-        
+
         // Add to system
         this.arxObjects.set(id, arxObject);
-        
+
         console.log('Created ArxObject:', arxObject);
         return arxObject;
     }
-    
+
     /**
      * Get default properties for object type
      */
@@ -419,16 +419,16 @@ class ArxObjectSystem {
                 occupancy: 1
             }
         };
-        
+
         return defaults[type] || {};
     }
-    
+
     /**
      * Calculate measurements for ArxObject
      */
     calculateMeasurements(arxObject) {
         const measurements = [];
-        
+
         switch (arxObject.type) {
             case 'wall':
                 measurements.push(
@@ -437,7 +437,7 @@ class ArxObjectSystem {
                     { type: 'volume', value: this.calculateVolume(arxObject.geometry), unit: 'cubic_inches' }
                 );
                 break;
-                
+
             case 'door':
             case 'window':
                 measurements.push(
@@ -445,7 +445,7 @@ class ArxObjectSystem {
                     { type: 'clearance', value: this.calculateClearance(arxObject.geometry), unit: 'inches' }
                 );
                 break;
-                
+
             case 'room':
                 measurements.push(
                     { type: 'area', value: this.calculateArea(arxObject.geometry), unit: 'square_inches' },
@@ -453,7 +453,7 @@ class ArxObjectSystem {
                     { type: 'volume', value: this.calculateVolume(arxObject.geometry), unit: 'cubic_inches' }
                 );
                 break;
-                
+
             case 'electrical_outlet':
             case 'light_fixture':
                 measurements.push(
@@ -461,10 +461,10 @@ class ArxObjectSystem {
                 );
                 break;
         }
-        
+
         arxObject.measurements = measurements;
     }
-    
+
     /**
      * Calculate length of object
      */
@@ -476,7 +476,7 @@ class ArxObjectSystem {
         }
         return 0;
     }
-    
+
     /**
      * Calculate area of object
      */
@@ -486,15 +486,15 @@ class ArxObjectSystem {
                 const width = Math.abs(geometry.endPoint.x - geometry.startPoint.x);
                 const height = Math.abs(geometry.endPoint.y - geometry.startPoint.y);
                 return width * height;
-                
+
             case 'circle':
                 return Math.PI * geometry.radius * geometry.radius;
-                
+
             default:
                 return 0;
         }
     }
-    
+
     /**
      * Calculate perimeter of object
      */
@@ -504,15 +504,15 @@ class ArxObjectSystem {
                 const width = Math.abs(geometry.endPoint.x - geometry.startPoint.x);
                 const height = Math.abs(geometry.endPoint.y - geometry.startPoint.y);
                 return 2 * (width + height);
-                
+
             case 'circle':
                 return 2 * Math.PI * geometry.radius;
-                
+
             default:
                 return 0;
         }
     }
-    
+
     /**
      * Calculate volume of object
      */
@@ -521,7 +521,7 @@ class ArxObjectSystem {
         const height = geometry.height || 0;
         return area * height;
     }
-    
+
     /**
      * Calculate height of object
      */
@@ -529,16 +529,16 @@ class ArxObjectSystem {
         if (geometry.height) {
             return geometry.height;
         }
-        
+
         switch (geometry.type) {
             case 'rectangle':
                 return Math.abs(geometry.endPoint.y - geometry.startPoint.y);
-                
+
             default:
                 return 0;
         }
     }
-    
+
     /**
      * Calculate clearance around object
      */
@@ -550,10 +550,10 @@ class ArxObjectSystem {
             electrical_outlet: 18,
             light_fixture: 12
         };
-        
+
         return clearances[geometry.objectType] || 0;
     }
-    
+
     /**
      * Calculate distance between two points
      */
@@ -562,18 +562,18 @@ class ArxObjectSystem {
         const dy = point2.y - point1.y;
         return Math.sqrt(dx * dx + dy * dy);
     }
-    
+
     /**
      * Add relationship between two ArxObjects
      */
     addRelationship(objectId1, objectId2, relationshipType, properties = {}) {
         const object1 = this.arxObjects.get(objectId1);
         const object2 = this.arxObjects.get(objectId2);
-        
+
         if (!object1 || !object2) {
             throw new Error('One or both objects not found');
         }
-        
+
         const relationship = {
             id: this.generateRelationshipId(),
             type: relationshipType,
@@ -585,18 +585,18 @@ class ArxObjectSystem {
                 modified: Date.now()
             }
         };
-        
+
         // Add to both objects
         object1.relationships.push(relationship);
         object2.relationships.push(relationship);
-        
+
         // Store in relationships map
         this.relationships.set(relationship.id, relationship);
-        
+
         console.log('Added relationship:', relationship);
         return relationship;
     }
-    
+
     /**
      * Add constraint to ArxObject
      */
@@ -605,7 +605,7 @@ class ArxObjectSystem {
         if (!arxObject) {
             throw new Error('Object not found');
         }
-        
+
         const constraint = {
             id: this.generateConstraintId(),
             type: constraintType,
@@ -615,20 +615,20 @@ class ArxObjectSystem {
                 modified: Date.now()
             }
         };
-        
+
         arxObject.constraints.push(constraint);
-        
+
         console.log('Added constraint:', constraint);
         return constraint;
     }
-    
+
     /**
      * Get ArxObject by ID
      */
     getArxObject(id) {
         return this.arxObjects.get(id);
     }
-    
+
     /**
      * Get all ArxObjects of a specific type
      */
@@ -641,7 +641,7 @@ class ArxObjectSystem {
         }
         return objects;
     }
-    
+
     /**
      * Get ArxObjects by category
      */
@@ -655,14 +655,14 @@ class ArxObjectSystem {
         }
         return objects;
     }
-    
+
     /**
      * Get related ArxObjects
      */
     getRelatedArxObjects(objectId, relationshipType = null) {
         const arxObject = this.arxObjects.get(objectId);
         if (!arxObject) return [];
-        
+
         const relatedObjects = [];
         for (const relationship of arxObject.relationships) {
             if (!relationshipType || relationship.type === relationshipType) {
@@ -673,10 +673,10 @@ class ArxObjectSystem {
                 }
             }
         }
-        
+
         return relatedObjects;
     }
-    
+
     /**
      * Update ArxObject
      */
@@ -685,27 +685,27 @@ class ArxObjectSystem {
         if (!arxObject) {
             throw new Error('Object not found');
         }
-        
+
         // Update properties
         if (updates.properties) {
             arxObject.properties = { ...arxObject.properties, ...updates.properties };
         }
-        
+
         // Update geometry
         if (updates.geometry) {
             arxObject.geometry = { ...arxObject.geometry, ...updates.geometry };
         }
-        
+
         // Recalculate measurements
         this.calculateMeasurements(arxObject);
-        
+
         // Update metadata
         arxObject.metadata.modified = Date.now();
-        
+
         console.log('Updated ArxObject:', arxObject);
         return arxObject;
     }
-    
+
     /**
      * Delete ArxObject
      */
@@ -714,18 +714,18 @@ class ArxObjectSystem {
         if (!arxObject) {
             throw new Error('Object not found');
         }
-        
+
         // Remove relationships
         for (const relationship of arxObject.relationships) {
             this.relationships.delete(relationship.id);
         }
-        
+
         // Remove from system
         this.arxObjects.delete(id);
-        
+
         console.log('Deleted ArxObject:', id);
     }
-    
+
     /**
      * Export ArxObjects to JSON
      */
@@ -740,51 +740,51 @@ class ArxObjectSystem {
                 relationshipCount: this.relationships.size
             }
         };
-        
+
         return JSON.stringify(exportData, null, 2);
     }
-    
+
     /**
      * Import ArxObjects from JSON
      */
     importFromJSON(jsonData) {
         const data = JSON.parse(jsonData);
-        
+
         // Import ArxObjects
         for (const arxObject of data.arxObjects) {
             this.arxObjects.set(arxObject.id, arxObject);
         }
-        
+
         // Import relationships
         for (const relationship of data.relationships) {
             this.relationships.set(relationship.id, relationship);
         }
-        
+
         console.log('Imported ArxObjects:', data.arxObjects.length);
         console.log('Imported relationships:', data.relationships.length);
     }
-    
+
     /**
      * Generate unique object ID
      */
     generateObjectId() {
         return 'arx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    
+
     /**
      * Generate unique relationship ID
      */
     generateRelationshipId() {
         return 'rel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    
+
     /**
      * Generate unique constraint ID
      */
     generateConstraintId() {
         return 'con_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
-    
+
     /**
      * Get statistics about ArxObjects
      */
@@ -797,18 +797,18 @@ class ArxObjectSystem {
             totalArea: 0,
             totalVolume: 0
         };
-        
+
         // Count by type and category
         for (const [id, arxObject] of this.arxObjects) {
             // Count by type
             stats.objectsByType[arxObject.type] = (stats.objectsByType[arxObject.type] || 0) + 1;
-            
+
             // Count by category
             const objectType = this.objectTypes.get(arxObject.type);
             if (objectType) {
                 stats.objectsByCategory[objectType.category] = (stats.objectsByCategory[objectType.category] || 0) + 1;
             }
-            
+
             // Sum areas and volumes
             for (const measurement of arxObject.measurements) {
                 if (measurement.type === 'area') {
@@ -818,10 +818,10 @@ class ArxObjectSystem {
                 }
             }
         }
-        
+
         return stats;
     }
 }
 
 // Export for global use
-window.ArxObjectSystem = ArxObjectSystem; 
+window.ArxObjectSystem = ArxObjectSystem;

@@ -137,12 +137,12 @@ const gusAssistant = {
   helpWithDrawing: async (userQuery) => {
     return await gusAPI.analyzeDrawingRequest(userQuery);
   },
-  
+
   // Precision guidance
   validatePrecision: async (coordinates) => {
     return await gusAPI.validatePrecision(coordinates);
   },
-  
+
   // Constraint assistance
   suggestConstraints: async (geometry) => {
     return await gusAPI.suggestConstraints(geometry);
@@ -202,19 +202,19 @@ python main.py
 gus:
   name: "General User Support"
   version: "1.0.0"
-  
+
   # AI Models
   models:
     nlp: "gpt-4"
     embedding: "text-embedding-ada-002"
     reasoning: "claude-3-sonnet"
-  
+
   # Knowledge Base
   knowledge:
     building_codes: "data/building_codes/"
     engineering_standards: "data/standards/"
     arxos_documentation: "data/arxos/"
-    
+
   # Integration
   integrations:
     browser_cad: "http://localhost:3000"
@@ -316,7 +316,7 @@ monitor.track_user_satisfaction()
 class BuildingCodesExpert:
     def __init__(self):
         self.knowledge_base = load_building_codes()
-    
+
     def answer_query(self, query: str) -> str:
         # Implementation
         pass
@@ -331,6 +331,6 @@ gus.register_expert("building_codes", BuildingCodesExpert())
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Active Development 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Active Development

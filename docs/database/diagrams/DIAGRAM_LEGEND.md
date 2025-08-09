@@ -39,7 +39,7 @@
 ### 1. Entity-Relationship (ER) Diagram
 - **Purpose**: Shows detailed table structure and relationships
 - **File**: `arxos_er_diagram.drawio`
-- **Features**: 
+- **Features**:
   - Complete table schemas
   - Column details and data types
   - Primary and foreign key indicators
@@ -102,4 +102,4 @@ python tools/generate_diagrams.py --database-url postgresql://...
 
 ---
 
-*This legend is automatically generated and should be updated with diagram changes.* 
+*This legend is automatically generated and should be updated with diagram changes.*

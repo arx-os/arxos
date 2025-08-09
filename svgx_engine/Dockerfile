@@ -34,4 +34,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl --fail http://localhost:8080/health || exit 1
 
 # Start the SVGX Engine (assumes FastAPI/Uvicorn app: app.py or main.py)
-CMD ["python", "-m", "svgx_engine.app"] 
+CMD ["python", "-m", "svgx_engine.app"]

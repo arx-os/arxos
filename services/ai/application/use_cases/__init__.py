@@ -1,7 +1,7 @@
 """
 Use Cases
 
-This module contains the use cases that implement the application's
+This module contains the use cases that implement the application's'
 business operations and orchestrate domain logic.
 """
 
@@ -15,4 +15,4 @@ __all__ = [
     'ProcessAIQueryUseCase',
     'ProcessAIQueryRequest',
     'ProcessAIQueryResponse'
-] 
+]

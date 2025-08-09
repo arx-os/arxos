@@ -195,4 +195,4 @@ Building code rules can be defined inline (as JSON) or in external files (JSON) 
 - **Version Control**: Rule version management
 - **Change Management**: Rule change procedures
 - **Testing**: Update testing procedures
-- **Deployment**: Update deployment procedures 
+- **Deployment**: Update deployment procedures

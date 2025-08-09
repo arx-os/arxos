@@ -59,7 +59,7 @@ linked_hardware:
 
 ### 1. Driver Author
 - **Description**: Writes and uploads initial ArxDriver
-- **Responsibilities**: 
+- **Responsibilities**:
   - Create driver configuration
   - Define data mappings
   - Document hardware specifications
@@ -281,4 +281,4 @@ This framework operates under the Arxos platform license and terms. All contribu
 
 ---
 
-*This framework enables the decentralized development of hardware integrations while ensuring fair compensation for contributors and maintaining high quality standards.* 
+*This framework enables the decentralized development of hardware integrations while ensuring fair compensation for contributors and maintaining high quality standards.*

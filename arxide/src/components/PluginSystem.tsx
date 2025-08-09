@@ -569,4 +569,4 @@ export const PluginSystem: React.FC<PluginSystemProps> = ({
       )}
     </Box>
   );
-}; 
+};

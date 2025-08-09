@@ -20,7 +20,7 @@ class BuildingService:
     """
     Domain service for building operations and business logic.
     """
-    
+
     def __init__(self, building_repository: BuildingRepository):
     """
     Perform __init__ operation
@@ -39,7 +39,7 @@ Example:
         print(result)
     """
         self.building_repository = building_repository
-    
+
     def create_building(
         self,
         name: str,
@@ -55,10 +55,10 @@ Example:
         # Business logic validation
         if not name or len(name.strip()) == 0:
             raise ValueError("Building name cannot be empty")
-        
+
         if cost.amount < 0:
             raise ValueError("Building cost cannot be negative")
-        
+
         # Create building aggregate
         building_aggregate = BuildingAggregate.create(
             name=name,
@@ -68,13 +68,13 @@ Example:
             status=status,
             cost=cost
         )
-        
+
         # Save to repository
         self.building_repository.save(building_aggregate)
-        
+
         logger.info(f"Created building: {building_aggregate.id}")
         return building_aggregate
-    
+
     def update_building(
         self,
         building_id: str,
@@ -86,28 +86,28 @@ Example:
         building = self.building_repository.get_by_id(building_id)
         if not building:
             raise ValueError(f"Building with id {building_id} not found")
-        
+
         # Apply updates with validation
         building.update(updates)
-        
+
         # Save to repository
         self.building_repository.save(building)
-        
+
         logger.info(f"Updated building: {building_id}")
         return building
-    
+
     def get_building(self, building_id: str) -> Optional[BuildingAggregate]:
         """
         Get building by ID.
         """
         return self.building_repository.get_by_id(building_id)
-    
+
     def get_all_buildings(self) -> List[BuildingAggregate]:
         """
         Get all buildings.
         """
         return self.building_repository.get_all()
-    
+
     def delete_building(self, building_id: str) -> bool:
         """
         Delete building with validation.
@@ -115,21 +115,21 @@ Example:
         building = self.building_repository.get_by_id(building_id)
         if not building:
             return False
-        
+
         # Business logic validation
         if building.status.value == "ACTIVE":
             raise ValueError("Cannot delete active building")
-        
+
         self.building_repository.delete(building_id)
         logger.info(f"Deleted building: {building_id}")
         return True
-    
+
     def get_buildings_by_status(self, status: Status) -> List[BuildingAggregate]:
         """
         Get buildings filtered by status.
         """
         return self.building_repository.get_by_status(status)
-    
+
     def get_buildings_by_location(
         self,
         coordinates: Coordinates,
@@ -138,4 +138,4 @@ Example:
         """
         Get buildings within specified radius of coordinates.
         """
-        return self.building_repository.get_by_location(coordinates, radius) 
+        return self.building_repository.get_by_location(coordinates, radius)

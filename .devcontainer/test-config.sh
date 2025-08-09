@@ -72,4 +72,4 @@ for port in "${ports[@]}"; do
 done
 
 echo ""
-echo "✅ Configuration test complete!" 
+echo "✅ Configuration test complete!"

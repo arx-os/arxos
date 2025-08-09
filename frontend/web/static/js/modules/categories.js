@@ -11,13 +11,13 @@ export class Categories {
             maxCategoryDepth: options.maxCategoryDepth || 5,
             ...options
         };
-        
+
         // Category state
         this.categories = [];
         this.categoryTree = {};
         this.selectedCategory = null;
         this.categoryFilters = new Map();
-        
+
         // Category templates
         this.categoryTemplates = {
             'HVAC': {
@@ -37,10 +37,10 @@ export class Categories {
                 attributes: ['coverage_area', 'response_time', 'manufacturer']
             }
         };
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -54,16 +54,16 @@ export class Categories {
         document.addEventListener('categorySelected', (event) => {
             this.handleCategorySelection(event.detail);
         });
-        
+
         // Listen for category creation/update
         document.addEventListener('categoryCreated', (event) => {
             this.handleCategoryCreated(event.detail);
         });
-        
+
         document.addEventListener('categoryUpdated', (event) => {
             this.handleCategoryUpdated(event.detail);
         });
-        
+
         document.addEventListener('categoryDeleted', (event) => {
             this.handleCategoryDeleted(event.detail);
         });
@@ -75,20 +75,20 @@ export class Categories {
             const response = await fetch('/api/categories', {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const categories = await response.json();
             this.categories = categories;
             this.buildCategoryTree();
-            
-            this.triggerEvent('categoriesLoaded', { 
+
+            this.triggerEvent('categoriesLoaded', {
                 categories: this.categories,
-                count: this.categories.length 
+                count: this.categories.length
             });
-            
+
         } catch (error) {
             console.error('Failed to load categories:', error);
             this.triggerEvent('categoriesLoadFailed', { error });
@@ -97,7 +97,7 @@ export class Categories {
 
     buildCategoryTree() {
         this.categoryTree = {};
-        
+
         // Build hierarchy
         this.categories.forEach(category => {
             if (!category.parent_id) {
@@ -126,7 +126,7 @@ export class Categories {
             if (validationErrors.length > 0) {
                 throw new Error(`Category validation failed: ${validationErrors.join(', ')}`);
             }
-            
+
             const response = await fetch('/api/categories', {
                 method: 'POST',
                 headers: {
@@ -135,18 +135,18 @@ export class Categories {
                 },
                 body: JSON.stringify(categoryData)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const category = await response.json();
             this.categories.push(category);
             this.buildCategoryTree();
-            
+
             this.triggerEvent('categoryCreated', { category });
             return category;
-            
+
         } catch (error) {
             console.error('Failed to create category:', error);
             this.triggerEvent('categoryCreateFailed', { categoryData, error });
@@ -161,7 +161,7 @@ export class Categories {
             if (validationErrors.length > 0) {
                 throw new Error(`Category validation failed: ${validationErrors.join(', ')}`);
             }
-            
+
             const response = await fetch(`/api/categories/${categoryId}`, {
                 method: 'PUT',
                 headers: {
@@ -170,24 +170,24 @@ export class Categories {
                 },
                 body: JSON.stringify(categoryData)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const category = await response.json();
-            
+
             // Update category in local array
             const index = this.categories.findIndex(c => c.id === categoryId);
             if (index !== -1) {
                 this.categories[index] = category;
             }
-            
+
             this.buildCategoryTree();
-            
+
             this.triggerEvent('categoryUpdated', { category });
             return category;
-            
+
         } catch (error) {
             console.error('Failed to update category:', error);
             this.triggerEvent('categoryUpdateFailed', { categoryId, categoryData, error });
@@ -201,17 +201,17 @@ export class Categories {
                 method: 'DELETE',
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             // Remove category from local array
             this.categories = this.categories.filter(c => c.id !== categoryId);
             this.buildCategoryTree();
-            
+
             this.triggerEvent('categoryDeleted', { categoryId });
-            
+
         } catch (error) {
             console.error('Failed to delete category:', error);
             this.triggerEvent('categoryDeleteFailed', { categoryId, error });
@@ -222,29 +222,29 @@ export class Categories {
     // Category validation
     validateCategory(categoryData) {
         const errors = [];
-        
+
         if (!categoryData.name || categoryData.name.trim().length === 0) {
             errors.push('Category name is required');
         }
-        
+
         if (categoryData.name && categoryData.name.length > 100) {
             errors.push('Category name cannot exceed 100 characters');
         }
-        
+
         if (categoryData.parent_id) {
             // Check if parent exists
             const parent = this.categories.find(c => c.id === categoryData.parent_id);
             if (!parent) {
                 errors.push('Parent category does not exist');
             }
-            
+
             // Check for circular references
             if (this.options.enableCategoryHierarchy) {
                 if (this.wouldCreateCircularReference(categoryData.parent_id, categoryData.id)) {
                     errors.push('Cannot create circular reference in category hierarchy');
                 }
             }
-            
+
             // Check depth limit
             if (this.options.maxCategoryDepth) {
                 const depth = this.getCategoryDepth(categoryData.parent_id);
@@ -253,29 +253,29 @@ export class Categories {
                 }
             }
         }
-        
+
         return errors;
     }
 
     wouldCreateCircularReference(parentId, categoryId) {
         if (!categoryId) return false;
-        
+
         const parent = this.categories.find(c => c.id === parentId);
         if (!parent) return false;
-        
+
         if (parent.id === categoryId) return true;
-        
+
         if (parent.parent_id) {
             return this.wouldCreateCircularReference(parent.parent_id, categoryId);
         }
-        
+
         return false;
     }
 
     getCategoryDepth(categoryId) {
         const category = this.categories.find(c => c.id === categoryId);
         if (!category || !category.parent_id) return 0;
-        
+
         return 1 + this.getCategoryDepth(category.parent_id);
     }
 
@@ -317,12 +317,12 @@ export class Categories {
     getCategoryPath(categoryId) {
         const path = [];
         let current = this.categories.find(c => c.id === categoryId);
-        
+
         while (current) {
             path.unshift(current);
             current = this.categories.find(c => c.id === current.parent_id);
         }
-        
+
         return path;
     }
 
@@ -333,12 +333,12 @@ export class Categories {
     getCategoryDescendants(categoryId) {
         const descendants = [];
         const children = this.categories.filter(c => c.parent_id === categoryId);
-        
+
         children.forEach(child => {
             descendants.push(child);
             descendants.push(...this.getCategoryDescendants(child.id));
         });
-        
+
         return descendants;
     }
 
@@ -356,7 +356,7 @@ export class Categories {
         if (!template) {
             throw new Error(`Template '${templateName}' not found`);
         }
-        
+
         return {
             ...categoryData,
             template: templateName,
@@ -370,13 +370,13 @@ export class Categories {
         const stats = {
             totalCategories: this.categories.length,
             rootCategories: this.categories.filter(c => !c.parent_id).length,
-            leafCategories: this.categories.filter(c => 
+            leafCategories: this.categories.filter(c =>
                 !this.categories.some(child => child.parent_id === c.id)
             ).length,
             maxDepth: this.getMaxCategoryDepth(),
             averageDepth: this.getAverageCategoryDepth()
         };
-        
+
         return stats;
     }
 
@@ -392,9 +392,9 @@ export class Categories {
     // Category search
     searchCategories(query) {
         if (!query) return this.categories;
-        
+
         const searchTerm = query.toLowerCase();
-        return this.categories.filter(category => 
+        return this.categories.filter(category =>
             category.name.toLowerCase().includes(searchTerm) ||
             (category.description && category.description.toLowerCase().includes(searchTerm))
         );
@@ -470,9 +470,9 @@ export class Categories {
         this.categoryTree = {};
         this.selectedCategory = null;
         this.categoryFilters.clear();
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

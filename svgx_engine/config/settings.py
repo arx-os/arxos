@@ -125,33 +125,33 @@ class SVGXConfig:
     api: APIConfig = field(default_factory=APIConfig)
     server: ServerConfig = field(default_factory=ServerConfig)
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
-    
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         self._validate_config()
-    
+
     def _validate_config(self):
         """Validate configuration settings."""
         # Validate environment
         if self.environment not in ["development", "staging", "production"]:
             raise ValueError(f"Invalid environment: {self.environment}")
-        
+
         # Validate database URL
         if not self.database.url:
             raise ValueError("Database URL is required")
-        
+
         # Validate security settings in production
         if self.environment == "production":
             if self.security.secret_key == "your-secret-key-change-in-production":
                 raise ValueError("Secret key must be changed in production")
-        
+
         # Validate port ranges
         if not (1 <= self.server.port <= 65535):
             raise ValueError(f"Invalid port: {self.server.port}")
-        
+
         if not (1 <= self.monitoring.metrics_port <= 65535):
             raise ValueError(f"Invalid metrics port: {self.monitoring.metrics_port}")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         return {
@@ -228,62 +228,62 @@ class SVGXConfig:
                 "tracing_endpoint": self.monitoring.tracing_endpoint
             }
         }
-    
+
     def save_to_file(self, file_path: str):
         """Save configuration to file."""
         config_dict = self.to_dict()
         with open(file_path, 'w') as f:
             json.dump(config_dict, f, indent=2)
-    
+
     @classmethod
     def load_from_file(cls, file_path: str) -> 'SVGXConfig':
         """Load configuration from file."""
         with open(file_path, 'r') as f:
             config_dict = json.load(f)
-        
+
         # Create configuration from dictionary
         config = cls()
-        
+
         # Update database config
         if "database" in config_dict:
             for key, value in config_dict["database"].items():
                 setattr(config.database, key, value)
-        
+
         # Update redis config
         if "redis" in config_dict:
             for key, value in config_dict["redis"].items():
                 setattr(config.redis, key, value)
-        
+
         # Update logging config
         if "logging" in config_dict:
             for key, value in config_dict["logging"].items():
                 setattr(config.logging, key, value)
-        
+
         # Update security config
         if "security" in config_dict:
             for key, value in config_dict["security"].items():
                 setattr(config.security, key, value)
-        
+
         # Update performance config
         if "performance" in config_dict:
             for key, value in config_dict["performance"].items():
                 setattr(config.performance, key, value)
-        
+
         # Update api config
         if "api" in config_dict:
             for key, value in config_dict["api"].items():
                 setattr(config.api, key, value)
-        
+
         # Update server config
         if "server" in config_dict:
             for key, value in config_dict["server"].items():
                 setattr(config.server, key, value)
-        
+
         # Update monitoring config
         if "monitoring" in config_dict:
             for key, value in config_dict["monitoring"].items():
                 setattr(config.monitoring, key, value)
-        
+
         return config
 
 
@@ -313,4 +313,4 @@ def reload_config():
     """Reload configuration from environment."""
     global _config
     _config = SVGXConfig()
-    return _config 
+    return _config

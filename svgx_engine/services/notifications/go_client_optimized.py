@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 class CacheEntry:
     """Cache entry with TTL support"""
-    
+
     def __init__(self, value: Any, ttl: int = 300):
     """
     Perform __init__ operation
@@ -72,7 +72,7 @@ Example:
         self.value = value
         self.created_at = time.time()
         self.ttl = ttl
-    
+
     def is_expired(self) -> bool:
         """Check if cache entry has expired"""
         return time.time() - self.created_at > self.ttl
@@ -97,29 +97,29 @@ Example:
         print(result)
     """
     """Rate limiter for API calls"""
-    
+
     def __init__(self, max_requests: int = 100, time_window: int = 60):
         self.max_requests = max_requests
         self.time_window = time_window
         self.requests = deque()
         self.lock = threading.Lock()
-    
+
     def can_proceed(self) -> bool:
         """Check if request can proceed"""
         now = time.time()
-        
+
         with self.lock:
             # Remove expired requests
             while self.requests and now - self.requests[0] > self.time_window:
                 self.requests.popleft()
-            
+
             # Check if we can add another request
             if len(self.requests) < self.max_requests:
                 self.requests.append(now)
                 return True
-            
+
             return False
-    
+
     def wait_if_needed(self) -> float:
         """Wait if rate limit is exceeded and return wait time"""
         if not self.can_proceed():
@@ -134,21 +134,21 @@ Example:
 
 class ConnectionPool:
     """Connection pool for HTTP clients"""
-    
+
     def __init__(self, max_connections: int = 100, max_keepalive: int = 20):
         self.max_connections = max_connections
         self.max_keepalive = max_keepalive
         self.session = None
         self.async_session = None
         self._lock = threading.Lock()
-    
+
     def get_session(self) -> requests.Session:
         """Get or create HTTP session with connection pooling"""
         if self.session is None:
             with self._lock:
                 if self.session is None:
                     self.session = requests.Session()
-                    
+
                     # Configure connection pooling
                     adapter = HTTPAdapter(
                         pool_connections=self.max_connections,
@@ -158,12 +158,11 @@ class ConnectionPool:
                             backoff_factor=0.1,
                             status_forcelist=[429, 500, 502, 503, 504]
                         )
-                    )
                     self.session.mount("http://", adapter)
                     self.session.mount("https://", adapter)
-        
+
         return self.session
-    
+
     async def get_async_session(self) -> aiohttp.ClientSession:
         """Get or create async HTTP session with connection pooling"""
         if self.async_session is None or self.async_session.closed:
@@ -178,49 +177,45 @@ class ConnectionPool:
                     self.async_session = aiohttp.ClientSession(
                         connector=connector,
                         timeout=aiohttp.ClientTimeout(total=30)
-                    )
-        
         return self.async_session
-    
+
     def close(self):
         """Close all sessions"""
         if self.session:
             self.session.close()
         if self.async_session and not self.async_session.closed:
-            asyncio.create_task(self.async_session.close())
-
-
+            asyncio.create_task(self.async_session.close()
 class BackgroundJobProcessor:
     """Background job processor for notification tasks"""
-    
+
     def __init__(self, max_workers: int = 10):
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.jobs = {}
         self._lock = threading.Lock()
-    
+
     def submit_job(self, job_id: str, func: Callable, *args, **kwargs):
         """Submit a job for background processing"""
         future = self.executor.submit(func, *args, **kwargs)
-        
+
         with self._lock:
             self.jobs[job_id] = {
                 'future': future,
                 'submitted_at': time.time(),
                 'status': 'pending'
             }
-        
+
         return job_id
-    
+
     def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get job status"""
         with self._lock:
             if job_id not in self.jobs:
                 return None
-            
+
             job = self.jobs[job_id]
             future = job['future']
-            
+
             if future.done():
                 try:
                     result = future.result(timeout=0)
@@ -231,9 +226,9 @@ class BackgroundJobProcessor:
                     job['error'] = str(e)
             else:
                 job['status'] = 'running'
-            
+
             return job
-    
+
     def cleanup_completed_jobs(self):
         """Clean up completed jobs"""
         with self._lock:
@@ -241,10 +236,10 @@ class BackgroundJobProcessor:
                 job_id for job_id, job in self.jobs.items()
                 if job['status'] in ['completed', 'failed']
             ]
-            
+
             for job_id in completed_jobs:
                 del self.jobs[job_id]
-    
+
     def shutdown(self):
         """Shutdown the job processor"""
         self.executor.shutdown(wait=True)
@@ -253,7 +248,7 @@ class BackgroundJobProcessor:
 class OptimizedGoNotificationClient:
     """
     Optimized Go notification client with performance enhancements
-    
+
     Features:
     - Connection pooling for external services
     - Async notification processing
@@ -278,7 +273,7 @@ class OptimizedGoNotificationClient:
     ):
         """
         Initialize the optimized Go notification client
-        
+
         Args:
             base_url: Base URL for the Go notification API
             timeout: Request timeout in seconds
@@ -295,14 +290,14 @@ class OptimizedGoNotificationClient:
         self.timeout = timeout
         self.max_retries = max_retries
         self.retry_delay = retry_delay
-        
+
         # Performance components
         self.connection_pool = ConnectionPool(max_connections, max_keepalive)
         self.rate_limiter = RateLimiter(rate_limit_requests, rate_limit_window)
         self.cache: Dict[str, CacheEntry] = {}
         self.cache_lock = threading.Lock()
         self.job_processor = BackgroundJobProcessor(max_workers)
-        
+
         # Metrics
         self.metrics = {
             'requests_total': 0,
@@ -314,15 +309,15 @@ class OptimizedGoNotificationClient:
             'avg_response_time': 0.0
         }
         self.metrics_lock = threading.Lock()
-        
+
         # Background cleanup
         self._start_cleanup_thread()
-        
+
         logger.info("Optimized Go notification client initialized")
 
     def _start_cleanup_thread(self):
         """Start background cleanup thread"""
-        def cleanup_worker():
+def cleanup_worker():
             while True:
                 try:
                     time.sleep(60)  # Run every minute
@@ -330,7 +325,7 @@ class OptimizedGoNotificationClient:
                     self.job_processor.cleanup_completed_jobs()
                 except Exception as e:
                     logger.error(f"Cleanup worker error: {e}")
-        
+
         cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
         cleanup_thread.start()
 
@@ -354,7 +349,7 @@ class OptimizedGoNotificationClient:
                     return entry.value
                 else:
                     del self.cache[key]
-        
+
         self._update_metrics('cache_misses', 1)
         return None
 
@@ -392,7 +387,7 @@ class OptimizedGoNotificationClient:
     ) -> requests.Response:
         """
         Make HTTP request with optimizations
-        
+
         Args:
             method: HTTP method
             endpoint: API endpoint
@@ -401,7 +396,7 @@ class OptimizedGoNotificationClient:
             use_cache: Whether to use caching
             cache_key: Cache key for response
             cache_ttl: Cache TTL in seconds
-            
+
         Returns:
             HTTP response
         """
@@ -410,18 +405,18 @@ class OptimizedGoNotificationClient:
             cached_response = self._get_cache(cache_key)
             if cached_response:
                 return cached_response
-        
+
         # Rate limiting
         wait_time = self.rate_limiter.wait_if_needed()
         if wait_time > 0:
             self._update_metrics('rate_limit_hits', 1)
-        
-        # Get session from pool
+
+        # Get session from pool import pool
         session = self.connection_pool.get_session()
         url = f"{self.base_url}{endpoint}"
-        
+
         start_time = time.time()
-        
+
         try:
             response = session.request(
                 method=method,
@@ -431,17 +426,17 @@ class OptimizedGoNotificationClient:
                 timeout=self.timeout
             )
             response.raise_for_status()
-            
+
             # Cache successful GET responses
             if use_cache and cache_key and method.upper() == 'GET':
                 self._set_cache(cache_key, response, cache_ttl)
-            
+
             duration = time.time() - start_time
             self._record_request_time(duration)
             self._update_metrics('requests_success', 1)
-            
+
             return response
-            
+
         except Exception as e:
             duration = time.time() - start_time
             self._record_request_time(duration)
@@ -458,13 +453,13 @@ class OptimizedGoNotificationClient:
     ) -> aiohttp.ClientResponse:
         """
         Make async HTTP request with optimizations
-        
+
         Args:
             method: HTTP method
             endpoint: API endpoint
             data: Request data
             params: Query parameters
-            
+
         Returns:
             HTTP response
         """
@@ -473,13 +468,13 @@ class OptimizedGoNotificationClient:
             wait_time = self.rate_limiter.time_window
             await asyncio.sleep(wait_time)
             self._update_metrics('rate_limit_hits', 1)
-        
-        # Get async session from pool
+
+        # Get async session from pool import pool
         session = await self.connection_pool.get_async_session()
         url = f"{self.base_url}{endpoint}"
-        
+
         start_time = time.time()
-        
+
         try:
             async with session.request(
                 method=method,
@@ -488,13 +483,13 @@ class OptimizedGoNotificationClient:
                 params=params
             ) as response:
                 response.raise_for_status()
-                
+
                 duration = time.time() - start_time
                 self._record_request_time(duration)
                 self._update_metrics('requests_success', 1)
-                
+
                 return response
-                
+
         except Exception as e:
             duration = time.time() - start_time
             self._record_request_time(duration)
@@ -505,10 +500,10 @@ class OptimizedGoNotificationClient:
     def send_notification(self, request: NotificationRequest) -> NotificationResponse:
         """
         Send notification with optimizations
-        
+
         Args:
             request: Notification request
-            
+
         Returns:
             Notification response
         """
@@ -517,25 +512,21 @@ class OptimizedGoNotificationClient:
                 method="POST",
                 endpoint="/api/notifications/send",
                 data=request.to_dict()
-            )
-            
             response_data = response.json()
             return NotificationResponse(**response_data)
-            
+
         except Exception as e:
             logger.error(f"Failed to send notification: {e}")
             return NotificationResponse(
                 success=False,
                 error=str(e)
-            )
-
     async def send_notification_async(self, request: NotificationRequest) -> NotificationResponse:
         """
         Send notification asynchronously with optimizations
-        
+
         Args:
             request: Notification request
-            
+
         Returns:
             Notification response
         """
@@ -544,36 +535,31 @@ class OptimizedGoNotificationClient:
                 method="POST",
                 endpoint="/api/notifications/send",
                 data=request.to_dict()
-            )
-            
             response_data = await response.json()
             return NotificationResponse(**response_data)
-            
+
         except Exception as e:
             logger.error(f"Failed to send notification async: {e}")
             return NotificationResponse(
                 success=False,
                 error=str(e)
-            )
-
     def send_notification_background(
         self,
         request: NotificationRequest
     ) -> str:
         """
         Send notification in background job
-        
+
         Args:
             request: Notification request
-            
+
         Returns:
             Job ID for tracking
         """
-        job_id = str(uuid.uuid4())
-        
+        job_id = str(uuid.uuid4()
         def send_job():
             return self.send_notification(request)
-        
+
         self.job_processor.submit_job(job_id, send_job)
         return job_id
 
@@ -587,16 +573,16 @@ class OptimizedGoNotificationClient:
     ) -> Dict[str, Any]:
         """
         Get notification history with caching
-        
+
         Args:
             request: History request parameters
-            
+
         Returns:
             Notification history data
         """
         # Create cache key
         cache_key = f"history_{hash(str(request.to_dict()))}"
-        
+
         try:
             response = self._make_request(
                 method="GET",
@@ -606,9 +592,9 @@ class OptimizedGoNotificationClient:
                 cache_key=cache_key,
                 cache_ttl=60  # Cache for 1 minute
             )
-            
+
             return response.json()
-            
+
         except Exception as e:
             logger.error(f"Failed to get notification history: {e}")
             return {"error": str(e)}
@@ -619,15 +605,15 @@ class OptimizedGoNotificationClient:
     ) -> Optional[NotificationStatistics]:
         """
         Get notification statistics with caching
-        
+
         Args:
             period: Statistics period (e.g., "7d", "30d")
-            
+
         Returns:
             Notification statistics
         """
         cache_key = f"stats_{period}"
-        
+
         try:
             response = self._make_request(
                 method="GET",
@@ -637,10 +623,10 @@ class OptimizedGoNotificationClient:
                 cache_key=cache_key,
                 cache_ttl=300  # Cache for 5 minutes
             )
-            
+
             data = response.json()
             return NotificationStatistics(**data)
-            
+
         except Exception as e:
             logger.error(f"Failed to get notification statistics: {e}")
             return None
@@ -648,12 +634,12 @@ class OptimizedGoNotificationClient:
     def get_templates(self) -> List[Dict[str, Any]]:
         """
         Get notification templates with caching
-        
+
         Returns:
             List of notification templates
         """
         cache_key = "templates"
-        
+
         try:
             response = self._make_request(
                 method="GET",
@@ -662,9 +648,9 @@ class OptimizedGoNotificationClient:
                 cache_key=cache_key,
                 cache_ttl=600  # Cache for 10 minutes
             )
-            
+
             return response.json().get("templates", [])
-            
+
         except Exception as e:
             logger.error(f"Failed to get templates: {e}")
             return []
@@ -672,12 +658,12 @@ class OptimizedGoNotificationClient:
     def get_configs(self) -> List[Dict[str, Any]]:
         """
         Get notification configurations with caching
-        
+
         Returns:
             List of notification configurations
         """
         cache_key = "configs"
-        
+
         try:
             response = self._make_request(
                 method="GET",
@@ -686,9 +672,9 @@ class OptimizedGoNotificationClient:
                 cache_key=cache_key,
                 cache_ttl=600  # Cache for 10 minutes
             )
-            
+
             return response.json().get("configs", [])
-            
+
         except Exception as e:
             logger.error(f"Failed to get configs: {e}")
             return []
@@ -696,7 +682,7 @@ class OptimizedGoNotificationClient:
     def health_check(self) -> Dict[str, Any]:
         """
         Check Go notification service health with metrics
-        
+
         Returns:
             Health status with performance metrics
         """
@@ -705,9 +691,9 @@ class OptimizedGoNotificationClient:
                 method="GET",
                 endpoint="/api/notifications/health"
             )
-            
+
             health_data = response.json()
-            
+
             # Add performance metrics
             with self.metrics_lock:
                 health_data.update({
@@ -719,9 +705,9 @@ class OptimizedGoNotificationClient:
                         "current_requests": len(self.rate_limiter.requests)
                     }
                 })
-            
+
             return health_data
-            
+
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return {
@@ -734,12 +720,12 @@ class OptimizedGoNotificationClient:
         """Get detailed performance metrics"""
         with self.metrics_lock:
             metrics = self.metrics.copy()
-        
+
         return {
             "metrics": metrics,
             "cache_info": {
                 "size": len(self.cache),
-                "keys": list(self.cache.keys())
+                "keys": list(self.cache.keys()
             },
             "job_info": {
                 "active_jobs": len(self.job_processor.jobs),
@@ -788,7 +774,7 @@ def create_optimized_go_notification_client(
 ) -> OptimizedGoNotificationClient:
     """
     Create an optimized Go notification client
-    
+
     Args:
         base_url: Base URL for the Go notification API
         timeout: Request timeout in seconds
@@ -800,7 +786,7 @@ def create_optimized_go_notification_client(
         rate_limit_window: Time window for rate limiting in seconds
         cache_ttl: Cache TTL in seconds
         max_workers: Maximum background workers
-        
+
     Returns:
         Optimized Go notification client
     """
@@ -826,4 +812,4 @@ __all__ = [
     'CacheEntry',
     'BackgroundJobProcessor',
     'create_optimized_go_notification_client'
-] 
+]

@@ -14,7 +14,7 @@ export class GenericAdapter {
             enableMetadata: true,
             ...options
         };
-        
+
         // Generic CMMS configurations
         this.config = {
             cmmsName: options.cmmsName || 'Unknown CMMS',
@@ -25,10 +25,10 @@ export class GenericAdapter {
             linkTemplates: options.linkTemplates || {},
             ...options
         };
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -52,17 +52,17 @@ export class GenericAdapter {
             cmmsData = {},
             options = {}
         } = params;
-        
+
         try {
             switch (integrationType) {
                 case 'custom':
                     return await this.integrateWithCustomFormat(link, object, cmmsData, options);
-                
+
                 case 'link':
                 default:
                     return await this.generateStandardLink(link, object, options);
             }
-            
+
         } catch (error) {
             console.error('Generic CMMS integration failed:', error);
             this.triggerEvent('integrationFailed', { params, error });
@@ -77,17 +77,17 @@ export class GenericAdapter {
             linkType = 'standard',
             options = {}
         } = params;
-        
+
         try {
             switch (linkType) {
                 case 'custom':
                     return await this.generateCustomLink(link, object, options);
-                
+
                 case 'standard':
                 default:
                     return await this.generateStandardLink(link, object, options);
             }
-            
+
         } catch (error) {
             console.error('Generic CMMS link generation failed:', error);
             throw error;
@@ -102,15 +102,15 @@ export class GenericAdapter {
             includeMetadata = true,
             customFields = {}
         } = options;
-        
+
         // Create generic CMMS-specific link format
         const genericLink = new URL(link.url);
-        
+
         // Add generic CMMS-specific parameters
         genericLink.searchParams.set('cmms_type', 'generic');
         genericLink.searchParams.set('cmms_name', this.config.cmmsName);
         genericLink.searchParams.set('integration_type', 'standard');
-        
+
         // Add object context
         const objectContext = {
             id: object.id,
@@ -118,26 +118,26 @@ export class GenericAdapter {
             building: object.building_id,
             floor: object.floor_id
         };
-        
+
         if (includeDescription) {
             objectContext.description = `${object.object_type} ${object.id}`;
         }
-        
+
         if (includeLocation) {
             objectContext.location = `${object.building_id} - ${object.floor_id}`;
         }
-        
+
         if (includeMetadata && object.metadata) {
             objectContext.metadata = object.metadata;
         }
-        
+
         // Add custom fields
         if (Object.keys(customFields).length > 0) {
             objectContext.customFields = customFields;
         }
-        
+
         genericLink.searchParams.set('object_context', JSON.stringify(objectContext));
-        
+
         return genericLink.toString();
     }
 
@@ -148,20 +148,20 @@ export class GenericAdapter {
             customFields = {},
             includeMetadata = true
         } = options;
-        
+
         // Use custom template if specified
         if (templateName && this.config.linkTemplates[templateName]) {
             return this.applyCustomTemplate(link, object, templateName, customFields);
         }
-        
+
         // Create custom link format
         const customLink = new URL(link.url);
-        
+
         // Add custom CMMS-specific parameters
         customLink.searchParams.set('cmms_type', 'generic');
         customLink.searchParams.set('cmms_name', this.config.cmmsName);
         customLink.searchParams.set('integration_type', 'custom');
-        
+
         // Add object context with custom fields
         const objectContext = {
             id: object.id,
@@ -170,13 +170,13 @@ export class GenericAdapter {
             floor: object.floor_id,
             customFields: customFields
         };
-        
+
         if (includeMetadata && object.metadata) {
             objectContext.metadata = object.metadata;
         }
-        
+
         customLink.searchParams.set('object_context', JSON.stringify(objectContext));
-        
+
         return customLink.toString();
     }
 
@@ -188,14 +188,14 @@ export class GenericAdapter {
             customFields = {},
             metadata = {}
         } = cmmsData;
-        
+
         try {
             // Generate custom link
             const customLink = await this.generateCustomLink(link, object, {
                 customFields,
                 ...options
             });
-            
+
             // Create custom integration data
             const integrationData = {
                 type: 'custom',
@@ -217,19 +217,19 @@ export class GenericAdapter {
                     integrationTimestamp: Date.now()
                 }
             };
-            
+
             // Send to CMMS API if configured
             if (this.config.baseUrl && this.config.apiKey) {
                 await this.sendToCMMS(cmmsRecordType, integrationData);
             }
-            
-            this.triggerEvent('customIntegrationCompleted', { 
+
+            this.triggerEvent('customIntegrationCompleted', {
                 cmmsRecordType,
                 cmmsRecordId,
-                link: customLink, 
-                object 
+                link: customLink,
+                object
             });
-            
+
             return {
                 success: true,
                 type: 'custom',
@@ -238,7 +238,7 @@ export class GenericAdapter {
                 link: customLink,
                 integrationData
             };
-            
+
         } catch (error) {
             console.error('Custom integration failed:', error);
             throw error;
@@ -251,10 +251,10 @@ export class GenericAdapter {
         if (!template) {
             throw new Error(`Template '${templateName}' not found`);
         }
-        
+
         // Create link based on template
         const templatedLink = new URL(link.url);
-        
+
         // Apply template parameters
         Object.entries(template.parameters || {}).forEach(([key, value]) => {
             if (typeof value === 'string') {
@@ -265,33 +265,33 @@ export class GenericAdapter {
                 templatedLink.searchParams.set(key, JSON.stringify(value));
             }
         });
-        
+
         // Add template metadata
         templatedLink.searchParams.set('template_name', templateName);
         templatedLink.searchParams.set('cmms_type', 'generic');
         templatedLink.searchParams.set('cmms_name', this.config.cmmsName);
-        
+
         return templatedLink.toString();
     }
 
     replacePlaceholders(template, object, customFields) {
         let result = template;
-        
+
         // Replace object placeholders
         result = result.replace(/\{object\.(\w+)\}/g, (match, key) => {
             return object[key] || '';
         });
-        
+
         // Replace custom field placeholders
         result = result.replace(/\{custom\.(\w+)\}/g, (match, key) => {
             return customFields[key] || '';
         });
-        
+
         // Replace metadata placeholders
         result = result.replace(/\{metadata\.(\w+)\}/g, (match, key) => {
             return object.metadata && object.metadata[key] ? object.metadata[key] : '';
         });
-        
+
         return result;
     }
 
@@ -300,7 +300,7 @@ export class GenericAdapter {
         if (!this.config.baseUrl || !this.config.apiKey) {
             throw new Error('CMMS API not configured');
         }
-        
+
         try {
             const response = await fetch(`${this.config.baseUrl}/api/${endpoint}`, {
                 method: 'POST',
@@ -312,13 +312,13 @@ export class GenericAdapter {
                 },
                 body: JSON.stringify(data)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`CMMS API error: ${response.status}`);
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to send data to CMMS:', error);
             throw error;
@@ -328,14 +328,14 @@ export class GenericAdapter {
     async testConnection(config = {}) {
         try {
             const testConfig = { ...this.config, ...config };
-            
+
             if (!testConfig.baseUrl || !testConfig.apiKey) {
                 return {
                     success: false,
                     message: 'CMMS API not configured'
                 };
             }
-            
+
             const response = await fetch(`${testConfig.baseUrl}/api/health`, {
                 method: 'GET',
                 headers: {
@@ -344,7 +344,7 @@ export class GenericAdapter {
                     'X-CMMS-Name': testConfig.cmmsName
                 }
             });
-            
+
             if (response.ok) {
                 return {
                     success: true,
@@ -356,7 +356,7 @@ export class GenericAdapter {
                     message: `${testConfig.cmmsName} connection failed: ${response.status}`
                 };
             }
-            
+
         } catch (error) {
             return {
                 success: false,
@@ -452,21 +452,21 @@ export class GenericAdapter {
     // Utility methods
     validateCustomFields(fields) {
         const errors = [];
-        
+
         // Validate field names
         Object.keys(fields).forEach(fieldName => {
             if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(fieldName)) {
                 errors.push(`Invalid field name: ${fieldName}`);
             }
         });
-        
+
         // Validate field values
         Object.entries(fields).forEach(([fieldName, fieldValue]) => {
             if (typeof fieldValue === 'string' && fieldValue.length > 1000) {
                 errors.push(`Field value too long: ${fieldName}`);
             }
         });
-        
+
         return {
             valid: errors.length === 0,
             errors: errors
@@ -475,20 +475,20 @@ export class GenericAdapter {
 
     sanitizeCustomFields(fields) {
         const sanitized = {};
-        
+
         Object.entries(fields).forEach(([key, value]) => {
             // Sanitize key
             const sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '_');
-            
+
             // Sanitize value
             let sanitizedValue = value;
             if (typeof value === 'string') {
                 sanitizedValue = value.substring(0, 1000); // Limit length
             }
-            
+
             sanitized[sanitizedKey] = sanitizedValue;
         });
-        
+
         return sanitized;
     }
 
@@ -529,4 +529,4 @@ export class GenericAdapter {
             this.eventHandlers.clear();
         }
     }
-} 
+}

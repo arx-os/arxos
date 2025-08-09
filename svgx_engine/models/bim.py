@@ -63,7 +63,7 @@ class DeviceCategory(Enum):
     TELECOMMUNICATIONS = "telecommunications"
     LIGHTING = "lighting"
     OTHER = "other"
-    
+
     # HVAC Devices
     AHU = "ahu"
     VAV = "vav"
@@ -75,7 +75,7 @@ class DeviceCategory(Enum):
     FAN = "fan"
     DAMPER = "damper"
     THERMOSTAT = "thermostat"
-    
+
     # Electrical Devices
     PANEL = "panel"
     OUTLET = "outlet"
@@ -83,21 +83,21 @@ class DeviceCategory(Enum):
     TRANSFORMER = "transformer"
     UPS = "ups"
     CONTROLLER = "controller"
-    
+
     # Plumbing Devices
     VALVE = "valve"
     FAUCET = "faucet"
     DRAIN = "drain"
     PIPE = "pipe"
     FIXTURE = "fixture"
-    
+
     # Fire Alarm Devices
     SMOKE_DETECTOR = "smoke_detector"
     HEAT_DETECTOR = "heat_detector"
     HORN_STROBE = "horn_strobe"
     PULL_STATION = "pull_station"
     ANNUNCIATOR = "annunciator"
-    
+
     # Security Devices
     CAMERA = "camera"
     CARD_READER = "card_reader"
@@ -124,8 +124,9 @@ class Geometry:
     geometry_type: GeometryType
     coordinates: Union[List, List[List], List[List[List]]]
     properties: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -164,7 +165,7 @@ class BIMElementBase:
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    
+
     def __post_init__(self):
         if not self.id:
             raise ValueError("Element ID cannot be empty")
@@ -176,7 +177,7 @@ class BIMElement(BIMElementBase):
     """Generic BIM element."""
     element_type: str = "generic"
     system_type: Optional[SystemType] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if not self.element_type:
@@ -190,7 +191,7 @@ class Room(BIMElementBase):
     area: Optional[float] = None
     height: Optional[float] = None
     occupancy: Optional[int] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.area is not None and self.area <= 0:
@@ -208,7 +209,7 @@ class Wall(BIMElementBase):
     height: Optional[float] = None
     material: Optional[str] = None
     fire_rating: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.thickness is not None and self.thickness <= 0:
@@ -225,7 +226,7 @@ class Door(BIMElementBase):
     material: Optional[str] = None
     fire_rating: Optional[str] = None
     swing_direction: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.width is not None and self.width <= 0:
@@ -241,7 +242,7 @@ class Window(BIMElementBase):
     height: Optional[float] = None
     material: Optional[str] = None
     glazing_type: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.width is not None and self.width <= 0:
@@ -253,11 +254,11 @@ class Window(BIMElementBase):
 
 @dataclass
 class HVACZone(BIMElementBase):
-    """HVAC Zone element in BIM model.
-    
+    """HVAC Zone element in BIM model."
+
     Represents a thermal zone in an HVAC system with temperature and humidity
     setpoints, airflow requirements, and connected equipment.
-    
+
     Attributes:
         temperature_setpoint: Target temperature in degrees Celsius
         humidity_setpoint: Target humidity percentage (0-100)
@@ -276,7 +277,7 @@ class HVACZone(BIMElementBase):
     cooling_capacity: Optional[float] = None
     vav_boxes: List[str] = field(default_factory=list)
     thermostats: List[str] = field(default_factory=list)
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.temperature_setpoint is not None:
@@ -294,27 +295,27 @@ class HVACZone(BIMElementBase):
         if self.cooling_capacity is not None:
             if self.cooling_capacity < 0:
                 raise ValueError("Cooling capacity cannot be negative")
-    def add_vav_box(self, vav_box_id: str):
+def add_vav_box(self, vav_box_id: str):
         """Add a VAV box to this zone."""
         if vav_box_id not in self.vav_boxes:
             self.vav_boxes.append(vav_box_id)
             self.updated_at = datetime.now()
-    def remove_vav_box(self, vav_box_id: str):
+def remove_vav_box(self, vav_box_id: str):
         """Remove a VAV box from this zone."""
         if vav_box_id in self.vav_boxes:
             self.vav_boxes.remove(vav_box_id)
             self.updated_at = datetime.now()
-    def add_thermostat(self, thermostat_id: str):
+def add_thermostat(self, thermostat_id: str):
         """Add a thermostat to this zone."""
         if thermostat_id not in self.thermostats:
             self.thermostats.append(thermostat_id)
             self.updated_at = datetime.now()
-    def remove_thermostat(self, thermostat_id: str):
+def remove_thermostat(self, thermostat_id: str):
         """Remove a thermostat from this zone."""
         if thermostat_id in self.thermostats:
             self.thermostats.remove(thermostat_id)
             self.updated_at = datetime.now()
-    def get_total_capacity(self) -> Optional[float]:
+def get_total_capacity(self) -> Optional[float]:
         """Get the total heating and cooling capacity."""
         total = 0.0
         if self.heating_capacity is not None:
@@ -322,10 +323,10 @@ class HVACZone(BIMElementBase):
         if self.cooling_capacity is not None:
             total += self.cooling_capacity
         return total if total > 0 else None
-    def is_comfort_zone(self) -> bool:
+def is_comfort_zone(self) -> bool:
         """Check if this is a comfort zone (has temperature and humidity setpoints)."""
         return (self.temperature_setpoint is not None and self.humidity_setpoint is not None)
-    def get_zone_info(self) -> Dict[str, Any]:
+def get_zone_info(self) -> Dict[str, Any]:
         """Get comprehensive zone information."""
         return {
             'id': self.id,
@@ -359,7 +360,7 @@ class AirHandler(BIMElementBase):
     serial_number: Optional[str] = None
     installation_date: Optional[datetime] = None
     maintenance_schedule: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.capacity is not None and self.capacity < 0:
@@ -379,7 +380,7 @@ class VAVBox(BIMElementBase):
     reheat_capacity: Optional[float] = None
     damper_type: Optional[str] = None
     controller_type: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.max_airflow is not None and self.max_airflow < 0:
@@ -403,7 +404,7 @@ class ElectricalCircuit(BIMElementBase):
     connected_devices: List[str] = field(default_factory=list)
     load_capacity: Optional[float] = None
     load_percentage: Optional[float] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.voltage is not None and self.voltage <= 0:
@@ -428,7 +429,7 @@ class ElectricalPanel(BIMElementBase):
     available_circuits: Optional[int] = None
     manufacturer: Optional[str] = None
     model: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.voltage is not None and self.voltage <= 0:
@@ -452,7 +453,7 @@ class ElectricalOutlet(BIMElementBase):
     is_gfci: bool = False
     is_afci: bool = False
     is_emergency: bool = False
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.voltage is not None and self.voltage <= 0:
@@ -473,7 +474,7 @@ class PlumbingSystem(BIMElementBase):
     temperature: Optional[float] = None
     connected_fixtures: List[str] = field(default_factory=list)
     valves: List[str] = field(default_factory=list)
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.flow_rate is not None and self.flow_rate < 0:
@@ -492,7 +493,7 @@ class PlumbingFixture(BIMElementBase):
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     installation_date: Optional[datetime] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.flow_rate is not None and self.flow_rate < 0:
@@ -511,7 +512,7 @@ class Valve(BIMElementBase):
     pressure_rating: Optional[float] = None
     is_automatic: bool = False
     actuator_type: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.pressure_rating is not None and self.pressure_rating < 0:
@@ -529,7 +530,7 @@ class FireAlarmSystem(BIMElementBase):
     battery_backup: bool = True
     emergency_power: bool = True
     connected_devices: List[str] = field(default_factory=list)
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.zone_count is not None and self.zone_count < 0:
@@ -548,7 +549,7 @@ class SmokeDetector(BIMElementBase):
     battery_type: Optional[str] = None
     last_test_date: Optional[datetime] = None
     next_test_date: Optional[datetime] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.coverage_area is not None and self.coverage_area < 0:
@@ -566,7 +567,7 @@ class SecuritySystem(BIMElementBase):
     recording_capacity: Optional[str] = None
     backup_power: bool = True
     connected_devices: List[str] = field(default_factory=list)
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.device_count is not None and self.device_count < 0:
@@ -586,7 +587,7 @@ class Camera(BIMElementBase):
     ptz_capable: bool = False
     recording_enabled: bool = True
     storage_location: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.field_of_view is not None and not (0 <= self.field_of_view <= 360):
@@ -616,7 +617,7 @@ class Device(BIMElementBase):
     status: str = "active"
     operational_hours: Optional[float] = None
     efficiency_rating: Optional[float] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.operational_hours is not None and self.operational_hours < 0:
@@ -636,7 +637,7 @@ class Label(BIMElementBase):
     layer: Optional[str] = None
     rotation: Optional[float] = None
     alignment: Optional[str] = None
-    
+
     def __post_init__(self):
         super().__post_init__()
         if self.text is not None and not self.text:
@@ -644,7 +645,7 @@ class Label(BIMElementBase):
         if self.font_size is not None and self.font_size <= 0:
             raise ValueError("Font size must be positive")
         if self.rotation is not None and not (0 <= self.rotation <= 360):
-            raise ValueError("Rotation must be between 0 and 360 degrees") 
+            raise ValueError("Rotation must be between 0 and 360 degrees")
 
 # --- BIM Model Classes ---
 
@@ -660,25 +661,25 @@ class BIMModel:
     elements: List[BIMElementBase] = field(default_factory=list)
     systems: List['BIMSystem'] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def __post_init__(self):
         if not self.id:
             raise ValueError("Model ID cannot be empty")
         if not self.name:
             raise ValueError("Model name cannot be empty")
-    
+
     def add_element(self, element: BIMElementBase):
         """Add an element to the model."""
         self.elements.append(element)
         self.updated_at = datetime.now()
-    
+
     def get_element_by_id(self, element_id: str) -> Optional[BIMElementBase]:
         """Get an element by its ID."""
         for element in self.elements:
             if element.id == element_id:
                 return element
         return None
-    
+
     def get_elements_by_type(self, element_type: str) -> List[BIMElementBase]:
         """Get all elements of a specific type."""
         return [element for element in self.elements if element.__class__.__name__ == element_type]
@@ -694,19 +695,19 @@ class BIMSystem:
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    
+
     def __post_init__(self):
         if not self.id:
             raise ValueError("System ID cannot be empty")
         if not self.name:
             raise ValueError("System name cannot be empty")
-    
+
     def add_element(self, element_id: str):
         """Add an element to this system."""
         if element_id not in self.elements:
             self.elements.append(element_id)
             self.updated_at = datetime.now()
-    
+
     def remove_element(self, element_id: str):
         """Remove an element from this system."""
         if element_id in self.elements:
@@ -724,19 +725,19 @@ class BIMSpace:
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    
+
     def __post_init__(self):
         if not self.id:
             raise ValueError("Space ID cannot be empty")
         if not self.name:
             raise ValueError("Space name cannot be empty")
-    
+
     def add_element(self, element_id: str):
         """Add an element to this space."""
         if element_id not in self.elements:
             self.elements.append(element_id)
             self.updated_at = datetime.now()
-    
+
     def remove_element(self, element_id: str):
         """Remove an element from this space."""
         if element_id in self.elements:
@@ -754,7 +755,7 @@ class BIMRelationship:
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    
+
     def __post_init__(self):
         if not self.id:
             raise ValueError("Relationship ID cannot be empty")
@@ -763,4 +764,4 @@ class BIMRelationship:
         if not self.source_id:
             raise ValueError("Source ID cannot be empty")
         if not self.target_id:
-            raise ValueError("Target ID cannot be empty") 
+            raise ValueError("Target ID cannot be empty")

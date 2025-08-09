@@ -364,7 +364,7 @@ from arx_nlp import NLPRouter
 def test_basic_intent_detection():
     router = NLPRouter()
     result = router.parse_natural_language("create a room")
-    
+
     assert result.intent.intent_type.value == "create"
     assert result.confidence > 0.5
     assert "create" in result.cli_command.to_string()
@@ -372,7 +372,7 @@ def test_basic_intent_detection():
 def test_slot_extraction():
     router = NLPRouter()
     result = router.parse_natural_language("create a red bedroom")
-    
+
     assert len(result.slots) > 0
     assert any(slot.slot_type.value == "object_type" for slot in result.slots)
 ```
@@ -486,4 +486,4 @@ For support and questions:
 - Check the documentation
 - Review the examples
 - Open an issue on the repository
-- Contact the Arxos Platform team 
+- Contact the Arxos Platform team

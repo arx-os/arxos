@@ -157,4 +157,4 @@ When updating documentation:
 For questions about SVGX Engine documentation:
 - **Development Planning**: See [Plans/DEVELOPMENT_PLAN.md](Plans/DEVELOPMENT_PLAN.md)
 - **Migration Status**: See [Summary/MIGRATION_STATUS.md](Summary/MIGRATION_STATUS.md)
-- **Technical Questions**: See [api_reference.md](api_reference.md) and [development_guide.md](development_guide.md) 
+- **Technical Questions**: See [api_reference.md](api_reference.md) and [development_guide.md](development_guide.md)

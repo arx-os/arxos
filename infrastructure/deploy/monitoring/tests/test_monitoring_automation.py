@@ -177,7 +177,7 @@ class TestMonitoringAutomation(unittest.TestCase):
             updated_at=datetime.now()
         )
 
-        # Create incident from alert
+        # Create incident from alert import alert
         incident = Incident(
             incident_id=self.test_incident_id,
             title=f"Incident: {alert.title}",
@@ -231,7 +231,7 @@ class TestMonitoringAutomation(unittest.TestCase):
 
         # Verify metric collection
         self.assertEqual(len(collected_metrics), 3)
-        
+
         # Test aggregation
         cpu_metrics = [m for m in collected_metrics if m.name == "cpu_usage"]
         avg_cpu = sum(m.value for m in cpu_metrics) / len(cpu_metrics)
@@ -366,10 +366,10 @@ class TestMonitoringAutomation(unittest.TestCase):
         """Test performance metrics tracking."""
         # Simulate performance metrics
         start_time = time.time()
-        
+
         # Simulate alert processing
         time.sleep(0.1)  # Simulate processing time
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
 
@@ -723,7 +723,7 @@ class TestMonitoringAutomation(unittest.TestCase):
         """Test performance benchmarks and stress testing."""
         # Test alert processing performance
         start_time = time.time()
-        
+
         # Create 100 test alerts
         for i in range(100):
             alert = Alert(
@@ -790,7 +790,7 @@ class TestMonitoringAutomation(unittest.TestCase):
         # Test recovery from failed notification
         with patch.object(self.monitoring, '_send_slack_notification') as mock_slack:
             mock_slack.side_effect = Exception("Network error")
-            
+
             alert = Alert(
                 alert_id="recovery_test",
                 title="Recovery Test Alert",
@@ -946,4 +946,4 @@ class TestMonitoringIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     # Run the test suite
-    unittest.main(verbosity=2) 
+    unittest.main(verbosity=2)

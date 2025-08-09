@@ -16,9 +16,9 @@ from .project import ProjectModel
 __all__ = [
     'Base',
     'BuildingModel',
-    'FloorModel', 
+    'FloorModel',
     'RoomModel',
     'DeviceModel',
     'UserModel',
     'ProjectModel',
-] 
+]

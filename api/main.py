@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.utils import get_openapi
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 import structlog
 
 from application.container import container
@@ -40,8 +40,7 @@ from api.middleware import (
     AuthenticationMiddleware,
     RateLimitingMiddleware
 )
-from api.dependencies import get_current_user, get_api_key
-from core.security.auth_middleware import get_current_user, User
+from api.dependencies import get_current_user
 
 
 # Configure structured logging
@@ -81,104 +80,104 @@ app_state: Dict[str, Any] = {}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI, user: User = Depends(get_current_user)):
+async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info("Starting Arxos Platform API...")
-    
+
     try:
         # Initialize application container
         config = get_config()
         container.initialize(config)
         app_state["config"] = config
         app_state["startup_time"] = datetime.utcnow()
-        
+
         logger.info("Application container initialized successfully")
-        
+
         # Initialize services
         await _initialize_services()
-        
+
         logger.info("Arxos Platform API started successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"Failed to start Arxos Platform API: {e}")
         raise
-    
+
     finally:
         # Shutdown
         logger.info("Shutting down Arxos Platform API...")
         await _cleanup_services()
 
 
-async def _initialize_services(user: User = Depends(get_current_user)):
+async def _initialize_services():
     """Initialize application services"""
     try:
         # Initialize database connections
         await container.get_database_session()
         logger.info("Database connection initialized")
-        
+
         # Initialize cache service
         cache_service = container.get_cache_service()
         if cache_service:
             await cache_service.initialize()
             logger.info("Cache service initialized")
-        
+
         # Initialize event store
         event_store = container.get_event_store()
         if event_store:
             await event_store.initialize()
             logger.info("Event store initialized")
-        
+
         # Initialize message queue
         message_queue = container.get_message_queue()
         if message_queue:
             await message_queue.initialize()
             logger.info("Message queue initialized")
-        
+
         # Initialize metrics service
         metrics_service = container.get_metrics_service()
         if metrics_service:
             await metrics_service.initialize()
             logger.info("Metrics service initialized")
-        
+
     except Exception as e:
         logger.error(f"Failed to initialize services: {e}")
         raise
 
 
-async def _cleanup_services(user: User = Depends(get_current_user)):
+async def _cleanup_services():
     """Cleanup application services"""
     try:
         # Cleanup database connections
         await container.cleanup_database()
         logger.info("Database connections cleaned up")
-        
+
         # Cleanup cache service
         cache_service = container.get_cache_service()
         if cache_service:
             await cache_service.cleanup()
             logger.info("Cache service cleaned up")
-        
+
         # Cleanup event store
         event_store = container.get_event_store()
         if event_store:
             await event_store.cleanup()
             logger.info("Event store cleaned up")
-        
+
         # Cleanup message queue
         message_queue = container.get_message_queue()
         if message_queue:
             await message_queue.cleanup()
             logger.info("Message queue cleaned up")
-        
+
         # Cleanup metrics service
         metrics_service = container.get_metrics_service()
         if metrics_service:
             await metrics_service.cleanup()
             logger.info("Metrics service cleaned up")
-        
+
     except Exception as e:
         logger.error(f"Error during cleanup: {e}")
 
@@ -187,43 +186,43 @@ def custom_openapi():
     """Custom OpenAPI schema generator"""
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title="Arxos Platform API",
         version="1.0.0",
         description="""
         # Arxos Platform API
-        
+
         Comprehensive REST API for the Arxos building information modeling platform.
-        
+
         ## Features
-        
+
         * **Device Management** - Create, read, update, and delete devices
         * **Room Management** - Manage rooms and their properties
         * **User Management** - Handle user accounts and permissions
         * **Project Management** - Manage building projects
         * **Building Management** - Handle building information and models
-        
+
         ## Authentication
-        
+
         API requests require authentication using API keys or JWT tokens.
-        
+
         ## Rate Limiting
-        
+
         API requests are rate limited to ensure fair usage.
-        
+
         ## Error Handling
-        
+
         All errors return consistent JSON responses with error codes and details.
         """,
         routes=app.routes,
     )
-    
+
     # Add custom info
     openapi_schema["info"]["x-logo"] = {
         "url": "https://arxos.com/logo.png"
     }
-    
+
     # Add security schemes
     openapi_schema["components"]["securitySchemes"] = {
         "ApiKeyAuth": {
@@ -237,13 +236,13 @@ def custom_openapi():
             "bearerFormat": "JWT"
         }
     }
-    
+
     # Add global security
     openapi_schema["security"] = [
         {"ApiKeyAuth": []},
         {"BearerAuth": []}
     ]
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
@@ -282,10 +281,10 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Global exception handlers
 @app.exception_handler(ApplicationError)
-async def application_error_handler(request: Request, exc: ApplicationError, user: User = Depends(get_current_user)):
+async def application_error_handler(request: Request, exc: ApplicationError):
     """Handle application-specific errors"""
     logger.error(f"Application error: {exc.message}", error_code=exc.error_code, details=exc.details)
-    
+
     return JSONResponse(
         status_code=400,
         content=ErrorResponse(
@@ -295,14 +294,12 @@ async def application_error_handler(request: Request, exc: ApplicationError, use
             timestamp=datetime.utcnow().isoformat(),
             request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
         ).dict()
-    )
-
-
-@app.exception_handler(ValidationError)
-async def validation_error_handler(request: Request, exc: ValidationError, user: User = Depends(get_current_user)):
+)
+@app.exception_handler(BusinessRuleError)
+async def validation_error_handler(request: Request, exc: BusinessRuleError):
     """Handle validation errors"""
     logger.error(f"Validation error: {exc.message}", field=exc.field, value=exc.value)
-    
+
     return JSONResponse(
         status_code=422,
         content=ErrorResponse(
@@ -312,14 +309,12 @@ async def validation_error_handler(request: Request, exc: ValidationError, user:
             timestamp=datetime.utcnow().isoformat(),
             request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
         ).dict()
-    )
-
-
+)
 @app.exception_handler(BusinessRuleError)
-async def business_rule_error_handler(request: Request, exc: BusinessRuleError, user: User = Depends(get_current_user)):
+async def business_rule_error_handler(request: Request, exc: BusinessRuleError):
     """Handle business rule errors"""
     logger.error(f"Business rule error: {exc.message}", rule=exc.rule, context=exc.context)
-    
+
     return JSONResponse(
         status_code=400,
         content=ErrorResponse(
@@ -329,14 +324,12 @@ async def business_rule_error_handler(request: Request, exc: BusinessRuleError, 
             timestamp=datetime.utcnow().isoformat(),
             request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
         ).dict()
-    )
-
-
+)
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception, user: User = Depends(get_current_user)):
+async def global_exception_handler(request: Request, exc: Exception):
     """Handle all other exceptions"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    
+
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
@@ -346,12 +339,10 @@ async def global_exception_handler(request: Request, exc: Exception, user: User 
             timestamp=datetime.utcnow().isoformat(),
             request_id=request.state.request_id if hasattr(request.state, 'request_id') else None
         ).dict()
-    )
-
-
+)
 # Root endpoint
 @app.get("/", response_model=Dict[str, Any])
-async def root(user: User = Depends(get_current_user)):
+async def root():
     """Root endpoint with API information"""
     return {
         "service": "Arxos Platform API",
@@ -375,24 +366,24 @@ async def root(user: User = Depends(get_current_user)):
 
 # Health check endpoint
 @app.get("/health", response_model=Dict[str, Any])
-async def health_check(user: User = Depends(get_current_user)):
+async def health_check():
     """Comprehensive health check endpoint"""
     try:
         # Check database connection
         db_session = container.get_database_session()
         db_healthy = db_session is not None
-        
+
         # Check cache service
         cache_service = container.get_cache_service()
         cache_healthy = cache_service is not None
-        
+
         # Check event store
         event_store = container.get_event_store()
         event_store_healthy = event_store is not None
-        
+
         # Overall health
         overall_healthy = db_healthy and cache_healthy and event_store_healthy
-        
+
         return {
             "status": "healthy" if overall_healthy else "unhealthy",
             "service": "arxos-api",
@@ -405,7 +396,7 @@ async def health_check(user: User = Depends(get_current_user)):
             },
             "uptime": (datetime.utcnow() - app_state.get("startup_time", datetime.utcnow())).total_seconds()
         }
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return {
@@ -428,14 +419,31 @@ app.include_router(device_router, prefix="/api/v1/devices", tags=["Devices"])
 app.include_router(room_router, prefix="/api/v1/rooms", tags=["Rooms"])
 app.include_router(user_router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(project_router, prefix="/api/v1/projects", tags=["Projects"])
-app.include_router(building_router, prefix="/api/v1/buildings", tags=["Buildings"])
 app.include_router(pdf_router, tags=["PDF Analysis"])
+
+# Conditionally include unified building routes behind feature flag
+try:
+    cfg = get_config()
+    use_unified_api = cfg.get('features', {}).get('use_unified_api', False)
+except Exception:
+    use_unified_api = False
+
+if use_unified_api:
+    try:
+        from api.unified.routes.building_routes import router as unified_building_router
+        app.include_router(unified_building_router)
+    except Exception as e:
+        logger.error(f"Failed to include unified building routes: {e}")
+        # Fallback to legacy router on failure
+        app.include_router(building_router, prefix="/api/v1/buildings", tags=["Buildings"])
+else:
+    app.include_router(building_router, prefix="/api/v1/buildings", tags=["Buildings"])
 
 
 if __name__ == "__main__":
     # Get configuration
     config = get_config()
-    
+
     # Run the application
     uvicorn.run(
         "api.main:app",
@@ -443,4 +451,4 @@ if __name__ == "__main__":
         port=config.api.port,
         reload=config.environment == "development",
         log_level=config.logging.level.lower()
-    ) 
+    )

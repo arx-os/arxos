@@ -18,14 +18,14 @@ export class [VendorName]Adapter {
             supportedLinkTypes: ['work_order', 'asset', 'pm_schedule', 'standard'],
             ...options
         };
-        
+
         this.config = {
             baseUrl: options.baseUrl || '',
             apiKey: options.apiKey || '',
             organizationId: options.organizationId || '',
             ...options
         };
-        
+
         this.eventHandlers = new Map();
         this.initialize();
     }
@@ -119,19 +119,19 @@ updateConfiguration(newConfig) {
 ```javascript
 async integrateWithWorkOrder(link, object, cmmsData, options) {
     const { workOrderId, workOrderNumber, description } = cmmsData;
-    
+
     // Generate vendor-specific link
     const workOrderLink = await this.generateWorkOrderLink(link, object, {
         workOrderId, workOrderNumber, ...options
     });
-    
+
     // Send to vendor API
     if (this.config.baseUrl && this.config.apiKey) {
         await this.sendToVendor('work_orders', {
             workOrderId, arxosLink: workOrderLink, object
         });
     }
-    
+
     return { success: true, type: 'work_order', workOrderId, link: workOrderLink };
 }
 ```
@@ -142,16 +142,16 @@ async generateWorkOrderLink(link, object, options) {
     const vendorLink = new URL(link.url);
     vendorLink.searchParams.set('cmms_type', '[vendor-name]');
     vendorLink.searchParams.set('integration_type', 'work_order');
-    
+
     if (options.workOrderId) {
         vendorLink.searchParams.set('work_order_id', options.workOrderId);
     }
-    
+
     vendorLink.searchParams.set('object_context', JSON.stringify({
         id: object.id, type: object.object_type,
         building: object.building_id, floor: object.floor_id
     }));
-    
+
     return vendorLink.toString();
 }
 ```
@@ -162,7 +162,7 @@ async sendToVendor(endpoint, data) {
     if (!this.config.baseUrl || !this.config.apiKey) {
         throw new Error('[Vendor Name] API not configured');
     }
-    
+
     const response = await fetch(`${this.config.baseUrl}/api/${endpoint}`, {
         method: 'POST',
         headers: {
@@ -172,11 +172,11 @@ async sendToVendor(endpoint, data) {
         },
         body: JSON.stringify(data)
     });
-    
+
     if (!response.ok) {
         throw new Error(`[Vendor Name] API error: ${response.status}`);
     }
-    
+
     return await response.json();
 }
 ```
@@ -190,31 +190,31 @@ import { [VendorName]Adapter } from '../../frontend/web/static/js/modules/cmms/[
 
 describe('[Vendor Name] Adapter', () => {
     let adapter;
-    
+
     beforeEach(() => {
         adapter = new [VendorName]Adapter({
             baseUrl: 'https://test-api.vendor.com',
             apiKey: 'test-api-key'
         });
     });
-    
+
     test('should generate work order link', async () => {
         const link = await adapter.generateWorkOrderLink(
             { url: 'https://app.arxos.io/viewer' },
             { id: 'test-object', object_type: 'AHU', building_id: 'building-1', floor_id: 'floor-1' },
             { workOrderId: 'WO-123' }
         );
-        
+
         expect(link).toContain('cmms_type=[vendor-name]');
         expect(link).toContain('work_order_id=WO-123');
     });
-    
+
     test('should test connection', async () => {
         const result = await adapter.testConnection({
             baseUrl: 'https://test-api.vendor.com',
             apiKey: 'test-api-key'
         });
-        
+
         expect(result.success).toBe(true);
     });
 });
@@ -228,11 +228,11 @@ async function testVendorIntegration() {
         baseUrl: 'https://api.vendor.com',
         apiKey: 'your-api-key'
     });
-    
+
     // Test connection
     const connectionResult = await adapter.testConnection();
     console.log('Connection test:', connectionResult);
-    
+
     // Test link generation
     const link = await adapter.generateWorkOrderLink(
         { url: 'https://app.arxos.io/viewer' },
@@ -240,7 +240,7 @@ async function testVendorIntegration() {
         { workOrderId: 'WO-123' }
     );
     console.log('Generated link:', link);
-    
+
     // Test integration
     const integrationResult = await adapter.integrate({
         link: { url: 'https://app.arxos.io/viewer' },
@@ -306,4 +306,4 @@ Your adapter is ready when:
 
 **Time Estimate**: 4-6 days for complete implementation
 **Difficulty**: Medium (requires vendor API knowledge)
-**Dependencies**: Vendor API access and documentation 
+**Dependencies**: Vendor API access and documentation

@@ -83,7 +83,7 @@ async def create_building(
             status=request.status,
             created_by=user.user_id
         )
-        
+
         # Use application service to create building
         result = building_service.create_building(
             name=create_request.name,
@@ -95,7 +95,7 @@ async def create_building(
             status=create_request.status,
             created_by=create_request.created_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -118,7 +118,7 @@ async def create_building(
                 message=result.error_message or "Failed to create building",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to create building: {str(e)}")
         return format_error_response(
@@ -151,7 +151,7 @@ async def list_buildings(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -185,7 +185,7 @@ async def list_buildings(
                 message=result.error_message or "Failed to retrieve buildings",
                 details={"error": result.error_message}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to list buildings: {str(e)}")
         return format_error_response(
@@ -210,7 +210,7 @@ async def get_building(
     try:
         # Use application service to get building
         result = building_service.get_building(building_id=building_id)
-        
+
         if result.success and result.building:
             building = result.building
             return format_success_response(
@@ -235,7 +235,7 @@ async def get_building(
                 message=result.error_message or "Building not found",
                 details={"building_id": building_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get building {building_id}: {str(e)}")
         return format_error_response(
@@ -271,7 +271,7 @@ async def update_building(
             status=request.status,
             updated_by=user.user_id
         )
-        
+
         # Use application service to update building
         result = building_service.update_building(
             building_id=building_id,
@@ -284,7 +284,7 @@ async def update_building(
             status=update_request.status,
             updated_by=update_request.updated_by
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -307,7 +307,7 @@ async def update_building(
                 message=result.error_message or "Failed to update building",
                 details={"error": result.error_message, "building_id": building_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to update building {building_id}: {str(e)}")
         return format_error_response(
@@ -335,7 +335,7 @@ async def delete_building(
             building_id=building_id,
             deleted_by=user.user_id
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -351,7 +351,7 @@ async def delete_building(
                 message=result.error_message or "Failed to delete building",
                 details={"error": result.error_message, "building_id": building_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to delete building {building_id}: {str(e)}")
         return format_error_response(
@@ -386,7 +386,7 @@ async def get_building_rooms(
             page=page,
             page_size=page_size
         )
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -420,7 +420,7 @@ async def get_building_rooms(
                 message=result.error_message or "Failed to retrieve building rooms",
                 details={"error": result.error_message, "building_id": building_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get rooms for building {building_id}: {str(e)}")
         return format_error_response(
@@ -445,7 +445,7 @@ async def get_building_statistics(
     try:
         # Use application service to get building statistics
         result = building_service.get_building_statistics(building_id=building_id)
-        
+
         if result.success:
             return format_success_response(
                 data={
@@ -471,11 +471,11 @@ async def get_building_statistics(
                 message=result.error_message or "Failed to retrieve building statistics",
                 details={"error": result.error_message, "building_id": building_id}
             )
-            
+
     except Exception as e:
         logger.error(f"Failed to get statistics for building {building_id}: {str(e)}")
         return format_error_response(
             error_code="BUILDING_STATISTICS_ERROR",
             message="Failed to retrieve building statistics",
             details={"error": str(e), "building_id": building_id}
-        ) 
+        )

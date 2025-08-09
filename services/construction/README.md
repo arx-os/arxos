@@ -119,4 +119,4 @@ The service includes a dedicated `pkg/svgxbridge` package for SVGX BIM integrati
 1. Follow Go best practices and conventions
 2. Write tests for new functionality
 3. Update documentation as needed
-4. Ensure all tests pass before submitting changes 
+4. Ensure all tests pass before submitting changes

@@ -272,7 +272,7 @@
             .playground {
                 grid-template-columns: 1fr;
             }
-            
+
             .examples-grid {
                 grid-template-columns: 1fr;
             }
@@ -454,7 +454,7 @@ public class BasicSetup {
         ApiClient client = new ApiClient();
         client.setBasePath("https://api.arxos.com");
         client.setApiKey("your_api_key_here");
-        
+
         // Make your first API call
         HealthApi healthApi = new HealthApi(client);
         try {
@@ -478,7 +478,7 @@ class BasicSetup
         var client = new ApiClient();
         client.BasePath = "https://api.arxos.com";
         client.ApiKey = "your_api_key_here";
-        
+
         // Make your first API call
         var healthApi = new HealthApi(client);
         try
@@ -531,7 +531,7 @@ const client = new ArxBackendClient({
 // API Key Authentication
 async function apiKeyAuth() {
   client.setApiKey('your_api_key_here');
-  
+
   try {
     const projects = await client.projects.listProjects();
     console.log('Projects:', projects);
@@ -547,7 +547,7 @@ async function passwordAuth() {
       username: 'your_username',
       password: 'your_password'
     });
-    
+
     client.setAuthToken(auth.token);
     console.log('Authenticated as:', auth.user.username);
   } catch (error) {
@@ -563,7 +563,7 @@ async function oauthAuth() {
       clientSecret: 'your_client_secret',
       scope: 'read write'
     });
-    
+
     client.setAuthToken(auth.accessToken);
     console.log('OAuth authenticated');
   } catch (error) {
@@ -635,7 +635,7 @@ func main() {
     // API Key Authentication
     func apiKeyAuth() {
         client.SetAPIKey("your_api_key_here")
-        
+
         projects, err := client.Projects.ListProjects()
         if err != nil {
             log.Printf("Auth Error: %v", err)
@@ -654,7 +654,7 @@ func main() {
             log.Printf("Login Error: %v", err)
             return
         }
-        
+
         client.SetAuthToken(auth.Token)
         fmt.Printf("Authenticated as: %s\\n", auth.User.Username)
     }
@@ -670,7 +670,7 @@ func main() {
             log.Printf("OAuth Error: %v", err)
             return
         }
-        
+
         client.SetAuthToken(auth.AccessToken)
         fmt.Println("OAuth authenticated")
     }
@@ -689,7 +689,7 @@ public class AuthenticationExamples {
     public static void main(String[] args) {
         ApiClient client = new ApiClient();
         client.setBasePath("https://api.arxos.com");
-        
+
         // API Key Authentication
         client.setApiKey("your_api_key_here");
         ProjectsApi projectsApi = new ProjectsApi(client);
@@ -699,28 +699,28 @@ public class AuthenticationExamples {
         } catch (Exception e) {
             System.err.println("Auth Error: " + e.getMessage());
         }
-        
+
         // Username/Password Authentication
         AuthApi authApi = new AuthApi(client);
         try {
             LoginRequest loginRequest = new LoginRequest();
             loginRequest.setUsername("your_username");
             loginRequest.setPassword("your_password");
-            
+
             LoginResponse auth = authApi.login(loginRequest);
             client.setAccessToken(auth.getToken());
             System.out.println("Authenticated as: " + auth.getUser().getUsername());
         } catch (Exception e) {
             System.err.println("Login Error: " + e.getMessage());
         }
-        
+
         // OAuth 2.0 Authentication
         try {
             OAuthRequest oauthRequest = new OAuthRequest();
             oauthRequest.setClientId("your_client_id");
             oauthRequest.setClientSecret("your_client_secret");
             oauthRequest.setScope("read write");
-            
+
             OAuthResponse auth = authApi.oauth(oauthRequest);
             client.setAccessToken(auth.getAccessToken());
             System.out.println("OAuth authenticated");
@@ -740,7 +740,7 @@ class AuthenticationExamples
     {
         var client = new ApiClient();
         client.BasePath = "https://api.arxos.com";
-        
+
         // API Key Authentication
         client.ApiKey = "your_api_key_here";
         var projectsApi = new ProjectsApi(client);
@@ -753,7 +753,7 @@ class AuthenticationExamples
         {
             Console.WriteLine($"Auth Error: {ex.Message}");
         }
-        
+
         // Username/Password Authentication
         var authApi = new AuthApi(client);
         try
@@ -763,7 +763,7 @@ class AuthenticationExamples
                 Username = "your_username",
                 Password = "your_password"
             };
-            
+
             var auth = await authApi.LoginAsync(loginRequest);
             client.AccessToken = auth.Token;
             Console.WriteLine($"Authenticated as: {auth.User.Username}");
@@ -772,7 +772,7 @@ class AuthenticationExamples
         {
             Console.WriteLine($"Login Error: {ex.Message}");
         }
-        
+
         // OAuth 2.0 Authentication
         try
         {
@@ -782,7 +782,7 @@ class AuthenticationExamples
                 ClientSecret = "your_client_secret",
                 Scope = "read write"
             };
-            
+
             var auth = await authApi.OAuthAsync(oauthRequest);
             client.AccessToken = auth.AccessToken;
             Console.WriteLine("OAuth authenticated");
@@ -856,13 +856,13 @@ oauthAuth();
 
         function switchLanguage(language) {
             currentLanguage = language;
-            
+
             // Update active button
             document.querySelectorAll('.lang-button').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
-            
+
             // Load example for current language
             loadCurrentExample();
         }
@@ -892,11 +892,11 @@ oauthAuth();
             const code = document.getElementById('codeEditor').value;
             const output = document.getElementById('outputText');
             const runButton = document.querySelector('.run-button');
-            
+
             // Disable button and show loading
             runButton.disabled = true;
             output.innerHTML = '<div class="loading"><div class="spinner"></div>Executing code...</div>';
-            
+
             // Simulate code execution
             setTimeout(() => {
                 try {
@@ -957,4 +957,4 @@ Note: This is a simulation. In a real environment, your code would execute again
         });
     </script>
 </body>
-</html> 
+</html>

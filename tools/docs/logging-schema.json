@@ -24,7 +24,7 @@
       "description": "Name of the service generating the log entry",
       "enum": [
         "arx-backend",
-        "arx-svg-parser", 
+        "arx-svg-parser",
         "arx-frontend",
         "arx-cmms",
         "arx-data-vendor",
@@ -59,7 +59,7 @@
       "examples": ["req-12345", "req-abc-def-456"]
     },
     "correlation_id": {
-      "type": "string", 
+      "type": "string",
       "description": "Correlation ID for tracing related log entries across services",
       "pattern": "^[a-zA-Z0-9-_]+$",
       "examples": ["corr-def456", "corr-xyz-789"]
@@ -85,7 +85,7 @@
       "examples": ["1234567890abcdef1234567890abcdef"]
     },
     "span_id": {
-      "type": "string", 
+      "type": "string",
       "description": "Span ID for distributed tracing",
       "pattern": "^[a-f0-9]{16}$",
       "examples": ["1234567890abcdef"]
@@ -383,7 +383,7 @@
       "type": "string",
       "enum": [
         "arx-backend",
-        "arx-svg-parser", 
+        "arx-svg-parser",
         "arx-frontend",
         "arx-cmms",
         "arx-data-vendor",
@@ -399,4 +399,4 @@
       "description": "Component name pattern"
     }
   }
-} 
+}

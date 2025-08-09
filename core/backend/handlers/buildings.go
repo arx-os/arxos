@@ -509,7 +509,7 @@ func HTMXListBuildingsSidebar(w http.ResponseWriter, r *http.Request) {
 	} else if role == "shared" {
 		// Optimized query for shared buildings with proper joins
 		db.DB.Raw(`
-			SELECT DISTINCT b.id, b.name, b.status, b.building_type 
+			SELECT DISTINCT b.id, b.name, b.status, b.building_type
 			FROM buildings b
 			JOIN user_category_permissions ucp ON ucp.project_id = b.project_id
 			WHERE ucp.user_id = ? AND b.owner_id != ?

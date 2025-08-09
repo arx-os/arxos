@@ -46,4 +46,4 @@ func deleteProject(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "id")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"id": "` + projectID + `", "deleted": true}`))
-} 
+}

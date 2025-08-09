@@ -60,4 +60,4 @@ func submitSafetyChecklist(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement safety checklist submission
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"submitted": true, "checklist_id": "new-checklist-id"}`))
-} 
+}

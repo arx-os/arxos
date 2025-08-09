@@ -1,7 +1,7 @@
 /**
  * Arxos CAD Constraint System
  * Handles geometric constraints for CAD-level precision and relationships
- * 
+ *
  * @author Arxos Team
  * @version 1.0.0
  * @license MIT
@@ -12,7 +12,7 @@ class ConstraintSolver {
         this.constraints = new Map();
         this.constraintId = 0;
         this.solverActive = false;
-        
+
         // Constraint types
         this.constraintTypes = {
             'DISTANCE': 'distance',
@@ -24,7 +24,7 @@ class ConstraintSolver {
             'HORIZONTAL': 'horizontal',
             'VERTICAL': 'vertical'
         };
-        
+
         // Precision settings
         this.precision = 0.001; // 0.001 inches
         this.anglePrecision = 0.1; // 0.1 degrees
@@ -38,7 +38,7 @@ class ConstraintSolver {
      */
     addConstraint(type, params) {
         const constraintId = `constraint_${++this.constraintId}`;
-        
+
         const constraint = {
             id: constraintId,
             type: type,
@@ -47,10 +47,10 @@ class ConstraintSolver {
             tolerance: this.precision,
             createdAt: Date.now()
         };
-        
+
         this.constraints.set(constraintId, constraint);
         console.log(`Added constraint: ${type}`, constraint);
-        
+
         return constraintId;
     }
 
@@ -72,10 +72,10 @@ class ConstraintSolver {
      */
     solveConstraints(objects) {
         if (this.solverActive) return objects; // Prevent recursive solving
-        
+
         this.solverActive = true;
         const updatedObjects = [...objects];
-        
+
         try {
             for (const [constraintId, constraint] of this.constraints) {
                 if (constraint.active) {
@@ -87,7 +87,7 @@ class ConstraintSolver {
         } finally {
             this.solverActive = false;
         }
-        
+
         return updatedObjects;
     }
 
@@ -127,26 +127,26 @@ class ConstraintSolver {
      */
     applyDistanceConstraint(constraint, objects) {
         const { object1Id, object2Id, distance } = constraint.params;
-        
+
         const obj1 = objects.find(obj => obj.id === object1Id);
         const obj2 = objects.find(obj => obj.id === object2Id);
-        
+
         if (!obj1 || !obj2) return objects;
-        
+
         const currentDistance = this.calculateDistance(obj1, obj2);
         const difference = distance - currentDistance;
-        
+
         if (Math.abs(difference) > this.precision) {
             // Adjust objects to meet distance constraint
             const direction = this.getDirection(obj1, obj2);
             const adjustment = difference / 2;
-            
+
             obj1.x -= direction.x * adjustment;
             obj1.y -= direction.y * adjustment;
             obj2.x += direction.x * adjustment;
             obj2.y += direction.y * adjustment;
         }
-        
+
         return objects;
     }
 
@@ -158,20 +158,20 @@ class ConstraintSolver {
      */
     applyAngleConstraint(constraint, objects) {
         const { object1Id, object2Id, angle } = constraint.params;
-        
+
         const obj1 = objects.find(obj => obj.id === object1Id);
         const obj2 = objects.find(obj => obj.id === object2Id);
-        
+
         if (!obj1 || !obj2) return objects;
-        
+
         const currentAngle = this.calculateAngle(obj1, obj2);
         const angleDifference = angle - currentAngle;
-        
+
         if (Math.abs(angleDifference) > this.anglePrecision) {
             // Rotate objects to meet angle constraint
             this.rotateObject(obj2, obj1, angleDifference);
         }
-        
+
         return objects;
     }
 
@@ -183,20 +183,20 @@ class ConstraintSolver {
      */
     applyParallelConstraint(constraint, objects) {
         const { object1Id, object2Id } = constraint.params;
-        
+
         const obj1 = objects.find(obj => obj.id === object1Id);
         const obj2 = objects.find(obj => obj.id === object2Id);
-        
+
         if (!obj1 || !obj2) return objects;
-        
+
         const angle1 = this.getObjectAngle(obj1);
         const angle2 = this.getObjectAngle(obj2);
         const angleDifference = angle1 - angle2;
-        
+
         // Make objects parallel (0 or 180 degrees)
         const targetAngle = Math.abs(angleDifference) > 90 ? angle1 + 180 : angle1;
         this.setObjectAngle(obj2, targetAngle);
-        
+
         return objects;
     }
 
@@ -208,16 +208,16 @@ class ConstraintSolver {
      */
     applyPerpendicularConstraint(constraint, objects) {
         const { object1Id, object2Id } = constraint.params;
-        
+
         const obj1 = objects.find(obj => obj.id === object1Id);
         const obj2 = objects.find(obj => obj.id === object2Id);
-        
+
         if (!obj1 || !obj2) return objects;
-        
+
         const angle1 = this.getObjectAngle(obj1);
         const targetAngle = angle1 + 90; // Perpendicular angle
         this.setObjectAngle(obj2, targetAngle);
-        
+
         return objects;
     }
 
@@ -229,18 +229,18 @@ class ConstraintSolver {
      */
     applyCoincidentConstraint(constraint, objects) {
         const { object1Id, object2Id, point } = constraint.params;
-        
+
         const obj1 = objects.find(obj => obj.id === object1Id);
         const obj2 = objects.find(obj => obj.id === object2Id);
-        
+
         if (!obj1 || !obj2) return objects;
-        
+
         // Move objects to be coincident at the specified point
         obj1.x = point.x;
         obj1.y = point.y;
         obj2.x = point.x;
         obj2.y = point.y;
-        
+
         return objects;
     }
 
@@ -252,13 +252,13 @@ class ConstraintSolver {
      */
     applyHorizontalConstraint(constraint, objects) {
         const { objectId } = constraint.params;
-        
+
         const obj = objects.find(obj => obj.id === objectId);
         if (!obj) return objects;
-        
+
         // Make object horizontal (0 degrees)
         this.setObjectAngle(obj, 0);
-        
+
         return objects;
     }
 
@@ -270,13 +270,13 @@ class ConstraintSolver {
      */
     applyVerticalConstraint(constraint, objects) {
         const { objectId } = constraint.params;
-        
+
         const obj = objects.find(obj => obj.id === objectId);
         if (!obj) return objects;
-        
+
         // Make object vertical (90 degrees)
         this.setObjectAngle(obj, 90);
-        
+
         return objects;
     }
 
@@ -311,7 +311,7 @@ class ConstraintSolver {
     getDirection(obj1, obj2) {
         const distance = this.calculateDistance(obj1, obj2);
         if (distance === 0) return { x: 0, y: 0 };
-        
+
         return {
             x: (obj2.x - obj1.x) / distance,
             y: (obj2.y - obj1.y) / distance
@@ -349,13 +349,13 @@ class ConstraintSolver {
         const radians = angle * Math.PI / 180;
         const cos = Math.cos(radians);
         const sin = Math.sin(radians);
-        
+
         const dx = obj.x - center.x;
         const dy = obj.y - center.y;
-        
+
         obj.x = center.x + dx * cos - dy * sin;
         obj.y = center.y + dx * sin + dy * cos;
-        
+
         // Update object angle
         obj.angle = (obj.angle || 0) + angle;
     }
@@ -392,15 +392,15 @@ class ConstraintSolver {
      */
     getConstraintsForObject(objectId) {
         const objectConstraints = [];
-        
+
         for (const [constraintId, constraint] of this.constraints) {
-            if (constraint.params.object1Id === objectId || 
+            if (constraint.params.object1Id === objectId ||
                 constraint.params.object2Id === objectId ||
                 constraint.params.objectId === objectId) {
                 objectConstraints.push(constraint);
             }
         }
-        
+
         return objectConstraints;
     }
 
@@ -422,16 +422,16 @@ class ConstraintSolver {
             byType: {},
             active: 0
         };
-        
+
         for (const [constraintId, constraint] of this.constraints) {
             if (constraint.active) stats.active++;
-            
+
             if (!stats.byType[constraint.type]) {
                 stats.byType[constraint.type] = 0;
             }
             stats.byType[constraint.type]++;
         }
-        
+
         return stats;
     }
 }
@@ -439,4 +439,4 @@ class ConstraintSolver {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ConstraintSolver;
-} 
+}

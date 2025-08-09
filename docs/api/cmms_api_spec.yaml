@@ -2,19 +2,19 @@ openapi: 3.0.3
 info:
   title: Arx CMMS Service API
   description: |
-    Comprehensive API for the Arx CMMS service providing CMMS integration, 
+    Comprehensive API for the Arx CMMS service providing CMMS integration,
     synchronization, and maintenance workflow management.
-    
+
     ## Authentication
     The API uses JWT Bearer token authentication. Include the token in the Authorization header:
     ```
     Authorization: Bearer <your-jwt-token>
     ```
-    
+
     ## Rate Limiting
     - Public endpoints: 100 requests/second, burst of 200
     - Authenticated endpoints: 50 requests/second, burst of 100
-    
+
     ## Error Handling
     All endpoints return standard HTTP status codes with detailed error messages in JSON format.
   version: 1.0.0
@@ -1186,7 +1186,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error' 
+                $ref: '#/components/schemas/Error'
 
   # Sync Logs
   /cmms/connections/{connectionId}/sync-logs:
@@ -1741,4 +1741,4 @@ components:
           description: Whether there is a next page
         has_prev:
           type: boolean
-          description: Whether there is a previous page 
+          description: Whether there is a previous page

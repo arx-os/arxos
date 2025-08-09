@@ -18,21 +18,21 @@ export class CMMSIntegrationManager {
             enableAnalytics: options.enableAnalytics !== false,
             ...options
         };
-        
+
         // Core modules
         this.deepLinkRouter = null;
         this.objectRegistry = null;
         this.linkGenerator = null;
-        
+
         // CMMS adapters
         this.adapters = new Map();
-        
+
         // Integration configurations
         this.configurations = new Map();
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -43,31 +43,31 @@ export class CMMSIntegrationManager {
                 enableHighlighting: true,
                 enableZooming: true
             });
-            
+
             this.objectRegistry = new ObjectRegistry({
                 enableCaching: true,
                 enableIndexing: true
             });
-            
+
             this.linkGenerator = new LinkGenerator({
                 enableQRCode: true,
                 enableAnalytics: this.options.enableAnalytics
             });
-            
+
             // Initialize CMMS adapters
             await this.initializeAdapters();
-            
+
             // Load configurations
             await this.loadConfigurations();
-            
+
             // Setup event listeners
             this.setupEventListeners();
-            
-            this.triggerEvent('initialized', { 
+
+            this.triggerEvent('initialized', {
                 adapters: Array.from(this.adapters.keys()),
                 configurations: Array.from(this.configurations.keys())
             });
-            
+
         } catch (error) {
             console.error('CMMS Integration Manager initialization failed:', error);
             this.triggerEvent('initializationFailed', { error });
@@ -84,7 +84,7 @@ export class CMMSIntegrationManager {
                 console.warn('WebTMA adapter not available:', error);
             }
         }
-        
+
         // Initialize Maximo adapter
         if (this.options.enableMaximo) {
             try {
@@ -94,7 +94,7 @@ export class CMMSIntegrationManager {
                 console.warn('Maximo adapter not available:', error);
             }
         }
-        
+
         // Initialize SAP PM adapter
         if (this.options.enableSAPPM) {
             try {
@@ -104,7 +104,7 @@ export class CMMSIntegrationManager {
                 console.warn('SAP PM adapter not available:', error);
             }
         }
-        
+
         // Initialize generic adapter
         if (this.options.enableGeneric) {
             try {
@@ -121,7 +121,7 @@ export class CMMSIntegrationManager {
             const response = await fetch('/api/cmms/config', {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (response.ok) {
                 const configs = await response.json();
                 configs.forEach(config => {
@@ -138,12 +138,12 @@ export class CMMSIntegrationManager {
         document.addEventListener('objectSelected', (event) => {
             this.handleObjectSelection(event.detail);
         });
-        
+
         // Listen for link generation
         this.linkGenerator.addEventListener('linkGenerated', (event) => {
             this.handleLinkGenerated(event);
         });
-        
+
         // Listen for CMMS integration requests
         document.addEventListener('cmmsIntegration', (event) => {
             this.handleCMMSIntegrationRequest(event.detail);
@@ -159,21 +159,21 @@ export class CMMSIntegrationManager {
             cmmsData = {},
             options = {}
         } = params;
-        
+
         try {
             // Validate CMMS type
             if (!this.adapters.has(cmmsType)) {
                 throw new Error(`Unsupported CMMS type: ${cmmsType}`);
             }
-            
+
             const adapter = this.adapters.get(cmmsType);
-            
+
             // Get object details
             const object = this.objectRegistry.getObject(objectId);
             if (!object) {
                 throw new Error(`Object '${objectId}' not found`);
             }
-            
+
             // Generate link
             const link = await this.linkGenerator.generateLink({
                 objectId: object.id,
@@ -185,7 +185,7 @@ export class CMMSIntegrationManager {
                 highlight: options.highlight !== false,
                 zoom: options.zoom !== false
             });
-            
+
             // Integrate with CMMS
             const integrationResult = await adapter.integrate({
                 link,
@@ -194,16 +194,16 @@ export class CMMSIntegrationManager {
                 cmmsData,
                 options
             });
-            
+
             this.triggerEvent('cmmsIntegrationCompleted', {
                 cmmsType,
                 objectId,
                 link,
                 result: integrationResult
             });
-            
+
             return integrationResult;
-            
+
         } catch (error) {
             console.error('CMMS integration failed:', error);
             this.triggerEvent('cmmsIntegrationFailed', { params, error });
@@ -218,14 +218,14 @@ export class CMMSIntegrationManager {
             linkType = 'standard',
             options = {}
         } = params;
-        
+
         try {
             // Get object details
             const object = this.objectRegistry.getObject(objectId);
             if (!object) {
                 throw new Error(`Object '${objectId}' not found`);
             }
-            
+
             // Generate link
             const link = await this.linkGenerator.generateLink({
                 objectId: object.id,
@@ -237,7 +237,7 @@ export class CMMSIntegrationManager {
                 highlight: options.highlight !== false,
                 zoom: options.zoom !== false
             });
-            
+
             // Generate CMMS-specific link format
             const adapter = this.adapters.get(cmmsType);
             if (adapter && adapter.generateLink) {
@@ -247,12 +247,12 @@ export class CMMSIntegrationManager {
                     linkType,
                     options
                 });
-                
+
                 return cmmsLink;
             }
-            
+
             return link;
-            
+
         } catch (error) {
             console.error('CMMS link generation failed:', error);
             throw error;
@@ -264,23 +264,23 @@ export class CMMSIntegrationManager {
             if (!this.adapters.has(cmmsType)) {
                 throw new Error(`Unsupported CMMS type: ${cmmsType}`);
             }
-            
+
             const adapter = this.adapters.get(cmmsType);
-            
+
             if (adapter.testConnection) {
                 const result = await adapter.testConnection(config);
-                
+
                 this.triggerEvent('cmmsConnectionTested', {
                     cmmsType,
                     config,
                     result
                 });
-                
+
                 return result;
             }
-            
+
             return { success: true, message: 'Connection test not implemented' };
-            
+
         } catch (error) {
             console.error('CMMS connection test failed:', error);
             this.triggerEvent('cmmsConnectionTestFailed', { cmmsType, config, error });
@@ -299,18 +299,18 @@ export class CMMSIntegrationManager {
                 },
                 body: JSON.stringify(config)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to save configuration: ${response.status}`);
             }
-            
+
             const savedConfig = await response.json();
             this.configurations.set(savedConfig.id, savedConfig);
-            
+
             this.triggerEvent('configurationSaved', { config: savedConfig });
-            
+
             return savedConfig;
-            
+
         } catch (error) {
             console.error('Failed to save configuration:', error);
             throw error;
@@ -327,18 +327,18 @@ export class CMMSIntegrationManager {
                 },
                 body: JSON.stringify(updates)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to update configuration: ${response.status}`);
             }
-            
+
             const updatedConfig = await response.json();
             this.configurations.set(configId, updatedConfig);
-            
+
             this.triggerEvent('configurationUpdated', { config: updatedConfig });
-            
+
             return updatedConfig;
-            
+
         } catch (error) {
             console.error('Failed to update configuration:', error);
             throw error;
@@ -351,15 +351,15 @@ export class CMMSIntegrationManager {
                 method: 'DELETE',
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to delete configuration: ${response.status}`);
             }
-            
+
             this.configurations.delete(configId);
-            
+
             this.triggerEvent('configurationDeleted', { configId });
-            
+
         } catch (error) {
             console.error('Failed to delete configuration:', error);
             throw error;
@@ -399,27 +399,27 @@ export class CMMSIntegrationManager {
     // Event handlers
     handleObjectSelection(detail) {
         const { object } = detail;
-        
+
         // Update deep link router
         this.deepLinkRouter.updateURL({
             building_id: object.building_id,
             floor_id: object.floor_id,
             object_id: object.id
         });
-        
+
         this.triggerEvent('objectSelectedForIntegration', { object });
     }
 
     handleLinkGenerated(event) {
         const { link } = event;
-        
+
         // Notify adapters of new link
         this.adapters.forEach((adapter, cmmsType) => {
             if (adapter.onLinkGenerated) {
                 adapter.onLinkGenerated(link);
             }
         });
-        
+
         this.triggerEvent('linkGeneratedForCMMS', { link });
     }
 
@@ -435,24 +435,24 @@ export class CMMSIntegrationManager {
             endDate = null,
             groupBy = 'day'
         } = options;
-        
+
         try {
             const params = new URLSearchParams();
             if (cmmsType) params.append('cmms_type', cmmsType);
             if (startDate) params.append('start_date', startDate);
             if (endDate) params.append('end_date', endDate);
             if (groupBy) params.append('group_by', groupBy);
-            
+
             const response = await fetch(`/api/cmms/analytics?${params}`, {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to get analytics: ${response.status}`);
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to get integration analytics:', error);
             throw error;
@@ -469,13 +469,13 @@ export class CMMSIntegrationManager {
                 },
                 body: JSON.stringify(options)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to generate report: ${response.status}`);
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to generate integration report:', error);
             throw error;
@@ -553,27 +553,27 @@ export class CMMSIntegrationManager {
         if (this.deepLinkRouter) {
             this.deepLinkRouter.destroy();
         }
-        
+
         if (this.objectRegistry) {
             this.objectRegistry.destroy();
         }
-        
+
         if (this.linkGenerator) {
             this.linkGenerator.destroy();
         }
-        
+
         // Destroy adapters
         this.adapters.forEach(adapter => {
             if (adapter.destroy) {
                 adapter.destroy();
             }
         });
-        
+
         this.adapters.clear();
         this.configurations.clear();
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

@@ -364,4 +364,4 @@ receivers:
             password: 'YOUR_WEBHOOK_PASSWORD'
 
 templates:
-  - '/etc/alertmanager/template/*.tmpl' 
+  - '/etc/alertmanager/template/*.tmpl'

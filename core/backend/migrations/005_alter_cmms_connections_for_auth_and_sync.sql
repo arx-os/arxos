@@ -9,4 +9,4 @@ ALTER TABLE cmms_connections
 	ADD COLUMN IF NOT EXISTS oauth2_scope VARCHAR(255),
 	ADD COLUMN IF NOT EXISTS sync_interval_min INTEGER DEFAULT 60,
 	ADD COLUMN IF NOT EXISTS last_sync_status VARCHAR(50),
-	ADD COLUMN IF NOT EXISTS last_sync_error TEXT; 
+	ADD COLUMN IF NOT EXISTS last_sync_error TEXT;

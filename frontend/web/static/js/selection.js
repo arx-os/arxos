@@ -42,7 +42,7 @@ class MultiSelection {
 
     handleMouseDown(event) {
         const target = event.target.closest('.placed-symbol');
-        
+
         // Start marquee selection if clicking on empty space
         if (!target && event.button === 0) {
             this.startMarqueeSelection(event);
@@ -95,13 +95,13 @@ class MultiSelection {
     startMarqueeSelection(event) {
         this.isMarqueeSelecting = true;
         this.marqueeStart = this.getMousePosition(event);
-        
+
         this.marqueeElement.style.left = this.marqueeStart.x + 'px';
         this.marqueeElement.style.top = this.marqueeStart.y + 'px';
         this.marqueeElement.style.width = '0px';
         this.marqueeElement.style.height = '0px';
         this.marqueeElement.classList.remove('hidden');
-        
+
         // Clear current selection if not holding shift
         if (!event.shiftKey) {
             this.clearSelection();
@@ -132,7 +132,7 @@ class MultiSelection {
         objects.forEach(obj => {
             const objRect = obj.getBoundingClientRect();
             const containerRect = this.svgContainer.getBoundingClientRect();
-            
+
             const objLeft = objRect.left - containerRect.left;
             const objTop = objRect.top - containerRect.top;
             const objRight = objLeft + objRect.width;
@@ -165,8 +165,8 @@ class MultiSelection {
     }
 
     rectsIntersect(rect1, rect2) {
-        return !(rect1.left > rect2.right || 
-                rect1.right < rect2.left || 
+        return !(rect1.left > rect2.right ||
+                rect1.right < rect2.left ||
                 rect1.top > rect2.bottom ||
                 rect1.bottom < rect2.top);
     }
@@ -219,10 +219,10 @@ class MultiSelection {
             const currentY = parseFloat(obj.getAttribute('data-y') || 0);
             const newX = currentX + deltaX;
             const newY = currentY + deltaY;
-            
+
             obj.setAttribute('data-x', newX);
             obj.setAttribute('data-y', newY);
-            
+
             const rotation = obj.getAttribute('data-rotation') || 0;
             obj.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
         });
@@ -232,9 +232,9 @@ class MultiSelection {
         this.selectedObjects.forEach(obj => {
             const currentRotation = parseFloat(obj.getAttribute('data-rotation') || 0);
             const newRotation = currentRotation + angle;
-            
+
             obj.setAttribute('data-rotation', newRotation);
-            
+
             const x = obj.getAttribute('data-x') || 0;
             const y = obj.getAttribute('data-y') || 0;
             obj.setAttribute('transform', `translate(${x},${y}) rotate(${newRotation})`);
@@ -258,20 +258,20 @@ class MultiSelection {
 
         const groupId = 'group_' + Date.now();
         const objects = Array.from(this.selectedObjects);
-        
+
         // Create group element
         const groupElement = document.createElementNS('http://www.w3.org/2000/svg', 'g');
         groupElement.setAttribute('data-group-id', groupId);
         groupElement.classList.add('object-group', 'selected');
-        
+
         // Move objects to group
         objects.forEach(obj => {
             obj.setAttribute('data-group-id', groupId);
             groupElement.appendChild(obj);
         });
-        
+
         this.svgElement.appendChild(groupElement);
-        
+
         // Update selection
         this.clearSelection();
         this.selectedObjects.add(groupElement);
@@ -279,22 +279,22 @@ class MultiSelection {
     }
 
     ungroupSelectedObjects() {
-        const groups = Array.from(this.selectedObjects).filter(obj => 
+        const groups = Array.from(this.selectedObjects).filter(obj =>
             obj.classList.contains('object-group')
         );
-        
+
         groups.forEach(group => {
             const groupId = group.getAttribute('data-group-id');
             const objects = group.querySelectorAll('.placed-symbol');
-            
+
             objects.forEach(obj => {
                 obj.removeAttribute('data-group-id');
                 this.svgElement.appendChild(obj);
             });
-            
+
             group.remove();
         });
-        
+
         this.clearSelection();
     }
 
@@ -348,7 +348,7 @@ class MultiSelection {
         if (window.contextPanel) {
             window.contextPanel.updateSelection(this.selectedObjects);
         }
-        
+
         if (window.svgObjectInteraction) {
             window.svgObjectInteraction.selectedObjects = this.selectedObjects;
         }

@@ -33,16 +33,16 @@ from psycopg2.extras import RealDictCursor
 def handle_errors(func):
     """
     Decorator to handle errors securely.
-    
+
     Args:
         func: Function to wrap
-        
+
     Returns:
         Wrapped function with error handling
     """
     def wrapper(*args, **kwargs):
-    """
-    Perform wrapper operation
+        """
+        Perform wrapper operation
 
 Args:
         None
@@ -61,16 +61,16 @@ Example:
             return func(*args, **kwargs)
         except ValueError as e:
             logger.error(f"Value error in {func.__name__}: {e}")
-            raise HTTPException(status_code=400, detail="Invalid input")
+            raise Exception("Invalid input")
         except FileNotFoundError as e:
             logger.error(f"File not found in {func.__name__}: {e}")
-            raise HTTPException(status_code=404, detail="Resource not found")
+            raise Exception("Resource not found")
         except PermissionError as e:
             logger.error(f"Permission error in {func.__name__}: {e}")
-            raise HTTPException(status_code=403, detail="Access denied")
+            raise Exception("Access denied")
         except Exception as e:
             logger.error(f"Unexpected error in {func.__name__}: {e}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise
     return wrapper
 
 
@@ -101,15 +101,15 @@ class ValidationReport:
 class DocumentationValidator:
     """
     Validator for database documentation synchronization.
-    
+
     Follows Arxos standards for automated validation, comprehensive checking,
     and CI/CD integration with detailed reporting.
     """
-    
+
     def __init__(self, database_url: str, docs_path: str = "arx-docs/database"):
         """
         Initialize the documentation validator.
-        
+
         Args:
             database_url: PostgreSQL connection URL
             docs_path: Path to documentation directory
@@ -118,7 +118,7 @@ class DocumentationValidator:
         self.docs_path = Path(docs_path)
         self.connection = None
         self.validation_report = None
-        
+
         # Validation metrics
         self.metrics = {
             'checks_performed': 0,
@@ -127,11 +127,11 @@ class DocumentationValidator:
             'doc_tables': 0,
             'mismatches_found': 0
         }
-        
+
         logger.info("documentation_validator_initialized",
-                   database_url=self._mask_password(database_url),
-                   docs_path=str(self.docs_path))
-    
+                    database_url=self._mask_password(database_url),
+                    docs_path=str(self.docs_path))
+
     def _mask_password(self, url: str) -> str:
         """Mask password in database URL for logging."""
         if '@' in url and ':' in url:
@@ -147,11 +147,11 @@ class DocumentationValidator:
                             user = credentials.split(':')[0]
                             return f"{protocol}://{user}:***@{parts[1]}"
         return url
-    
+
     def connect(self) -> bool:
         """
         Establish database connection.
-        
+
         Returns:
             True if connection successful, False otherwise
         """
@@ -161,32 +161,32 @@ class DocumentationValidator:
             return True
         except Exception as e:
             logger.error("database_connection_failed",
-                        error=str(e))
+                         error=str(e))
             return False
-    
+
     def disconnect(self) -> None:
         """Close database connection."""
         if self.connection:
             self.connection.close()
             logger.info("database_connection_closed")
-    
+
     def validate_documentation(self) -> bool:
         """
         Perform comprehensive documentation validation.
-        
+
         Returns:
             True if validation successful, False otherwise
         """
         start_time = datetime.now()
-        
+
         if not self.connect():
             return False
-        
+
         try:
             logger.info("starting_documentation_validation")
-            
+
             results = []
-            
+
             # Perform validation checks
             checks = [
                 self._validate_schema_documentation,
@@ -196,7 +196,7 @@ class DocumentationValidator:
                 self._validate_file_structure,
                 self._validate_documentation_completeness
             ]
-            
+
             for check in checks:
                 try:
                     result = check()
@@ -207,20 +207,20 @@ class DocumentationValidator:
                     self.metrics['checks_performed'] += 1
                 except Exception as e:
                     logger.error("validation_check_failed",
-                               check=check.__name__,
-                               error=str(e))
+                                 check=check.__name__,
+                                 error=str(e))
                     results.append(ValidationResult(
                         check_name=check.__name__,
                         status='FAIL',
                         message=f"Validation check failed: {str(e)}",
                         severity='ERROR'
                     ))
-            
+
             # Calculate metrics
             passed_checks = len([r for r in results if r.status == 'PASS'])
             failed_checks = len([r for r in results if r.status == 'FAIL'])
             warning_checks = len([r for r in results if r.status == 'WARNING'])
-            
+
             # Generate summary
             if failed_checks == 0 and warning_checks == 0:
                 summary = "✅ All documentation validation checks passed"
@@ -228,11 +228,11 @@ class DocumentationValidator:
                 summary = f"⚠️ Documentation validation completed with {warning_checks} warnings"
             else:
                 summary = f"❌ Documentation validation failed with {failed_checks} errors and {warning_checks} warnings"
-            
+
             # Create validation report
             processing_time = (datetime.now() - start_time).total_seconds() * 1000
             self.metrics['validation_time_ms'] = processing_time
-            
+
             self.validation_report = ValidationReport(
                 timestamp=datetime.now(),
                 database_name=self._get_database_name(),
@@ -243,23 +243,22 @@ class DocumentationValidator:
                 results=results,
                 summary=summary
             )
-            
+
             logger.info("documentation_validation_completed",
-                       total_checks=len(results),
-                       passed_checks=passed_checks,
-                       failed_checks=failed_checks,
-                       warning_checks=warning_checks,
-                       validation_time_ms=round(processing_time, 2))
-            
+                        total_checks=len(results),
+                        passed_checks=passed_checks,
+                        failed_checks=failed_checks,
+                        warning_checks=warning_checks,
+                        validation_time_ms=round(processing_time, 2))
             return failed_checks == 0
-            
+
         except Exception as e:
             logger.error("documentation_validation_failed",
-                        error=str(e))
+                         error=str(e))
             return False
         finally:
             self.disconnect()
-    
+
     def _get_database_name(self) -> str:
         """Get database name for reporting."""
         try:
@@ -268,19 +267,19 @@ class DocumentationValidator:
                 return cursor.fetchone()[0]
         except Exception as e:
             return "unknown"
-    
+
     def _validate_schema_documentation(self) -> List[ValidationResult]:
         """Validate that schema documentation matches actual database schema."""
         results = []
-        
+
         # Get actual database tables
         actual_tables = self._get_actual_tables()
         self.metrics['schema_tables'] = len(actual_tables)
-        
+
         # Get documented tables
         documented_tables = self._get_documented_tables()
         self.metrics['doc_tables'] = len(documented_tables)
-        
+
         # Check for missing documentation
         missing_docs = actual_tables - documented_tables
         if missing_docs:
@@ -299,7 +298,7 @@ class DocumentationValidator:
                 message="All tables have documentation",
                 details={'total_tables': len(actual_tables)}
             ))
-        
+
         # Check for outdated documentation
         outdated_docs = documented_tables - actual_tables
         if outdated_docs:
@@ -310,47 +309,46 @@ class DocumentationValidator:
                 details={'outdated_tables': list(outdated_docs)},
                 severity='WARNING'
             ))
-        
+
         # Validate individual table documentation
         for table_name in actual_tables:
             table_results = self._validate_table_documentation(table_name)
             results.extend(table_results)
-        
+
         return results
-    
+
     def _get_actual_tables(self) -> Set[str]:
         """Get actual tables from database."""
         tables = set()
-        
+
         with self.connection.cursor() as cursor:
             cursor.execute("""
-                SELECT table_name 
-                FROM information_schema.tables 
+                SELECT table_name
+                FROM information_schema.tables
                 WHERE table_schema = 'public'
                 AND table_type = 'BASE TABLE'
             """)
-            
             for row in cursor.fetchall():
                 tables.add(row[0])
-        
+
         return tables
-    
+
     def _get_documented_tables(self) -> Set[str]:
         """Get tables that have documentation."""
         documented_tables = set()
-        
+
         schema_docs_path = self.docs_path / "schema"
         if schema_docs_path.exists():
             for doc_file in schema_docs_path.glob("*.md"):
                 table_name = doc_file.stem
                 documented_tables.add(table_name)
-        
+
         return documented_tables
-    
+
     def _validate_table_documentation(self, table_name: str) -> List[ValidationResult]:
         """Validate documentation for a specific table."""
         results = []
-        
+
         # Check if documentation file exists
         doc_file = self.docs_path / "schema" / f"{table_name}.md"
         if not doc_file.exists():
@@ -362,7 +360,7 @@ class DocumentationValidator:
                 severity='ERROR'
             ))
             return results
-        
+
         # Read documentation content
         try:
             with open(doc_file, 'r') as f:
@@ -376,7 +374,7 @@ class DocumentationValidator:
                 severity='ERROR'
             ))
             return results
-        
+
         # Validate schema section
         if "## Schema Definition" not in doc_content:
             results.append(ValidationResult(
@@ -386,7 +384,6 @@ class DocumentationValidator:
                 details={'table_name': table_name},
                 severity='WARNING'
             ))
-        
         # Validate relationships section
         if "## Relationships" not in doc_content:
             results.append(ValidationResult(
@@ -396,7 +393,6 @@ class DocumentationValidator:
                 details={'table_name': table_name},
                 severity='WARNING'
             ))
-        
         # Validate indexes section
         if "## Indexes" not in doc_content:
             results.append(ValidationResult(
@@ -406,13 +402,12 @@ class DocumentationValidator:
                 details={'table_name': table_name},
                 severity='WARNING'
             ))
-        
         return results
-    
+
     def _validate_migration_documentation(self) -> ValidationResult:
         """Validate migration documentation completeness."""
         migration_doc = self.docs_path / "migrations.md"
-        
+
         if not migration_doc.exists():
             return ValidationResult(
                 check_name="migration_documentation_existence",
@@ -421,23 +416,23 @@ class DocumentationValidator:
                 details={'expected_file': str(migration_doc)},
                 severity='ERROR'
             )
-        
+
         # Check for required sections
         try:
             with open(migration_doc, 'r') as f:
                 content = f.read()
-            
+
             required_sections = [
                 "## Migration Workflow",
                 "## Versioning Conventions",
                 "## Rollback Strategy"
             ]
-            
+
             missing_sections = []
             for section in required_sections:
                 if section not in content:
                     missing_sections.append(section)
-            
+
             if missing_sections:
                 return ValidationResult(
                     check_name="migration_documentation_completeness",
@@ -453,7 +448,7 @@ class DocumentationValidator:
                     message="Migration documentation is complete",
                     details={'total_sections': len(required_sections)}
                 )
-                
+
         except Exception as e:
             return ValidationResult(
                 check_name="migration_documentation_readability",
@@ -462,11 +457,11 @@ class DocumentationValidator:
                 details={'error': str(e)},
                 severity='ERROR'
             )
-    
+
     def _validate_constraint_documentation(self) -> ValidationResult:
         """Validate constraint documentation accuracy."""
         constraint_doc = self.docs_path / "constraints.md"
-        
+
         if not constraint_doc.exists():
             return ValidationResult(
                 check_name="constraint_documentation_existence",
@@ -475,11 +470,11 @@ class DocumentationValidator:
                 details={'expected_file': str(constraint_doc)},
                 severity='ERROR'
             )
-        
+
         # Check actual constraints vs documented constraints
         actual_constraints = self._get_actual_constraints()
         documented_constraints = self._get_documented_constraints()
-        
+
         missing_docs = actual_constraints - documented_constraints
         if missing_docs:
             return ValidationResult(
@@ -496,38 +491,37 @@ class DocumentationValidator:
                 message="All constraints are documented",
                 details={'total_constraints': len(actual_constraints)}
             )
-    
+
     def _get_actual_constraints(self) -> Set[str]:
         """Get actual constraints from database."""
         constraints = set()
-        
+
         with self.connection.cursor() as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     tc.table_name || '.' || tc.constraint_name as constraint_id,
                     tc.constraint_type
                 FROM information_schema.table_constraints tc
                 WHERE tc.table_schema = 'public'
             """)
-            
             for row in cursor.fetchall():
                 constraints.add(f"{row[0]} ({row[1]})")
-        
+
         return constraints
-    
+
     def _get_documented_constraints(self) -> Set[str]:
         """Get documented constraints from documentation."""
-        # This is a simplified check - in practice, you'd parse the constraints.md file
-        # For now, we'll assume constraints are documented if the file exists
+        # This is a simplified check - in practice, you'd parse the constraints.md file'
+        # For now, we'll assume constraints are documented if the file exists'
         constraint_doc = self.docs_path / "constraints.md"
         if constraint_doc.exists():
             return {"constraints_documented"}  # Placeholder
         return set()
-    
+
     def _validate_performance_documentation(self) -> ValidationResult:
         """Validate performance documentation completeness."""
         performance_doc = self.docs_path / "performance_guide.md"
-        
+
         if not performance_doc.exists():
             return ValidationResult(
                 check_name="performance_documentation_existence",
@@ -536,23 +530,23 @@ class DocumentationValidator:
                 details={'expected_file': str(performance_doc)},
                 severity='ERROR'
             )
-        
+
         # Check for required performance sections
         try:
             with open(performance_doc, 'r') as f:
                 content = f.read()
-            
+
             required_sections = [
                 "## Index Strategy",
                 "## Query Optimization",
                 "## Performance Monitoring"
             ]
-            
+
             missing_sections = []
             for section in required_sections:
                 if section not in content:
                     missing_sections.append(section)
-            
+
             if missing_sections:
                 return ValidationResult(
                     check_name="performance_documentation_completeness",
@@ -568,7 +562,7 @@ class DocumentationValidator:
                     message="Performance documentation is complete",
                     details={'total_sections': len(required_sections)}
                 )
-                
+
         except Exception as e:
             return ValidationResult(
                 check_name="performance_documentation_readability",
@@ -577,7 +571,7 @@ class DocumentationValidator:
                 details={'error': str(e)},
                 severity='ERROR'
             )
-    
+
     def _validate_file_structure(self) -> ValidationResult:
         """Validate documentation file structure."""
         required_files = [
@@ -585,13 +579,13 @@ class DocumentationValidator:
             "schema/",
             "migrations.md"
         ]
-        
+
         missing_files = []
         for file_path in required_files:
             full_path = self.docs_path / file_path
             if not full_path.exists():
                 missing_files.append(file_path)
-        
+
         if missing_files:
             return ValidationResult(
                 check_name="documentation_file_structure",
@@ -607,15 +601,15 @@ class DocumentationValidator:
                 message="Documentation file structure is complete",
                 details={'total_files': len(required_files)}
             )
-    
+
     def _validate_documentation_completeness(self) -> ValidationResult:
         """Validate overall documentation completeness."""
         # Check documentation coverage
         actual_tables = self._get_actual_tables()
         documented_tables = self._get_documented_tables()
-        
+
         coverage_percentage = (len(documented_tables) / len(actual_tables)) * 100 if actual_tables else 0
-        
+
         if coverage_percentage >= 90:
             status = 'PASS'
             message = f"Documentation coverage is excellent ({coverage_percentage:.1f}%)"
@@ -625,7 +619,6 @@ class DocumentationValidator:
         else:
             status = 'FAIL'
             message = f"Documentation coverage is poor ({coverage_percentage:.1f}%)"
-        
         return ValidationResult(
             check_name="documentation_completeness",
             status=status,
@@ -637,26 +630,26 @@ class DocumentationValidator:
             },
             severity='INFO' if status == 'PASS' else 'WARNING' if status == 'WARNING' else 'ERROR'
         )
-    
+
     def generate_report(self, output_format: str = "json", output_file: Optional[str] = None) -> str:
         """
         Generate validation report in specified format.
-        
+
         Args:
             output_format: 'json' or 'markdown'
             output_file: Optional output file path
-            
+
         Returns:
             Generated report content
         """
         if not self.validation_report:
             logger.warning("no_validation_report_to_generate")
             return ""
-        
+
         logger.info("generating_validation_report",
                    format=output_format,
                    total_checks=self.validation_report.total_checks)
-        
+
         if output_format.lower() == "json":
             return self._generate_json_report(output_file)
         elif output_format.lower() == "markdown":
@@ -665,7 +658,7 @@ class DocumentationValidator:
             logger.error("unsupported_output_format",
                         format=output_format)
             return ""
-    
+
     def _generate_json_report(self, output_file: Optional[str] = None) -> str:
         """Generate JSON format validation report."""
         report_data = {
@@ -681,22 +674,22 @@ class DocumentationValidator:
             },
             'results': [asdict(result) for result in self.validation_report.results]
         }
-        
+
         content = json.dumps(report_data, indent=2, default=str)
-        
+
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(content)
             logger.info("json_report_saved",
                        file=output_file)
-        
+
         return content
-    
+
     def _generate_markdown_report(self, output_file: Optional[str] = None) -> str:
         """Generate Markdown format validation report."""
         content = f"""# Database Documentation Validation Report
 
-**Generated:** {self.validation_report.timestamp.strftime('%Y-%m-%d %H:%M:%S')}  
+**Generated:** {self.validation_report.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
 **Database:** {self.validation_report.database_name}
 
 ## Summary
@@ -713,12 +706,12 @@ class DocumentationValidator:
 ## Detailed Results
 
 """
-        
+
         # Group results by status
         passed_results = [r for r in self.validation_report.results if r.status == 'PASS']
         failed_results = [r for r in self.validation_report.results if r.status == 'FAIL']
         warning_results = [r for r in self.validation_report.results if r.status == 'WARNING']
-        
+
         if failed_results:
             content += "### ❌ Failed Checks\n\n"
             for result in failed_results:
@@ -727,7 +720,7 @@ class DocumentationValidator:
                 if result.details:
                     content += f"- Details: {json.dumps(result.details, indent=2)}\n"
                 content += "\n"
-        
+
         if warning_results:
             content += "### ⚠️ Warning Checks\n\n"
             for result in warning_results:
@@ -736,7 +729,7 @@ class DocumentationValidator:
                 if result.details:
                     content += f"- Details: {json.dumps(result.details, indent=2)}\n"
                 content += "\n"
-        
+
         if passed_results:
             content += "### ✅ Passed Checks\n\n"
             for result in passed_results:
@@ -745,7 +738,7 @@ class DocumentationValidator:
                 if result.details:
                     content += f"- Details: {json.dumps(result.details, indent=2)}\n"
                 content += "\n"
-        
+
         content += f"""
 ## Processing Metrics
 
@@ -758,13 +751,13 @@ class DocumentationValidator:
 ---
 *This report was generated by the Arxos Database Documentation Validator.*
 """
-        
+
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(content)
             logger.info("markdown_report_saved",
                        file=output_file)
-        
+
         return content
 
 
@@ -798,9 +791,9 @@ def main():
         action="store_true",
         help="Enable verbose logging"
     )
-    
+
     args = parser.parse_args()
-    
+
     # Configure logging
     if args.verbose:
         structlog.configure(
@@ -819,18 +812,18 @@ def main():
             wrapper_class=structlog.stdlib.BoundLogger,
             cache_logger_on_first_use=True,
         )
-    
+
     # Validate documentation
     validator = DocumentationValidator(args.database_url, args.docs_path)
     success = validator.validate_documentation()
-    
+
     if validator.validation_report:
         # Generate report
         report_content = validator.generate_report(
             output_format=args.output_format,
             output_file=args.output_file
         )
-        
+
         # Print summary
         print("\n" + "="*60)
         print("DOCUMENTATION VALIDATION SUMMARY")
@@ -841,14 +834,14 @@ def main():
         print(f"Failed: {validator.validation_report.failed_checks}")
         print(f"Warnings: {validator.validation_report.warning_checks}")
         print("="*60)
-        
+
         # Print report if no output file specified
         if not args.output_file and report_content:
             print("\n" + report_content)
-    
+
     # Exit with appropriate code
     sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

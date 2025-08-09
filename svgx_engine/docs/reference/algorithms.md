@@ -208,4 +208,4 @@ This document contains algorithm references and implementations for the SVGX Eng
 - [SVGX Specification](../svgx_spec.md)
 - [CAD Parity Specification](./svgx_cad_parity_spec.json)
 - [Architecture Guide](../architecture.md)
-- [API Reference](../api_reference.md) 
+- [API Reference](../api_reference.md)

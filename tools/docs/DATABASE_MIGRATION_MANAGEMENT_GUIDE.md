@@ -11,7 +11,7 @@ The Arxos Platform uses Alembic for structured and versioned database schema mig
 Each Python-based service has its own Alembic configuration:
 
 - **arx_svg_parser**: SVG parsing and BIM data management
-- **arx-bas-iot**: Building automation and IoT device management  
+- **arx-bas-iot**: Building automation and IoT device management
 - **arx-backend**: Core backend services (Go-based, uses SQL migrations)
 
 ### Migration Structure
@@ -80,20 +80,20 @@ The monolithic `001_create_arx_schema.sql` has been split into modular migration
 def upgrade() -> None:
     # Enable PostGIS extension
     op.execute('CREATE EXTENSION IF NOT EXISTS postgis')
-    
+
     # Create users table
     op.create_table('users', ...)
-    
+
     # Create projects table
     op.create_table('projects', ...)
-    
+
     # Create indexes
     op.create_index('idx_projects_user_id', 'projects', ['user_id'])
 
 def downgrade() -> None:
     # Drop indexes
     op.drop_index('idx_projects_user_id', table_name='projects')
-    
+
     # Drop tables in reverse order
     op.drop_table('projects')
     op.drop_table('users')
@@ -105,10 +105,10 @@ def downgrade() -> None:
 def upgrade() -> None:
     # Create buildings table
     op.create_table('buildings', ...)
-    
+
     # Create floors table
     op.create_table('floors', ...)
-    
+
     # Create indexes
     op.create_index('idx_buildings_project_id', 'buildings', ['project_id'])
     op.create_index('idx_buildings_owner_id', 'buildings', ['owner_id'])
@@ -125,7 +125,7 @@ def downgrade() -> None:
 def upgrade() -> None:
     # Create rooms table with PostGIS geometry
     op.create_table('rooms', ...)
-    
+
     # Create spatial and regular indexes
     op.execute('CREATE INDEX idx_rooms_geom ON rooms USING GIST (geom)')
     op.create_index('idx_rooms_assigned_to', 'rooms', ['assigned_to'])
@@ -144,7 +144,7 @@ def upgrade() -> None:
     op.create_table('walls', ...)
     op.create_table('doors', ...)
     op.create_table('windows', ...)
-    
+
     # Create spatial indexes for each
     op.execute('CREATE INDEX idx_walls_geom ON walls USING GIST (geom)')
     # ... more indexes
@@ -162,7 +162,7 @@ def upgrade() -> None:
     op.create_table('devices', ...)
     op.create_table('labels', ...)
     op.create_table('zones', ...)
-    
+
     # Create spatial indexes
     op.execute('CREATE INDEX idx_devices_geom ON devices USING GIST (geom)')
     # ... more indexes
@@ -186,7 +186,7 @@ def upgrade() -> None:
     op.create_table('audit_logs', ...)
     op.create_table('chat_messages', ...)
     op.create_table('catalog_items', ...)
-    
+
     # Create indexes
     op.create_index('idx_drawings_project_id', 'drawings', ['project_id'])
     # ... more indexes
@@ -351,7 +351,7 @@ on:
 def upgrade() -> None:
     """Upgrade to this revision."""
     # Create tables, indexes, constraints
-    
+
 def downgrade() -> None:
     """Downgrade from this revision."""
     # Drop in reverse order
@@ -372,7 +372,7 @@ def downgrade() -> None:
 def upgrade() -> None:
     # Create table
     op.create_table('users', ...)
-    
+
     # Create indexes
     op.create_index('idx_users_email', 'users', ['email'])
     op.create_index('idx_users_username', 'users', ['username'])
@@ -381,7 +381,7 @@ def downgrade() -> None:
     # Drop indexes first
     op.drop_index('idx_users_username', table_name='users')
     op.drop_index('idx_users_email', table_name='users')
-    
+
     # Then drop table
     op.drop_table('users')
 ```
@@ -393,14 +393,14 @@ def downgrade() -> None:
 def upgrade() -> None:
     # Create table with geometry column
     op.create_table('rooms', ...)
-    
+
     # Create spatial index
     op.execute('CREATE INDEX idx_rooms_geom ON rooms USING GIST (geom)')
 
 def downgrade() -> None:
     # Drop spatial index
     op.execute('DROP INDEX IF EXISTS idx_rooms_geom')
-    
+
     # Drop table
     op.drop_table('rooms')
 ```
@@ -617,4 +617,4 @@ pg_restore --dry-run backup_file.sql
 ---
 
 *Last updated: 2024-01-15*
-*Version: 1.0* 
+*Version: 1.0*

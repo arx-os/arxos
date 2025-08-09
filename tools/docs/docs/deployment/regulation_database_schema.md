@@ -514,4 +514,4 @@ ORDER BY bv.validated_dt DESC;
 
 **Schema Version**: 1.0
 **Last Updated**: 2024-01-XX
-**Compatibility**: PostgreSQL 12+, SQLite 3.35+ 
+**Compatibility**: PostgreSQL 12+, SQLite 3.35+

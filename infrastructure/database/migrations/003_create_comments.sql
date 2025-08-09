@@ -18,4 +18,4 @@ CREATE TABLE comments (
     INDEX idx_comments_parent_comment_id (parent_comment_id),
     INDEX idx_comments_is_approved (is_approved),
     INDEX idx_comments_created_at (created_at)
-); 
+);

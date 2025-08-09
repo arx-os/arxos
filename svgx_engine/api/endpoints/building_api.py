@@ -70,14 +70,14 @@ async def create_building(
 ):
     """
     Create a new building.
-    
+
     Args:
         request: Building creation request
         use_case: Create building use case
-        
+
     Returns:
         Created building DTO
-        
+
     Raises:
         HTTPException: If creation fails
     """
@@ -101,14 +101,14 @@ async def get_building(
 ):
     """
     Get a building by ID.
-    
+
     Args:
         building_id: Building identifier
         use_case: Get building use case
-        
+
     Returns:
         Building DTO
-        
+
     Raises:
         HTTPException: If building not found
     """
@@ -135,7 +135,7 @@ async def list_buildings(
 ):
     """
     List buildings with optional filtering and pagination.
-    
+
     Args:
         limit: Maximum number of buildings to return
         offset: Number of buildings to skip
@@ -143,13 +143,13 @@ async def list_buildings(
         building_type: Filter by building type
         city: Filter by city
         use_case: List buildings use case
-        
+
     Returns:
         List of building DTOs with pagination info
     """
     try:
         logger.info(f"Listing buildings with filters: name={name}, type={building_type}, city={city}")
-        
+
         # Build search criteria
         criteria = {}
         if name:
@@ -158,7 +158,7 @@ async def list_buildings(
             criteria['building_type'] = building_type
         if city:
             criteria['city'] = city
-        
+
         result = use_case.execute(limit=limit, offset=offset, criteria=criteria)
         return result
     except Exception as e:
@@ -174,15 +174,15 @@ async def update_building(
 ):
     """
     Update a building.
-    
+
     Args:
         building_id: Building identifier
         request: Building update request
         use_case: Update building use case
-        
+
     Returns:
         Updated building DTO
-        
+
     Raises:
         HTTPException: If building not found or update fails
     """
@@ -209,11 +209,11 @@ async def delete_building(
 ):
     """
     Delete a building.
-    
+
     Args:
         building_id: Building identifier
         use_case: Delete building use case
-        
+
     Raises:
         HTTPException: If building not found or deletion fails
     """
@@ -240,24 +240,24 @@ async def get_building_events(
 ):
     """
     Get domain events for a building.
-    
+
     Args:
         building_id: Building identifier
         use_case: Get building use case
-        
+
     Returns:
         List of domain events
-        
+
     Raises:
         HTTPException: If building not found
     """
     try:
         logger.info(f"Getting events for building: {building_id}")
         building = use_case.execute(building_id)
-        
+
         # Get domain events from the building entity
         events = building.get_domain_events()
-        
+
         return {
             "building_id": building_id,
             "events": [event.to_dict() for event in events],
@@ -268,4 +268,4 @@ async def get_building_events(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error getting building events: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error") 
+        raise HTTPException(status_code=500, detail="Internal server error")

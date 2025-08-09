@@ -197,4 +197,4 @@ For issues with scripts:
 2. Review the troubleshooting section
 3. Check logs for error messages
 4. Verify environment setup
-5. Contact the development team if issues persist 
+5. Contact the development team if issues persist

@@ -52,4 +52,4 @@ func getAnalytics(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement analytics data retrieval
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"analytics": {"data": []}}`))
-} 
+}

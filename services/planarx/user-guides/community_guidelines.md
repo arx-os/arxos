@@ -1,9 +1,9 @@
 # Arxos Community Guidelines
 
-**Version:** 1.0.0  
-**Last Updated:** January 2024  
-**Effective Date:** January 15, 2024  
-**Next Review:** April 15, 2024  
+**Version:** 1.0.0
+**Last Updated:** January 2024
+**Effective Date:** January 15, 2024
+**Next Review:** April 15, 2024
 
 ## Table of Contents
 
@@ -115,8 +115,8 @@ Moderation decisions are transparent and appealable. Users are accountable for t
 ## Prohibited Behavior
 
 ### Category 1: Safety Violations (Immediate Ban)
-**Severity**: Critical  
-**Response Time**: 24 hours  
+**Severity**: Critical
+**Response Time**: 24 hours
 **Appeal**: 7 days
 
 - Promoting unsafe construction practices
@@ -125,8 +125,8 @@ Moderation decisions are transparent and appealable. Users are accountable for t
 - Encouraging non-compliance with regulations
 
 ### Category 2: Harassment and Abuse (Temporary Ban)
-**Severity**: High  
-**Response Time**: 48 hours  
+**Severity**: High
+**Response Time**: 48 hours
 **Appeal**: 14 days
 
 - Personal attacks or bullying
@@ -136,8 +136,8 @@ Moderation decisions are transparent and appealable. Users are accountable for t
 - Threats of violence or harm
 
 ### Category 3: Spam and Misinformation (Warning)
-**Severity**: Medium  
-**Response Time**: 72 hours  
+**Severity**: Medium
+**Response Time**: 72 hours
 **Appeal**: 30 days
 
 - Irrelevant promotional content
@@ -147,8 +147,8 @@ Moderation decisions are transparent and appealable. Users are accountable for t
 - Excessive self-promotion
 
 ### Category 4: Professional Misconduct (Review)
-**Severity**: Medium  
-**Response Time**: 5 days  
+**Severity**: Medium
+**Response Time**: 5 days
 **Appeal**: 30 days
 
 - Plagiarism or copyright violation
@@ -158,8 +158,8 @@ Moderation decisions are transparent and appealable. Users are accountable for t
 - Conflicts of interest
 
 ### Category 5: Minor Violations (Warning)
-**Severity**: Low  
-**Response Time**: 7 days  
+**Severity**: Low
+**Response Time**: 7 days
 **Appeal**: 30 days
 
 - Off-topic discussions
@@ -405,7 +405,7 @@ Special thanks to the Arxos community for their valuable feedback and contributi
 
 ---
 
-**Last Updated**: January 15, 2024  
-**Next Review**: April 15, 2024  
-**Document ID**: CG-2024-001  
-**Version**: 1.0.0 
+**Last Updated**: January 15, 2024
+**Next Review**: April 15, 2024
+**Document ID**: CG-2024-001
+**Version**: 1.0.0

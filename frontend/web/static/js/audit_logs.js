@@ -5,11 +5,11 @@ let currentFilters = {};
 // Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
     loadAuditLogs();
-    
+
     // Set default date range (last 30 days)
     const today = new Date();
     const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
-    
+
     document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
     document.getElementById('dateTo').value = today.toISOString().split('T')[0];
 });
@@ -32,7 +32,7 @@ function loadAuditLogs() {
         })
         .catch(error => {
             console.error('Error loading audit logs:', error);
-            document.getElementById('auditLogsTable').innerHTML = 
+            document.getElementById('auditLogsTable').innerHTML =
                 '<tr><td colspan="8" class="px-6 py-4 text-center text-red-500">Error loading audit logs</td></tr>';
         });
 }
@@ -40,7 +40,7 @@ function loadAuditLogs() {
 // Get current filter values
 function getCurrentFilters() {
     const filters = {};
-    
+
     const objectType = document.getElementById('objectType').value;
     const action = document.getElementById('action').value;
     const dateFrom = document.getElementById('dateFrom').value;
@@ -65,7 +65,7 @@ function getCurrentFilters() {
 // Display audit logs in the table
 function displayAuditLogs(logs) {
     const tbody = document.getElementById('auditLogsTable');
-    
+
     if (logs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No audit logs found</td></tr>';
         return;
@@ -76,14 +76,14 @@ function displayAuditLogs(logs) {
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.id}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.user_id}</td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                     ${getObjectTypeColor(log.object_type)}">
                     ${log.object_type}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">${log.object_id}</td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                     ${getActionColor(log.action)}">
                     ${log.action}
                 </span>
@@ -93,7 +93,7 @@ function displayAuditLogs(logs) {
                 ${formatDate(log.created_at)}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <button onclick="showLogDetails('${log.id}')" 
+                <button onclick="showLogDetails('${log.id}')"
                         class="text-indigo-600 hover:text-indigo-900">
                     View Details
                 </button>
@@ -190,14 +190,14 @@ function clearFilters() {
     document.getElementById('assetId').value = '';
     document.getElementById('buildingId').value = '';
     document.getElementById('ipAddress').value = '';
-    
+
     // Reset date range to last 30 days
     const today = new Date();
     const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
-    
+
     document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
     document.getElementById('dateTo').value = today.toISOString().split('T')[0];
-    
+
     currentPage = 1;
     loadAuditLogs();
 }
@@ -206,7 +206,7 @@ function clearFilters() {
 function exportLogs() {
     const format = document.getElementById('exportFormat').value;
     const filters = getCurrentFilters();
-    
+
     const queryParams = new URLSearchParams({
         export: format,
         ...filters
@@ -240,7 +240,7 @@ function showLogDetails(logId) {
 // Display log details in modal
 function displayLogDetails(log) {
     const content = document.getElementById('logDetailsContent');
-    
+
     let fieldChangesHtml = '';
     if (log.field_changes) {
         try {
@@ -321,4 +321,4 @@ document.getElementById('logDetailsModal').addEventListener('click', function(e)
     if (e.target === this) {
         closeLogDetails();
     }
-}); 
+});

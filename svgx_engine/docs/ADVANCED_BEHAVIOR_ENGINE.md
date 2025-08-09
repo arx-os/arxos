@@ -619,4 +619,4 @@ for rule in applicable_rules:
 
 The SVGX Advanced Behavior Engine provides a comprehensive foundation for complex behavior management in SVGX elements. It enables CAD-parity behaviors, infrastructure simulation, and advanced rule-based systems while maintaining performance and reliability.
 
-The engine is designed to be extensible, allowing for future enhancements while providing a stable foundation for current use cases. Its modular architecture makes it easy to integrate with existing SVGX systems and extend with new capabilities as needed. 
+The engine is designed to be extensible, allowing for future enhancements while providing a stable foundation for current use cases. Its modular architecture makes it easy to integrate with existing SVGX systems and extend with new capabilities as needed.

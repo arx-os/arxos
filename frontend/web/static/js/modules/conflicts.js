@@ -12,24 +12,24 @@ export class Conflicts {
             conflictTimeout: options.conflictTimeout || 300000, // 5 minutes
             ...options
         };
-        
+
         // Conflict state
         this.conflictQueue = [];
         this.activeConflicts = new Map();
         this.resolvedConflicts = new Map();
         this.isProcessing = false;
-        
+
         // Timers
         this.conflictTimer = null;
         this.conflictTimeoutTimer = null;
-        
+
         // UI elements
         this.conflictModal = null;
         this.conflictPanel = null;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -44,16 +44,16 @@ export class Conflicts {
         document.addEventListener('conflictDetected', (event) => {
             this.handleConflictsDetected(event.detail);
         });
-        
+
         // Listen for version control operations
         document.addEventListener('versionRestoreStarted', () => {
             this.handleVersionRestoreStarted();
         });
-        
+
         document.addEventListener('versionRestoreCompleted', () => {
             this.handleVersionRestoreCompleted();
         });
-        
+
         document.addEventListener('versionRestoreFailed', () => {
             this.handleVersionRestoreFailed();
         });
@@ -72,27 +72,27 @@ export class Conflicts {
     // Conflict detection methods
     async checkForConflicts() {
         if (this.isProcessing) return;
-        
+
         try {
             this.isProcessing = true;
-            
+
             // Get current floor and version
             const currentFloor = this.getCurrentFloor();
             if (!currentFloor) return;
-            
+
             // Check for conflicts with server
             const response = await fetch(`/api/conflicts/check?floor_id=${currentFloor.id}`);
-            
+
             if (!response.ok) {
                 throw new Error('Failed to check for conflicts');
             }
-            
+
             const conflicts = await response.json();
-            
+
             if (conflicts.length > 0) {
                 this.handleConflictsDetected(conflicts);
             }
-            
+
         } catch (error) {
             console.error('Error checking for conflicts:', error);
             this.triggerEvent('conflictCheckFailed', { error });
@@ -107,30 +107,30 @@ export class Conflicts {
             this.conflictQueue.push(conflict);
             this.activeConflicts.set(conflict.id, conflict);
         });
-        
+
         // Start conflict timeout
         this.startConflictTimeout();
-        
+
         // Show conflict modal if auto-resolve is disabled
         if (!this.options.autoResolveConflicts) {
             this.showConflictModal();
         } else {
             this.autoResolveConflicts();
         }
-        
+
         this.triggerEvent('conflictsDetected', { conflicts });
     }
 
     // Conflict resolution methods
     async resolveConflicts() {
         if (this.conflictQueue.length === 0) return;
-        
+
         try {
             this.isProcessing = true;
-            
+
             const conflicts = [...this.conflictQueue];
             const resolutionStrategy = this.determineResolutionStrategy(conflicts);
-            
+
             // Send resolution request to server
             const response = await fetch('/api/conflicts/resolve', {
                 method: 'POST',
@@ -142,13 +142,13 @@ export class Conflicts {
                     strategy: resolutionStrategy
                 })
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to resolve conflicts');
             }
-            
+
             const result = await response.json();
-            
+
             // Mark conflicts as resolved
             conflicts.forEach(conflict => {
                 this.resolvedConflicts.set(conflict.id, {
@@ -158,13 +158,13 @@ export class Conflicts {
                 });
                 this.activeConflicts.delete(conflict.id);
             });
-            
+
             // Clear queue
             this.conflictQueue = [];
-            
+
             this.hideConflictModal();
             this.handleConflictsResolved(result);
-            
+
         } catch (error) {
             console.error('Error resolving conflicts:', error);
             this.triggerEvent('conflictResolutionFailed', { error });
@@ -189,10 +189,10 @@ export class Conflicts {
             });
             this.activeConflicts.delete(conflict.id);
         });
-        
+
         // Clear queue
         this.conflictQueue = [];
-        
+
         this.hideConflictModal();
         this.triggerEvent('conflictsIgnored', { count: this.conflictQueue.length });
     }
@@ -204,7 +204,7 @@ export class Conflicts {
             'merge': 0,
             'manual': 0
         };
-        
+
         conflicts.forEach(conflict => {
             switch (conflict.type) {
                 case 'object_modified':
@@ -220,7 +220,7 @@ export class Conflicts {
                     strategies['manual']++;
             }
         });
-        
+
         // Return the most common strategy
         return Object.entries(strategies).reduce((a, b) => a[1] > b[1] ? a : b)[0];
     }
@@ -234,7 +234,7 @@ export class Conflicts {
     handleVersionRestoreCompleted() {
         // Resume conflict checking after version restore
         this.resumeConflictChecking();
-        
+
         // Clear any existing conflicts
         this.clearConflicts();
     }
@@ -249,7 +249,7 @@ export class Conflicts {
         if (this.conflictTimeoutTimer) {
             clearTimeout(this.conflictTimeoutTimer);
         }
-        
+
         this.conflictTimeoutTimer = setTimeout(() => {
             this.handleConflictTimeout();
         }, this.options.conflictTimeout);
@@ -258,7 +258,7 @@ export class Conflicts {
     handleConflictTimeout() {
         console.warn('Conflict resolution timeout reached');
         this.triggerEvent('conflictTimeout', { conflicts: this.conflictQueue });
-        
+
         // Auto-resolve or ignore based on settings
         if (this.options.autoResolveConflicts) {
             this.resolveConflicts();
@@ -292,7 +292,7 @@ export class Conflicts {
         this.conflictModal.id = 'conflict-modal';
         this.conflictModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
         this.conflictModal.style.display = 'none';
-        
+
         this.conflictModal.innerHTML = `
             <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                 <div class="flex items-center justify-between mb-4">
@@ -319,7 +319,7 @@ export class Conflicts {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(this.conflictModal);
         this.setupConflictModalEvents();
     }
@@ -329,7 +329,7 @@ export class Conflicts {
         this.conflictPanel.id = 'conflict-panel';
         this.conflictPanel.className = 'fixed top-4 right-4 bg-red-100 border border-red-300 rounded-lg shadow-lg p-3 z-40';
         this.conflictPanel.style.display = 'none';
-        
+
         this.conflictPanel.innerHTML = `
             <div class="flex items-center space-x-2">
                 <div class="w-2 h-2 bg-red-500 rounded-full"></div>
@@ -339,7 +339,7 @@ export class Conflicts {
                 </button>
             </div>
         `;
-        
+
         document.body.appendChild(this.conflictPanel);
         this.setupConflictPanelEvents();
     }
@@ -348,15 +348,15 @@ export class Conflicts {
         const closeButton = this.conflictModal.querySelector('#close-conflict-modal');
         const resolveButton = this.conflictModal.querySelector('#resolve-conflicts');
         const ignoreButton = this.conflictModal.querySelector('#ignore-conflicts');
-        
+
         closeButton.addEventListener('click', () => {
             this.hideConflictModal();
         });
-        
+
         resolveButton.addEventListener('click', () => {
             this.resolveConflicts();
         });
-        
+
         ignoreButton.addEventListener('click', () => {
             this.ignoreConflicts();
         });
@@ -384,12 +384,12 @@ export class Conflicts {
 
     updateConflictDetails() {
         const detailsElement = this.conflictModal.querySelector('#conflict-details');
-        
+
         if (detailsElement && this.conflictQueue.length > 0) {
-            const details = this.conflictQueue.map(conflict => 
+            const details = this.conflictQueue.map(conflict =>
                 `${conflict.type}: ${conflict.description}`
             ).join('\n');
-            
+
             detailsElement.textContent = details;
         }
     }
@@ -398,7 +398,7 @@ export class Conflicts {
         if (this.conflictPanel) {
             const hasConflicts = this.conflictQueue.length > 0;
             this.conflictPanel.style.display = hasConflicts ? 'block' : 'none';
-            
+
             if (hasConflicts) {
                 const countElement = this.conflictPanel.querySelector('span');
                 if (countElement) {
@@ -410,14 +410,14 @@ export class Conflicts {
 
     // Conflict resolution result handling
     handleConflictsResolved(result) {
-        this.triggerEvent('conflictsResolved', { 
-            result, 
-            resolvedCount: this.resolvedConflicts.size 
+        this.triggerEvent('conflictsResolved', {
+            result,
+            resolvedCount: this.resolvedConflicts.size
         });
-        
+
         // Update UI
         this.updateConflictPanel();
-        
+
         // Show success notification
         this.showNotification('Conflicts resolved successfully', 'success');
     }
@@ -452,9 +452,9 @@ export class Conflicts {
         const notification = document.createElement('div');
         notification.className = `fixed top-4 right-4 bg-${type === 'success' ? 'green' : 'blue'}-600 text-white px-4 py-2 rounded-lg shadow-lg z-50`;
         notification.textContent = message;
-        
+
         document.body.appendChild(notification);
-        
+
         // Remove after 3 seconds
         setTimeout(() => {
             notification.remove();
@@ -467,7 +467,7 @@ export class Conflicts {
             clearInterval(this.conflictTimer);
             this.conflictTimer = null;
         }
-        
+
         if (this.conflictTimeoutTimer) {
             clearTimeout(this.conflictTimeoutTimer);
             this.conflictTimeoutTimer = null;
@@ -511,17 +511,17 @@ export class Conflicts {
         this.conflictQueue = [];
         this.activeConflicts.clear();
         this.resolvedConflicts.clear();
-        
+
         if (this.conflictModal) {
             this.conflictModal.remove();
         }
-        
+
         if (this.conflictPanel) {
             this.conflictPanel.remove();
         }
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

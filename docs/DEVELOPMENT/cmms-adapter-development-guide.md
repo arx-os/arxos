@@ -100,7 +100,7 @@ export class [VendorName]Adapter {
             // Vendor-specific options
             ...options
         };
-        
+
         // Vendor-specific configurations
         this.config = {
             baseUrl: options.baseUrl || '',
@@ -109,10 +109,10 @@ export class [VendorName]Adapter {
             // Add vendor-specific config options
             ...options
         };
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -136,23 +136,23 @@ export class [VendorName]Adapter {
             cmmsData = {},
             options = {}
         } = params;
-        
+
         try {
             switch (integrationType) {
                 case 'work_order':
                     return await this.integrateWithWorkOrder(link, object, cmmsData, options);
-                
+
                 case 'asset':
                     return await this.integrateWithAsset(link, object, cmmsData, options);
-                
+
                 case 'pm_schedule':
                     return await this.integrateWithPMSchedule(link, object, cmmsData, options);
-                
+
                 case 'link':
                 default:
                     return await this.generateStandardLink(link, object, options);
             }
-            
+
         } catch (error) {
             console.error('[Vendor Name] integration failed:', error);
             this.triggerEvent('integrationFailed', { params, error });
@@ -167,23 +167,23 @@ export class [VendorName]Adapter {
             linkType = 'standard',
             options = {}
         } = params;
-        
+
         try {
             switch (linkType) {
                 case 'work_order':
                     return await this.generateWorkOrderLink(link, object, options);
-                
+
                 case 'asset':
                     return await this.generateAssetLink(link, object, options);
-                
+
                 case 'pm_schedule':
                     return await this.generatePMScheduleLink(link, object, options);
-                
+
                 case 'standard':
                 default:
                     return await this.generateStandardLink(link, object, options);
             }
-            
+
         } catch (error) {
             console.error('[Vendor Name] link generation failed:', error);
             throw error;
@@ -316,7 +316,7 @@ Add your adapter to `frontend/web/static/js/modules/cmms-integration-manager.js`
 ```javascript
 async initializeAdapters() {
     // ... existing adapters ...
-    
+
     // Add your new adapter
     if (this.options.enable[YourVendor]) {
         try {
@@ -360,7 +360,7 @@ async integrateWithWorkOrder(link, object, cmmsData, options) {
         priority = 'normal',
         status = 'open'
     } = cmmsData;
-    
+
     try {
         // Generate vendor-specific link
         const workOrderLink = await this.generateWorkOrderLink(link, object, {
@@ -368,7 +368,7 @@ async integrateWithWorkOrder(link, object, cmmsData, options) {
             workOrderNumber,
             ...options
         });
-        
+
         // Create integration data
         const integrationData = {
             type: 'work_order',
@@ -390,18 +390,18 @@ async integrateWithWorkOrder(link, object, cmmsData, options) {
                 integrationTimestamp: Date.now()
             }
         };
-        
+
         // Send to vendor API if configured
         if (this.config.baseUrl && this.config.apiKey) {
             await this.sendToVendor('work_orders', integrationData);
         }
-        
-        this.triggerEvent('workOrderIntegrated', { 
-            workOrderId, 
-            link: workOrderLink, 
-            object 
+
+        this.triggerEvent('workOrderIntegrated', {
+            workOrderId,
+            link: workOrderLink,
+            object
         });
-        
+
         return {
             success: true,
             type: 'work_order',
@@ -409,7 +409,7 @@ async integrateWithWorkOrder(link, object, cmmsData, options) {
             link: workOrderLink,
             integrationData
         };
-        
+
     } catch (error) {
         console.error('Work order integration failed:', error);
         throw error;
@@ -426,22 +426,22 @@ async generateWorkOrderLink(link, object, options) {
         includeDescription = true,
         includeLocation = true
     } = options;
-    
+
     // Create vendor-specific link format
     const vendorLink = new URL(link.url);
-    
+
     // Add vendor-specific parameters
     vendorLink.searchParams.set('cmms_type', '[vendor-name]');
     vendorLink.searchParams.set('integration_type', 'work_order');
-    
+
     if (workOrderId) {
         vendorLink.searchParams.set('work_order_id', workOrderId);
     }
-    
+
     if (workOrderNumber) {
         vendorLink.searchParams.set('work_order_number', workOrderNumber);
     }
-    
+
     // Add object context
     vendorLink.searchParams.set('object_context', JSON.stringify({
         id: object.id,
@@ -451,7 +451,7 @@ async generateWorkOrderLink(link, object, options) {
         description: includeDescription ? `${object.object_type} ${object.id}` : '',
         location: includeLocation ? `${object.building_id} - ${object.floor_id}` : ''
     }));
-    
+
     return vendorLink.toString();
 }
 ```
@@ -462,7 +462,7 @@ async sendToVendor(endpoint, data) {
     if (!this.config.baseUrl || !this.config.apiKey) {
         throw new Error('[Vendor Name] API not configured');
     }
-    
+
     try {
         const response = await fetch(`${this.config.baseUrl}/api/${endpoint}`, {
             method: 'POST',
@@ -474,13 +474,13 @@ async sendToVendor(endpoint, data) {
             },
             body: JSON.stringify(data)
         });
-        
+
         if (!response.ok) {
             throw new Error(`[Vendor Name] API error: ${response.status}`);
         }
-        
+
         return await response.json();
-        
+
     } catch (error) {
         console.error('Failed to send data to [Vendor Name]:', error);
         throw error;
@@ -498,31 +498,31 @@ import { [VendorName]Adapter } from '../../frontend/web/static/js/modules/cmms/[
 
 describe('[Vendor Name] Adapter', () => {
     let adapter;
-    
+
     beforeEach(() => {
         adapter = new [VendorName]Adapter({
             baseUrl: 'https://test-api.vendor.com',
             apiKey: 'test-api-key'
         });
     });
-    
+
     test('should generate work order link', async () => {
         const link = await adapter.generateWorkOrderLink(
             { url: 'https://app.arxos.io/viewer' },
             { id: 'test-object', object_type: 'AHU', building_id: 'building-1', floor_id: 'floor-1' },
             { workOrderId: 'WO-123' }
         );
-        
+
         expect(link).toContain('cmms_type=[vendor-name]');
         expect(link).toContain('work_order_id=WO-123');
     });
-    
+
     test('should test connection', async () => {
         const result = await adapter.testConnection({
             baseUrl: 'https://test-api.vendor.com',
             apiKey: 'test-api-key'
         });
-        
+
         expect(result.success).toBe(true);
     });
 });
@@ -536,11 +536,11 @@ async function testVendorIntegration() {
         baseUrl: 'https://api.vendor.com',
         apiKey: 'your-api-key'
     });
-    
+
     // Test connection
     const connectionResult = await adapter.testConnection();
     console.log('Connection test:', connectionResult);
-    
+
     // Test link generation
     const link = await adapter.generateWorkOrderLink(
         { url: 'https://app.arxos.io/viewer' },
@@ -548,7 +548,7 @@ async function testVendorIntegration() {
         { workOrderId: 'WO-123' }
     );
     console.log('Generated link:', link);
-    
+
     // Test integration
     const integrationResult = await adapter.integrate({
         link: { url: 'https://app.arxos.io/viewer' },
@@ -732,4 +732,4 @@ Your adapter is ready for production when:
 - **API Support**: [Contact info]
 - **Community Forums**: [Links]
 
-This guide provides everything needed to add a new CMMS vendor to the Arxos integration system. Follow the steps carefully and don't hesitate to ask for help when needed! 
+This guide provides everything needed to add a new CMMS vendor to the Arxos integration system. Follow the steps carefully and don't hesitate to ask for help when needed!

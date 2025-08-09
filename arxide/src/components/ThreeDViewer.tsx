@@ -54,7 +54,7 @@ const ThreeDObject: React.FC<{
 
   // Apply precision to position
   const precisePosition = useMemo(() => {
-    return object.position.map(coord => 
+    return object.position.map(coord =>
       Math.round(coord / precision) * precision
     ) as [number, number, number];
   }, [object.position, precision]);
@@ -116,9 +116,10 @@ const ThreeDObject: React.FC<{
         ];
         const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
         return (
-          <line geometry={lineGeometry} {...commonProps}>
-            <lineBasicMaterial color={object.color} linewidth={isSelected ? 3 : 1} />
-          </line>
+          <primitive object={new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({
+            color: object.color,
+            linewidth: isSelected ? 3 : 1
+          }))} {...commonProps} />
         );
 
       case 'plane':
@@ -145,8 +146,8 @@ const ThreeDObject: React.FC<{
             size="small"
             color="primary"
             variant="outlined"
-            sx={{ 
-              backgroundColor: 'rgba(0,0,0,0.8)', 
+            sx={{
+              backgroundColor: 'rgba(0,0,0,0.8)',
               color: 'white',
               fontSize: '0.7rem'
             }}
@@ -387,4 +388,4 @@ export const ThreeDViewer: React.FC<ThreeDViewerProps> = ({
       </MuiBox>
     </MuiBox>
   );
-}; 
+};

@@ -7,34 +7,34 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1F2937">
     <title>Login - Arxos Mobile</title>
-    
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
-    
+
     <!-- Stylesheets -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+
     <!-- Mobile-specific styles -->
     <style>
         /* Prevent zoom on input focus */
         input, select, textarea {
             font-size: 16px !important;
         }
-        
+
         /* Touch-friendly buttons */
         .touch-button {
             min-height: 44px;
             min-width: 44px;
             touch-action: manipulation;
         }
-        
+
         /* Smooth transitions */
         .transition-smooth {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
+
         /* Loading animation */
         .loading-spinner {
             border: 2px solid #f3f3f3;
@@ -44,23 +44,23 @@
             height: 20px;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
+
         /* Form validation styles */
         .form-error {
             border-color: #EF4444;
             box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
         }
-        
+
         .form-success {
             border-color: #10B981;
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
-        
+
         /* Biometric auth button */
         .biometric-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -78,11 +78,11 @@
             margin-top: 16px;
             transition: all 0.3s ease;
         }
-        
+
         .biometric-button:active {
             transform: scale(0.98);
         }
-        
+
         /* Project selector styles */
         .project-card {
             background: white;
@@ -93,18 +93,18 @@
             transition: all 0.3s ease;
             cursor: pointer;
         }
-        
+
         .project-card:hover {
             border-color: #3B82F6;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
         }
-        
+
         .project-card.selected {
             border-color: #3B82F6;
             background: #F0F9FF;
         }
-        
+
         /* Session info styles */
         .session-info {
             background: rgba(255, 255, 255, 0.95);
@@ -116,8 +116,8 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen" 
-      x-data="{ 
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen"
+      x-data="{
         currentStep: 'login',
         loginForm: {
           email: '',
@@ -138,7 +138,7 @@
       ">
 
     <!-- Loading Overlay -->
-    <div x-show="loading" 
+    <div x-show="loading"
          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
             <div class="loading-spinner"></div>
@@ -147,7 +147,7 @@
     </div>
 
     <!-- Error Alert -->
-    <div x-show="error" 
+    <div x-show="error"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0 transform scale-95"
          x-transition:enter-end="opacity-100 transform scale-100"
@@ -164,7 +164,7 @@
     </div>
 
     <!-- Success Alert -->
-    <div x-show="success" 
+    <div x-show="success"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0 transform scale-95"
          x-transition:enter-end="opacity-100 transform scale-100"
@@ -182,14 +182,14 @@
 
     <!-- Main Container -->
     <div class="min-h-screen flex items-center justify-center p-4">
-        
+
         <!-- Login Step -->
-        <div x-show="currentStep === 'login'" 
+        <div x-show="currentStep === 'login'"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0 transform scale-95"
              x-transition:enter-end="opacity-100 transform scale-100"
              class="w-full max-w-sm">
-            
+
             <!-- Header -->
             <div class="text-center mb-8">
                 <div class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -219,8 +219,8 @@
                     <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
                         Email Address
                     </label>
-                    <input type="email" 
-                           id="email" 
+                    <input type="email"
+                           id="email"
                            x-model="loginForm.email"
                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-smooth"
                            placeholder="Enter your email"
@@ -232,13 +232,13 @@
                         Password
                     </label>
                     <div class="relative">
-                        <input type="password" 
-                               id="password" 
+                        <input type="password"
+                               id="password"
                                x-model="loginForm.password"
                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-smooth"
                                placeholder="Enter your password"
                                required>
-                        <button type="button" 
+                        <button type="button"
                                 @click="togglePasswordVisibility()"
                                 class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                             <i class="fas fa-eye"></i>
@@ -248,7 +248,7 @@
 
                 <div class="flex items-center justify-between">
                     <label class="flex items-center space-x-2">
-                        <input type="checkbox" 
+                        <input type="checkbox"
                                x-model="loginForm.rememberMe"
                                class="rounded border-gray-300 text-blue-600">
                         <span class="text-sm text-gray-700">Remember me</span>
@@ -256,7 +256,7 @@
                     <a href="#" class="text-sm text-blue-600 hover:underline">Forgot password?</a>
                 </div>
 
-                <button type="submit" 
+                <button type="submit"
                         class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium transition-smooth hover:bg-blue-700 active:bg-blue-800 touch-button">
                     <span x-show="!loading">Sign In</span>
                     <span x-show="loading" class="flex items-center justify-center space-x-2">
@@ -266,7 +266,7 @@
                 </button>
 
                 <!-- Biometric Login -->
-                <button x-show="biometricAvailable" 
+                <button x-show="biometricAvailable"
                         type="button"
                         @click="handleBiometricLogin()"
                         class="biometric-button">
@@ -278,19 +278,19 @@
             <!-- Footer -->
             <div class="mt-8 text-center">
                 <p class="text-sm text-gray-600">
-                    Don't have an account? 
+                    Don't have an account?
                     <a href="#" class="text-blue-600 hover:underline font-medium">Contact your administrator</a>
                 </p>
             </div>
         </div>
 
         <!-- Project Selection Step -->
-        <div x-show="currentStep === 'projects'" 
+        <div x-show="currentStep === 'projects'"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0 transform scale-95"
              x-transition:enter-end="opacity-100 transform scale-100"
              class="w-full max-w-md">
-            
+
             <!-- Header -->
             <div class="text-center mb-6">
                 <h2 class="text-xl font-bold text-gray-800 mb-2">Select Project</h2>
@@ -324,20 +324,20 @@
 
             <!-- Action Buttons -->
             <div class="space-y-3">
-                <button @click="loadProjects()" 
+                <button @click="loadProjects()"
                         class="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-medium transition-smooth hover:bg-gray-200 touch-button">
                     <i class="fas fa-sync-alt mr-2"></i>
                     Refresh Projects
                 </button>
-                
-                <button x-show="selectedProject" 
+
+                <button x-show="selectedProject"
                         @click="enterProject()"
                         class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium transition-smooth hover:bg-blue-700 touch-button">
                     <i class="fas fa-arrow-right mr-2"></i>
                     Enter Project
                 </button>
-                
-                <button @click="logout()" 
+
+                <button @click="logout()"
                         class="w-full bg-red-600 text-white py-3 rounded-lg font-medium transition-smooth hover:bg-red-700 touch-button">
                     <i class="fas fa-sign-out-alt mr-2"></i>
                     Sign Out
@@ -350,7 +350,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="../js/project_switcher.js"></script>
-    
+
     <script>
         // Check for biometric support
         async function checkBiometricSupport() {
@@ -359,7 +359,7 @@
                 Alpine.store('biometricAvailable', available);
             }
         }
-        
+
         // Check for existing session
         async function checkExistingSession() {
             const token = localStorage.getItem('arx_jwt');
@@ -370,7 +370,7 @@
                             'Authorization': 'Bearer ' + token
                         }
                     });
-                    
+
                     if (response.ok) {
                         const sessionData = await response.json();
                         Alpine.store('sessionInfo', {
@@ -378,7 +378,7 @@
                             email: sessionData.email,
                             lastActive: new Date(sessionData.last_active).toLocaleString()
                         });
-                        
+
                         // Auto-load projects if session is valid
                         await loadProjects();
                         Alpine.store('currentStep', 'projects');
@@ -390,12 +390,12 @@
                 }
             }
         }
-        
+
         // Handle login
         async function handleLogin() {
             Alpine.store('loading', true);
             Alpine.store('error', null);
-            
+
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
@@ -408,13 +408,13 @@
                         remember_me: Alpine.store('loginForm').rememberMe
                     })
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     localStorage.setItem('arx_jwt', data.token);
-                    
+
                     Alpine.store('success', 'Login successful!');
-                    
+
                     // Load projects and switch to project selection
                     await loadProjects();
                     Alpine.store('currentStep', 'projects');
@@ -428,7 +428,7 @@
                 Alpine.store('loading', false);
             }
         }
-        
+
         // Handle biometric login
         async function handleBiometricLogin() {
             try {
@@ -439,19 +439,19 @@
                 Alpine.store('error', 'Biometric authentication failed');
             }
         }
-        
+
         // Load user projects
         async function loadProjects() {
             const token = localStorage.getItem('arx_jwt');
             if (!token) return;
-            
+
             try {
                 const response = await fetch('/api/user/projects', {
                     headers: {
                         'Authorization': 'Bearer ' + token
                     }
                 });
-                
+
                 if (response.ok) {
                     const projects = await response.json();
                     Alpine.store('projects', projects);
@@ -462,22 +462,22 @@
                 Alpine.store('error', 'Network error loading projects');
             }
         }
-        
+
         // Select project
         function selectProject(project) {
             Alpine.store('selectedProject', project);
         }
-        
+
         // Enter selected project
         function enterProject() {
             const project = Alpine.store('selectedProject');
             if (!project) return;
-            
+
             // Navigate to BIM viewer with project context
             const url = `bim_viewer.html?building=${project.id}&name=${encodeURIComponent(project.name)}`;
             window.location.href = url;
         }
-        
+
         // Logout
         function logout() {
             localStorage.removeItem('arx_jwt');
@@ -486,12 +486,12 @@
             Alpine.store('projects', []);
             Alpine.store('selectedProject', null);
         }
-        
+
         // Toggle password visibility
         function togglePasswordVisibility() {
             const passwordInput = document.getElementById('password');
             const icon = passwordInput.nextElementSibling.querySelector('i');
-            
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 icon.classList.remove('fa-eye');
@@ -502,7 +502,7 @@
                 icon.classList.add('fa-eye');
             }
         }
-        
+
         // Expose functions to Alpine.js
         window.handleLogin = handleLogin;
         window.handleBiometricLogin = handleBiometricLogin;
@@ -513,4 +513,4 @@
         window.togglePasswordVisibility = togglePasswordVisibility;
     </script>
 </body>
-</html> 
+</html>

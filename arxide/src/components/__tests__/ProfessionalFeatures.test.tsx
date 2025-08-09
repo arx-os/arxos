@@ -626,4 +626,4 @@ describe('Professional Features', () => {
       expect(screen.getByText('Cloud Sync')).toBeInTheDocument();
     });
   });
-}); 
+});

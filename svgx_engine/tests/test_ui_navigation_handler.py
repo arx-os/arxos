@@ -72,7 +72,7 @@ class TestNavigationHandlerLogic:
         )
         feedback = navigation_handler.handle_navigation_event(event)
         assert feedback['new_zoom'] == 0.1  # min_zoom
-        
+
         # Test zoom above maximum
         event2 = Event(
             id="evt2",
@@ -88,7 +88,7 @@ class TestNavigationHandlerLogic:
     def test_focus_action(self):
         # Add focus target first
         navigation_handler.add_focus_target("canvas1", "target1", 200.0, 300.0, 2.0)
-        
+
         event = Event(
             id="evt1",
             type=EventType.USER_INTERACTION,
@@ -129,7 +129,7 @@ class TestNavigationHandlerLogic:
             data={"canvas_id": "canvas1", "action": "pan", "dx": 100.0, "dy": 200.0}
         )
         navigation_handler.handle_navigation_event(event)
-        
+
         # Then reset
         reset_event = Event(
             id="evt2",
@@ -188,7 +188,7 @@ class TestNavigationHandlerLogic:
         )
         feedback = navigation_handler.handle_navigation_event(event)
         assert feedback is None
-        
+
         # Missing action
         event2 = Event(
             id="evt2",
@@ -200,7 +200,7 @@ class TestNavigationHandlerLogic:
         )
         feedback2 = navigation_handler.handle_navigation_event(event2)
         assert feedback2 is None
-        
+
         # Unknown action
         event3 = Event(
             id="evt3",
@@ -217,7 +217,7 @@ class TestNavigationHandlerLogic:
         # Access viewport state for new canvas
         viewport = navigation_handler.get_viewport_state("new_canvas")
         assert viewport is None
-        
+
         # Trigger navigation to initialize
         event = Event(
             id="evt1",
@@ -228,7 +228,7 @@ class TestNavigationHandlerLogic:
             data={"canvas_id": "new_canvas", "action": "pan", "dx": 10.0}
         )
         navigation_handler.handle_navigation_event(event)
-        
+
         # Now viewport should be initialized
         viewport = navigation_handler.get_viewport_state("new_canvas")
         assert viewport is not None
@@ -240,7 +240,7 @@ class TestNavigationHandlerLogic:
         # Add focus targets
         navigation_handler.add_focus_target("canvas1", "target1", 100.0, 200.0, 1.5)
         navigation_handler.add_focus_target("canvas1", "target2", 300.0, 400.0)
-        
+
         # Focus on target1
         event = Event(
             id="evt1",
@@ -253,7 +253,7 @@ class TestNavigationHandlerLogic:
         feedback = navigation_handler.handle_navigation_event(event)
         assert feedback['target_position'] == (100.0, 200.0)
         assert feedback['viewport_state']['zoom'] == 1.5
-        
+
         # Focus on target2 (should use current zoom since none specified)
         event2 = Event(
             id="evt2",
@@ -302,7 +302,7 @@ class TestNavigationHandlerIntegration:
             {"action": "zoom", "zoom_factor": 2.0},
             {"action": "reset"}
         ]
-        
+
         for i, action_data in enumerate(actions):
             event = Event(
                 id=f"evt{i}",
@@ -313,7 +313,7 @@ class TestNavigationHandlerIntegration:
                 data={"canvas_id": "canvas1", **action_data}
             )
             navigation_handler.handle_navigation_event(event)
-        
+
         history = navigation_handler.get_navigation_history("canvas1")
         assert len(history) == 3
         assert history[0]['action'] == 'pan'
@@ -332,7 +332,7 @@ class TestNavigationHandlerIntegration:
         )
         navigation_handler.handle_navigation_event(event)
         assert len(navigation_handler.get_navigation_history("canvas1")) == 1
-        
+
         # Clear history
         navigation_handler.clear_history("canvas1")
-        assert len(navigation_handler.get_navigation_history("canvas1")) == 0 
+        assert len(navigation_handler.get_navigation_history("canvas1")) == 0

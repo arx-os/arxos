@@ -143,7 +143,7 @@ Ensure tables are created in the correct order:
 def upgrade() -> None:
     # Create referenced table first
     op.create_table('users', ...)
-    
+
     # Then create referencing table
     op.create_table('posts',
         sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id')),
@@ -175,7 +175,7 @@ For data changes, use raw SQL:
 def upgrade() -> None:
     # Schema changes
     op.add_column('users', sa.Column('email', sa.String(255)))
-    
+
     # Data changes
     op.execute("UPDATE users SET email = username || '@example.com' WHERE email IS NULL")
 
@@ -263,7 +263,7 @@ alembic current
 ```python
 # Ensure referenced table exists first
 op.create_table('users', ...)
-op.create_table('posts', 
+op.create_table('posts',
     sa.Column('user_id', sa.ForeignKey('users.id')),
     ...
 )
@@ -382,4 +382,4 @@ infrastructure/database/
 3. **Set up autogeneration** for future model changes
 4. **Integrate with your application** deployment process
 
-For more information, see the [Alembic documentation](https://alembic.sqlalchemy.org/). 
+For more information, see the [Alembic documentation](https://alembic.sqlalchemy.org/).

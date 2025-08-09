@@ -7,24 +7,24 @@ export class Click {
     constructor(viewportManager, selection, options = {}) {
         this.viewportManager = viewportManager;
         this.selection = selection;
-        
+
         // Click state
         this.clickTimeout = null;
         this.clickDelay = options.clickDelay || 300; // ms for double click
         this.lastClickTime = 0;
         this.lastClickTarget = null;
-        
+
         // Context menu
         this.contextMenu = null;
         this.contextMenuEnabled = options.contextMenuEnabled !== false;
-        
+
         // Object manipulation
         this.rotateHandle = null;
         this.rotateEnabled = options.rotateEnabled !== false;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -36,17 +36,17 @@ export class Click {
 
     setupEventListeners() {
         if (!this.viewportManager || !this.viewportManager.svg) return;
-        
+
         const svg = this.viewportManager.svg;
-        
+
         // Click events
         svg.addEventListener('click', (e) => this.handleClick(e));
         svg.addEventListener('dblclick', (e) => this.handleDoubleClick(e));
         svg.addEventListener('contextmenu', (e) => this.handleContextMenu(e));
-        
+
         // Keyboard events
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        
+
         // Global click to close context menu
         document.addEventListener('click', (e) => this.handleGlobalClick(e));
     }
@@ -58,11 +58,11 @@ export class Click {
             this.hideRotateHandle();
             return;
         }
-        
+
         const currentTime = Date.now();
-        const isDoubleClick = (currentTime - this.lastClickTime) < this.clickDelay && 
+        const isDoubleClick = (currentTime - this.lastClickTime) < this.clickDelay &&
                              target === this.lastClickTarget;
-        
+
         if (isDoubleClick) {
             // Handle double click
             this.handleDoubleClick(event);
@@ -70,7 +70,7 @@ export class Click {
             // Handle single click
             this.handleSingleClick(event, target);
         }
-        
+
         this.lastClickTime = currentTime;
         this.lastClickTarget = target;
     }
@@ -81,7 +81,7 @@ export class Click {
         } else {
             this.selection.selectObject(target);
         }
-        
+
         this.showRotateHandle(target);
         this.triggerEvent('objectClicked', { target, event });
     }
@@ -89,7 +89,7 @@ export class Click {
     handleDoubleClick(event) {
         const target = this.findClickableObject(event.target);
         if (!target) return;
-        
+
         // Open object properties or edit mode
         this.openObjectProperties(target);
         this.triggerEvent('objectDoubleClicked', { target, event });
@@ -97,16 +97,16 @@ export class Click {
 
     handleContextMenu(event) {
         if (!this.contextMenuEnabled) return;
-        
+
         event.preventDefault();
-        
+
         const target = this.findClickableObject(event.target);
         if (target) {
             // Select object if not already selected
             if (!this.selection.isObjectSelected(target)) {
                 this.selection.selectObject(target);
             }
-            
+
             this.showContextMenu(event, target);
         } else {
             this.showBackgroundContextMenu(event);
@@ -143,27 +143,27 @@ export class Click {
     // Object manipulation methods
     deleteSelectedObjects() {
         const selectedObjects = this.selection.getSelectedObjects();
-        
+
         if (selectedObjects.length === 0) return;
-        
+
         // Confirm deletion
         if (!confirm(`Delete ${selectedObjects.length} selected object(s)?`)) {
             return;
         }
-        
+
         selectedObjects.forEach(obj => {
             this.deleteObject(obj);
         });
-        
+
         this.selection.clearSelection();
         this.hideRotateHandle();
-        
+
         this.triggerEvent('objectsDeleted', { count: selectedObjects.length });
     }
 
     async deleteObject(obj) {
         if (!obj || !obj.id) return;
-        
+
         try {
             const response = await fetch(`/api/objects/${obj.id}`, {
                 method: 'DELETE',
@@ -171,14 +171,14 @@ export class Click {
                     'Content-Type': 'application/json',
                 }
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to delete object');
             }
-            
+
             // Remove from DOM
             obj.remove();
-            
+
             this.triggerEvent('objectDeleted', { object: obj });
         } catch (error) {
             console.error('Error deleting object:', error);
@@ -188,20 +188,20 @@ export class Click {
 
     rotateSelectedObjects(angle) {
         const selectedObjects = this.selection.getSelectedObjects();
-        
+
         selectedObjects.forEach(obj => {
             this.rotateObject(obj, angle);
         });
-        
+
         this.triggerEvent('objectsRotated', { angle, count: selectedObjects.length });
     }
 
     rotateObject(obj, angle) {
         if (!obj) return;
-        
+
         const currentRotation = this.getObjectRotation(obj);
         const newRotation = currentRotation + angle;
-        
+
         this.setObjectRotation(obj, newRotation);
     }
 
@@ -219,14 +219,14 @@ export class Click {
     setObjectRotation(obj, angle) {
         const currentTransform = obj.getAttribute('transform') || '';
         const position = this.getObjectPosition(obj);
-        
+
         // Remove existing rotation
         const transformWithoutRotation = currentTransform.replace(/rotate\([^)]+\)/g, '');
-        
+
         // Add new rotation
         const newTransform = `${transformWithoutRotation} rotate(${angle})`;
         obj.setAttribute('transform', newTransform);
-        
+
         // Update data attribute
         obj.setAttribute('data-rotation', angle.toString());
     }
@@ -242,7 +242,7 @@ export class Click {
                 };
             }
         }
-        
+
         return {
             x: parseFloat(obj.getAttribute('x') || '0'),
             y: parseFloat(obj.getAttribute('y') || '0')
@@ -252,16 +252,16 @@ export class Click {
     // Rotate handle methods
     showRotateHandle(obj) {
         if (!this.rotateEnabled || !obj) return;
-        
+
         this.hideRotateHandle();
-        
+
         const rect = obj.getBoundingClientRect();
         const svgRect = this.viewportManager.svg.getBoundingClientRect();
-        
+
         this.rotateHandle.style.display = 'block';
         this.rotateHandle.style.left = `${rect.right - svgRect.left + 10}px`;
         this.rotateHandle.style.top = `${rect.top - svgRect.top}px`;
-        
+
         this.setupRotateHandleEvents(obj);
     }
 
@@ -282,34 +282,34 @@ export class Click {
 
     setupRotateHandleEvents(obj) {
         if (!this.rotateHandle) return;
-        
+
         const handleMouseDown = (event) => {
             event.stopPropagation();
             this.startRotation(event, obj);
         };
-        
+
         this.rotateHandle.onmousedown = handleMouseDown;
     }
 
     startRotation(event, obj) {
         const startAngle = this.calculateAngle(event, obj);
         let isRotating = true;
-        
+
         const handleMouseMove = (moveEvent) => {
             if (!isRotating) return;
-            
+
             const currentAngle = this.calculateAngle(moveEvent, obj);
             const deltaAngle = currentAngle - startAngle;
-            
+
             this.rotateObject(obj, deltaAngle);
         };
-        
+
         const handleMouseUp = () => {
             isRotating = false;
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-        
+
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
     }
@@ -318,10 +318,10 @@ export class Click {
         const rect = obj.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
+
         const deltaX = event.clientX - centerX;
         const deltaY = event.clientY - centerY;
-        
+
         return Math.atan2(deltaY, deltaX) * 180 / Math.PI;
     }
 
@@ -344,28 +344,28 @@ export class Click {
             z-index: 1000;
             display: none;
         `;
-        
+
         this.viewportManager.container.appendChild(this.rotateHandle);
     }
 
     // Context menu methods
     showContextMenu(event, target) {
         if (!this.contextMenu) return;
-        
+
         this.contextMenu.style.display = 'block';
         this.contextMenu.style.left = `${event.clientX}px`;
         this.contextMenu.style.top = `${event.clientY}px`;
-        
+
         this.updateContextMenuItems(target);
     }
 
     showBackgroundContextMenu(event) {
         if (!this.contextMenu) return;
-        
+
         this.contextMenu.style.display = 'block';
         this.contextMenu.style.left = `${event.clientX}px`;
         this.contextMenu.style.top = `${event.clientY}px`;
-        
+
         this.updateBackgroundContextMenuItems();
     }
 
@@ -377,7 +377,7 @@ export class Click {
 
     updateContextMenuItems(target) {
         if (!this.contextMenu) return;
-        
+
         this.contextMenu.innerHTML = `
             <div class="context-menu-item" data-action="properties">Properties</div>
             <div class="context-menu-item" data-action="edit">Edit</div>
@@ -387,26 +387,26 @@ export class Click {
             <div class="context-menu-item" data-action="bring-to-front">Bring to Front</div>
             <div class="context-menu-item" data-action="send-to-back">Send to Back</div>
         `;
-        
+
         this.setupContextMenuEvents(target);
     }
 
     updateBackgroundContextMenuItems() {
         if (!this.contextMenu) return;
-        
+
         this.contextMenu.innerHTML = `
             <div class="context-menu-item" data-action="paste">Paste</div>
             <div class="context-menu-item" data-action="select-all">Select All</div>
             <div class="context-menu-separator"></div>
             <div class="context-menu-item" data-action="zoom-to-fit">Zoom to Fit</div>
         `;
-        
+
         this.setupBackgroundContextMenuEvents();
     }
 
     setupContextMenuEvents(target) {
         if (!this.contextMenu) return;
-        
+
         this.contextMenu.addEventListener('click', (event) => {
             const action = event.target.getAttribute('data-action');
             if (action) {
@@ -417,7 +417,7 @@ export class Click {
 
     setupBackgroundContextMenuEvents() {
         if (!this.contextMenu) return;
-        
+
         this.contextMenu.addEventListener('click', (event) => {
             const action = event.target.getAttribute('data-action');
             if (action) {
@@ -428,7 +428,7 @@ export class Click {
 
     handleContextMenuAction(action, target) {
         this.hideContextMenu();
-        
+
         switch (action) {
             case 'properties':
                 this.openObjectProperties(target);
@@ -453,7 +453,7 @@ export class Click {
 
     handleBackgroundContextMenuAction(action) {
         this.hideContextMenu();
-        
+
         switch (action) {
             case 'paste':
                 this.pasteObjects();
@@ -481,14 +481,14 @@ export class Click {
             display: none;
             min-width: 150px;
         `;
-        
+
         document.body.appendChild(this.contextMenu);
     }
 
     // Utility methods
     findClickableObject(target) {
         if (!target) return null;
-        
+
         // Walk up the DOM tree to find the closest clickable object
         let element = target;
         while (element && element !== this.viewportManager.svg) {
@@ -497,7 +497,7 @@ export class Click {
             }
             element = element.parentElement;
         }
-        
+
         return null;
     }
 
@@ -587,17 +587,17 @@ export class Click {
     destroy() {
         this.hideContextMenu();
         this.hideRotateHandle();
-        
+
         if (this.contextMenu) {
             this.contextMenu.remove();
         }
-        
+
         if (this.rotateHandle) {
             this.rotateHandle.remove();
         }
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

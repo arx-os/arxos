@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Box, AppBar, Toolbar, Typography, IconButton, Menu, MenuItem, 
+import { Box, AppBar, Toolbar, Typography, IconButton, Menu, MenuItem,
          Drawer, List, ListItem, ListItemIcon, ListItemText, Divider,
          Dialog, DialogTitle, DialogContent, DialogActions, Button,
          TextField, Alert, Snackbar, Tooltip, Chip, Tabs, Tab } from '@mui/material';
@@ -32,11 +32,15 @@ import { PluginSystem } from './PluginSystem';
 import { CollaborationSystem } from './CollaborationSystem';
 import { AIIntegration } from './AIIntegration';
 import { CloudSync } from './CloudSync';
+import { AdvancedPrecisionEngine } from './AdvancedPrecisionEngine';
+import { RealTimeCollaboration } from './RealTimeCollaboration';
+import { AIDesignAssistant } from './AIDesignAssistant';
 import { invoke } from '@tauri-apps/api/tauri';
 import { open, save } from '@tauri-apps/api/dialog';
 import { appWindow } from '@tauri-apps/api/window';
 import { listen } from '@tauri-apps/api/event';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
+import { ActiveTab } from '../types';
 
 interface ArxIDEApplicationProps {}
 
@@ -68,14 +72,14 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
   const [notifications, setNotifications] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  
+
   // Advanced features state
   const [viewMode, setViewMode] = useState<'2D' | '3D'>('2D');
   const [selectedObject, setSelectedObject] = useState<string | null>(null);
   const [constraints, setConstraints] = useState<any[]>([]);
   const [plugins, setPlugins] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'cad' | '3d' | 'constraints' | 'plugins' | 'collaboration' | 'ai' | 'cloud'>('cad');
-  
+  const [activeTab, setActiveTab] = useState<'cad' | '3d' | 'constraints' | 'plugins' | 'collaboration' | 'ai' | 'cloud' | 'precision' | 'realtime' | 'ai-assistant'>('cad');
+
   // Professional features state
   const [collaborationSession, setCollaborationSession] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState({
@@ -87,44 +91,45 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
     role: 'owner' as const,
     lastSeen: new Date(),
     currentActivity: 'Editing design',
+    permissions: ['read', 'write', 'admin'],
+    isTyping: false,
   });
   const [aiEnabled, setAiEnabled] = useState(true);
   const [cloudSyncEnabled, setCloudSyncEnabled] = useState(true);
-  
+
   // Menu state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  
+
   // CAD Engine reference
   const cadEngineRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+
   // Initialize CAD Engine and desktop features
   useEffect(() => {
     initializeArxIDE();
-    setupDesktopFeatures();
     setupEventListeners();
   }, []);
-  
+
   /**
    * Initialize ArxIDE with CAD engine and desktop features
    */
   const initializeArxIDE = async () => {
     try {
       console.log('🚀 Initializing ArxIDE Desktop CAD...');
-      
+
       // Initialize CAD Engine (from browser CAD)
       if (typeof window !== 'undefined') {
         // Load CAD engine scripts
         await loadCadScripts();
-        
+
         // Initialize CAD engine
         if (window.CadEngine) {
           cadEngineRef.current = new window.CadEngine();
           await cadEngineRef.current.initialize('cad-canvas');
           console.log('✅ CAD Engine initialized');
         }
-        
+
         // Initialize constraint solver
         if (window.ConstraintSolver) {
           const constraintSolver = new window.ConstraintSolver();
@@ -134,18 +139,18 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           console.log('✅ Constraint Solver initialized');
         }
       }
-      
+
       // Initialize desktop features
       await initializeDesktopFeatures();
-      
+
       console.log('✅ ArxIDE initialized successfully');
-      
+
     } catch (error) {
       console.error('❌ Failed to initialize ArxIDE:', error);
       showNotification('Failed to initialize ArxIDE', 'error');
     }
   };
-  
+
   /**
    * Load CAD engine scripts
    */
@@ -161,7 +166,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       '/static/js/cad-ui.js',
       '/static/js/ai-assistant.js'
     ];
-    
+
     for (const script of scripts) {
       try {
         await loadScript(script);
@@ -170,7 +175,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       }
     }
   };
-  
+
   /**
    * Load script dynamically
    */
@@ -183,7 +188,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       document.head.appendChild(script);
     });
   };
-  
+
   /**
    * Initialize desktop-specific features
    */
@@ -195,22 +200,22 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
         const permission = await requestPermission();
         console.log('Notification permission:', permission);
       }
-      
+
       // Set up window event listeners
       await appWindow.listen('tauri://close-requested', () => {
         handleAppClose();
       });
-      
+
       // Set up file system watchers
       await setupFileWatchers();
-      
+
       console.log('✅ Desktop features initialized');
-      
+
     } catch (error) {
       console.error('Failed to initialize desktop features:', error);
     }
   };
-  
+
   /**
    * Set up desktop event listeners
    */
@@ -220,14 +225,14 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       console.log('File changed:', event);
       showNotification('File changed externally', 'info');
     });
-    
+
     // Listen for system notifications
     listen('system-notification', (event) => {
       console.log('System notification:', event);
       addNotification(event.payload as string);
     });
   };
-  
+
   /**
    * Set up file system watchers
    */
@@ -240,7 +245,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       }
     }
   };
-  
+
   /**
    * Handle app close with unsaved changes
    */
@@ -253,11 +258,11 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
         return; // Don't close
       }
     }
-    
+
     // Close the app
     await appWindow.close();
   };
-  
+
   /**
    * Check for unsaved changes
    */
@@ -265,7 +270,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
     // Implementation would check if current data differs from saved data
     return false; // Placeholder
   };
-  
+
   /**
    * Show unsaved changes dialog
    */
@@ -275,7 +280,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       resolve('discard'); // Placeholder
     });
   };
-  
+
   /**
    * File operations
    */
@@ -292,20 +297,20 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
         constraints: [],
         settings: {}
       });
-      
+
       // Clear CAD canvas
       if (cadEngineRef.current) {
         cadEngineRef.current.clearCanvas();
       }
-      
+
       showNotification('New file created', 'success');
-      
+
     } catch (error) {
       console.error('Failed to create new file:', error);
       showNotification('Failed to create new file', 'error');
     }
   };
-  
+
   const openFile = async () => {
     try {
       const selected = await open({
@@ -318,65 +323,65 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           extensions: ['*']
         }]
       });
-      
+
       if (selected) {
         const filePath = selected as string;
         const fileData = await invoke('read_file', { path: filePath });
-        
+
         // Parse SVGX data
         const projectData = JSON.parse(fileData as string);
         setProjectData(projectData);
-        
+
         // Load into CAD engine
         if (cadEngineRef.current) {
           cadEngineRef.current.loadProject(projectData);
         }
-        
+
         setCurrentFile({
           name: filePath.split('/').pop() || 'Unknown',
           path: filePath,
           lastModified: new Date(),
           size: (fileData as string).length
         });
-        
+
         showNotification('File opened successfully', 'success');
       }
-      
+
     } catch (error) {
       console.error('Failed to open file:', error);
       showNotification('Failed to open file', 'error');
     }
   };
-  
+
   const saveFile = async () => {
     try {
       if (!currentFile) {
         return await saveFileAs();
       }
-      
+
       // Get current project data
       const projectData = getCurrentProjectData();
-      
+
       // Save to file
       await invoke('write_file', {
         path: currentFile.path,
         content: JSON.stringify(projectData, null, 2)
       });
-      
+
       setCurrentFile({
         ...currentFile,
         lastModified: new Date(),
         size: JSON.stringify(projectData).length
       });
-      
+
       showNotification('File saved successfully', 'success');
-      
+
     } catch (error) {
       console.error('Failed to save file:', error);
       showNotification('Failed to save file', 'error');
     }
   };
-  
+
   const saveFileAs = async () => {
     try {
       const selected = await save({
@@ -385,32 +390,32 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           extensions: ['svgx']
         }]
       });
-      
+
       if (selected) {
         const filePath = selected as string;
         const projectData = getCurrentProjectData();
-        
+
         await invoke('write_file', {
           path: filePath,
           content: JSON.stringify(projectData, null, 2)
         });
-        
+
         setCurrentFile({
           name: filePath.split('/').pop() || 'Unknown',
           path: filePath,
           lastModified: new Date(),
           size: JSON.stringify(projectData).length
         });
-        
+
         showNotification('File saved successfully', 'success');
       }
-      
+
     } catch (error) {
       console.error('Failed to save file:', error);
       showNotification('Failed to save file', 'error');
     }
   };
-  
+
   /**
    * Export operations
    */
@@ -422,23 +427,23 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           extensions: ['dxf']
         }]
       });
-      
+
       if (selected) {
         const filePath = selected as string;
         const dxfData = await invoke('export_to_dxf', {
           path: filePath,
           projectData: getCurrentProjectData()
         });
-        
+
         showNotification('Exported to DXF successfully', 'success');
       }
-      
+
     } catch (error) {
       console.error('Failed to export to DXF:', error);
       showNotification('Failed to export to DXF', 'error');
     }
   };
-  
+
   const exportToIFC = async () => {
     try {
       const selected = await save({
@@ -447,23 +452,23 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           extensions: ['ifc']
         }]
       });
-      
+
       if (selected) {
         const filePath = selected as string;
         const ifcData = await invoke('export_to_ifc', {
           path: filePath,
           projectData: getCurrentProjectData()
         });
-        
+
         showNotification('Exported to IFC successfully', 'success');
       }
-      
+
     } catch (error) {
       console.error('Failed to export to IFC:', error);
       showNotification('Failed to export to IFC', 'error');
     }
   };
-  
+
   /**
    * Get current project data
    */
@@ -480,15 +485,15 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
         settings: {}
       };
     }
-    
+
     // Get objects from CAD engine
-    const objects = cadEngineRef.current ? 
+    const objects = cadEngineRef.current ?
       Array.from(cadEngineRef.current.arxObjects.values()) : [];
-    
+
     // Get constraints from constraint solver
-    const constraints = cadEngineRef.current?.constraintSolver ? 
+    const constraints = cadEngineRef.current?.constraintSolver ?
       Array.from(cadEngineRef.current.constraintSolver.constraints.values()) : [];
-    
+
     return {
       ...projectData,
       objects,
@@ -496,17 +501,17 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       lastModified: new Date()
     };
   };
-  
+
   /**
    * Utility functions
    */
   const generateId = (): string => {
     return `arx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
-  
+
   const showNotification = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     addNotification(message);
-    
+
     // Send system notification
     sendNotification({
       title: 'ArxIDE',
@@ -514,34 +519,38 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       icon: type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'
     });
   };
-  
+
   const addNotification = (message: string) => {
     setNotifications(prev => [...prev, message]);
   };
-  
+
   const removeNotification = (index: number) => {
     setNotifications(prev => prev.filter((_, i) => i !== index));
   };
-  
+
   /**
    * Menu handlers
    */
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
-  
+
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
-  
+
   const toggleDrawer = () => {
     setDrawerOpen(!drawerOpen);
   };
-  
+
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
   };
-  
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: ActiveTab) => {
+    setActiveTab(newValue);
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* App Bar */}
@@ -555,32 +564,32 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           >
             <MenuIcon />
           </IconButton>
-          
+
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             ArxIDE - Professional CAD
             {currentFile && (
-              <Chip 
-                label={currentFile.name} 
-                size="small" 
+              <Chip
+                label={currentFile.name}
+                size="small"
                 sx={{ ml: 2 }}
                 color="primary"
                 variant="outlined"
               />
             )}
           </Typography>
-          
+
           <Tooltip title="Toggle Dark Mode">
             <IconButton color="inherit" onClick={toggleDarkMode}>
               {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
             </IconButton>
           </Tooltip>
-          
+
           <Tooltip title="Notifications">
             <IconButton color="inherit">
               <NotificationsIcon />
             </IconButton>
           </Tooltip>
-          
+
           <Tooltip title="Account">
             <IconButton color="inherit">
               <AccountIcon />
@@ -588,7 +597,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           </Tooltip>
         </Toolbar>
       </AppBar>
-      
+
       {/* Main Content */}
       <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Sidebar */}
@@ -610,46 +619,46 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
               </ListItemIcon>
               <ListItemText primary="New File" />
             </ListItem>
-            
+
             <ListItem button onClick={openFile}>
               <ListItemIcon>
                 <OpenIcon />
               </ListItemIcon>
               <ListItemText primary="Open File" />
             </ListItem>
-            
+
             <ListItem button onClick={saveFile}>
               <ListItemIcon>
                 <SaveIcon />
               </ListItemIcon>
               <ListItemText primary="Save" />
             </ListItem>
-            
+
             <Divider />
-            
+
             <ListItem button onClick={exportToDXF}>
               <ListItemIcon>
                 <ExportIcon />
               </ListItemIcon>
               <ListItemText primary="Export to DXF" />
             </ListItem>
-            
+
             <ListItem button onClick={exportToIFC}>
               <ListItemIcon>
                 <ExportIcon />
               </ListItemIcon>
               <ListItemText primary="Export to IFC" />
             </ListItem>
-            
+
             <Divider />
-            
+
             <ListItem button onClick={() => setShowSettings(true)}>
               <ListItemIcon>
                 <SettingsIcon />
               </ListItemIcon>
               <ListItemText primary="Settings" />
             </ListItem>
-            
+
             <ListItem button onClick={() => setShowHelp(true)}>
               <ListItemIcon>
                 <HelpIcon />
@@ -658,57 +667,75 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
             </ListItem>
           </List>
         </Drawer>
-        
+
         {/* Main Content Area */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* Tab Navigation */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs 
-              value={activeTab} 
-              onChange={(_, newValue) => setActiveTab(newValue)}
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
               variant="scrollable"
               scrollButtons="auto"
             >
-              <Tab 
-                label="2D CAD" 
-                value="cad" 
+              <Tab
+                label="2D CAD"
+                value="cad"
                 icon={<View2DIcon />}
                 iconPosition="start"
               />
-              <Tab 
-                label="3D View" 
-                value="3d" 
+              <Tab
+                label="3D View"
+                value="3d"
                 icon={<View3DIcon />}
                 iconPosition="start"
               />
-              <Tab 
-                label="Constraints" 
-                value="constraints" 
+              <Tab
+                label="Constraints"
+                value="constraints"
                 icon={<ConstraintIcon />}
                 iconPosition="start"
               />
-                        <Tab 
-            label="Plugins" 
-            value="plugins" 
+                        <Tab
+            label="Plugins"
+            value="plugins"
             icon={<PluginIcon />}
             iconPosition="start"
           />
-          <Tab 
-            label="Collaboration" 
-            value="collaboration" 
+          <Tab
+            label="Collaboration"
+            value="collaboration"
             icon={<GroupIcon />}
             iconPosition="start"
           />
-          <Tab 
-            label="AI Assistant" 
-            value="ai" 
+          <Tab
+            label="AI Assistant"
+            value="ai"
             icon={<AIIcon />}
             iconPosition="start"
           />
-          <Tab 
-            label="Cloud Sync" 
-            value="cloud" 
+          <Tab
+            label="Cloud Sync"
+            value="cloud"
             icon={<CloudIcon />}
+            iconPosition="start"
+          />
+          <Tab
+            label="Precision Engine"
+            value="precision"
+            icon={<SettingsIcon />}
+            iconPosition="start"
+          />
+          <Tab
+            label="Real-Time Collab"
+            value="realtime"
+            icon={<GroupIcon />}
+            iconPosition="start"
+          />
+          <Tab
+            label="AI Assistant"
+            value="ai-assistant"
+            icon={<AIIcon />}
             iconPosition="start"
           />
             </Tabs>
@@ -732,7 +759,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           {activeTab === '3d' && (
             <ThreeDViewer
               objects={projectData?.objects || []}
-              selectedObject={selectedObject}
+              selectedObject={selectedObject || undefined}
               onObjectSelect={setSelectedObject}
               onObjectUpdate={(objectId, updates) => {
                 // Handle 3D object updates
@@ -753,7 +780,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
                 setConstraints([...constraints, constraint]);
               }}
               onConstraintUpdate={(constraintId, updates) => {
-                setConstraints(constraints.map(c => 
+                setConstraints(constraints.map(c =>
                   c.id === constraintId ? { ...c, ...updates } : c
                 ));
               }}
@@ -783,17 +810,17 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
                 setPlugins(plugins.filter(p => p.id !== pluginId));
               }}
               onPluginEnable={(pluginId) => {
-                setPlugins(plugins.map(p => 
+                setPlugins(plugins.map(p =>
                   p.id === pluginId ? { ...p, enabled: true } : p
                 ));
               }}
               onPluginDisable={(pluginId) => {
-                setPlugins(plugins.map(p => 
+                setPlugins(plugins.map(p =>
                   p.id === pluginId ? { ...p, enabled: false } : p
                 ));
               }}
               onPluginUpdate={(pluginId, settings) => {
-                setPlugins(plugins.map(p => 
+                setPlugins(plugins.map(p =>
                   p.id === pluginId ? { ...p, settings } : p
                 ));
               }}
@@ -899,9 +926,93 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
               }}
             />
           )}
+
+          {activeTab === 'precision' && (
+            <AdvancedPrecisionEngine
+              onPrecisionChange={(config) => {
+                console.log('Precision config changed:', config);
+              }}
+              onPerformanceUpdate={(metrics) => {
+                console.log('Performance metrics updated:', metrics);
+              }}
+              onOptimizationComplete={(results) => {
+                console.log('Optimization completed:', results);
+              }}
+            />
+          )}
+
+          {activeTab === 'realtime' && (
+            <RealTimeCollaboration
+              sessionId="session_001"
+              currentUser={currentUser}
+              onUserJoin={(user) => {
+                console.log('User joined:', user);
+              }}
+              onUserLeave={(userId) => {
+                console.log('User left:', userId);
+              }}
+              onCommentAdd={(comment) => {
+                console.log('Comment added:', comment);
+              }}
+              onCommentResolve={(commentId) => {
+                console.log('Comment resolved:', commentId);
+              }}
+              onPermissionChange={(userId, permissions) => {
+                console.log('Permission changed:', userId, permissions);
+              }}
+              onSessionEnd={() => {
+                console.log('Session ended');
+              }}
+              onConflictResolve={(conflictId, resolution) => {
+                console.log('Conflict resolved:', conflictId, resolution);
+              }}
+              onVersionCreate={(version) => {
+                console.log('Version created:', version);
+              }}
+              onVersionRestore={(versionId) => {
+                console.log('Version restored:', versionId);
+              }}
+            />
+          )}
+
+          {activeTab === 'ai-assistant' && (
+            <AIDesignAssistant
+              onSuggestionApply={(suggestion) => {
+                console.log('AI suggestion applied:', suggestion);
+              }}
+              onSuggestionReject={(suggestionId) => {
+                console.log('AI suggestion rejected:', suggestionId);
+              }}
+              onConversationStart={(prompt) => {
+                console.log('AI conversation started:', prompt);
+              }}
+              onAutoComplete={async (partial) => {
+                return `Completed: ${partial}`;
+              }}
+              onDesignAnalysis={async (design) => {
+                return {
+                  id: 'analysis_001',
+                  type: 'general',
+                  title: 'Design Analysis',
+                  summary: 'Design analysis completed',
+                  details: ['Analysis completed successfully'],
+                  recommendations: ['Continue with current design'],
+                  riskLevel: 'low',
+                  confidence: 0.95,
+                  timestamp: new Date()
+                };
+              }}
+              onOptimization={async (parameters) => {
+                return { optimization: 'Optimization completed' };
+              }}
+              onAutomationExecute={async (automation) => {
+                return { automation: 'Automation executed' };
+              }}
+            />
+          )}
         </Box>
       </Box>
-      
+
       {/* Notifications */}
       <Snackbar
         open={notifications.length > 0}
@@ -912,7 +1023,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           {notifications[0]}
         </Alert>
       </Snackbar>
-      
+
       {/* Settings Dialog */}
       <Dialog open={showSettings} onClose={() => setShowSettings(false)} maxWidth="md" fullWidth>
         <DialogTitle>ArxIDE Settings</DialogTitle>
@@ -932,7 +1043,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
             defaultValue="0.1"
             margin="normal"
           />
-          
+
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
             System Settings
           </Typography>
@@ -950,7 +1061,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* Help Dialog */}
       <Dialog open={showHelp} onClose={() => setShowHelp(false)} maxWidth="md" fullWidth>
         <DialogTitle>ArxIDE Help</DialogTitle>
@@ -961,7 +1072,7 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
           <Typography paragraph>
             ArxIDE is a professional desktop CAD application for building information modeling.
           </Typography>
-          
+
           <Typography variant="h6" gutterBottom>
             Keyboard Shortcuts
           </Typography>
@@ -982,4 +1093,4 @@ export const ArxIDEApplication: React.FC<ArxIDEApplicationProps> = () => {
       </Dialog>
     </Box>
   );
-}; 
+};

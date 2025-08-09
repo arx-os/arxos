@@ -500,7 +500,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -514,7 +514,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7
         options: >-
@@ -527,42 +527,42 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-    
+
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
-    
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       run: |
         npm ci
         go mod download
         pip install -r services/requirements.txt
-    
+
     - name: Run linting
       run: |
         npm run lint
         npm run type-check
-    
+
     - name: Run tests
       run: |
         npm run test
         npm run test:e2e
-    
+
     - name: Build
       run: npm run build
-    
+
     - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:

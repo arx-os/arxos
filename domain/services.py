@@ -2,7 +2,7 @@
 Domain Services - Business Logic Services
 
 This module contains domain services that implement business logic
-that doesn't belong to entities. Domain services coordinate between
+that doesn't belong to entities. Domain services coordinate between'
 entities and implement complex business rules.
 """
 
@@ -30,26 +30,21 @@ from .exceptions import (
 
 class BuildingDomainService:
     """Domain service for building-related business logic."""
-    
+
     def __init__(self, building_repository: BuildingRepository):
-    """
-    Perform __init__ operation
+        """Initialize the building domain service."
 
-Args:
-        building_repository: Description of building_repository
+        Args:
+            building_repository: Repository for building data access
 
-Returns:
-        Description of return value
+        Returns:
+            None
 
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        Raises:
+            None
+        """
         self.building_repository = building_repository
-    
+
     def create_building(
         self,
         name: str,
@@ -66,7 +61,7 @@ Example:
             raise BusinessRuleViolationError(
                 f"Building already exists at address: {address.full_address}"
             )
-        
+
         building = Building(
             id=BuildingId(),
             name=name,
@@ -76,10 +71,10 @@ Example:
             description=description,
             created_by=created_by
         )
-        
+
         self.building_repository.save(building)
         return building
-    
+
     def update_building_status(
         self,
         building_id: BuildingId,
@@ -90,24 +85,24 @@ Example:
         building = self.building_repository.get_by_id(building_id)
         if not building:
             raise BuildingNotFoundError(f"Building with ID {building_id} not found")
-        
+
         building.update_status(new_status, updated_by)
         self.building_repository.save(building)
         return building
-    
+
     def get_building_statistics(self, building_id: BuildingId) -> Dict[str, Any]:
         """Get comprehensive building statistics."""
         building = self.building_repository.get_with_floors(building_id)
         if not building:
             raise BuildingNotFoundError(f"Building with ID {building_id} not found")
-        
+
         total_rooms = sum(len(floor.rooms) for floor in building.floors)
         total_devices = sum(
-            len(room.devices) 
-            for floor in building.floors 
+            len(room.devices)
+            for floor in building.floors
             for room in floor.rooms
         )
-        
+
         # Calculate occupancy rates
         operational_rooms = sum(
             len([r for r in floor.rooms if r.status == RoomStatus.OPERATIONAL])
@@ -117,18 +112,18 @@ Example:
             len([r for r in floor.rooms if r.status == RoomStatus.OCCUPIED])
             for floor in building.floors
         )
-        
+
         occupancy_rate = (occupied_rooms / total_rooms * 100) if total_rooms > 0 else 0
-        
+
         # Calculate device health
         operational_devices = sum(
             len([d for d in room.devices if d.status == DeviceStatus.OPERATIONAL])
             for floor in building.floors
             for room in floor.rooms
         )
-        
+
         device_health_rate = (operational_devices / total_devices * 100) if total_devices > 0 else 0
-        
+
         return {
             "building_id": str(building_id),
             "building_name": building.name,
@@ -144,37 +139,37 @@ Example:
             "building_volume": building.volume,
             "status": building.status.value
         }
-    
+
     def calculate_building_efficiency(self, building_id: BuildingId) -> Dict[str, float]:
         """Calculate building efficiency metrics."""
         building = self.building_repository.get_with_floors(building_id)
         if not building:
             raise BuildingNotFoundError(f"Building with ID {building_id} not found")
-        
+
         total_area = building.area or 0
         total_rooms = sum(len(floor.rooms) for floor in building.floors)
-        
+
         if total_area == 0 or total_rooms == 0:
             return {
                 "space_utilization": 0.0,
                 "room_density": 0.0,
                 "device_density": 0.0
             }
-        
+
         # Space utilization (rooms per square meter)
         space_utilization = total_rooms / total_area if total_area > 0 else 0
-        
+
         # Room density (rooms per floor)
         room_density = total_rooms / building.floor_count if building.floor_count > 0 else 0
-        
+
         # Device density (devices per room)
         total_devices = sum(
-            len(room.devices) 
-            for floor in building.floors 
+            len(room.devices)
+            for floor in building.floors
             for room in floor.rooms
         )
         device_density = total_devices / total_rooms if total_rooms > 0 else 0
-        
+
         return {
             "space_utilization": round(space_utilization, 4),
             "room_density": round(room_density, 2),
@@ -200,10 +195,10 @@ Example:
         print(result)
     """
     """Domain service for floor-related business logic."""
-    
+
     def __init__(self, floor_repository: FloorRepository):
         self.floor_repository = floor_repository
-    
+
     def create_floor(
         self,
         building_id: BuildingId,
@@ -219,7 +214,7 @@ Example:
             raise BusinessRuleViolationError(
                 f"Floor {floor_number} already exists in building {building_id}"
             )
-        
+
         floor = Floor(
             id=FloorId(),
             building_id=building_id,
@@ -228,32 +223,32 @@ Example:
             description=description,
             created_by=created_by
         )
-        
+
         self.floor_repository.save(floor)
         return floor
-    
+
     def get_floor_statistics(self, floor_id: FloorId) -> Dict[str, Any]:
         """Get comprehensive floor statistics."""
         floor = self.floor_repository.get_by_id(floor_id)
         if not floor:
             raise FloorNotFoundError(f"Floor with ID {floor_id} not found")
-        
+
         total_rooms = len(floor.rooms)
         total_devices = sum(len(room.devices) for room in floor.rooms)
-        
+
         # Room type distribution
         room_types = {}
         for room in floor.rooms:
             room_type = room.room_type
             room_types[room_type] = room_types.get(room_type, 0) + 1
-        
+
         # Device type distribution
         device_types = {}
         for room in floor.rooms:
             for device in room.devices:
                 device_type = device.device_type
                 device_types[device_type] = device_types.get(device_type, 0) + 1
-        
+
         return {
             "floor_id": str(floor_id),
             "floor_name": floor.name,
@@ -268,10 +263,10 @@ Example:
 
 class RoomDomainService:
     """Domain service for room-related business logic."""
-    
+
     def __init__(self, room_repository: RoomRepository):
         self.room_repository = room_repository
-    
+
     def create_room(
         self,
         floor_id: FloorId,
@@ -289,7 +284,7 @@ class RoomDomainService:
             raise BusinessRuleViolationError(
                 f"Room {room_number} already exists on floor {floor_id}"
             )
-        
+
         room = Room(
             id=RoomId(),
             floor_id=floor_id,
@@ -300,30 +295,30 @@ class RoomDomainService:
             description=description,
             created_by=created_by
         )
-        
+
         self.room_repository.save(room)
         return room
-    
+
     def get_room_statistics(self, room_id: RoomId) -> Dict[str, Any]:
         """Get comprehensive room statistics."""
         room = self.room_repository.get_by_id(room_id)
         if not room:
             raise RoomNotFoundError(f"Room with ID {room_id} not found")
-        
+
         total_devices = len(room.devices)
-        
+
         # Device status distribution
         device_statuses = {}
         for device in room.devices:
             status = device.status.value
             device_statuses[status] = device_statuses.get(status, 0) + 1
-        
+
         # Device type distribution
         device_types = {}
         for device in room.devices:
             device_type = device.device_type
             device_types[device_type] = device_types.get(device_type, 0) + 1
-        
+
         return {
             "room_id": str(room_id),
             "room_name": room.name,
@@ -336,29 +331,29 @@ class RoomDomainService:
             "volume": room.volume,
             "status": room.status.value
         }
-    
+
     def calculate_room_efficiency(self, room_id: RoomId) -> Dict[str, float]:
         """Calculate room efficiency metrics."""
         room = self.room_repository.get_by_id(room_id)
         if not room:
             raise RoomNotFoundError(f"Room with ID {room_id} not found")
-        
+
         area = room.area or 0
         device_count = len(room.devices)
-        
+
         if area == 0:
             return {
                 "device_density": 0.0,
                 "space_utilization": 0.0
             }
-        
+
         # Device density (devices per square meter)
         device_density = device_count / area if area > 0 else 0
-        
+
         # Space utilization (based on room type and device count)
         # This is a simplified calculation - in practice, this would be more complex
         space_utilization = min(device_density * 10, 100)  # Arbitrary scaling
-        
+
         return {
             "device_density": round(device_density, 4),
             "space_utilization": round(space_utilization, 2)
@@ -367,10 +362,10 @@ class RoomDomainService:
 
 class DeviceDomainService:
     """Domain service for device-related business logic."""
-    
+
     def __init__(self, device_repository: DeviceRepository):
         self.device_repository = device_repository
-    
+
     def create_device(
         self,
         room_id: RoomId,
@@ -391,7 +386,7 @@ class DeviceDomainService:
                 raise BusinessRuleViolationError(
                     f"Device with ID {device_id} already exists"
                 )
-        
+
         device = Device(
             id=DeviceId(),
             room_id=room_id,
@@ -404,19 +399,19 @@ class DeviceDomainService:
             description=description,
             created_by=created_by
         )
-        
+
         self.device_repository.save(device)
         return device
-    
+
     def get_device_statistics(self, device_id: DeviceId) -> Dict[str, Any]:
         """Get comprehensive device statistics."""
         device = self.device_repository.get_by_id(device_id)
         if not device:
             raise DeviceNotFoundError(f"Device with ID {device_id} not found")
-        
+
         # Calculate device age
         device_age = (datetime.utcnow() - device.created_at).days
-        
+
         return {
             "device_id": str(device_id),
             "device_name": device.name,
@@ -428,15 +423,15 @@ class DeviceDomainService:
             "device_age_days": device_age,
             "created_by": device.created_by
         }
-    
+
     def get_devices_by_status(self, status: DeviceStatus) -> List[Device]:
         """Get all devices with a specific status."""
         return self.device_repository.get_by_status(status)
-    
+
     def get_device_health_summary(self) -> Dict[str, Any]:
         """Get overall device health summary."""
         all_devices = self.device_repository.get_all()
-        
+
         total_devices = len(all_devices)
         if total_devices == 0:
             return {
@@ -447,15 +442,15 @@ class DeviceDomainService:
                 "error_devices": 0,
                 "health_rate": 0.0
             }
-        
+
         status_counts = {}
         for device in all_devices:
             status = device.status.value
             status_counts[status] = status_counts.get(status, 0) + 1
-        
+
         operational_count = status_counts.get(DeviceStatus.OPERATIONAL.value, 0)
         health_rate = (operational_count / total_devices) * 100
-        
+
         return {
             "total_devices": total_devices,
             "operational_devices": operational_count,
@@ -468,10 +463,10 @@ class DeviceDomainService:
 
 class UserDomainService:
     """Domain service for user-related business logic."""
-    
+
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
-    
+
     def create_user(
         self,
         email: str,
@@ -484,17 +479,17 @@ class UserDomainService:
     ) -> User:
         """Create a new user with validation."""
         from .value_objects import Email, PhoneNumber
-        
+
         # Business rule: Check if email already exists
         if self.user_repository.exists_by_email(email):
             raise BusinessRuleViolationError(f"User with email {email} already exists")
-        
+
         # Business rule: Check if username already exists
         existing_users = self.user_repository.get_all()
         for user in existing_users:
             if user.username == username:
                 raise BusinessRuleViolationError(f"Username {username} already exists")
-        
+
         user = User(
             id=UserId(),
             email=Email(email),
@@ -505,25 +500,25 @@ class UserDomainService:
             phone_number=PhoneNumber(phone_number) if phone_number else None,
             created_by=created_by
         )
-        
+
         self.user_repository.save(user)
         return user
-    
+
     def get_user_statistics(self) -> Dict[str, Any]:
         """Get comprehensive user statistics."""
         all_users = self.user_repository.get_all()
         active_users = self.user_repository.get_active_users()
-        
+
         # Role distribution
         role_counts = {}
         for user in all_users:
             role = user.role.value
             role_counts[role] = role_counts.get(role, 0) + 1
-        
+
         # Active vs inactive users
         active_count = len(active_users)
         inactive_count = len(all_users) - active_count
-        
+
         return {
             "total_users": len(all_users),
             "active_users": active_count,
@@ -531,7 +526,7 @@ class UserDomainService:
             "role_distribution": role_counts,
             "activation_rate": round((active_count / len(all_users)) * 100, 2) if all_users else 0
         }
-    
+
     def get_users_by_role(self, role: UserRole) -> List[User]:
         """Get all users with a specific role."""
         return self.user_repository.get_by_role(role)
@@ -539,10 +534,10 @@ class UserDomainService:
 
 class ProjectDomainService:
     """Domain service for project-related business logic."""
-    
+
     def __init__(self, project_repository: ProjectRepository):
         self.project_repository = project_repository
-    
+
     def create_project(
         self,
         name: str,
@@ -560,7 +555,7 @@ class ProjectDomainService:
                 raise BusinessRuleViolationError(
                     f"Project with name '{name}' already exists for building {building_id}"
                 )
-        
+
         project = Project(
             id=ProjectId(),
             name=name,
@@ -570,16 +565,16 @@ class ProjectDomainService:
             end_date=end_date,
             created_by=created_by
         )
-        
+
         self.project_repository.save(project)
         return project
-    
+
     def get_project_statistics(self, project_id: ProjectId) -> Dict[str, Any]:
         """Get comprehensive project statistics."""
         project = self.project_repository.get_by_id(project_id)
         if not project:
             raise ProjectNotFoundError(f"Project with ID {project_id} not found")
-        
+
         # Calculate project progress
         total_days = project.duration_days or 0
         if project.start_date and project.end_date:
@@ -587,7 +582,7 @@ class ProjectDomainService:
             progress_percentage = min((elapsed_days / total_days) * 100, 100) if total_days > 0 else 0
         else:
             progress_percentage = 0
-        
+
         return {
             "project_id": str(project_id),
             "project_name": project.name,
@@ -598,21 +593,21 @@ class ProjectDomainService:
             "progress_percentage": round(progress_percentage, 2),
             "created_by": project.created_by
         }
-    
+
     def get_projects_by_status(self, status: ProjectStatus) -> List[Project]:
         """Get all projects with a specific status."""
         return self.project_repository.get_by_status(status)
-    
+
     def get_project_summary(self) -> Dict[str, Any]:
         """Get overall project summary."""
         all_projects = self.project_repository.get_all()
-        
+
         # Status distribution
         status_counts = {}
         for project in all_projects:
             status = project.status.value
             status_counts[status] = status_counts.get(status, 0) + 1
-        
+
         # Calculate average project duration
         total_duration = 0
         projects_with_duration = 0
@@ -620,11 +615,11 @@ class ProjectDomainService:
             if project.duration_days:
                 total_duration += project.duration_days
                 projects_with_duration += 1
-        
+
         avg_duration = total_duration / projects_with_duration if projects_with_duration > 0 else 0
-        
+
         return {
             "total_projects": len(all_projects),
             "status_distribution": status_counts,
             "average_duration_days": round(avg_duration, 1)
-        } 
+        }

@@ -12,35 +12,30 @@ from datetime import datetime
 
 class ApplicationError(Exception):
     """Base exception for all application layer errors."""
-    
+
     def __init__(self, message: str, error_code: str = None, details: Dict[str, Any] = None):
-    """
-    Perform __init__ operation
+        """Initialize the application error."
 
-Args:
-        message: Description of message
-        error_code: Description of error_code
-        details: Description of details
+        Args:
+            message: Error message
+            error_code: Error code for categorization
+            details: Additional error details
 
-Returns:
-        Description of return value
+        Returns:
+            None
 
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        Raises:
+            None
+        """
         super().__init__(message)
         self.message = message
         self.error_code = error_code or "APPLICATION_ERROR"
         self.details = details or {}
         self.timestamp = datetime.utcnow()
-        
+
         # Log the error
         self._log_error()
-    
+
     def _log_error(self):
         """Log the error with structured information."""
         logger = logging.getLogger(__name__)
@@ -52,7 +47,7 @@ Example:
                 "timestamp": self.timestamp.isoformat()
             }
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert exception to dictionary for API responses."""
         return {
@@ -65,27 +60,22 @@ Example:
 
 
 class ValidationError(ApplicationError):
-    """
-    Perform __init__ operation
-
-Args:
-        message: Description of message
-        field: Description of field
-        value: Description of value
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
     """Exception raised when input validation fails."""
-    
+
     def __init__(self, message: str, field: str = None, value: Any = None):
+        """Initialize the validation error."
+
+        Args:
+            message: Error message
+            field: Field that failed validation
+            value: Value that failed validation
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         super().__init__(
             message=message,
             error_code="VALIDATION_ERROR",
@@ -95,7 +85,7 @@ Example:
 
 class BusinessRuleError(ApplicationError):
     """Exception raised when business rules are violated."""
-    
+
     def __init__(self, message: str, rule: str = None, context: Dict[str, Any] = None):
         super().__init__(
             message=message,
@@ -106,11 +96,11 @@ class BusinessRuleError(ApplicationError):
 
 class ResourceNotFoundError(ApplicationError):
     """Exception raised when a requested resource is not found."""
-    
+
     def __init__(self, resource_type: str, resource_id: str, message: str = None):
         if not message:
             message = f"{resource_type} with ID '{resource_id}' not found"
-        
+
         super().__init__(
             message=message,
             error_code="RESOURCE_NOT_FOUND",
@@ -120,11 +110,11 @@ class ResourceNotFoundError(ApplicationError):
 
 class DuplicateResourceError(ApplicationError):
     """Exception raised when attempting to create a duplicate resource."""
-    
+
     def __init__(self, resource_type: str, identifier: str, message: str = None):
         if not message:
             message = f"{resource_type} with identifier '{identifier}' already exists"
-        
+
         super().__init__(
             message=message,
             error_code="DUPLICATE_RESOURCE",
@@ -134,11 +124,11 @@ class DuplicateResourceError(ApplicationError):
 
 class PermissionError(ApplicationError):
     """Exception raised when user lacks required permissions."""
-    
+
     def __init__(self, required_permission: str, user_id: str = None, message: str = None):
         if not message:
             message = f"Permission '{required_permission}' required"
-        
+
         super().__init__(
             message=message,
             error_code="PERMISSION_ERROR",
@@ -148,11 +138,11 @@ class PermissionError(ApplicationError):
 
 class ServiceUnavailableError(ApplicationError):
     """Exception raised when a required service is unavailable."""
-    
+
     def __init__(self, service_name: str, message: str = None):
         if not message:
             message = f"Service '{service_name}' is unavailable"
-        
+
         super().__init__(
             message=message,
             error_code="SERVICE_UNAVAILABLE",
@@ -162,11 +152,11 @@ class ServiceUnavailableError(ApplicationError):
 
 class ConfigurationError(ApplicationError):
     """Exception raised when there's a configuration issue."""
-    
+
     def __init__(self, config_key: str, message: str = None):
         if not message:
             message = f"Configuration error for key '{config_key}'"
-        
+
         super().__init__(
             message=message,
             error_code="CONFIGURATION_ERROR",
@@ -176,11 +166,11 @@ class ConfigurationError(ApplicationError):
 
 class TransactionError(ApplicationError):
     """Exception raised when a database transaction fails."""
-    
+
     def __init__(self, operation: str, message: str = None):
         if not message:
             message = f"Transaction failed for operation '{operation}'"
-        
+
         super().__init__(
             message=message,
             error_code="TRANSACTION_ERROR",
@@ -190,11 +180,11 @@ class TransactionError(ApplicationError):
 
 class CacheError(ApplicationError):
     """Exception raised when cache operations fail."""
-    
+
     def __init__(self, operation: str, key: str = None, message: str = None):
         if not message:
             message = f"Cache operation '{operation}' failed"
-        
+
         super().__init__(
             message=message,
             error_code="CACHE_ERROR",
@@ -204,11 +194,11 @@ class CacheError(ApplicationError):
 
 class EventProcessingError(ApplicationError):
     """Exception raised when event processing fails."""
-    
+
     def __init__(self, event_type: str, event_id: str = None, message: str = None):
         if not message:
             message = f"Event processing failed for event type '{event_type}'"
-        
+
         super().__init__(
             message=message,
             error_code="EVENT_PROCESSING_ERROR",
@@ -218,11 +208,11 @@ class EventProcessingError(ApplicationError):
 
 class RateLimitError(ApplicationError):
     """Exception raised when rate limits are exceeded."""
-    
+
     def __init__(self, limit_type: str, retry_after: int = None, message: str = None):
         if not message:
             message = f"Rate limit exceeded for '{limit_type}'"
-        
+
         super().__init__(
             message=message,
             error_code="RATE_LIMIT_ERROR",
@@ -232,11 +222,11 @@ class RateLimitError(ApplicationError):
 
 class DataIntegrityError(ApplicationError):
     """Exception raised when data integrity constraints are violated."""
-    
+
     def __init__(self, constraint: str, message: str = None):
         if not message:
             message = f"Data integrity constraint '{constraint}' violated"
-        
+
         super().__init__(
             message=message,
             error_code="DATA_INTEGRITY_ERROR",
@@ -247,7 +237,7 @@ class DataIntegrityError(ApplicationError):
 # Error handling utilities
 def handle_application_error(func):
     """Decorator to handle application errors and provide consistent error responses."""
-    def wrapper(*args, **kwargs):
+def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except ApplicationError as e:
@@ -257,7 +247,7 @@ def handle_application_error(func):
             # Convert unexpected errors to application errors
             logger = logging.getLogger(__name__)
             logger.error(f"Unexpected error in {func.__name__}: {str(e)}", exc_info=True)
-            
+
             raise ApplicationError(
                 message="An unexpected error occurred",
                 error_code="INTERNAL_ERROR",
@@ -277,11 +267,11 @@ def create_error_response(error: ApplicationError) -> Dict[str, Any]:
 def validate_required_fields(data: Dict[str, Any], required_fields: list) -> None:
     """Validate that required fields are present in the data."""
     missing_fields = []
-    
+
     for field in required_fields:
         if field not in data or data[field] is None or str(data[field]).strip() == "":
             missing_fields.append(field)
-    
+
     if missing_fields:
         raise ValidationError(
             message=f"Missing required fields: {', '.join(missing_fields)}",
@@ -307,17 +297,17 @@ def validate_string_length(value: str, field_name: str, min_length: int = 0, max
             field=field_name,
             value=value
         )
-    
+
     if len(value) < min_length:
         raise ValidationError(
             message=f"Field '{field_name}' must be at least {min_length} characters long",
             field=field_name,
             value=value
         )
-    
+
     if max_length and len(value) > max_length:
         raise ValidationError(
             message=f"Field '{field_name}' must be no more than {max_length} characters long",
             field=field_name,
             value=value
-        ) 
+        )

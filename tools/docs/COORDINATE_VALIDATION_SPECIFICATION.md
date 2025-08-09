@@ -289,10 +289,10 @@ func main() {
     // Validate a coordinate
     coord := utils.Coordinate2D{X: 100.5, Y: 200.75}
     config := utils.DefaultCoordinateConfig()
-    
+
     if utils.IsValidCoordinate2D(coord, config) {
         fmt.Println("Coordinate is valid")
-        
+
         // Calculate distance
         other := utils.Coordinate2D{X: 300, Y: 400}
         distance := utils.Distance2D(coord, other)
@@ -312,7 +312,7 @@ from arx_svg_parser.utils.coordinate_utils import is_valid_coordinate, distance_
 coord = (100.5, 200.75)
 if is_valid_coordinate(coord, dim=2, min_value=-1e6, max_value=1e6):
     print("Coordinate is valid")
-    
+
     # Calculate distance
     other = (300, 400)
     distance = distance_2d(coord, other)
@@ -381,4 +381,4 @@ if (result.valid) {
 - Follow coding standards for both Go and Python
 - Include tests for new features
 - Update documentation for changes
-- Review existing implementations for consistency 
+- Review existing implementations for consistency

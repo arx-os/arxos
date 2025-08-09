@@ -151,4 +151,4 @@ element.innerHTML = DOMPurify.sanitize(dynamicContent);
 - **Protection Level**: Enterprise-grade content sanitization
 - **Compliance**: Meets security standards and best practices
 
-This implementation provides robust XSS protection while maintaining functionality and performance across the Arxos Platform frontend components. 
+This implementation provides robust XSS protection while maintaining functionality and performance across the Arxos Platform frontend components.

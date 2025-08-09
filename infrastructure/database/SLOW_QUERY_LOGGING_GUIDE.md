@@ -205,7 +205,7 @@ python tools/parse_slow_queries.py pg_log --output-format json | jq '.queries[] 
 ```sql
 -- Find most frequent slow queries
 SELECT query_hash, COUNT(*) as frequency, AVG(duration_ms) as avg_duration
-FROM slow_query_log 
+FROM slow_query_log
 WHERE severity = 'critical'
 GROUP BY query_hash
 ORDER BY frequency DESC;
@@ -215,9 +215,9 @@ ORDER BY frequency DESC;
 
 ```sql
 -- Queries that might benefit from indexes
-SELECT DISTINCT statement 
-FROM slow_query_log 
-WHERE duration_ms > 1000 
+SELECT DISTINCT statement
+FROM slow_query_log
+WHERE duration_ms > 1000
 AND statement LIKE '%WHERE%'
 AND statement NOT LIKE '%INDEX%';
 ```
@@ -226,12 +226,12 @@ AND statement NOT LIKE '%INDEX%';
 
 ```sql
 -- Weekly performance trends
-SELECT 
+SELECT
     DATE_TRUNC('week', timestamp) as week,
     COUNT(*) as total_queries,
     AVG(duration_ms) as avg_duration,
     COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical_count
-FROM slow_query_log 
+FROM slow_query_log
 GROUP BY DATE_TRUNC('week', timestamp)
 ORDER BY week DESC;
 ```
@@ -278,12 +278,12 @@ The system generates data for dashboard integration:
 
 ```sql
 -- Dashboard metrics
-SELECT 
+SELECT
     COUNT(*) as total_queries,
     COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical_queries,
     AVG(duration_ms) as avg_duration,
     MAX(duration_ms) as max_duration
-FROM slow_query_log 
+FROM slow_query_log
 WHERE timestamp > NOW() - INTERVAL '24 hours';
 ```
 
@@ -363,7 +363,7 @@ python tools/parse_slow_queries.py pg_log --stream-process
 **Solutions**:
 ```sql
 -- Add indexes for slow query log table
-CREATE INDEX CONCURRENTLY idx_slow_query_log_timestamp_severity 
+CREATE INDEX CONCURRENTLY idx_slow_query_log_timestamp_severity
 ON slow_query_log (timestamp, severity);
 
 -- Analyze table statistics
@@ -444,4 +444,4 @@ def check_custom_alerts(analysis_results):
 
 The Arxos Slow Query Logging System provides a comprehensive solution for database performance monitoring and optimization. By following the established patterns and integrating with existing infrastructure, it enables data-driven performance improvements while maintaining consistency with Arxos standards.
 
-For additional support or questions, refer to the Arxos engineering documentation or contact the database team. 
+For additional support or questions, refer to the Arxos engineering documentation or contact the database team.

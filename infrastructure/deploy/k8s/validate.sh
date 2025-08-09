@@ -28,7 +28,7 @@ check_namespace() {
     local file=$1
     local expected_namespace=$2
     local actual_namespace=$(grep -h "namespace:" "$file" | head -1 | awk '{print $2}')
-    
+
     if [ "$actual_namespace" = "$expected_namespace" ]; then
         echo -e "${GREEN}✅ $file uses correct namespace: $expected_namespace${NC}"
     else
@@ -237,4 +237,4 @@ echo "✅ Resource limits configured"
 echo "✅ Health checks configured"
 echo "✅ YAML syntax validated"
 echo ""
-echo "🚀 Ready for deployment!" 
+echo "🚀 Ready for deployment!"

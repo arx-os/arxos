@@ -244,4 +244,4 @@ def create_request_dto_to_internal(dto: CreateBuildingRequestDTO) -> CreateBuild
             currency=dto.cost.currency
         ),
         metadata=dto.metadata
-    ) 
+    )

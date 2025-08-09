@@ -205,7 +205,7 @@
     <!-- Toast/Notification Area -->
     <div id="toast-area" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
   </main>
-  
+
   <!-- ArxLogger Script -->
   <script src="static/js/arx-logger.js"></script>
   <script>
@@ -216,7 +216,7 @@
       const buildingId = urlParams.get('building_id') || localStorage.getItem('arx_building_id') || 'unknown';
       const floorId = urlParams.get('floor_id') || localStorage.getItem('arx_floor_id') || 'unknown';
       const userId = localStorage.getItem('arx_user_id') || 'unknown';
-      
+
       // Set context for asset management operations
       if (window.arxLogger) {
         window.arxLogger.setContext({
@@ -225,7 +225,7 @@
           userId: userId,
           correlationId: window.arxLogger.generateCorrelationId()
         });
-        
+
         window.arxLogger.info('Asset Inventory page initialized with context', {
           building_id: buildingId,
           floor_id: floorId,
@@ -235,7 +235,7 @@
       }
     });
   </script>
-  
+
   <script src="static/js/asset_inventory.js"></script>
 </body>
-</html> 
+</html>

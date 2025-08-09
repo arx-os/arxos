@@ -171,7 +171,7 @@ CREATE INDEX CONCURRENTLY idx_audit_logs_non_archived ON audit_logs(user_id, cre
 ```sql
 -- View to monitor index usage
 CREATE OR REPLACE VIEW performance_indexes_monitoring AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -179,7 +179,7 @@ SELECT
     idx_tup_read as tuples_read,
     idx_tup_fetch as tuples_fetched,
     pg_size_pretty(pg_relation_size(indexrelid)) as index_size,
-    CASE 
+    CASE
         WHEN idx_scan = 0 THEN 'UNUSED'
         WHEN idx_scan < 10 THEN 'RARELY_USED'
         WHEN idx_scan < 100 THEN 'OCCASIONALLY_USED'
@@ -199,9 +199,9 @@ SELECT indexname, tablename FROM pg_indexes WHERE indexname LIKE 'idx_%' ORDER B
 SELECT * FROM performance_indexes_monitoring WHERE usage_category = 'UNUSED';
 
 -- Check index sizes
-SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) as size 
-FROM pg_stat_user_indexes 
-WHERE indexname LIKE 'idx_%' 
+SELECT indexname, pg_size_pretty(pg_relation_size(indexrelid)) as size
+FROM pg_stat_user_indexes
+WHERE indexname LIKE 'idx_%'
 ORDER BY pg_relation_size(indexrelid) DESC;
 ```
 
@@ -274,4 +274,4 @@ The implementation is production-ready and includes comprehensive monitoring and
 
 ## Status: ✅ COMPLETED
 
-Task 2.7: Add Database Indexes has been fully implemented with schema-aware adaptations and comprehensive performance optimization. 
+Task 2.7: Add Database Indexes has been fully implemented with schema-aware adaptations and comprehensive performance optimization.

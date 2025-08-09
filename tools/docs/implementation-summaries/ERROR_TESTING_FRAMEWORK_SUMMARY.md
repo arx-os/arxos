@@ -52,7 +52,7 @@ corrupted_yamls = [
         nested:
             item: "test"
     """,
-    
+
     # Invalid indentation
     """
     version: "1.0"
@@ -95,7 +95,7 @@ invalid_type_metadata = [
 def test_disk_space_exhaustion_simulation(self):
     large_content = "x" * 1024 * 1024  # 1MB
     result = self.file_manager.write_file(self.test_file, large_content)
-    
+
     disk_result = self.file_manager.check_disk_space(self.temp_dir)
     if disk_result["success"]:
         free_space = disk_result["free_space"]
@@ -204,10 +204,10 @@ def test_v1_to_v2_migration(self):
         "deprecated_field": "deprecated_value",
         "valid_field": "valid_value"
     }
-    
+
     result = self.migrator.migrate_schema(v1_data, "1.0", "2.0")
     assert result["success"], "Migration should succeed"
-    
+
     migrated_data = result["data"]
     assert migrated_data["version"] == "2.0", "Version should be updated"
     assert "new_field" in migrated_data, "old_field should be renamed to new_field"
@@ -220,7 +220,7 @@ def test_deprecated_field_detection(self):
         "deprecated_field": "deprecated_value",
         "optional_field": "optional_value"
     }
-    
+
     result = self.data_model.validate_data(data_with_deprecated)
     assert result["valid"], "Data should be valid even with deprecated fields"
     assert len(result["warnings"]) > 0, "Should have warnings for deprecated fields"
@@ -351,4 +351,4 @@ pytest arx_svg_parser/tests/test_backward_compatibility.py::TestSchemaVersionMig
 
 The Error Testing Framework provides a comprehensive foundation for ensuring system reliability and robustness across the Arxos Platform. By systematically testing error conditions and failure scenarios, it helps maintain high system quality and user experience even under adverse conditions.
 
-The framework's modular design allows for easy extension and maintenance, while its comprehensive coverage ensures that critical error paths are thoroughly tested. This implementation supports the platform's goal of providing reliable, scalable, and maintainable services for BIM and SVG processing applications. 
+The framework's modular design allows for easy extension and maintenance, while its comprehensive coverage ensures that critical error paths are thoroughly tested. This implementation supports the platform's goal of providing reliable, scalable, and maintainable services for BIM and SVG processing applications.

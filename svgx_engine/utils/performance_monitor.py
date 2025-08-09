@@ -1,7 +1,7 @@
 """
 SVGX Engine - Performance Monitor Module
 
-This module re-exports the PerformanceMonitor from utils.performance
+This module re-exports the PerformanceMonitor from utils.performance import utils.performance
 to maintain backward compatibility and resolve import issues.
 """
 
@@ -19,4 +19,4 @@ __all__ = [
     'monitor_operation',
     'get_performance_report',
     'clear_performance_data'
-] 
+]

@@ -62,4 +62,4 @@ func rejectInspection(w http.ResponseWriter, r *http.Request) {
 	inspectionID := chi.URLParam(r, "id")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"id": "` + inspectionID + `", "rejected": true}`))
-} 
+}

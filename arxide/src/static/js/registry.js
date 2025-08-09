@@ -47,4 +47,4 @@ function getNextInstanceNumber(objects, { building, floor, system, type }) {
   return maxInstance + 1;
 }
 
-export { fetchRegistries, getObjectTypesRegistry, getBehaviorProfilesRegistry, generateObjectId, isValidObjectId, getNextInstanceNumber }; 
+export { fetchRegistries, getObjectTypesRegistry, getBehaviorProfilesRegistry, generateObjectId, isValidObjectId, getNextInstanceNumber };

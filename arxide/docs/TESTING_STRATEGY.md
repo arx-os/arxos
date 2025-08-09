@@ -37,26 +37,26 @@ import { SVGXCanvas } from '../components/SVGXCanvas'
 describe('SVGXCanvas', () => {
   test('renders canvas with initial state', () => {
     render(<SVGXCanvas initialContent="<svg></svg>" />)
-    
+
     expect(screen.getByTestId('svgx-canvas')).toBeInTheDocument()
     expect(screen.getByTestId('canvas-content')).toHaveTextContent('<svg></svg>')
   })
-  
+
   test('handles element selection', () => {
     const onElementSelect = jest.fn()
     render(<SVGXCanvas onElementSelect={onElementSelect} />)
-    
+
     const element = screen.getByTestId('svg-element')
     fireEvent.click(element)
-    
+
     expect(onElementSelect).toHaveBeenCalledWith('element-id')
   })
-  
+
   test('updates canvas on content change', () => {
     const { rerender } = render(<SVGXCanvas content="<svg></svg>" />)
-    
+
     rerender(<SVGXCanvas content="<svg><rect/></svg>" />)
-    
+
     expect(screen.getByTestId('canvas-content')).toHaveTextContent('<rect/>')
   })
 })
@@ -70,29 +70,29 @@ import { mockFileSystem } from '../__mocks__/fileSystem'
 
 describe('FileService', () => {
   let fileService: FileService
-  
+
   beforeEach(() => {
     fileService = new FileService(mockFileSystem)
   })
-  
+
   test('loads SVGX file correctly', async () => {
     const content = await fileService.loadFile('test.svgx')
-    
+
     expect(content).toContain('<svgx>')
     expect(content).toContain('<building>')
   })
-  
+
   test('saves file with proper formatting', async () => {
     const content = '<svgx><building/></svgx>'
     await fileService.saveFile('test.svgx', content)
-    
+
     const savedContent = await fileService.loadFile('test.svgx')
     expect(savedContent).toBe(content)
   })
-  
+
   test('validates file format', async () => {
     const invalidContent = '<invalid>content</invalid>'
-    
+
     await expect(fileService.saveFile('test.svgx', invalidContent))
       .rejects.toThrow('Invalid SVGX format')
   })
@@ -118,33 +118,33 @@ import (
 func TestUserAPI(t *testing.T) {
     gin.SetMode(gin.TestMode)
     router := setupRouter()
-    
+
     t.Run("GET /api/users/:id", func(t *testing.T) {
         req, _ := http.NewRequest("GET", "/api/users/123", nil)
         w := httptest.NewRecorder()
         router.ServeHTTP(w, req)
-        
+
         assert.Equal(t, http.StatusOK, w.Code)
-        
+
         var response UserResponse
         json.Unmarshal(w.Body.Bytes(), &response)
-        
+
         assert.Equal(t, "123", response.ID)
         assert.NotEmpty(t, response.Username)
     })
-    
+
     t.Run("POST /api/users", func(t *testing.T) {
         userData := `{"username":"testuser","email":"test@example.com"}`
         req, _ := http.NewRequest("POST", "/api/users", strings.NewReader(userData))
         req.Header.Set("Content-Type", "application/json")
         w := httptest.NewRecorder()
         router.ServeHTTP(w, req)
-        
+
         assert.Equal(t, http.StatusCreated, w.Code)
-        
+
         var response UserResponse
         json.Unmarshal(w.Body.Bytes(), &response)
-        
+
         assert.NotEmpty(t, response.ID)
         assert.Equal(t, "testuser", response.Username)
     })
@@ -174,18 +174,18 @@ func (m *MockUserRepository) GetByID(id string) (*User, error) {
 func TestUserService(t *testing.T) {
     mockRepo := new(MockUserRepository)
     userService := NewUserService(mockRepo)
-    
+
     t.Run("GetUserByID", func(t *testing.T) {
         expectedUser := &User{
             ID:       "123",
             Username: "testuser",
             Email:    "test@example.com",
         }
-        
+
         mockRepo.On("GetByID", "123").Return(expectedUser, nil)
-        
+
         user, err := userService.GetUserByID("123")
-        
+
         assert.NoError(t, err)
         assert.Equal(t, expectedUser, user)
         mockRepo.AssertExpectations(t)
@@ -206,26 +206,26 @@ from services.svgx_engine import SVGXEngine
 class TestArxosAgent:
     def setup_method(self):
         self.agent = ArxosAgent()
-    
+
     def test_process_natural_language_command(self):
         command = "Create a new electrical panel in room 101"
         result = self.agent.process_command(command)
-        
+
         assert result.success is True
         assert "panel" in result.svgx_code.lower()
         assert "electrical" in result.svgx_code.lower()
-    
+
     def test_validate_command(self):
         invalid_command = "Invalid command"
         result = self.agent.validate_command(invalid_command)
-        
+
         assert result.is_valid is False
         assert "unrecognized" in result.error_message.lower()
 
 class TestSVGXEngine:
     def setup_method(self):
         self.engine = SVGXEngine()
-    
+
     def test_parse_svgx_content(self):
         svgx_content = """
         <svgx>
@@ -236,21 +236,21 @@ class TestSVGXEngine:
             </building>
         </svgx>
         """
-        
+
         result = self.engine.parse_content(svgx_content)
-        
+
         assert result.is_valid is True
         assert len(result.rooms) == 1
         assert result.rooms[0].id == "101"
-    
+
     def test_generate_svgx_from_components(self):
         components = [
             {"type": "room", "id": "101", "name": "Office"},
             {"type": "panel", "id": "E001", "room": "101"}
         ]
-        
+
         svgx_content = self.engine.generate_svgx(components)
-        
+
         assert "<svgx>" in svgx_content
         assert "room id=\"101\"" in svgx_content
         assert "panel id=\"E001\"" in svgx_content
@@ -271,11 +271,11 @@ describe('API Integration Tests', () => {
   beforeAll(async () => {
     await setupTestDatabase()
   })
-  
+
   afterAll(async () => {
     await teardownTestDatabase()
   })
-  
+
   describe('Building API', () => {
     test('creates building with valid data', async () => {
       const buildingData = {
@@ -283,37 +283,37 @@ describe('API Integration Tests', () => {
         address: '123 Test St',
         floors: 3
       }
-      
+
       const response = await request(app)
         .post('/api/buildings')
         .send(buildingData)
         .expect(201)
-      
+
       expect(response.body.id).toBeDefined()
       expect(response.body.name).toBe(buildingData.name)
     })
-    
+
     test('retrieves building by ID', async () => {
       const buildingId = 'test-building-id'
-      
+
       const response = await request(app)
         .get(`/api/buildings/${buildingId}`)
         .expect(200)
-      
+
       expect(response.body.id).toBe(buildingId)
       expect(response.body.name).toBeDefined()
     })
   })
-  
+
   describe('File API', () => {
     test('uploads SVGX file', async () => {
       const fileContent = '<svgx><building/></svgx>'
-      
+
       const response = await request(app)
         .post('/api/files/upload')
         .attach('file', Buffer.from(fileContent), 'test.svgx')
         .expect(200)
-      
+
       expect(response.body.fileId).toBeDefined()
       expect(response.body.filename).toBe('test.svgx')
     })
@@ -350,14 +350,14 @@ class TestArxosAgentIntegration:
             "command": "Add an electrical panel to room 101",
             "building_id": "test-building"
         }
-        
+
         response = await client.post("/api/agent/command", json=command_data)
         assert response.status_code == 200
-        
+
         result = response.json()
         assert result["success"] is True
         assert "panel" in result["svgx_code"]
-        
+
         # Verify SVGX was saved to database
         saved_svgx = await test_db.get_svgx_by_building("test-building")
         assert saved_svgx is not None
@@ -377,13 +377,13 @@ class TestSVGXEngineIntegration:
             </building>
         </svgx>
         """
-        
+
         # Process SVGX
         response = await client.post("/api/svgx/process", json={
             "content": svgx_content
         })
         assert response.status_code == 200
-        
+
         result = response.json()
         assert result["valid"] is True
         assert len(result["components"]) == 3  # building, floor, room, panel
@@ -405,57 +405,57 @@ test.describe('ArxIDE User Workflows', () => {
     await page.fill('[data-testid="email"]', 'test@example.com')
     await page.fill('[data-testid="password"]', 'password123')
     await page.click('[data-testid="login-button"]')
-    
+
     // 2. Create new building
     await page.click('[data-testid="new-building-button"]')
     await page.fill('[data-testid="building-name"]', 'Test Building')
     await page.fill('[data-testid="building-address"]', '123 Test St')
     await page.click('[data-testid="create-building-button"]')
-    
+
     // 3. Add floor
     await page.click('[data-testid="add-floor-button"]')
     await page.fill('[data-testid="floor-level"]', '1')
     await page.click('[data-testid="save-floor-button"]')
-    
+
     // 4. Add room
     await page.click('[data-testid="add-room-button"]')
     await page.fill('[data-testid="room-name"]', 'Conference Room')
     await page.fill('[data-testid="room-number"]', '101')
     await page.click('[data-testid="save-room-button"]')
-    
+
     // 5. Add electrical panel
     await page.click('[data-testid="add-panel-button"]')
     await page.selectOption('[data-testid="panel-type"]', 'electrical')
     await page.fill('[data-testid="panel-id"]', 'E001')
     await page.click('[data-testid="save-panel-button"]')
-    
+
     // 6. Verify building structure
     await expect(page.locator('[data-testid="building-name"]')).toHaveText('Test Building')
     await expect(page.locator('[data-testid="floor-1"]')).toBeVisible()
     await expect(page.locator('[data-testid="room-101"]')).toBeVisible()
     await expect(page.locator('[data-testid="panel-E001"]')).toBeVisible()
   })
-  
+
   test('natural language command workflow', async ({ page }) => {
     // 1. Login and open building
     await page.goto('/login')
     await page.fill('[data-testid="email"]', 'test@example.com')
     await page.fill('[data-testid="password"]', 'password123')
     await page.click('[data-testid="login-button"]')
-    
+
     await page.click('[data-testid="building-item"]')
-    
+
     // 2. Open chat interface
     await page.click('[data-testid="chat-button"]')
-    
+
     // 3. Send natural language command
     await page.fill('[data-testid="chat-input"]', 'Add a lighting fixture to room 101')
     await page.click('[data-testid="send-button"]')
-    
+
     // 4. Verify command processing
     await expect(page.locator('[data-testid="chat-message"]')).toContainText('Processing command')
     await expect(page.locator('[data-testid="chat-message"]')).toContainText('Added lighting fixture')
-    
+
     // 5. Verify visual update
     await expect(page.locator('[data-testid="lighting-fixture"]')).toBeVisible()
   })
@@ -475,13 +475,13 @@ test.describe('Cross-Platform Compatibility', () => {
     await page.goto('/')
     await expect(page.locator('[data-testid="windows-compatible"]')).toBeVisible()
   })
-  
+
   test('works on macOS', async ({ page }) => {
     // Test macOS-specific features
     await page.goto('/')
     await expect(page.locator('[data-testid="macos-compatible"]')).toBeVisible()
   })
-  
+
   test('works on Linux', async ({ page }) => {
     // Test Linux-specific features
     await page.goto('/')
@@ -502,34 +502,34 @@ import { test, expect } from '@playwright/test'
 test.describe('Performance Tests', () => {
   test('API response time under load', async ({ request }) => {
     const startTime = Date.now()
-    
+
     // Make multiple concurrent requests
     const promises = Array.from({ length: 100 }, () =>
       request.get('/api/buildings')
     )
-    
+
     const responses = await Promise.all(promises)
     const endTime = Date.now()
-    
+
     // Verify all requests succeeded
     responses.forEach(response => {
       expect(response.status()).toBe(200)
     })
-    
+
     // Verify response time is under threshold
     const averageResponseTime = (endTime - startTime) / responses.length
     expect(averageResponseTime).toBeLessThan(1000) // 1 second
   })
-  
+
   test('large file processing performance', async ({ request }) => {
     const largeSvgxContent = generateLargeSVGX(1000) // 1000 components
-    
+
     const startTime = Date.now()
     const response = await request.post('/api/svgx/process', {
       data: { content: largeSvgxContent }
     })
     const endTime = Date.now()
-    
+
     expect(response.status()).toBe(200)
     expect(endTime - startTime).toBeLessThan(5000) // 5 seconds
   })
@@ -546,7 +546,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Memory Tests', () => {
   test('no memory leaks during file operations', async ({ page }) => {
     const initialMemory = await page.evaluate(() => performance.memory?.usedJSHeapSize || 0)
-    
+
     // Perform multiple file operations
     for (let i = 0; i < 10; i++) {
       await page.click('[data-testid="new-file-button"]')
@@ -554,10 +554,10 @@ test.describe('Memory Tests', () => {
       await page.click('[data-testid="save-file-button"]')
       await page.waitForTimeout(100)
     }
-    
+
     const finalMemory = await page.evaluate(() => performance.memory?.usedJSHeapSize || 0)
     const memoryIncrease = finalMemory - initialMemory
-    
+
     // Memory increase should be reasonable (< 50MB)
     expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024)
   })
@@ -577,32 +577,32 @@ test.describe('Security Tests', () => {
   test('prevents unauthorized access', async ({ page }) => {
     // Try to access protected resource without login
     await page.goto('/api/buildings')
-    
+
     // Should redirect to login
     await expect(page).toHaveURL(/.*login.*/)
   })
-  
+
   test('validates input sanitization', async ({ page }) => {
     await page.goto('/login')
     await page.fill('[data-testid="email"]', 'test@example.com')
     await page.fill('[data-testid="password"]', 'password123')
     await page.click('[data-testid="login-button"]')
-    
+
     // Try to inject malicious content
     const maliciousContent = '<script>alert("xss")</script>'
     await page.fill('[data-testid="building-name"]', maliciousContent)
     await page.click('[data-testid="save-building-button"]')
-    
+
     // Should sanitize and save safely
     await expect(page.locator('[data-testid="building-name"]')).not.toContainText('<script>')
   })
-  
+
   test('prevents SQL injection', async ({ page }) => {
     await page.goto('/login')
     await page.fill('[data-testid="email"]', "'; DROP TABLE users; --")
     await page.fill('[data-testid="password"]', 'password123')
     await page.click('[data-testid="login-button"]')
-    
+
     // Should handle injection attempt safely
     await expect(page.locator('[data-testid="error-message"]')).toContainText('Invalid credentials')
   })
@@ -655,17 +655,17 @@ interface TestMetrics {
   lineCoverage: number
   branchCoverage: number
   functionCoverage: number
-  
+
   // Performance metrics
   averageTestDuration: number
   slowestTests: TestResult[]
   fastestTests: TestResult[]
-  
+
   // Quality metrics
   testPassRate: number
   flakyTests: TestResult[]
   failingTests: TestResult[]
-  
+
   // Security metrics
   securityTestPassRate: number
   vulnerabilityCount: number
@@ -691,7 +691,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -705,7 +705,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      
+
       redis:
         image: redis:7
         options: >-
@@ -718,53 +718,53 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-    
+
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
-    
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       run: |
         npm ci
         go mod download
         pip install -r services/requirements.txt
-    
+
     - name: Run unit tests
       run: |
         npm run test:unit
         npm run test:coverage
-    
+
     - name: Run integration tests
       run: |
         npm run test:integration
-    
+
     - name: Run E2E tests
       run: |
         npm run test:e2e
-    
+
     - name: Run security tests
       run: |
         npm run test:security
-    
+
     - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/lcov.info
         flags: unittests
         name: codecov-umbrella
-    
+
     - name: Generate test report
       run: |
         npm run test:report

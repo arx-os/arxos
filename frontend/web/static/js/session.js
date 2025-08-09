@@ -64,4 +64,4 @@ function parseJwt (token) {
       document.getElementById('user-info').textContent = payload.email;
     }
   }
-})(); 
+})();

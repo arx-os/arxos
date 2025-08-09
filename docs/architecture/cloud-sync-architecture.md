@@ -101,7 +101,7 @@ class ArxosSyncManager {
     // Connect to sync service
     async connect() {
         this.websocket = new WebSocket(`wss://sync.arxos.io/${this.userId}`);
-        
+
         this.websocket.onmessage = (event) => {
             const message = JSON.parse(event.data);
             this.handleSyncMessage(message);
@@ -166,7 +166,7 @@ class ConflictResolver {
         if (this.canMerge(conflicts)) {
             return this.mergeChanges(conflicts);
         }
-        
+
         // Strategy 2: Use latest timestamp
         const latest = this.getLatestChange(conflicts);
         return {
@@ -174,7 +174,7 @@ class ConflictResolver {
             resolvedContent: latest.content,
             resolvedBy: 'system'
         };
-        
+
         // Strategy 3: Manual resolution required
         return {
             strategy: 'manual',
@@ -250,10 +250,10 @@ class CollaborationManager {
     handleEdit(deviceId, edit) {
         // Apply edit to local file
         this.applyEdit(edit);
-        
+
         // Broadcast to other collaborators
         this.broadcastEdit(deviceId, edit);
-        
+
         // Sync to cloud
         this.syncToCloud(edit);
     }
@@ -315,7 +315,7 @@ class FileEncryption {
     private async encryptFile(content: string, key: string): Promise<string> {
         const encoder = new TextEncoder();
         const data = encoder.encode(content);
-        
+
         const cryptoKey = await crypto.subtle.importKey(
             'raw',
             encoder.encode(key),
@@ -323,14 +323,14 @@ class FileEncryption {
             false,
             ['encrypt']
         );
-        
+
         const iv = crypto.getRandomValues(new Uint8Array(12));
         const encrypted = await crypto.subtle.encrypt(
             { name: 'AES-GCM', iv },
             cryptoKey,
             data
         );
-        
+
         return JSON.stringify({
             iv: Array.from(iv),
             data: Array.from(new Uint8Array(encrypted))
@@ -339,7 +339,7 @@ class FileEncryption {
 
     private async decryptFile(encryptedData: string, key: string): Promise<string> {
         const { iv, data } = JSON.parse(encryptedData);
-        
+
         const cryptoKey = await crypto.subtle.importKey(
             'raw',
             new TextEncoder().encode(key),
@@ -347,13 +347,13 @@ class FileEncryption {
             false,
             ['decrypt']
         );
-        
+
         const decrypted = await crypto.subtle.decrypt(
             { name: 'AES-GCM', iv: new Uint8Array(iv) },
             cryptoKey,
             new Uint8Array(data)
         );
-        
+
         return new TextDecoder().decode(decrypted);
     }
 }
@@ -365,23 +365,23 @@ class FileEncryption {
 class AccessControl {
     async checkPermission(userId: string, fileId: string, action: string): Promise<boolean> {
         const file = await this.getFile(fileId);
-        
+
         // Owner has full access
         if (file.owner_id === userId) {
             return true;
         }
-        
+
         // Check collaborator permissions
         const collaborator = file.collaborators.find(c => c.userId === userId);
         if (collaborator) {
             return collaborator.permissions.includes(action);
         }
-        
+
         // Check public access
         if (file.public && action === 'read') {
             return true;
         }
-        
+
         return false;
     }
 }
@@ -396,7 +396,7 @@ class IncrementalSync {
     async syncChanges(fileId: string, changes: Change[]): Promise<void> {
         // Group changes by type
         const groupedChanges = this.groupChanges(changes);
-        
+
         // Sync only necessary changes
         for (const [type, changes] of groupedChanges) {
             await this.syncChangeType(fileId, type, changes);
@@ -476,6 +476,6 @@ class OfflineManager {
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Implementation Ready 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Implementation Ready

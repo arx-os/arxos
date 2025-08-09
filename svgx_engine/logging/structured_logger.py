@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 
 class StructuredFormatter(logging.Formatter):
     """Structured JSON formatter for SVGX Engine logs."""
-    
+
     def __init__(self, include_timestamp: bool = True, include_level: bool = True):
         """Initialize structured formatter."""
         super().__init__()
         self.include_timestamp = include_timestamp
         self.include_level = include_level
-    
+
     def format(self, record: logging.LogRecord) -> str:
         """Format log record as structured JSON."""
         log_entry = {
@@ -40,13 +40,13 @@ class StructuredFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno
         }
-        
+
         if self.include_timestamp:
             log_entry["timestamp"] = datetime.utcnow().isoformat()
-        
+
         if self.include_level:
             log_entry["level"] = record.levelname
-        
+
         # Add exception info if present
         if record.exc_info:
             log_entry["exception"] = {
@@ -54,22 +54,22 @@ class StructuredFormatter(logging.Formatter):
                 "message": str(record.exc_info[1]),
                 "traceback": traceback.format_exception(*record.exc_info)
             }
-        
-        # Add extra fields from record
+
+        # Add extra fields from record import record
         for key, value in record.__dict__.items():
-            if key not in ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 
-                          'filename', 'module', 'lineno', 'funcName', 'created', 
-                          'msecs', 'relativeCreated', 'thread', 'threadName', 
-                          'processName', 'process', 'getMessage', 'exc_info', 
+            if key not in ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname',
+                          'filename', 'module', 'lineno', 'funcName', 'created',
+                          'msecs', 'relativeCreated', 'thread', 'threadName',
+                          'processName', 'process', 'getMessage', 'exc_info',
                           'exc_text', 'stack_info']:
                 log_entry[key] = value
-        
+
         return json.dumps(log_entry, default=str)
 
 
 class SVGXLogger:
     """Structured logger for SVGX Engine."""
-    
+
     def __init__(self, name: str, config: Optional[Dict[str, Any]] = None):
         """Initialize SVGX logger."""
         self.name = name
@@ -78,9 +78,9 @@ class SVGXLogger:
         self.request_id: Optional[str] = None
         self.session_id: Optional[str] = None
         self.user_id: Optional[str] = None
-        
+
         self._setup_logger()
-    
+
     def _load_config(self) -> Dict[str, Any]:
         """Load logging configuration from environment."""
         return {
@@ -93,16 +93,16 @@ class SVGXLogger:
             "include_timestamp": os.getenv("SVGX_LOG_INCLUDE_TIMESTAMP", "true").lower() == "true",
             "include_level": os.getenv("SVGX_LOG_INCLUDE_LEVEL", "true").lower() == "true"
         }
-    
+
     def _setup_logger(self):
         """Set up logger with handlers and formatters."""
         # Set log level
         level = getattr(logging, self.config["level"].upper(), logging.INFO)
         self.logger.setLevel(level)
-        
+
         # Clear existing handlers
         self.logger.handlers.clear()
-        
+
         # Create formatter
         if self.config["format"] == "json":
             formatter = StructuredFormatter(
@@ -113,13 +113,13 @@ class SVGXLogger:
             formatter = logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
-        
+
         # Add console handler if enabled
         if self.config["console_output"]:
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
-        
+
         # Add file handler if file path is specified
         if self.config["file_path"]:
             try:
@@ -132,15 +132,15 @@ class SVGXLogger:
                 self.logger.addHandler(file_handler)
             except Exception as e:
                 print(f"Failed to set up file logging: {e}")
-    
-    def set_context(self, request_id: Optional[str] = None, 
-                   session_id: Optional[str] = None, 
+
+    def set_context(self, request_id: Optional[str] = None,
+                   session_id: Optional[str] = None,
                    user_id: Optional[str] = None):
         """Set logging context for correlation."""
         self.request_id = request_id
         self.session_id = session_id
         self.user_id = user_id
-    
+
     def _get_extra_fields(self) -> Dict[str, Any]:
         """Get extra fields for structured logging."""
         extra = {}
@@ -151,37 +151,37 @@ class SVGXLogger:
         if self.user_id:
             extra["user_id"] = self.user_id
         return extra
-    
+
     def debug(self, message: str, **kwargs):
         """Log debug message."""
         extra = {**self._get_extra_fields(), **kwargs}
         self.logger.debug(message, extra=extra)
-    
+
     def info(self, message: str, **kwargs):
         """Log info message."""
         extra = {**self._get_extra_fields(), **kwargs}
         self.logger.info(message, extra=extra)
-    
+
     def warning(self, message: str, **kwargs):
         """Log warning message."""
         extra = {**self._get_extra_fields(), **kwargs}
         self.logger.warning(message, extra=extra)
-    
+
     def error(self, message: str, **kwargs):
         """Log error message."""
         extra = {**self._get_extra_fields(), **kwargs}
         self.logger.error(message, extra=extra)
-    
+
     def critical(self, message: str, **kwargs):
         """Log critical message."""
         extra = {**self._get_extra_fields(), **kwargs}
         self.logger.critical(message, extra=extra)
-    
+
     def exception(self, message: str, exc_info: bool = True, **kwargs):
         """Log exception with traceback."""
         extra = {**self._get_extra_fields(), **kwargs}
         self.logger.exception(message, extra=extra)
-    
+
     def performance(self, operation: str, duration_ms: float, **kwargs):
         """Log performance metrics."""
         extra = {
@@ -192,8 +192,8 @@ class SVGXLogger:
             **kwargs
         }
         self.logger.info(f"Performance: {operation} took {duration_ms:.2f}ms", extra=extra)
-    
-    def request(self, method: str, path: str, status_code: int, 
+
+    def request(self, method: str, path: str, status_code: int,
                 duration_ms: float, **kwargs):
         """Log HTTP request."""
         extra = {
@@ -206,7 +206,7 @@ class SVGXLogger:
             **kwargs
         }
         self.logger.info(f"Request: {method} {path} -> {status_code} ({duration_ms:.2f}ms)", extra=extra)
-    
+
     def database(self, operation: str, table: str, duration_ms: float, **kwargs):
         """Log database operations."""
         extra = {
@@ -218,7 +218,7 @@ class SVGXLogger:
             **kwargs
         }
         self.logger.info(f"Database: {operation} on {table} took {duration_ms:.2f}ms", extra=extra)
-    
+
     def cache(self, operation: str, key: str, hit: bool, duration_ms: float, **kwargs):
         """Log cache operations."""
         extra = {
@@ -232,7 +232,7 @@ class SVGXLogger:
         }
         cache_type = "HIT" if hit else "MISS"
         self.logger.info(f"Cache {cache_type}: {operation} {key} ({duration_ms:.2f}ms)", extra=extra)
-    
+
     def security(self, event: str, user_id: Optional[str] = None, **kwargs):
         """Log security events."""
         extra = {
@@ -243,7 +243,7 @@ class SVGXLogger:
             **kwargs
         }
         self.logger.warning(f"Security: {event}", extra=extra)
-    
+
     def business(self, event: str, **kwargs):
         """Log business events."""
         extra = {
@@ -257,7 +257,7 @@ class SVGXLogger:
 
 class LoggingContext:
     """Context manager for logging correlation."""
-    
+
     def __init__(self, logger: SVGXLogger, request_id: Optional[str] = None,
                  session_id: Optional[str] = None, user_id: Optional[str] = None):
         """Initialize logging context."""
@@ -266,7 +266,7 @@ class LoggingContext:
         self.session_id = session_id
         self.user_id = user_id
         self.previous_context = None
-    
+
     def __enter__(self):
         """Enter logging context."""
         self.previous_context = (
@@ -280,7 +280,7 @@ class LoggingContext:
             user_id=self.user_id
         )
         return self.logger
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit logging context."""
         if self.previous_context:
@@ -303,14 +303,14 @@ def setup_logging(config: Optional[Dict[str, Any]] = None):
     # Create default logger
     default_logger = SVGXLogger("svgx_engine", config)
     _loggers["svgx_engine"] = default_logger
-    
+
     # Set up root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    
+
     # Clear existing handlers
     root_logger.handlers.clear()
-    
+
     # Add console handler
     console_handler = logging.StreamHandler()
     formatter = StructuredFormatter()
@@ -319,11 +319,11 @@ def setup_logging(config: Optional[Dict[str, Any]] = None):
 
 
 @contextmanager
-def logging_context(logger_name: str = "svgx_engine", 
+def logging_context(logger_name: str = "svgx_engine",
                    request_id: Optional[str] = None,
                    session_id: Optional[str] = None,
                    user_id: Optional[str] = None):
     """Context manager for logging correlation."""
     logger = get_logger(logger_name)
     with LoggingContext(logger, request_id, session_id, user_id) as ctx_logger:
-        yield ctx_logger 
+        yield ctx_logger

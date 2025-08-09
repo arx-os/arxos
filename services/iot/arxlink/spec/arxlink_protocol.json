@@ -3,10 +3,10 @@
   "protocol_name": "ArxLink",
   "version": "1.0.0",
   "description": "Lightweight protocol for syncing object states, behaviors, and telemetry",
-  
+
   "transport_layers": ["MQTT", "TCP", "Serial", "LoRa", "BLE"],
   "data_formats": ["JSON", "MessagePack"],
-  
+
   "packet_types": {
     "object_update": {
       "description": "Object state update from device to Arxos",
@@ -44,7 +44,7 @@
         }
       }
     },
-    
+
     "command_request": {
       "description": "Command from Arxos to device",
       "direction": "arxos_to_device",
@@ -86,7 +86,7 @@
         }
       }
     },
-    
+
     "command_response": {
       "description": "Command response from device to Arxos",
       "direction": "device_to_arxos",
@@ -139,7 +139,7 @@
         }
       }
     },
-    
+
     "heartbeat": {
       "description": "Device heartbeat/keepalive",
       "direction": "device_to_arxos",
@@ -176,7 +176,7 @@
         }
       }
     },
-    
+
     "alarm": {
       "description": "Device alarm/alert",
       "direction": "device_to_arxos",
@@ -225,7 +225,7 @@
       }
     }
   },
-  
+
   "security": {
     "encryption": "NaCl (libsodium) with Ed25519 keys",
     "authentication": "Device certificates and checksum-based integrity",
@@ -233,7 +233,7 @@
     "key_exchange": "X25519",
     "signature_algorithm": "Ed25519"
   },
-  
+
   "transport_config": {
     "mqtt": {
       "qos": 1,
@@ -263,7 +263,7 @@
       "characteristic_uuid": "87654321-4321-4321-4321-cba987654321"
     }
   },
-  
+
   "examples": {
     "object_update": {
       "type": "object_update",
@@ -278,7 +278,7 @@
       "sequence": 12345,
       "checksum": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456"
     },
-    
+
     "command_request": {
       "type": "command_request",
       "timestamp": 1724382372,
@@ -291,4 +291,4 @@
       "checksum": "b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456a1"
     }
   }
-} 
+}

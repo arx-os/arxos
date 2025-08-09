@@ -12,25 +12,25 @@ export class Presence {
             maxInactiveTime: options.maxInactiveTime || 300000, // 5 minutes
             ...options
         };
-        
+
         // User state
         this.currentUser = null;
         this.activeUsers = new Map();
         this.userActivity = new Map();
         this.userStatus = new Map();
-        
+
         // Timers
         this.activityTimer = null;
         this.presenceTimer = null;
         this.inactiveTimer = null;
-        
+
         // UI elements
         this.presencePanel = null;
         this.presenceIndicator = null;
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -49,12 +49,12 @@ export class Presence {
             avatar: localStorage.getItem('user_avatar') || null,
             sessionId: this.generateSessionId()
         };
-        
+
         // Store user info if not already stored
         if (!localStorage.getItem('user_id')) {
             localStorage.setItem('user_id', this.currentUser.id);
         }
-        
+
         // Initialize current user activity
         this.updateUserActivity();
     }
@@ -65,7 +65,7 @@ export class Presence {
         document.addEventListener('keydown', () => this.updateUserActivity());
         document.addEventListener('touchstart', () => this.updateUserActivity());
         document.addEventListener('scroll', () => this.updateUserActivity());
-        
+
         // Listen for page visibility changes
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -74,16 +74,16 @@ export class Presence {
                 this.handlePageVisible();
             }
         });
-        
+
         // Listen for presence updates from realtime module
         document.addEventListener('presenceUpdate', (event) => {
             this.handlePresenceUpdate(event.detail);
         });
-        
+
         document.addEventListener('userJoined', (event) => {
             this.handleUserJoined(event.detail);
         });
-        
+
         document.addEventListener('userLeft', (event) => {
             this.handleUserLeft(event.detail);
         });
@@ -117,26 +117,26 @@ export class Presence {
     updateUserActivity() {
         const now = Date.now();
         this.userActivity.set(this.currentUser.id, now);
-        
+
         // Reset inactive timer
         if (this.inactiveTimer) {
             clearTimeout(this.inactiveTimer);
         }
         this.startInactiveTimer();
-        
+
         // Update user status to active
         this.updateUserStatus('active');
-        
-        this.triggerEvent('userActivityUpdated', { 
-            userId: this.currentUser.id, 
-            timestamp: now 
+
+        this.triggerEvent('userActivityUpdated', {
+            userId: this.currentUser.id,
+            timestamp: now
         });
     }
 
     checkUserActivity() {
         const now = Date.now();
         const lastActivity = this.userActivity.get(this.currentUser.id);
-        
+
         if (lastActivity && (now - lastActivity) > this.options.userActivityTimeout) {
             this.handleUserBecameInactive();
         }
@@ -151,7 +151,7 @@ export class Presence {
         if (userId === this.currentUser.id) {
             this.updateUserStatus('inactive');
         }
-        
+
         this.triggerEvent('userBecameInactive', { userId });
     }
 
@@ -161,10 +161,10 @@ export class Presence {
             status,
             timestamp: Date.now()
         });
-        
-        this.triggerEvent('userStatusChanged', { 
-            userId: this.currentUser.id, 
-            status 
+
+        this.triggerEvent('userStatusChanged', {
+            userId: this.currentUser.id,
+            status
         });
     }
 
@@ -182,7 +182,7 @@ export class Presence {
                 last_activity: this.userActivity.get(this.currentUser.id),
                 timestamp: Date.now()
             };
-            
+
             // Send presence update to server
             const response = await fetch('/api/presence/update', {
                 method: 'POST',
@@ -191,11 +191,11 @@ export class Presence {
                 },
                 body: JSON.stringify(presenceData)
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to update presence');
             }
-            
+
             this.triggerEvent('presenceUpdated', { data: presenceData });
         } catch (error) {
             console.error('Error updating presence:', error);
@@ -205,7 +205,7 @@ export class Presence {
 
     handlePresenceUpdate(data) {
         const { users } = data;
-        
+
         // Update active users
         users.forEach(user => {
             this.activeUsers.set(user.id, user);
@@ -215,7 +215,7 @@ export class Presence {
                 timestamp: user.timestamp
             });
         });
-        
+
         this.updatePresencePanel();
         this.triggerEvent('presenceDataUpdated', { users });
     }
@@ -237,18 +237,18 @@ export class Presence {
     // Page visibility handling
     handlePageHidden() {
         this.updateUserStatus('away');
-        this.triggerEvent('userStatusChanged', { 
-            userId: this.currentUser.id, 
-            status: 'away' 
+        this.triggerEvent('userStatusChanged', {
+            userId: this.currentUser.id,
+            status: 'away'
         });
     }
 
     handlePageVisible() {
         this.updateUserStatus('active');
         this.updateUserActivity();
-        this.triggerEvent('userStatusChanged', { 
-            userId: this.currentUser.id, 
-            status: 'active' 
+        this.triggerEvent('userStatusChanged', {
+            userId: this.currentUser.id,
+            status: 'active'
         });
     }
 
@@ -263,7 +263,7 @@ export class Presence {
         this.presenceIndicator.id = 'presence-indicator';
         this.presenceIndicator.className = 'fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-40';
         this.presenceIndicator.style.display = 'none';
-        
+
         this.presenceIndicator.innerHTML = `
             <div class="flex items-center space-x-2">
                 <div class="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -273,7 +273,7 @@ export class Presence {
                 </button>
             </div>
         `;
-        
+
         document.body.appendChild(this.presenceIndicator);
         this.setupPresenceIndicatorEvents();
     }
@@ -283,7 +283,7 @@ export class Presence {
         this.presencePanel.id = 'presence-panel';
         this.presencePanel.className = 'fixed bottom-16 right-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-50 max-w-sm';
         this.presencePanel.style.display = 'none';
-        
+
         this.presencePanel.innerHTML = `
             <div class="flex items-center justify-between mb-3">
                 <h3 class="font-semibold text-gray-900">Active Users</h3>
@@ -295,7 +295,7 @@ export class Presence {
                 <!-- Users will be populated here -->
             </div>
         `;
-        
+
         document.body.appendChild(this.presencePanel);
         this.setupPresencePanelEvents();
     }
@@ -316,10 +316,10 @@ export class Presence {
 
     updatePresencePanel() {
         if (!this.options.showUserPresence) return;
-        
+
         const usersList = this.presencePanel.querySelector('#presence-users-list');
         const activeUsers = this.getActiveUsers();
-        
+
         usersList.innerHTML = activeUsers.map(user => `
             <div class="flex items-center space-x-2">
                 <div class="w-2 h-2 bg-${this.getStatusColor(user.id)} rounded-full"></div>
@@ -327,18 +327,18 @@ export class Presence {
                 <span class="text-xs text-gray-500">${this.getStatusText(user.id)}</span>
             </div>
         `).join('');
-        
+
         this.updateActiveUsersCount();
     }
 
     updateActiveUsersCount() {
         const count = this.getActiveUsersCount();
         const countElement = this.presenceIndicator.querySelector('span');
-        
+
         if (countElement) {
             countElement.textContent = `${count} online`;
         }
-        
+
         // Show/hide indicator based on count
         if (count > 1) {
             this.presenceIndicator.style.display = 'block';
@@ -428,12 +428,12 @@ export class Presence {
             clearInterval(this.activityTimer);
             this.activityTimer = null;
         }
-        
+
         if (this.presenceTimer) {
             clearInterval(this.presenceTimer);
             this.presenceTimer = null;
         }
-        
+
         if (this.inactiveTimer) {
             clearTimeout(this.inactiveTimer);
             this.inactiveTimer = null;
@@ -477,17 +477,17 @@ export class Presence {
         this.activeUsers.clear();
         this.userActivity.clear();
         this.userStatus.clear();
-        
+
         if (this.presenceIndicator) {
             this.presenceIndicator.remove();
         }
-        
+
         if (this.presencePanel) {
             this.presencePanel.remove();
         }
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

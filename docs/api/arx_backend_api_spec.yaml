@@ -2,19 +2,19 @@ openapi: 3.0.3
 info:
   title: Arx Backend API
   description: |
-    Comprehensive API for the Arx Backend service providing BIM object management, 
+    Comprehensive API for the Arx Backend service providing BIM object management,
     asset inventory, CMMS integration, maintenance workflows, and compliance reporting.
-    
+
     ## Authentication
     The API uses JWT Bearer token authentication. Include the token in the Authorization header:
     ```
     Authorization: Bearer <your-jwt-token>
     ```
-    
+
     ## Rate Limiting
     - Public endpoints: 100 requests/second, burst of 200
     - Authenticated endpoints: 50 requests/second, burst of 100
-    
+
     ## Error Handling
     All endpoints return standard HTTP status codes with detailed error messages in JSON format.
   version: 1.0.0
@@ -2245,7 +2245,7 @@ paths:
           content:
             image/svg+xml:
               schema:
-                type: string 
+                type: string
 
   # Symbol Library
   /symbols:

@@ -45,20 +45,20 @@ class PrecisionPoint:
     y: Decimal
     z: Optional[Decimal] = None
     precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER
-    
+
     def __post_init__(self):
         """Validate and normalize precision"""
         self.x = self._normalize_precision(self.x)
         self.y = self._normalize_precision(self.y)
         if self.z is not None:
             self.z = self._normalize_precision(self.z)
-    
+
     def _normalize_precision(self, value: Decimal) -> Decimal:
         """Normalize value to specified precision level"""
         return Decimal(str(value)).quantize(
             Decimal(str(self.precision_level.value))
         )
-    
+
     def distance_to(self, other: 'PrecisionPoint') -> Decimal:
         """Calculate distance to another point"""
         dx = self.x - other.x
@@ -67,11 +67,11 @@ class PrecisionPoint:
             dz = self.z - other.z
             return Decimal(str(math.sqrt(dx**2 + dy**2 + dz**2)))
         return Decimal(str(math.sqrt(dx**2 + dy**2)))
-    
+
     def to_tuple(self) -> Tuple[Decimal, Decimal, Optional[Decimal]]:
         """Convert to tuple representation"""
         return (self.x, self.y, self.z)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation"""
         result = {
@@ -90,26 +90,26 @@ class PrecisionVector:
     dy: Decimal
     dz: Optional[Decimal] = None
     precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER
-    
+
     def __post_init__(self):
         """Validate and normalize precision"""
         self.dx = self._normalize_precision(self.dx)
         self.dy = self._normalize_precision(self.dy)
         if self.dz is not None:
             self.dz = self._normalize_precision(self.dz)
-    
+
     def _normalize_precision(self, value: Decimal) -> Decimal:
         """Normalize value to specified precision level"""
         return Decimal(str(value)).quantize(
             Decimal(str(self.precision_level.value))
         )
-    
+
     def magnitude(self) -> Decimal:
         """Calculate vector magnitude"""
         if self.dz is not None:
             return Decimal(str(math.sqrt(self.dx**2 + self.dy**2 + self.dz**2)))
         return Decimal(str(math.sqrt(self.dx**2 + self.dy**2)))
-    
+
     def normalize(self) -> 'PrecisionVector':
         """Normalize vector to unit length"""
         mag = self.magnitude()
@@ -123,8 +123,8 @@ class PrecisionVector:
 
 class PrecisionCoordinateSystem:
     """High-precision coordinate system for CAD operations"""
-    
-    def __init__(self, 
+
+    def __init__(self,
                  system_type: CoordinateSystem = CoordinateSystem.CARTESIAN_2D,
                  origin: Optional[PrecisionPoint] = None,
                  precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
@@ -133,7 +133,7 @@ class PrecisionCoordinateSystem:
         self.precision_level = precision_level
         self.transform_matrix = self._create_identity_matrix()
         self.inverse_matrix = self._create_identity_matrix()
-    
+
     def _create_identity_matrix(self) -> List[List[Decimal]]:
         """Create identity transformation matrix"""
         return [
@@ -142,18 +142,18 @@ class PrecisionCoordinateSystem:
             [Decimal('0'), Decimal('0'), Decimal('1'), Decimal('0')],
             [Decimal('0'), Decimal('0'), Decimal('0'), Decimal('1')]
         ]
-    
+
     def transform_point(self, point: PrecisionPoint) -> PrecisionPoint:
         """Transform point using current transformation matrix"""
         # Convert to homogeneous coordinates
         coords = [point.x, point.y, point.z or Decimal('0'), Decimal('1')]
-        
+
         # Apply transformation
         result = [Decimal('0')] * 4
         for i in range(4):
             for j in range(4):
                 result[i] += self.transform_matrix[i][j] * coords[j]
-        
+
         # Convert back to precision point
         return PrecisionPoint(
             result[0],
@@ -161,12 +161,12 @@ class PrecisionCoordinateSystem:
             result[2] if self.system_type == CoordinateSystem.CARTESIAN_3D else None,
             self.precision_level
         )
-    
+
     def set_origin(self, origin: PrecisionPoint):
         """Set coordinate system origin"""
         self.origin = origin
         self._update_transformation_matrix()
-    
+
     def _update_transformation_matrix(self):
         """Update transformation matrix based on origin"""
         # Translation matrix
@@ -176,10 +176,10 @@ class PrecisionCoordinateSystem:
             [Decimal('0'), Decimal('0'), Decimal('1'), -self.origin.z or Decimal('0')],
             [Decimal('0'), Decimal('0'), Decimal('0'), Decimal('1')]
         ]
-        
+
         # Calculate inverse matrix
         self._calculate_inverse_matrix()
-    
+
     def _calculate_inverse_matrix(self):
         """Calculate inverse transformation matrix"""
         # For translation, inverse is negative translation
@@ -192,27 +192,22 @@ class PrecisionCoordinateSystem:
 
 class PrecisionValidator:
     """Validator for precision operations"""
-    
+
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
-    """
-    Perform __init__ operation
+        """Initialize the precision validator."
 
-Args:
-        precision_level: Description of precision_level
+        Args:
+            precision_level: The precision level to validate against
 
-Returns:
-        Description of return value
+        Returns:
+            None
 
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        Raises:
+            None
+        """
         self.precision_level = precision_level
         self.tolerance = Decimal(str(precision_level.value))
-    
+
     def validate_point(self, point: PrecisionPoint) -> bool:
         """Validate point precision"""
         try:
@@ -222,12 +217,12 @@ Example:
             z_valid = True
             if point.z is not None:
                 z_valid = abs(point.z - point.z.quantize(self.tolerance)) < self.tolerance
-            
+
             return x_valid and y_valid and z_valid
         except Exception as e:
             logger.error(f"Point validation error: {e}")
             return False
-    
+
     def validate_distance(self, distance: Decimal) -> bool:
         """Validate distance precision"""
         try:
@@ -235,7 +230,7 @@ Example:
         except Exception as e:
             logger.error(f"Distance validation error: {e}")
             return False
-    
+
     def validate_angle(self, angle: Decimal) -> bool:
         """Validate angle precision (in radians)"""
         try:
@@ -247,41 +242,36 @@ Example:
             return False
 
 class PrecisionDisplay:
-    """
-    Perform __init__ operation
-
-Args:
-        precision_level: Description of precision_level
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
     """Display utilities for precision values"""
-    
+
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
+        """Initialize the precision display utilities."
+
+        Args:
+            precision_level: The precision level for display formatting
+
+        Returns:
+            None
+
+        Raises:
+            None
+        """
         self.precision_level = precision_level
-    
+
     def format_point(self, point: PrecisionPoint, units: str = "mm") -> str:
         """Format point for display"""
         if point.z is not None:
             return f"({float(point.x):.3f}, {float(point.y):.3f}, {float(point.z):.3f}) {units}"
         return f"({float(point.x):.3f}, {float(point.y):.3f}) {units}"
-    
+
     def format_distance(self, distance: Decimal, units: str = "mm") -> str:
         """Format distance for display"""
         return f"{float(distance):.3f} {units}"
-    
+
     def format_angle(self, angle: Decimal, units: str = "rad") -> str:
         """Format angle for display"""
         return f"{float(angle):.6f} {units}"
-    
+
     def format_precision_level(self) -> str:
         """Format precision level for display"""
         if self.precision_level == PrecisionLevel.SUB_MILLIMETER:
@@ -291,27 +281,11 @@ Example:
         elif self.precision_level == PrecisionLevel.NANOMETER:
             return "0.000001mm"
         else:
-    """
-    Perform __init__ operation
-
-Args:
-        precision_level: Description of precision_level
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
             return "1.0mm"
 
 class PrecisionDrawingSystem:
     """Main precision drawing system"""
-    
+
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
         self.precision_level = precision_level
         self.coordinate_system = PrecisionCoordinateSystem(
@@ -321,9 +295,9 @@ class PrecisionDrawingSystem:
         self.display = PrecisionDisplay(precision_level)
         self.points = []
         self.vectors = []
-        
+
         logger.info(f"Precision Drawing System initialized with {self.display.format_precision_level()} accuracy")
-    
+
     def add_point(self, x: float, y: float, z: Optional[float] = None) -> PrecisionPoint:
         """Add a new precision point"""
         point = PrecisionPoint(
@@ -332,14 +306,14 @@ class PrecisionDrawingSystem:
             Decimal(str(z)) if z is not None else None,
             self.precision_level
         )
-        
+
         if self.validator.validate_point(point):
             self.points.append(point)
             logger.info(f"Added precision point: {self.display.format_point(point)}")
             return point
         else:
             raise ValueError(f"Invalid precision point: {self.display.format_point(point)}")
-    
+
     def add_vector(self, dx: float, dy: float, dz: Optional[float] = None) -> PrecisionVector:
         """Add a new precision vector"""
         vector = PrecisionVector(
@@ -348,24 +322,24 @@ class PrecisionDrawingSystem:
             Decimal(str(dz)) if dz is not None else None,
             self.precision_level
         )
-        
+
         self.vectors.append(vector)
         logger.info(f"Added precision vector: {self.display.format_distance(vector.magnitude())}")
         return vector
-    
+
     def calculate_distance(self, point1: PrecisionPoint, point2: PrecisionPoint) -> Decimal:
         """Calculate distance between two points"""
         distance = point1.distance_to(point2)
-        
+
         if self.validator.validate_distance(distance):
             return distance
         else:
             raise ValueError(f"Invalid distance calculation: {self.display.format_distance(distance)}")
-    
+
     def transform_point(self, point: PrecisionPoint) -> PrecisionPoint:
         """Transform point using coordinate system"""
         return self.coordinate_system.transform_point(point)
-    
+
     def set_origin(self, x: float, y: float, z: Optional[float] = None):
         """Set coordinate system origin"""
         origin = PrecisionPoint(
@@ -376,7 +350,7 @@ class PrecisionDrawingSystem:
         )
         self.coordinate_system.set_origin(origin)
         logger.info(f"Set coordinate system origin: {self.display.format_point(origin)}")
-    
+
     def get_precision_info(self) -> Dict[str, Any]:
         """Get precision system information"""
         return {
@@ -387,7 +361,7 @@ class PrecisionDrawingSystem:
             'point_count': len(self.points),
             'vector_count': len(self.vectors)
         }
-    
+
     def validate_system(self) -> bool:
         """Validate entire precision system"""
         try:
@@ -395,25 +369,25 @@ class PrecisionDrawingSystem:
             if not self.validator.validate_point(self.coordinate_system.origin):
                 logger.error("Invalid coordinate system origin")
                 return False
-            
+
             # Validate all points
             for i, point in enumerate(self.points):
                 if not self.validator.validate_point(point):
                     logger.error(f"Invalid point at index {i}")
                     return False
-            
+
             # Validate all vectors
             for i, vector in enumerate(self.vectors):
                 if vector.magnitude() < 0:
                     logger.error(f"Invalid vector at index {i}")
                     return False
-            
+
             logger.info("Precision system validation passed")
             return True
-            
+
         except Exception as e:
             logger.error(f"Precision system validation failed: {e}")
             return False
 
 # Global instance for easy access
-precision_drawing_system = PrecisionDrawingSystem() 
+precision_drawing_system = PrecisionDrawingSystem()

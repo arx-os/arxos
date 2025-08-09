@@ -246,7 +246,7 @@ class VersionControlHandler:
     def create_version(self, request_data):
         """
         Create a new version of floor data.
-        
+
         Logic Flow:
         1. Validate input data
         2. Check user permissions
@@ -256,32 +256,32 @@ class VersionControlHandler:
         6. Update branch information
         7. Return version details
         """
-        
+
         # Step 1: Validate input data
         validation_result = self.validate_version_data(request_data)
         if not validation_result["valid"]:
             return self.create_error_response(validation_result["errors"])
-        
+
         # Step 2: Check user permissions
         permission_result = self.check_user_permissions(
-            request_data["floor_id"], 
-            request_data["building_id"], 
+            request_data["floor_id"],
+            request_data["building_id"],
             "create_version"
         )
         if not permission_result["allowed"]:
             return self.create_error_response("Permission denied")
-        
+
         # Step 3: Generate version ID and number
         version_id = self.generate_version_id()
         version_number = self.get_next_version_number(
-            request_data["floor_id"], 
-            request_data["building_id"], 
+            request_data["floor_id"],
+            request_data["building_id"],
             request_data["branch"]
         )
-        
+
         # Step 4: Calculate data hash
         data_hash = self.calculate_data_hash(request_data["data"])
-        
+
         # Step 5: Store version data
         version_data = {
             "id": version_id,
@@ -296,9 +296,9 @@ class VersionControlHandler:
             "data_hash": data_hash,
             "object_count": len(request_data["data"]["objects"])
         }
-        
+
         self.store_version_data(version_data, request_data["data"])
-        
+
         # Step 6: Update branch information
         self.update_branch_latest_version(
             request_data["floor_id"],
@@ -306,7 +306,7 @@ class VersionControlHandler:
             request_data["branch"],
             version_id
         )
-        
+
         # Step 7: Return version details
         return self.create_success_response({
             "version_id": version_id,
@@ -323,7 +323,7 @@ class BranchHandler:
     def create_branch(self, request_data):
         """
         Create a new branch from an existing version.
-        
+
         Logic Flow:
         1. Validate branch data
         2. Check if branch already exists
@@ -332,12 +332,12 @@ class BranchHandler:
         5. Set up branch tracking
         6. Return branch details
         """
-        
+
         # Step 1: Validate branch data
         validation_result = self.validate_branch_data(request_data)
         if not validation_result["valid"]:
             return self.create_error_response(validation_result["errors"])
-        
+
         # Step 2: Check if branch already exists
         existing_branch = self.get_branch(
             request_data["branch_name"],
@@ -346,12 +346,12 @@ class BranchHandler:
         )
         if existing_branch:
             return self.create_error_response("Branch already exists")
-        
+
         # Step 3: Verify base version exists
         base_version = self.get_version(request_data["base_version_id"])
         if not base_version:
             return self.create_error_response("Base version not found")
-        
+
         # Step 4: Create branch record
         branch_data = {
             "name": request_data["branch_name"],
@@ -363,12 +363,12 @@ class BranchHandler:
             "created_at": datetime.utcnow(),
             "status": "active"
         }
-        
+
         self.store_branch_data(branch_data)
-        
+
         # Step 5: Set up branch tracking
         self.initialize_branch_tracking(branch_data)
-        
+
         # Step 6: Return branch details
         return self.create_success_response({
             "branch_name": request_data["branch_name"],
@@ -385,7 +385,7 @@ class RouteHandler:
     def create_route(self, request_data):
         """
         Create a new route with waypoints and properties.
-        
+
         Logic Flow:
         1. Validate route data
         2. Check floor exists
@@ -394,17 +394,17 @@ class RouteHandler:
         5. Store route data
         6. Return route details
         """
-        
+
         # Step 1: Validate route data
         validation_result = self.validate_route_data(request_data)
         if not validation_result["valid"]:
             return self.create_error_response(validation_result["errors"])
-        
+
         # Step 2: Check floor exists
         floor = self.get_floor(request_data["floor_id"])
         if not floor:
             return self.create_error_response("Floor not found")
-        
+
         # Step 3: Validate waypoints
         waypoint_validation = self.validate_waypoints(
             request_data["waypoints"],
@@ -412,13 +412,13 @@ class RouteHandler:
         )
         if not waypoint_validation["valid"]:
             return self.create_error_response(waypoint_validation["errors"])
-        
+
         # Step 4: Calculate route properties
         route_properties = self.calculate_route_properties(
             request_data["waypoints"],
             request_data.get("properties", {})
         )
-        
+
         # Step 5: Store route data
         route_data = {
             "id": self.generate_route_id(),
@@ -432,9 +432,9 @@ class RouteHandler:
             "created_at": datetime.utcnow(),
             "status": "active"
         }
-        
+
         self.store_route_data(route_data)
-        
+
         # Step 6: Return route details
         return self.create_success_response({
             "route_id": route_data["id"],
@@ -449,7 +449,7 @@ class RouteOptimizationHandler:
     def optimize_route(self, route_id, optimization_params):
         """
         Optimize an existing route based on specified criteria.
-        
+
         Logic Flow:
         1. Retrieve current route
         2. Analyze optimization requirements
@@ -458,16 +458,16 @@ class RouteOptimizationHandler:
         5. Update route data
         6. Return optimization results
         """
-        
+
         # Step 1: Retrieve current route
         current_route = self.get_route(route_id)
         if not current_route:
             return self.create_error_response("Route not found")
-        
+
         # Step 2: Analyze optimization requirements
         optimization_type = optimization_params.get("optimization_type", "shortest_path")
         constraints = optimization_params.get("constraints", {})
-        
+
         # Step 3: Apply optimization algorithm
         if optimization_type == "shortest_path":
             optimized_waypoints = self.optimize_shortest_path(
@@ -481,7 +481,7 @@ class RouteOptimizationHandler:
             )
         else:
             return self.create_error_response("Invalid optimization type")
-        
+
         # Step 4: Validate optimized route
         validation_result = self.validate_optimized_route(
             optimized_waypoints,
@@ -489,14 +489,14 @@ class RouteOptimizationHandler:
         )
         if not validation_result["valid"]:
             return self.create_error_response("Optimized route validation failed")
-        
+
         # Step 5: Update route data
         updated_properties = self.calculate_route_properties(optimized_waypoints)
         original_distance = current_route["properties"]["distance"]
         optimized_distance = updated_properties["distance"]
-        
+
         savings_percentage = ((original_distance - optimized_distance) / original_distance) * 100
-        
+
         route_data = {
             **current_route,
             "waypoints": optimized_waypoints,
@@ -507,9 +507,9 @@ class RouteOptimizationHandler:
                 "savings_percentage": savings_percentage
             }
         }
-        
+
         self.update_route_data(route_id, route_data)
-        
+
         # Step 6: Return optimization results
         return self.create_success_response({
             "route": route_data,
@@ -546,39 +546,39 @@ from arxos.extensions import DataProcessor
 
 class CustomDataProcessor(DataProcessor):
     """Custom data processor for specialized data transformation."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.processor_name = "custom_processor"
         self.version = "1.0.0"
-    
+
     def process_floor_data(self, floor_data):
         """
         Process floor data with custom logic.
-        
+
         Args:
             floor_data (dict): Floor data to process
-            
+
         Returns:
             dict: Processed floor data
         """
         processed_data = floor_data.copy()
-        
+
         # Apply custom processing logic
         for obj in processed_data.get("objects", []):
             if obj["type"] == "room":
                 obj["processed_area"] = obj.get("width", 0) * obj.get("height", 0)
                 obj["processing_timestamp"] = datetime.utcnow().isoformat()
-        
+
         return processed_data
-    
+
     def validate_config(self, config):
         """Validate processor configuration."""
         required_fields = ["custom_setting"]
         for field in required_fields:
             if field not in config:
                 raise ValueError(f"Missing required config field: {field}")
-        
+
         return True
 ```
 
@@ -614,35 +614,35 @@ from arxos.extensions import ValidationRule
 
 class CustomValidationRule(ValidationRule):
     """Custom validation rule for specialized validation logic."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.rule_name = "custom_validation"
         self.priority = 100
-    
+
     def validate_floor_data(self, floor_data):
         """
         Validate floor data with custom rules.
-        
+
         Args:
             floor_data (dict): Floor data to validate
-            
+
         Returns:
             dict: Validation result
         """
         errors = []
         warnings = []
-        
+
         # Custom validation logic
         for obj in floor_data.get("objects", []):
             if obj["type"] == "room":
                 area = obj.get("width", 0) * obj.get("height", 0)
                 if area < self.config.get("min_room_area", 10):
                     errors.append(f"Room {obj['id']} is too small: {area}")
-                
+
                 if area > self.config.get("max_room_area", 1000):
                     warnings.append(f"Room {obj['id']} is very large: {area}")
-        
+
         return {
             "valid": len(errors) == 0,
             "errors": errors,
@@ -659,47 +659,47 @@ from arxos.extensions import OptimizationAlgorithm
 
 class CustomOptimizationAlgorithm(OptimizationAlgorithm):
     """Custom optimization algorithm for specialized route optimization."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.algorithm_name = "custom_optimization"
         self.version = "1.0.0"
-    
+
     def optimize_route(self, waypoints, constraints):
         """
         Optimize route using custom algorithm.
-        
+
         Args:
             waypoints (list): List of waypoints
             constraints (dict): Optimization constraints
-            
+
         Returns:
             list: Optimized waypoints
         """
         optimized_waypoints = waypoints.copy()
-        
+
         # Custom optimization logic
         if constraints.get("avoid_obstacles", False):
             optimized_waypoints = self.avoid_obstacles(optimized_waypoints)
-        
+
         if constraints.get("minimize_distance", False):
             optimized_waypoints = self.minimize_distance(optimized_waypoints)
-        
+
         if constraints.get("prefer_accessible", False):
             optimized_waypoints = self.prefer_accessible_routes(optimized_waypoints)
-        
+
         return optimized_waypoints
-    
+
     def avoid_obstacles(self, waypoints):
         """Avoid obstacles in route."""
         # Implementation for obstacle avoidance
         return waypoints
-    
+
     def minimize_distance(self, waypoints):
         """Minimize total route distance."""
         # Implementation for distance minimization
         return waypoints
-    
+
     def prefer_accessible_routes(self, waypoints):
         """Prefer accessible routes."""
         # Implementation for accessibility preference
@@ -715,21 +715,21 @@ from arxos.extensions import ExportFormat
 
 class CustomExportFormat(ExportFormat):
     """Custom export format for specialized data export."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.format_name = "custom_format"
         self.file_extension = ".custom"
         self.mime_type = "application/custom"
-    
+
     def export_floor_data(self, floor_data, export_options):
         """
         Export floor data in custom format.
-        
+
         Args:
             floor_data (dict): Floor data to export
             export_options (dict): Export options
-            
+
         Returns:
             bytes: Exported data
         """
@@ -741,7 +741,7 @@ class CustomExportFormat(ExportFormat):
             "floor_data": floor_data,
             "export_options": export_options
         }
-        
+
         # Convert to custom format
         if export_options.get("format_type") == "json":
             return json.dumps(export_data, indent=2).encode()
@@ -749,12 +749,12 @@ class CustomExportFormat(ExportFormat):
             return self.convert_to_xml(export_data)
         else:
             return self.convert_to_binary(export_data)
-    
+
     def convert_to_xml(self, data):
         """Convert data to XML format."""
         # XML conversion implementation
         pass
-    
+
     def convert_to_binary(self, data):
         """Convert data to binary format."""
         # Binary conversion implementation
@@ -770,32 +770,32 @@ from arxos.extensions import IntegrationHook
 
 class CustomIntegrationHook(IntegrationHook):
     """Custom integration hook for external system integration."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.hook_name = "custom_integration"
         self.events = ["version_created", "route_updated"]
-    
+
     def on_version_created(self, version_data):
         """
         Handle version creation event.
-        
+
         Args:
             version_data (dict): Version data
         """
         # Integration logic for version creation
         self.notify_external_system("version_created", version_data)
-    
+
     def on_route_updated(self, route_data):
         """
         Handle route update event.
-        
+
         Args:
             route_data (dict): Route data
         """
         # Integration logic for route updates
         self.notify_external_system("route_updated", route_data)
-    
+
     def notify_external_system(self, event_type, data):
         """Notify external system of events."""
         # External system notification implementation
@@ -839,11 +839,11 @@ def get_optimized_version_history(floor_id, building_id, limit=50, offset=0):
         ORDER BY v.created_at DESC
         LIMIT ? OFFSET ?
     """
-    
+
     # Use prepared statements
     cursor = db.cursor()
     cursor.execute(query, (floor_id, building_id, limit, offset))
-    
+
     return cursor.fetchall()
 
 # Optimized route query with joins
@@ -852,7 +852,7 @@ def get_optimized_routes_with_objects(floor_id):
     Optimized route query with related objects.
     """
     query = """
-        SELECT r.*, 
+        SELECT r.*,
                COUNT(o.id) as object_count,
                AVG(o.x) as avg_object_x,
                AVG(o.y) as avg_object_y
@@ -862,10 +862,10 @@ def get_optimized_routes_with_objects(floor_id):
         GROUP BY r.id
         ORDER BY r.created_at DESC
     """
-    
+
     cursor = db.cursor()
     cursor.execute(query, (floor_id,))
-    
+
     return cursor.fetchall()
 ```
 
@@ -882,19 +882,19 @@ class CacheManager:
     def __init__(self, redis_config):
         self.redis_client = redis.Redis(**redis_config)
         self.default_ttl = 3600  # 1 hour
-    
+
     def cache_result(self, key, ttl=None):
         """Decorator for caching function results."""
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
                 cache_key = f"{key}:{hash(str(args) + str(kwargs))}"
-                
+
                 # Try to get from cache
                 cached_result = self.redis_client.get(cache_key)
                 if cached_result:
                     return json.loads(cached_result)
-                
+
                 # Execute function and cache result
                 result = func(*args, **kwargs)
                 self.redis_client.setex(
@@ -902,7 +902,7 @@ class CacheManager:
                     ttl or self.default_ttl,
                     json.dumps(result)
                 )
-                
+
                 return result
             return wrapper
         return decorator
@@ -932,22 +932,22 @@ class MemoryCache:
         self.max_size = max_size
         self.cache = {}
         self.access_times = {}
-    
+
     def get(self, key):
         """Get value from cache."""
         if key in self.cache:
             self.access_times[key] = time.time()
             return self.cache[key]
         return None
-    
+
     def set(self, key, value, ttl=3600):
         """Set value in cache with TTL."""
         if len(self.cache) >= self.max_size:
             self._evict_oldest()
-        
+
         self.cache[key] = value
         self.access_times[key] = time.time()
-    
+
     def _evict_oldest(self):
         """Evict oldest accessed item."""
         oldest_key = min(self.access_times, key=self.access_times.get)
@@ -983,7 +983,7 @@ def compress_response(data):
 async def get_floor(floor_id: int, request: Request):
     """Get floor data with compression."""
     floor_data = get_floor_data(floor_id)
-    
+
     # Check if client accepts gzip
     if 'gzip' in request.headers.get('accept-encoding', ''):
         compressed_data = compress_response(floor_data)
@@ -992,7 +992,7 @@ async def get_floor(floor_id: int, request: Request):
             media_type='application/json',
             headers={'Content-Encoding': 'gzip'}
         )
-    
+
     return floor_data
 ```
 
@@ -1004,15 +1004,15 @@ def get_paginated_results(query, page=1, per_page=50):
     Implement pagination for large result sets.
     """
     offset = (page - 1) * per_page
-    
+
     # Get total count
     count_query = f"SELECT COUNT(*) FROM ({query}) as subquery"
     total_count = db.execute(count_query).scalar()
-    
+
     # Get paginated results
     paginated_query = f"{query} LIMIT {per_page} OFFSET {offset}"
     results = db.execute(paginated_query).fetchall()
-    
+
     return {
         "results": results,
         "pagination": {
@@ -1038,7 +1038,7 @@ from concurrent.futures import ThreadPoolExecutor
 class AsyncRouteOptimizer:
     def __init__(self, max_workers=4):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
-    
+
     async def optimize_routes_batch(self, routes):
         """
         Optimize multiple routes concurrently.
@@ -1049,28 +1049,28 @@ class AsyncRouteOptimizer:
                 self.optimize_single_route(route)
             )
             tasks.append(task)
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return results
-    
+
     async def optimize_single_route(self, route):
         """
         Optimize a single route asynchronously.
         """
         loop = asyncio.get_event_loop()
-        
+
         # Run CPU-intensive optimization in thread pool
         optimized_waypoints = await loop.run_in_executor(
             self.executor,
             self.cpu_intensive_optimization,
             route["waypoints"]
         )
-        
+
         return {
             "route_id": route["id"],
             "optimized_waypoints": optimized_waypoints
         }
-    
+
     def cpu_intensive_optimization(self, waypoints):
         """
         CPU-intensive optimization algorithm.
@@ -1099,15 +1099,15 @@ def optimize_route_background(route_id):
         route = get_route(route_id)
         if not route:
             return {"success": False, "error": "Route not found"}
-        
+
         # Perform optimization
         optimized_waypoints = optimize_route_algorithm(route["waypoints"])
-        
+
         # Update route
         update_route(route_id, {"waypoints": optimized_waypoints})
-        
+
         return {"success": True, "route_id": route_id}
-    
+
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -1119,15 +1119,15 @@ def export_floor_data_background(floor_id, export_format):
     try:
         # Get floor data
         floor_data = get_floor_data(floor_id)
-        
+
         # Export data
         export_result = export_floor_data(floor_data, export_format)
-        
+
         # Store export result
         store_export_result(floor_id, export_format, export_result)
-        
+
         return {"success": True, "export_id": export_result["id"]}
-    
+
     except Exception as e:
         return {"success": False, "error": str(e)}
 ```
@@ -1144,7 +1144,7 @@ from functools import wraps
 class PerformanceMonitor:
     def __init__(self):
         self.logger = logging.getLogger('performance')
-    
+
     def monitor_performance(self, operation_name):
         """Decorator for monitoring operation performance."""
         def decorator(func):
@@ -1152,7 +1152,7 @@ class PerformanceMonitor:
             def wrapper(*args, **kwargs):
                 start_time = time.time()
                 start_memory = self.get_memory_usage()
-                
+
                 try:
                     result = func(*args, **kwargs)
                     success = True
@@ -1162,26 +1162,26 @@ class PerformanceMonitor:
                 finally:
                     end_time = time.time()
                     end_memory = self.get_memory_usage()
-                    
+
                     duration = end_time - start_time
                     memory_used = end_memory - start_memory
-                    
+
                     self.log_performance(
                         operation_name,
                         duration,
                         memory_used,
                         success
                     )
-                
+
                 return result
             return wrapper
         return decorator
-    
+
     def get_memory_usage(self):
         """Get current memory usage."""
         import psutil
         return psutil.Process().memory_info().rss
-    
+
     def log_performance(self, operation, duration, memory_used, success):
         """Log performance metrics."""
         self.logger.info(
@@ -1422,7 +1422,7 @@ document.getElementById('pan-right').addEventListener('click', () => {
 // Update coordinate display
 function updateCoordinateDisplay(event) {
     const [svgX, svgY] = viewport.screenToSVG(event.clientX, event.clientY);
-    document.getElementById('coordinates').textContent = 
+    document.getElementById('coordinates').textContent =
         `X: ${svgX.toFixed(3)} Y: ${svgY.toFixed(3)}`;
 }
 
@@ -1500,7 +1500,7 @@ function customZoomHandler(data) {
 
     // Update UI
     updateZoomIndicator(data.zoom);
-    
+
     // Trigger custom logic
     if (data.zoom > 3.0) {
         showHighZoomWarning();
@@ -1629,7 +1629,7 @@ setInterval(monitorMemory, 5000);
 function optimizeRendering() {
     const zoom = viewport.getZoom();
     const symbolCount = getSymbolCount();
-    
+
     if (symbolCount > 1000 && zoom < 0.5) {
         // Enable level of detail
         enableLOD();
@@ -1668,7 +1668,7 @@ describe('ViewportManager', () => {
     test('should convert coordinates correctly', () => {
         viewport.setZoom(2.0);
         viewport.setPan(100, 200);
-        
+
         const [svgX, svgY] = viewport.screenToSVG(200, 400);
         expect(svgX).toBe(50); // (200 - 100) / 2
         expect(svgY).toBe(100); // (400 - 200) / 2
@@ -1683,11 +1683,11 @@ describe('Viewport Integration', () => {
     test('should integrate with symbol library', () => {
         const symbolLibrary = new SymbolLibrary();
         const viewport = new ViewportManager(svgElement);
-        
+
         // Add symbol to viewport
         const symbol = symbolLibrary.createSymbol('door');
         viewport.addSymbol(symbol);
-        
+
         // Test symbol interaction
         const symbols = viewport.getSymbolsAt(100, 200);
         expect(symbols).toContain(symbol);
@@ -1701,14 +1701,14 @@ describe('Viewport Integration', () => {
 describe('Viewport Performance', () => {
     test('should handle high-frequency zoom operations', () => {
         const startTime = performance.now();
-        
+
         for (let i = 0; i < 1000; i++) {
             viewport.setZoom(Math.random() * 5);
         }
-        
+
         const endTime = performance.now();
         const duration = endTime - startTime;
-        
+
         expect(duration).toBeLessThan(1000); // Should complete in <1 second
     });
 });
@@ -1728,10 +1728,10 @@ console.log('Performance metrics:', metrics);
 if (metrics.fps < 30) {
     // Reduce zoom level
     viewport.setZoom(Math.min(viewport.getZoom(), 2.0));
-    
+
     // Clear history
     viewport.clearZoomHistory();
-    
+
     // Enable performance mode
     viewport.setPerformanceMode('high');
 }
@@ -1742,15 +1742,15 @@ if (metrics.fps < 30) {
 // Check for memory leaks
 function checkMemoryLeaks() {
     const initialMemory = performance.memory.usedJSHeapSize;
-    
+
     // Perform operations
     for (let i = 0; i < 100; i++) {
         viewport.setZoom(Math.random() * 5);
     }
-    
+
     const finalMemory = performance.memory.usedJSHeapSize;
     const memoryIncrease = finalMemory - initialMemory;
-    
+
     if (memoryIncrease > 10 * 1024 * 1024) { // 10MB threshold
         console.warn('Potential memory leak detected');
     }
@@ -1763,7 +1763,7 @@ function checkMemoryLeaks() {
 function debugEventListeners() {
     const events = viewport.getEventListeners();
     console.log('Active event listeners:', events);
-    
+
     // Check for duplicate listeners
     const duplicates = findDuplicateListeners(events);
     if (duplicates.length > 0) {
@@ -1794,20 +1794,20 @@ class ViewportController {
         this.setupEventHandlers();
         this.setupUI();
     }
-    
+
     setupEventHandlers() {
         this.viewport.addEventListener('zoomChanged', this.handleZoom.bind(this));
         this.viewport.addEventListener('panChanged', this.handlePan.bind(this));
     }
-    
+
     setupUI() {
         // Setup UI controls
     }
-    
+
     handleZoom(data) {
         // Handle zoom changes
     }
-    
+
     handlePan(data) {
         // Handle pan changes
     }
@@ -1827,14 +1827,14 @@ class SafeViewportManager {
             this.fallbackToBasicViewport();
         }
     }
-    
+
     setupErrorHandling() {
         this.viewport.addEventListener('error', (error) => {
             console.error('Viewport error:', error);
             this.handleError(error);
         });
     }
-    
+
     handleError(error) {
         // Implement error recovery
         switch (error.type) {
@@ -1861,24 +1861,24 @@ class OptimizedViewportManager {
             throttleUpdates: true,
             performanceMode: 'high'
         });
-        
+
         this.setupPerformanceMonitoring();
     }
-    
+
     setupPerformanceMonitoring() {
         // Monitor and optimize performance
         setInterval(() => {
             this.optimizePerformance();
         }, 1000);
     }
-    
+
     optimizePerformance() {
         const metrics = this.viewport.performanceMetrics;
-        
+
         if (metrics.fps < 30) {
             this.enablePerformanceMode();
         }
-        
+
         if (metrics.memoryUsage > 100) {
             this.cleanupMemory();
         }
@@ -1896,21 +1896,21 @@ describe('ViewportManager Testing', () => {
         test('pan operations');
         test('coordinate conversion');
     });
-    
+
     // Integration tests for component interaction
     describe('Integration Tests', () => {
         test('symbol library integration');
         test('event system integration');
         test('performance monitoring');
     });
-    
+
     // Performance tests for optimization
     describe('Performance Tests', () => {
         test('high-frequency operations');
         test('memory usage');
         test('rendering performance');
     });
-    
+
     // Browser compatibility tests
     describe('Browser Tests', () => {
         test('Chrome compatibility');
@@ -1926,4 +1926,4 @@ describe('ViewportManager Testing', () => {
 **Documentation Version**: 1.0.0
 **Last Updated**: [Current Date]
 **Target Audience**: Developers and Technical Users
-**Compatibility**: Viewport Manager v1.0.0+ 
+**Compatibility**: Viewport Manager v1.0.0+

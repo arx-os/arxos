@@ -130,5 +130,5 @@ This document outlines the database architecture strategy for Arxos, with a focu
 
 🛡️ This plan will allow Arxos to serve its first 10 buildings just as easily as its first 100,000 — without painting ourselves into a corner.
 
-Prepared by: `CTO Office – Infrastructure & Platform Team`  
+Prepared by: `CTO Office – Infrastructure & Platform Team`
 Last Updated: `{{today's date}}`

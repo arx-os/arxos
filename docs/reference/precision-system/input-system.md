@@ -184,22 +184,22 @@ settings = InputSettings(
     default_precision=Decimal('0.001'),      # 1mm precision
     grid_snap_precision=Decimal('1.000'),    # 1mm grid
     angle_snap_precision=Decimal('15.0'),    # 15 degrees
-    
+
     # Input sensitivity
     mouse_sensitivity=1.0,
     touch_sensitivity=1.0,
     keyboard_precision=Decimal('0.001'),
-    
+
     # Validation settings
     validate_input=True,
     strict_mode=True,
     log_input_errors=True,
-    
+
     # Feedback settings
     provide_visual_feedback=True,
     provide_audio_feedback=False,
     feedback_delay=0.1,
-    
+
     # Snap settings
     enable_grid_snap=True,
     enable_object_snap=True,
@@ -293,7 +293,7 @@ print(f"Coordinate valid: {is_valid}")
 
 # Validate with custom precision
 is_valid = validator.validate_input_coordinates(
-    1.000001, 2.000001, 3.000001, 
+    1.000001, 2.000001, 3.000001,
     precision=Decimal('0.000001')
 )
 print(f"High precision valid: {is_valid}")
@@ -533,4 +533,4 @@ The system includes extensive testing:
 
 The Precision Input System provides comprehensive input handling for CAD applications with sub-millimeter accuracy. Its multi-input type support, configurable processing modes, and real-time feedback ensure reliable operation in demanding engineering and design applications.
 
-The system's integration with other CAD components provides a solid foundation for professional CAD functionality while maintaining the precision and performance required for engineering applications. The comprehensive validation and feedback capabilities make it suitable for both development and production environments. 
+The system's integration with other CAD components provides a solid foundation for professional CAD functionality while maintaining the precision and performance required for engineering applications. The comprehensive validation and feedback capabilities make it suitable for both development and production environments.

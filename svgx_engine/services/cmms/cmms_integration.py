@@ -67,9 +67,9 @@ class FloorAsset:
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     @property
-    def precision_location(self) -> PrecisionCoordinate:
+def precision_location(self) -> PrecisionCoordinate:
         """Get precision coordinate for asset location"""
         return PrecisionCoordinate(self.location_x, self.location_y, self.location_z)
 
@@ -143,7 +143,7 @@ class MaintenanceHistory:
 
 class FloorAssetManager:
     """Manages floor-specific assets with precision coordinate support"""
-    
+
     def __init__(self, db_manager: DatabaseManager):
     """
     Perform __init__ operation
@@ -163,13 +163,13 @@ Example:
     """
         self.db_manager = db_manager
         self.precision_math = PrecisionMath()
-        
+
     async def add_floor_asset(self, asset: FloorAsset) -> bool:
         """Add a floor asset with precision validation"""
         try:
             # Validate precision coordinates
             precision_location = asset.precision_location
-            
+
             # Check for duplicate assets at same location
             existing_assets = await self.get_floor_assets(asset.floor_id, asset.building_id)
             for existing_asset in existing_assets:
@@ -178,7 +178,7 @@ Example:
                 if distance < 0.1:  # Minimum clearance
                     logger.warning(f"Asset too close to existing asset at distance {distance}")
                     return False
-            
+
             # Store asset in database
             asset_data = {
                 'asset_id': asset.asset_id,
@@ -202,7 +202,7 @@ Example:
                 'updated_at': asset.updated_at.isoformat(),
                 'metadata': json.dumps(asset.metadata)
             }
-            
+
             await self.db_manager.execute(
                 """
                 INSERT INTO floor_assets (
@@ -219,26 +219,26 @@ Example:
                 """,
                 asset_data
             )
-            
+
             logger.info(f"Added floor asset {asset.asset_id} at precision location {precision_location}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error adding floor asset: {e}")
             return False
-    
+
     async def get_floor_assets(self, floor_id: str, building_id: str) -> List[FloorAsset]:
         """Get all assets for a specific floor with precision coordinates"""
         try:
             result = await self.db_manager.fetch_all(
                 """
-                SELECT * FROM floor_assets 
+                SELECT * FROM floor_assets
                 WHERE floor_id = :floor_id AND building_id = :building_id
                 ORDER BY asset_name
                 """,
                 {'floor_id': floor_id, 'building_id': building_id}
             )
-            
+
             assets = []
             for row in result:
                 asset = FloorAsset(
@@ -264,9 +264,9 @@ Example:
                     metadata=json.loads(row['metadata']) if row['metadata'] else {}
                 )
                 assets.append(asset)
-            
+
             return assets
-            
+
         except Exception as e:
             logger.error(f"Error getting floor assets: {e}")
             return []
@@ -289,10 +289,10 @@ Example:
         print(result)
     """
     """Manages maintenance schedules with precision timing"""
-    
+
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
-    
+
     async def add_maintenance_schedule(self, schedule: MaintenanceSchedule) -> bool:
         """Add a maintenance schedule"""
         try:
@@ -315,7 +315,7 @@ Example:
                 'updated_at': schedule.updated_at.isoformat(),
                 'metadata': json.dumps(schedule.metadata)
             }
-            
+
             await self.db_manager.execute(
                 """
                 INSERT INTO maintenance_schedules (
@@ -332,20 +332,20 @@ Example:
                 """,
                 schedule_data
             )
-            
+
             logger.info(f"Added maintenance schedule {schedule.schedule_id}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error adding maintenance schedule: {e}")
             return False
 
 class WorkOrderManager:
     """Manages work orders with precision tracking"""
-    
+
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
-    
+
     async def create_work_order(self, work_order: WorkOrder) -> bool:
         """Create a new work order"""
         try:
@@ -376,7 +376,7 @@ class WorkOrderManager:
                 'updated_at': work_order.updated_at.isoformat(),
                 'metadata': json.dumps(work_order.metadata)
             }
-            
+
             await self.db_manager.execute(
                 """
                 INSERT INTO work_orders (
@@ -397,24 +397,24 @@ class WorkOrderManager:
                 """,
                 work_order_data
             )
-            
+
             logger.info(f"Created work order {work_order.work_order_id}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error creating work order: {e}")
             return False
 
 class CMMSIntegrationService:
     """Main CMMS integration service for SVGX Engine"""
-    
+
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
         self.asset_manager = FloorAssetManager(db_manager)
         self.scheduler = MaintenanceScheduler(db_manager)
         self.work_order_manager = WorkOrderManager(db_manager)
         self.precision_math = PrecisionMath()
-    
+
     async def add_floor_asset(self, asset_data: Dict[str, Any]) -> Dict[str, Any]:
         """Add a floor asset with precision coordinate validation"""
         try:
@@ -422,9 +422,9 @@ class CMMSIntegrationService:
             location_x = asset_data.get('location_x', 0.0)
             location_y = asset_data.get('location_y', 0.0)
             location_z = asset_data.get('location_z', 0.0)
-            
+
             precision_location = PrecisionCoordinate(location_x, location_y, location_z)
-            
+
             asset = FloorAsset(
                 asset_id=asset_data.get('asset_id', str(uuid.uuid4())),
                 floor_id=asset_data['floor_id'],
@@ -444,10 +444,8 @@ class CMMSIntegrationService:
                 condition=asset_data.get('condition', 'good'),
                 maintenance_interval_days=asset_data.get('maintenance_interval_days', 365),
                 metadata=asset_data.get('metadata', {})
-            )
-            
             success = await self.asset_manager.add_floor_asset(asset)
-            
+
             return {
                 'success': success,
                 'asset_id': asset.asset_id,
@@ -458,19 +456,19 @@ class CMMSIntegrationService:
                 },
                 'message': 'Asset added successfully' if success else 'Failed to add asset'
             }
-            
+
         except Exception as e:
             logger.error(f"Error adding floor asset: {e}")
             return {
                 'success': False,
                 'error': str(e)
             }
-    
+
     async def get_floor_assets(self, floor_id: str, building_id: str) -> Dict[str, Any]:
         """Get all assets for a specific floor with precision coordinates"""
         try:
             assets = await self.asset_manager.get_floor_assets(floor_id, building_id)
-            
+
             asset_list = []
             for asset in assets:
                 asset_list.append({
@@ -486,7 +484,7 @@ class CMMSIntegrationService:
                     'condition': asset.condition,
                     'next_maintenance': asset.next_maintenance.isoformat() if asset.next_maintenance else None
                 })
-            
+
             return {
                 'success': True,
                 'floor_id': floor_id,
@@ -494,14 +492,14 @@ class CMMSIntegrationService:
                 'assets': asset_list,
                 'total_assets': len(asset_list)
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting floor assets: {e}")
             return {
                 'success': False,
                 'error': str(e)
             }
-    
+
     async def create_maintenance_schedule(self, schedule_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a maintenance schedule"""
         try:
@@ -518,23 +516,21 @@ class CMMSIntegrationService:
                 parts_required=schedule_data.get('parts_required', []),
                 instructions=schedule_data.get('instructions', ''),
                 metadata=schedule_data.get('metadata', {})
-            )
-            
             success = await self.scheduler.add_maintenance_schedule(schedule)
-            
+
             return {
                 'success': success,
                 'schedule_id': schedule.schedule_id,
                 'message': 'Schedule created successfully' if success else 'Failed to create schedule'
             }
-            
+
         except Exception as e:
             logger.error(f"Error creating maintenance schedule: {e}")
             return {
                 'success': False,
                 'error': str(e)
             }
-    
+
     async def create_work_order(self, work_order_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a work order"""
         try:
@@ -555,31 +551,29 @@ class CMMSIntegrationService:
                 parts_used=work_order_data.get('parts_used', []),
                 notes=work_order_data.get('notes', ''),
                 metadata=work_order_data.get('metadata', {})
-            )
-            
             success = await self.work_order_manager.create_work_order(work_order)
-            
+
             return {
                 'success': success,
                 'work_order_id': work_order.work_order_id,
                 'message': 'Work order created successfully' if success else 'Failed to create work order'
             }
-            
+
         except Exception as e:
             logger.error(f"Error creating work order: {e}")
             return {
                 'success': False,
                 'error': str(e)
             }
-    
+
     async def get_due_maintenance(self, floor_id: str, building_id: str) -> Dict[str, Any]:
         """Get assets due for maintenance on a specific floor"""
         try:
             assets = await self.asset_manager.get_floor_assets(floor_id, building_id)
             due_assets = []
-            
+
             current_date = datetime.utcnow()
-            
+
             for asset in assets:
                 if asset.next_maintenance and asset.next_maintenance <= current_date:
                     due_assets.append({
@@ -594,7 +588,7 @@ class CMMSIntegrationService:
                         'next_maintenance': asset.next_maintenance.isoformat(),
                         'days_overdue': (current_date - asset.next_maintenance).days
                     })
-            
+
             return {
                 'success': True,
                 'floor_id': floor_id,
@@ -602,10 +596,10 @@ class CMMSIntegrationService:
                 'due_assets': due_assets,
                 'total_due': len(due_assets)
             }
-            
+
         except Exception as e:
             logger.error(f"Error getting due maintenance: {e}")
             return {
                 'success': False,
                 'error': str(e)
-            } 
+            }

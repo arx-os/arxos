@@ -220,10 +220,10 @@ async def create_entity(
             description=request.description,
             created_by=user.id
         )
-        
+
         # Use application service
         result = entity_service.create_entity(create_request)
-        
+
         if result.success:
             return format_success_response(
                 data={"id": result.entity_id},
@@ -235,7 +235,7 @@ async def create_entity(
                 message=result.error_message,
                 status_code=400
             )
-            
+
     except ValidationError as e:
         return format_error_response(
             error_code="VALIDATION_ERROR",
@@ -408,4 +408,4 @@ async def create_entity(
 
 ## Conclusion
 
-This implementation plan provides a comprehensive roadmap for building a production-ready API Layer that follows Clean Architecture principles, implements proper security measures, and provides excellent developer experience through comprehensive documentation and testing. 
+This implementation plan provides a comprehensive roadmap for building a production-ready API Layer that follows Clean Architecture principles, implements proper security measures, and provides excellent developer experience through comprehensive documentation and testing.

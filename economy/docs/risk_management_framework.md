@@ -208,13 +208,13 @@ cybersecurity_controls:
     - waf: advanced_threat_detection
     - vpn: zero_trust_access
     - segmentation: network_isolation
-  
+
   application_security:
     - code_review: mandatory_peer_review
     - penetration_testing: quarterly_external_tests
     - vulnerability_scanning: continuous_monitoring
     - secure_development: sdlc_integration
-  
+
   data_protection:
     - encryption: aes_256_at_rest_and_in_transit
     - access_controls: role_based_permissions
@@ -266,7 +266,7 @@ compliance_controls:
     - legal_review: quarterly_compliance_assessment
     - regulatory_consultation: external_legal_counsel
     - compliance_auditing: annual_independent_audits
-  
+
   tax_compliance:
     - automated_reporting: real_time_tax_calculations
     - withholding_management: automated_tax_withholding
@@ -292,7 +292,7 @@ enforcement_risk_controls:
     - insurance_coverage: directors_and_officers_insurance
     - legal_counsel: specialized_securities_lawyers
     - compliance_program: comprehensive_compliance_framework
-  
+
   crisis_management:
     - crisis_communication: prepared_response_protocols
     - stakeholder_relations: investor_communication_strategy
@@ -315,13 +315,13 @@ key_risk_indicators:
     - error_rate: <0.1%
     - response_time: <200ms
     - security_incidents: 0_critical_incidents
-  
+
   financial_risk:
     - liquidity_ratio: >6_months_reserve
     - dividend_coverage: >3x_coverage
     - treasury_diversification: max_20%_concentration
     - currency_exposure: <10%_unhedged
-  
+
   regulatory_risk:
     - compliance_score: 100%
     - regulatory_filings: 100%_timely
@@ -350,7 +350,7 @@ risk_communication:
     - weekly_summaries: executive_risk_summaries
     - monthly_reports: detailed_risk_analysis
     - quarterly_reviews: board_presentations
-  
+
   external_reporting:
     - regulatory_reports: required_compliance_reporting
     - investor_communications: risk_disclosure_updates
@@ -383,13 +383,13 @@ incident_response:
     - alert_systems: real_time_notifications
     - escalation_procedures: defined_escalation_matrix
     - incident_classification: severity_assessment
-  
+
   response:
     - immediate_containment: isolate_affected_systems
     - investigation: root_cause_analysis
     - communication: stakeholder_notifications
     - recovery: system_restoration
-  
+
   recovery:
     - business_continuity: maintain_critical_operations
     - system_restoration: full_system_recovery
@@ -432,19 +432,19 @@ risk_assessment_schedule:
   daily:
     - critical_risk_monitoring: real_time_alerts
     - system_health_checks: automated_monitoring
-  
+
   weekly:
     - risk_metric_review: key_indicators_analysis
     - incident_review: security_incident_assessment
-  
+
   monthly:
     - comprehensive_risk_review: full_risk_assessment
     - compliance_check: regulatory_compliance_verification
-  
+
   quarterly:
     - strategic_risk_review: long_term_risk_analysis
     - board_presentation: risk_governance_review
-  
+
   annually:
     - enterprise_risk_assessment: comprehensive_evaluation
     - risk_strategy_update: risk_management_plan_revision
@@ -542,13 +542,13 @@ risk_management_kpis:
     - incident_response_time: <15_minutes
     - recovery_time: <4_hours
     - security_incidents: 0_critical_incidents
-  
+
   financial_risk:
     - liquidity_coverage: >6_months
     - dividend_sustainability: >3x_coverage
     - treasury_diversification: max_20%_concentration
     - currency_risk: <10%_exposure
-  
+
   regulatory_risk:
     - compliance_rate: 100%
     - regulatory_filings: 100%_timely

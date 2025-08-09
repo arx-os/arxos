@@ -5,42 +5,42 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        
+
         <!-- User Service -->
         <mxCell id="service_User_Service" value="User Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4A90E2;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="100" y="100" width="120" height="60" as="geometry" />
         </mxCell>
-        
+
         <!-- Project Service -->
         <mxCell id="service_Project_Service" value="Project Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9B59B6;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="300" y="100" width="120" height="60" as="geometry" />
         </mxCell>
-        
+
         <!-- Building Service -->
         <mxCell id="service_Building_Service" value="Building Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9B59B6;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="500" y="100" width="120" height="60" as="geometry" />
         </mxCell>
-        
+
         <!-- BIM Service -->
         <mxCell id="service_BIM_Service" value="BIM Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#50C878;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="700" y="100" width="120" height="60" as="geometry" />
         </mxCell>
-        
+
         <!-- Audit Service -->
         <mxCell id="service_Audit_Service" value="Audit Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FF6B6B;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="100" y="300" width="120" height="60" as="geometry" />
         </mxCell>
-        
+
         <!-- Collaboration Service -->
         <mxCell id="service_Collaboration_Service" value="Collaboration Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFD93D;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="300" y="300" width="120" height="60" as="geometry" />
         </mxCell>
-        
+
         <!-- Database -->
         <mxCell id="service_Database" value="PostgreSQL Database" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
           <mxGeometry x="400" y="500" width="120" height="60" as="geometry" />
         </mxCell>
-        
+
         <!-- Data Flow Arrows -->
         <mxCell id="flow_User_Service_Database" edge="1" parent="1" source="service_User_Service" target="service_Database" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
@@ -50,7 +50,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_Project_Service_Database" edge="1" parent="1" source="service_Project_Service" target="service_Database" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -59,7 +59,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_Building_Service_Database" edge="1" parent="1" source="service_Building_Service" target="service_Database" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -68,7 +68,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_BIM_Service_Database" edge="1" parent="1" source="service_BIM_Service" target="service_Database" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -77,7 +77,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_Audit_Service_Database" edge="1" parent="1" source="service_Audit_Service" target="service_Database" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -86,7 +86,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_Collaboration_Service_Database" edge="1" parent="1" source="service_Collaboration_Service" target="service_Database" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -95,7 +95,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <!-- Service to Service Flows -->
         <mxCell id="flow_User_Service_Project_Service" edge="1" parent="1" source="service_User_Service" target="service_Project_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
@@ -105,7 +105,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_Project_Service_Building_Service" edge="1" parent="1" source="service_Project_Service" target="service_Building_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -114,7 +114,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_Building_Service_BIM_Service" edge="1" parent="1" source="service_Building_Service" target="service_BIM_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -123,7 +123,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_BIM_Service_Audit_Service" edge="1" parent="1" source="service_BIM_Service" target="service_Audit_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -132,7 +132,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="flow_BIM_Service_Collaboration_Service" edge="1" parent="1" source="service_BIM_Service" target="service_Collaboration_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -141,63 +141,63 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <!-- External Systems -->
         <mxCell id="external_Web_Client" value="Web Client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
           <mxGeometry x="50" y="50" width="100" height="40" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="external_Mobile_App" value="Mobile App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;" vertex="1" parent="1">
           <mxGeometry x="170" y="50" width="100" height="40" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="external_API_Gateway" value="API Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;" vertex="1" parent="1">
           <mxGeometry x="290" y="50" width="100" height="40" as="geometry" />
         </mxCell>
-        
+
         <!-- External to Service Flows -->
         <mxCell id="flow_Web_Client_API_Gateway" edge="1" parent="1" source="external_Web_Client" target="external_API_Gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="flow_Mobile_App_API_Gateway" edge="1" parent="1" source="external_Mobile_App" target="external_API_Gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="flow_API_Gateway_User_Service" edge="1" parent="1" source="external_API_Gateway" target="service_User_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="flow_API_Gateway_Project_Service" edge="1" parent="1" source="external_API_Gateway" target="service_Project_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="flow_API_Gateway_Building_Service" edge="1" parent="1" source="external_API_Gateway" target="service_Building_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="flow_API_Gateway_BIM_Service" edge="1" parent="1" source="external_API_Gateway" target="service_BIM_Service" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        
+
         <!-- Data Flow Labels -->
         <mxCell id="label_HTTP_Requests" value="HTTP Requests" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=2;" vertex="1" parent="1">
           <mxGeometry x="200" y="30" width="100" height="20" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="label_REST_API" value="REST API" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=2;" vertex="1" parent="1">
           <mxGeometry x="320" y="30" width="80" height="20" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="label_Database_Operations" value="Database Operations" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=2;" vertex="1" parent="1">
           <mxGeometry x="400" y="450" width="120" height="20" as="geometry" />
         </mxCell>
-        
+
         <mxCell id="label_Service_Communication" value="Service Communication" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=2;" vertex="1" parent="1">
           <mxGeometry x="200" y="200" width="140" height="20" as="geometry" />
         </mxCell>
-        
+
       </root>
     </mxGraphModel>
   </diagram>
-</mxfile> 
+</mxfile>

@@ -71,7 +71,7 @@ class CustomBehaviorPluginSystem:
     """
     Extensible plugin system for custom behaviors, supporting dynamic loading, registration, validation, security, and monitoring.
     """
-    def __init__(self):
+def __init__(self):
     """
     Perform __init__ operation
 
@@ -118,16 +118,16 @@ Example:
                     module = sys.modules[module_path]
                 else:
                     module = importlib.import_module(module_path)
-                
+
                 # Validate plugin structure
                 if not hasattr(module, "register"):
                     raise ImportError(f"Plugin {plugin_name} missing required 'register' function.")
-                
+
                 # Extract metadata
                 meta = getattr(module, "PLUGIN_METADATA", None)
                 if not meta or not isinstance(meta, dict):
                     raise ImportError(f"Plugin {plugin_name} missing or invalid PLUGIN_METADATA.")
-                
+
                 plugin_metadata = PluginMetadata(
                     name=meta.get("name", plugin_name),
                     version=meta.get("version", "0.1.0"),
@@ -138,14 +138,12 @@ Example:
                     loaded_at=datetime.utcnow(),
                     status=PluginStatus.LOADED
                 )
-                
+
                 plugin = BehaviorPlugin(
                     id=plugin_name,
                     metadata=plugin_metadata,
                     module=module,
                     last_loaded=datetime.utcnow()
-                )
-                
                 # Register plugin behaviors
                 registered_behaviors = module.register(behavior_management_system)
                 if not isinstance(registered_behaviors, list):
@@ -153,7 +151,7 @@ Example:
                 plugin.registered_behaviors = registered_behaviors
                 for behavior_id in registered_behaviors:
                     self.behavior_to_plugin[behavior_id] = plugin_name
-                
+
                 self.plugins[plugin_name] = plugin
                 logger.info(f"Loaded plugin: {plugin_name}")
                 return plugin
@@ -168,12 +166,10 @@ Example:
                 loaded_at=datetime.utcnow(),
                 status=PluginStatus.ERROR,
                 error=str(e)
-            )
             plugin = BehaviorPlugin(
                 id=plugin_name,
                 metadata=plugin_metadata,
                 last_error=str(e)
-            )
             self.plugins[plugin_name] = plugin
             return None
 
@@ -257,8 +253,7 @@ Example:
     def get_plugins(self, status: Optional[PluginStatus] = None) -> List[BehaviorPlugin]:
         if status:
             return [p for p in self.plugins.values() if p.metadata.status == status]
-        return list(self.plugins.values())
-
+        return list(self.plugins.values()
     def get_plugin_behaviors(self, plugin_name: str) -> List[str]:
         plugin = self.plugins.get(plugin_name)
         return plugin.registered_behaviors if plugin else []
@@ -288,12 +283,12 @@ Example:
         result = _register_custom_behavior_plugin_system(param)
         print(result)
     """
-    def handler(event: Event):
+def handler(event: Event):
         if event.type == EventType.SYSTEM and event.data.get('plugin'):
             # Plugin events are handled internally
             return None
         return None
-    
+
     # Import here to avoid circular imports
     from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
     event_driven_behavior_engine.register_handler(
@@ -303,4 +298,4 @@ Example:
         priority=4
     )
 
-_register_custom_behavior_plugin_system() 
+_register_custom_behavior_plugin_system()

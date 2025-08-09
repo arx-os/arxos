@@ -6,7 +6,7 @@
 -- ============================================================================
 
 -- Get database size and table information
-SELECT 
+SELECT
     schemaname,
     tablename,
     attname,
@@ -14,18 +14,18 @@ SELECT
     correlation,
     most_common_vals,
     most_common_freqs
-FROM pg_stats 
+FROM pg_stats
 WHERE schemaname = 'public'
 ORDER BY tablename, attname;
 
 -- Table sizes and row counts
-SELECT 
+SELECT
     schemaname,
     tablename,
     pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size,
     pg_total_relation_size(schemaname||'.'||tablename) as size_bytes,
     (SELECT reltuples FROM pg_class WHERE relname = tablename) as row_count
-FROM pg_tables 
+FROM pg_tables
 WHERE schemaname = 'public'
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 
@@ -34,14 +34,14 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 -- ============================================================================
 
 -- Index usage statistics
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
     idx_scan as index_scans,
     idx_tup_read as tuples_read,
     idx_tup_fetch as tuples_fetched,
-    CASE 
+    CASE
         WHEN idx_scan = 0 THEN 'UNUSED'
         WHEN idx_scan < 10 THEN 'RARELY_USED'
         WHEN idx_scan < 100 THEN 'OCCASIONALLY_USED'
@@ -51,7 +51,7 @@ FROM pg_stat_user_indexes
 ORDER BY idx_scan DESC;
 
 -- Unused indexes (potential candidates for removal)
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -62,7 +62,7 @@ WHERE idx_scan = 0
 ORDER BY pg_relation_size(indexrelid) DESC;
 
 -- Index sizes
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -77,7 +77,7 @@ ORDER BY pg_relation_size(indexrelid) DESC;
 
 -- Analyze common query patterns (if pg_stat_statements is enabled)
 -- Note: This requires pg_stat_statements extension to be installed
-SELECT 
+SELECT
     query,
     calls,
     total_time,
@@ -100,7 +100,7 @@ LIMIT 20;
 -- ============================================================================
 
 -- Analyze building queries (as mentioned in the task)
-EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) 
+EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 SELECT * FROM buildings WHERE owner_id = 1;
 
 -- Analyze asset queries
@@ -113,7 +113,7 @@ SELECT * FROM walls WHERE building_id = 1 AND ST_Intersects(geom, ST_MakeEnvelop
 
 -- Analyze complex joins
 EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
-SELECT 
+SELECT
     b.name as building_name,
     f.name as floor_name,
     COUNT(w.id) as wall_count,
@@ -132,14 +132,14 @@ GROUP BY b.id, b.name, f.id, f.name;
 -- ============================================================================
 
 -- Tables with high sequential scans
-SELECT 
+SELECT
     schemaname,
     tablename,
     seq_scan,
     seq_tup_read,
     idx_scan,
     idx_tup_fetch,
-    CASE 
+    CASE
         WHEN seq_scan > idx_scan THEN 'HIGH_SEQ_SCANS'
         WHEN seq_scan > 0 THEN 'SOME_SEQ_SCANS'
         ELSE 'INDEX_SCANS_ONLY'
@@ -152,12 +152,12 @@ ORDER BY seq_scan DESC;
 -- ============================================================================
 
 -- Buffer cache hit ratios
-SELECT 
+SELECT
     schemaname,
     tablename,
     heap_blks_read,
     heap_blks_hit,
-    CASE 
+    CASE
         WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
         ELSE ROUND(100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read), 2)
     END as cache_hit_ratio
@@ -169,7 +169,7 @@ ORDER BY cache_hit_ratio ASC;
 -- ============================================================================
 
 -- Current locks
-SELECT 
+SELECT
     l.pid,
     l.mode,
     l.granted,
@@ -191,7 +191,7 @@ ORDER BY l.pid;
 -- ============================================================================
 
 -- Tables needing vacuum
-SELECT 
+SELECT
     schemaname,
     tablename,
     n_tup_ins as inserts,
@@ -201,7 +201,7 @@ SELECT
     n_dead_tup as dead_tuples,
     last_vacuum,
     last_autovacuum,
-    CASE 
+    CASE
         WHEN n_dead_tup > n_live_tup * 0.1 THEN 'NEEDS_VACUUM'
         WHEN n_dead_tup > 1000 THEN 'CONSIDER_VACUUM'
         ELSE 'OK'
@@ -214,7 +214,7 @@ ORDER BY n_dead_tup DESC;
 -- ============================================================================
 
 -- Spatial index usage
-SELECT 
+SELECT
     schemaname,
     tablename,
     indexname,
@@ -268,13 +268,13 @@ ORDER BY idx_scan DESC;
 
 -- Create a view for ongoing monitoring
 CREATE OR REPLACE VIEW performance_monitoring AS
-SELECT 
+SELECT
     'index_usage' as metric_type,
     schemaname,
     tablename,
     indexname,
     idx_scan as value,
-    CASE 
+    CASE
         WHEN idx_scan = 0 THEN 'unused'
         WHEN idx_scan < 10 THEN 'rarely_used'
         WHEN idx_scan < 100 THEN 'occasionally_used'
@@ -282,13 +282,13 @@ SELECT
     END as status
 FROM pg_stat_user_indexes
 UNION ALL
-SELECT 
+SELECT
     'table_scans' as metric_type,
     schemaname,
     tablename,
     '' as indexname,
     seq_scan as value,
-    CASE 
+    CASE
         WHEN seq_scan > idx_scan THEN 'high_seq_scans'
         WHEN seq_scan > 0 THEN 'some_seq_scans'
         ELSE 'index_scans_only'
@@ -341,8 +341,8 @@ INSERT INTO performance_baseline (metric_name, metric_value)
 SELECT 'total_seq_scans', SUM(seq_scan) FROM pg_stat_user_tables;
 
 INSERT INTO performance_baseline (metric_name, metric_value)
-SELECT 'avg_cache_hit_ratio', 
-    AVG(CASE 
+SELECT 'avg_cache_hit_ratio',
+    AVG(CASE
         WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
         ELSE 100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read)
     END)
@@ -353,38 +353,38 @@ FROM pg_statio_user_tables;
 -- ============================================================================
 
 -- Generate a summary report
-SELECT 
+SELECT
     'PERFORMANCE SUMMARY' as report_section,
     'Total Tables: ' || COUNT(*) as metric,
     '' as value
-FROM pg_tables 
+FROM pg_tables
 WHERE schemaname = 'public'
 UNION ALL
-SELECT 
+SELECT
     'PERFORMANCE SUMMARY',
     'Total Indexes: ' || COUNT(*),
     ''
 FROM pg_stat_user_indexes
 UNION ALL
-SELECT 
+SELECT
     'PERFORMANCE SUMMARY',
     'Unused Indexes: ' || COUNT(*),
     ''
 FROM pg_stat_user_indexes
 WHERE idx_scan = 0
 UNION ALL
-SELECT 
+SELECT
     'PERFORMANCE SUMMARY',
     'Tables with High Seq Scans: ' || COUNT(*),
     ''
 FROM pg_stat_user_tables
 WHERE seq_scan > idx_scan
 UNION ALL
-SELECT 
+SELECT
     'PERFORMANCE SUMMARY',
-    'Average Cache Hit Ratio: ' || ROUND(AVG(CASE 
+    'Average Cache Hit Ratio: ' || ROUND(AVG(CASE
         WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
         ELSE 100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read)
     END), 2) || '%',
     ''
-FROM pg_statio_user_tables; 
+FROM pg_statio_user_tables;

@@ -596,6 +596,6 @@ curl -X GET "http://localhost:3001/api/datasources"
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: ✅ **Production Ready** 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: ✅ **Production Ready**

@@ -26,7 +26,7 @@ from application.dto.device_dto import (
 
 class CreateDeviceUseCase:
     """Use case for creating a new device."""
-    
+
     def __init__(self, device_repository: DeviceRepository):
     """
     Perform __init__ operation
@@ -45,7 +45,7 @@ Example:
         print(result)
     """
         self.device_repository = device_repository
-    
+
     def execute(self, request: CreateDeviceRequest) -> CreateDeviceResponse:
         """Execute the create device use case."""
         try:
@@ -55,23 +55,23 @@ Example:
                     success=False,
                     error_message="Device name is required"
                 )
-            
+
             if not request.device_type or len(request.device_type.strip()) == 0:
                 return CreateDeviceResponse(
                     success=False,
                     error_message="Device type is required"
                 )
-            
+
             if not request.room_id or len(request.room_id.strip()) == 0:
                 return CreateDeviceResponse(
                     success=False,
                     error_message="Room ID is required"
                 )
-            
+
             # Create domain objects
             device_id = DeviceId()
             room_id = RoomId(request.room_id)
-            
+
             # Create device entity
             device = Device(
                 id=device_id,
@@ -86,18 +86,16 @@ Example:
                 created_by=request.created_by,
                 metadata=request.metadata or {}
             )
-            
+
             # Save to repository
             self.device_repository.save(device)
-            
+
             # Return success response
             return CreateDeviceResponse(
                 success=True,
                 device_id=str(device_id),
                 message="Device created successfully",
                 created_at=datetime.utcnow()
-            )
-            
         except DuplicateDeviceError as e:
             return CreateDeviceResponse(
                 success=False,
@@ -133,10 +131,10 @@ Example:
         print(result)
     """
     """Use case for updating a device."""
-    
+
     def __init__(self, device_repository: DeviceRepository):
         self.device_repository = device_repository
-    
+
     def execute(self, request: UpdateDeviceRequest) -> UpdateDeviceResponse:
         """Execute the update device use case."""
         try:
@@ -146,21 +144,21 @@ Example:
                     success=False,
                     error_message="Device ID is required"
                 )
-            
+
             # Get existing device
             device_id = DeviceId(request.device_id)
             device = self.device_repository.get_by_id(device_id)
-            
+
             if not device:
                 return UpdateDeviceResponse(
                     success=False,
                     error_message="Device not found"
                 )
-            
+
             # Update device fields
             if request.name is not None:
                 device.update_name(request.name, request.updated_by or "system")
-            
+
             if request.device_type is not None:
                 if len(request.device_type.strip()) == 0:
                     return UpdateDeviceResponse(
@@ -169,23 +167,23 @@ Example:
                     )
                 device.device_type = request.device_type.strip()
                 device.updated_at = datetime.utcnow()
-            
+
             if request.manufacturer is not None:
                 device.manufacturer = request.manufacturer
                 device.updated_at = datetime.utcnow()
-            
+
             if request.model is not None:
                 device.model = request.model
                 device.updated_at = datetime.utcnow()
-            
+
             if request.serial_number is not None:
                 device.serial_number = request.serial_number
                 device.updated_at = datetime.utcnow()
-            
+
             if request.description is not None:
                 device.description = request.description
                 device.updated_at = datetime.utcnow()
-            
+
             if request.status is not None:
                 try:
                     new_status = DeviceStatus(request.status)
@@ -195,22 +193,20 @@ Example:
                         success=False,
                         error_message=f"Invalid device status: {request.status}"
                     )
-            
+
             if request.metadata is not None:
                 device.metadata.update(request.metadata)
                 device.updated_at = datetime.utcnow()
-            
+
             # Save to repository
             self.device_repository.save(device)
-            
+
             # Return success response
             return UpdateDeviceResponse(
                 success=True,
                 device_id=str(device_id),
                 message="Device updated successfully",
                 updated_at=datetime.utcnow()
-            )
-            
         except InvalidDeviceError as e:
             return UpdateDeviceResponse(
                 success=False,
@@ -230,10 +226,10 @@ Example:
 
 class GetDeviceUseCase:
     """Use case for getting a device by ID."""
-    
+
     def __init__(self, device_repository: DeviceRepository):
         self.device_repository = device_repository
-    
+
     def execute(self, device_id: str) -> GetDeviceResponse:
         """Execute the get device use case."""
         try:
@@ -243,16 +239,15 @@ class GetDeviceUseCase:
                     success=False,
                     error_message="Device ID is required"
                 )
-            
-            # Get device from repository
-            device = self.device_repository.get_by_id(DeviceId(device_id))
-            
+
+            # Get device from repository import repository
+            device = self.device_repository.get_by_id(DeviceId(device_id)
             if not device:
                 return GetDeviceResponse(
                     success=False,
                     error_message="Device not found"
                 )
-            
+
             # Convert to dictionary
             device_dict = {
                 "id": str(device.id),
@@ -270,12 +265,12 @@ class GetDeviceUseCase:
                 "created_by": device.created_by,
                 "metadata": device.metadata
             }
-            
+
             return GetDeviceResponse(
                 success=True,
                 device=device_dict
             )
-            
+
         except Exception as e:
             return GetDeviceResponse(
                 success=False,
@@ -285,10 +280,10 @@ class GetDeviceUseCase:
 
 class ListDevicesUseCase:
     """Use case for listing devices."""
-    
+
     def __init__(self, device_repository: DeviceRepository):
         self.device_repository = device_repository
-    
+
     def execute(self, room_id: Optional[str] = None, device_type: Optional[str] = None,
                 status: Optional[str] = None, page: int = 1, page_size: int = 10) -> ListDevicesResponse:
         """Execute the list devices use case."""
@@ -298,13 +293,13 @@ class ListDevicesUseCase:
                 page = 1
             if page_size < 1 or page_size > 100:
                 page_size = 10
-            
-            # Get devices from repository
+
+            # Get devices from repository import repository
             devices = []
-            
+
             if room_id:
                 # Get devices by room
-                devices = self.device_repository.get_by_room_id(RoomId(room_id))
+                devices = self.device_repository.get_by_room_id(RoomId(room_id)
             elif device_type:
                 # Get devices by type
                 devices = self.device_repository.get_by_type(device_type)
@@ -322,13 +317,13 @@ class ListDevicesUseCase:
                 # Get all devices (this would need to be implemented in repository)
                 # For now, return empty list
                 devices = []
-            
+
             # Apply pagination
             total_count = len(devices)
             start_index = (page - 1) * page_size
             end_index = start_index + page_size
             paginated_devices = devices[start_index:end_index]
-            
+
             # Convert to dictionaries
             device_dicts = []
             for device in paginated_devices:
@@ -348,7 +343,7 @@ class ListDevicesUseCase:
                     "created_by": device.created_by
                 }
                 device_dicts.append(device_dict)
-            
+
             return ListDevicesResponse(
                 success=True,
                 devices=device_dicts,
@@ -356,7 +351,7 @@ class ListDevicesUseCase:
                 page=page,
                 page_size=page_size
             )
-            
+
         except Exception as e:
             return ListDevicesResponse(
                 success=False,
@@ -366,10 +361,10 @@ class ListDevicesUseCase:
 
 class DeleteDeviceUseCase:
     """Use case for deleting a device."""
-    
+
     def __init__(self, device_repository: DeviceRepository):
         self.device_repository = device_repository
-    
+
     def execute(self, device_id: str) -> DeleteDeviceResponse:
         """Execute the delete device use case."""
         try:
@@ -379,28 +374,24 @@ class DeleteDeviceUseCase:
                     success=False,
                     error_message="Device ID is required"
                 )
-            
+
             # Check if device exists
-            device = self.device_repository.get_by_id(DeviceId(device_id))
-            
+            device = self.device_repository.get_by_id(DeviceId(device_id)
             if not device:
                 return DeleteDeviceResponse(
                     success=False,
                     error_message="Device not found"
                 )
-            
-            # Delete from repository
-            self.device_repository.delete(DeviceId(device_id))
-            
+
+            # Delete from repository import repository
+            self.device_repository.delete(DeviceId(device_id)
             return DeleteDeviceResponse(
                 success=True,
                 device_id=device_id,
                 message="Device deleted successfully",
                 deleted_at=datetime.utcnow()
-            )
-            
         except Exception as e:
             return DeleteDeviceResponse(
                 success=False,
                 error_message=f"Failed to delete device: {str(e)}"
-            ) 
+            )

@@ -54,4 +54,4 @@ func getGanttChart(w http.ResponseWriter, r *http.Request) {
 	scheduleID := chi.URLParam(r, "id")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"id": "` + scheduleID + `", "gantt": {"tasks": []}}`))
-} 
+}

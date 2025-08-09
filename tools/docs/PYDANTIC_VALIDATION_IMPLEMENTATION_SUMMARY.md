@@ -190,10 +190,10 @@ async def upload_svg(request: SVGUploadRequest):
     file_name = request.file_name
     file_size = request.file_size
     file_type = request.file_type
-    
+
     # Process upload
     file_id = await process_upload(request)
-    
+
     return SVGUploadResponse(
         success=True,
         message="File uploaded successfully",
@@ -215,9 +215,9 @@ async def register_user(request: UserCreateRequest):
     # Password strength already validated by Pydantic
     # Email format already validated by Pydantic
     # Username format already validated by Pydantic
-    
+
     user = await create_user(request)
-    
+
     return UserResponse(
         success=True,
         message="User created successfully",
@@ -241,9 +241,9 @@ async def search(request: SearchRequest):
     # Query validation already done by Pydantic
     # Pagination validation already done by Pydantic
     # Filter validation already done by Pydantic
-    
+
     results = await perform_search(request)
-    
+
     return SearchResponse(
         success=True,
         message="Search completed",
@@ -380,4 +380,4 @@ The validation system is designed to be:
 - **Maintainable**: Well-documented and tested
 - **Secure**: Validates all inputs and prevents common vulnerabilities
 
-This implementation establishes a strong foundation for the Arxos Platform's API layer and ensures high-quality, reliable API endpoints for all users. 
+This implementation establishes a strong foundation for the Arxos Platform's API layer and ensures high-quality, reliable API endpoints for all users.

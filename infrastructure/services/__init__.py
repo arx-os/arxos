@@ -11,6 +11,6 @@ from .message_queue import MessageQueueService
 
 __all__ = [
     'RedisCacheService',
-    'EventStoreService', 
+    'EventStoreService',
     'MessageQueueService',
-] 
+]

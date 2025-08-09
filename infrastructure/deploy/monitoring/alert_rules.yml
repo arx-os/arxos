@@ -526,4 +526,4 @@ groups:
           summary: "Warning alert unresolved for more than 15 minutes"
           description: "Warning alert has been firing for more than 15 minutes and requires attention"
           runbook_url: "https://arxos.com/runbooks/unresolved-warning-alert"
-          dashboard_url: "https://grafana.arxos.com/d/alert-management" 
+          dashboard_url: "https://grafana.arxos.com/d/alert-management"

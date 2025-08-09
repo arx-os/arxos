@@ -58,7 +58,7 @@ check_root() {
 # Setup environment variables
 setup_environment() {
     print_header "Setting Up Environment Variables"
-    
+
     # Create .env file for production
     cat > .env.production << EOF
 # Arxos Production Environment Configuration
@@ -100,43 +100,43 @@ ANALYTICS_ENABLED=true
 ANALYTICS_RETENTION_DAYS=90
 PERFORMANCE_MONITORING=true
 EOF
-    
+
     print_success "Environment variables configured"
 }
 
 # Setup database
 setup_database() {
     print_header "Setting Up Database"
-    
+
     # Check if PostgreSQL is available
     if ! command -v psql &> /dev/null; then
         print_error "PostgreSQL is not installed"
         print_info "Please install PostgreSQL and try again"
         exit 1
     fi
-    
+
     # Create database and user
     print_info "Creating database and user..."
-    
+
     # Create user (if it doesn't exist)
     psql -h $DB_HOST -p $DB_PORT -U postgres -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';" || true
-    
+
     # Create database
     psql -h $DB_HOST -p $DB_PORT -U postgres -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;" || true
-    
+
     # Grant privileges
     psql -h $DB_HOST -p $DB_PORT -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
-    
+
     # Run migrations
     print_info "Running database migrations..."
     cd arx-backend
-    
+
     # Apply pipeline migrations
     if [[ -f "migrations/004_create_pipeline_tables.sql" ]]; then
         psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f migrations/004_create_pipeline_tables.sql
         print_success "Pipeline tables created"
     fi
-    
+
     cd ..
     print_success "Database setup completed"
 }
@@ -144,7 +144,7 @@ setup_database() {
 # Setup monitoring
 setup_monitoring() {
     print_header "Setting Up Monitoring"
-    
+
     # Create monitoring configuration
     cat > monitoring_config.json << EOF
 {
@@ -169,18 +169,18 @@ setup_monitoring() {
     }
 }
 EOF
-    
+
     # Create log directories
     mkdir -p logs/{pipeline,monitoring,analytics}
     mkdir -p backups/{full,incremental,schemas}
-    
+
     print_success "Monitoring setup completed"
 }
 
 # Setup security
 setup_security() {
     print_header "Setting Up Security"
-    
+
     # Create security configuration
     cat > security_config.json << EOF
 {
@@ -205,19 +205,19 @@ setup_security() {
     }
 }
 EOF
-    
+
     # Set proper file permissions
     chmod 600 .env.production
     chmod 600 security_config.json
     chmod 600 monitoring_config.json
-    
+
     print_success "Security setup completed"
 }
 
 # Setup backup automation
 setup_backup_automation() {
     print_header "Setting Up Backup Automation"
-    
+
     # Create backup script
     cat > scripts/backup_pipeline.sh << 'EOF'
 #!/bin/bash
@@ -241,19 +241,19 @@ find backups/ -type d -mtime +30 -exec rm -rf {} \;
 
 echo "Backup completed: $BACKUP_DIR"
 EOF
-    
+
     chmod +x scripts/backup_pipeline.sh
-    
+
     # Add to crontab
     (crontab -l 2>/dev/null; echo "0 2 * * * $(pwd)/scripts/backup_pipeline.sh") | crontab -
-    
+
     print_success "Backup automation setup completed"
 }
 
 # Setup performance optimization
 setup_performance_optimization() {
     print_header "Setting Up Performance Optimization"
-    
+
     # Create performance configuration
     cat > performance_config.json << EOF
 {
@@ -280,14 +280,14 @@ setup_performance_optimization() {
     }
 }
 EOF
-    
+
     print_success "Performance optimization setup completed"
 }
 
 # Setup logging
 setup_logging() {
     print_header "Setting Up Logging"
-    
+
     # Create log configuration
     cat > logging_config.json << EOF
 {
@@ -348,14 +348,14 @@ setup_logging() {
     }
 }
 EOF
-    
+
     print_success "Logging setup completed"
 }
 
 # Setup health checks
 setup_health_checks() {
     print_header "Setting Up Health Checks"
-    
+
     # Create health check script
     cat > scripts/health_check.sh << 'EOF'
 #!/bin/bash
@@ -400,16 +400,16 @@ fi
 
 exit $([ "$HEALTH_STATUS" = "healthy" ] && echo 0 || echo 1)
 EOF
-    
+
     chmod +x scripts/health_check.sh
-    
+
     print_success "Health checks setup completed"
 }
 
 # Setup production deployment
 setup_production_deployment() {
     print_header "Setting Up Production Deployment"
-    
+
     # Create production deployment script
     cat > scripts/deploy_production.sh << 'EOF'
 #!/bin/bash
@@ -460,16 +460,16 @@ echo "Running health checks..."
 
 echo "Production deployment completed successfully!"
 EOF
-    
+
     chmod +x scripts/deploy_production.sh
-    
+
     print_success "Production deployment setup completed"
 }
 
 # Setup monitoring dashboard
 setup_monitoring_dashboard() {
     print_header "Setting Up Monitoring Dashboard"
-    
+
     # Create dashboard configuration
     cat > dashboard_config.json << EOF
 {
@@ -526,7 +526,7 @@ setup_monitoring_dashboard() {
     ]
 }
 EOF
-    
+
     print_success "Monitoring dashboard setup completed"
 }
 
@@ -535,10 +535,10 @@ main() {
     print_header "Arxos Production Environment Setup"
     print_info "Environment: $ENVIRONMENT"
     print_info "Database: $DB_HOST:$DB_PORT/$DB_NAME"
-    
+
     # Check requirements
     check_root
-    
+
     # Setup all components
     setup_environment
     setup_database
@@ -550,7 +550,7 @@ main() {
     setup_health_checks
     setup_production_deployment
     setup_monitoring_dashboard
-    
+
     print_header "Production Setup Complete"
     print_success "Arxos pipeline is ready for production deployment!"
     print_info "Next steps:"
@@ -562,4 +562,4 @@ main() {
 }
 
 # Run main function
-main "$@" 
+main "$@"

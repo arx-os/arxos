@@ -144,18 +144,18 @@ The `backfill_nulls.sql` script safely updates NULL data:
 
 ```sql
 -- Example: Update NULL status fields to 'active'
-UPDATE rooms 
-SET status = 'active' 
+UPDATE rooms
+SET status = 'active'
 WHERE status IS NULL;
 
 -- Example: Update NULL timestamps to current time
-UPDATE users 
-SET created_at = CURRENT_TIMESTAMP 
+UPDATE users
+SET created_at = CURRENT_TIMESTAMP
 WHERE created_at IS NULL;
 
 -- Example: Update NULL materials to common defaults
-UPDATE walls 
-SET material = 'concrete' 
+UPDATE walls
+SET material = 'concrete'
 WHERE material IS NULL;
 ```
 
@@ -168,16 +168,16 @@ DECLARE
     summary_record RECORD;
 BEGIN
     FOR summary_record IN
-        SELECT 
+        SELECT
             'users' as table_name,
             COUNT(*) as total_count,
             COUNT(CASE WHEN role IS NULL THEN 1 END) as null_count
         FROM users
         -- ... more tables
     LOOP
-        RAISE NOTICE 'Table: % | Total: % | Remaining NULL: %', 
-            summary_record.table_name, 
-            summary_record.total_count, 
+        RAISE NOTICE 'Table: % | Total: % | Remaining NULL: %',
+            summary_record.table_name,
+            summary_record.total_count,
             summary_record.null_count;
     END LOOP;
 END $$;
@@ -191,18 +191,18 @@ The `006_add_constraints.sql` migration adds comprehensive constraints:
 
 ```sql
 -- Users table
-ALTER TABLE users 
+ALTER TABLE users
     ALTER COLUMN role SET NOT NULL,
     ALTER COLUMN created_at SET NOT NULL,
     ALTER COLUMN updated_at SET NOT NULL;
 
 -- Projects table
-ALTER TABLE projects 
+ALTER TABLE projects
     ALTER COLUMN created_at SET NOT NULL,
     ALTER COLUMN updated_at SET NOT NULL;
 
 -- BIM objects
-ALTER TABLE rooms 
+ALTER TABLE rooms
     ALTER COLUMN status SET NOT NULL,
     ALTER COLUMN category SET NOT NULL;
 ```
@@ -211,18 +211,18 @@ ALTER TABLE rooms
 
 ```sql
 -- Role validation
-ALTER TABLE users 
-    ADD CONSTRAINT chk_users_role 
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_role
     CHECK (role IN ('user', 'admin', 'manager', 'viewer'));
 
 -- Status validation
-ALTER TABLE rooms 
-    ADD CONSTRAINT chk_rooms_status 
+ALTER TABLE rooms
+    ADD CONSTRAINT chk_rooms_status
     CHECK (status IN ('active', 'inactive', 'suspended', 'pending', 'completed', 'cancelled'));
 
 -- Material validation
-ALTER TABLE walls 
-    ADD CONSTRAINT chk_walls_material 
+ALTER TABLE walls
+    ADD CONSTRAINT chk_walls_material
     CHECK (material IN ('concrete', 'steel', 'wood', 'glass', 'plastic', 'metal'));
 ```
 
@@ -230,18 +230,18 @@ ALTER TABLE walls
 
 ```sql
 -- Email format
-ALTER TABLE users 
-    ADD CONSTRAINT chk_users_email_format 
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_email_format
     CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
 
 -- Username format
-ALTER TABLE users 
-    ADD CONSTRAINT chk_users_username_format 
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_username_format
     CHECK (username ~* '^[a-zA-Z0-9_-]{3,50}$');
 
 -- Password hash format
-ALTER TABLE users 
-    ADD CONSTRAINT chk_users_password_hash_format 
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_password_hash_format
     CHECK (password_hash ~* '^[a-fA-F0-9]{64}$');
 ```
 
@@ -271,7 +271,7 @@ The `test_constraints.py` module provides comprehensive testing:
 ```python
 def test_not_null_constraints_users(self, db_helper, clean_database):
     """Test NOT NULL constraints on users table."""
-    
+
     # Test valid data insertion
     valid_user = {
         'email': 'test@example.com',
@@ -281,14 +281,14 @@ def test_not_null_constraints_users(self, db_helper, clean_database):
     }
     user_id = db_helper.insert_test_data('users', valid_user)
     assert user_id is not None
-    
+
     # Test NULL email (should fail)
     invalid_user = valid_user.copy()
     invalid_user['email'] = None
-    
+
     with pytest.raises(psycopg2.IntegrityError) as exc_info:
         db_helper.insert_test_data('users', invalid_user)
-    
+
     assert 'email' in str(exc_info.value).lower()
 ```
 
@@ -354,15 +354,15 @@ BEGIN
     FOR constraint_record IN
         SELECT tc.table_name, tc.constraint_name
         FROM information_schema.table_constraints tc
-        WHERE tc.table_schema = 'public' 
+        WHERE tc.table_schema = 'public'
         AND tc.constraint_type = 'CHECK'
         AND tc.constraint_name LIKE 'chk_%'
     LOOP
-        EXECUTE format('ALTER TABLE %I DROP CONSTRAINT %I', 
-                      constraint_record.table_name, 
+        EXECUTE format('ALTER TABLE %I DROP CONSTRAINT %I',
+                      constraint_record.table_name,
                       constraint_record.constraint_name);
     END LOOP;
-    
+
     -- Reset NOT NULL constraints
     ALTER TABLE users ALTER COLUMN role DROP NOT NULL;
     -- ... more table rollbacks
@@ -381,11 +381,11 @@ DECLARE
     backup_suffix TEXT := '_backup_' || TO_CHAR(NOW(), 'YYYYMMDD_HH24MISS');
     table_name TEXT;
 BEGIN
-    FOR table_name IN 
+    FOR table_name IN
         SELECT unnest(ARRAY['users', 'projects', 'buildings', ...])
     LOOP
-        EXECUTE format('CREATE TABLE %I AS SELECT * FROM %I', 
-                      table_name || backup_suffix, 
+        EXECUTE format('CREATE TABLE %I AS SELECT * FROM %I',
+                      table_name || backup_suffix,
                       table_name);
     END LOOP;
 END $$;
@@ -456,7 +456,7 @@ Performance impact is monitored through:
 
 **Problem**: `IntegrityError` when inserting data
 
-**Solution**: 
+**Solution**:
 - Check data format against constraint requirements
 - Verify all required fields are provided
 - Ensure domain values are valid
@@ -483,9 +483,9 @@ Performance impact is monitored through:
 
 ```bash
 # Check constraint status
-SELECT constraint_name, table_name, constraint_type 
-FROM information_schema.table_constraints 
-WHERE table_schema = 'public' 
+SELECT constraint_name, table_name, constraint_type
+FROM information_schema.table_constraints
+WHERE table_schema = 'public'
 AND constraint_type IN ('CHECK', 'NOT NULL');
 
 # Check for NULL values
@@ -511,4 +511,4 @@ The NOT NULL and CHECK constraint implementation provides comprehensive data int
 - **Documentation**: Complete implementation guides and troubleshooting
 - **Testing**: Comprehensive unit and integration tests
 
-This implementation strengthens the Arxos database foundation and provides a solid base for future data integrity requirements. 
+This implementation strengthens the Arxos database foundation and provides a solid base for future data integrity requirements.

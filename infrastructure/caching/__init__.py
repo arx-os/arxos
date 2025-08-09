@@ -10,4 +10,4 @@ from .cache_strategy import CacheStrategy
 __all__ = [
     'CacheManager',
     'CacheStrategy',
-] 
+]

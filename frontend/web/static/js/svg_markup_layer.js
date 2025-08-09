@@ -1,6 +1,6 @@
 /**
  * SVG-BIM Markup Layer Service
- * 
+ *
  * Implements scalable, layered SVG interface for MEP markup editing and view-only browsing.
  * Features:
  * - MEP layer management (E, LV, FA, N, M, P, S)
@@ -125,7 +125,7 @@ class SVGMarkupLayer {
 
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         // Initialize
         this.initialize();
     }
@@ -139,7 +139,7 @@ class SVGMarkupLayer {
         this.loadUserPermissions();
         this.updateEditMode();
         this.applyLayerVisibility();
-        
+
         console.log('SVG Markup Layer initialized');
     }
 
@@ -161,7 +161,7 @@ class SVGMarkupLayer {
                     </svg>
                 </button>
             </div>
-            
+
             <div class="space-y-3">
                 ${Object.entries(this.mepLayers).map(([key, layer]) => `
                     <div class="flex items-center justify-between p-2 rounded border border-gray-200 hover:bg-gray-50">
@@ -188,7 +188,7 @@ class SVGMarkupLayer {
                     </div>
                 `).join('')}
             </div>
-            
+
             <div class="mt-4 pt-4 border-t border-gray-200">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-700">Edit Mode</span>
@@ -197,7 +197,7 @@ class SVGMarkupLayer {
                         <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
-                
+
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-700">Snapping</span>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -205,7 +205,7 @@ class SVGMarkupLayer {
                         <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
-                
+
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-medium text-gray-700">Diff Overlay</span>
                     <label class="relative inline-flex items-center cursor-pointer">
@@ -316,7 +316,7 @@ class SVGMarkupLayer {
      */
     updateEditMode() {
         const canEdit = this.userPermissions.canEdit && this.userPermissions.role !== 'viewer';
-        
+
         if (!canEdit) {
             this.setEditMode(false);
         }
@@ -336,7 +336,7 @@ class SVGMarkupLayer {
      */
     setEditMode(active) {
         this.editMode.active = active && this.userPermissions.canEdit;
-        
+
         // Update UI
         const editModeToggle = document.getElementById('edit-mode-toggle');
         if (editModeToggle) {
@@ -355,7 +355,7 @@ class SVGMarkupLayer {
      */
     applyEditMode() {
         const svgElements = document.querySelectorAll('svg');
-        
+
         svgElements.forEach(svg => {
             if (this.editMode.active) {
                 svg.classList.add('edit-mode');
@@ -384,7 +384,7 @@ class SVGMarkupLayer {
      */
     toggleLayerVisibility(layerKey, visible) {
         this.layerVisibility[layerKey] = visible;
-        
+
         // Update layer elements
         const layerElements = document.querySelectorAll(`[data-layer="${layerKey}"]`);
         layerElements.forEach(element => {
@@ -414,7 +414,7 @@ class SVGMarkupLayer {
      */
     setSnapping(enabled) {
         this.snappingConfig.enabled = enabled;
-        
+
         // Update UI
         const snappingToggle = document.getElementById('snapping-toggle');
         if (snappingToggle) {
@@ -440,7 +440,7 @@ class SVGMarkupLayer {
 
         // Calculate snapped position
         const snappedPosition = this.calculateSnappedPosition(x, y);
-        
+
         // Update cursor position indicator
         this.updateSnapIndicator(snappedPosition);
     }
@@ -511,7 +511,7 @@ class SVGMarkupLayer {
      */
     setDiffOverlay(active) {
         this.diffOverlay.active = active;
-        
+
         // Update UI
         const diffOverlayToggle = document.getElementById('diff-overlay-toggle');
         if (diffOverlayToggle) {
@@ -613,14 +613,14 @@ class SVGMarkupLayer {
     getObjectProperties(obj) {
         const properties = {};
         const dataAttributes = obj.attributes;
-        
+
         for (let i = 0; i < dataAttributes.length; i++) {
             const attr = dataAttributes[i];
             if (attr.name.startsWith('data-')) {
                 properties[attr.name] = attr.value;
             }
         }
-        
+
         return properties;
     }
 
@@ -845,4 +845,4 @@ class SVGMarkupLayer {
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = SVGMarkupLayer;
-} 
+}

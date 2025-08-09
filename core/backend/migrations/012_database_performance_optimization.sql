@@ -161,13 +161,13 @@ ANALYZE zones;
 
 -- Create performance monitoring view
 CREATE OR REPLACE VIEW performance_monitoring AS
-SELECT 
+SELECT
     'index_usage' as metric_type,
     schemaname,
     tablename,
     indexname,
     idx_scan as value,
-    CASE 
+    CASE
         WHEN idx_scan = 0 THEN 'unused'
         WHEN idx_scan < 10 THEN 'rarely_used'
         WHEN idx_scan < 100 THEN 'occasionally_used'
@@ -175,13 +175,13 @@ SELECT
     END as status
 FROM pg_stat_user_indexes
 UNION ALL
-SELECT 
+SELECT
     'table_scans' as metric_type,
     schemaname,
     tablename,
     '' as indexname,
     seq_scan as value,
-    CASE 
+    CASE
         WHEN seq_scan > idx_scan THEN 'high_seq_scans'
         WHEN seq_scan > 0 THEN 'some_seq_scans'
         ELSE 'index_scans_only'
@@ -190,16 +190,16 @@ FROM pg_stat_user_tables;
 
 -- Create cache performance view
 CREATE OR REPLACE VIEW cache_performance_monitoring AS
-SELECT 
+SELECT
     schemaname,
     tablename,
     heap_blks_read,
     heap_blks_hit,
-    CASE 
+    CASE
         WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
         ELSE ROUND(100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read), 2)
     END as cache_hit_ratio,
-    CASE 
+    CASE
         WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 'no_activity'
         WHEN (heap_blks_hit + heap_blks_read) > 0 AND heap_blks_hit / (heap_blks_hit + heap_blks_read) < 0.8 THEN 'poor'
         WHEN (heap_blks_hit + heap_blks_read) > 0 AND heap_blks_hit / (heap_blks_hit + heap_blks_read) < 0.95 THEN 'good'
@@ -226,11 +226,11 @@ CREATE TABLE IF NOT EXISTS performance_baseline (
 INSERT INTO performance_baseline (metric_name, metric_value, metric_unit, description) VALUES
 ('total_index_scans', (SELECT COALESCE(SUM(idx_scan), 0) FROM pg_stat_user_indexes), 'count', 'Total index scans across all indexes'),
 ('total_seq_scans', (SELECT COALESCE(SUM(seq_scan), 0) FROM pg_stat_user_tables), 'count', 'Total sequential scans across all tables'),
-('avg_cache_hit_ratio', 
-    (SELECT COALESCE(AVG(CASE 
+('avg_cache_hit_ratio',
+    (SELECT COALESCE(AVG(CASE
         WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
         ELSE 100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read)
-    END), 0) FROM pg_statio_user_tables), 
+    END), 0) FROM pg_statio_user_tables),
     'percentage', 'Average cache hit ratio across all tables'),
 ('unused_indexes', (SELECT COUNT(*) FROM pg_stat_user_indexes WHERE idx_scan = 0), 'count', 'Number of unused indexes'),
 ('high_seq_scan_tables', (SELECT COUNT(*) FROM pg_stat_user_tables WHERE seq_scan > idx_scan), 'count', 'Number of tables with high sequential scan ratio');
@@ -250,7 +250,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         i.schemaname,
         i.tablename,
         i.indexname,
@@ -276,18 +276,18 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         t.schemaname,
         t.tablename,
         t.n_live_tup as live_tuples,
         t.n_dead_tup as dead_tuples,
-        CASE 
+        CASE
             WHEN t.n_live_tup = 0 THEN 0
             ELSE ROUND(100.0 * t.n_dead_tup / t.n_live_tup, 2)
         END as dead_ratio,
         t.last_vacuum,
         t.last_autovacuum,
-        CASE 
+        CASE
             WHEN t.n_dead_tup > t.n_live_tup * 0.1 THEN 'NEEDS_VACUUM'
             WHEN t.n_dead_tup > 1000 THEN 'CONSIDER_VACUUM'
             ELSE 'OK'
@@ -309,23 +309,23 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         COUNT(*) as total_tables,
-        COUNT(*) FILTER (WHERE 
-            (heap_blks_hit + heap_blks_read) > 0 AND 
+        COUNT(*) FILTER (WHERE
+            (heap_blks_hit + heap_blks_read) > 0 AND
             heap_blks_hit / (heap_blks_hit + heap_blks_read) >= 0.95
         ) as excellent_cache,
-        COUNT(*) FILTER (WHERE 
-            (heap_blks_hit + heap_blks_read) > 0 AND 
+        COUNT(*) FILTER (WHERE
+            (heap_blks_hit + heap_blks_read) > 0 AND
             heap_blks_hit / (heap_blks_hit + heap_blks_read) >= 0.8 AND
             heap_blks_hit / (heap_blks_hit + heap_blks_read) < 0.95
         ) as good_cache,
-        COUNT(*) FILTER (WHERE 
-            (heap_blks_hit + heap_blks_read) > 0 AND 
+        COUNT(*) FILTER (WHERE
+            (heap_blks_hit + heap_blks_read) > 0 AND
             heap_blks_hit / (heap_blks_hit + heap_blks_read) < 0.8
         ) as poor_cache,
         COUNT(*) FILTER (WHERE (heap_blks_hit + heap_blks_read) = 0) as no_activity,
-        ROUND(AVG(CASE 
+        ROUND(AVG(CASE
             WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
             ELSE 100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read)
         END), 2) as avg_cache_hit_ratio
@@ -362,9 +362,9 @@ DECLARE
 BEGIN
     -- Check for low cache hit ratios
     INSERT INTO performance_alerts (alert_type, severity, message, metric_value, threshold_value, table_name)
-    SELECT 
+    SELECT
         'LOW_CACHE_HIT_RATIO',
-        CASE 
+        CASE
             WHEN cache_ratio < 50 THEN 'CRITICAL'
             WHEN cache_ratio < 70 THEN 'HIGH'
             ELSE 'MEDIUM'
@@ -374,9 +374,9 @@ BEGIN
         cache_threshold,
         tablename
     FROM (
-        SELECT 
+        SELECT
             tablename,
-            CASE 
+            CASE
                 WHEN (heap_blks_hit + heap_blks_read) = 0 THEN 0
                 ELSE ROUND(100.0 * heap_blks_hit / (heap_blks_hit + heap_blks_read), 2)
             END as cache_ratio
@@ -385,19 +385,19 @@ BEGIN
     ) cache_stats
     WHERE cache_ratio < cache_threshold
     AND NOT EXISTS (
-        SELECT 1 FROM performance_alerts 
-        WHERE alert_type = 'LOW_CACHE_HIT_RATIO' 
-        AND table_name = cache_stats.tablename 
+        SELECT 1 FROM performance_alerts
+        WHERE alert_type = 'LOW_CACHE_HIT_RATIO'
+        AND table_name = cache_stats.tablename
         AND resolved_at IS NULL
     );
-    
+
     GET DIAGNOSTICS alert_count = ROW_COUNT;
-    
+
     -- Check for high sequential scans
     INSERT INTO performance_alerts (alert_type, severity, message, metric_value, threshold_value, table_name)
-    SELECT 
+    SELECT
         'HIGH_SEQUENTIAL_SCANS',
-        CASE 
+        CASE
             WHEN seq_scan > 1000 THEN 'CRITICAL'
             WHEN seq_scan > 500 THEN 'HIGH'
             ELSE 'MEDIUM'
@@ -409,14 +409,14 @@ BEGIN
     FROM pg_stat_user_tables
     WHERE seq_scan > seq_scan_threshold
     AND NOT EXISTS (
-        SELECT 1 FROM performance_alerts 
-        WHERE alert_type = 'HIGH_SEQUENTIAL_SCANS' 
-        AND table_name = pg_stat_user_tables.tablename 
+        SELECT 1 FROM performance_alerts
+        WHERE alert_type = 'HIGH_SEQUENTIAL_SCANS'
+        AND table_name = pg_stat_user_tables.tablename
         AND resolved_at IS NULL
     );
-    
+
     GET DIAGNOSTICS alert_count = alert_count + ROW_COUNT;
-    
+
     RETURN alert_count;
 END;
 $$ LANGUAGE plpgsql;
@@ -433,4 +433,4 @@ INSERT INTO performance_baseline (metric_name, metric_value, metric_unit, descri
 -- (This assumes you have a migration tracking table)
 -- INSERT INTO schema_migrations (version, applied_at) VALUES ('012_database_performance_optimization', NOW());
 
-COMMENT ON MIGRATION '012_database_performance_optimization' IS 'Database performance optimization with comprehensive indexing strategy, monitoring views, and automated maintenance functions'; 
+COMMENT ON MIGRATION '012_database_performance_optimization' IS 'Database performance optimization with comprehensive indexing strategy, monitoring views, and automated maintenance functions';

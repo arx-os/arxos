@@ -25,10 +25,10 @@ from typing import List, Dict, Any, Optional
 
 class DocstringIndentationFixer:
     """Fixes docstring indentation issues"""
-    
+
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
-        
+
         # Files with docstring indentation issues
         self.files_with_indentation_issues = [
             "plugins/example_behavior_plugin.py",
@@ -170,94 +170,94 @@ class DocstringIndentationFixer:
             "core/security/auth_middleware.py",
             "core/shared/models/error.py"
         ]
-    
+
     def fix_docstring_indentation_issues(self):
         """Fix docstring indentation issues"""
         print("🔧 Fixing Docstring Indentation Issues")
         print("=" * 60)
-        
+
         success_count = 0
         error_count = 0
-        
+
         for file_path in self.files_with_indentation_issues:
             full_path = self.project_root / file_path
-            
+
             if not full_path.exists():
                 print(f"⚠️  File not found: {file_path}")
                 continue
-            
+
             try:
                 if self._fix_file_docstring_indentation(full_path):
                     print(f"✅ Fixed docstring indentation in: {file_path}")
                     success_count += 1
                 else:
                     print(f"ℹ️  No docstring indentation issues found in: {file_path}")
-                    
+
             except Exception as e:
                 print(f"❌ Error fixing {file_path}: {e}")
                 error_count += 1
-        
+
         print("\n" + "=" * 60)
         print(f"📊 Summary:")
         print(f"   ✅ Successfully fixed: {success_count} files")
         print(f"   ❌ Errors: {error_count} files")
         print(f"   📁 Total processed: {len(self.files_with_indentation_issues)} files")
-    
+
     def _fix_file_docstring_indentation(self, file_path: Path) -> bool:
         """Fix docstring indentation issues in a single file"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             original_content = content
-            
+
             # Fix docstring indentation issues
             content = self._fix_docstring_indentation_patterns(content)
-            
+
             # Validate syntax
             if not self._validate_syntax(content):
                 print(f"⚠️  Syntax validation failed for {file_path}")
                 return False
-            
+
             # Only write if content changed
             if content != original_content:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
                 return True
-            
+
             return False
-            
+
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             return False
-    
+
     def _fix_docstring_indentation_patterns(self, content: str) -> str:
         """Fix docstring indentation patterns"""
-        
+
         # Pattern 1: Function definition followed by unindented docstring
         # def func():
         # """
         # docstring
         # """
         content = re.sub(
-            r'(def [^:]+:)\n\s*("""[^"]*""")',
+            r'(def [^:]+:)\n\s*("""[^"]*""")',"
             r'\1\n        \2',
             content,
             flags=re.MULTILINE | re.DOTALL
         )
-        
+
         # Pattern 2: Class definition followed by unindented docstring
         # class Class:
         # """
         # docstring
         # """
         content = re.sub(
-            r'(class [^:]+:)\n\s*("""[^"]*""")',
+            r'(class [^:]+:)\n\s*("""[^"]*""")',"
             r'\1\n        \2',
             content,
             flags=re.MULTILINE | re.DOTALL
         )
-        
+
         # Pattern 3: Function definition followed by unindented docstring with multiple lines
         # def func():
         # """
@@ -265,12 +265,12 @@ class DocstringIndentationFixer:
         # content
         # """
         content = re.sub(
-            r'(def [^:]+:)\n\s*("""[^"]*?""")',
+            r'(def [^:]+:)\n\s*("""[^"]*?""")',"
             r'\1\n        \2',
             content,
             flags=re.MULTILINE | re.DOTALL
         )
-        
+
         # Pattern 4: Class definition followed by unindented docstring with multiple lines
         # class Class:
         # """
@@ -278,24 +278,24 @@ class DocstringIndentationFixer:
         # content
         # """
         content = re.sub(
-            r'(class [^:]+:)\n\s*("""[^"]*?""")',
+            r'(class [^:]+:)\n\s*("""[^"]*?""")',"
             r'\1\n        \2',
             content,
             flags=re.MULTILINE | re.DOTALL
         )
-        
+
         # Pattern 5: Async function definition followed by unindented docstring
         # async def func():
         # """
         # docstring
         # """
         content = re.sub(
-            r'(async def [^:]+:)\n\s*("""[^"]*""")',
+            r'(async def [^:]+:)\n\s*("""[^"]*""")',"
             r'\1\n        \2',
             content,
             flags=re.MULTILINE | re.DOTALL
         )
-        
+
         # Pattern 6: Async function definition followed by unindented docstring with multiple lines
         # async def func():
         # """
@@ -303,14 +303,14 @@ class DocstringIndentationFixer:
         # content
         # """
         content = re.sub(
-            r'(async def [^:]+:)\n\s*("""[^"]*?""")',
+            r'(async def [^:]+:)\n\s*("""[^"]*?""")',"
             r'\1\n        \2',
             content,
             flags=re.MULTILINE | re.DOTALL
         )
-        
+
         return content
-    
+
     def _validate_syntax(self, content: str) -> bool:
         """Validate that the content has valid Python syntax"""
         try:
@@ -318,7 +318,7 @@ class DocstringIndentationFixer:
             return True
         except SyntaxError:
             return False
-    
+
     def create_indentation_fix_example(self):
         """Create an example of proper docstring indentation"""
         example = '''
@@ -334,38 +334,38 @@ logger = logging.getLogger(__name__)
 class ExampleClass:
     """
     Example class with proper docstring indentation.
-    
+
     Attributes:
         config: Configuration dictionary
-        
+
     Methods:
         process_data: Process input data
         validate_input: Validate input parameters
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize the class.
-        
+
         Args:
             config: Configuration dictionary
-            
+
         Returns:
             None
         """
         self.config = config or {}
         self.logger = logger
-    
+
     async def process_data(self, data: str) -> Dict[str, Any]:
         """
         Process input data asynchronously.
-        
+
         Args:
             data: Input data to process
-            
+
         Returns:
             Processed data dictionary
-            
+
         Raises:
             ValueError: If data is invalid
         """
@@ -379,32 +379,31 @@ class ExampleClass:
         except Exception as e:
             self.logger.error(f"Error processing data: {e}")
             raise ValueError(f"Invalid data: {e}")
-    
+
     def validate_input(self, input_data: str) -> bool:
         """
         Validate input parameters.
-        
+
         Args:
             input_data: Input data to validate
-            
+
         Returns:
             True if valid, False otherwise
         """
-        return bool(input_data and input_data.strip())
-
+        return bool(input_data and input_data.strip()
 # Usage example
 if __name__ == "__main__":
     example = ExampleClass({"test": "value"})
     result = await example.process_data("test_data")
     print(result)
 '''
-        
+
         example_path = self.project_root / "docs" / "proper_docstring_indentation_example.py"
         example_path.parent.mkdir(exist_ok=True)
-        
+
         with open(example_path, 'w') as f:
             f.write(example)
-        
+
         print(f"📝 Created proper docstring indentation example: {example_path}")
 
 
@@ -413,16 +412,16 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/fix_docstring_indentation.py [--dry-run] [--example]")
         sys.exit(1)
-    
+
     project_root = "."
     dry_run = "--dry-run" in sys.argv
     create_example = "--example" in sys.argv
-    
+
     fixer = DocstringIndentationFixer(project_root)
-    
+
     if create_example:
         fixer.create_indentation_fix_example()
-    
+
     if not dry_run:
         fixer.fix_docstring_indentation_issues()
     else:
@@ -437,4 +436,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

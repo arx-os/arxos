@@ -53,10 +53,10 @@ type WalletInfo struct {
 func (ws *WalletService) CreateWalletForUser(userID string) (*WalletInfo, error) {
     // Generate new wallet address
     walletAddress, privateKey := ws.crypto.GenerateWallet()
-    
+
     // Encrypt private key for storage
     encryptedKey := ws.crypto.EncryptPrivateKey(privateKey, userID)
-    
+
     // Store in database
     wallet := &WalletInfo{
         UserID:        userID,
@@ -65,13 +65,13 @@ func (ws *WalletService) CreateWalletForUser(userID string) (*WalletInfo, error)
         WalletType:    "auto_generated",
         CreatedAt:     time.Now(),
     }
-    
+
     err := ws.db.Exec(`
-        UPDATE users 
+        UPDATE users
         SET wallet_address = ?, wallet_encrypted_key = ?, updated_at = NOW()
         WHERE id = ?
     `, walletAddress, encryptedKey, userID)
-    
+
     return wallet, err
 }
 
@@ -79,10 +79,10 @@ func (ws *WalletService) GetUserWallet(userID string) (*WalletInfo, error) {
     var wallet WalletInfo
     err := ws.db.QueryRow(`
         SELECT id, wallet_address, arx_balance, wallet_type, created_at
-        FROM users 
+        FROM users
         WHERE id = ?
     `, userID).Scan(&wallet.UserID, &wallet.WalletAddress, &wallet.ARXBalance, &wallet.WalletType, &wallet.CreatedAt)
-    
+
     return &wallet, err
 }
 ```
@@ -96,7 +96,7 @@ type ARXRoleMapper struct {
 
 var roleMapping = map[string]string{
     "contractor":      "object_minter",
-    "school_staff":    "building_uploader", 
+    "school_staff":    "building_uploader",
     "district_admin":  "organizational_owner",
     "arxos_support":   "validator_auditor",
 }
@@ -112,7 +112,7 @@ func (rm *ARXRoleMapper) GetMintingPermissions(userRole string) []string {
         "organizational_owner": {"mint_objects", "verify_objects", "manage_organization"},
         "validator_auditor":    {"verify_objects", "audit_contributions"},
     }
-    
+
     contributorType := rm.GetARXContributorType(userRole)
     return permissions[contributorType]
 }
@@ -130,13 +130,13 @@ class ArxLogicARXIntegration:
     def __init__(self):
         self.arx_logic = ArxLogicValidator()
         self.tokenomics = ARXTokenomicsCalculator()
-    
+
     async def validate_and_calculate_mint(self, contribution_data: dict) -> dict:
         """Validate contribution using ArxLogic and calculate ARX mint amount."""
-        
+
         # Run ArxLogic validation
         validation_result = await self.arx_logic.validate_contribution(contribution_data)
-        
+
         # Extract validation metrics
         validation_metrics = {
             'simulation_pass_rate': validation_result.simulation_pass_rate,
@@ -144,20 +144,20 @@ class ArxLogicARXIntegration:
             'system_completion_score': validation_result.system_completion_score,
             'error_propagation_score': validation_result.error_propagation_score
         }
-        
+
         # Calculate validation score
         validation_score = calculate_validation_score(**validation_metrics)
-        
+
         # Get complexity multiplier
         system_type = contribution_data.get('system_type', 'electrical')
         complexity_multiplier = self.tokenomics.get_complexity_multiplier(system_type)
-        
+
         # Calculate ARX mint amount
         arx_mint_amount = calculate_arx_mint(
             validation_score=validation_score,
             complexity_multiplier=complexity_multiplier
         )
-        
+
         return {
             'validation_result': validation_result,
             'validation_score': validation_score,
@@ -174,13 +174,13 @@ class ArxLogicEventHandler:
     def __init__(self):
         self.arx_service = ARXService()
         self.notification_service = NotificationService()
-    
+
     async def handle_validation_complete(self, event: ValidationCompleteEvent):
         """Handle ArxLogic validation completion and trigger ARX minting."""
-        
+
         # Calculate ARX mint amount
         mint_calculation = await self.arx_service.calculate_mint_amount(event.contribution_data)
-        
+
         if mint_calculation['arx_mint_amount'] > 0:
             # Mint ARX tokens
             mint_result = await self.arx_service.mint_tokens(
@@ -189,7 +189,7 @@ class ArxLogicEventHandler:
                 contribution_hash=event.contribution_hash,
                 validation_score=mint_calculation['validation_score']
             )
-            
+
             # Send notification to user
             await self.notification_service.send_mint_notification(
                 user_id=event.user_id,
@@ -226,14 +226,14 @@ func (cs *ComplianceService) VerifyKYC(userID string, jurisdiction string) error
     if err != nil {
         return err
     }
-    
+
     // Update database
     _, err = cs.db.Exec(`
-        UPDATE users 
+        UPDATE users
         SET kyc_verified = ?, jurisdiction = ?, regulatory_status = 'verified'
         WHERE id = ?
     `, kycResult.Verified, jurisdiction, userID)
-    
+
     return err
 }
 
@@ -243,25 +243,25 @@ func (cs *ComplianceService) ClearAML(userID string) error {
     if err != nil {
         return err
     }
-    
+
     // Update database
     _, err = cs.db.Exec(`
-        UPDATE users 
+        UPDATE users
         SET aml_cleared = ?, regulatory_status = 'cleared'
         WHERE id = ?
     `, amlResult.Cleared, userID)
-    
+
     return err
 }
 
 func (cs *ComplianceService) RegisterEquityHolder(userID string) error {
     // Mark user as equity holder (cannot participate in token governance)
     _, err := cs.db.Exec(`
-        UPDATE users 
+        UPDATE users
         SET is_equity_holder = true, regulatory_status = 'equity_holder'
         WHERE id = ?
     `, userID)
-    
+
     return err
 }
 ```
@@ -378,13 +378,13 @@ type ARXHandler struct {
 // GET /api/arx/wallet
 func (h *ARXHandler) GetUserWallet(w http.ResponseWriter, r *http.Request) {
     userID := getUserIDFromContext(r.Context())
-    
+
     wallet, err := h.walletService.GetUserWallet(userID)
     if err != nil {
         http.Error(w, "Failed to get wallet", http.StatusInternalServerError)
         return
     }
-    
+
     json.NewEncoder(w).Encode(wallet)
 }
 
@@ -395,36 +395,36 @@ func (h *ARXHandler) SubmitContribution(w http.ResponseWriter, r *http.Request) 
         http.Error(w, "Invalid request body", http.StatusBadRequest)
         return
     }
-    
+
     userID := getUserIDFromContext(r.Context())
-    
+
     // Validate contribution using ArxLogic
     validationResult, err := h.validationService.ValidateAndCalculateMint(contribution)
     if err != nil {
         http.Error(w, "Validation failed", http.StatusBadRequest)
         return
     }
-    
+
     // Mint ARX tokens
     mintResult, err := h.arxService.MintTokens(userID, validationResult)
     if err != nil {
         http.Error(w, "Minting failed", http.StatusInternalServerError)
         return
     }
-    
+
     json.NewEncoder(w).Encode(mintResult)
 }
 
 // GET /api/arx/dividends
 func (h *ARXHandler) GetUserDividends(w http.ResponseWriter, r *http.Request) {
     userID := getUserIDFromContext(r.Context())
-    
+
     dividends, err := h.arxService.GetUserDividends(userID)
     if err != nil {
         http.Error(w, "Failed to get dividends", http.StatusInternalServerError)
         return
     }
-    
+
     json.NewEncoder(w).Encode(dividends)
 }
 
@@ -435,16 +435,16 @@ func (h *ARXHandler) VerifyContribution(w http.ResponseWriter, r *http.Request) 
         http.Error(w, "Invalid request body", http.StatusBadRequest)
         return
     }
-    
+
     userID := getUserIDFromContext(r.Context())
-    
+
     // Perform secondary verification
     verificationResult, err := h.arxService.VerifyContribution(userID, verification)
     if err != nil {
         http.Error(w, "Verification failed", http.StatusBadRequest)
         return
     }
-    
+
     json.NewEncoder(w).Encode(verificationResult)
 }
 ```
@@ -461,7 +461,7 @@ func (h *ARXWebSocketHandler) HandleARXUpdates(conn *WebSocketConnection) {
     // Subscribe to ARX events
     events := make(chan ARXEvent)
     h.arxService.SubscribeToEvents(conn.UserID, events)
-    
+
     for event := range events {
         conn.SendJSON(event)
     }
@@ -485,26 +485,26 @@ type ARXEvent struct {
         <h2>ARX Wallet</h2>
         <div class="wallet-address">{{ .WalletAddress }}</div>
     </div>
-    
+
     <div class="wallet-balance">
         <span class="balance-label">ARX Balance:</span>
         <span class="balance-amount">{{ .ARXBalance }}</span>
     </div>
-    
+
     <div class="wallet-actions">
-        <button hx-post="/api/arx/claim-dividends" 
+        <button hx-post="/api/arx/claim-dividends"
                 hx-target="#dividend-status"
                 class="btn btn-primary">
             Claim Dividends
         </button>
-        
-        <button hx-get="/api/arx/transactions" 
+
+        <button hx-get="/api/arx/transactions"
                 hx-target="#transaction-history"
                 class="btn btn-secondary">
             View History
         </button>
     </div>
-    
+
     <div id="dividend-status"></div>
     <div id="transaction-history"></div>
 </div>
@@ -519,58 +519,58 @@ class ARXWallet {
         this.balance = 0;
         this.initialize();
     }
-    
+
     async initialize() {
         await this.loadWalletInfo();
         this.setupWebSocket();
         this.startBalanceUpdates();
     }
-    
+
     async loadWalletInfo() {
         const response = await fetch('/api/arx/wallet');
         const wallet = await response.json();
-        
+
         this.walletAddress = wallet.wallet_address;
         this.balance = wallet.arx_balance;
         this.updateUI();
     }
-    
+
     setupWebSocket() {
         const ws = new WebSocket(`ws://${window.location.host}/ws/arx`);
-        
+
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             this.handleARXEvent(data);
         };
     }
-    
+
     handleARXEvent(event) {
         switch (event.type) {
             case 'mint_complete':
                 this.balance += event.data.arx_amount;
                 this.showNotification(`Minted ${event.data.arx_amount} ARX!`);
                 break;
-                
+
             case 'dividend_distributed':
                 this.showNotification(`Dividend distributed: ${event.data.amount} ARX`);
                 break;
         }
-        
+
         this.updateUI();
     }
-    
+
     updateUI() {
         document.getElementById('arx-balance').textContent = this.balance.toFixed(8);
         document.getElementById('wallet-address').textContent = this.walletAddress;
     }
-    
+
     showNotification(message) {
         // Show toast notification
         const toast = document.createElement('div');
         toast.className = 'toast toast-success';
         toast.textContent = message;
         document.body.appendChild(toast);
-        
+
         setTimeout(() => toast.remove(), 3000);
     }
 }
@@ -695,4 +695,4 @@ func NewARXMetrics() *ARXMetrics {
 - [ ] Support team trained
 - [ ] Backup and recovery procedures tested
 
-This integration architecture ensures ARX functionality seamlessly integrates with the existing Arxos platform while maintaining security, performance, and user experience standards. 
+This integration architecture ensures ARX functionality seamlessly integrates with the existing Arxos platform while maintaining security, performance, and user experience standards.

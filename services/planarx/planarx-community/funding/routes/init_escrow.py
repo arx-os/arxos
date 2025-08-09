@@ -10,8 +10,7 @@ from decimal import Decimal
 from datetime import datetime
 import logging
 
-from services.escrow_engine
-
+from services.escrow_engine import services.escrow_engine
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/funding/escrow", tags=["Funding Escrow"])
@@ -62,9 +61,9 @@ async def create_escrow_account(request: EscrowCreateRequest):
         if milestone_sum != request.total_amount:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Milestone amounts ({milestone_sum}) must equal total amount ({request.total_amount})"
+                detail=f"Milestone amounts ({milestone_sum}) must equal total amount ({request.total_amount})
             )
-        
+
         # Convert to dict format for engine
         milestones_data = [
             {
@@ -75,7 +74,7 @@ async def create_escrow_account(request: EscrowCreateRequest):
             }
             for m in request.milestones
         ]
-        
+
         escrow_account = escrow_engine.create_escrow_account(
             project_id=request.project_id,
             creator_id=request.creator_id,
@@ -84,15 +83,15 @@ async def create_escrow_account(request: EscrowCreateRequest):
             governance_board=request.governance_board,
             auto_release=request.auto_release
         )
-        
+
         logger.info(f"Created escrow account {escrow_account.id} for project {request.project_id}")
-        
+
         return {
             "escrow_id": escrow_account.id,
             "status": "created",
             "message": "Escrow account created successfully"
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to create escrow account: {str(e)}")
         raise HTTPException(
@@ -110,7 +109,7 @@ async def deposit_funds(escrow_id: str, request: FundDepositRequest):
             amount=request.amount,
             user_id=request.user_id
         )
-        
+
         if success:
             return {
                 "escrow_id": escrow_id,
@@ -123,7 +122,7 @@ async def deposit_funds(escrow_id: str, request: FundDepositRequest):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to deposit funds"
             )
-            
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -150,7 +149,7 @@ async def submit_milestone(
             evidence_urls=request.evidence_urls,
             creator_id=request.user_id  # Assuming user_id is passed in request
         )
-        
+
         if success:
             return {
                 "escrow_id": escrow_id,
@@ -163,7 +162,7 @@ async def submit_milestone(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to submit milestone"
             )
-            
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -190,7 +189,7 @@ async def approve_milestone(
             approver_id=request.approver_id,
             is_override=request.is_override
         )
-        
+
         if success:
             return {
                 "escrow_id": escrow_id,
@@ -203,7 +202,7 @@ async def approve_milestone(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to approve milestone"
             )
-            
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -228,7 +227,7 @@ async def reject_milestone(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Rejection reason is required"
         )
-    
+
     try:
         success = escrow_engine.reject_milestone(
             escrow_id=escrow_id,
@@ -236,7 +235,7 @@ async def reject_milestone(
             rejector_id=request.approver_id,
             reason=request.rejection_reason
         )
-        
+
         if success:
             return {
                 "escrow_id": escrow_id,
@@ -250,7 +249,7 @@ async def reject_milestone(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Failed to reject milestone"
             )
-            
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -269,7 +268,7 @@ async def get_escrow_summary(escrow_id: str):
     try:
         summary = escrow_engine.get_escrow_summary(escrow_id)
         return summary
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -288,7 +287,7 @@ async def get_milestone_details(escrow_id: str, milestone_id: str):
     try:
         details = escrow_engine.get_milestone_details(escrow_id, milestone_id)
         return details
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -307,7 +306,7 @@ async def get_pending_approvals(user_id: str):
     try:
         pending = escrow_engine.get_pending_approvals(user_id)
         return pending
-        
+
     except Exception as e:
         logger.error(f"Failed to get pending approvals: {str(e)}")
         raise HTTPException(
@@ -325,10 +324,10 @@ async def get_escrow_transactions(escrow_id: str, limit: int = 50):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Escrow account {escrow_id} not found"
             )
-        
+
         escrow = escrow_engine.escrow_accounts[escrow_id]
         transactions = sorted(escrow.transactions, key=lambda x: x.timestamp, reverse=True)[:limit]
-        
+
         return [
             {
                 "id": t.id,
@@ -341,10 +340,10 @@ async def get_escrow_transactions(escrow_id: str, limit: int = 50):
             }
             for t in transactions
         ]
-        
+
     except Exception as e:
         logger.error(f"Failed to get escrow transactions: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get escrow transactions: {str(e)}"
-        ) 
+        ) ))))))

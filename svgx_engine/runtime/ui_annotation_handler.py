@@ -44,8 +44,9 @@ class Annotation:
     visibility: AnnotationVisibility = AnnotationVisibility.VISIBLE
     created_at: datetime = None
     updated_at: datetime = None
-    
+
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -72,7 +73,7 @@ class AnnotationHandler:
     Handles annotation state, CRUD operations, and visibility management for SVGX canvases.
     Supports various annotation types with metadata and positioning.
     """
-    def __init__(self):
+def __init__(self):
         # {canvas_id: {annotation_id: Annotation}}
         self.annotations: Dict[str, Dict[str, Annotation]] = {}
         # {canvas_id: list of annotation actions}
@@ -83,27 +84,27 @@ class AnnotationHandler:
     def handle_annotation_event(self, event: Event) -> Optional[Dict[str, Any]]:
         """
         Handle annotation events (create, update, delete, show, hide).
-        
+
         Args:
             event: Annotation event with action and parameters
-            
+
         Returns:
             Dict with action result and feedback, or None if invalid
         """
         try:
             canvas_id = event.data.get('canvas_id')
             action = event.data.get('action')
-            
+
             if not canvas_id or not action:
                 logger.warning(f"Invalid annotation event: missing canvas_id or action")
                 return None
-            
+
             # Initialize canvas annotations if not exists
             if canvas_id not in self.annotations:
                 self.annotations[canvas_id] = {}
                 self.annotation_history[canvas_id] = []
                 self.visibility_states[canvas_id] = {}
-            
+
             if action == 'create':
                 return self._handle_create(event, canvas_id)
             elif action == 'update':
@@ -121,7 +122,7 @@ class AnnotationHandler:
             else:
                 logger.warning(f"Unknown annotation action: {action}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Error handling annotation event: {e}")
             return None
@@ -130,19 +131,19 @@ class AnnotationHandler:
         """Handle create annotation action."""
         annotation_id = event.data.get('annotation_id')
         target_id = event.data.get('target_id')
-        annotation_type = AnnotationType(event.data.get('type', 'text'))
+        annotation_type = AnnotationType(event.data.get('type', 'text')
         content = event.data.get('content', '')
-        position = event.data.get('position', (0.0, 0.0))
+        position = event.data.get('position', (0.0, 0.0)
         metadata = event.data.get('metadata', {})
-        
+
         if not annotation_id:
             logger.warning("Create annotation requires annotation_id")
             return None
-        
+
         if annotation_id in self.annotations[canvas_id]:
             logger.warning(f"Annotation {annotation_id} already exists")
             return None
-        
+
         # Create annotation
         annotation = Annotation(
             id=annotation_id,
@@ -153,10 +154,10 @@ class AnnotationHandler:
             position=position,
             metadata=metadata
         )
-        
+
         self.annotations[canvas_id][annotation_id] = annotation
         self.visibility_states[canvas_id][annotation_id] = AnnotationVisibility.VISIBLE
-        
+
         # Record in history
         self._record_annotation_action(canvas_id, 'create', {
             'annotation_id': annotation_id,
@@ -166,7 +167,7 @@ class AnnotationHandler:
             'position': position,
             'metadata': metadata
         })
-        
+
         return {
             'action': 'create',
             'annotation_id': annotation_id,
@@ -180,30 +181,30 @@ class AnnotationHandler:
         content = event.data.get('content')
         position = event.data.get('position')
         metadata = event.data.get('metadata')
-        
+
         if not annotation_id:
             logger.warning("Update annotation requires annotation_id")
             return None
-        
+
         annotation = self.annotations[canvas_id].get(annotation_id)
         if not annotation:
             logger.warning(f"Annotation {annotation_id} not found")
             return None
-        
+
         # Update fields
         old_content = annotation.content
         old_position = annotation.position
         old_metadata = annotation.metadata.copy()
-        
+
         if content is not None:
             annotation.content = content
         if position is not None:
             annotation.position = position
         if metadata is not None:
             annotation.metadata.update(metadata)
-        
+
         annotation.updated_at = datetime.utcnow()
-        
+
         # Record in history
         self._record_annotation_action(canvas_id, 'update', {
             'annotation_id': annotation_id,
@@ -214,7 +215,7 @@ class AnnotationHandler:
             'old_metadata': old_metadata,
             'new_metadata': annotation.metadata
         })
-        
+
         return {
             'action': 'update',
             'annotation_id': annotation_id,
@@ -229,30 +230,30 @@ class AnnotationHandler:
     def _handle_delete(self, event: Event, canvas_id: str) -> Dict[str, Any]:
         """Handle delete annotation action."""
         annotation_id = event.data.get('annotation_id')
-        
+
         if not annotation_id:
             logger.warning("Delete annotation requires annotation_id")
             return None
-        
+
         annotation = self.annotations[canvas_id].get(annotation_id)
         if not annotation:
             logger.warning(f"Annotation {annotation_id} not found")
             return None
-        
+
         # Store annotation data for history
         deleted_annotation = self._annotation_to_dict(annotation)
-        
+
         # Delete annotation
         del self.annotations[canvas_id][annotation_id]
         if annotation_id in self.visibility_states[canvas_id]:
             del self.visibility_states[canvas_id][annotation_id]
-        
+
         # Record in history
         self._record_annotation_action(canvas_id, 'delete', {
             'annotation_id': annotation_id,
             'deleted_annotation': deleted_annotation
         })
-        
+
         return {
             'action': 'delete',
             'annotation_id': annotation_id,
@@ -263,25 +264,25 @@ class AnnotationHandler:
     def _handle_show(self, event: Event, canvas_id: str) -> Dict[str, Any]:
         """Handle show annotation action."""
         annotation_id = event.data.get('annotation_id')
-        
+
         if not annotation_id:
             logger.warning("Show annotation requires annotation_id")
             return None
-        
+
         if annotation_id not in self.annotations[canvas_id]:
             logger.warning(f"Annotation {annotation_id} not found")
             return None
-        
+
         old_visibility = self.visibility_states[canvas_id].get(annotation_id, AnnotationVisibility.HIDDEN)
         self.visibility_states[canvas_id][annotation_id] = AnnotationVisibility.VISIBLE
-        
+
         # Record in history
         self._record_annotation_action(canvas_id, 'show', {
             'annotation_id': annotation_id,
             'old_visibility': old_visibility.value,
             'new_visibility': AnnotationVisibility.VISIBLE.value
         })
-        
+
         return {
             'action': 'show',
             'annotation_id': annotation_id,
@@ -292,25 +293,25 @@ class AnnotationHandler:
     def _handle_hide(self, event: Event, canvas_id: str) -> Dict[str, Any]:
         """Handle hide annotation action."""
         annotation_id = event.data.get('annotation_id')
-        
+
         if not annotation_id:
             logger.warning("Hide annotation requires annotation_id")
             return None
-        
+
         if annotation_id not in self.annotations[canvas_id]:
             logger.warning(f"Annotation {annotation_id} not found")
             return None
-        
+
         old_visibility = self.visibility_states[canvas_id].get(annotation_id, AnnotationVisibility.VISIBLE)
         self.visibility_states[canvas_id][annotation_id] = AnnotationVisibility.HIDDEN
-        
+
         # Record in history
         self._record_annotation_action(canvas_id, 'hide', {
             'annotation_id': annotation_id,
             'old_visibility': old_visibility.value,
             'new_visibility': AnnotationVisibility.HIDDEN.value
         })
-        
+
         return {
             'action': 'hide',
             'annotation_id': annotation_id,
@@ -321,27 +322,27 @@ class AnnotationHandler:
     def _handle_toggle(self, event: Event, canvas_id: str) -> Dict[str, Any]:
         """Handle toggle annotation visibility action."""
         annotation_id = event.data.get('annotation_id')
-        
+
         if not annotation_id:
             logger.warning("Toggle annotation requires annotation_id")
             return None
-        
+
         if annotation_id not in self.annotations[canvas_id]:
             logger.warning(f"Annotation {annotation_id} not found")
             return None
-        
+
         current_visibility = self.visibility_states[canvas_id].get(annotation_id, AnnotationVisibility.VISIBLE)
         new_visibility = AnnotationVisibility.HIDDEN if current_visibility == AnnotationVisibility.VISIBLE else AnnotationVisibility.VISIBLE
-        
+
         self.visibility_states[canvas_id][annotation_id] = new_visibility
-        
+
         # Record in history
         self._record_annotation_action(canvas_id, 'toggle', {
             'annotation_id': annotation_id,
             'old_visibility': current_visibility.value,
             'new_visibility': new_visibility.value
         })
-        
+
         return {
             'action': 'toggle',
             'annotation_id': annotation_id,
@@ -353,27 +354,27 @@ class AnnotationHandler:
         """Handle move annotation action."""
         annotation_id = event.data.get('annotation_id')
         new_position = event.data.get('position')
-        
+
         if not annotation_id or new_position is None:
             logger.warning("Move annotation requires annotation_id and position")
             return None
-        
+
         annotation = self.annotations[canvas_id].get(annotation_id)
         if not annotation:
             logger.warning(f"Annotation {annotation_id} not found")
             return None
-        
+
         old_position = annotation.position
         annotation.position = new_position
         annotation.updated_at = datetime.utcnow()
-        
+
         # Record in history
         self._record_annotation_action(canvas_id, 'move', {
             'annotation_id': annotation_id,
             'old_position': old_position,
             'new_position': new_position
         })
-        
+
         return {
             'action': 'move',
             'annotation_id': annotation_id,
@@ -410,7 +411,7 @@ class AnnotationHandler:
 
     def get_annotations(self, canvas_id: str, visible_only: bool = False) -> List[Annotation]:
         """Get all annotations for canvas."""
-        annotations = list(self.annotations.get(canvas_id, {}).values())
+        annotations = list(self.annotations.get(canvas_id, {}).values()
         if visible_only:
             annotations = [
                 ann for ann in annotations
@@ -459,11 +460,11 @@ Example:
         result = _register_annotation_handler(param)
         print(result)
     """
-    def handler(event: Event):
+def handler(event: Event):
         if event.type == EventType.USER_INTERACTION and event.data.get('event_subtype') == 'annotation':
             return annotation_handler.handle_annotation_event(event)
         return None
-    
+
     # Import here to avoid circular imports
     from svgx_engine.runtime.event_driven_behavior_engine import event_driven_behavior_engine
     event_driven_behavior_engine.register_handler(
@@ -473,4 +474,4 @@ Example:
         priority=3
     )
 
-_register_annotation_handler() 
+_register_annotation_handler()

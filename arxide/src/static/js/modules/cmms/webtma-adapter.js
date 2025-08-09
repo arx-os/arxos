@@ -14,7 +14,7 @@ export class WebTMAAdapter {
             enableAttachments: true,
             ...options
         };
-        
+
         // WebTMA-specific configurations
         this.config = {
             baseUrl: options.baseUrl || '',
@@ -22,10 +22,10 @@ export class WebTMAAdapter {
             organizationId: options.organizationId || '',
             defaultAccessLevel: options.defaultAccessLevel || 'public'
         };
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -49,23 +49,23 @@ export class WebTMAAdapter {
             cmmsData = {},
             options = {}
         } = params;
-        
+
         try {
             switch (integrationType) {
                 case 'work_order':
                     return await this.integrateWithWorkOrder(link, object, cmmsData, options);
-                
+
                 case 'equipment':
                     return await this.integrateWithEquipment(link, object, cmmsData, options);
-                
+
                 case 'pm_schedule':
                     return await this.integrateWithPMSchedule(link, object, cmmsData, options);
-                
+
                 case 'link':
                 default:
                     return await this.generateStandardLink(link, object, options);
             }
-            
+
         } catch (error) {
             console.error('WebTMA integration failed:', error);
             this.triggerEvent('integrationFailed', { params, error });
@@ -80,23 +80,23 @@ export class WebTMAAdapter {
             linkType = 'standard',
             options = {}
         } = params;
-        
+
         try {
             switch (linkType) {
                 case 'work_order':
                     return await this.generateWorkOrderLink(link, object, options);
-                
+
                 case 'equipment':
                     return await this.generateEquipmentLink(link, object, options);
-                
+
                 case 'pm_schedule':
                     return await this.generatePMScheduleLink(link, object, options);
-                
+
                 case 'standard':
                 default:
                     return await this.generateStandardLink(link, object, options);
             }
-            
+
         } catch (error) {
             console.error('WebTMA link generation failed:', error);
             throw error;
@@ -112,7 +112,7 @@ export class WebTMAAdapter {
             priority = 'normal',
             status = 'open'
         } = cmmsData;
-        
+
         try {
             // Generate work order specific link
             const workOrderLink = await this.generateWorkOrderLink(link, object, {
@@ -120,7 +120,7 @@ export class WebTMAAdapter {
                 workOrderNumber,
                 ...options
             });
-            
+
             // Create work order integration data
             const integrationData = {
                 type: 'work_order',
@@ -142,18 +142,18 @@ export class WebTMAAdapter {
                     integrationTimestamp: Date.now()
                 }
             };
-            
+
             // Send to WebTMA API if configured
             if (this.config.baseUrl && this.config.apiKey) {
                 await this.sendToWebTMA('work_orders', integrationData);
             }
-            
-            this.triggerEvent('workOrderIntegrated', { 
-                workOrderId, 
-                link: workOrderLink, 
-                object 
+
+            this.triggerEvent('workOrderIntegrated', {
+                workOrderId,
+                link: workOrderLink,
+                object
             });
-            
+
             return {
                 success: true,
                 type: 'work_order',
@@ -161,7 +161,7 @@ export class WebTMAAdapter {
                 link: workOrderLink,
                 integrationData
             };
-            
+
         } catch (error) {
             console.error('Work order integration failed:', error);
             throw error;
@@ -175,22 +175,22 @@ export class WebTMAAdapter {
             includeDescription = true,
             includeLocation = true
         } = options;
-        
+
         // Create WebTMA-specific link format
         const webtmaLink = new URL(link.url);
-        
+
         // Add WebTMA-specific parameters
         webtmaLink.searchParams.set('cmms_type', 'webtma');
         webtmaLink.searchParams.set('integration_type', 'work_order');
-        
+
         if (workOrderId) {
             webtmaLink.searchParams.set('work_order_id', workOrderId);
         }
-        
+
         if (workOrderNumber) {
             webtmaLink.searchParams.set('work_order_number', workOrderNumber);
         }
-        
+
         // Add object context
         webtmaLink.searchParams.set('object_context', JSON.stringify({
             id: object.id,
@@ -200,7 +200,7 @@ export class WebTMAAdapter {
             description: includeDescription ? `${object.object_type} ${object.id}` : '',
             location: includeLocation ? `${object.building_id} - ${object.floor_id}` : ''
         }));
-        
+
         return webtmaLink.toString();
     }
 
@@ -214,7 +214,7 @@ export class WebTMAAdapter {
             manufacturer,
             model
         } = cmmsData;
-        
+
         try {
             // Generate equipment specific link
             const equipmentLink = await this.generateEquipmentLink(link, object, {
@@ -222,7 +222,7 @@ export class WebTMAAdapter {
                 equipmentNumber,
                 ...options
             });
-            
+
             // Create equipment integration data
             const integrationData = {
                 type: 'equipment',
@@ -245,18 +245,18 @@ export class WebTMAAdapter {
                     integrationTimestamp: Date.now()
                 }
             };
-            
+
             // Send to WebTMA API if configured
             if (this.config.baseUrl && this.config.apiKey) {
                 await this.sendToWebTMA('equipment', integrationData);
             }
-            
-            this.triggerEvent('equipmentIntegrated', { 
-                equipmentId, 
-                link: equipmentLink, 
-                object 
+
+            this.triggerEvent('equipmentIntegrated', {
+                equipmentId,
+                link: equipmentLink,
+                object
             });
-            
+
             return {
                 success: true,
                 type: 'equipment',
@@ -264,7 +264,7 @@ export class WebTMAAdapter {
                 link: equipmentLink,
                 integrationData
             };
-            
+
         } catch (error) {
             console.error('Equipment integration failed:', error);
             throw error;
@@ -278,22 +278,22 @@ export class WebTMAAdapter {
             includeSpecs = true,
             includeLocation = true
         } = options;
-        
+
         // Create WebTMA-specific link format
         const webtmaLink = new URL(link.url);
-        
+
         // Add WebTMA-specific parameters
         webtmaLink.searchParams.set('cmms_type', 'webtma');
         webtmaLink.searchParams.set('integration_type', 'equipment');
-        
+
         if (equipmentId) {
             webtmaLink.searchParams.set('equipment_id', equipmentId);
         }
-        
+
         if (equipmentNumber) {
             webtmaLink.searchParams.set('equipment_number', equipmentNumber);
         }
-        
+
         // Add object context
         webtmaLink.searchParams.set('object_context', JSON.stringify({
             id: object.id,
@@ -303,7 +303,7 @@ export class WebTMAAdapter {
             specs: includeSpecs ? this.extractObjectSpecs(object) : {},
             location: includeLocation ? `${object.building_id} - ${object.floor_id}` : ''
         }));
-        
+
         return webtmaLink.toString();
     }
 
@@ -316,7 +316,7 @@ export class WebTMAAdapter {
             nextDue,
             assignedTo
         } = cmmsData;
-        
+
         try {
             // Generate PM schedule specific link
             const pmScheduleLink = await this.generatePMScheduleLink(link, object, {
@@ -324,7 +324,7 @@ export class WebTMAAdapter {
                 scheduleName,
                 ...options
             });
-            
+
             // Create PM schedule integration data
             const integrationData = {
                 type: 'pm_schedule',
@@ -346,18 +346,18 @@ export class WebTMAAdapter {
                     integrationTimestamp: Date.now()
                 }
             };
-            
+
             // Send to WebTMA API if configured
             if (this.config.baseUrl && this.config.apiKey) {
                 await this.sendToWebTMA('pm_schedules', integrationData);
             }
-            
-            this.triggerEvent('pmScheduleIntegrated', { 
-                scheduleId, 
-                link: pmScheduleLink, 
-                object 
+
+            this.triggerEvent('pmScheduleIntegrated', {
+                scheduleId,
+                link: pmScheduleLink,
+                object
             });
-            
+
             return {
                 success: true,
                 type: 'pm_schedule',
@@ -365,7 +365,7 @@ export class WebTMAAdapter {
                 link: pmScheduleLink,
                 integrationData
             };
-            
+
         } catch (error) {
             console.error('PM schedule integration failed:', error);
             throw error;
@@ -379,22 +379,22 @@ export class WebTMAAdapter {
             includeFrequency = true,
             includeLocation = true
         } = options;
-        
+
         // Create WebTMA-specific link format
         const webtmaLink = new URL(link.url);
-        
+
         // Add WebTMA-specific parameters
         webtmaLink.searchParams.set('cmms_type', 'webtma');
         webtmaLink.searchParams.set('integration_type', 'pm_schedule');
-        
+
         if (scheduleId) {
             webtmaLink.searchParams.set('schedule_id', scheduleId);
         }
-        
+
         if (scheduleName) {
             webtmaLink.searchParams.set('schedule_name', scheduleName);
         }
-        
+
         // Add object context
         webtmaLink.searchParams.set('object_context', JSON.stringify({
             id: object.id,
@@ -404,7 +404,7 @@ export class WebTMAAdapter {
             frequency: includeFrequency ? this.extractPMFrequency(object) : {},
             location: includeLocation ? `${object.building_id} - ${object.floor_id}` : ''
         }));
-        
+
         return webtmaLink.toString();
     }
 
@@ -415,14 +415,14 @@ export class WebTMAAdapter {
             includeLocation = true,
             includeMetadata = true
         } = options;
-        
+
         // Create WebTMA-specific link format
         const webtmaLink = new URL(link.url);
-        
+
         // Add WebTMA-specific parameters
         webtmaLink.searchParams.set('cmms_type', 'webtma');
         webtmaLink.searchParams.set('integration_type', 'standard');
-        
+
         // Add object context
         const objectContext = {
             id: object.id,
@@ -430,21 +430,21 @@ export class WebTMAAdapter {
             building: object.building_id,
             floor: object.floor_id
         };
-        
+
         if (includeDescription) {
             objectContext.description = `${object.object_type} ${object.id}`;
         }
-        
+
         if (includeLocation) {
             objectContext.location = `${object.building_id} - ${object.floor_id}`;
         }
-        
+
         if (includeMetadata && object.metadata) {
             objectContext.metadata = object.metadata;
         }
-        
+
         webtmaLink.searchParams.set('object_context', JSON.stringify(objectContext));
-        
+
         return webtmaLink.toString();
     }
 
@@ -453,7 +453,7 @@ export class WebTMAAdapter {
         if (!this.config.baseUrl || !this.config.apiKey) {
             throw new Error('WebTMA API not configured');
         }
-        
+
         try {
             const response = await fetch(`${this.config.baseUrl}/api/${endpoint}`, {
                 method: 'POST',
@@ -464,13 +464,13 @@ export class WebTMAAdapter {
                 },
                 body: JSON.stringify(data)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`WebTMA API error: ${response.status}`);
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to send data to WebTMA:', error);
             throw error;
@@ -480,14 +480,14 @@ export class WebTMAAdapter {
     async testConnection(config = {}) {
         try {
             const testConfig = { ...this.config, ...config };
-            
+
             if (!testConfig.baseUrl || !testConfig.apiKey) {
                 return {
                     success: false,
                     message: 'WebTMA API not configured'
                 };
             }
-            
+
             const response = await fetch(`${testConfig.baseUrl}/api/health`, {
                 method: 'GET',
                 headers: {
@@ -495,7 +495,7 @@ export class WebTMAAdapter {
                     'X-Organization-ID': testConfig.organizationId
                 }
             });
-            
+
             if (response.ok) {
                 return {
                     success: true,
@@ -507,7 +507,7 @@ export class WebTMAAdapter {
                     message: `WebTMA connection failed: ${response.status}`
                 };
             }
-            
+
         } catch (error) {
             return {
                 success: false,
@@ -519,41 +519,41 @@ export class WebTMAAdapter {
     // Utility methods
     extractObjectSpecs(object) {
         const specs = {};
-        
+
         if (object.metadata) {
             // Extract common equipment specifications
             const specKeys = ['manufacturer', 'model', 'serial_number', 'capacity', 'voltage', 'amperage'];
-            
+
             specKeys.forEach(key => {
                 if (object.metadata[key]) {
                     specs[key] = object.metadata[key];
                 }
             });
         }
-        
+
         return specs;
     }
 
     extractPMFrequency(object) {
         const frequency = {};
-        
+
         if (object.metadata && object.metadata.maintenance) {
             const maintenance = object.metadata.maintenance;
-            
+
             if (maintenance.frequency) {
                 frequency.value = maintenance.frequency.value;
                 frequency.unit = maintenance.frequency.unit;
             }
-            
+
             if (maintenance.lastPerformed) {
                 frequency.lastPerformed = maintenance.lastPerformed;
             }
-            
+
             if (maintenance.nextDue) {
                 frequency.nextDue = maintenance.nextDue;
             }
         }
-        
+
         return frequency;
     }
 
@@ -634,4 +634,4 @@ export class WebTMAAdapter {
             this.eventHandlers.clear();
         }
     }
-} 
+}

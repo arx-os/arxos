@@ -1,0 +1,589 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arxos-production
+  labels:
+    name: arxos-production
+    environment: production
+    phase: 5
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: arxos-service-account
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: arxos-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "statefulsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: arxos-cluster-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: arxos-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: arxos-service-account
+  namespace: arxos-production
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arxos-config
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+data:
+  # Application Configuration
+  APP_ENVIRONMENT: "production"
+  APP_DEBUG: "false"
+  APP_LOG_LEVEL: "info"
+
+  # Database Configuration
+  DB_HOST: "arxos-postgres-cluster"
+  DB_PORT: "5432"
+  DB_NAME: "arxos_production"
+  DB_SSL_MODE: "require"
+
+  # Redis Configuration
+  REDIS_HOST: "arxos-redis-cluster"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  # AI Service Configuration
+  AI_SERVICE_ENABLED: "true"
+  AI_MODEL_PATH: "/models/svgx_ai"
+  AI_CONFIDENCE_THRESHOLD: "0.85"
+
+  # Real-time Configuration
+  REALTIME_ENABLED: "true"
+  REALTIME_MAX_CONNECTIONS: "1000"
+  REALTIME_HEARTBEAT_INTERVAL: "30"
+
+  # Analytics Configuration
+  ANALYTICS_ENABLED: "true"
+  ANALYTICS_RETENTION_DAYS: "365"
+  ANALYTICS_BATCH_SIZE: "1000"
+
+  # Security Configuration
+  SECURITY_ENCRYPTION_ENABLED: "true"
+  SECURITY_AUDIT_LOGGING: "true"
+  SECURITY_RATE_LIMITING: "true"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: arxos-secrets
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+type: Opaque
+data:
+  # Database Secrets
+  DB_USERNAME: YXJ4b3NfYWRtaW4=  # arxos_admin
+  DB_PASSWORD: U2VjdXJlUGFzc3dvcmQxMjM=  # SecurePassword123
+
+  # Redis Secrets
+  REDIS_PASSWORD: UmVkaXNQYXNzd29yZDEyMw==  # RedisPassword123
+
+  # API Keys
+  AI_API_KEY: QUlBcGlLZXkxMjM=  # AIApiKey123
+  ANALYTICS_API_KEY: QW5hbHl0aWNzQXBpS2V5MTIz  # AnalyticsApiKey123
+
+  # JWT Secrets
+  JWT_SECRET: SnNvbldlYlRva2VuU2VjcmV0MTIz  # JsonWebTokenSecret123
+  JWT_REFRESH_SECRET: UmVmcmVzaFRva2VuU2VjcmV0MTIz  # RefreshTokenSecret123
+
+  # SSL Certificates
+  SSL_CERT: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==  # Base64 encoded SSL cert
+  SSL_KEY: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCg==  # Base64 encoded SSL key
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arxos-api
+  namespace: arxos-production
+  labels:
+    app: arxos-api
+    environment: production
+    version: "1.0.0"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: arxos-api
+  template:
+    metadata:
+      labels:
+        app: arxos-api
+        environment: production
+        version: "1.0.0"
+    spec:
+      serviceAccountName: arxos-service-account
+      containers:
+      - name: arxos-api
+        image: arxos/api:1.0.0
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 8001
+          name: metrics
+        env:
+        - name: APP_ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-config
+              key: APP_ENVIRONMENT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-config
+              key: DB_HOST
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: arxos-secrets
+              key: DB_USERNAME
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: arxos-secrets
+              key: DB_PASSWORD
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arxos-ai-service
+  namespace: arxos-production
+  labels:
+    app: arxos-ai-service
+    environment: production
+    version: "1.0.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: arxos-ai-service
+  template:
+    metadata:
+      labels:
+        app: arxos-ai-service
+        environment: production
+        version: "1.0.0"
+    spec:
+      serviceAccountName: arxos-service-account
+      containers:
+      - name: arxos-ai-service
+        image: arxos/ai-service:1.0.0
+        ports:
+        - containerPort: 8002
+          name: http
+        - containerPort: 8003
+          name: metrics
+        env:
+        - name: AI_SERVICE_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-config
+              key: AI_SERVICE_ENABLED
+        - name: AI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: arxos-secrets
+              key: AI_API_KEY
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: ai-models
+          mountPath: /models
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: ai-models
+        persistentVolumeClaim:
+          claimName: arxos-ai-models-pvc
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arxos-realtime-service
+  namespace: arxos-production
+  labels:
+    app: arxos-realtime-service
+    environment: production
+    version: "1.0.0"
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: arxos-realtime-service
+  template:
+    metadata:
+      labels:
+        app: arxos-realtime-service
+        environment: production
+        version: "1.0.0"
+    spec:
+      serviceAccountName: arxos-service-account
+      containers:
+      - name: arxos-realtime-service
+        image: arxos/realtime-service:1.0.0
+        ports:
+        - containerPort: 8004
+          name: http
+        - containerPort: 8005
+          name: websocket
+        env:
+        - name: REALTIME_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-config
+              key: REALTIME_ENABLED
+        - name: REALTIME_MAX_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: arxos-config
+              key: REALTIME_MAX_CONNECTIONS
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8004
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arxos-api-service
+  namespace: arxos-production
+  labels:
+    app: arxos-api
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 8000
+    protocol: TCP
+    name: https
+  selector:
+    app: arxos-api
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arxos-ai-service
+  namespace: arxos-production
+  labels:
+    app: arxos-ai-service
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8002
+    protocol: TCP
+    name: http
+  selector:
+    app: arxos-ai-service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: arxos-realtime-service
+  namespace: arxos-production
+  labels:
+    app: arxos-realtime-service
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8004
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 8005
+    protocol: TCP
+    name: websocket
+  selector:
+    app: arxos-realtime-service
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: arxos-ingress
+  namespace: arxos-production
+  labels:
+    app: arxos
+    environment: production
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - api.arxos.com
+    - ai.arxos.com
+    - realtime.arxos.com
+    secretName: arxos-tls-secret
+  rules:
+  - host: api.arxos.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: arxos-api-service
+            port:
+              number: 80
+  - host: ai.arxos.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: arxos-ai-service
+            port:
+              number: 80
+  - host: realtime.arxos.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: arxos-realtime-service
+            port:
+              number: 80
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arxos-ai-models-pvc
+  namespace: arxos-production
+  labels:
+    app: arxos-ai-service
+    environment: production
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: arxos-api-hpa
+  namespace: arxos-production
+  labels:
+    app: arxos-api
+    environment: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: arxos-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: arxos-ai-service-hpa
+  namespace: arxos-production
+  labels:
+    app: arxos-ai-service
+    environment: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: arxos-ai-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: arxos-realtime-service-hpa
+  namespace: arxos-production
+  labels:
+    app: arxos-realtime-service
+    environment: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: arxos-realtime-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

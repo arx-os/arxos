@@ -6,11 +6,11 @@
 export class Camera {
     constructor(viewport, options = {}) {
         this.viewport = viewport;
-        
+
         // Animation settings
         this.animationDuration = options.animationDuration || 300;
         this.easingFunction = options.easingFunction || this.easeInOutCubic;
-        
+
         // Animation state
         this.isAnimating = false;
         this.targetZoom = null;
@@ -20,14 +20,14 @@ export class Camera {
         this.animationStartZoom = null;
         this.animationStartPanX = null;
         this.animationStartPanY = null;
-        
+
         // Camera constraints
         this.panBoundaries = options.panBoundaries || {
             enabled: true,
             padding: 100,
             maxDistance: 2000
         };
-        
+
         this.initialize();
     }
 
@@ -183,7 +183,7 @@ export class Camera {
         // Calculate the bounding box of all visible objects
         const svg = this.viewport.svg;
         const bbox = svg.getBBox();
-        
+
         if (bbox.width === 0 || bbox.height === 0) {
             return;
         }
@@ -266,4 +266,4 @@ export class Camera {
             this.eventHandlers.clear();
         }
     }
-} 
+}

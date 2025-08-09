@@ -13,13 +13,13 @@ export class Validation {
             allowedObjectTypes: ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'text'],
             ...options
         };
-        
+
         // Validation schemas
         this.schemas = new Map();
-        
+
         // Validation rules
         this.rules = new Map();
-        
+
         this.initialize();
     }
 
@@ -41,7 +41,7 @@ export class Validation {
                 timestamp: { type: 'string' }
             }
         });
-        
+
         // Floor schema
         this.schemas.set('floor', {
             type: 'object',
@@ -54,7 +54,7 @@ export class Validation {
                 timestamp: { type: 'string' }
             }
         });
-        
+
         // Object schema
         this.schemas.set('object', {
             type: 'object',
@@ -66,7 +66,7 @@ export class Validation {
                 content: { type: 'string' }
             }
         });
-        
+
         // Backup schema
         this.schemas.set('backup', {
             type: 'object',
@@ -90,7 +90,7 @@ export class Validation {
             }
             return true;
         });
-        
+
         // Object count validation
         this.rules.set('objectCount', (objects) => {
             if (objects.length > this.options.maxObjectCount) {
@@ -98,7 +98,7 @@ export class Validation {
             }
             return true;
         });
-        
+
         // Object type validation
         this.rules.set('objectTypes', (objects) => {
             for (const obj of objects) {
@@ -108,7 +108,7 @@ export class Validation {
             }
             return true;
         });
-        
+
         // ID validation
         this.rules.set('idFormat', (id) => {
             if (!id || typeof id !== 'string' || id.length === 0) {
@@ -119,18 +119,18 @@ export class Validation {
             }
             return true;
         });
-        
+
         // Coordinate validation
         this.rules.set('coordinates', (objects) => {
             for (const obj of objects) {
                 if (obj.attributes) {
                     const x = parseFloat(obj.attributes.x);
                     const y = parseFloat(obj.attributes.y);
-                    
+
                     if (isNaN(x) || isNaN(y)) {
                         throw new Error(`Invalid coordinates for object ${obj.id}`);
                     }
-                    
+
                     if (x < -10000 || x > 10000 || y < -10000 || y > 10000) {
                         throw new Error(`Coordinates out of range for object ${obj.id}`);
                     }
@@ -143,21 +143,21 @@ export class Validation {
     // Main validation methods
     validateImportData(data, options = {}) {
         const { validateSchema = true, validateRules = true } = options;
-        
+
         try {
             // Basic structure validation
             this.validateBasicStructure(data);
-            
+
             // Schema validation
             if (validateSchema && this.options.validateSchema) {
                 this.validateSchema(data);
             }
-            
+
             // Rules validation
             if (validateRules) {
                 this.validateRules(data);
             }
-            
+
             return true;
         } catch (error) {
             throw new Error(`Import validation failed: ${error.message}`);
@@ -166,21 +166,21 @@ export class Validation {
 
     validateExportData(data, options = {}) {
         const { validateSchema = true, validateRules = true } = options;
-        
+
         try {
             // Basic structure validation
             this.validateBasicStructure(data);
-            
+
             // Schema validation
             if (validateSchema && this.options.validateSchema) {
                 this.validateSchema(data);
             }
-            
+
             // Rules validation
             if (validateRules) {
                 this.validateRules(data);
             }
-            
+
             return true;
         } catch (error) {
             throw new Error(`Export validation failed: ${error.message}`);
@@ -189,21 +189,21 @@ export class Validation {
 
     validateBackup(backupData, options = {}) {
         const { validateSchema = true, validateRules = true } = options;
-        
+
         try {
             // Basic structure validation
             this.validateBasicStructure(backupData);
-            
+
             // Schema validation
             if (validateSchema && this.options.validateSchema) {
                 this.validateBackupSchema(backupData);
             }
-            
+
             // Rules validation
             if (validateRules) {
                 this.validateBackupRules(backupData);
             }
-            
+
             return true;
         } catch (error) {
             throw new Error(`Backup validation failed: ${error.message}`);
@@ -215,7 +215,7 @@ export class Validation {
         if (!data || typeof data !== 'object') {
             throw new Error('Data must be an object');
         }
-        
+
         if (Array.isArray(data)) {
             throw new Error('Data must be an object, not an array');
         }
@@ -224,7 +224,7 @@ export class Validation {
     validateSchema(data) {
         // Determine schema type based on data structure
         let schemaType = null;
-        
+
         if (data.version) {
             schemaType = 'version';
         } else if (data.floor) {
@@ -234,12 +234,12 @@ export class Validation {
         } else {
             throw new Error('Unable to determine data schema type');
         }
-        
+
         const schema = this.schemas.get(schemaType);
         if (!schema) {
             throw new Error(`No schema found for type: ${schemaType}`);
         }
-        
+
         this.validateAgainstSchema(data, schema, schemaType);
     }
 
@@ -257,7 +257,7 @@ export class Validation {
                 }
             }
         }
-        
+
         // Check field types
         if (schema.properties) {
             for (const [field, value] of Object.entries(data)) {
@@ -267,7 +267,7 @@ export class Validation {
                 }
             }
         }
-        
+
         // Check enum values
         if (schema.properties) {
             for (const [field, value] of Object.entries(data)) {
@@ -283,7 +283,7 @@ export class Validation {
 
     validateFieldType(value, schema, fieldName) {
         const expectedType = schema.type;
-        
+
         switch (expectedType) {
             case 'string':
                 if (typeof value !== 'string') {
@@ -319,14 +319,14 @@ export class Validation {
     validateRules(data) {
         // Validate IDs
         this.validateIds(data);
-        
+
         // Validate objects if present
         if (data.objects) {
             this.rules.get('objectCount')(data.objects);
             this.rules.get('objectTypes')(data.objects);
             this.rules.get('coordinates')(data.objects);
         }
-        
+
         // Validate version objects if present
         if (data.version && data.version.objects) {
             this.rules.get('objectCount')(data.version.objects);
@@ -344,7 +344,7 @@ export class Validation {
                 this.rules.get('coordinates')(backupData.version.objects);
             }
         }
-        
+
         if (backupData.type === 'floor_backup' && backupData.versions) {
             for (const version of backupData.versions) {
                 if (version.objects) {
@@ -361,17 +361,17 @@ export class Validation {
         if (data.id) {
             this.rules.get('idFormat')(data.id);
         }
-        
+
         // Validate version ID
         if (data.version && data.version.id) {
             this.rules.get('idFormat')(data.version.id);
         }
-        
+
         // Validate floor ID
         if (data.floor && data.floor.id) {
             this.rules.get('idFormat')(data.floor.id);
         }
-        
+
         // Validate object IDs
         if (data.objects) {
             for (const obj of data.objects) {
@@ -385,20 +385,20 @@ export class Validation {
     // File validation
     validateFile(file, options = {}) {
         const { validateSize = true, validateType = true } = options;
-        
+
         try {
             if (!file) {
                 throw new Error('No file provided');
             }
-            
+
             if (validateSize) {
                 this.rules.get('fileSize')(file);
             }
-            
+
             if (validateType) {
                 this.validateFileType(file);
             }
-            
+
             return true;
         } catch (error) {
             throw new Error(`File validation failed: ${error.message}`);
@@ -413,7 +413,7 @@ export class Validation {
             'image/png',
             'application/pdf'
         ];
-        
+
         if (!allowedTypes.includes(file.type)) {
             throw new Error(`Unsupported file type: ${file.type}`);
         }
@@ -424,11 +424,11 @@ export class Validation {
         if (!versionData.id) {
             throw new Error('Version data must contain an ID');
         }
-        
+
         if (!versionData.objects || !Array.isArray(versionData.objects)) {
             throw new Error('Version data must contain objects array');
         }
-        
+
         this.rules.get('idFormat')(versionData.id);
         this.rules.get('objectCount')(versionData.objects);
         this.rules.get('objectTypes')(versionData.objects);
@@ -439,13 +439,13 @@ export class Validation {
         if (!floorData.id) {
             throw new Error('Floor data must contain an ID');
         }
-        
+
         if (!floorData.name) {
             throw new Error('Floor data must contain a name');
         }
-        
+
         this.rules.get('idFormat')(floorData.id);
-        
+
         if (floorData.versions && Array.isArray(floorData.versions)) {
             for (const version of floorData.versions) {
                 this.validateVersionData(version);
@@ -457,13 +457,13 @@ export class Validation {
         if (!objectData.id) {
             throw new Error('Object data must contain an ID');
         }
-        
+
         if (!objectData.type) {
             throw new Error('Object data must contain a type');
         }
-        
+
         this.rules.get('idFormat')(objectData.id);
-        
+
         if (!this.options.allowedObjectTypes.includes(objectData.type)) {
             throw new Error(`Invalid object type: ${objectData.type}`);
         }
@@ -547,9 +547,9 @@ export class Validation {
     destroy() {
         this.schemas.clear();
         this.rules.clear();
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

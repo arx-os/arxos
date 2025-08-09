@@ -204,4 +204,4 @@ class TestEditingHandlerIntegration:
         assert feedback.success is True
         assert feedback.result['handler_results'][0]['result']['edit_data'] == {"x": 1}
         # State should be updated
-        assert editing_handler.get_shadow_model("canvas1", "obj1") == {"x": 1} 
+        assert editing_handler.get_shadow_model("canvas1", "obj1") == {"x": 1}

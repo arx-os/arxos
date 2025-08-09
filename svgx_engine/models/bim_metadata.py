@@ -109,4 +109,4 @@ class BIMObjectMetadata:
 
     def add_custom_metadata(self, key: str, value: Any):
         self.custom[key] = value
-        self.updated_at = datetime.now() 
+        self.updated_at = datetime.now()

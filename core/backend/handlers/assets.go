@@ -16,6 +16,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// getUserRoleFromToken extracts user role from JWT token
+func getUserRoleFromToken(r *http.Request) (string, error) {
+	token := r.Header.Get("Authorization")
+	if token == "" {
+		return "", fmt.Errorf("no token provided")
+	}
+	// TODO: Implement proper JWT token validation
+	// For now, return a mock user role
+	return "owner", nil
+}
+
 // GetBuildingAssets retrieves assets for a building with optimized queries and eager loading
 func GetBuildingAssets(w http.ResponseWriter, r *http.Request) {
 	_, err := getUserIDFromToken(r)
@@ -751,6 +762,241 @@ func ExportBuildingInventory(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Unsupported format", http.StatusBadRequest)
 	}
+}
+
+// AddAssetHistory adds a new history entry for an asset
+func AddAssetHistory(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	assetID := chi.URLParam(r, "assetId")
+	var history models.AssetHistory
+	if err := json.NewDecoder(r.Body).Decode(&history); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	history.AssetID = assetID
+	history.CreatedBy = userID
+	history.CreatedAt = time.Now()
+
+	if err := db.DB.Create(&history).Error; err != nil {
+		http.Error(w, "Failed to create asset history", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(history)
+}
+
+// AddAssetMaintenance adds a new maintenance record for an asset
+func AddAssetMaintenance(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	assetID := chi.URLParam(r, "assetId")
+	var maintenance models.AssetMaintenance
+	if err := json.NewDecoder(r.Body).Decode(&maintenance); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	maintenance.AssetID = assetID
+	maintenance.CreatedBy = userID
+	maintenance.CreatedAt = time.Now()
+
+	if err := db.DB.Create(&maintenance).Error; err != nil {
+		http.Error(w, "Failed to create maintenance record", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(maintenance)
+}
+
+// AddAssetValuation adds a new valuation for an asset
+func AddAssetValuation(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	assetID := chi.URLParam(r, "assetId")
+	var valuation models.AssetValuation
+	if err := json.NewDecoder(r.Body).Decode(&valuation); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	valuation.AssetID = assetID
+	valuation.CreatedBy = userID
+	valuation.CreatedAt = time.Now()
+
+	if err := db.DB.Create(&valuation).Error; err != nil {
+		http.Error(w, "Failed to create asset valuation", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(valuation)
+}
+
+// GetBuildingInventorySummary returns a summary of building inventory
+func GetBuildingInventorySummary(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserIDFromToken(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	buildingID := chi.URLParam(r, "buildingId")
+
+	// Verify user has access to this building
+	var building models.Building
+	if err := db.DB.Where("id = ? AND owner_id = ?", buildingID, userID).First(&building).Error; err != nil {
+		http.Error(w, "Building not found or access denied", http.StatusNotFound)
+		return
+	}
+
+	// Get inventory summary
+	var summary struct {
+		TotalAssets    int64                     `json:"total_assets"`
+		BySystem       map[string]int            `json:"by_system"`
+		ByAssetType    map[string]int            `json:"by_asset_type"`
+		ByStatus       map[string]int            `json:"by_status"`
+		TotalValue     float64                   `json:"total_value"`
+		AverageAge     float64                   `json:"average_age"`
+		MaintenanceDue int64                     `json:"maintenance_due"`
+		EndOfLifeSoon  int64                     `json:"end_of_life_soon"`
+		RecentActivity []models.AssetHistory     `json:"recent_activity"`
+		UpcomingTasks  []models.AssetMaintenance `json:"upcoming_tasks"`
+	}
+
+	// Count total assets
+	db.DB.Model(&models.BuildingAsset{}).Where("building_id = ?", buildingID).Count(&summary.TotalAssets)
+
+	// Get breakdown by system
+	var systemStats []struct {
+		System string `json:"system"`
+		Count  int    `json:"count"`
+	}
+	db.DB.Model(&models.BuildingAsset{}).
+		Select("system, COUNT(*) as count").
+		Where("building_id = ?", buildingID).
+		Group("system").
+		Scan(&systemStats)
+
+	summary.BySystem = make(map[string]int)
+	for _, stat := range systemStats {
+		summary.BySystem[stat.System] = stat.Count
+	}
+
+	// Get breakdown by asset type
+	var typeStats []struct {
+		AssetType string `json:"asset_type"`
+		Count     int    `json:"count"`
+	}
+	db.DB.Model(&models.BuildingAsset{}).
+		Select("asset_type, COUNT(*) as count").
+		Where("building_id = ?", buildingID).
+		Group("asset_type").
+		Scan(&typeStats)
+
+	summary.ByAssetType = make(map[string]int)
+	for _, stat := range typeStats {
+		summary.ByAssetType[stat.AssetType] = stat.Count
+	}
+
+	// Get breakdown by status
+	var statusStats []struct {
+		Status string `json:"status"`
+		Count  int    `json:"count"`
+	}
+	db.DB.Model(&models.BuildingAsset{}).
+		Select("status, COUNT(*) as count").
+		Where("building_id = ?", buildingID).
+		Group("status").
+		Scan(&statusStats)
+
+	summary.ByStatus = make(map[string]int)
+	for _, stat := range statusStats {
+		summary.ByStatus[stat.Status] = stat.Count
+	}
+
+	// Calculate total value
+	db.DB.Model(&models.BuildingAsset{}).
+		Select("COALESCE(SUM(estimated_value), 0) as total_value").
+		Where("building_id = ?", buildingID).
+		Scan(&summary.TotalValue)
+
+	// Calculate average age
+	db.DB.Model(&models.BuildingAsset{}).
+		Select("COALESCE(AVG(age), 0) as average_age").
+		Where("building_id = ?", buildingID).
+		Scan(&summary.AverageAge)
+
+	// Count maintenance due
+	db.DB.Model(&models.AssetMaintenance{}).
+		Joins("JOIN building_assets ON building_assets.id = asset_maintenance.asset_id").
+		Where("building_assets.building_id = ? AND asset_maintenance.status = 'scheduled'", buildingID).
+		Count(&summary.MaintenanceDue)
+
+	// Count end of life soon (age > 15 years)
+	db.DB.Model(&models.BuildingAsset{}).
+		Where("building_id = ? AND age > 15", buildingID).
+		Count(&summary.EndOfLifeSoon)
+
+	// Get recent activity
+	db.DB.Model(&models.AssetHistory{}).
+		Joins("JOIN building_assets ON building_assets.id = asset_history.asset_id").
+		Where("building_assets.building_id = ?", buildingID).
+		Order("asset_history.created_at DESC").
+		Limit(10).
+		Find(&summary.RecentActivity)
+
+	// Get upcoming maintenance tasks
+	db.DB.Model(&models.AssetMaintenance{}).
+		Joins("JOIN building_assets ON building_assets.id = asset_maintenance.asset_id").
+		Where("building_assets.building_id = ? AND asset_maintenance.status = 'scheduled'", buildingID).
+		Order("asset_maintenance.scheduled_date ASC").
+		Limit(10).
+		Find(&summary.UpcomingTasks)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(summary)
+}
+
+// GetIndustryBenchmarks returns industry benchmarks for comparison
+func GetIndustryBenchmarks(w http.ResponseWriter, r *http.Request) {
+	equipmentType := r.URL.Query().Get("equipment_type")
+	system := r.URL.Query().Get("system")
+
+	query := db.DB.Model(&models.IndustryBenchmark{})
+	if equipmentType != "" {
+		query = query.Where("equipment_type = ?", equipmentType)
+	}
+	if system != "" {
+		query = query.Where("system = ?", system)
+	}
+
+	var benchmarks []models.IndustryBenchmark
+	if err := query.Order("year DESC, source ASC").Find(&benchmarks).Error; err != nil {
+		http.Error(w, "Failed to retrieve benchmarks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(benchmarks)
 }
 
 // Helper functions (reused from existing code)

@@ -146,8 +146,9 @@ class AIAssistant(BaseModel):
 
 class AIFrontendIntegrationService:
     """Service for HTMX-powered AI frontend integration"""
-    
+
     def __init__(self):
+        pass
     """
     Perform __init__ operation
 
@@ -171,9 +172,9 @@ Example:
         self.intelligent_searches: Dict[str, IntelligentSearch] = {}
         self.ai_assistants: Dict[str, AIAssistant] = {}
         self.user_pattern_service = UserPatternLearningService()
-        
+
         logger.info("AIFrontendIntegrationService initialized")
-    
+
     async def process_htmx_request(
         self,
         user_id: str,
@@ -188,7 +189,7 @@ Example:
     ) -> HTMXResponse:
         """Process HTMX request and generate AI-powered response"""
         start_time = datetime.utcnow()
-        
+
         # Create HTMX request
         request = HTMXRequest(
             user_id=user_id,
@@ -201,9 +202,9 @@ Example:
             ip_address=ip_address,
             user_agent=user_agent
         )
-        
+
         self.requests[request.id] = request
-        
+
         # Record user action for pattern learning
         await self.user_pattern_service.record_user_action(
             user_id=user_id,
@@ -217,19 +218,19 @@ Example:
                 "request_data": request_data
             }
         )
-        
+
         # Process request based on component type
         response = await self._process_component_request(request)
-        
+
         # Calculate processing time
         processing_time = (datetime.utcnow() - start_time).total_seconds()
         response.processing_time = processing_time
-        
+
         self.responses[response.id] = response
-        
+
         logger.info(f"Processed HTMX request: {event_type.value} for {component_type.value}")
         return response
-    
+
     async def _process_component_request(self, request: HTMXRequest) -> HTMXResponse:
         """Process request based on component type"""
         if request.component_type == AIComponentType.SMART_FORM:
@@ -254,31 +255,30 @@ Example:
             return await self._handle_intelligent_chart(request)
         else:
             return await self._handle_generic_request(request)
-    
+
     async def _handle_smart_form(self, request: HTMXRequest) -> HTMXResponse:
         """Handle smart form interactions"""
         form_data = request.request_data.get("form_data", {})
         field_name = request.request_data.get("field_name")
-        
+
         # Get user patterns for form optimization
         user_patterns = await self.user_pattern_service.get_user_patterns(
             user_id=request.user_id,
             pattern_type="preference"
         )
-        
+
         # Generate smart suggestions based on patterns
         suggestions = []
         for pattern in user_patterns:
             if pattern.pattern_data.get("preference_type") == "form_preference":
-                suggestions.append(pattern.pattern_data.get("suggestion", ""))
-        
+                suggestions.append(pattern.pattern_data.get("suggestion", "")
         # Create smart form HTML
         html_content = f"""
         <div class="smart-form-field" data-field="{field_name}">
             <label for="{field_name}">{field_name.title()}</label>
-            <input type="text" 
-                   id="{field_name}" 
-                   name="{field_name}" 
+            <input type="text"
+                   id="{field_name}"
+                   name="{field_name}"
                    value="{form_data.get(field_name, '')}"
                    hx-post="/ai/smart-form/validate"
                    hx-trigger="keyup changed delay:500ms"
@@ -289,7 +289,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -303,29 +303,28 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_intelligent_search(self, request: HTMXRequest) -> HTMXResponse:
         """Handle intelligent search interactions"""
         query = request.request_data.get("query", "")
         filters = request.request_data.get("filters", {})
-        
+
         # Get user search patterns
         user_patterns = await self.user_pattern_service.get_user_patterns(
             user_id=request.user_id,
             pattern_type="search_pattern"
         )
-        
+
         # Generate search suggestions based on patterns
         suggestions = []
         for pattern in user_patterns:
             if pattern.pattern_data.get("query_type") == "similar":
-                suggestions.append(pattern.pattern_data.get("suggestion", ""))
-        
+                suggestions.append(pattern.pattern_data.get("suggestion", "")
         # Create intelligent search HTML
         html_content = f"""
         <div class="intelligent-search">
-            <input type="text" 
-                   id="search-input" 
+            <input type="text"
+                   id="search-input"
                    placeholder="Search..."
                    value="{query}"
                    hx-post="/ai/search/suggest"
@@ -340,7 +339,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -354,24 +353,24 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_context_suggestions(self, request: HTMXRequest) -> HTMXResponse:
         """Handle context-aware suggestions"""
         context = request.context.get("current_context", "")
         user_id = request.user_id
-        
+
         # Get user recommendations
         recommendations = await self.user_pattern_service.get_user_recommendations(
             user_id=user_id,
             active_only=True
         )
-        
+
         # Filter recommendations by context
         context_recommendations = [
             rec for rec in recommendations
             if context.lower() in rec.description.lower() or context.lower() in rec.title.lower()
         ]
-        
+
         # Create context suggestions HTML
         html_content = f"""
         <div class="context-suggestions">
@@ -381,7 +380,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -394,17 +393,17 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_adaptive_navigation(self, request: HTMXRequest) -> HTMXResponse:
         """Handle adaptive navigation"""
         user_id = request.user_id
-        
+
         # Get user navigation patterns
         user_patterns = await self.user_pattern_service.get_user_patterns(
             user_id=user_id,
             pattern_type="navigation"
         )
-        
+
         # Generate adaptive navigation based on patterns
         navigation_items = []
         for pattern in user_patterns:
@@ -414,20 +413,20 @@ Example:
                     "url": pattern.pattern_data.get("url", "#"),
                     "frequency": pattern.frequency
                 })
-        
+
         # Sort by frequency
         navigation_items.sort(key=lambda x: x["frequency"], reverse=True)
-        
+
         # Create adaptive navigation HTML
         html_content = """
         <nav class="adaptive-navigation">
             <ul class="nav-list">
         """
-        
+
         for item in navigation_items[:5]:  # Top 5 most used
             html_content += f"""
                 <li class="nav-item">
-                    <a href="{item['url']}" 
+                    <a href="{item['url']}"
                        hx-get="{item['url']}"
                        hx-target="#main-content"
                        hx-push-url="true"
@@ -437,12 +436,12 @@ Example:
                     </a>
                 </li>
             """
-        
+
         html_content += """
             </ul>
         </nav>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -454,27 +453,27 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_personalized_dashboard(self, request: HTMXRequest) -> HTMXResponse:
         """Handle personalized dashboard"""
         user_id = request.user_id
-        
+
         # Get user analytics
         analytics = await self.user_pattern_service.get_user_analytics(user_id)
-        
+
         # Get user recommendations
         recommendations = await self.user_pattern_service.get_user_recommendations(
             user_id=user_id,
             active_only=True
         )
-        
+
         # Create personalized dashboard HTML
         html_content = f"""
         <div class="personalized-dashboard">
             <div class="dashboard-header">
                 <h2>Your Personalized Dashboard</h2>
             </div>
-            
+
             <div class="dashboard-stats">
                 <div class="stat-card">
                     <h3>Efficiency Score</h3>
@@ -489,7 +488,7 @@ Example:
                     <div class="stat-value">{analytics.patterns_identified}</div>
                 </div>
             </div>
-            
+
             <div class="dashboard-recommendations">
                 <h3>Recommended Actions</h3>
                 <div class="recommendations-list">
@@ -498,7 +497,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -511,13 +510,13 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_ai_assistant(self, request: HTMXRequest) -> HTMXResponse:
         """Handle AI assistant interactions"""
         message = request.request_data.get("message", "")
         user_id = request.user_id
         session_id = request.session_id
-        
+
         # Get or create AI assistant
         assistant_key = f"{user_id}_{session_id}"
         if assistant_key not in self.ai_assistants:
@@ -526,25 +525,25 @@ Example:
                 session_id=session_id,
                 context="general"
             )
-        
+
         assistant = self.ai_assistants[assistant_key]
-        
+
         # Add message to conversation history
         assistant.conversation_history.append({
             "role": "user",
             "message": message,
             "timestamp": datetime.utcnow().isoformat()
         })
-        
+
         # Generate AI response (simplified for demo)
-        ai_response = f"I understand you're asking about '{message}'. How can I help you with that?"
-        
+        ai_response = f"I understand you're asking about '{message}'. How can I help you with that?"'
+
         assistant.conversation_history.append({
             "role": "assistant",
             "message": ai_response,
             "timestamp": datetime.utcnow().isoformat()
         })
-        
+
         # Create AI assistant HTML
         html_content = f"""
         <div class="ai-assistant">
@@ -552,8 +551,8 @@ Example:
                 {self._generate_conversation_html(assistant.conversation_history)}
             </div>
             <div class="assistant-input">
-                <input type="text" 
-                       id="assistant-input" 
+                <input type="text"
+                       id="assistant-input"
                        placeholder="Ask me anything..."
                        hx-post="/ai/assistant/chat"
                        hx-trigger="keyup[key=='Enter']"
@@ -568,7 +567,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -580,17 +579,17 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_recommendation_widget(self, request: HTMXRequest) -> HTMXResponse:
         """Handle recommendation widget"""
         user_id = request.user_id
-        
+
         # Get user recommendations
         recommendations = await self.user_pattern_service.get_user_recommendations(
             user_id=user_id,
             active_only=True
         )
-        
+
         # Create recommendation widget HTML
         html_content = f"""
         <div class="recommendation-widget">
@@ -600,7 +599,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -612,20 +611,20 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_predictive_input(self, request: HTMXRequest) -> HTMXResponse:
         """Handle predictive input"""
         input_text = request.request_data.get("input_text", "")
         field_name = request.request_data.get("field_name", "")
-        
+
         # Generate predictions based on input
         predictions = self._generate_predictions(input_text, field_name)
-        
+
         # Create predictive input HTML
         html_content = f"""
         <div class="predictive-input">
-            <input type="text" 
-                   id="{field_name}" 
+            <input type="text"
+                   id="{field_name}"
                    value="{input_text}"
                    hx-post="/ai/predictive-input"
                    hx-trigger="keyup changed delay:200ms"
@@ -636,7 +635,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -648,16 +647,16 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_smart_table(self, request: HTMXRequest) -> HTMXResponse:
         """Handle smart table interactions"""
         table_data = request.request_data.get("table_data", [])
         sort_column = request.request_data.get("sort_column")
         filter_criteria = request.request_data.get("filter_criteria", {})
-        
+
         # Apply smart sorting and filtering
         processed_data = self._process_table_data(table_data, sort_column, filter_criteria)
-        
+
         # Create smart table HTML
         html_content = f"""
         <div class="smart-table">
@@ -673,7 +672,7 @@ Example:
             </table>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -685,15 +684,15 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_intelligent_chart(self, request: HTMXRequest) -> HTMXResponse:
         """Handle intelligent chart interactions"""
         chart_data = request.request_data.get("chart_data", {})
         chart_type = request.request_data.get("chart_type", "line")
-        
+
         # Process chart data intelligently
         processed_chart_data = self._process_chart_data(chart_data, chart_type)
-        
+
         # Create intelligent chart HTML
         html_content = f"""
         <div class="intelligent-chart">
@@ -714,7 +713,7 @@ Example:
             </div>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -727,7 +726,7 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     async def _handle_generic_request(self, request: HTMXRequest) -> HTMXResponse:
         """Handle generic HTMX requests"""
         html_content = f"""
@@ -737,7 +736,7 @@ Example:
             <p>Target: {request.target_id}</p>
         </div>
         """
-        
+
         return HTMXResponse(
             request_id=request.id,
             html_content=html_content,
@@ -750,34 +749,34 @@ Example:
             },
             processing_time=0.0
         )
-    
+
     def _generate_suggestions_html(self, suggestions: List[str]) -> str:
         """Generate HTML for suggestions"""
         if not suggestions:
             return ""
-        
+
         html = '<div class="suggestions-list">'
         for suggestion in suggestions[:5]:
             html += f'<div class="suggestion-item">{suggestion}</div>'
         html += '</div>'
         return html
-    
+
     def _generate_search_suggestions_html(self, suggestions: List[str]) -> str:
         """Generate HTML for search suggestions"""
         if not suggestions:
             return ""
-        
+
         html = '<div class="search-suggestions">'
         for suggestion in suggestions[:8]:
             html += f'<div class="search-suggestion" onclick="selectSearchSuggestion(\'{suggestion}\')">{suggestion}</div>'
         html += '</div>'
         return html
-    
+
     def _generate_recommendations_html(self, recommendations: List) -> str:
         """Generate HTML for recommendations"""
         if not recommendations:
             return '<div class="no-recommendations">No recommendations available</div>'
-        
+
         html = '<div class="recommendations-list">'
         for rec in recommendations:
             html += f"""
@@ -796,7 +795,7 @@ Example:
             """
         html += '</div>'
         return html
-    
+
     def _generate_conversation_html(self, conversation_history: List[Dict]) -> str:
         """Generate HTML for conversation history"""
         html = '<div class="conversation-history">'
@@ -810,12 +809,12 @@ Example:
             """
         html += '</div>'
         return html
-    
+
     def _generate_predictions(self, input_text: str, field_name: str) -> List[str]:
         """Generate predictions based on input text and field name"""
         # Simple prediction logic (in real implementation, this would use ML models)
         predictions = []
-        
+
         if field_name == "email":
             if "@" in input_text:
                 predictions.extend(["gmail.com", "yahoo.com", "outlook.com"])
@@ -823,31 +822,31 @@ Example:
             predictions.extend(["John", "Jane", "Mike", "Sarah"])
         elif field_name == "project":
             predictions.extend(["CAD Design", "3D Modeling", "Documentation", "Analysis"])
-        
+
         return predictions
-    
+
     def _generate_predictions_html(self, predictions: List[str]) -> str:
         """Generate HTML for predictions"""
         if not predictions:
             return ""
-        
+
         html = '<div class="predictions-list">'
         for prediction in predictions:
             html += f'<div class="prediction-item" onclick="selectPrediction(\'{prediction}\')">{prediction}</div>'
         html += '</div>'
         return html
-    
+
     def _generate_table_headers_html(self, data: List[Dict]) -> str:
         """Generate HTML for table headers"""
         if not data:
             return ""
-        
-        headers = list(data[0].keys())
+
+        headers = list(data[0].keys()
         html = ""
         for header in headers:
             html += f'<th class="sortable-header" hx-post="/ai/table/sort" hx-vals=\'{{"column": "{header}"}}\'>{header.title()}</th>'
         return html
-    
+
     def _generate_table_rows_html(self, data: List[Dict]) -> str:
         """Generate HTML for table rows"""
         html = ""
@@ -857,7 +856,7 @@ Example:
                 html += f'<td>{value}</td>'
             html += '</tr>'
         return html
-    
+
     def _process_table_data(self, data: List[Dict], sort_column: Optional[str], filter_criteria: Dict) -> List[Dict]:
         """Process table data with sorting and filtering"""
         # Apply filters
@@ -867,13 +866,12 @@ Example:
                 if all(row.get(key) == value for key, value in filter_criteria.items()):
                     filtered_data.append(row)
             data = filtered_data
-        
+
         # Apply sorting
         if sort_column and data:
-            data.sort(key=lambda x: x.get(sort_column, ""))
-        
+            data.sort(key=lambda x: x.get(sort_column, "")
         return data
-    
+
     def _process_chart_data(self, data: Dict, chart_type: str) -> Dict:
         """Process chart data for different chart types"""
         # Simple data processing (in real implementation, this would be more sophisticated)
@@ -882,9 +880,9 @@ Example:
             "datasets": data.get("datasets", []),
             "chart_type": chart_type
         }
-        
+
         return processed_data
-    
+
     async def create_ai_component(
         self,
         component_type: AIComponentType,
@@ -903,26 +901,25 @@ Example:
             htmx_config=htmx_config or {},
             ai_config=ai_config or {}
         )
-        
+
         self.components[component.id] = component
         logger.info(f"Created AI component: {name}")
         return component
-    
+
     async def get_ai_component(self, component_id: UUID) -> Optional[AIComponent]:
         """Get AI component by ID"""
         return self.components.get(component_id)
-    
+
     async def get_ai_components(
         self,
         component_type: Optional[AIComponentType] = None,
         active_only: bool = True
     ) -> List[AIComponent]:
         """Get AI components with optional filters"""
-        components = list(self.components.values())
-        
+        components = list(self.components.values()
         if component_type:
             components = [c for c in components if c.component_type == component_type]
         if active_only:
             components = [c for c in components if c.is_active]
-        
-        return components 
+
+        return components

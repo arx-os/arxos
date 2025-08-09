@@ -441,7 +441,7 @@
         left: 10px;
         max-width: none;
     }
-    
+
     .user-presence-indicator,
     .cache-status,
     .connection-status {
@@ -449,7 +449,7 @@
         margin: 10px;
         border-radius: 4px;
     }
-    
+
     .lock-dialog {
         margin: 20px;
         min-width: auto;
@@ -469,55 +469,55 @@
         background: #2d3748;
         color: #e2e8f0;
     }
-    
+
     .conflict-header,
     .error-header,
     .conflict-actions {
         background: #4a5568;
         border-color: #718096;
     }
-    
+
     .conflict-content p,
     .error-content p {
         color: #e2e8f0;
     }
-    
+
     .conflict-content strong,
     .error-content strong {
         color: #f7fafc;
     }
-    
+
     .close-btn {
         color: #a0aec0;
     }
-    
+
     .close-btn:hover {
         background-color: #4a5568;
         color: #e2e8f0;
     }
-    
+
     .conflict-actions button {
         background: #4a5568;
         color: #e2e8f0;
         border-color: #718096;
     }
-    
+
     .conflict-actions button:hover {
         background: #718096;
     }
-    
+
     .presence-title,
     .cache-status-title,
     .connection-text {
         color: #e2e8f0;
     }
-    
+
     .presence-user {
         color: #a0aec0;
     }
-    
+
     .cache-stats,
     .connection-stats {
         color: #a0aec0;
     }
-} 
+}

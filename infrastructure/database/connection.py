@@ -20,17 +20,17 @@ logger = logging.getLogger(__name__)
 
 class DatabaseConnection:
     """Database connection manager with connection pooling."""
-    
+
     def __init__(self, config: DatabaseConfig):
         """Initialize database connection with configuration."""
         self.config = config
         self.config.validate()
-        
+
         self._engine: Optional[Engine] = None
         self._session_factory: Optional[sessionmaker] = None
-        
+
         self._initialize_engine()
-    
+
     def _initialize_engine(self) -> None:
         """Initialize SQLAlchemy engine with connection pooling."""
         try:
@@ -48,7 +48,7 @@ class DatabaseConnection:
                 pool_pre_ping=True,  # Verify connections before use
                 pool_reset_on_return='commit',  # Reset connections properly
             )
-            
+
             # Create session factory
             self._session_factory = sessionmaker(
                 bind=self._engine,
@@ -56,33 +56,33 @@ class DatabaseConnection:
                 autoflush=False,
                 expire_on_commit=False
             )
-            
+
             logger.info(f"Database engine initialized successfully for {self.config.database}")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize database engine: {e}")
             raise
-    
+
     @property
-    def engine(self) -> Engine:
+def engine(self) -> Engine:
         """Get the SQLAlchemy engine."""
         if self._engine is None:
             raise RuntimeError("Database engine not initialized")
         return self._engine
-    
+
     @property
-    def session_factory(self) -> sessionmaker:
+def session_factory(self) -> sessionmaker:
         """Get the session factory."""
         if self._session_factory is None:
             raise RuntimeError("Session factory not initialized")
         return self._session_factory
-    
+
     def create_session(self) -> Session:
         """Create a new database session."""
         return self.session_factory()
-    
+
     @contextmanager
-    def get_session(self):
+def get_session(self):
         """Context manager for database sessions."""
         session = self.create_session()
         try:
@@ -93,7 +93,7 @@ class DatabaseConnection:
             raise
         finally:
             session.close()
-    
+
     def test_connection(self) -> bool:
         """Test database connection."""
         try:
@@ -104,12 +104,12 @@ class DatabaseConnection:
         except Exception as e:
             logger.error(f"Database connection test failed: {e}")
             return False
-    
+
     def get_pool_status(self) -> dict:
         """Get connection pool status."""
         if self._engine is None:
             return {"error": "Engine not initialized"}
-        
+
         pool = self._engine.pool
         return {
             "pool_size": pool.size(),
@@ -118,17 +118,17 @@ class DatabaseConnection:
             "overflow": pool.overflow(),
             "invalid": pool.invalid()
         }
-    
+
     def dispose(self) -> None:
         """Dispose of the engine and close all connections."""
         if self._engine:
             self._engine.dispose()
             logger.info("Database engine disposed")
-    
+
     def __enter__(self):
         """Context manager entry."""
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
-        self.dispose() 
+        self.dispose()

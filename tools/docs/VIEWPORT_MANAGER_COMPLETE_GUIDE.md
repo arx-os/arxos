@@ -543,8 +543,8 @@ Convert between different coordinate systems.
    // SVG must be larger than viewport for panning
    const svgRect = svg.getBoundingClientRect();
    const viewportRect = viewport.getBoundingClientRect();
-   console.log('SVG larger than viewport:', 
-       svgRect.width > viewportRect.width || 
+   console.log('SVG larger than viewport:',
+       svgRect.width > viewportRect.width ||
        svgRect.height > viewportRect.height);
    ```
 
@@ -699,4 +699,4 @@ If you're still experiencing issues after trying the troubleshooting steps:
 1. **Event-Driven Architecture**: Use events for loose coupling
 2. **Configuration Management**: Allow easy customization of settings
 3. **Session Management**: Support multiple user sessions
-4. **Error Handling**: Implement comprehensive error handling and recovery 
+4. **Error Handling**: Implement comprehensive error handling and recovery

@@ -60,7 +60,7 @@ app.include_router(escrow_router, prefix="/api/funding")
     """Serve the main homepage"""
     try:
         with open("frontend/index.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return HTMLResponse(content=f.read()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Homepage not found")
 
@@ -69,7 +69,7 @@ app.include_router(escrow_router, prefix="/api/funding")
     """Serve the project submission page"""
     try:
         with open("frontend/submit_design.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return HTMLResponse(content=f.read()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Submit page not found")
 
@@ -78,7 +78,7 @@ app.include_router(escrow_router, prefix="/api/funding")
     """Serve the drafts management page"""
     try:
         with open("frontend/my_drafts.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return HTMLResponse(content=f.read()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Drafts page not found")
 
@@ -87,7 +87,7 @@ app.include_router(escrow_router, prefix="/api/funding")
     """Serve the moderator dashboard page"""
     try:
         with open("frontend/mod_dashboard.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return HTMLResponse(content=f.read()
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Moderator dashboard not found")
 
@@ -112,7 +112,7 @@ app.include_router(escrow_router, prefix="/api/funding")
         "version": "1.0.0",
         "components": {
             "home": "active",
-            "drafts": "active", 
+            "drafts": "active",
             "moderation": "active",
             "onboarding": "active",
             "funding": "active"
@@ -150,13 +150,13 @@ app.include_router(escrow_router, prefix="/api/funding")
     async def startup_event(user: User = Depends(get_current_user)):
     """Application startup event"""
     logger.info("Planarx Community Platform starting up...")
-    
+
     # Create necessary directories
     os.makedirs("data/projects", exist_ok=True)
     os.makedirs("data/drafts", exist_ok=True)
     os.makedirs("data/funding", exist_ok=True)
     os.makedirs("data/uploads", exist_ok=True)
-    
+
     logger.info("Planarx Community Platform started successfully")
 
 # Shutdown event
@@ -173,4 +173,4 @@ if __name__ == "__main__":
         port=8000,
         reload=True,
         log_level="info"
-    ) 
+    )

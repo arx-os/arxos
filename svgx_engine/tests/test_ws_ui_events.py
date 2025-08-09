@@ -61,4 +61,4 @@ async def test_ws_disconnect_and_reconnect():
             "canvas_id": "ws-canvas-1"
         }))
         handshake_ack2 = json.loads(await ws2.recv())
-        assert handshake_ack2["status"] == "handshake_ack" 
+        assert handshake_ack2["status"] == "handshake_ack"

@@ -393,4 +393,4 @@ cargo clippy
 
 **ArxIDE Desktop** - Professional CAD for the modern world.
 
-*Built with ❤️ by the Arxos Team* 
+*Built with ❤️ by the Arxos Team*

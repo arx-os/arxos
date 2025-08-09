@@ -11,12 +11,12 @@ export class Metadata {
             maxMetadataSize: options.maxMetadataSize || 1024 * 1024, // 1MB
             ...options
         };
-        
+
         // Metadata state
         this.metadata = new Map();
         this.metadataSchemas = new Map();
         this.metadataAnalytics = {};
-        
+
         // Metadata templates
         this.metadataTemplates = {
             'HVAC': {
@@ -42,10 +42,10 @@ export class Metadata {
                 installation_date: { type: 'date', required: false }
             }
         };
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -59,7 +59,7 @@ export class Metadata {
         document.addEventListener('metadataChanged', (event) => {
             this.handleMetadataChange(event.detail);
         });
-        
+
         // Listen for metadata validation
         document.addEventListener('metadataValidation', (event) => {
             this.handleMetadataValidation(event.detail);
@@ -72,21 +72,21 @@ export class Metadata {
             const response = await fetch('/api/metadata/schemas', {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const schemas = await response.json();
             schemas.forEach(schema => {
                 this.metadataSchemas.set(schema.id, schema);
             });
-            
-            this.triggerEvent('metadataSchemasLoaded', { 
+
+            this.triggerEvent('metadataSchemasLoaded', {
                 schemas: Array.from(this.metadataSchemas.values()),
-                count: this.metadataSchemas.size 
+                count: this.metadataSchemas.size
             });
-            
+
         } catch (error) {
             console.error('Failed to load metadata schemas:', error);
             this.triggerEvent('metadataSchemasLoadFailed', { error });
@@ -99,17 +99,17 @@ export class Metadata {
             const response = await fetch(`/api/assets/${assetId}/metadata`, {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const metadata = await response.json();
             this.metadata.set(assetId, metadata);
-            
+
             this.triggerEvent('metadataLoaded', { assetId, metadata });
             return metadata;
-            
+
         } catch (error) {
             console.error('Failed to load asset metadata:', error);
             this.triggerEvent('metadataLoadFailed', { assetId, error });
@@ -126,7 +126,7 @@ export class Metadata {
                     throw new Error(`Metadata validation failed: ${validationErrors.join(', ')}`);
                 }
             }
-            
+
             const response = await fetch(`/api/assets/${assetId}/metadata`, {
                 method: 'PUT',
                 headers: {
@@ -135,17 +135,17 @@ export class Metadata {
                 },
                 body: JSON.stringify(metadata)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const updatedMetadata = await response.json();
             this.metadata.set(assetId, updatedMetadata);
-            
+
             this.triggerEvent('metadataUpdated', { assetId, metadata: updatedMetadata });
             return updatedMetadata;
-            
+
         } catch (error) {
             console.error('Failed to update asset metadata:', error);
             this.triggerEvent('metadataUpdateFailed', { assetId, metadata, error });
@@ -159,15 +159,15 @@ export class Metadata {
                 method: 'DELETE',
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             this.metadata.delete(assetId);
-            
+
             this.triggerEvent('metadataDeleted', { assetId });
-            
+
         } catch (error) {
             console.error('Failed to delete asset metadata:', error);
             this.triggerEvent('metadataDeleteFailed', { assetId, error });
@@ -178,27 +178,27 @@ export class Metadata {
     // Metadata validation
     validateMetadata(assetId, metadata) {
         const errors = [];
-        
+
         // Get asset to determine type
         const asset = this.getAssetById(assetId);
         if (!asset) {
             errors.push('Asset not found');
             return errors;
         }
-        
+
         // Get schema for asset type
         const schema = this.getMetadataSchema(asset.asset_type);
         if (!schema) {
             return errors; // No schema means no validation required
         }
-        
+
         // Validate required fields
         Object.entries(schema.fields).forEach(([fieldName, fieldConfig]) => {
             if (fieldConfig.required && !metadata[fieldName]) {
                 errors.push(`Required field '${fieldName}' is missing`);
             }
         });
-        
+
         // Validate field types
         Object.entries(metadata).forEach(([fieldName, value]) => {
             const fieldConfig = schema.fields[fieldName];
@@ -209,19 +209,19 @@ export class Metadata {
                 }
             }
         });
-        
+
         // Validate metadata size
         const metadataSize = JSON.stringify(metadata).length;
         if (metadataSize > this.options.maxMetadataSize) {
             errors.push(`Metadata size (${metadataSize} bytes) exceeds maximum allowed size (${this.options.maxMetadataSize} bytes)`);
         }
-        
+
         return errors;
     }
 
     validateFieldType(fieldName, value, fieldConfig) {
         if (value == null) return null;
-        
+
         switch (fieldConfig.type) {
             case 'string':
                 if (typeof value !== 'string') {
@@ -231,7 +231,7 @@ export class Metadata {
                     return `Field '${fieldName}' cannot exceed ${fieldConfig.maxLength} characters`;
                 }
                 break;
-                
+
             case 'number':
                 if (typeof value !== 'number' || isNaN(value)) {
                     return `Field '${fieldName}' must be a number`;
@@ -243,27 +243,27 @@ export class Metadata {
                     return `Field '${fieldName}' cannot exceed ${fieldConfig.max}`;
                 }
                 break;
-                
+
             case 'date':
                 const date = new Date(value);
                 if (isNaN(date.getTime())) {
                     return `Field '${fieldName}' must be a valid date`;
                 }
                 break;
-                
+
             case 'boolean':
                 if (typeof value !== 'boolean') {
                     return `Field '${fieldName}' must be a boolean`;
                 }
                 break;
-                
+
             case 'enum':
                 if (!fieldConfig.enum.includes(value)) {
                     return `Field '${fieldName}' must be one of: ${fieldConfig.enum.join(', ')}`;
                 }
                 break;
         }
-        
+
         return null;
     }
 
@@ -281,26 +281,26 @@ export class Metadata {
         if (!template) {
             throw new Error(`No metadata template found for asset type: ${assetType}`);
         }
-        
+
         const defaultMetadata = {};
         Object.entries(template.fields).forEach(([fieldName, fieldConfig]) => {
             if (fieldConfig.default !== undefined) {
                 defaultMetadata[fieldName] = fieldConfig.default;
             }
         });
-        
+
         return { ...defaultMetadata, ...metadata };
     }
 
     // Metadata analytics
     async analyzeMetadata(assetIds = null) {
         if (!this.options.enableMetadataAnalysis) return;
-        
+
         try {
-            const assets = assetIds ? 
+            const assets = assetIds ?
                 assetIds.map(id => this.getAssetById(id)).filter(Boolean) :
                 this.getAllAssets();
-            
+
             const analysis = {
                 totalAssets: assets.length,
                 assetsWithMetadata: 0,
@@ -309,7 +309,7 @@ export class Metadata {
                 valueRanges: {},
                 commonValues: {}
             };
-            
+
             for (const asset of assets) {
                 const metadata = this.metadata.get(asset.id);
                 if (metadata) {
@@ -317,10 +317,10 @@ export class Metadata {
                     this.analyzeAssetMetadata(asset, metadata, analysis);
                 }
             }
-            
+
             this.metadataAnalytics = analysis;
             this.triggerEvent('metadataAnalysisCompleted', { analysis });
-            
+
         } catch (error) {
             console.error('Failed to analyze metadata:', error);
             this.triggerEvent('metadataAnalysisFailed', { error });
@@ -330,7 +330,7 @@ export class Metadata {
     analyzeAssetMetadata(asset, metadata, analysis) {
         const schema = this.getMetadataSchema(asset.asset_type);
         if (!schema) return;
-        
+
         // Analyze field usage
         Object.entries(schema.fields).forEach(([fieldName, fieldConfig]) => {
             if (!analysis.fieldUsage[fieldName]) {
@@ -340,13 +340,13 @@ export class Metadata {
                     type: fieldConfig.type
                 };
             }
-            
+
             analysis.fieldUsage[fieldName].total++;
             if (metadata[fieldName] !== undefined && metadata[fieldName] !== null) {
                 analysis.fieldUsage[fieldName].populated++;
             }
         });
-        
+
         // Analyze value ranges for numeric fields
         Object.entries(metadata).forEach(([fieldName, value]) => {
             const fieldConfig = schema.fields[fieldName];
@@ -359,7 +359,7 @@ export class Metadata {
                         count: 0
                     };
                 }
-                
+
                 const range = analysis.valueRanges[fieldName];
                 range.min = Math.min(range.min, value);
                 range.max = Math.max(range.max, value);
@@ -367,15 +367,15 @@ export class Metadata {
                 range.count++;
             }
         });
-        
+
         // Analyze common values
         Object.entries(metadata).forEach(([fieldName, value]) => {
             if (!analysis.commonValues[fieldName]) {
                 analysis.commonValues[fieldName] = {};
             }
-            
+
             const valueStr = String(value);
-            analysis.commonValues[fieldName][valueStr] = 
+            analysis.commonValues[fieldName][valueStr] =
                 (analysis.commonValues[fieldName][valueStr] || 0) + 1;
         });
     }
@@ -395,7 +395,7 @@ export class Metadata {
                     limit: filters.limit || 100
                 }
             };
-            
+
             const response = await fetch('/api/metadata/search', {
                 method: 'POST',
                 headers: {
@@ -404,15 +404,15 @@ export class Metadata {
                 },
                 body: JSON.stringify(searchParams)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const results = await response.json();
             this.triggerEvent('metadataSearchCompleted', { query, results });
             return results;
-            
+
         } catch (error) {
             console.error('Failed to search metadata:', error);
             this.triggerEvent('metadataSearchFailed', { query, error });
@@ -428,7 +428,7 @@ export class Metadata {
                 format: format,
                 include_schemas: true
             };
-            
+
             const response = await fetch('/api/metadata/export', {
                 method: 'POST',
                 headers: {
@@ -437,24 +437,24 @@ export class Metadata {
                 },
                 body: JSON.stringify(exportParams)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
-            
+
             // Create download link
             const a = document.createElement('a');
             a.href = url;
             a.download = `asset_metadata_${Date.now()}.${format}`;
             a.click();
-            
+
             URL.revokeObjectURL(url);
-            
+
             this.triggerEvent('metadataExported', { assetIds, format });
-            
+
         } catch (error) {
             console.error('Failed to export metadata:', error);
             this.triggerEvent('metadataExportFailed', { assetIds, format, error });
@@ -467,7 +467,7 @@ export class Metadata {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('options', JSON.stringify(options));
-            
+
             const response = await fetch('/api/metadata/import', {
                 method: 'POST',
                 headers: {
@@ -475,16 +475,16 @@ export class Metadata {
                 },
                 body: formData
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             const result = await response.json();
-            
+
             this.triggerEvent('metadataImported', { result });
             return result;
-            
+
         } catch (error) {
             console.error('Failed to import metadata:', error);
             this.triggerEvent('metadataImportFailed', { file, error });
@@ -501,7 +501,7 @@ export class Metadata {
     handleMetadataValidation(detail) {
         const { assetId, metadata } = detail;
         const errors = this.validateMetadata(assetId, metadata);
-        
+
         if (errors.length > 0) {
             this.triggerEvent('metadataValidationFailed', { assetId, errors });
         } else {
@@ -561,9 +561,9 @@ export class Metadata {
         this.metadata.clear();
         this.metadataSchemas.clear();
         this.metadataAnalytics = {};
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

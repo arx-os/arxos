@@ -26,7 +26,7 @@ from application.dto.project_dto import (
 
 class CreateProjectUseCase:
     """Use case for creating a new project."""
-    
+
     def __init__(self, project_repository: ProjectRepository):
     """
     Perform __init__ operation
@@ -45,7 +45,7 @@ Example:
         print(result)
     """
         self.project_repository = project_repository
-    
+
     def execute(self, request: CreateProjectRequest) -> CreateProjectResponse:
         """Execute the create project use case."""
         try:
@@ -55,17 +55,17 @@ Example:
                     success=False,
                     error_message="Project name is required"
                 )
-            
+
             if not request.building_id or len(request.building_id.strip()) == 0:
                 return CreateProjectResponse(
                     success=False,
                     error_message="Building ID is required"
                 )
-            
+
             # Create domain objects
             project_id = ProjectId()
             building_id = BuildingId(request.building_id)
-            
+
             # Create project entity
             project = Project(
                 id=project_id,
@@ -77,18 +77,16 @@ Example:
                 created_by=request.created_by,
                 metadata=request.metadata or {}
             )
-            
+
             # Save to repository
             self.project_repository.save(project)
-            
+
             # Return success response
             return CreateProjectResponse(
                 success=True,
                 project_id=str(project_id),
                 message="Project created successfully",
                 created_at=datetime.utcnow()
-            )
-            
         except DuplicateProjectError as e:
             return CreateProjectResponse(
                 success=False,
@@ -124,10 +122,10 @@ Example:
         print(result)
     """
     """Use case for updating a project."""
-    
+
     def __init__(self, project_repository: ProjectRepository):
         self.project_repository = project_repository
-    
+
     def execute(self, request: UpdateProjectRequest) -> UpdateProjectResponse:
         """Execute the update project use case."""
         try:
@@ -137,33 +135,33 @@ Example:
                     success=False,
                     error_message="Project ID is required"
                 )
-            
+
             # Get existing project
             project_id = ProjectId(request.project_id)
             project = self.project_repository.get_by_id(project_id)
-            
+
             if not project:
                 return UpdateProjectResponse(
                     success=False,
                     error_message="Project not found"
                 )
-            
+
             # Update project fields
             if request.name is not None:
                 project.update_name(request.name, request.updated_by or "system")
-            
+
             if request.description is not None:
                 project.description = request.description
                 project.updated_at = datetime.utcnow()
-            
+
             if request.start_date is not None:
                 project.start_date = request.start_date
                 project.updated_at = datetime.utcnow()
-            
+
             if request.end_date is not None:
                 project.end_date = request.end_date
                 project.updated_at = datetime.utcnow()
-            
+
             if request.status is not None:
                 try:
                     new_status = ProjectStatus(request.status)
@@ -173,22 +171,20 @@ Example:
                         success=False,
                         error_message=f"Invalid project status: {request.status}"
                     )
-            
+
             if request.metadata is not None:
                 project.metadata.update(request.metadata)
                 project.updated_at = datetime.utcnow()
-            
+
             # Save to repository
             self.project_repository.save(project)
-            
+
             # Return success response
             return UpdateProjectResponse(
                 success=True,
                 project_id=str(project_id),
                 message="Project updated successfully",
                 updated_at=datetime.utcnow()
-            )
-            
         except InvalidProjectError as e:
             return UpdateProjectResponse(
                 success=False,
@@ -208,10 +204,10 @@ Example:
 
 class GetProjectUseCase:
     """Use case for getting a project by ID."""
-    
+
     def __init__(self, project_repository: ProjectRepository):
         self.project_repository = project_repository
-    
+
     def execute(self, project_id: str) -> GetProjectResponse:
         """Execute the get project use case."""
         try:
@@ -221,16 +217,15 @@ class GetProjectUseCase:
                     success=False,
                     error_message="Project ID is required"
                 )
-            
-            # Get project from repository
-            project = self.project_repository.get_by_id(ProjectId(project_id))
-            
+
+            # Get project from repository import repository
+            project = self.project_repository.get_by_id(ProjectId(project_id)
             if not project:
                 return GetProjectResponse(
                     success=False,
                     error_message="Project not found"
                 )
-            
+
             # Convert to dictionary
             project_dict = {
                 "id": str(project.id),
@@ -246,12 +241,12 @@ class GetProjectUseCase:
                 "created_by": project.created_by,
                 "metadata": project.metadata
             }
-            
+
             return GetProjectResponse(
                 success=True,
                 project=project_dict
             )
-            
+
         except Exception as e:
             return GetProjectResponse(
                 success=False,
@@ -261,10 +256,10 @@ class GetProjectUseCase:
 
 class ListProjectsUseCase:
     """Use case for listing projects."""
-    
+
     def __init__(self, project_repository: ProjectRepository):
         self.project_repository = project_repository
-    
+
     def execute(self, building_id: Optional[str] = None, status: Optional[str] = None,
                 user_id: Optional[str] = None, page: int = 1, page_size: int = 10) -> ListProjectsResponse:
         """Execute the list projects use case."""
@@ -274,13 +269,13 @@ class ListProjectsUseCase:
                 page = 1
             if page_size < 1 or page_size > 100:
                 page_size = 10
-            
-            # Get projects from repository
+
+            # Get projects from repository import repository
             projects = []
-            
+
             if building_id:
                 # Get projects by building
-                projects = self.project_repository.get_by_building_id(BuildingId(building_id))
+                projects = self.project_repository.get_by_building_id(BuildingId(building_id)
             elif status:
                 # Get projects by status
                 try:
@@ -294,17 +289,17 @@ class ListProjectsUseCase:
             elif user_id:
                 # Get projects by user
                 from domain.value_objects import UserId
-                projects = self.project_repository.get_by_user_id(UserId(user_id))
+                projects = self.project_repository.get_by_user_id(UserId(user_id)
             else:
                 # Get all projects
                 projects = self.project_repository.get_all()
-            
+
             # Apply pagination
             total_count = len(projects)
             start_index = (page - 1) * page_size
             end_index = start_index + page_size
             paginated_projects = projects[start_index:end_index]
-            
+
             # Convert to dictionaries
             project_dicts = []
             for project in paginated_projects:
@@ -322,7 +317,7 @@ class ListProjectsUseCase:
                     "created_by": project.created_by
                 }
                 project_dicts.append(project_dict)
-            
+
             return ListProjectsResponse(
                 success=True,
                 projects=project_dicts,
@@ -330,7 +325,7 @@ class ListProjectsUseCase:
                 page=page,
                 page_size=page_size
             )
-            
+
         except Exception as e:
             return ListProjectsResponse(
                 success=False,
@@ -340,10 +335,10 @@ class ListProjectsUseCase:
 
 class DeleteProjectUseCase:
     """Use case for deleting a project."""
-    
+
     def __init__(self, project_repository: ProjectRepository):
         self.project_repository = project_repository
-    
+
     def execute(self, project_id: str) -> DeleteProjectResponse:
         """Execute the delete project use case."""
         try:
@@ -353,28 +348,24 @@ class DeleteProjectUseCase:
                     success=False,
                     error_message="Project ID is required"
                 )
-            
+
             # Check if project exists
-            project = self.project_repository.get_by_id(ProjectId(project_id))
-            
+            project = self.project_repository.get_by_id(ProjectId(project_id)
             if not project:
                 return DeleteProjectResponse(
                     success=False,
                     error_message="Project not found"
                 )
-            
-            # Delete from repository
-            self.project_repository.delete(ProjectId(project_id))
-            
+
+            # Delete from repository import repository
+            self.project_repository.delete(ProjectId(project_id)
             return DeleteProjectResponse(
                 success=True,
                 project_id=project_id,
                 message="Project deleted successfully",
                 deleted_at=datetime.utcnow()
-            )
-            
         except Exception as e:
             return DeleteProjectResponse(
                 success=False,
                 error_message=f"Failed to delete project: {str(e)}"
-            ) 
+            )

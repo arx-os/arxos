@@ -178,7 +178,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <div class="p-6">
                 <!-- Draft Information -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -199,7 +199,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
                     <textarea id="modal-description-input" rows="4" class="w-full border border-gray-300 rounded-md px-3 py-2"></textarea>
@@ -341,17 +341,17 @@
             try {
                 const response = await fetch('/api/drafts?page=' + currentPage);
                 const data = await response.json();
-                
+
                 if (currentPage === 1) {
                     drafts = data.drafts;
                 } else {
                     drafts = drafts.concat(data.drafts);
                 }
-                
+
                 hasMoreDrafts = data.has_more;
                 renderDrafts();
                 updateLoadMoreButton();
-                
+
             } catch (error) {
                 console.error('Error loading drafts:', error);
             }
@@ -360,7 +360,7 @@
         function renderDrafts() {
             const grid = document.getElementById('drafts-grid');
             grid.innerHTML = '';
-            
+
             drafts.forEach(draft => {
                 const card = createDraftCard(draft);
                 grid.appendChild(card);
@@ -371,10 +371,10 @@
             const card = document.createElement('div');
             card.className = 'bg-white rounded-lg shadow-md p-6 draft-card cursor-pointer';
             card.onclick = () => openDraftModal(draft);
-            
+
             const statusColor = getStatusColor(draft.status);
             const statusText = getStatusText(draft.status);
-            
+
             card.innerHTML = `
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-lg font-semibold text-gray-900">${draft.title}</h3>
@@ -401,7 +401,7 @@
                     </div>
                 </div>
             `;
-            
+
             return card;
         }
 
@@ -449,23 +449,23 @@
             const status = document.getElementById('status-filter').value;
             const category = document.getElementById('category-filter').value;
             const search = document.getElementById('search-input').value;
-            
+
             // Apply filters to drafts
             const filteredDrafts = drafts.filter(draft => {
                 if (status && draft.status !== status) return false;
                 if (category && draft.category !== category) return false;
-                if (search && !draft.title.toLowerCase().includes(search.toLowerCase()) && 
+                if (search && !draft.title.toLowerCase().includes(search.toLowerCase()) &&
                     !draft.description.toLowerCase().includes(search.toLowerCase())) return false;
                 return true;
             });
-            
+
             renderFilteredDrafts(filteredDrafts);
         }
 
         function renderFilteredDrafts(filteredDrafts) {
             const grid = document.getElementById('drafts-grid');
             grid.innerHTML = '';
-            
+
             filteredDrafts.forEach(draft => {
                 const card = createDraftCard(draft);
                 grid.appendChild(card);
@@ -494,11 +494,11 @@
             document.getElementById('modal-category-input').value = draft.category;
             document.getElementById('modal-description-input').value = draft.description;
             document.getElementById('visibility-select').value = draft.visibility;
-            
+
             loadDraftVersions();
             loadDraftCollaborators();
             loadDraftComments();
-            
+
             document.getElementById('draft-modal').classList.remove('hidden');
         }
 
@@ -512,16 +512,16 @@
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.add('hidden');
             });
-            
+
             // Remove active class from all tab buttons
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('active', 'border-blue-500', 'text-blue-600');
                 button.classList.add('border-transparent', 'text-gray-500');
             });
-            
+
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.remove('hidden');
-            
+
             // Add active class to selected tab button
             event.target.classList.add('active', 'border-blue-500', 'text-blue-600');
             event.target.classList.remove('border-transparent', 'text-gray-500');
@@ -530,7 +530,7 @@
         function loadDraftVersions() {
             const versionsList = document.getElementById('versions-list');
             versionsList.innerHTML = '';
-            
+
             currentDraft.versions.forEach((version, index) => {
                 const versionDiv = document.createElement('div');
                 versionDiv.className = 'flex items-start space-x-4';
@@ -554,7 +554,7 @@
         function loadDraftCollaborators() {
             const collaboratorsList = document.getElementById('collaborators-list');
             collaboratorsList.innerHTML = '';
-            
+
             currentDraft.collaborators.forEach(collaborator => {
                 const collaboratorDiv = document.createElement('div');
                 collaboratorDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-md';
@@ -577,7 +577,7 @@
         function loadDraftComments() {
             const commentsList = document.getElementById('comments-list');
             commentsList.innerHTML = '';
-            
+
             currentDraft.comments.forEach(comment => {
                 const commentDiv = document.createElement('div');
                 commentDiv.className = 'p-3 bg-gray-50 rounded-md';
@@ -604,12 +604,12 @@
         function addCollaborator() {
             const userId = document.getElementById('collaborator-input').value;
             const role = document.getElementById('collaborator-role').value;
-            
+
             if (!userId) {
                 alert('Please enter a user ID or email');
                 return;
             }
-            
+
             // Add collaborator via API
             fetch('/api/drafts/' + currentDraft.draft_id + '/collaborators', {
                 method: 'POST',
@@ -659,12 +659,12 @@
 
         function addComment() {
             const content = document.getElementById('comment-input').value;
-            
+
             if (!content) {
                 alert('Please enter a comment');
                 return;
             }
-            
+
             fetch('/api/drafts/' + currentDraft.draft_id + '/comments', {
                 method: 'POST',
                 headers: {
@@ -694,7 +694,7 @@
             const category = document.getElementById('modal-category-input').value;
             const description = document.getElementById('modal-description-input').value;
             const visibility = document.getElementById('visibility-select').value;
-            
+
             fetch('/api/drafts/' + currentDraft.draft_id, {
                 method: 'PUT',
                 headers: {
@@ -804,4 +804,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

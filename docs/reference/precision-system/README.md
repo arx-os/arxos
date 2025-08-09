@@ -78,6 +78,6 @@ constraint = DistanceConstraint(
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 1.0.0  
-**Status**: Complete 
+**Last Updated**: December 2024
+**Version**: 1.0.0
+**Status**: Complete

@@ -536,14 +536,14 @@ func (c *{{classname}}Client) MakeRequest(
 
 	// Prepare request
 	url := fmt.Sprintf("%s%s", c.baseURL, endpoint)
-	
+
 	// Add query parameters
 	if len(params) > 0 {
 		u, err := url.Parse(url)
 		if err != nil {
 			return nil, fmt.Errorf("invalid URL: %v", err)
 		}
-		
+
 		q := u.Query()
 		for k, v := range params {
 			q.Set(k, v)
@@ -701,7 +701,7 @@ func (c *{{classname}}Client) {{operationId}}(
 ) ({{#returnType}}{{{returnType}}}{{/returnType}}{{^returnType}}interface{}{{/returnType}}, error) {
 	// Build URL with path parameters
 	url := "{{{path}}}"{{#pathParams}}.Replace("{{paramName}}", fmt.Sprintf("%v", {{paramName}})){{/pathParams}}
-	
+
 	// Prepare request parameters
 	params := make(map[string]string)
 	{{#queryParams}}
@@ -709,13 +709,13 @@ func (c *{{classname}}Client) {{operationId}}(
 		params["{{paramName}}"] = fmt.Sprintf("%v", *{{paramName}})
 	}
 	{{/queryParams}}
-	
+
 	// Prepare request data
 	var data interface{}
 	{{#hasBodyParam}}
 	data = {{bodyParam.paramName}}
 	{{/hasBodyParam}}
-	
+
 	// Make request
 	return c.MakeRequest(ctx, {{httpMethod}}, url, params, data, nil)
 }
@@ -735,11 +735,11 @@ func NewEnhanced{{classname}}Client(
 	authConfig *AuthConfig,
 ) *Enhanced{{classname}}Client {
 	client := New{{classname}}Client(baseURL, config)
-	
+
 	if authConfig != nil {
 		client.SetAuthConfig(authConfig)
 	}
-	
+
 	return &Enhanced{{classname}}Client{
 		{{classname}}Client: client,
 	}
@@ -782,4 +782,4 @@ func (c *Enhanced{{classname}}Client) Logout(ctx context.Context) error {
 		return c.authManager.Logout(ctx)
 	}
 	return nil
-} 
+}

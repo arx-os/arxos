@@ -33,4 +33,4 @@ async def generic_exception_handler(request: Request, exc: Exception):
         code="INTERNAL_ERROR",
         details={"path": str(request.url)}
     )
-    return JSONResponse(status_code=500, content=response.dict()) 
+    return JSONResponse(status_code=500, content=response.dict())

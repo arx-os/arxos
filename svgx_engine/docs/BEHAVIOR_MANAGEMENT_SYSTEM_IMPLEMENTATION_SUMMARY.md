@@ -160,7 +160,7 @@ def _register_behavior_management_system():
         if event.type == EventType.SYSTEM and event.data.get('behavior_management'):
             return None
         return None
-    
+
     event_driven_behavior_engine.register_handler(
         event_type=EventType.SYSTEM,
         handler_id='behavior_management_system',
@@ -393,4 +393,4 @@ The Behavior Management System represents a significant milestone in the SVGX En
 - ✅ Comprehensive test coverage and documentation
 - ✅ Enterprise-grade error handling and recovery
 
-The Behavior Management System is now ready for production use and provides a solid foundation for comprehensive behavior lifecycle management in the SVGX Engine. 
+The Behavior Management System is now ready for production use and provides a solid foundation for comprehensive behavior lifecycle management in the SVGX Engine.

@@ -1,6 +1,6 @@
 /**
  * Arxos CDN Loader
- * 
+ *
  * This utility integrates with the CDN configuration to load assets
  * efficiently with fallback mechanisms and performance optimization.
  */
@@ -20,25 +20,25 @@ class CDNLoader {
      */
     async loadCSS(path, fallbackPath = null) {
         const assetId = `css:${path}`;
-        
+
         // Check if already loaded
         if (this.loadedAssets.has(assetId)) {
             return Promise.resolve();
         }
-        
+
         // Check if currently loading
         if (this.loadingAssets.has(assetId)) {
             return this.loadingAssets.get(assetId);
         }
-        
+
         // Check if previously failed
         if (this.failedAssets.has(assetId)) {
             return Promise.reject(new Error(`Asset previously failed to load: ${path}`));
         }
-        
+
         const cdnUrl = window.CDNUtils.getAssetUrl(path, 'css');
         const fallbackUrl = fallbackPath ? window.CDNUtils.getAssetUrl(fallbackPath, 'css') : null;
-        
+
         const loadPromise = window.CDNUtils.loadCSS(cdnUrl, fallbackUrl)
             .then(() => {
                 this.loadedAssets.add(assetId);
@@ -51,7 +51,7 @@ class CDNLoader {
                 console.error(`❌ Failed to load CSS: ${path}`, error);
                 throw error;
             });
-        
+
         this.loadingAssets.set(assetId, loadPromise);
         return loadPromise;
     }
@@ -64,25 +64,25 @@ class CDNLoader {
      */
     async loadJS(path, fallbackPath = null) {
         const assetId = `js:${path}`;
-        
+
         // Check if already loaded
         if (this.loadedAssets.has(assetId)) {
             return Promise.resolve();
         }
-        
+
         // Check if currently loading
         if (this.loadingAssets.has(assetId)) {
             return this.loadingAssets.get(assetId);
         }
-        
+
         // Check if previously failed
         if (this.failedAssets.has(assetId)) {
             return Promise.reject(new Error(`Asset previously failed to load: ${path}`));
         }
-        
+
         const cdnUrl = window.CDNUtils.getAssetUrl(path, 'js');
         const fallbackUrl = fallbackPath ? window.CDNUtils.getAssetUrl(fallbackPath, 'js') : null;
-        
+
         const loadPromise = window.CDNUtils.loadJS(cdnUrl, fallbackUrl)
             .then(() => {
                 this.loadedAssets.add(assetId);
@@ -95,7 +95,7 @@ class CDNLoader {
                 console.error(`❌ Failed to load JavaScript: ${path}`, error);
                 throw error;
             });
-        
+
         this.loadingAssets.set(assetId, loadPromise);
         return loadPromise;
     }
@@ -127,19 +127,19 @@ class CDNLoader {
      */
     async loadCriticalAssets(assets = {}) {
         const promises = [];
-        
+
         // Load critical CSS
         if (assets.css) {
             const cssPaths = Array.isArray(assets.css) ? assets.css : [assets.css];
             promises.push(this.loadMultipleCSS(cssPaths));
         }
-        
+
         // Load critical JavaScript
         if (assets.js) {
             const jsPaths = Array.isArray(assets.js) ? assets.js : [assets.js];
             promises.push(this.loadMultipleJS(jsPaths));
         }
-        
+
         return Promise.all(promises);
     }
 
@@ -149,7 +149,7 @@ class CDNLoader {
      */
     preloadNonCriticalAssets(assets = {}) {
         const preloadAssets = [];
-        
+
         // Add CSS files
         if (assets.css) {
             const cssPaths = Array.isArray(assets.css) ? assets.css : [assets.css];
@@ -160,7 +160,7 @@ class CDNLoader {
                 });
             });
         }
-        
+
         // Add JavaScript files
         if (assets.js) {
             const jsPaths = Array.isArray(assets.js) ? assets.js : [assets.js];
@@ -171,7 +171,7 @@ class CDNLoader {
                 });
             });
         }
-        
+
         // Add images
         if (assets.images) {
             const imagePaths = Array.isArray(assets.images) ? assets.images : [assets.images];
@@ -182,7 +182,7 @@ class CDNLoader {
                 });
             });
         }
-        
+
         // Add fonts
         if (assets.fonts) {
             const fontPaths = Array.isArray(assets.fonts) ? assets.fonts : [assets.fonts];
@@ -194,7 +194,7 @@ class CDNLoader {
                 });
             });
         }
-        
+
         window.CDNUtils.preloadAssets(preloadAssets);
     }
 
@@ -256,4 +256,4 @@ window.CDNLoader = new CDNLoader();
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CDNLoader;
-} 
+}

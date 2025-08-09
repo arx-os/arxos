@@ -114,7 +114,7 @@ GET /api/payouts/evangelist/{id}/history
 ```python
 class EvangelistRevenueCalculator:
     """Calculate evangelist revenue shares"""
-    
+
     def __init__(self):
         self.base_share = 0.03  # 3%
         self.tier_bonuses = {
@@ -122,31 +122,31 @@ class EvangelistRevenueCalculator:
             10: 0.05,  # 5% for 10-24 buildings
             25: 0.06   # 6% for 25+ buildings
         }
-    
+
     def calculate_share_percentage(self, buildings_onboarded: int) -> float:
         """Calculate share percentage based on tier"""
         for threshold, bonus in sorted(self.tier_bonuses.items(), reverse=True):
             if buildings_onboarded >= threshold:
                 return bonus
         return self.base_share
-    
+
     def calculate_monthly_payout(self, evangelist_id: str, month: str) -> float:
         """Calculate monthly payout for evangelist"""
         # Get all active building links
         building_links = self.get_active_building_links(evangelist_id)
-        
+
         total_payout = 0
         for link in building_links:
             # Calculate revenue for this building in this month
             building_revenue = self.get_building_revenue(link.building_id, month)
-            
+
             # Calculate share percentage
             share_percentage = self.calculate_share_percentage(link.evangelist.buildings_onboarded)
-            
+
             # Calculate payout
             payout = building_revenue * share_percentage
             total_payout += payout
-        
+
         return total_payout
 ```
 
@@ -154,24 +154,24 @@ class EvangelistRevenueCalculator:
 ```python
 class RevenueTrackingService:
     """Track revenue events and calculate evangelist shares"""
-    
+
     def track_revenue_event(self, building_id: str, revenue_type: str, amount: float):
         """Track a revenue event and calculate evangelist share"""
-        
+
         # Get evangelist for this building
         evangelist_link = self.get_evangelist_link(building_id)
         if not evangelist_link:
             return  # No evangelist associated
-        
+
         # Calculate share percentage
         calculator = EvangelistRevenueCalculator()
         share_percentage = calculator.calculate_share_percentage(
             evangelist_link.evangelist.buildings_onboarded
         )
-        
+
         # Calculate evangelist share
         evangelist_share = amount * share_percentage
-        
+
         # Record revenue event
         self.create_revenue_event(
             building_id=building_id,
@@ -180,7 +180,7 @@ class RevenueTrackingService:
             amount=amount,
             evangelist_share=evangelist_share
         )
-        
+
         # Update totals
         self.update_evangelist_totals(evangelist_link.evangelist_id, amount, evangelist_share)
 ```
@@ -193,19 +193,19 @@ class RevenueTrackingService:
 ```python
 class EvangelistFraudPrevention:
     """Fraud prevention for evangelist program"""
-    
+
     def verify_building_onboarding(self, building_data: dict, evangelist_id: str) -> bool:
         """Verify building onboarding is legitimate"""
-        
+
         checks = [
             self.check_duplicate_building(building_data),
             self.check_evangelist_self_referral(building_data, evangelist_id),
             self.check_building_verification(building_data),
             self.check_activity_threshold(building_data)
         ]
-        
+
         return all(checks)
-    
+
     def check_duplicate_building(self, building_data: dict) -> bool:
         """Check for duplicate building uploads"""
         # Geo-fingerprinting
@@ -213,41 +213,41 @@ class EvangelistFraudPrevention:
             building_data['address'],
             building_data['coordinates']
         )
-        
+
         existing_buildings = self.find_buildings_by_location_hash(location_hash)
         return len(existing_buildings) == 0
-    
+
     def check_evangelist_self_referral(self, building_data: dict, evangelist_id: str) -> bool:
         """Prevent evangelists from referring their own buildings"""
-        
+
         # Check IP address
         evangelist_ip = self.get_evangelist_ip(evangelist_id)
         building_owner_ip = building_data.get('owner_ip')
-        
+
         if evangelist_ip == building_owner_ip:
             return False
-        
+
         # Check email domains
         evangelist_email = self.get_evangelist_email(evangelist_id)
         building_owner_email = building_data.get('owner_email')
-        
+
         if self.same_email_domain(evangelist_email, building_owner_email):
             return False
-        
+
         return True
-    
+
     def check_building_verification(self, building_data: dict) -> bool:
         """Verify building meets minimum verification requirements"""
-        
+
         required_fields = ['name', 'address', 'building_type', 'owner_contact']
         for field in required_fields:
             if not building_data.get(field):
                 return False
-        
+
         # Check for minimum activity threshold
         if not self.has_minimum_activity(building_data):
             return False
-        
+
         return True
 ```
 
@@ -259,20 +259,20 @@ class EvangelistFraudPrevention:
 ```python
 class EvangelistDashboardService:
     """Provide dashboard data for evangelists"""
-    
+
     def get_dashboard_data(self, evangelist_id: str) -> dict:
         """Get comprehensive dashboard data"""
-        
+
         evangelist = self.get_evangelist(evangelist_id)
         buildings = self.get_evangelist_buildings(evangelist_id)
-        
+
         # Calculate current month payout
         current_month = datetime.now().strftime('%Y-%m')
         payout_this_month = self.calculate_monthly_payout(evangelist_id, current_month)
-        
+
         # Get next payout date
         next_payout = self.get_next_payout_date()
-        
+
         return {
             "evangelist_id": evangelist_id,
             "buildings_onboarded": len(buildings),

@@ -12,10 +12,10 @@ class SharedUtilities {
             supportedFormats: ['json', 'svg', 'zip', 'pdf'],
             ...options
         };
-        
+
         this.notificationQueue = [];
         this.isProcessingNotifications = false;
-        
+
         this.initializeNotificationSystem();
     }
 
@@ -75,14 +75,14 @@ class SharedUtilities {
     async downloadFile(data, filename, mimeType = 'application/octet-stream') {
         const blob = new Blob([data], { type: mimeType });
         const url = URL.createObjectURL(blob);
-        
+
         const link = document.createElement('a');
         link.href = url;
         link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         URL.revokeObjectURL(url);
     }
 
@@ -176,11 +176,11 @@ class SharedUtilities {
             word-wrap: break-word;
             animation: slideInRight 0.3s ease-out;
         `;
-        
+
         notification.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <span>${this.escapeHtml(message)}</span>
-                <button onclick="this.parentElement.parentElement.remove()" 
+                <button onclick="this.parentElement.parentElement.remove()"
                         style="background: none; border: none; color: white; cursor: pointer; margin-left: 8px; font-size: 16px;">
                     ×
                 </button>
@@ -304,7 +304,7 @@ class SharedUtilities {
                 if (attempt === maxRetries) {
                     throw error;
                 }
-                
+
                 const delay = baseDelay * Math.pow(2, attempt - 1);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
@@ -351,4 +351,4 @@ window.sharedUtilities = new SharedUtilities();
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = SharedUtilities;
-} 
+}

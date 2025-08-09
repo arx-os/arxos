@@ -21,7 +21,7 @@ from services.models.mcp_models import BuildingObject, RuleCondition, RuleExecut
 def create_demo_building_objects():
     """Create demo building objects for testing"""
     objects = []
-    
+
     # Create various building objects with temporal and dynamic data
     for i in range(50):
         # Create rooms
@@ -52,7 +52,7 @@ def create_demo_building_objects():
             }
         )
         objects.append(room)
-        
+
         # Create walls
         wall = BuildingObject(
             object_id=f"wall_{i}",
@@ -78,14 +78,14 @@ def create_demo_building_objects():
             }
         )
         objects.append(wall)
-    
+
     return objects
 
 
 def demonstrate_temporal_conditions(evaluator, objects):
     """Demonstrate temporal condition evaluation"""
     print("\n=== Temporal Conditions Demonstration ===")
-    
+
     # Test different temporal operators
     temporal_tests = [
         {
@@ -128,7 +128,7 @@ def demonstrate_temporal_conditions(evaluator, objects):
             )
         }
     ]
-    
+
     for test in temporal_tests:
         print(f"\nTesting: {test['name']}")
         results = evaluator.evaluate_temporal_condition(test['condition'], objects)
@@ -140,7 +140,7 @@ def demonstrate_temporal_conditions(evaluator, objects):
 def demonstrate_dynamic_conditions(evaluator, objects):
     """Demonstrate dynamic condition evaluation"""
     print("\n=== Dynamic Conditions Demonstration ===")
-    
+
     # Test different dynamic resolvers
     dynamic_tests = [
         {
@@ -192,7 +192,7 @@ def demonstrate_dynamic_conditions(evaluator, objects):
             )
         }
     ]
-    
+
     for test in dynamic_tests:
         print(f"\nTesting: {test['name']}")
         results = evaluator.evaluate_dynamic_condition(test['condition'], objects)
@@ -204,7 +204,7 @@ def demonstrate_dynamic_conditions(evaluator, objects):
 def demonstrate_statistical_conditions(evaluator, objects):
     """Demonstrate statistical condition evaluation"""
     print("\n=== Statistical Conditions Demonstration ===")
-    
+
     # Test different statistical functions
     statistical_tests = [
         {
@@ -264,7 +264,7 @@ def demonstrate_statistical_conditions(evaluator, objects):
             )
         }
     ]
-    
+
     for test in statistical_tests:
         print(f"\nTesting: {test['name']}")
         results = evaluator.evaluate_statistical_condition(test['condition'], objects)
@@ -276,7 +276,7 @@ def demonstrate_statistical_conditions(evaluator, objects):
 def demonstrate_pattern_conditions(evaluator, objects):
     """Demonstrate pattern condition evaluation"""
     print("\n=== Pattern Conditions Demonstration ===")
-    
+
     # Test different pattern matching
     pattern_tests = [
         {
@@ -328,7 +328,7 @@ def demonstrate_pattern_conditions(evaluator, objects):
             )
         }
     ]
-    
+
     for test in pattern_tests:
         print(f"\nTesting: {test['name']}")
         results = evaluator.evaluate_pattern_condition(test['condition'], objects)
@@ -340,7 +340,7 @@ def demonstrate_pattern_conditions(evaluator, objects):
 def demonstrate_range_conditions(evaluator, objects):
     """Demonstrate range condition evaluation"""
     print("\n=== Range Conditions Demonstration ===")
-    
+
     # Test different range operations
     range_tests = [
         {
@@ -398,7 +398,7 @@ def demonstrate_range_conditions(evaluator, objects):
             )
         }
     ]
-    
+
     for test in range_tests:
         print(f"\nTesting: {test['name']}")
         results = evaluator.evaluate_range_condition(test['condition'], objects)
@@ -410,7 +410,7 @@ def demonstrate_range_conditions(evaluator, objects):
 def demonstrate_logical_conditions(evaluator, objects):
     """Demonstrate complex logical condition evaluation"""
     print("\n=== Logical Conditions Demonstration ===")
-    
+
     # Test different logical expressions
     logical_tests = [
         {
@@ -473,7 +473,7 @@ def demonstrate_logical_conditions(evaluator, objects):
             )
         }
     ]
-    
+
     for test in logical_tests:
         print(f"\nTesting: {test['name']}")
         results = evaluator.evaluate_complex_logical_condition(test['condition'], objects)
@@ -485,10 +485,10 @@ def demonstrate_logical_conditions(evaluator, objects):
 def demonstrate_comprehensive_analysis(evaluator, objects):
     """Demonstrate comprehensive condition analysis"""
     print("\n=== Comprehensive Analysis Demonstration ===")
-    
+
     # Create a complex analysis scenario
     print("Running comprehensive building analysis...")
-    
+
     # 1. Find rooms created during working hours
     temporal_condition = RuleCondition(
         type="temporal",
@@ -502,7 +502,7 @@ def demonstrate_comprehensive_analysis(evaluator, objects):
     )
     temporal_results = evaluator.evaluate_temporal_condition(temporal_condition, objects)
     print(f"1. Rooms created during working hours: {len(temporal_results)}")
-    
+
     # 2. Find large, efficient rooms
     dynamic_condition = RuleCondition(
         type="dynamic",
@@ -515,7 +515,7 @@ def demonstrate_comprehensive_analysis(evaluator, objects):
     )
     dynamic_results = evaluator.evaluate_dynamic_condition(dynamic_condition, objects)
     print(f"2. Large rooms (area >= 200): {len(dynamic_results)}")
-    
+
     # 3. Find zones with high average efficiency
     statistical_condition = RuleCondition(
         type="statistical",
@@ -530,7 +530,7 @@ def demonstrate_comprehensive_analysis(evaluator, objects):
     )
     statistical_results = evaluator.evaluate_statistical_condition(statistical_condition, objects)
     print(f"3. Zones with high average efficiency: {len(statistical_results)}")
-    
+
     # 4. Find concrete walls
     pattern_condition = RuleCondition(
         type="pattern",
@@ -543,7 +543,7 @@ def demonstrate_comprehensive_analysis(evaluator, objects):
     )
     pattern_results = evaluator.evaluate_pattern_condition(pattern_condition, objects)
     print(f"4. Concrete walls: {len(pattern_results)}")
-    
+
     # 5. Find rooms in specific cost ranges
     range_condition = RuleCondition(
         type="range",
@@ -559,7 +559,7 @@ def demonstrate_comprehensive_analysis(evaluator, objects):
     )
     range_results = evaluator.evaluate_range_condition(range_condition, objects)
     print(f"5. Rooms in specific cost ranges: {len(range_results)}")
-    
+
     # Summary
     print(f"\nSummary:")
     print(f"  Total objects analyzed: {len(objects)}")
@@ -573,7 +573,7 @@ def demonstrate_comprehensive_analysis(evaluator, objects):
 def demonstrate_performance_analysis(evaluator, objects):
     """Demonstrate performance analysis of different condition types"""
     print("\n=== Performance Analysis Demonstration ===")
-    
+
     condition_types = [
         ("Temporal", lambda: evaluator.evaluate_temporal_condition(
             RuleCondition(
@@ -634,13 +634,13 @@ def demonstrate_performance_analysis(evaluator, objects):
             ), objects
         ))
     ]
-    
+
     print("Performance comparison of condition types:")
     for condition_type, evaluation_func in condition_types:
         start_time = time.time()
         results = evaluation_func()
         end_time = time.time()
-        
+
         execution_time = end_time - start_time
         print(f"  {condition_type}: {execution_time:.4f}s ({len(results)} matches)")
 
@@ -649,16 +649,16 @@ def main():
     """Run the advanced conditions demonstration"""
     print("Advanced Condition Types Engine Demonstration")
     print("=" * 60)
-    
+
     # Create demo data
     print("Creating demo building objects...")
     objects = create_demo_building_objects()
     print(f"Created {len(objects)} building objects")
-    
+
     # Initialize evaluator
     evaluator = AdvancedConditionEvaluator()
     print("Initialized AdvancedConditionEvaluator")
-    
+
     # Run demonstrations
     demonstrate_temporal_conditions(evaluator, objects)
     demonstrate_dynamic_conditions(evaluator, objects)
@@ -668,7 +668,7 @@ def main():
     demonstrate_logical_conditions(evaluator, objects)
     demonstrate_comprehensive_analysis(evaluator, objects)
     demonstrate_performance_analysis(evaluator, objects)
-    
+
     print("\n" + "=" * 60)
     print("Demonstration Complete!")
     print("\nKey Features Demonstrated:")
@@ -680,11 +680,11 @@ def main():
     print("✅ Complex logical expressions with nested conditions")
     print("✅ Context-aware condition evaluation")
     print("✅ Performance analysis and optimization")
-    
+
     # Final statistics
     room_objects = [obj for obj in objects if obj.object_type == "room"]
     wall_objects = [obj for obj in objects if obj.object_type == "wall"]
-    
+
     print(f"\nFinal Statistics:")
     print(f"  Total objects: {len(objects)}")
     print(f"  Room objects: {len(room_objects)}")
@@ -695,4 +695,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

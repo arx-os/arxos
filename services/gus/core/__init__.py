@@ -17,8 +17,8 @@ __author__ = "Arxos Team"
 
 __all__ = [
     "GUSAgent",
-    "NLPProcessor", 
+    "NLPProcessor",
     "KnowledgeManager",
     "DecisionEngine",
     "LearningSystem"
-] 
+]

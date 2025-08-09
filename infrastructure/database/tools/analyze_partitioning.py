@@ -84,22 +84,22 @@ class PartitioningAnalysis:
 class PartitioningAnalyzer:
     """
     Analyzer for identifying table partitioning candidates.
-    
+
     Follows Arxos logging standards with structured logging, performance monitoring,
     and comprehensive analysis of table characteristics.
     """
-    
+
     def __init__(self, database_url: str):
         """
         Initialize the partitioning analyzer.
-        
+
         Args:
             database_url: PostgreSQL connection URL
         """
         self.database_url = database_url
         self.connection = None
         self.analysis_results = None
-        
+
         # Performance tracking
         self.metrics = {
             'tables_analyzed': 0,
@@ -108,7 +108,7 @@ class PartitioningAnalyzer:
             'errors': 0,
             'warnings': 0
         }
-        
+
         # Partitioning criteria
         self.partitioning_criteria = {
             'size_threshold_mb': 1000,  # 1GB
@@ -117,17 +117,17 @@ class PartitioningAnalyzer:
             'query_frequency_threshold': 100,  # 100 queries/day
             'age_threshold_days': 180  # 6 months
         }
-        
+
         # Target tables for analysis
         self.target_tables = [
             'audit_logs',
-            'object_history', 
+            'object_history',
             'slow_query_log',
             'chat_messages',
             'comments',
             'assignments'
         ]
-        
+
         # Partitioning strategies
         self.strategies = {
             'range_by_date': {
@@ -149,10 +149,10 @@ class PartitioningAnalyzer:
                 'expression': 'PARTITION BY RANGE (created_at)'
             }
         }
-        
+
         logger.info("partitioning_analyzer_initialized",
-                   database_url=self._mask_password(database_url))
-    
+                    database_url=self._mask_password(database_url))
+
     def _mask_password(self, url: str) -> str:
         """Mask password in database URL for logging."""
         if '@' in url and ':' in url:
@@ -168,11 +168,11 @@ class PartitioningAnalyzer:
                             user = credentials.split(':')[0]
                             return f"{protocol}://{user}:***@{parts[1]}"
         return url
-    
+
     def connect(self) -> bool:
         """
         Establish database connection.
-        
+
         Returns:
             True if connection successful, False otherwise
         """
@@ -182,49 +182,49 @@ class PartitioningAnalyzer:
             return True
         except Exception as e:
             logger.error("database_connection_failed",
-                        error=str(e))
+                         error=str(e))
             return False
-    
+
     def disconnect(self) -> None:
         """Close database connection."""
         if self.connection:
             self.connection.close()
             logger.info("database_connection_closed")
-    
+
     def analyze_tables(self) -> bool:
         """
         Perform comprehensive table analysis for partitioning.
-        
+
         Returns:
             True if analysis successful, False otherwise
         """
         start_time = datetime.now()
-        
+
         if not self.connect():
             return False
-        
+
         try:
             logger.info("starting_partitioning_analysis")
-            
+
             # Get database information
             db_info = self._get_database_info()
-            
+
             # Analyze each target table
             table_metrics = []
             partitioning_plans = []
-            
+
             for table_name in self.target_tables:
                 metrics = self._analyze_table(table_name)
                 if metrics:
                     table_metrics.append(metrics)
                     self.metrics['tables_analyzed'] += 1
-                    
+
                     if metrics.partition_candidate:
                         plan = self._create_partitioning_plan(metrics)
                         if plan:
                             partitioning_plans.append(plan)
                             self.metrics['partition_candidates_found'] += 1
-            
+
             # Generate analysis results
             self.analysis_results = PartitioningAnalysis(
                 analysis_timestamp=datetime.now(),
@@ -239,73 +239,71 @@ class PartitioningAnalyzer:
                 recommendations=self._generate_recommendations(table_metrics, partitioning_plans),
                 performance_estimates=self._estimate_performance_improvements(partitioning_plans)
             )
-            
             # Calculate processing time
             processing_time = (datetime.now() - start_time).total_seconds() * 1000
             self.metrics['processing_time_ms'] = processing_time
-            
+
             logger.info("partitioning_analysis_completed",
-                       tables_analyzed=self.metrics['tables_analyzed'],
-                       partition_candidates=self.metrics['partition_candidates_found'],
-                       processing_time_ms=round(processing_time, 2))
-            
+                        tables_analyzed=self.metrics['tables_analyzed'],
+                        partition_candidates=self.metrics['partition_candidates_found'],
+                        processing_time_ms=round(processing_time, 2))
             return True
-            
+
         except Exception as e:
             logger.error("partitioning_analysis_failed",
-                        error=str(e))
+                         error=str(e))
             return False
         finally:
             self.disconnect()
-    
+
     def _get_database_info(self) -> Dict[str, Any]:
         """Get basic database information."""
         with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("SELECT current_database() as database_name")
             result = cursor.fetchone()
             return dict(result)
-    
+
     def _analyze_table(self, table_name: str) -> Optional[TableMetrics]:
         """
         Analyze a single table for partitioning suitability.
-        
+
         Args:
             table_name: Name of the table to analyze
-            
+
         Returns:
             TableMetrics object with analysis results
         """
         try:
             logger.debug("analyzing_table",
                         table=table_name)
-            
+
             # Check if table exists
             if not self._table_exists(table_name):
                 logger.warning("table_not_found",
                              table=table_name)
                 return None
-            
+
             # Get table size and row count
             size_info = self._get_table_size_info(table_name)
-            
+
             # Get activity metrics
             activity_metrics = self._get_activity_metrics(table_name)
-            
+
             # Get maintenance info
             maintenance_info = self._get_maintenance_info(table_name)
-            
+
             # Determine if table is a partitioning candidate
             partition_candidate = self._is_partition_candidate(size_info, activity_metrics)
-            
+
             # Determine recommended strategy
             recommended_strategy = self._recommend_partitioning_strategy(table_name, activity_metrics)
-            
+
             # Determine partition key
             partition_key = self._determine_partition_key(table_name, recommended_strategy)
-            
+
             # Estimate improvement
             estimated_improvement = self._estimate_improvement(size_info, activity_metrics)
-            
+
             return TableMetrics(
                 table_name=table_name,
                 row_count=size_info['row_count'],
@@ -324,29 +322,29 @@ class PartitioningAnalyzer:
                 partition_key=partition_key,
                 estimated_improvement=estimated_improvement
             )
-            
+
         except Exception as e:
             logger.error("failed_to_analyze_table",
-                        table=table_name,
-                        error=str(e))
+                         table=table_name,
+                         error=str(e))
             self.metrics['errors'] += 1
             return None
-    
+
     def _table_exists(self, table_name: str) -> bool:
         """Check if table exists."""
         with self.connection.cursor() as cursor:
             cursor.execute("""
-                SELECT 1 FROM information_schema.tables 
-                WHERE table_schema = 'public' 
+                SELECT 1 FROM information_schema.tables
+                WHERE table_schema = 'public'
                 AND table_name = %s
             """, (table_name,))
             return cursor.fetchone() is not None
-    
+
     def _get_table_size_info(self, table_name: str) -> Dict[str, Any]:
         """Get table size and row count information."""
         with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     schemaname,
                     tablename,
                     n_tup_ins + n_tup_upd + n_tup_del as total_operations,
@@ -355,17 +353,16 @@ class PartitioningAnalyzer:
                     pg_total_relation_size(schemaname||'.'||tablename) as total_size_bytes,
                     pg_relation_size(schemaname||'.'||tablename) as table_size_bytes,
                     pg_indexes_size(schemaname||'.'||tablename) as index_size_bytes
-                FROM pg_stat_user_tables 
+                FROM pg_stat_user_tables
                 WHERE tablename = %s
             """, (table_name,))
-            
             result = cursor.fetchone()
             if result:
                 total_size_mb = result['total_size_bytes'] / (1024 * 1024)
                 table_size_mb = result['table_size_bytes'] / (1024 * 1024)
                 index_size_mb = result['index_size_bytes'] / (1024 * 1024)
                 avg_row_size = result['table_size_bytes'] / max(result['row_count'], 1)
-                
+
                 return {
                     'row_count': result['row_count'],
                     'total_size_mb': round(total_size_mb, 2),
@@ -383,31 +380,30 @@ class PartitioningAnalyzer:
                     'avg_row_size_bytes': 0,
                     'total_operations': 0
                 }
-    
+
     def _get_activity_metrics(self, table_name: str) -> Dict[str, float]:
         """Get table activity metrics."""
         with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     n_tup_ins as inserts,
                     n_tup_upd as updates,
                     n_tup_del as deletes,
                     n_tup_ins + n_tup_upd + n_tup_del as total_operations,
-                    CASE 
-                        WHEN age(now(), last_vacuum) IS NOT NULL 
+                    CASE
+                        WHEN age(now(), last_vacuum) IS NOT NULL
                         THEN EXTRACT(EPOCH FROM age(now(), last_vacuum)) / 86400
                         ELSE 30
                     END as days_since_vacuum
-                FROM pg_stat_user_tables 
+                FROM pg_stat_user_tables
                 WHERE tablename = %s
             """, (table_name,))
-            
             result = cursor.fetchone()
             if result:
                 days_since_vacuum = result['days_since_vacuum']
                 if days_since_vacuum == 0:
                     days_since_vacuum = 1
-                
+
                 return {
                     'insert_rate_per_day': round(result['inserts'] / days_since_vacuum, 2),
                     'update_rate_per_day': round(result['updates'] / days_since_vacuum, 2),
@@ -421,20 +417,19 @@ class PartitioningAnalyzer:
                     'delete_rate_per_day': 0,
                     'read_rate_per_day': 0
                 }
-    
+
     def _get_maintenance_info(self, table_name: str) -> Dict[str, Optional[datetime]]:
         """Get table maintenance information."""
         with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     last_vacuum,
                     last_autovacuum,
                     last_analyze,
                     last_autoanalyze
-                FROM pg_stat_user_tables 
+                FROM pg_stat_user_tables
                 WHERE tablename = %s
             """, (table_name,))
-            
             result = cursor.fetchone()
             if result:
                 return {
@@ -446,23 +441,23 @@ class PartitioningAnalyzer:
                     'last_vacuum': None,
                     'last_analyze': None
                 }
-    
+
     def _is_partition_candidate(self, size_info: Dict[str, Any], activity_metrics: Dict[str, float]) -> bool:
         """Determine if table is a partitioning candidate."""
         # Check size threshold
         if size_info['total_size_mb'] < self.partitioning_criteria['size_threshold_mb']:
             return False
-        
+
         # Check row count threshold
         if size_info['row_count'] < self.partitioning_criteria['row_count_threshold']:
             return False
-        
+
         # Check insert rate threshold
         if activity_metrics['insert_rate_per_day'] < self.partitioning_criteria['insert_rate_threshold']:
             return False
-        
+
         return True
-    
+
     def _recommend_partitioning_strategy(self, table_name: str, activity_metrics: Dict[str, float]) -> Optional[str]:
         """Recommend partitioning strategy for table."""
         if table_name in ['audit_logs', 'object_history', 'slow_query_log']:
@@ -473,7 +468,7 @@ class PartitioningAnalyzer:
             return 'range_by_date'
         else:
             return None
-    
+
     def _determine_partition_key(self, table_name: str, strategy: Optional[str]) -> Optional[str]:
         """Determine partition key for table."""
         if strategy == 'range_by_date':
@@ -484,7 +479,7 @@ class PartitioningAnalyzer:
             return '(created_at, project_id)'
         else:
             return None
-    
+
     def _estimate_improvement(self, size_info: Dict[str, Any], activity_metrics: Dict[str, float]) -> Optional[str]:
         """Estimate performance improvement from partitioning."""
         if size_info['total_size_mb'] > 5000:
@@ -495,23 +490,23 @@ class PartitioningAnalyzer:
             return "Low (40-60% query improvement)"
         else:
             return None
-    
+
     def _create_partitioning_plan(self, metrics: TableMetrics) -> Optional[PartitioningPlan]:
         """Create detailed partitioning plan for table."""
         if not metrics.recommended_strategy:
             return None
-        
+
         strategy_info = self.strategies.get(metrics.recommended_strategy, {})
-        
+
         # Generate initial partitions
         initial_partitions = self._generate_initial_partitions(metrics.table_name, metrics.recommended_strategy)
-        
+
         # Generate migration steps
         migration_steps = self._generate_migration_steps(metrics.table_name, metrics.recommended_strategy)
-        
+
         # Generate rollback plan
         rollback_plan = self._generate_rollback_plan(metrics.table_name)
-        
+
         return PartitioningPlan(
             table_name=metrics.table_name,
             strategy=metrics.recommended_strategy,
@@ -523,7 +518,7 @@ class PartitioningAnalyzer:
             migration_steps=migration_steps,
             rollback_plan=rollback_plan
         )
-    
+
     def _generate_initial_partitions(self, table_name: str, strategy: str) -> List[str]:
         """Generate initial partition names."""
         if strategy == 'range_by_date':
@@ -540,7 +535,7 @@ class PartitioningAnalyzer:
             return [f"{table_name}_p_project_{i}" for i in range(1, 11)]
         else:
             return []
-    
+
     def _generate_migration_steps(self, table_name: str, strategy: str) -> List[str]:
         """Generate migration steps for partitioning."""
         steps = [
@@ -553,7 +548,7 @@ class PartitioningAnalyzer:
             f"7. Update foreign key constraints"
         ]
         return steps
-    
+
     def _generate_rollback_plan(self, table_name: str) -> List[str]:
         """Generate rollback plan for partitioning."""
         steps = [
@@ -565,37 +560,37 @@ class PartitioningAnalyzer:
             f"6. Drop partitioned table"
         ]
         return steps
-    
+
     def _generate_recommendations(self, table_metrics: List[TableMetrics], partitioning_plans: List[PartitioningPlan]) -> List[str]:
         """Generate partitioning recommendations."""
         recommendations = []
-        
+
         # High priority tables
         high_priority = [t for t in table_metrics if t.total_size_mb > 5000]
         if high_priority:
             recommendations.append(f"Prioritize partitioning for {len(high_priority)} large tables (>5GB)")
-        
+
         # Medium priority tables
         medium_priority = [t for t in table_metrics if 1000 <= t.total_size_mb <= 5000]
         if medium_priority:
             recommendations.append(f"Plan partitioning for {len(medium_priority)} medium tables (1-5GB)")
-        
+
         # Specific recommendations
         for plan in partitioning_plans:
             recommendations.append(f"Partition {plan.table_name} using {plan.strategy} strategy")
-        
+
         # Performance recommendations
         total_size = sum(t.total_size_mb for t in table_metrics)
         if total_size > 10000:
             recommendations.append(f"Total table size: {total_size:.1f}MB - significant storage savings expected")
-        
+
         return recommendations
-    
+
     def _estimate_performance_improvements(self, partitioning_plans: List[PartitioningPlan]) -> Dict[str, Any]:
         """Estimate performance improvements from partitioning."""
         total_tables = len(partitioning_plans)
         total_size_mb = sum(plan.table_name for plan in partitioning_plans)  # Placeholder
-        
+
         return {
             'estimated_query_improvement': '60-90%',
             'estimated_insert_improvement': '40-70%',
@@ -604,26 +599,26 @@ class PartitioningAnalyzer:
             'tables_to_partition': total_tables,
             'total_size_affected_mb': total_size_mb
         }
-    
+
     def generate_report(self, output_format: str = "json", output_file: Optional[str] = None) -> str:
         """
         Generate analysis report in specified format.
-        
+
         Args:
             output_format: 'json' or 'markdown'
             output_file: Optional output file path
-            
+
         Returns:
             Generated report content
         """
         if not self.analysis_results:
             logger.warning("no_analysis_results_to_report")
             return ""
-        
+
         logger.info("generating_partitioning_report",
                    format=output_format,
                    partition_candidates=self.analysis_results.partition_candidates)
-        
+
         if output_format.lower() == "json":
             return self._generate_json_report(output_file)
         elif output_format.lower() == "markdown":
@@ -632,7 +627,7 @@ class PartitioningAnalyzer:
             logger.error("unsupported_output_format",
                         format=output_format)
             return ""
-    
+
     def _generate_json_report(self, output_file: Optional[str] = None) -> str:
         """Generate JSON format report."""
         report = {
@@ -653,64 +648,64 @@ class PartitioningAnalyzer:
             'table_metrics': [asdict(metrics) for metrics in self.analysis_results.table_metrics],
             'partitioning_plans': [asdict(plan) for plan in self.analysis_results.partitioning_plans]
         }
-        
+
         content = json.dumps(report, indent=2, default=str)
-        
+
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(content)
             logger.info("json_report_saved",
                        file=output_file)
-        
+
         return content
-    
+
     def _generate_markdown_report(self, output_file: Optional[str] = None) -> str:
         """Generate Markdown format report."""
         content = f"""# Table Partitioning Analysis Report
 
-**Generated:** {self.analysis_results.analysis_timestamp.strftime('%Y-%m-%d %H:%M:%S')}  
-**Database:** {self.analysis_results.database_name}  
-**Tables Analyzed:** {self.analysis_results.tables_analyzed}
+        **Generated:** {self.analysis_results.analysis_timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+        **Database:** {self.analysis_results.database_name}
+        **Tables Analyzed:** {self.analysis_results.tables_analyzed}
 
-## Executive Summary
+        ## Executive Summary
 
-- **Partition Candidates:** {self.analysis_results.partition_candidates}
-- **High Priority Tables:** {len(self.analysis_results.high_priority_tables)}
-- **Medium Priority Tables:** {len(self.analysis_results.medium_priority_tables)}
-- **Low Priority Tables:** {len(self.analysis_results.low_priority_tables)}
+        - **Partition Candidates:** {self.analysis_results.partition_candidates}
+        - **High Priority Tables:** {len(self.analysis_results.high_priority_tables)}
+        - **Medium Priority Tables:** {len(self.analysis_results.medium_priority_tables)}
+        - **Low Priority Tables:** {len(self.analysis_results.low_priority_tables)}
 
-## Performance Estimates
+        ## Performance Estimates
 
-- **Query Improvement:** {self.analysis_results.performance_estimates['estimated_query_improvement']}
-- **Insert Improvement:** {self.analysis_results.performance_estimates['estimated_insert_improvement']}
-- **Storage Savings:** {self.analysis_results.performance_estimates['estimated_storage_savings']}
-- **Maintenance Improvement:** {self.analysis_results.performance_estimates['estimated_maintenance_improvement']}
+        - **Query Improvement:** {self.analysis_results.performance_estimates['estimated_query_improvement']}
+        - **Insert Improvement:** {self.analysis_results.performance_estimates['estimated_insert_improvement']}
+        - **Storage Savings:** {self.analysis_results.performance_estimates['estimated_storage_savings']}
+        - **Maintenance Improvement:** {self.analysis_results.performance_estimates['estimated_maintenance_improvement']}
 
-## Recommendations
+        ## Recommendations
 
-"""
-        
+        """
+
         for rec in self.analysis_results.recommendations:
             content += f"- {rec}\n"
-        
+
         content += "\n## Detailed Table Analysis\n\n"
-        
+
         for metrics in self.analysis_results.table_metrics:
             content += f"### {metrics.table_name.title()}\n\n"
             content += f"- **Total Size:** {metrics.total_size_mb}MB\n"
             content += f"- **Row Count:** {metrics.row_count:,}\n"
             content += f"- **Insert Rate:** {metrics.insert_rate_per_day}/day\n"
             content += f"- **Partition Candidate:** {'Yes' if metrics.partition_candidate else 'No'}\n"
-            
+
             if metrics.recommended_strategy:
                 content += f"- **Recommended Strategy:** {metrics.recommended_strategy}\n"
                 content += f"- **Partition Key:** {metrics.partition_key}\n"
                 content += f"- **Estimated Improvement:** {metrics.estimated_improvement}\n"
-            
+
             content += "\n"
-        
+
         content += "\n## Partitioning Plans\n\n"
-        
+
         for plan in self.analysis_results.partitioning_plans:
             content += f"### {plan.table_name.title()}\n\n"
             content += f"- **Strategy:** {plan.strategy}\n"
@@ -718,23 +713,23 @@ class PartitioningAnalyzer:
             content += f"- **Expression:** {plan.partition_expression}\n"
             content += f"- **Maintenance Schedule:** {plan.maintenance_schedule}\n"
             content += f"- **Estimated Improvement:** {plan.estimated_improvement}\n\n"
-            
+
             content += "#### Migration Steps\n\n"
             for step in plan.migration_steps:
                 content += f"- {step}\n"
-            
+
             content += "\n#### Rollback Plan\n\n"
             for step in plan.rollback_plan:
                 content += f"- {step}\n"
-            
+
             content += "\n"
-        
+
         if output_file:
             with open(output_file, 'w') as f:
                 f.write(content)
             logger.info("markdown_report_saved",
                        file=output_file)
-        
+
         return content
 
 
@@ -763,9 +758,9 @@ def main():
         action="store_true",
         help="Enable verbose logging"
     )
-    
+
     args = parser.parse_args()
-    
+
     # Configure logging
     if args.verbose:
         structlog.configure(
@@ -785,18 +780,18 @@ def main():
             wrapper_class=structlog.stdlib.BoundLogger,
             cache_logger_on_first_use=True,
         )
-    
+
     # Run analysis
     analyzer = PartitioningAnalyzer(args.database_url)
     success = analyzer.analyze_tables()
-    
+
     if success:
         # Generate report
         report_content = analyzer.generate_report(
             output_format=args.output_format,
             output_file=args.output_file
         )
-        
+
         # Print summary
         if analyzer.analysis_results:
             print("\n" + "="*60)
@@ -810,14 +805,14 @@ def main():
             for rec in analyzer.analysis_results.recommendations:
                 print(f"- {rec}")
             print("="*60)
-        
+
         # Print report if no output file specified
         if not args.output_file and report_content:
             print("\n" + report_content)
-    
+
     # Exit with appropriate code
     sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
-    main() 
+    main()

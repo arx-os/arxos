@@ -95,4 +95,4 @@ If governance is enabled, display proposals, vote breakdowns, and treasury movem
 - [ ] Define frontend spec and data feeds
 - [ ] Build MVP dashboard using testnet ARX and mock data
 - [ ] Publish live metrics with disclaimers and roadmap
-- [ ] Integrate into ArxIDE and public-facing arxcoin.io 
+- [ ] Integrate into ArxIDE and public-facing arxcoin.io

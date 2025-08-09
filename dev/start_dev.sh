@@ -46,7 +46,7 @@ while [ $elapsed -lt $timeout ]; do
         echo "✅ All services are healthy!"
         break
     fi
-    
+
     echo "⏳ Waiting for services... ($elapsed/$timeout seconds)"
     sleep $interval
     elapsed=$((elapsed + interval))
@@ -102,4 +102,4 @@ elif command -v open &> /dev/null; then
 fi
 
 echo "✅ Development environment started successfully!"
-echo "💡 Tip: Use 'docker-compose logs -f' to view real-time logs" 
+echo "💡 Tip: Use 'docker-compose logs -f' to view real-time logs"

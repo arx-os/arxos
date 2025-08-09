@@ -63,7 +63,7 @@ class Jurisdiction:
     state: Optional[str] = None
     city: Optional[str] = None
     county: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -86,7 +86,7 @@ class RuleCondition:
     target_type: Optional[str] = None
     conditions: Optional[List['RuleCondition']] = None
     composite_operator: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         result = {
@@ -99,10 +99,10 @@ class RuleCondition:
             'target_type': self.target_type,
             'composite_operator': self.composite_operator
         }
-        
+
         if self.conditions:
             result['conditions'] = [c.to_dict() for c in self.conditions]
-        
+
         return result
 
 
@@ -117,7 +117,7 @@ class RuleAction:
     unit: Optional[str] = None
     description: Optional[str] = None
     parameters: Optional[Dict[str, Any]] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         result = {
@@ -146,7 +146,7 @@ class MCPRule:
     enabled: bool = True
     version: str = "1.0"
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -171,7 +171,7 @@ class MCPMetadata:
     contact: Optional[str] = None
     notes: Optional[str] = None
     last_updated: Optional[datetime] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         result = {
@@ -180,10 +180,10 @@ class MCPMetadata:
             'contact': self.contact,
             'notes': self.notes
         }
-        
+
         if self.last_updated:
             result['last_updated'] = self.last_updated.isoformat()
-        
+
         return {k: v for k, v in result.items() if v is not None}
 
 
@@ -198,7 +198,7 @@ class MCPFile:
     effective_date: str
     rules: List[MCPRule] = field(default_factory=list)
     metadata: Optional[MCPMetadata] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         result = {
@@ -210,10 +210,10 @@ class MCPFile:
             'effective_date': self.effective_date,
             'rules': [r.to_dict() for r in self.rules]
         }
-        
+
         if self.metadata:
             result['metadata'] = self.metadata.to_dict()
-        
+
         return result
 
 
@@ -232,7 +232,7 @@ class ValidationViolation:
     calculated_value: Optional[Any] = None
     expected_value: Optional[Any] = None
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         result = {
@@ -264,7 +264,7 @@ class ValidationResult:
     calculations: Dict[str, Any] = field(default_factory=dict)
     execution_time: float = 0.0
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -295,7 +295,7 @@ class MCPValidationReport:
     results: List[ValidationResult] = field(default_factory=list)
     summary: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -326,7 +326,7 @@ class ComplianceReport:
     total_warnings: int = 0
     recommendations: List[str] = field(default_factory=list)
     generated_date: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -351,7 +351,7 @@ class BuildingObject:
     location: Optional[Dict[str, Any]] = None
     connections: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -371,7 +371,7 @@ class BuildingModel:
     building_name: str
     objects: List[BuildingObject] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -397,15 +397,15 @@ def deserialize_mcp_file(json_str: str) -> MCPFile:
 def _dict_to_mcp_file(data: Dict[str, Any]) -> MCPFile:
     """Convert dictionary to MCP file"""
     jurisdiction = Jurisdiction(**data['jurisdiction'])
-    
+
     rules = []
     for rule_data in data.get('rules', []):
         rules.append(_dict_to_mcp_rule(rule_data))
-    
+
     metadata = None
     if 'metadata' in data:
         metadata = MCPMetadata(**data['metadata'])
-    
+
     return MCPFile(
         mcp_id=data['mcp_id'],
         name=data['name'],
@@ -421,15 +421,15 @@ def _dict_to_mcp_file(data: Dict[str, Any]) -> MCPFile:
 def _dict_to_mcp_rule(data: Dict[str, Any]) -> MCPRule:
     """Convert dictionary to MCP rule"""
     category = RuleCategory(data['category'])
-    
+
     conditions = []
     for condition_data in data.get('conditions', []):
         conditions.append(_dict_to_rule_condition(condition_data))
-    
+
     actions = []
     for action_data in data.get('actions', []):
         actions.append(_dict_to_rule_action(action_data))
-    
+
     return MCPRule(
         rule_id=data['rule_id'],
         name=data['name'],
@@ -447,11 +447,11 @@ def _dict_to_mcp_rule(data: Dict[str, Any]) -> MCPRule:
 def _dict_to_rule_condition(data: Dict[str, Any]) -> RuleCondition:
     """Convert dictionary to rule condition"""
     condition_type = ConditionType(data['type'])
-    
+
     conditions = None
     if 'conditions' in data:
         conditions = [_dict_to_rule_condition(c) for c in data['conditions']]
-    
+
     return RuleCondition(
         type=condition_type,
         element_type=data.get('element_type'),
@@ -468,11 +468,11 @@ def _dict_to_rule_condition(data: Dict[str, Any]) -> RuleCondition:
 def _dict_to_rule_action(data: Dict[str, Any]) -> RuleAction:
     """Convert dictionary to rule action"""
     action_type = ActionType(data['type'])
-    
+
     severity = None
     if 'severity' in data:
         severity = RuleSeverity(data['severity'])
-    
+
     return RuleAction(
         type=action_type,
         message=data.get('message'),
@@ -482,4 +482,4 @@ def _dict_to_rule_action(data: Dict[str, Any]) -> RuleAction:
         unit=data.get('unit'),
         description=data.get('description'),
         parameters=data.get('parameters')
-    ) 
+    )

@@ -84,15 +84,15 @@ offset := (page - 1) * pageSize
 #### Cache Key Generation
 ```go
 // Buildings cache key
-cacheKey := fmt.Sprintf("buildings:list:user:%d:page:%d:size:%d:status:%s:type:%s:search:%s:sort:%s:%s", 
+cacheKey := fmt.Sprintf("buildings:list:user:%d:page:%d:size:%d:status:%s:type:%s:search:%s:sort:%s:%s",
     userID, page, pageSize, status, buildingType, search, sortBy, sortOrder)
 
 // Assets cache key
-cacheKey := fmt.Sprintf("assets:list:building:%s:page:%d:size:%d:system:%s:type:%s:status:%s:floor:%s:room:%s:search:%s:sort:%s:%s", 
+cacheKey := fmt.Sprintf("assets:list:building:%s:page:%d:size:%d:system:%s:type:%s:status:%s:floor:%s:room:%s:search:%s:sort:%s:%s",
     buildingID, page, pageSize, system, assetType, status, floorID, roomID, search, sortBy, sortOrder)
 
 // Version control cache key
-cacheKey := fmt.Sprintf("version:history:floor:%s:page:%d:size:%d:action:%s:user:%s:data:%t:from:%s:to:%s", 
+cacheKey := fmt.Sprintf("version:history:floor:%s:page:%d:size:%d:action:%s:user:%s:data:%t:from:%s:to:%s",
     floorID, page, pageSize, actionType, userID, includeData, dateFrom, dateTo)
 ```
 
@@ -194,10 +194,10 @@ func generateEfficientDiff(version1, version2 models.DrawingVersion) map[string]
         "action_diff":     version1.ActionType != version2.ActionType,
         "svg_size_diff":   len(version2.SVG) - len(version1.SVG),
     }
-    
+
     similarity := calculateSimilarity(version1.SVG, version2.SVG)
     diff["similarity_percentage"] = similarity
-    
+
     // Determine change type based on similarity
     if similarity > 95 {
         diff["change_type"] = "minor"
@@ -206,7 +206,7 @@ func generateEfficientDiff(version1, version2 models.DrawingVersion) map[string]
     } else {
         diff["change_type"] = "major"
     }
-    
+
     return diff
 }
 ```
@@ -345,4 +345,4 @@ The database query optimization implementation provides significant performance 
 6. **Lazy Loading**: Optional inclusion of large data to reduce memory usage
 7. **Summary Statistics**: Pre-calculated statistics for better user experience
 
-The implementation maintains backward compatibility while providing significant performance improvements and enhanced functionality for the Arxos platform. 
+The implementation maintains backward compatibility while providing significant performance improvements and enhanced functionality for the Arxos platform.

@@ -33,7 +33,7 @@ register_map:
     description: "Temperature sensor reading"
     range: [-40, 80]
     accuracy: "±0.5°C"
-    
+
   pressure:
     address: 40003
     type: float
@@ -42,7 +42,7 @@ register_map:
     description: "Duct pressure sensor"
     range: [-1000, 1000]
     accuracy: "±10Pa"
-    
+
   airflow:
     address: 40005
     type: float
@@ -51,7 +51,7 @@ register_map:
     description: "Airflow rate measurement"
     range: [0, 1000]
     accuracy: "±5%"
-    
+
   damper_position:
     address: 40007
     type: float
@@ -60,7 +60,7 @@ register_map:
     description: "Damper position control"
     range: [0, 100]
     writable: true
-    
+
   fan_status:
     address: 10001
     type: bool
@@ -80,12 +80,12 @@ fault_handling:
     description: "Modbus communication timeout"
     severity: "critical"
     action: "retry_connection"
-    
+
   invalid_register:
     description: "Invalid register address"
     severity: "error"
     action: "skip_register"
-    
+
   data_range_error:
     description: "Data outside expected range"
     severity: "warning"
@@ -97,4 +97,4 @@ validation:
   response_timeout: 5000
   max_retries: 3
 
-mapped_to: vav 
+mapped_to: vav

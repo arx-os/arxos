@@ -12,23 +12,23 @@ export class Realtime {
             maxReconnectAttempts: options.maxReconnectAttempts || 5,
             ...options
         };
-        
+
         // WebSocket connection
         this.websocket = null;
         this.isConnected = false;
         this.reconnectAttempts = 0;
         this.reconnectTimer = null;
         this.heartbeatTimer = null;
-        
+
         // Real-time state
         this.currentFloor = null;
         this.currentUser = null;
         this.activeUsers = new Map();
         this.liveUpdates = new Map();
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -42,12 +42,12 @@ export class Realtime {
         document.addEventListener('floorSelected', (event) => {
             this.handleFloorSelection(event.detail);
         });
-        
+
         // Listen for user activity
         document.addEventListener('mousedown', () => this.sendUserActivity());
         document.addEventListener('keydown', () => this.sendUserActivity());
         document.addEventListener('touchstart', () => this.sendUserActivity());
-        
+
         // Listen for page visibility changes
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
@@ -56,7 +56,7 @@ export class Realtime {
                 this.handlePageVisible();
             }
         });
-        
+
         // Listen for beforeunload
         window.addEventListener('beforeunload', () => {
             this.disconnect();
@@ -66,16 +66,16 @@ export class Realtime {
     // WebSocket connection methods
     connect() {
         if (this.isConnected) return;
-        
+
         try {
             const url = this.buildWebSocketUrl();
             this.websocket = new WebSocket(url);
-            
+
             this.websocket.onopen = () => this.handleConnectionOpen();
             this.websocket.onmessage = (event) => this.handleMessage(event);
             this.websocket.onclose = (event) => this.handleConnectionClose(event);
             this.websocket.onerror = (error) => this.handleConnectionError(error);
-            
+
         } catch (error) {
             console.error('Failed to create WebSocket connection:', error);
             this.scheduleReconnect();
@@ -87,7 +87,7 @@ export class Realtime {
             this.websocket.close();
             this.websocket = null;
         }
-        
+
         this.isConnected = false;
         this.clearTimers();
         this.triggerEvent('disconnected');
@@ -100,7 +100,7 @@ export class Realtime {
             session_id: this.currentUser?.sessionId || this.generateSessionId(),
             floor_id: this.currentFloor?.id || ''
         });
-        
+
         return `${baseUrl}?${params.toString()}`;
     }
 
@@ -108,10 +108,10 @@ export class Realtime {
     handleConnectionOpen() {
         this.isConnected = true;
         this.reconnectAttempts = 0;
-        
+
         this.startHeartbeat();
         this.sendJoinMessage();
-        
+
         this.triggerEvent('connected');
     }
 
@@ -127,11 +127,11 @@ export class Realtime {
     handleConnectionClose(event) {
         this.isConnected = false;
         this.clearTimers();
-        
+
         if (event.code !== 1000) { // Not a normal closure
             this.scheduleReconnect();
         }
-        
+
         this.triggerEvent('connectionClosed', { code: event.code, reason: event.reason });
     }
 
@@ -143,7 +143,7 @@ export class Realtime {
     // Message processing
     processMessage(data) {
         const { type, payload } = data;
-        
+
         switch (type) {
             case 'user_joined':
                 this.handleUserJoined(payload);
@@ -181,7 +181,7 @@ export class Realtime {
     handleUserJoined(payload) {
         const { user } = payload;
         this.activeUsers.set(user.id, user);
-        
+
         this.triggerEvent('userJoined', { user });
         this.updateActiveUsers();
     }
@@ -189,43 +189,43 @@ export class Realtime {
     handleUserLeft(payload) {
         const { user_id } = payload;
         this.activeUsers.delete(user_id);
-        
+
         this.triggerEvent('userLeft', { userId: user_id });
         this.updateActiveUsers();
     }
 
     handleUserActivity(payload) {
         const { user_id, activity_type, timestamp } = payload;
-        
-        this.triggerEvent('userActivity', { 
-            userId: user_id, 
-            activityType: activity_type, 
-            timestamp 
+
+        this.triggerEvent('userActivity', {
+            userId: user_id,
+            activityType: activity_type,
+            timestamp
         });
     }
 
     handleFloorLockAcquired(payload) {
         const { user_id, floor_id, timestamp } = payload;
-        
-        this.triggerEvent('floorLockAcquired', { 
-            userId: user_id, 
-            floorId: floor_id, 
-            timestamp 
+
+        this.triggerEvent('floorLockAcquired', {
+            userId: user_id,
+            floorId: floor_id,
+            timestamp
         });
     }
 
     handleFloorLockReleased(payload) {
         const { floor_id, timestamp } = payload;
-        
-        this.triggerEvent('floorLockReleased', { 
-            floorId: floor_id, 
-            timestamp 
+
+        this.triggerEvent('floorLockReleased', {
+            floorId: floor_id,
+            timestamp
         });
     }
 
     handleLiveUpdate(payload) {
         const { user_id, update_type, data, timestamp } = payload;
-        
+
         // Store live update
         this.liveUpdates.set(`${user_id}_${timestamp}`, {
             userId: user_id,
@@ -233,32 +233,32 @@ export class Realtime {
             data,
             timestamp
         });
-        
-        this.triggerEvent('liveUpdate', { 
-            userId: user_id, 
-            updateType: update_type, 
-            data, 
-            timestamp 
+
+        this.triggerEvent('liveUpdate', {
+            userId: user_id,
+            updateType: update_type,
+            data,
+            timestamp
         });
     }
 
     handleConflictDetected(payload) {
         const { conflicts, timestamp } = payload;
-        
-        this.triggerEvent('conflictDetected', { 
-            conflicts, 
-            timestamp 
+
+        this.triggerEvent('conflictDetected', {
+            conflicts,
+            timestamp
         });
     }
 
     handlePresenceUpdate(payload) {
         const { users } = payload;
-        
+
         // Update active users
         users.forEach(user => {
             this.activeUsers.set(user.id, user);
         });
-        
+
         this.triggerEvent('presenceUpdate', { users });
         this.updateActiveUsers();
     }
@@ -277,7 +277,7 @@ export class Realtime {
             console.warn('WebSocket not connected, cannot send message');
             return;
         }
-        
+
         try {
             this.websocket.send(JSON.stringify(message));
         } catch (error) {
@@ -357,14 +357,14 @@ export class Realtime {
         if (this.currentFloor) {
             this.sendLeaveMessage();
         }
-        
+
         this.currentFloor = floorData;
-        
+
         // Join new floor
         if (this.isConnected) {
             this.sendJoinMessage();
         }
-        
+
         this.triggerEvent('floorChanged', { floor: floorData });
     }
 
@@ -414,7 +414,7 @@ export class Realtime {
             clearInterval(this.heartbeatTimer);
             this.heartbeatTimer = null;
         }
-        
+
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
@@ -428,14 +428,14 @@ export class Realtime {
             this.triggerEvent('reconnectFailed');
             return;
         }
-        
+
         this.reconnectAttempts++;
         const delay = this.options.reconnectInterval * this.reconnectAttempts;
-        
+
         this.reconnectTimer = setTimeout(() => {
             this.connect();
         }, delay);
-        
+
         this.triggerEvent('reconnecting', { attempt: this.reconnectAttempts });
     }
 
@@ -457,7 +457,7 @@ export class Realtime {
     }
 
     updateActiveUsers() {
-        this.triggerEvent('activeUsersUpdated', { 
+        this.triggerEvent('activeUsersUpdated', {
             users: this.getActiveUsers(),
             count: this.getActiveUsersCount()
         });
@@ -526,9 +526,9 @@ export class Realtime {
         this.disconnect();
         this.activeUsers.clear();
         this.liveUpdates.clear();
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

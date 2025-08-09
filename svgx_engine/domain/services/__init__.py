@@ -14,4 +14,4 @@ __description__ = "Domain services for SVGX Engine"
 # Export all services
 __all__ = [
     "BuildingService"
-] 
+]

@@ -86,7 +86,7 @@ class TelemetryConfig:
 
 class TelemetryBuffer:
     """Simple telemetry buffer."""
-    
+
     def __init__(self, max_size: int = 10000, enable_persistence: bool = True):
     """
     Perform __init__ operation
@@ -110,30 +110,30 @@ Example:
         self.records: List[TelemetryRecord] = []
         self._lock = threading.Lock()
         self._running = False
-    
+
     def start(self):
         """Start the buffer."""
         self._running = True
-    
+
     def stop(self):
         """Stop the buffer."""
         self._running = False
-    
+
     def ingest(self, record: TelemetryRecord):
         """Add a record to the buffer."""
         if not self._running:
             return
-        
+
         with self._lock:
             self.records.append(record)
             if len(self.records) > self.max_size:
                 self.records.pop(0)
-    
+
     def get_records(self) -> List[TelemetryRecord]:
         """Get all records."""
         with self._lock:
             return self.records.copy()
-    
+
     def clear(self):
         """Clear all records."""
         with self._lock:
@@ -147,7 +147,7 @@ def create_svgx_telemetry_buffer(max_size: int = 10000, enable_persistence: bool
 
 class TelemetryLogger:
     """Comprehensive telemetry logger for SVGX Engine."""
-    
+
     def __init__(self, config: Optional[TelemetryConfig] = None):
         """Initialize the telemetry logger."""
         self.config = config or TelemetryConfig()
@@ -158,30 +158,30 @@ class TelemetryLogger:
         self.session_id = self._generate_session_id()
         self.user_id = None
         self._lock = threading.Lock()
-        
+
         # Start the buffer if enabled
         if self.config.enabled:
             self.buffer.start()
-        
+
         if logger:
             logger.info("TelemetryLogger initialized", config=self.config)
-    
+
     def _generate_session_id(self) -> str:
         """Generate a unique session ID."""
         return f"session_{int(time.time())}_{threading.get_ident()}"
-    
+
     def set_user_id(self, user_id: str):
         """Set the current user ID for telemetry."""
         self.user_id = user_id
         if logger:
             logger.debug("User ID set for telemetry", user_id=user_id)
-    
+
     def log_event(self, event_type: str, message: str, level: LogLevel = LogLevel.INFO,
                   metadata: Optional[Dict[str, Any]] = None, duration_ms: Optional[float] = None):
         """Log a telemetry event."""
         if not self.config.enabled:
             return
-        
+
         try:
             # Map log level to telemetry severity
             severity_map = {
@@ -191,7 +191,7 @@ class TelemetryLogger:
                 LogLevel.ERROR: TelemetrySeverity.ERROR,
                 LogLevel.CRITICAL: TelemetrySeverity.CRITICAL
             }
-            
+
             # Create telemetry record
             record = TelemetryRecord(
                 timestamp=time.time(),
@@ -218,28 +218,28 @@ class TelemetryLogger:
                     'timestamp_iso': datetime.now().isoformat()
                 }
             )
-            
+
             # Add to buffer
             self.buffer.ingest(record)
-            
+
             # Console logging if enabled
             if self.config.log_to_console:
                 self._log_to_console(level, event_type, message, metadata)
-            
+
             # File logging if enabled
             if self.config.log_to_file and self.config.log_file_path:
                 self._log_to_file(record)
-                
+
         except Exception as e:
             if logger:
                 logger.error(f"Failed to log telemetry event: {e}")
-    
+
     def log_operation(self, operation_name: str, operation_type: TelemetryType,
                       metadata: Optional[Dict[str, Any]] = None):
         """Log an operation with context manager support."""
         return OperationLogger(self, operation_name, operation_type, metadata)
-    
-    def log_error(self, error_type: str, error_message: str, 
+
+    def log_error(self, error_type: str, error_message: str,
                   error_details: Optional[Dict[str, Any]] = None):
         """Log an error event."""
         metadata = {
@@ -252,7 +252,7 @@ class TelemetryLogger:
             level=LogLevel.ERROR,
             metadata=metadata
         )
-    
+
     def log_performance(self, operation_name: str, duration_ms: float,
                        metadata: Optional[Dict[str, Any]] = None):
         """Log a performance metric."""
@@ -268,7 +268,7 @@ class TelemetryLogger:
             metadata=perf_metadata,
             duration_ms=duration_ms
         )
-    
+
     def log_security(self, security_event: str, details: Optional[Dict[str, Any]] = None):
         """Log a security event."""
         security_metadata = {
@@ -281,7 +281,7 @@ class TelemetryLogger:
             level=LogLevel.WARNING,
             metadata=security_metadata
         )
-    
+
     def _get_memory_usage(self) -> Optional[float]:
         """Get current memory usage in MB."""
         try:
@@ -292,7 +292,7 @@ class TelemetryLogger:
             return None
         except Exception:
             return None
-    
+
     def _get_cpu_usage(self) -> Optional[float]:
         """Get current CPU usage percentage."""
         try:
@@ -302,8 +302,8 @@ class TelemetryLogger:
             return None
         except Exception:
             return None
-    
-    def _log_to_console(self, level: LogLevel, event_type: str, message: str, 
+
+    def _log_to_console(self, level: LogLevel, event_type: str, message: str,
                         metadata: Optional[Dict[str, Any]] = None):
         """Log to console."""
         if logger:
@@ -314,7 +314,7 @@ class TelemetryLogger:
                 'metadata': metadata or {}
             }
             logger.info("Telemetry event", **log_data)
-    
+
     def _log_to_file(self, record: TelemetryRecord):
         """Log to file."""
         try:
@@ -323,24 +323,24 @@ class TelemetryLogger:
         except Exception as e:
             if logger:
                 logger.error(f"Failed to write to telemetry file: {e}")
-    
+
     def get_statistics(self) -> Dict[str, Any]:
         """Get telemetry statistics."""
         records = self.buffer.get_records()
         if not records:
             return {}
-        
+
         return {
             'total_records': len(records),
             'session_id': self.session_id,
             'user_id': self.user_id,
             'enabled': self.config.enabled
         }
-    
+
     def clear_statistics(self):
         """Clear telemetry statistics."""
         self.buffer.clear()
-    
+
     def shutdown(self):
         """Shutdown the telemetry logger."""
         self.buffer.stop()
@@ -369,7 +369,7 @@ Example:
         print(result)
     """
     """Context manager for logging operations."""
-    
+
     def __init__(self, telemetry_logger: TelemetryLogger, operation_name: str,
                  operation_type: TelemetryType, metadata: Optional[Dict[str, Any]] = None):
         self.telemetry_logger = telemetry_logger
@@ -377,7 +377,7 @@ Example:
         self.operation_type = operation_type
         self.metadata = metadata or {}
         self.start_time = None
-    
+
     def __enter__(self):
         """Enter the operation context."""
         self.start_time = time.time()
@@ -388,11 +388,11 @@ Example:
             metadata=self.metadata
         )
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit the operation context."""
         duration_ms = (time.time() - self.start_time) * 1000 if self.start_time else 0
-        
+
         if exc_type is None:
             # Operation completed successfully
             self.telemetry_logger.log_event(
@@ -435,4 +435,4 @@ def log_telemetry_operation(operation_name: str, operation_type: TelemetryType,
 def shutdown_telemetry():
     """Shutdown the default telemetry logger."""
     logger = get_telemetry_logger()
-    logger.shutdown() 
+    logger.shutdown()

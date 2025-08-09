@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+((((#!/usr/bin/env python3
 """
 Fix Documentation Syntax Errors
 
@@ -27,10 +27,10 @@ from typing import List, Dict, Any, Optional
 
 class DocumentationSyntaxFixer:
     """Fixes syntax errors introduced during documentation generation"""
-    
+
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
-        
+
         # Files with known syntax errors from documentation generation
         self.files_with_syntax_errors = [
             "plugins/example_behavior_plugin.py",
@@ -172,125 +172,125 @@ class DocumentationSyntaxFixer:
             "core/security/auth_middleware.py",
             "core/shared/models/error.py"
         ]
-    
+
     def fix_documentation_syntax_errors(self):
         """Fix syntax errors introduced during documentation generation"""
         print("🔧 Fixing Documentation Syntax Errors")
         print("=" * 60)
-        
+
         success_count = 0
         error_count = 0
-        
+
         for file_path in self.files_with_syntax_errors:
             full_path = self.project_root / file_path
-            
+
             if not full_path.exists():
                 print(f"⚠️  File not found: {file_path}")
                 continue
-            
+
             try:
                 if self._fix_file_syntax(full_path):
                     print(f"✅ Fixed syntax errors in: {file_path}")
                     success_count += 1
                 else:
                     print(f"ℹ️  No syntax errors found in: {file_path}")
-                    
+
             except Exception as e:
                 print(f"❌ Error fixing {file_path}: {e}")
                 error_count += 1
-        
+
         print("\n" + "=" * 60)
         print(f"📊 Summary:")
         print(f"   ✅ Successfully fixed: {success_count} files")
         print(f"   ❌ Errors: {error_count} files")
         print(f"   📁 Total processed: {len(self.files_with_syntax_errors)} files")
-    
+
     def _fix_file_syntax(self, file_path: Path) -> bool:
         """Fix syntax errors in a single file"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             original_content = content
-            
+
             # Fix indentation errors
             content = self._fix_indentation_errors(content)
-            
+
             # Fix function definition errors
             content = self._fix_function_definition_errors(content)
-            
+
             # Fix class definition errors
             content = self._fix_class_definition_errors(content)
-            
+
             # Fix import errors
             content = self._fix_import_errors(content)
-            
+
             # Validate syntax
             if not self._validate_syntax(content):
                 print(f"⚠️  Syntax validation failed for {file_path}")
                 return False
-            
+
             # Only write if content changed
             if content != original_content:
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content)
                 return True
-            
+
             return False
-            
+
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             return False
-    
+
     def _fix_indentation_errors(self, content: str) -> str:
         """Fix indentation errors"""
         lines = content.split('\n')
         fixed_lines = []
-        
+
         for i, line in enumerate(lines):
             # Fix common indentation issues
             if line.strip().startswith('async def ') and ':' in line:
                 # Ensure proper indentation for async function definitions
                 if not line.startswith('    ') and not line.startswith('\t'):
                     line = '    ' + line.lstrip()
-            
+
             # Fix indentation for class definitions
             elif line.strip().startswith('class ') and ':' in line:
                 if not line.startswith('    ') and not line.startswith('\t'):
                     line = '    ' + line.lstrip()
-            
+
             # Fix indentation for function definitions
             elif line.strip().startswith('def ') and ':' in line:
                 if not line.startswith('    ') and not line.startswith('\t'):
                     line = '    ' + line.lstrip()
-            
+
             # Fix indentation for try/except blocks
             elif line.strip().startswith('try:') or line.strip().startswith('except'):
                 if not line.startswith('    ') and not line.startswith('\t'):
                     line = '    ' + line.lstrip()
-            
+
             # Fix indentation for if/elif/else blocks
             elif line.strip().startswith(('if ', 'elif ', 'else:')):
                 if not line.startswith('    ') and not line.startswith('\t'):
                     line = '    ' + line.lstrip()
-            
+
             # Fix indentation for for/while loops
             elif line.strip().startswith(('for ', 'while ')):
                 if not line.startswith('    ') and not line.startswith('\t'):
                     line = '    ' + line.lstrip()
-            
+
             # Fix indentation for with statements
             elif line.strip().startswith('with '):
                 if not line.startswith('    ') and not line.startswith('\t'):
                     line = '    ' + line.lstrip()
-            
+
             fixed_lines.append(line)
-        
+
         return '\n'.join(fixed_lines)
-    
+
     def _fix_function_definition_errors(self, content: str) -> str:
         """Fix function definition errors"""
-        
+
         # Fix function definitions without proper indentation
         content = re.sub(
             r'^def ([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\):',
@@ -298,7 +298,7 @@ class DocumentationSyntaxFixer:
             content,
             flags=re.MULTILINE
         )
-        
+
         # Fix async function definitions without proper indentation
         content = re.sub(
             r'^async def ([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\):',
@@ -306,7 +306,7 @@ class DocumentationSyntaxFixer:
             content,
             flags=re.MULTILINE
         )
-        
+
         # Fix function definitions with missing colons
         content = re.sub(
             r'def ([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$',
@@ -314,7 +314,7 @@ class DocumentationSyntaxFixer:
             content,
             flags=re.MULTILINE
         )
-        
+
         # Fix async function definitions with missing colons
         content = re.sub(
             r'async def ([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*$',
@@ -322,12 +322,12 @@ class DocumentationSyntaxFixer:
             content,
             flags=re.MULTILINE
         )
-        
+
         return content
-    
+
     def _fix_class_definition_errors(self, content: str) -> str:
         """Fix class definition errors"""
-        
+
         # Fix class definitions without proper indentation
         content = re.sub(
             r'^class ([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\):',
@@ -335,7 +335,7 @@ class DocumentationSyntaxFixer:
             content,
             flags=re.MULTILINE
         )
-        
+
         # Fix class definitions without parentheses
         content = re.sub(
             r'^class ([a-zA-Z_][a-zA-Z0-9_]*):',
@@ -343,28 +343,28 @@ class DocumentationSyntaxFixer:
             content,
             flags=re.MULTILINE
         )
-        
+
         return content
-    
+
     def _fix_import_errors(self, content: str) -> str:
         """Fix import errors"""
-        
+
         # Fix broken import statements
         content = re.sub(
             r'from ([a-zA-Z_][a-zA-Z0-9_.]*) import \(\nimport ([a-zA-Z_][a-zA-Z0-9_]*)',
             r'from \1 import (\n    # imports here\n)\nimport \2',
             content
         )
-        
+
         # Fix unmatched parentheses in imports
         content = re.sub(
             r'from ([a-zA-Z_][a-zA-Z0-9_.]*) import \([^)]*$',
             r'from \1 import (\n    # imports here\n)',
             content
         )
-        
+
         return content
-    
+
     def _validate_syntax(self, content: str) -> bool:
         """Validate that the content has valid Python syntax"""
         try:
@@ -372,7 +372,7 @@ class DocumentationSyntaxFixer:
             return True
         except SyntaxError:
             return False
-    
+
     def create_syntax_fix_example(self):
         """Create an example of proper syntax after documentation"""
         example = '''
@@ -388,38 +388,38 @@ logger = logging.getLogger(__name__)
 class ExampleClass:
     """
     Example class with proper syntax and documentation.
-    
+
     Attributes:
         config: Configuration dictionary
-        
+
     Methods:
         process_data: Process input data
         validate_input: Validate input parameters
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
         Initialize the class.
-        
+
         Args:
             config: Configuration dictionary
-            
+
         Returns:
             None
         """
         self.config = config or {}
         self.logger = logger
-    
+
     async def process_data(self, data: str) -> Dict[str, Any]:
         """
         Process input data asynchronously.
-        
+
         Args:
             data: Input data to process
-            
+
         Returns:
             Processed data dictionary
-            
+
         Raises:
             ValueError: If data is invalid
         """
@@ -433,32 +433,31 @@ class ExampleClass:
         except Exception as e:
             self.logger.error(f"Error processing data: {e}")
             raise ValueError(f"Invalid data: {e}")
-    
+
     def validate_input(self, input_data: str) -> bool:
         """
         Validate input parameters.
-        
+
         Args:
             input_data: Input data to validate
-            
+
         Returns:
             True if valid, False otherwise
         """
-        return bool(input_data and input_data.strip())
-
+        return bool(input_data and input_data.strip()
 # Usage example
 if __name__ == "__main__":
     example = ExampleClass({"test": "value"})
     result = await example.process_data("test_data")
     print(result)
 '''
-        
+
         example_path = self.project_root / "docs" / "proper_documentation_syntax_example.py"
         example_path.parent.mkdir(exist_ok=True)
-        
+
         with open(example_path, 'w') as f:
             f.write(example)
-        
+
         print(f"📝 Created proper documentation syntax example: {example_path}")
 
 
@@ -467,16 +466,16 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python3 scripts/fix_documentation_syntax_errors.py [--dry-run] [--example]")
         sys.exit(1)
-    
+
     project_root = "."
     dry_run = "--dry-run" in sys.argv
     create_example = "--example" in sys.argv
-    
+
     fixer = DocumentationSyntaxFixer(project_root)
-    
+
     if create_example:
         fixer.create_syntax_fix_example()
-    
+
     if not dry_run:
         fixer.fix_documentation_syntax_errors()
     else:
@@ -491,4 +490,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

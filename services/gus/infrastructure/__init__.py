@@ -20,4 +20,4 @@ __all__ = [
     'OpenAIClient',
     'KnowledgeBaseManager',
     'PDFAnalyzer'
-] 
+]

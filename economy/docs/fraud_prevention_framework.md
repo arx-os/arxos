@@ -122,4 +122,3 @@ Fraud protection is enforced through:
 - Real-world engineering logic and standards
 
 > ARX must remain the most trusted work-minted, yield-bearing infrastructure token on Earth.
-

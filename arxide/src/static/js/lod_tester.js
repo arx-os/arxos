@@ -9,7 +9,7 @@ class LODTester {
         this.testResults = [];
         this.isRunning = false;
         this.currentTest = null;
-        
+
         // Test configurations
         this.testConfigs = {
             simple: {
@@ -37,7 +37,7 @@ class LODTester {
                 description: 'Mix of simple and complex symbols'
             }
         };
-        
+
         // Performance metrics
         this.metrics = {
             renderTime: 0,
@@ -45,10 +45,10 @@ class LODTester {
             lodSwitches: 0,
             averageSwitchTime: 0
         };
-        
+
         this.initialize();
     }
-    
+
     /**
      * Initialize the LOD tester
      */
@@ -56,7 +56,7 @@ class LODTester {
         this.generateTestSymbols();
         window.arxLogger.info('LODTester initialized', { file: 'lod_tester.js' });
     }
-    
+
     /**
      * Generate test symbols with different complexities
      */
@@ -84,7 +84,7 @@ class LODTester {
                 svg: '<polygon points="10,2 18,18 2,18" fill="green" stroke="black" stroke-width="1"/>',
                 complexity: 'low'
             },
-            
+
             // Medium complexity symbols
             {
                 id: 'test-medium-1',
@@ -110,7 +110,7 @@ class LODTester {
                 `,
                 complexity: 'medium'
             },
-            
+
             // Complex symbols (high complexity)
             {
                 id: 'test-complex-1',
@@ -152,7 +152,7 @@ class LODTester {
             }
         ];
     }
-    
+
     /**
      * Run a specific LOD test
      */
@@ -161,41 +161,41 @@ class LODTester {
             console.warn('LODTester: Test already running');
             return;
         }
-        
+
         const config = this.testConfigs[testType];
         if (!config) {
             console.error(`LODTester: Unknown test type: ${testType}`);
             return;
         }
-        
+
         this.isRunning = true;
         this.currentTest = testType;
-        
+
         window.arxLogger.info(`LODTester: Starting ${config.name} test`, { file: 'lod_tester.js' });
-        
+
         try {
             // Clear existing test objects
             this.clearTestObjects();
-            
+
             // Generate test objects
             const testObjects = this.generateTestObjects(config);
-            
+
             // Place test objects
             await this.placeTestObjects(testObjects);
-            
+
             // Run zoom test
             await this.runZoomTest();
-            
+
             // Collect results
             const results = this.collectTestResults(config);
-            
+
             // Store results
             this.testResults.push(results);
-            
+
             window.arxLogger.info(`LODTester: ${config.name} test completed`, { results, file: 'lod_tester.js' });
-            
+
             return results;
-            
+
         } catch (error) {
             console.error('LODTester: Test failed', error);
             throw error;
@@ -204,19 +204,19 @@ class LODTester {
             this.currentTest = null;
         }
     }
-    
+
     /**
      * Generate test objects based on configuration
      */
     generateTestObjects(config) {
         const objects = [];
         const symbols = this.getSymbolsByComplexity(config.complexity);
-        
+
         for (let i = 0; i < config.symbolCount; i++) {
             const symbol = symbols[i % symbols.length];
             const x = Math.random() * 800 + 100;
             const y = Math.random() * 600 + 100;
-            
+
             objects.push({
                 symbol: symbol,
                 x: x,
@@ -224,10 +224,10 @@ class LODTester {
                 id: `test-${config.complexity}-${i}`
             });
         }
-        
+
         return objects;
     }
-    
+
     /**
      * Get symbols by complexity level
      */
@@ -235,10 +235,10 @@ class LODTester {
         if (complexity === 'mixed') {
             return this.testSymbols;
         }
-        
+
         return this.testSymbols.filter(symbol => symbol.complexity === complexity);
     }
-    
+
     /**
      * Place test objects in the SVG
      */
@@ -247,18 +247,18 @@ class LODTester {
         if (!svg) {
             throw new Error('SVG container not found');
         }
-        
+
         const startTime = performance.now();
-        
+
         for (const obj of objects) {
             await this.placeTestObject(svg, obj);
             // Small delay to prevent blocking
             await new Promise(resolve => setTimeout(resolve, 10));
         }
-        
+
         this.metrics.renderTime = performance.now() - startTime;
     }
-    
+
     /**
      * Place a single test object
      */
@@ -277,20 +277,20 @@ class LODTester {
         symbolElement.setAttribute('data-lod-level', 'medium');
         symbolElement.setAttribute('data-lod-complexity', '0.7');
         symbolElement.setAttribute('data-lod-enabled', 'true');
-        
+
         // Create SVG content
         const symbolSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         symbolSvg.setAttribute('width', '40');
         symbolSvg.setAttribute('height', '40');
         symbolSvg.setAttribute('viewBox', '0 0 20 20');
         symbolSvg.innerHTML = obj.symbol.svg;
-        
+
         symbolElement.appendChild(symbolSvg);
         symbolElement.setAttribute('transform', `translate(${obj.x}, ${obj.y})`);
-        
+
         svg.appendChild(symbolElement);
     }
-    
+
     /**
      * Run zoom test to trigger LOD switches
      */
@@ -299,59 +299,59 @@ class LODTester {
             console.warn('LODTester: ViewportManager not available for zoom test');
             return;
         }
-        
+
         const viewportManager = window.viewportManager;
         const lodManager = window.lodManager;
-        
+
         if (!lodManager) {
             console.warn('LODTester: LODManager not available for zoom test');
             return;
         }
-        
+
         // Store initial state
         const initialZoom = viewportManager.currentZoom;
         const initialLOD = lodManager.getCurrentLODLevel();
-        
+
         // Test different zoom levels
         const zoomLevels = [0.1, 0.5, 1.0, 2.0, 5.0];
         const lodSwitches = [];
-        
+
         for (const zoom of zoomLevels) {
             const startTime = performance.now();
-            
+
             // Set zoom level
             viewportManager.setZoom(zoom);
-            
+
             // Wait for LOD switch
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             const switchTime = performance.now() - startTime;
             const currentLOD = lodManager.getCurrentLODLevel();
-            
+
             lodSwitches.push({
                 zoom: zoom,
                 lodLevel: currentLOD,
                 switchTime: switchTime
             });
         }
-        
+
         // Restore initial state
         viewportManager.setZoom(initialZoom);
-        
+
         // Update metrics
         this.metrics.lodSwitches = lodSwitches.length;
         this.metrics.averageSwitchTime = lodSwitches.reduce((sum, s) => sum + s.switchTime, 0) / lodSwitches.length;
-        
+
         return lodSwitches;
     }
-    
+
     /**
      * Collect test results
      */
     collectTestResults(config) {
         const testObjects = document.querySelectorAll('.test-object');
         const lodManager = window.lodManager;
-        
+
         const results = {
             testType: config.name,
             timestamp: new Date().toISOString(),
@@ -366,10 +366,10 @@ class LODTester {
                 objectVisibility: this.calculateObjectVisibility()
             }
         };
-        
+
         return results;
     }
-    
+
     /**
      * Get memory usage (approximate)
      */
@@ -383,7 +383,7 @@ class LODTester {
         }
         return null;
     }
-    
+
     /**
      * Calculate approximate FPS
      */
@@ -391,37 +391,37 @@ class LODTester {
         // Simple FPS calculation based on render time
         const renderTime = this.metrics.renderTime;
         const objectCount = document.querySelectorAll('.test-object').length;
-        
+
         if (renderTime > 0 && objectCount > 0) {
             const timePerObject = renderTime / objectCount;
             return Math.round(1000 / timePerObject);
         }
-        
+
         return 60; // Default assumption
     }
-    
+
     /**
      * Calculate object visibility percentage
      */
     calculateObjectVisibility() {
         const testObjects = document.querySelectorAll('.test-object');
         const viewportManager = window.viewportManager;
-        
+
         if (!viewportManager) return 100;
-        
+
         let visibleCount = 0;
         testObjects.forEach(obj => {
             const x = parseFloat(obj.getAttribute('data-x'));
             const y = parseFloat(obj.getAttribute('data-y'));
-            
+
             if (viewportManager.isObjectVisible(x, y)) {
                 visibleCount++;
             }
         });
-        
+
         return Math.round((visibleCount / testObjects.length) * 100);
     }
-    
+
     /**
      * Clear test objects
      */
@@ -429,7 +429,7 @@ class LODTester {
         const testObjects = document.querySelectorAll('.test-object');
         testObjects.forEach(obj => obj.remove());
     }
-    
+
     /**
      * Get test results summary
      */
@@ -437,7 +437,7 @@ class LODTester {
         if (this.testResults.length === 0) {
             return { message: 'No test results available' };
         }
-        
+
         const summary = {
             totalTests: this.testResults.length,
             averageRenderTime: 0,
@@ -446,20 +446,20 @@ class LODTester {
             bestPerformance: null,
             worstPerformance: null
         };
-        
+
         // Calculate averages
         summary.averageRenderTime = this.testResults.reduce((sum, r) => sum + r.renderTime, 0) / this.testResults.length;
         summary.averageLODSwitches = this.testResults.reduce((sum, r) => sum + r.lodSwitches, 0) / this.testResults.length;
         summary.averageSwitchTime = this.testResults.reduce((sum, r) => sum + r.averageSwitchTime, 0) / this.testResults.length;
-        
+
         // Find best and worst performance
         const sortedByRenderTime = [...this.testResults].sort((a, b) => a.renderTime - b.renderTime);
         summary.bestPerformance = sortedByRenderTime[0];
         summary.worstPerformance = sortedByRenderTime[sortedByRenderTime.length - 1];
-        
+
         return summary;
     }
-    
+
     /**
      * Export test results
      */
@@ -469,18 +469,18 @@ class LODTester {
             detailedResults: this.testResults,
             timestamp: new Date().toISOString()
         };
-        
+
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `lod-test-results-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
-        
+
         URL.revokeObjectURL(url);
     }
-    
+
     /**
      * Reset test results
      */
@@ -494,14 +494,14 @@ class LODTester {
         };
         window.arxLogger.info('LODTester: Test results reset', { file: 'lod_tester.js' });
     }
-    
+
     /**
      * Get available test types
      */
     getAvailableTests() {
         return Object.keys(this.testConfigs);
     }
-    
+
     /**
      * Get test configuration
      */
@@ -515,4 +515,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = LODTester;
 } else if (typeof window !== 'undefined') {
     window.LODTester = LODTester;
-} 
+}

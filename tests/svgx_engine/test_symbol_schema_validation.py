@@ -45,16 +45,16 @@ from svgx_engine.utils.errors import (
 
 class TestSymbolSchemaValidationService:
     """Test suite for Symbol Schema Validation Service."""
-    
+
     @pytest.fixture
-    def temp_dir(self):
+def temp_dir(self):
         """Create a temporary directory for testing."""
         temp_dir = tempfile.mkdtemp()
         yield temp_dir
         shutil.rmtree(temp_dir)
-    
+
     @pytest.fixture
-    def service(self, temp_dir):
+def service(self, temp_dir):
         """Create a Symbol Schema Validation Service instance."""
         options = {
             'enable_caching': True,
@@ -69,7 +69,7 @@ class TestSymbolSchemaValidationService:
             'custom_rules_enabled': True,
             'performance_optimization': True,
         }
-        
+
         # Override database paths to use temp directory
         with patch('services.symbol_schema_validation.SymbolSchemaValidationService._init_databases') as mock_init:
             service = SVGXSymbolSchemaValidationService(options)
@@ -79,11 +79,11 @@ class TestSymbolSchemaValidationService:
             service.cache_db_path = os.path.join(temp_dir, 'cache.db')
             service._init_databases()
             return service
-    
+
     @pytest.fixture
-    def sample_svgx_xml(self):
+def sample_svgx_xml(self):
         """Sample SVGX XML content for testing."""
-        return '''<?xml version="1.0" encoding="UTF-8"?>
+        return '''<?xml version="1.0" encoding="UTF-8"?>'
 <svgx xmlns="http://www.svgx.org/schema/1.0">
     <metadata>
         <name>Test Symbol</name>
@@ -105,9 +105,9 @@ class TestSymbolSchemaValidationService:
         <friction>0.1</friction>
     </physics>
 </svgx>'''
-    
+
     @pytest.fixture
-    def sample_svgx_json(self):
+def sample_svgx_json(self):
         """Sample SVGX JSON content for testing."""
         return json.dumps({
             "metadata": {
@@ -145,7 +145,7 @@ class TestSymbolSchemaValidationService:
                 "friction": 0.1
             }
         })
-    
+
     def test_service_initialization(self, service):
         """Test service initialization."""
         assert service is not None
@@ -155,16 +155,16 @@ class TestSymbolSchemaValidationService:
         assert service.options['custom_rules_enabled'] is True
         assert len(service.schemas) > 0  # Should have default schema
         assert len(service.active_rules) > 0  # Should have default rules
-    
+
     def test_validate_symbol_xml(self, service, sample_svgx_xml):
         """Test validating SVGX XML symbol."""
         symbol_id = "test_symbol_001"
-        
+
         result = service.validate_symbol(
             symbol_id=symbol_id,
             content=sample_svgx_xml
         )
-        
+
         assert result is not None
         assert result.symbol_id == symbol_id
         assert result.is_valid is True
@@ -172,16 +172,16 @@ class TestSymbolSchemaValidationService:
         assert result.schema_version == service.options['default_schema_version']
         assert len(result.applied_rules) > 0
         assert result.metadata['content_type'] == 'xml'
-    
+
     def test_validate_symbol_json(self, service, sample_svgx_json):
         """Test validating SVGX JSON symbol."""
         symbol_id = "test_symbol_002"
-        
+
         result = service.validate_symbol(
             symbol_id=symbol_id,
             content=sample_svgx_json
         )
-        
+
         assert result is not None
         assert result.symbol_id == symbol_id
         assert result.is_valid is True
@@ -189,59 +189,59 @@ class TestSymbolSchemaValidationService:
         assert result.schema_version == service.options['default_schema_version']
         assert len(result.applied_rules) > 0
         assert result.metadata['content_type'] == 'json'
-    
+
     def test_validate_invalid_xml(self, service):
         """Test validating invalid XML content."""
         symbol_id = "test_symbol_003"
         invalid_xml = "<svgx><invalid>content</invalid>"
-        
+
         result = service.validate_symbol(
             symbol_id=symbol_id,
             content=invalid_xml
         )
-        
+
         assert result is not None
         assert result.is_valid is False
         assert len(result.errors) > 0
-    
+
     def test_validate_invalid_json(self, service):
         """Test validating invalid JSON content."""
         symbol_id = "test_symbol_004"
         invalid_json = '{"invalid": "json", "missing": "closing"}'
-        
+
         result = service.validate_symbol(
             symbol_id=symbol_id,
             content=invalid_json
         )
-        
+
         assert result is not None
         assert result.is_valid is False
         assert len(result.errors) > 0
-    
+
     def test_validation_caching(self, service, sample_svgx_xml):
         """Test validation result caching."""
         symbol_id = "test_symbol_005"
-        
+
         # First validation
         result1 = service.validate_symbol(
             symbol_id=symbol_id,
             content=sample_svgx_xml
         )
-        
+
         # Second validation (should use cache)
         result2 = service.validate_symbol(
             symbol_id=symbol_id,
             content=sample_svgx_xml
         )
-        
+
         assert result1.symbol_id == result2.symbol_id
         assert result1.is_valid == result2.is_valid
-        
+
         # Check cache statistics
         stats = service.get_validation_statistics()
         assert stats['cache_hits'] > 0
         assert stats['cache_misses'] > 0
-    
+
     def test_add_validation_rule(self, service):
         """Test adding a custom validation rule."""
         rule = ValidationRule(
@@ -252,11 +252,11 @@ class TestSymbolSchemaValidationService:
             schema_content=r"<svgx.*>",
             severity="warning"
         )
-        
+
         success = service.add_validation_rule(rule)
         assert success is True
         assert rule.rule_id in service.active_rules
-    
+
     def test_remove_validation_rule(self, service):
         """Test removing a validation rule."""
         rule = ValidationRule(
@@ -267,16 +267,16 @@ class TestSymbolSchemaValidationService:
             schema_content=r"<svgx.*>",
             severity="warning"
         )
-        
+
         # Add rule
         service.add_validation_rule(rule)
         assert rule.rule_id in service.active_rules
-        
+
         # Remove rule
         success = service.remove_validation_rule(rule.rule_id)
         assert success is True
         assert rule.rule_id not in service.active_rules
-    
+
     def test_add_schema_version(self, service):
         """Test adding a new schema version."""
         schema = SchemaVersion(
@@ -287,20 +287,20 @@ class TestSymbolSchemaValidationService:
             is_default=False,
             metadata={"test": "data"}
         )
-        
+
         success = service.add_schema_version(schema)
         assert success is True
         assert schema.version in service.schemas
-    
+
     def test_get_schema_version(self, service):
         """Test getting a schema version."""
         default_version = service.options['default_schema_version']
         schema = service.get_schema_version(default_version)
-        
+
         assert schema is not None
         assert schema.version == default_version
         assert schema.is_default is True
-    
+
     def test_validation_statistics(self, service, sample_svgx_xml):
         """Test getting validation statistics."""
         # Perform some validations
@@ -309,15 +309,15 @@ class TestSymbolSchemaValidationService:
                 symbol_id=f"test_symbol_{i}",
                 content=sample_svgx_xml
             )
-        
+
         stats = service.get_validation_statistics()
-        
+
         assert stats['total_validations'] >= 3
         assert stats['average_validation_time'] > 0
         assert 'cache_size' in stats
         assert 'active_rules_count' in stats
         assert 'schema_versions_count' in stats
-    
+
     def test_clear_cache(self, service, sample_svgx_xml):
         """Test clearing validation cache."""
         # Perform validation to populate cache
@@ -325,19 +325,19 @@ class TestSymbolSchemaValidationService:
             symbol_id="test_symbol_cache",
             content=sample_svgx_xml
         )
-        
+
         # Clear cache
         success = service.clear_cache()
         assert success is True
-        
+
         # Check cache is empty
         stats = service.get_validation_statistics()
         assert stats['cache_size'] == 0
-    
+
     def test_svgx_specific_validation(self, service):
         """Test SVGX-specific validation rules."""
         # Test with valid SVGX content
-        valid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>
+        valid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>'
 <svgx xmlns="http://www.svgx.org/schema/1.0">
     <metadata>
         <name>Test</name>
@@ -348,28 +348,28 @@ class TestSymbolSchemaValidationService:
         <rect x="0" y="0" width="100" height="50"/>
     </geometry>
 </svgx>'''
-        
+
         result = service.validate_symbol(
             symbol_id="test_svgx_specific",
             content=valid_svgx
         )
-        
+
         assert result.is_valid is True
-        
+
         # Test with missing SVGX root element
-        invalid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>
+        invalid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>'
 <svg xmlns="http://www.w3.org/2000/svg">
     <rect x="0" y="0" width="100" height="50"/>
 </svg>'''
-        
+
         result = service.validate_symbol(
             symbol_id="test_svgx_invalid",
             content=invalid_svgx
         )
-        
+
         assert result.is_valid is False
         assert len(result.errors) > 0
-    
+
     def test_custom_validation_rules(self, service):
         """Test custom validation rules."""
         # Add a custom regex rule
@@ -381,44 +381,44 @@ class TestSymbolSchemaValidationService:
             schema_content=r"<svgx[^>]*>",
             severity="error"
         )
-        
+
         service.add_validation_rule(rule)
-        
+
         # Test with valid content
         valid_content = "<svgx xmlns='http://www.svgx.org/schema/1.0'></svgx>"
         result = service.validate_symbol(
             symbol_id="test_custom_valid",
             content=valid_content
         )
-        
+
         # Test with invalid content
         invalid_content = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
         result = service.validate_symbol(
             symbol_id="test_custom_invalid",
             content=invalid_content
         )
-        
+
         assert result.is_valid is False
-    
+
     def test_performance_monitoring(self, service, sample_svgx_xml):
         """Test performance monitoring integration."""
         start_time = time.time()
-        
+
         result = service.validate_symbol(
             symbol_id="test_performance",
             content=sample_svgx_xml
         )
-        
+
         end_time = time.time()
-        
+
         # Verify performance monitoring works
         assert result.validation_time > 0
         assert result.validation_time < (end_time - start_time + 0.1)  # Allow some tolerance
-        
+
         # Check performance metrics
         stats = service.get_validation_statistics()
         assert stats['average_validation_time'] > 0
-    
+
     def test_error_handling(self, service):
         """Test error handling for various scenarios."""
         # Test with empty content
@@ -427,14 +427,14 @@ class TestSymbolSchemaValidationService:
                 symbol_id="test_empty",
                 content=""
             )
-        
+
         # Test with None content
         with pytest.raises(ValidationError):
             service.validate_symbol(
                 symbol_id="test_none",
                 content=None
             )
-    
+
     def test_schema_versioning(self, service):
         """Test schema versioning functionality."""
         # Create a new schema version
@@ -445,19 +445,19 @@ class TestSymbolSchemaValidationService:
             rules=[],
             is_default=False
         )
-        
+
         success = service.add_schema_version(new_schema)
         assert success is True
-        
+
         # Validate with specific schema version
         result = service.validate_symbol(
             symbol_id="test_schema_version",
             content="<svgx></svgx>",
             schema_version="1.1.0"
         )
-        
+
         assert result.schema_version == "1.1.0"
-    
+
     def test_cleanup(self, service):
         """Test service cleanup."""
         # Add some test data
@@ -465,20 +465,20 @@ class TestSymbolSchemaValidationService:
             symbol_id="test_cleanup",
             content="<svgx></svgx>"
         )
-        
+
         # Perform cleanup
         service.cleanup()
-        
+
         # Verify cleanup completed without errors
         assert True  # If we get here, cleanup succeeded
-    
+
     def test_concurrent_validations(self, service, sample_svgx_xml):
         """Test concurrent validation operations."""
         import threading
-        
+
         results = []
         errors = []
-        
+
         def validate_symbol(symbol_id):
             try:
                 result = service.validate_symbol(
@@ -488,32 +488,31 @@ class TestSymbolSchemaValidationService:
                 results.append(result)
             except Exception as e:
                 errors.append(e)
-        
+
         # Start multiple validation threads
         threads = []
         for i in range(5):
             thread = threading.Thread(
                 target=validate_symbol,
                 args=(f"concurrent_symbol_{i}",)
-            )
             threads.append(thread)
             thread.start()
-        
+
         # Wait for all threads to complete
         for thread in threads:
             thread.join()
-        
+
         # Verify all validations completed
         assert len(results) == 5
         assert len(errors) == 0
-        
+
         for result in results:
             assert result.is_valid is True
 
 
 class TestValidationRule:
     """Test suite for ValidationRule dataclass."""
-    
+
     def test_validation_rule_creation(self):
         """Test creating a ValidationRule instance."""
         rule = ValidationRule(
@@ -525,7 +524,7 @@ class TestValidationRule:
             severity="warning",
             is_active=True
         )
-        
+
         assert rule.rule_id == "test_rule"
         assert rule.name == "Test Rule"
         assert rule.description == "A test validation rule"
@@ -537,7 +536,7 @@ class TestValidationRule:
 
 class TestValidationResult:
     """Test suite for ValidationResult dataclass."""
-    
+
     def test_validation_result_creation(self):
         """Test creating a ValidationResult instance."""
         result = ValidationResult(
@@ -551,7 +550,7 @@ class TestValidationResult:
             applied_rules=["xml_schema_validation"],
             metadata={"test": "data"}
         )
-        
+
         assert result.symbol_id == "test_symbol"
         assert result.is_valid is True
         assert len(result.errors) == 0
@@ -565,7 +564,7 @@ class TestValidationResult:
 
 class TestSchemaVersion:
     """Test suite for SchemaVersion dataclass."""
-    
+
     def test_schema_version_creation(self):
         """Test creating a SchemaVersion instance."""
         schema = SchemaVersion(
@@ -576,7 +575,7 @@ class TestSchemaVersion:
             is_default=True,
             metadata={"test": "data"}
         )
-        
+
         assert schema.version == "1.0.0"
         assert schema.description == "Test schema"
         assert schema.schema_content == "<xs:schema>...</xs:schema>"
@@ -587,7 +586,7 @@ class TestSchemaVersion:
 
 class TestValidationCache:
     """Test suite for ValidationCache dataclass."""
-    
+
     def test_validation_cache_creation(self):
         """Test creating a ValidationCache instance."""
         result = ValidationResult(
@@ -601,15 +600,13 @@ class TestValidationCache:
             applied_rules=[],
             metadata={}
         )
-        
+
         cache = ValidationCache(
             symbol_hash="abc123",
             schema_version="1.0.0",
             validation_result=result,
             cached_at=datetime.now(),
             expires_at=datetime.now() + timedelta(hours=1)
-        )
-        
         assert cache.symbol_hash == "abc123"
         assert cache.schema_version == "1.0.0"
         assert cache.validation_result == result
@@ -620,11 +617,11 @@ class TestValidationCache:
 def test_create_symbol_schema_validation_service():
     """Test creating a service instance using the factory function."""
     service = create_symbol_schema_validation_service()
-    
+
     assert service is not None
     assert isinstance(service, SVGXSymbolSchemaValidationService)
     assert service.options['enable_caching'] is True
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"]) 
+    pytest.main([__file__, "-v"])

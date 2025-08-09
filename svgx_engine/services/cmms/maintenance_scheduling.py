@@ -177,8 +177,9 @@ class MaintenanceCalendar(BaseModel):
 
 class MaintenanceSchedulingService:
     """Service for managing maintenance scheduling and workflows"""
-    
+
     def __init__(self):
+        pass
     """
     Perform __init__ operation
 
@@ -200,16 +201,16 @@ Example:
         self.history: Dict[UUID, MaintenanceHistory] = {}
         self.calendars: Dict[UUID, MaintenanceCalendar] = {}
         self.notification_system = UnifiedNotificationSystem()
-        
+
         # Initialize default calendar
         default_calendar = MaintenanceCalendar(
             name="Default Maintenance Calendar",
             description="Default calendar for maintenance scheduling"
         )
         self.calendars[default_calendar.id] = default_calendar
-        
+
         logger.info("MaintenanceSchedulingService initialized")
-    
+
     async def create_maintenance_schedule(
         self,
         name: str,
@@ -242,11 +243,11 @@ Example:
             required_parts=required_parts or [],
             steps=steps or []
         )
-        
+
         self.schedules[schedule.id] = schedule
         logger.info(f"Created maintenance schedule: {schedule.id}")
         return schedule
-    
+
     async def update_maintenance_schedule(
         self,
         schedule_id: UUID,
@@ -256,34 +257,33 @@ Example:
         if schedule_id not in self.schedules:
             logger.warning(f"Schedule not found: {schedule_id}")
             return None
-        
+
         schedule = self.schedules[schedule_id]
         for key, value in kwargs.items():
             if hasattr(schedule, key):
                 setattr(schedule, key, value)
-        
+
         schedule.updated_at = datetime.utcnow()
         logger.info(f"Updated maintenance schedule: {schedule_id}")
         return schedule
-    
+
     async def delete_maintenance_schedule(self, schedule_id: UUID) -> bool:
         """Delete a maintenance schedule"""
         if schedule_id not in self.schedules:
             logger.warning(f"Schedule not found: {schedule_id}")
             return False
-        
+
         del self.schedules[schedule_id]
         logger.info(f"Deleted maintenance schedule: {schedule_id}")
         return True
-    
+
     async def get_maintenance_schedule(self, schedule_id: UUID) -> Optional[MaintenanceSchedule]:
         """Get a maintenance schedule by ID"""
         return self.schedules.get(schedule_id)
-    
+
     async def get_all_maintenance_schedules(self) -> List[MaintenanceSchedule]:
         """Get all maintenance schedules"""
-        return list(self.schedules.values())
-    
+        return list(self.schedules.values()
     async def create_maintenance_task(
         self,
         schedule_id: UUID,
@@ -299,10 +299,10 @@ Example:
         if schedule_id not in self.schedules:
             logger.warning(f"Schedule not found: {schedule_id}")
             return None
-        
+
         schedule = self.schedules[schedule_id]
         scheduled_end = scheduled_start + timedelta(minutes=schedule.estimated_duration)
-        
+
         task = MaintenanceTask(
             schedule_id=schedule_id,
             asset_id=asset_id,
@@ -316,16 +316,14 @@ Example:
             location=location,
             notes=notes,
             remaining_steps=schedule.steps.copy()
-        )
-        
         self.tasks[task.id] = task
         logger.info(f"Created maintenance task: {task.id}")
-        
+
         # Send notification for new task
         await self._send_task_notification(task, "created")
-        
+
         return task
-    
+
     async def update_maintenance_task(
         self,
         task_id: UUID,
@@ -335,41 +333,41 @@ Example:
         if task_id not in self.tasks:
             logger.warning(f"Task not found: {task_id}")
             return None
-        
+
         task = self.tasks[task_id]
         old_status = task.status
-        
+
         for key, value in kwargs.items():
             if hasattr(task, key):
                 setattr(task, key, value)
-        
+
         task.updated_at = datetime.utcnow()
-        
+
         # Handle status changes
         if 'status' in kwargs and kwargs['status'] != old_status:
             await self._handle_status_change(task, old_status, kwargs['status'])
-        
+
         logger.info(f"Updated maintenance task: {task_id}")
         return task
-    
+
     async def start_maintenance_task(self, task_id: UUID, performer: str) -> Optional[MaintenanceTask]:
         """Start a maintenance task"""
         task = await self.get_maintenance_task(task_id)
         if not task:
             return None
-        
+
         if task.status != MaintenanceStatus.SCHEDULED:
             logger.warning(f"Cannot start task {task_id}: status is {task.status}")
             return None
-        
+
         task.status = MaintenanceStatus.IN_PROGRESS
         task.actual_start = datetime.utcnow()
         task.assigned_to = performer
-        
+
         await self._send_task_notification(task, "started")
         logger.info(f"Started maintenance task: {task_id}")
         return task
-    
+
     async def complete_maintenance_task(
         self,
         task_id: UUID,
@@ -383,17 +381,17 @@ Example:
         task = await self.get_maintenance_task(task_id)
         if not task:
             return None
-        
+
         if task.status != MaintenanceStatus.IN_PROGRESS:
             logger.warning(f"Cannot complete task {task_id}: status is {task.status}")
             return None
-        
+
         task.status = MaintenanceStatus.COMPLETED
         task.actual_end = datetime.utcnow()
         task.actual_duration = actual_duration
         task.actual_cost = actual_cost
         task.notes = notes
-        
+
         # Create history record
         history = MaintenanceHistory(
             task_id=task.id,
@@ -411,22 +409,22 @@ Example:
             findings=findings,
             recommendations=recommendations
         )
-        
+
         self.history[history.id] = history
-        
+
         # Update schedule last executed
         schedule = self.schedules[task.schedule_id]
         schedule.last_executed = datetime.utcnow()
         schedule.next_scheduled = await self._calculate_next_schedule(schedule)
-        
+
         await self._send_task_notification(task, "completed")
         logger.info(f"Completed maintenance task: {task_id}")
         return task
-    
+
     async def get_maintenance_task(self, task_id: UUID) -> Optional[MaintenanceTask]:
         """Get a maintenance task by ID"""
         return self.tasks.get(task_id)
-    
+
     async def get_maintenance_tasks(
         self,
         status: Optional[MaintenanceStatus] = None,
@@ -436,8 +434,7 @@ Example:
         end_date: Optional[datetime] = None
     ) -> List[MaintenanceTask]:
         """Get maintenance tasks with optional filters"""
-        tasks = list(self.tasks.values())
-        
+        tasks = list(self.tasks.values()
         if status:
             tasks = [t for t in tasks if t.status == status]
         if asset_id:
@@ -448,9 +445,9 @@ Example:
             tasks = [t for t in tasks if t.scheduled_start >= start_date]
         if end_date:
             tasks = [t for t in tasks if t.scheduled_start <= end_date]
-        
+
         return tasks
-    
+
     async def get_maintenance_history(
         self,
         asset_id: Optional[str] = None,
@@ -459,8 +456,7 @@ Example:
         end_date: Optional[datetime] = None
     ) -> List[MaintenanceHistory]:
         """Get maintenance history with optional filters"""
-        history = list(self.history.values())
-        
+        history = list(self.history.values()
         if asset_id:
             history = [h for h in history if h.asset_id == asset_id]
         if maintenance_type:
@@ -469,23 +465,23 @@ Example:
             history = [h for h in history if h.actual_start >= start_date]
         if end_date:
             history = [h for h in history if h.actual_start <= end_date]
-        
+
         return history
-    
+
     async def schedule_recurring_maintenance(self) -> List[MaintenanceTask]:
         """Schedule recurring maintenance tasks based on schedules"""
         new_tasks = []
         current_time = datetime.utcnow()
-        
+
         for schedule in self.schedules.values():
             if not schedule.is_active:
                 continue
-            
-            # Check if it's time to schedule next maintenance
+
+            # Check if it's time to schedule next maintenance'
             if schedule.next_scheduled and schedule.next_scheduled <= current_time:
                 # Find assets that need this maintenance
                 assets = await self._get_assets_for_maintenance(schedule)
-                
+
                 for asset_id in assets:
                     task = await self.create_maintenance_task(
                         schedule_id=schedule.id,
@@ -495,13 +491,13 @@ Example:
                     )
                     if task:
                         new_tasks.append(task)
-                
+
                 # Update next scheduled time
                 schedule.next_scheduled = await self._calculate_next_schedule(schedule)
-        
+
         logger.info(f"Scheduled {len(new_tasks)} new maintenance tasks")
         return new_tasks
-    
+
     async def get_maintenance_calendar(
         self,
         calendar_id: UUID,
@@ -512,14 +508,14 @@ Example:
         if calendar_id not in self.calendars:
             logger.warning(f"Calendar not found: {calendar_id}")
             return []
-        
+
         tasks = await self.get_maintenance_tasks(
             start_date=start_date,
             end_date=end_date
         )
-        
+
         return tasks
-    
+
     async def create_maintenance_calendar(
         self,
         name: str,
@@ -540,15 +536,15 @@ Example:
             working_days=working_days or {0, 1, 2, 3, 4},
             holidays=holidays or []
         )
-        
+
         self.calendars[calendar.id] = calendar
         logger.info(f"Created maintenance calendar: {calendar.id}")
         return calendar
-    
+
     async def _calculate_next_schedule(self, schedule: MaintenanceSchedule) -> datetime:
         """Calculate next scheduled maintenance time"""
         base_time = schedule.last_executed or datetime.utcnow()
-        
+
         if schedule.frequency == MaintenanceFrequency.DAILY:
             return base_time + timedelta(days=1)
         elif schedule.frequency == MaintenanceFrequency.WEEKLY:
@@ -567,13 +563,13 @@ Example:
                 return base_time + timedelta(days=schedule.trigger_value)
             else:
                 return base_time + timedelta(days=30)  # Default to monthly
-    
+
     async def _get_assets_for_maintenance(self, schedule: MaintenanceSchedule) -> List[str]:
         """Get assets that need maintenance based on schedule"""
         # This would typically query the asset management system
         # For now, return a mock list of assets
         return [f"asset_{i}" for i in range(1, 6)]
-    
+
     async def _handle_status_change(
         self,
         task: MaintenanceTask,
@@ -587,7 +583,7 @@ Example:
             await self._send_task_notification(task, "started")
         elif new_status == MaintenanceStatus.COMPLETED:
             await self._send_task_notification(task, "completed")
-    
+
     async def _send_task_notification(self, task: MaintenanceTask, event_type: str):
         """Send notification for task events"""
         try:
@@ -595,17 +591,17 @@ Example:
             subject = f"Maintenance Task {event_type.title()}: {schedule.name}"
             message = f"""
             Maintenance Task {event_type.title()}
-            
+
             Task ID: {task.id}
             Asset: {task.asset_id}
             Type: {schedule.maintenance_type.value}
             Priority: {task.priority.value}
             Status: {task.status.value}
             Scheduled: {task.scheduled_start}
-            
+
             {task.notes or ''}
             """
-            
+
             # Send to assigned person if available
             if task.assigned_to:
                 await self.notification_system.send_email_notification(
@@ -613,17 +609,17 @@ Example:
                     subject=subject,
                     message=message
                 )
-            
+
             # Send to team if assigned
             if task.assigned_team:
                 await self.notification_system.send_slack_notification(
                     channel=task.assigned_team,
                     message=f"Maintenance task {event_type}: {schedule.name} for asset {task.asset_id}"
                 )
-        
+
         except Exception as e:
             logger.error(f"Failed to send notification for task {task.id}: {e}")
-    
+
     async def get_maintenance_statistics(
         self,
         start_date: Optional[datetime] = None,
@@ -632,15 +628,15 @@ Example:
         """Get maintenance statistics"""
         tasks = await self.get_maintenance_tasks(start_date=start_date, end_date=end_date)
         history = await self.get_maintenance_history(start_date=start_date, end_date=end_date)
-        
+
         total_tasks = len(tasks)
         completed_tasks = len([t for t in tasks if t.status == MaintenanceStatus.COMPLETED])
         overdue_tasks = len([t for t in tasks if t.status == MaintenanceStatus.OVERDUE])
         in_progress_tasks = len([t for t in tasks if t.status == MaintenanceStatus.IN_PROGRESS])
-        
+
         total_cost = sum(h.cost or Decimal(0) for h in history)
         total_duration = sum(h.duration or 0 for h in history)
-        
+
         return {
             "total_tasks": total_tasks,
             "completed_tasks": completed_tasks,
@@ -651,4 +647,4 @@ Example:
             "total_duration_hours": total_duration / 60 if total_duration else 0,
             "average_cost_per_task": float(total_cost / len(history)) if history else 0,
             "average_duration_per_task": (total_duration / len(history)) if history else 0
-        } 
+        }

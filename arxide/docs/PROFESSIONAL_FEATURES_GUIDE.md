@@ -482,4 +482,4 @@ interface CloudSyncProps {
 
 **ArxIDE Professional Features** - Enterprise-grade collaboration, AI, and cloud capabilities.
 
-*Built with ❤️ by the Arxos Team* 
+*Built with ❤️ by the Arxos Team*

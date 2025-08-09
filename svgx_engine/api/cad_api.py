@@ -11,7 +11,7 @@ CTO Directives:
 - Complete CAD system integration
 """
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any, Union
 from decimal import Decimal
@@ -134,46 +134,44 @@ async def create_drawing(request: CreateDrawingRequest, user: User = Depends(get
     """Create a new CAD drawing"""
     try:
         drawing_id = cad_system.create_new_drawing(
-            request.name, 
+            request.name,
             request.precision_level
         )
-        
+
         if not drawing_id:
             raise HTTPException(status_code=500, detail="Failed to create drawing")
-        
+
         return CreateDrawingResponse(
             drawing_id=drawing_id,
             name=request.name,
             precision_level=request.precision_level.value,
             message="Drawing created successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error creating drawing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/point", response_model=AddPointResponse)
 async def add_precision_point(request: AddPointRequest, user: User = Depends(get_current_user)):
     """Add a precision point to the drawing"""
     try:
         point = cad_system.add_precision_point(
-            request.x, 
-            request.y, 
+            request.x,
+            request.y,
             request.z
         )
-        
+
         if not point:
             raise HTTPException(status_code=500, detail="Failed to add precision point")
-        
+
         return AddPointResponse(
             point=point.to_dict(),
             message="Precision point added successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error adding precision point: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/constraint", response_model=AddConstraintResponse)
 async def add_constraint(request: AddConstraintRequest, user: User = Depends(get_current_user)):
     """Add a constraint to the drawing"""
@@ -183,18 +181,17 @@ async def add_constraint(request: AddConstraintRequest, user: User = Depends(get
             request.entities,
             request.parameters
         )
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to add constraint")
-        
+
         return AddConstraintResponse(
             message="Constraint added successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error adding constraint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/dimension", response_model=AddDimensionResponse)
 async def add_dimension(request: AddDimensionRequest, user: User = Depends(get_current_user)):
     """Add a dimension to the drawing"""
@@ -205,31 +202,30 @@ async def add_dimension(request: AddDimensionRequest, user: User = Depends(get_c
             Decimal(str(request.start_point['y'])),
             Decimal(str(request.start_point['z'])) if 'z' in request.start_point else None
         )
-        
+
         end_point = PrecisionPoint(
             Decimal(str(request.end_point['x'])),
             Decimal(str(request.end_point['y'])),
             Decimal(str(request.end_point['z'])) if 'z' in request.end_point else None
         )
-        
+
         success = cad_system.add_dimension(
             request.dimension_type,
             start_point,
             end_point,
             request.style_name
         )
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to add dimension")
-        
+
         return AddDimensionResponse(
             message="Dimension added successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error adding dimension: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/parameter", response_model=AddParameterResponse)
 async def add_parameter(request: AddParameterRequest, user: User = Depends(get_current_user)):
     """Add a parameter to the drawing"""
@@ -241,10 +237,10 @@ async def add_parameter(request: AddParameterRequest, user: User = Depends(get_c
             request.unit,
             request.description
         )
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to add parameter")
-        
+
         # Get the parameter info
         parameter_info = {
             'name': request.name,
@@ -253,41 +249,39 @@ async def add_parameter(request: AddParameterRequest, user: User = Depends(get_c
             'unit': request.unit,
             'description': request.description
         }
-        
+
         return AddParameterResponse(
             parameter=parameter_info,
             message="Parameter added successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error adding parameter: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/assembly", response_model=CreateAssemblyResponse)
 async def create_assembly(request: CreateAssemblyRequest, user: User = Depends(get_current_user)):
     """Create an assembly in the drawing"""
     try:
         assembly_id = cad_system.create_assembly(request.name)
-        
+
         if not assembly_id:
             raise HTTPException(status_code=500, detail="Failed to create assembly")
-        
+
         assembly_info = {
             'assembly_id': assembly_id,
             'name': request.name,
             'components': [],
             'constraints': []
         }
-        
+
         return CreateAssemblyResponse(
             assembly=assembly_info,
             message="Assembly created successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error creating assembly: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/assembly/component", response_model=AddComponentResponse)
 async def add_component_to_assembly(request: AddComponentRequest, user: User = Depends(get_current_user)):
     """Add a component to an assembly"""
@@ -296,95 +290,87 @@ async def add_component_to_assembly(request: AddComponentRequest, user: User = D
             request.assembly_id,
             request.component
         )
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to add component to assembly")
-        
+
         return AddComponentResponse(
             message="Component added to assembly successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error adding component to assembly: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/views", response_model=GenerateViewsResponse)
 async def generate_views(request: GenerateViewsRequest, user: User = Depends(get_current_user)):
     """Generate views for the drawing"""
     try:
         views = cad_system.generate_views(request.model_geometry)
-        
+
         return GenerateViewsResponse(
             views=views,
             message="Views generated successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error generating views: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/constraints/solve")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def solve_constraints(drawing_id: str, user: User = Depends(get_current_user)):
     """Solve all constraints in the drawing"""
     try:
         success = cad_system.solve_constraints()
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Failed to solve constraints")
-        
+
         return {"message": "Constraints solved successfully"}
-        
+
     except Exception as e:
         logger.error(f"Error solving constraints: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/validate")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def validate_drawing(drawing_id: str, user: User = Depends(get_current_user)):
     """Validate the entire drawing"""
     try:
         success = cad_system.validate_drawing()
-        
+
         if not success:
             raise HTTPException(status_code=500, detail="Drawing validation failed")
-        
+
         return {"message": "Drawing validated successfully"}
-        
+
     except Exception as e:
         logger.error(f"Error validating drawing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/cad/drawing/{drawing_id}", response_model=DrawingInfoResponse)
 async def get_drawing_info(drawing_id: str, user: User = Depends(get_current_user)):
     """Get comprehensive drawing information"""
     try:
         info = cad_system.get_drawing_info()
-        
+
         return DrawingInfoResponse(
             info=info,
             message="Drawing info retrieved successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error getting drawing info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/cad/export", response_model=ExportDrawingResponse)
 async def export_drawing(request: ExportDrawingRequest, user: User = Depends(get_current_user)):
     """Export the drawing in specified format"""
     try:
         export_data = cad_system.export_drawing(request.format)
-        
+
         return ExportDrawingResponse(
             export_data=export_data,
             message="Drawing exported successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error exporting drawing: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/cad/system/info", response_model=CADSystemInfoResponse)
 async def get_cad_system_info(user: User = Depends(get_current_user)):
     """Get CAD system information"""
@@ -403,18 +389,16 @@ async def get_cad_system_info(user: User = Depends(get_current_user)):
             'assembly_info': cad_system.assembly_system.get_all_assemblies(),
             'view_info': cad_system.view_system.get_all_layouts()
         }
-        
+
         return CADSystemInfoResponse(
             system_info=system_info,
             message="CAD system info retrieved successfully"
         )
-        
+
     except Exception as e:
         logger.error(f"Error getting CAD system info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 @app.get("/cad/drawings")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def get_drawing_history(user: User = Depends(get_current_user)):
     """Get drawing history"""
     try:
@@ -434,23 +418,21 @@ async def get_drawing_history(user: User = Depends(get_current_user)):
                 'updated_at': '2024-01-02T12:00:00Z'
             }
         ]
-        
+
         return {
             'message': 'Drawing history retrieved successfully',
             'history': history
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting drawing history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 # Health check endpoint
 @app.get("/health")
-async def endpoint_name(request: Request, user: User = Depends(get_current_user)):
 async def health_check(user: User = Depends(get_current_user)):
     """Health check endpoint"""
     return {"status": "healthy", "service": "CAD API"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001) 
+    uvicorn.run(app, host="0.0.0.0", port=8001)

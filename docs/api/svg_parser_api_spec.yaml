@@ -3,7 +3,7 @@ info:
   title: SVG-BIM Parser API
   description: |
     API for SVG to BIM conversion and management. This service provides comprehensive functionality for:
-    
+
     - SVG parsing and symbol recognition
     - BIM model assembly and management
     - Export interoperability (IFC, DXF, SVG)
@@ -12,22 +12,22 @@ info:
     - AHJ (Authorities Having Jurisdiction) integration
     - Smart tagging and data structuring
     - Multi-system integration
-    
+
     ## Authentication
-    
+
     This API uses JWT Bearer token authentication. Include the token in the Authorization header:
     ```
     Authorization: Bearer <your-jwt-token>
     ```
-    
+
     ## Rate Limiting
-    
+
     - Unauthenticated requests: 100 requests per minute
     - Authenticated requests: 1000 requests per minute
     - Admin requests: 2000 requests per minute
-    
+
     ## Error Handling
-    
+
     All errors follow a consistent format:
     ```json
     {
@@ -1684,4 +1684,4 @@ tags:
   - name: Data Structuring
     description: Structured data responses
   - name: Multi-System Integration
-    description: External system integration 
+    description: External system integration

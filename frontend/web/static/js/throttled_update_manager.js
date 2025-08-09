@@ -10,28 +10,28 @@ class ThrottledUpdateManager {
         this.frameInterval = 1000 / this.targetFPS; // ms between frames
         this.maxBatchSize = options.maxBatchSize || 100; // Maximum updates per batch
         this.batchTimeout = options.batchTimeout || 16; // ms to wait for batching
-        
+
         // Update state
         this.isRunning = false;
         this.lastFrameTime = 0;
         this.pendingUpdates = new Map(); // Map of update types to their data
         this.updateQueue = []; // Queue of batched updates
         this.animationFrameId = null;
-        
+
         // Performance tracking
         this.frameCount = 0;
         this.lastFPSUpdate = 0;
         this.currentFPS = 0;
         this.frameTimes = [];
         this.maxFrameTimeHistory = 60; // Keep last 60 frame times
-        
+
         // Device performance detection
         this.devicePerformance = this.detectDevicePerformance();
         this.adaptiveThrottling = options.adaptiveThrottling !== false; // Default to true
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         // Update types and their priorities
         this.updateTypes = {
             'viewport': { priority: 1, throttle: 16 }, // High priority, 60fps
@@ -42,11 +42,11 @@ class ThrottledUpdateManager {
             'ui': { priority: 4, throttle: 200 }, // Lowest priority, 5fps
             'batch': { priority: 0, throttle: 0 } // Immediate, no throttling
         };
-        
+
         // Initialize
         this.initialize();
     }
-    
+
     /**
      * Initialize the throttled update manager
      */
@@ -58,14 +58,14 @@ class ThrottledUpdateManager {
             target_fps: this.targetFPS
           });
         }
-        
+
         // Adjust settings based on device performance
         this.adaptToDevicePerformance();
-        
+
         // Start the update loop
         this.start();
     }
-    
+
     /**
      * Detect device performance capabilities
      */
@@ -73,23 +73,23 @@ class ThrottledUpdateManager {
         const performance = window.performance;
         const memory = performance.memory;
         const hardwareConcurrency = navigator.hardwareConcurrency || 1;
-        
+
         // Check for high refresh rate displays
         const refreshRate = this.detectRefreshRate();
-        
+
         // Check for hardware acceleration
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
         const hasHardwareAcceleration = gl && gl.getExtension('WEBGL_debug_renderer_info');
-        
+
         // Calculate performance score
         let score = 0;
-        
+
         // CPU cores
         if (hardwareConcurrency >= 8) score += 3;
         else if (hardwareConcurrency >= 4) score += 2;
         else if (hardwareConcurrency >= 2) score += 1;
-        
+
         // Memory
         if (memory) {
             const totalMemory = memory.totalJSHeapSizeLimit;
@@ -97,20 +97,20 @@ class ThrottledUpdateManager {
             else if (totalMemory >= 1073741824) score += 2; // 1GB+
             else if (totalMemory >= 536870912) score += 1; // 512MB+
         }
-        
+
         // Refresh rate
         if (refreshRate >= 120) score += 2;
         else if (refreshRate >= 60) score += 1;
-        
+
         // Hardware acceleration
         if (hasHardwareAcceleration) score += 1;
-        
+
         // Determine performance level
         if (score >= 8) return 'high';
         else if (score >= 5) return 'medium';
         else return 'low';
     }
-    
+
     /**
      * Detect display refresh rate
      */
@@ -119,31 +119,31 @@ class ThrottledUpdateManager {
         let lastTime = performance.now();
         let frameCount = 0;
         let refreshRate = 60; // Default
-        
+
         const detectFrame = (currentTime) => {
             frameCount++;
-            
+
             if (frameCount >= 60) {
                 const elapsed = currentTime - lastTime;
                 refreshRate = Math.round((frameCount / elapsed) * 1000);
                 return;
             }
-            
+
             requestAnimationFrame(detectFrame);
         };
-        
+
         requestAnimationFrame(detectFrame);
-        
+
         // Return detected refresh rate (with fallback)
         return refreshRate || 60;
     }
-    
+
     /**
      * Adapt settings based on device performance
      */
     adaptToDevicePerformance() {
         if (!this.adaptiveThrottling) return;
-        
+
         switch (this.devicePerformance) {
             case 'high':
                 this.targetFPS = 120;
@@ -164,7 +164,7 @@ class ThrottledUpdateManager {
                 this.batchTimeout = 32;
                 break;
         }
-        
+
         if (window.arxLogger) {
           window.arxLogger.info('Adapted settings for device performance', {
             component: 'throttled_update_manager',
@@ -175,17 +175,17 @@ class ThrottledUpdateManager {
           });
         }
     }
-    
+
     /**
      * Start the update loop
      */
     start() {
         if (this.isRunning) return;
-        
+
         this.isRunning = true;
         this.lastFrameTime = performance.now();
         this.animationFrameId = requestAnimationFrame(this.updateLoop.bind(this));
-        
+
         if (window.arxLogger) {
           window.arxLogger.info('ThrottledUpdateManager: Update loop started', {
             component: 'throttled_update_manager',
@@ -193,19 +193,19 @@ class ThrottledUpdateManager {
           });
         }
     }
-    
+
     /**
      * Stop the update loop
      */
     stop() {
         if (!this.isRunning) return;
-        
+
         this.isRunning = false;
         if (this.animationFrameId) {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
-        
+
         if (window.arxLogger) {
           window.arxLogger.info('ThrottledUpdateManager: Update loop stopped', {
             component: 'throttled_update_manager',
@@ -213,23 +213,23 @@ class ThrottledUpdateManager {
           });
         }
     }
-    
+
     /**
      * Main update loop using requestAnimationFrame
      */
     updateLoop(currentTime) {
         if (!this.isRunning) return;
-        
+
         // Calculate frame time
         const frameTime = currentTime - this.lastFrameTime;
         this.lastFrameTime = currentTime;
-        
+
         // Track frame times for FPS calculation
         this.frameTimes.push(frameTime);
         if (this.frameTimes.length > this.maxFrameTimeHistory) {
             this.frameTimes.shift();
         }
-        
+
         // Update FPS counter
         this.frameCount++;
         if (currentTime - this.lastFPSUpdate >= 1000) {
@@ -237,16 +237,16 @@ class ThrottledUpdateManager {
             this.frameCount = 0;
             this.lastFPSUpdate = currentTime;
         }
-        
+
         // Check if we should process updates
         if (frameTime >= this.frameInterval) {
             this.processUpdates(currentTime);
         }
-        
+
         // Continue the loop
         this.animationFrameId = requestAnimationFrame(this.updateLoop.bind(this));
     }
-    
+
     /**
      * Process pending updates
      */
@@ -260,39 +260,39 @@ class ThrottledUpdateManager {
                 const priorityB = this.updateTypes[typeB]?.priority || 5;
                 return priorityA - priorityB;
             });
-        
+
         let processedCount = 0;
         const processedTypes = new Set();
-        
+
         for (const [updateType, updateData] of sortedUpdates) {
             if (processedCount >= this.maxBatchSize) break;
-            
+
             const updateConfig = this.updateTypes[updateType];
             if (!updateConfig) continue;
-            
+
             // Check if enough time has passed since last update of this type
             const lastUpdate = updateData.lastUpdate || 0;
             if (currentTime - lastUpdate < updateConfig.throttle) continue;
-            
+
             // Process the update
             this.executeUpdate(updateType, updateData);
-            
+
             // Mark as processed
             processedTypes.add(updateType);
             processedCount++;
-            
+
             // Update timestamp
             updateData.lastUpdate = currentTime;
         }
-        
+
         // Remove processed updates
         for (const updateType of processedTypes) {
             this.pendingUpdates.delete(updateType);
         }
-        
+
         // Process batched updates
         this.processBatchedUpdates();
-        
+
         // Trigger performance event
         this.triggerEvent('updateProcessed', {
             processedCount,
@@ -301,7 +301,7 @@ class ThrottledUpdateManager {
             pendingUpdates: this.pendingUpdates.size
         });
     }
-    
+
     /**
      * Queue an update for processing
      */
@@ -310,25 +310,25 @@ class ThrottledUpdateManager {
             console.warn(`ThrottledUpdateManager: Unknown update type: ${updateType}`);
             return;
         }
-        
+
         const {
             priority = this.updateTypes[updateType].priority,
             immediate = false,
             batch = false
         } = options;
-        
+
         // Handle immediate updates
         if (immediate) {
             this.executeUpdate(updateType, updateData);
             return;
         }
-        
+
         // Handle batched updates
         if (batch) {
             this.queueBatchedUpdate(updateType, updateData);
             return;
         }
-        
+
         // Queue regular update
         this.pendingUpdates.set(updateType, {
             ...updateData,
@@ -336,7 +336,7 @@ class ThrottledUpdateManager {
             timestamp: performance.now()
         });
     }
-    
+
     /**
      * Queue a batched update
      */
@@ -346,29 +346,29 @@ class ThrottledUpdateManager {
             data: updateData,
             timestamp: performance.now()
         });
-        
+
         // Process batch after timeout
         setTimeout(() => {
             this.processBatchedUpdates();
         }, this.batchTimeout);
     }
-    
+
     /**
      * Process batched updates
      */
     processBatchedUpdates() {
         if (this.updateQueue.length === 0) return;
-        
+
         // Group updates by type
         const groupedUpdates = new Map();
-        
+
         for (const update of this.updateQueue) {
             if (!groupedUpdates.has(update.type)) {
                 groupedUpdates.set(update.type, []);
             }
             groupedUpdates.get(update.type).push(update);
         }
-        
+
         // Process each group
         for (const [updateType, updates] of groupedUpdates) {
             if (updates.length === 1) {
@@ -379,11 +379,11 @@ class ThrottledUpdateManager {
                 this.executeBatchedUpdate(updateType, updates);
             }
         }
-        
+
         // Clear the queue
         this.updateQueue = [];
     }
-    
+
     /**
      * Execute a single update
      */
@@ -395,15 +395,15 @@ class ThrottledUpdateManager {
                 data: updateData,
                 timestamp: performance.now()
             });
-            
+
             // Trigger type-specific event
             this.triggerEvent(`${updateType}Update`, updateData);
-            
+
         } catch (error) {
             console.error(`ThrottledUpdateManager: Error executing ${updateType} update:`, error);
         }
     }
-    
+
     /**
      * Execute a batched update
      */
@@ -415,21 +415,21 @@ class ThrottledUpdateManager {
                 count: updates.length,
                 timestamp: performance.now()
             };
-            
+
             // Trigger batched update event
             this.triggerEvent('batchedUpdate', {
                 type: updateType,
                 data: batchedData
             });
-            
+
             // Trigger type-specific batched event
             this.triggerEvent(`${updateType}BatchedUpdate`, batchedData);
-            
+
         } catch (error) {
             console.error(`ThrottledUpdateManager: Error executing batched ${updateType} update:`, error);
         }
     }
-    
+
     /**
      * Throttle a function call
      */
@@ -443,7 +443,7 @@ class ThrottledUpdateManager {
             }
         };
     }
-    
+
     /**
      * Debounce a function call
      */
@@ -456,15 +456,15 @@ class ThrottledUpdateManager {
             }, delay);
         };
     }
-    
+
     /**
      * Get current performance metrics
      */
     getPerformanceMetrics() {
-        const avgFrameTime = this.frameTimes.length > 0 
-            ? this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length 
+        const avgFrameTime = this.frameTimes.length > 0
+            ? this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length
             : 0;
-        
+
         return {
             currentFPS: this.currentFPS,
             targetFPS: this.targetFPS,
@@ -475,7 +475,7 @@ class ThrottledUpdateManager {
             frameTimeHistory: [...this.frameTimes]
         };
     }
-    
+
     /**
      * Set update type configuration
      */
@@ -485,7 +485,7 @@ class ThrottledUpdateManager {
             ...config
         };
     }
-    
+
     /**
      * Add event listener
      */
@@ -495,7 +495,7 @@ class ThrottledUpdateManager {
         }
         this.eventHandlers.get(event).push(handler);
     }
-    
+
     /**
      * Remove event listener
      */
@@ -508,7 +508,7 @@ class ThrottledUpdateManager {
             }
         }
     }
-    
+
     /**
      * Trigger custom event
      */
@@ -523,7 +523,7 @@ class ThrottledUpdateManager {
             });
         }
     }
-    
+
     /**
      * Clear all pending updates
      */
@@ -531,7 +531,7 @@ class ThrottledUpdateManager {
         this.pendingUpdates.clear();
         this.updateQueue = [];
     }
-    
+
     /**
      * Force immediate processing of all pending updates
      */
@@ -539,7 +539,7 @@ class ThrottledUpdateManager {
         const currentTime = performance.now();
         this.processUpdates(currentTime);
     }
-    
+
     /**
      * Destroy the throttled update manager
      */
@@ -561,4 +561,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = ThrottledUpdateManager;
 } else if (typeof window !== 'undefined') {
     window.ThrottledUpdateManager = ThrottledUpdateManager;
-} 
+}

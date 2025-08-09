@@ -54,7 +54,7 @@ class ThermalAnalysisConfig:
 class ThermalIntegrationService:
     """
     Integrated thermal analysis service that combines basic and advanced capabilities.
-    
+
     Features:
     - Unified interface for thermal analysis
     - Automatic mode selection based on requirements
@@ -62,7 +62,7 @@ class ThermalIntegrationService:
     - Performance optimization
     - Comprehensive result analysis
     """
-    
+
     def __init__(self):
         """Initialize the thermal integration service."""
         self.advanced_service = AdvancedThermalAnalysisService()
@@ -71,28 +71,28 @@ class ThermalIntegrationService:
         self.structural_service = StructuralAnalysisService()
         self.config = ThermalAnalysisConfig()
         logger.info("Thermal integration service initialized")
-    
-    def analyze_thermal_behavior(self, 
+
+    def analyze_thermal_behavior(self,
                                request: Union[Dict[str, Any], ThermalAnalysisRequest],
                                config: Optional[ThermalAnalysisConfig] = None) -> Dict[str, Any]:
         """
         Analyze thermal behavior using appropriate analysis mode.
-        
+
         Args:
             request: Thermal analysis request (dict or ThermalAnalysisRequest)
             config: Analysis configuration
-            
+
         Returns:
             Analysis results
         """
         if config is None:
             config = self.config
-        
+
         # Determine analysis mode based on request complexity
         mode = self._determine_analysis_mode(request, config)
-        
+
         logger.info(f"Performing thermal analysis in {mode} mode")
-        
+
         if mode == ThermalAnalysisMode.BASIC:
             return self._perform_basic_analysis(request, config)
         elif mode == ThermalAnalysisMode.ADVANCED:
@@ -101,44 +101,44 @@ class ThermalIntegrationService:
             return self._perform_coupled_analysis(request, config)
         else:
             raise ValueError(f"Unknown analysis mode: {mode}")
-    
-    def _determine_analysis_mode(self, request: Union[Dict[str, Any], ThermalAnalysisRequest], 
+
+    def _determine_analysis_mode(self, request: Union[Dict[str, Any], ThermalAnalysisRequest],
                                config: ThermalAnalysisConfig) -> str:
         """Determine the appropriate analysis mode based on request complexity."""
-        
+
         # Check if advanced features are requested
         has_temperature_dependent = config.enable_temperature_dependent_properties
         has_phase_change = config.enable_phase_change
         has_complex_boundary_conditions = self._has_complex_boundary_conditions(request)
         has_multi_physics = self._has_multi_physics_requirements(request)
-        
+
         # Use advanced mode if any advanced features are requested
-        if (has_temperature_dependent or has_phase_change or 
+        if (has_temperature_dependent or has_phase_change or
             has_complex_boundary_conditions or has_multi_physics):
             return ThermalAnalysisMode.ADVANCED
-        
+
         # Use coupled mode for multi-physics analysis
         if has_multi_physics:
             return ThermalAnalysisMode.COUPLED
-        
+
         # Default to basic mode
         return ThermalAnalysisMode.BASIC
-    
+
     def _has_complex_boundary_conditions(self, request: Union[Dict[str, Any], ThermalAnalysisRequest]) -> bool:
         """Check if request has complex boundary conditions."""
         if isinstance(request, dict):
             boundary_conditions = request.get("boundary_conditions", [])
         else:
             boundary_conditions = request.boundary_conditions
-        
+
         for bc in boundary_conditions:
             if hasattr(bc, 'time_function') and bc.time_function is not None:
                 return True
             if hasattr(bc, 'non_linear_function') and bc.non_linear_function is not None:
                 return True
-        
+
         return False
-    
+
     def _has_multi_physics_requirements(self, request: Union[Dict[str, Any], ThermalAnalysisRequest]) -> bool:
         """Check if request requires multi-physics analysis."""
         if isinstance(request, dict):
@@ -147,10 +147,10 @@ class ThermalIntegrationService:
         else:
             analysis_types = getattr(request, 'analysis_types', [])
             coupling = getattr(request, 'coupling', {})
-        
+
         return len(analysis_types) > 1 or bool(coupling)
-    
-    def _perform_basic_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest], 
+
+    def _perform_basic_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest],
                                config: ThermalAnalysisConfig) -> Dict[str, Any]:
         """Perform basic thermal analysis."""
         try:
@@ -159,24 +159,24 @@ class ThermalIntegrationService:
                 thermal_request = self._dict_to_thermal_request(request)
             else:
                 thermal_request = request
-            
+
             # Perform basic analysis
             result = self.basic_service.analyze_thermal_behavior(thermal_request)
-            
+
             # Convert result to standard format
             return self._convert_basic_result(result)
-            
+
         except Exception as e:
             logger.error(f"Error in basic thermal analysis: {str(e)}")
             raise
-    
-    def _perform_advanced_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest], 
+
+    def _perform_advanced_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest],
                                  config: ThermalAnalysisConfig) -> Dict[str, Any]:
         """Perform advanced thermal analysis."""
         try:
             # Convert request to advanced format
             advanced_request = self._convert_to_advanced_request(request, config)
-            
+
             # Perform advanced analysis
             result = self.advanced_service.solve_advanced_thermal_analysis(
                 advanced_request["mesh"],
@@ -185,7 +185,7 @@ class ThermalIntegrationService:
                 advanced_request.get("initial_temperature", 293.15),
                 config.time_steps
             )
-            
+
             # Add analysis metadata
             result["analysis_mode"] = "advanced"
             result["config"] = {
@@ -194,65 +194,65 @@ class ThermalIntegrationService:
                 "adaptive_mesh": config.enable_adaptive_mesh,
                 "non_linear_solver": config.enable_non_linear_solver
             }
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error in advanced thermal analysis: {str(e)}")
             raise
-    
-    def _perform_coupled_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest], 
+
+    def _perform_coupled_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest],
                                 config: ThermalAnalysisConfig) -> Dict[str, Any]:
         """Perform coupled multi-physics analysis."""
         try:
             # Perform thermal analysis
             thermal_result = self._perform_advanced_analysis(request, config)
-            
+
             # Perform fluid analysis if required
             fluid_result = None
             if self._requires_fluid_analysis(request):
                 fluid_result = self._perform_fluid_analysis(request)
-            
+
             # Perform structural analysis if required
             structural_result = None
             if self._requires_structural_analysis(request):
                 structural_result = self._perform_structural_analysis(request)
-            
+
             # Couple results
             coupled_result = self._couple_analysis_results(
                 thermal_result, fluid_result, structural_result
             )
-            
+
             coupled_result["analysis_mode"] = "coupled"
             return coupled_result
-            
+
         except Exception as e:
             logger.error(f"Error in coupled analysis: {str(e)}")
             raise
-    
-    def _convert_to_advanced_request(self, request: Union[Dict[str, Any], ThermalAnalysisRequest], 
+
+    def _convert_to_advanced_request(self, request: Union[Dict[str, Any], ThermalAnalysisRequest],
                                    config: ThermalAnalysisConfig) -> Dict[str, Any]:
         """Convert request to advanced thermal analysis format."""
         if isinstance(request, dict):
-            # Extract components from dict
+            # Extract components from dict import dict
             mesh = request.get("mesh", [])
             materials = request.get("materials", {})
             boundary_conditions = request.get("boundary_conditions", [])
             initial_temperature = request.get("initial_temperature", 293.15)
         else:
-            # Extract from ThermalAnalysisRequest
+            # Extract from ThermalAnalysisRequest import ThermalAnalysisRequest
             mesh = request.mesh
             materials = self._extract_materials_from_request(request)
             boundary_conditions = self._convert_boundary_conditions(request.boundary_conditions)
             initial_temperature = 293.15
-        
+
         return {
             "mesh": mesh,
             "materials": materials,
             "boundary_conditions": boundary_conditions,
             "initial_temperature": initial_temperature
         }
-    
+
     def _extract_materials_from_request(self, request: ThermalAnalysisRequest) -> Dict[str, str]:
         """Extract material assignments from thermal analysis request."""
         materials = {}
@@ -260,29 +260,29 @@ class ThermalIntegrationService:
             for element_id, material in request.materials.items():
                 materials[str(element_id)] = material.name.lower().replace(" ", "_")
         return materials
-    
+
     def _convert_boundary_conditions(self, boundary_conditions: List) -> List[AdvancedBoundaryCondition]:
         """Convert boundary conditions to advanced format."""
         advanced_bcs = []
-        
+
         for bc in boundary_conditions:
             if hasattr(bc, 'type'):
                 bc_type = BoundaryConditionType(bc.type.value)
             else:
                 bc_type = BoundaryConditionType.TEMPERATURE
-            
+
             advanced_bc = AdvancedBoundaryCondition(
                 type=bc_type,
                 location=bc.location if hasattr(bc, 'location') else [0],
                 value=bc.value if hasattr(bc, 'value') else {"value": 293.15}
             )
             advanced_bcs.append(advanced_bc)
-        
+
         return advanced_bcs
-    
+
     def _dict_to_thermal_request(self, request_dict: Dict[str, Any]) -> ThermalAnalysisRequest:
         """Convert dictionary to ThermalAnalysisRequest."""
-        # This is a simplified conversion - in practice, you'd need more robust conversion
+        # This is a simplified conversion - in practice, you'd need more robust conversion'
         return ThermalAnalysisRequest(
             analysis_type="thermal",
             mesh=request_dict.get("mesh", []),
@@ -291,7 +291,7 @@ class ThermalIntegrationService:
             heat_sources=request_dict.get("heat_sources", []),
             solver_settings=request_dict.get("solver_settings", {})
         )
-    
+
     def _convert_basic_result(self, result) -> Dict[str, Any]:
         """Convert basic analysis result to standard format."""
         return {
@@ -307,25 +307,25 @@ class ThermalIntegrationService:
             "final_temperature": result.temperature_field if hasattr(result, 'temperature_field') else [],
             "final_heat_flux": result.heat_flux if hasattr(result, 'heat_flux') else []
         }
-    
+
     def _requires_fluid_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest]) -> bool:
         """Check if fluid analysis is required."""
         if isinstance(request, dict):
             analysis_types = request.get("analysis_types", [])
         else:
             analysis_types = getattr(request, 'analysis_types', [])
-        
+
         return "fluid" in analysis_types or "convection" in analysis_types
-    
+
     def _requires_structural_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest]) -> bool:
         """Check if structural analysis is required."""
         if isinstance(request, dict):
             analysis_types = request.get("analysis_types", [])
         else:
             analysis_types = getattr(request, 'analysis_types', [])
-        
+
         return "structural" in analysis_types or "stress" in analysis_types
-    
+
     def _perform_fluid_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest]) -> Dict[str, Any]:
         """Perform fluid dynamics analysis."""
         # Simplified fluid analysis
@@ -335,7 +335,7 @@ class ThermalIntegrationService:
             "turbulence_field": [],
             "convergence_info": {"converged": True, "iterations": 1, "residual": 0.0}
         }
-    
+
     def _perform_structural_analysis(self, request: Union[Dict[str, Any], ThermalAnalysisRequest]) -> Dict[str, Any]:
         """Perform structural analysis."""
         # Simplified structural analysis
@@ -345,49 +345,49 @@ class ThermalIntegrationService:
             "displacement_field": [],
             "convergence_info": {"converged": True, "iterations": 1, "residual": 0.0}
         }
-    
-    def _couple_analysis_results(self, thermal_result: Dict[str, Any], 
-                               fluid_result: Optional[Dict[str, Any]], 
+
+    def _couple_analysis_results(self, thermal_result: Dict[str, Any],
+                               fluid_result: Optional[Dict[str, Any]],
                                structural_result: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Couple results from different physics analyses."""
         coupled_result = thermal_result.copy()
-        
+
         if fluid_result:
             coupled_result["fluid_analysis"] = fluid_result
             # Add fluid-thermal coupling effects
             coupled_result["convection_enhancement"] = self._calculate_convection_enhancement(
                 thermal_result, fluid_result
             )
-        
+
         if structural_result:
             coupled_result["structural_analysis"] = structural_result
             # Add thermal-structural coupling effects
             coupled_result["thermal_stress"] = self._calculate_thermal_stress(
                 thermal_result, structural_result
             )
-        
+
         return coupled_result
-    
-    def _calculate_convection_enhancement(self, thermal_result: Dict[str, Any], 
+
+    def _calculate_convection_enhancement(self, thermal_result: Dict[str, Any],
                                         fluid_result: Dict[str, Any]) -> float:
         """Calculate convection enhancement due to fluid flow."""
         # Simplified calculation
         return 1.2  # 20% enhancement
-    
-    def _calculate_thermal_stress(self, thermal_result: Dict[str, Any], 
+
+    def _calculate_thermal_stress(self, thermal_result: Dict[str, Any],
                                 structural_result: Dict[str, Any]) -> List[float]:
         """Calculate thermal stress."""
         # Simplified thermal stress calculation
         temperature_field = thermal_result.get("final_temperature", [])
         thermal_stress = []
-        
+
         for temp in temperature_field:
             # Simplified thermal stress = E * α * ΔT
             thermal_stress.append(200e9 * 12e-6 * (temp - 293.15))
-        
+
         return thermal_stress
-    
-    def optimize_thermal_system(self, 
+
+    def optimize_thermal_system(self,
                               request: Union[Dict[str, Any], ThermalAnalysisRequest],
                               objective_function: callable,
                               optimization_variables: List[str],
@@ -395,23 +395,23 @@ class ThermalIntegrationService:
                               config: Optional[ThermalAnalysisConfig] = None) -> Dict[str, Any]:
         """
         Optimize thermal system using advanced algorithms.
-        
+
         Args:
             request: Thermal analysis request
             objective_function: Function to minimize
             optimization_variables: Variables to optimize
             constraints: Optimization constraints
             config: Analysis configuration
-            
+
         Returns:
             Optimization results
         """
         if config is None:
             config = self.config
-        
+
         # Use advanced service for optimization
         advanced_request = self._convert_to_advanced_request(request, config)
-        
+
         return self.advanced_service.optimize_thermal_design(
             advanced_request["mesh"],
             advanced_request["materials"],
@@ -420,15 +420,15 @@ class ThermalIntegrationService:
             optimization_variables,
             constraints
         )
-    
+
     def get_material_properties(self, material_name: str, temperature: float = 293.15) -> Dict[str, float]:
         """
         Get material properties at specified temperature.
-        
+
         Args:
             material_name: Name of the material
             temperature: Temperature in Kelvin
-            
+
         Returns:
             Material properties
         """
@@ -443,13 +443,13 @@ class ThermalIntegrationService:
         else:
             # Fall back to basic service
             return self.basic_service.materials.get(material_name, {})
-    
-    def visualize_results(self, results: Dict[str, Any], 
+
+    def visualize_results(self, results: Dict[str, Any],
                          mesh: List[Dict[str, Any]],
                          config: Optional[ThermalAnalysisConfig] = None) -> None:
         """
         Visualize thermal analysis results.
-        
+
         Args:
             results: Analysis results
             mesh: Finite element mesh
@@ -457,29 +457,29 @@ class ThermalIntegrationService:
         """
         if config is None:
             config = self.config
-        
+
         if config.enable_visualization and results.get("analysis_mode") == "advanced":
             # Use advanced visualization
             temperature_field = np.array(results.get("final_temperature", []))
             heat_flux = results.get("final_heat_flux", [])
             material_phases = results.get("material_phases", {}).get(-1, {})  # Last time step
-            
+
             self.advanced_service.visualize_thermal_results(
                 mesh, temperature_field, heat_flux, material_phases
             )
         else:
             # Use basic visualization
             logger.info("Basic visualization not implemented")
-    
-    def generate_report(self, results: Dict[str, Any], 
+
+    def generate_report(self, results: Dict[str, Any],
                        request: Union[Dict[str, Any], ThermalAnalysisRequest]) -> Dict[str, Any]:
         """
         Generate comprehensive thermal analysis report.
-        
+
         Args:
             results: Analysis results
             request: Original analysis request
-            
+
         Returns:
             Analysis report
         """
@@ -511,14 +511,14 @@ class ThermalIntegrationService:
                 "mesh_refinements": len(results.get("mesh_refinement_history", []))
             }
         }
-        
+
         return report
-    
+
     def _identify_phase_change_locations(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Identify locations where phase changes occur."""
         phase_changes = []
         material_phases = results.get("material_phases", {})
-        
+
         if material_phases:
             # Analyze phase changes across time steps
             for time_step, phases in material_phases.items():
@@ -529,7 +529,7 @@ class ThermalIntegrationService:
                             "time_step": time_step,
                             "phase": phase.value
                         })
-        
+
         return phase_changes
 
 
@@ -537,7 +537,7 @@ class ThermalIntegrationService:
 if __name__ == "__main__":
     # Initialize integration service
     integration_service = ThermalIntegrationService()
-    
+
     # Create analysis request
     request = {
         "mesh": [
@@ -567,7 +567,7 @@ if __name__ == "__main__":
             }
         ]
     }
-    
+
     # Configure analysis
     config = ThermalAnalysisConfig(
         mode=ThermalAnalysisMode.ADVANCED,
@@ -576,15 +576,15 @@ if __name__ == "__main__":
         enable_adaptive_mesh=True,
         enable_non_linear_solver=True
     )
-    
+
     # Perform analysis
     results = integration_service.analyze_thermal_behavior(request, config)
-    
+
     # Generate report
     report = integration_service.generate_report(results, request)
-    
+
     print("Thermal analysis completed!")
     print(f"Analysis mode: {report['analysis_summary']['mode']}")
     print(f"Convergence: {report['analysis_summary']['convergence']}")
     print(f"Temperature range: {report['thermal_results']['temperature_range']['min']:.2f} - {report['thermal_results']['temperature_range']['max']:.2f} K")
-    print(f"Phases present: {report['material_analysis']['phases_present']}") 
+    print(f"Phases present: {report['material_analysis']['phases_present']}")

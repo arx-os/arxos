@@ -8,9 +8,9 @@
 
 This library provides:
 
-- 🔹 Standardized SVG symbols for all major building systems  
-- 🔹 Categorization by discipline (e.g., electrical, mechanical, AV, plumbing)  
-- 🔹 Structured metadata for integration with `svgx-engine`, `arx_symbol`, and `object_type` schemas  
+- 🔹 Standardized SVG symbols for all major building systems
+- 🔹 Categorization by discipline (e.g., electrical, mechanical, AV, plumbing)
+- 🔹 Structured metadata for integration with `svgx-engine`, `arx_symbol`, and `object_type` schemas
 - 🔹 Future support for AI-based search, filtering, and behavior simulation
 
 ---

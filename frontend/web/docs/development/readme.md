@@ -206,7 +206,7 @@ GET /api/monitoring/api-usage
    # Clone the repository
    git clone <repository-url>
    cd arx-web-frontend
-   
+
    # Serve locally (using any HTTP server)
    python -m http.server 8000
    # or
@@ -222,7 +222,7 @@ GET /api/monitoring/api-usage
    ```bash
    # Run end-to-end tests
    node tests/e2e_tests.js
-   
+
    # Run specific test suites
    node tests/e2e_asset_inventory.js
    ```

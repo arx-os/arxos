@@ -351,7 +351,7 @@ func (h *DataVendorAdminHandler) GetBillingData(w http.ResponseWriter, r *http.R
 	// Get revenue trends (last 12 months)
 	var revenueTrends []map[string]interface{}
 	h.db.Raw(`
-		SELECT 
+		SELECT
 			DATE_FORMAT(created_at, '%Y-%m') as month,
 			COUNT(*) * 0.01 as revenue
 		FROM api_key_usages
@@ -364,35 +364,35 @@ func (h *DataVendorAdminHandler) GetBillingData(w http.ResponseWriter, r *http.R
 	// Get billing data for each vendor
 	var billing []map[string]interface{}
 	h.db.Raw(`
-		SELECT 
+		SELECT
 			v.vendor_name,
 			v.access_level as plan,
-			CASE 
+			CASE
 				WHEN v.access_level = 'basic' THEN 50.0
 				WHEN v.access_level = 'premium' THEN 150.0
 				WHEN v.access_level = 'enterprise' THEN 500.0
 				ELSE 0.0
 			END as monthly_rate,
 			COUNT(u.id) as usage_this_month,
-			CASE 
+			CASE
 				WHEN COUNT(u.id) > 10000 THEN (COUNT(u.id) - 10000) * 0.005
 				ELSE 0.0
 			END as overage_charges,
-			CASE 
+			CASE
 				WHEN v.access_level = 'basic' THEN 50.0
 				WHEN v.access_level = 'premium' THEN 150.0
 				WHEN v.access_level = 'enterprise' THEN 500.0
 				ELSE 0.0
-			END + CASE 
+			END + CASE
 				WHEN COUNT(u.id) > 10000 THEN (COUNT(u.id) - 10000) * 0.005
 				ELSE 0.0
 			END as total_due,
-			CASE 
+			CASE
 				WHEN v.is_active AND v.expires_at > NOW() THEN 'active'
 				ELSE 'inactive'
 			END as status
 		FROM data_vendor_api_keys v
-		LEFT JOIN api_key_usages u ON v.id = u.api_key_id 
+		LEFT JOIN api_key_usages u ON v.id = u.api_key_id
 			AND u.created_at >= ?
 		GROUP BY v.id, v.vendor_name, v.access_level, v.is_active, v.expires_at
 		ORDER BY total_due DESC

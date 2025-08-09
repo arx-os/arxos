@@ -102,4 +102,4 @@ USER appuser
 EXPOSE 8000
 
 # Testing command
-CMD ["pytest", "tests/", "-v", "--cov=svgx_engine", "--cov-report=html"] 
+CMD ["pytest", "tests/", "-v", "--cov=svgx_engine", "--cov-report=html"]

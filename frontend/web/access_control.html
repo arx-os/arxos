@@ -75,7 +75,7 @@
                     </div>
                     <div class="form-group">
                         <label for="secondary_roles">Secondary Roles (comma-separated)</label>
-                        <input type="text" id="secondary_roles" name="secondary_roles" class="form-control" 
+                        <input type="text" id="secondary_roles" name="secondary_roles" class="form-control"
                                placeholder="e.g., contractor, inspector">
                     </div>
                     <button type="submit" class="btn btn-primary">
@@ -156,19 +156,19 @@
                         </div>
                         <div class="form-group">
                             <label for="resource_id">Resource ID (optional)</label>
-                            <input type="text" id="resource_id" name="resource_id" class="form-control" 
+                            <input type="text" id="resource_id" name="resource_id" class="form-control"
                                    placeholder="Specific resource ID">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="building_id">Building ID (optional)</label>
-                            <input type="text" id="building_id" name="building_id" class="form-control" 
+                            <input type="text" id="building_id" name="building_id" class="form-control"
                                    placeholder="Building identifier">
                         </div>
                         <div class="form-group">
                             <label for="floor_id">Floor ID (optional)</label>
-                            <input type="text" id="floor_id" name="floor_id" class="form-control" 
+                            <input type="text" id="floor_id" name="floor_id" class="form-control"
                                    placeholder="Floor identifier">
                         </div>
                     </div>
@@ -230,19 +230,19 @@
                         </div>
                         <div class="form-group">
                             <label for="check_resource_id">Resource ID (optional)</label>
-                            <input type="text" id="check_resource_id" name="resource_id" class="form-control" 
+                            <input type="text" id="check_resource_id" name="resource_id" class="form-control"
                                    placeholder="Specific resource ID">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="check_building_id">Building ID (optional)</label>
-                            <input type="text" id="check_building_id" name="building_id" class="form-control" 
+                            <input type="text" id="check_building_id" name="building_id" class="form-control"
                                    placeholder="Building identifier">
                         </div>
                         <div class="form-group">
                             <label for="check_floor_id">Floor ID (optional)</label>
-                            <input type="text" id="check_floor_id" name="floor_id" class="form-control" 
+                            <input type="text" id="check_floor_id" name="floor_id" class="form-control"
                                    placeholder="Floor identifier">
                         </div>
                     </div>
@@ -269,7 +269,7 @@
                     <div class="filters-row">
                         <div class="filter-group">
                             <label for="filter_user_id">User ID</label>
-                            <input type="text" id="filter_user_id" name="user_id" class="filter-control" 
+                            <input type="text" id="filter_user_id" name="user_id" class="filter-control"
                                    placeholder="Filter by user">
                         </div>
                         <div class="filter-group">
@@ -290,7 +290,7 @@
                         </div>
                         <div class="filter-group">
                             <label for="filter_resource_id">Resource ID</label>
-                            <input type="text" id="filter_resource_id" name="resource_id" class="filter-control" 
+                            <input type="text" id="filter_resource_id" name="resource_id" class="filter-control"
                                    placeholder="Filter by resource">
                         </div>
                         <div class="filter-group">
@@ -364,7 +364,7 @@
                     </div>
                     <div class="form-group">
                         <label for="bulk_permissions">Permissions (JSON) *</label>
-                        <textarea id="bulk_permissions" name="permissions" class="form-control" rows="10" required 
+                        <textarea id="bulk_permissions" name="permissions" class="form-control" rows="10" required
                                   placeholder='[
   {
     "role": "contractor",
@@ -404,11 +404,11 @@
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
                     const targetTab = button.getAttribute('data-tab');
-                    
+
                     // Remove active class from all buttons and contents
                     tabButtons.forEach(btn => btn.classList.remove('active'));
                     tabContents.forEach(content => content.classList.remove('active'));
-                    
+
                     // Add active class to clicked button and corresponding content
                     button.classList.add('active');
                     document.getElementById(`${targetTab}-tab`).classList.add('active');
@@ -425,4 +425,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

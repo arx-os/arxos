@@ -46,7 +46,7 @@ PLUGIN_METADATA = {
         plugin_path = os.path.join(PLUGIN_DIR, "invalid_plugin.py")
         with open(plugin_path, "w") as f:
             f.write(plugin_code)
-        
+
         plugin = custom_behavior_plugin_system.load_plugin("invalid_plugin")
         assert plugin is None or plugin.metadata.status == PluginStatus.ERROR
 
@@ -88,7 +88,7 @@ def register(behavior_management_system):
         plugin_path = os.path.join(PLUGIN_DIR, "valid_plugin.py")
         with open(plugin_path, "w") as f:
             f.write(plugin_code)
-        
+
         plugin = custom_behavior_plugin_system.load_plugin("valid_plugin")
         assert plugin is not None
         assert plugin.metadata.status == PluginStatus.LOADED
@@ -117,7 +117,7 @@ def register(behavior_management_system):
         plugin_path = os.path.join(PLUGIN_DIR, "validate_plugin.py")
         with open(plugin_path, "w") as f:
             f.write(plugin_code)
-        
+
         plugin = custom_behavior_plugin_system.load_plugin("validate_plugin")
         assert plugin is not None
         assert custom_behavior_plugin_system.validate_plugin("validate_plugin") is True
@@ -141,7 +141,7 @@ def register(behavior_management_system):
         plugin_path = os.path.join(PLUGIN_DIR, "perf_plugin.py")
         with open(plugin_path, "w") as f:
             f.write(plugin_code)
-        
+
         plugin = custom_behavior_plugin_system.load_plugin("perf_plugin")
         assert plugin is not None
         # Simulate performance metrics
@@ -189,7 +189,7 @@ def register(behavior_management_system):
         plugin_path = os.path.join(PLUGIN_DIR, "unload_plugin.py")
         with open(plugin_path, "w") as f:
             f.write(plugin_code)
-        
+
         plugin = custom_behavior_plugin_system.load_plugin("unload_plugin")
         assert plugin is not None
         assert 'unload_behavior' in plugin.registered_behaviors
@@ -198,4 +198,4 @@ def register(behavior_management_system):
         assert result is True
         # Behavior should be removed
         behavior = behavior_management_system.get_behavior('unload_behavior')
-        assert behavior is None 
+        assert behavior is None

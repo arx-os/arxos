@@ -110,11 +110,11 @@ def apply_constraints(coordinates: Dict[str, float], constraints: List[Dict[str,
     """Apply geometric constraints to coordinates."""
     # Simple snap-to-grid constraint (1mm grid)
     grid_size = 1.0  # 1mm
-    
+
     x = round(coordinates.get("x", 0) / grid_size) * grid_size
     y = round(coordinates.get("y", 0) / grid_size) * grid_size
     z = round(coordinates.get("z", 0) / grid_size) * grid_size
-    
+
     return {"x": x, "y": y, "z": z}
 ```
 
@@ -144,7 +144,7 @@ Avoids float precision issues in UI state:
 ```python
 class FixedPointNumber:
     """Fixed-point number implementation to avoid float precision issues."""
-    
+
     def __init__(self, value: Union[int, float, str], scale: int = 1000):
         self.scale = scale
         if isinstance(value, str):
@@ -158,12 +158,12 @@ class FixedPointNumber:
 #### Precision Operations
 
 ```python
-def round_coordinates(self, coordinates: Dict[str, float], 
+def round_coordinates(self, coordinates: Dict[str, float],
                      level: Optional[PrecisionLevel] = None) -> Dict[str, float]:
     """Round coordinates to the specified precision level."""
     target_level = level or self.current_level
     precision = self.get_precision_value(target_level)
-    
+
     rounded_coords = {}
     for axis, value in coordinates.items():
         if self.config.use_fixed_point:
@@ -175,7 +175,7 @@ def round_coordinates(self, coordinates: Dict[str, float],
             # Use decimal arithmetic for high precision
             decimal_value = decimal.Decimal(str(value))
             rounded_coords[axis] = float(round(decimal_value / precision) * precision)
-    
+
     return rounded_coords
 ```
 
@@ -236,9 +236,9 @@ Comprehensive test coverage for all implemented functionality:
 def test_ui_response_time_target(self, client):
     """Test UI response time target (<16ms)."""
     start_time = time.time()
-    
+
     response = client.get("/health")
-    
+
     duration = (time.time() - start_time) * 1000
     assert duration < 16.0, f"UI response time {duration:.2f}ms exceeds 16ms target"
 
@@ -262,7 +262,7 @@ def test_physics_simulation_time_target(self, client):
 ### Performance Targets
 
 ✅ **UI Response Time**: <16ms target achieved
-✅ **Redraw Time**: <32ms target achieved  
+✅ **Redraw Time**: <32ms target achieved
 ✅ **Physics Simulation**: <100ms target achieved
 
 ### Engineering Practices
@@ -354,4 +354,4 @@ The implementation includes:
 - ✅ Comprehensive testing with performance validation
 - ✅ Clean, documented code following best practices
 
-The system is ready for production deployment and further development of advanced features. 
+The system is ready for production deployment and further development of advanced features.

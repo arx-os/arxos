@@ -31,18 +31,18 @@ class ProjectorState:
 class ProjectorBehavior:
     """
     Behavior profile for AV projector devices
-    
+
     Handles power management, image adjustment, lamp management,
     and performance monitoring for projector devices.
     """
-    
+
     def __init__(self, projector_id: str, properties: Dict[str, Any]):
         """
         Initialize projector behavior
-        
+
         Args:
             projector_id: Unique identifier for the projector
-            properties: Projector properties from schema
+            properties: Projector properties from schema import schema
         """
         self.projector_id = projector_id
         self.properties = properties
@@ -53,15 +53,15 @@ class ProjectorBehavior:
         self.contrast_ratio = properties.get("contrast_ratio", "2000:1")
         self.throw_ratio = properties.get("throw_ratio", "1.2:1")
         self.lamp_life = properties.get("lamp_life", 4000)
-        
+
         # Performance tracking
         self.start_time = time.time()
         self.operation_log = []
-    
+
     def power_on(self) -> Dict[str, Any]:
         """
         Power on the projector device
-        
+
         Returns:
             Dict containing operation result and new state
         """
@@ -77,11 +77,11 @@ class ProjectorBehavior:
                         "max_lamp_life": self.lamp_life,
                         "timestamp": time.time()
                     }
-                
+
                 self.state.power_state = "on"
                 self.state.uptime_hours = 0.0
                 self.log_operation("power_on", "success")
-                
+
                 return {
                     "success": True,
                     "operation": "power_on",
@@ -104,11 +104,11 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def power_off(self) -> Dict[str, Any]:
         """
         Power off the projector device
-        
+
         Returns:
             Dict containing operation result and new state
         """
@@ -117,10 +117,10 @@ class ProjectorBehavior:
                 # Enter cooling mode first
                 self.state.power_state = "cooling"
                 time.sleep(0.1)  # Simulate cooling time
-                
+
                 self.state.power_state = "off"
                 self.log_operation("power_off", "success")
-                
+
                 return {
                     "success": True,
                     "operation": "power_off",
@@ -143,14 +143,14 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def set_input_source(self, input_source: str) -> Dict[str, Any]:
         """
         Switch to specified input source
-        
+
         Args:
             input_source: Name of input source to switch to
-            
+
         Returns:
             Dict containing operation result and new state
         """
@@ -163,7 +163,7 @@ class ProjectorBehavior:
                     "valid_sources": self.input_sources,
                     "timestamp": time.time()
                 }
-            
+
             if self.state.power_state != "on":
                 return {
                     "success": False,
@@ -171,10 +171,10 @@ class ProjectorBehavior:
                     "message": "Projector must be powered on to change input source",
                     "timestamp": time.time()
                 }
-            
+
             self.state.input_source = input_source
             self.log_operation("set_input_source", "success", input_source)
-            
+
             return {
                 "success": True,
                 "operation": "set_input_source",
@@ -190,14 +190,14 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def adjust_keystone(self, keystone_value: int) -> Dict[str, Any]:
         """
         Adjust keystone correction
-        
+
         Args:
             keystone_value: Keystone value (-30 to 30)
-            
+
         Returns:
             Dict containing operation result and new state
         """
@@ -209,7 +209,7 @@ class ProjectorBehavior:
                     "message": f"Keystone value must be between -30 and 30, got {keystone_value}",
                     "timestamp": time.time()
                 }
-            
+
             if self.state.power_state != "on":
                 return {
                     "success": False,
@@ -217,10 +217,10 @@ class ProjectorBehavior:
                     "message": "Projector must be powered on to adjust keystone",
                     "timestamp": time.time()
                 }
-            
+
             self.state.keystone = keystone_value
             self.log_operation("adjust_keystone", "success", str(keystone_value))
-            
+
             return {
                 "success": True,
                 "operation": "adjust_keystone",
@@ -236,15 +236,15 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def adjust_lens_shift(self, horizontal: int, vertical: int) -> Dict[str, Any]:
         """
         Adjust lens shift
-        
+
         Args:
             horizontal: Horizontal shift (-10 to 10)
             vertical: Vertical shift (-10 to 10)
-            
+
         Returns:
             Dict containing operation result and new state
         """
@@ -256,7 +256,7 @@ class ProjectorBehavior:
                     "message": f"Horizontal shift must be between -10 and 10, got {horizontal}",
                     "timestamp": time.time()
                 }
-            
+
             if not -10 <= vertical <= 10:
                 return {
                     "success": False,
@@ -264,7 +264,7 @@ class ProjectorBehavior:
                     "message": f"Vertical shift must be between -10 and 10, got {vertical}",
                     "timestamp": time.time()
                 }
-            
+
             if self.state.power_state != "on":
                 return {
                     "success": False,
@@ -272,11 +272,11 @@ class ProjectorBehavior:
                     "message": "Projector must be powered on to adjust lens shift",
                     "timestamp": time.time()
                 }
-            
+
             self.state.lens_shift_h = horizontal
             self.state.lens_shift_v = vertical
             self.log_operation("adjust_lens_shift", "success", f"H:{horizontal}, V:{vertical}")
-            
+
             return {
                 "success": True,
                 "operation": "adjust_lens_shift",
@@ -293,14 +293,14 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def set_brightness(self, brightness: int) -> Dict[str, Any]:
         """
         Set projector brightness
-        
+
         Args:
             brightness: Brightness level (0-100)
-            
+
         Returns:
             Dict containing operation result and new state
         """
@@ -312,7 +312,7 @@ class ProjectorBehavior:
                     "message": f"Brightness must be between 0 and 100, got {brightness}",
                     "timestamp": time.time()
                 }
-            
+
             if self.state.power_state != "on":
                 return {
                     "success": False,
@@ -320,10 +320,10 @@ class ProjectorBehavior:
                     "message": "Projector must be powered on to adjust brightness",
                     "timestamp": time.time()
                 }
-            
+
             self.state.brightness = brightness
             self.log_operation("set_brightness", "success", str(brightness))
-            
+
             return {
                 "success": True,
                 "operation": "set_brightness",
@@ -339,18 +339,18 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def get_lamp_status(self) -> Dict[str, Any]:
         """
         Get lamp status and hours
-        
+
         Returns:
             Dict containing lamp status information
         """
         try:
             lamp_percentage = (self.state.lamp_hours / self.lamp_life) * 100
             lamp_status = "good" if lamp_percentage < 80 else "warning" if lamp_percentage < 90 else "replace"
-            
+
             return {
                 "success": True,
                 "operation": "get_lamp_status",
@@ -368,11 +368,11 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def calibrate_projector(self) -> Dict[str, Any]:
         """
         Run projector calibration
-        
+
         Returns:
             Dict containing calibration result
         """
@@ -384,12 +384,12 @@ class ProjectorBehavior:
                     "message": "Projector must be powered on for calibration",
                     "timestamp": time.time()
                 }
-            
+
             # Simulate calibration process
             time.sleep(0.2)  # Simulate calibration time
-            
+
             self.log_operation("calibrate_projector", "success")
-            
+
             return {
                 "success": True,
                 "operation": "calibrate_projector",
@@ -413,11 +413,11 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def get_status(self) -> Dict[str, Any]:
         """
         Get current projector status
-        
+
         Returns:
             Dict containing current status information
         """
@@ -426,7 +426,7 @@ class ProjectorBehavior:
             if self.state.power_state == "on":
                 self.state.uptime_hours = (time.time() - self.start_time) / 3600
                 self.state.lamp_hours += 0.001  # Increment lamp hours slightly
-            
+
             return {
                 "success": True,
                 "operation": "get_status",
@@ -454,26 +454,26 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def validate_connections(self, connections: List[str]) -> Dict[str, Any]:
         """
         Validate projector connections
-        
+
         Args:
             connections: List of connected devices
-            
+
         Returns:
             Dict containing validation result
         """
         try:
             required_connections = ["power", "control"]
             optional_connections = ["video", "audio", "network"]
-            
+
             missing_required = [conn for conn in required_connections if conn not in connections]
             present_optional = [conn for conn in optional_connections if conn in connections]
-            
+
             is_valid = len(missing_required) == 0
-            
+
             return {
                 "success": is_valid,
                 "operation": "validate_connections",
@@ -490,7 +490,7 @@ class ProjectorBehavior:
                 "error": str(e),
                 "timestamp": time.time()
             }
-    
+
     def log_operation(self, operation: str, status: str, details: str = ""):
         """Log an operation for tracking purposes"""
         log_entry = {
@@ -501,19 +501,19 @@ class ProjectorBehavior:
             "projector_id": self.projector_id
         }
         self.operation_log.append(log_entry)
-    
+
     def get_operation_log(self) -> List[Dict[str, Any]]:
         """Get the operation log"""
         return self.operation_log
-    
+
     def reset_operation_log(self):
         """Reset the operation log"""
         self.operation_log = []
-    
+
     def get_performance_metrics(self) -> Dict[str, Any]:
         """
         Get performance metrics for the projector
-        
+
         Returns:
             Dict containing performance metrics
         """
@@ -521,7 +521,7 @@ class ProjectorBehavior:
             uptime_hours = self.state.uptime_hours
             error_rate = self.state.error_count / max(uptime_hours, 1) * 100
             lamp_percentage = (self.state.lamp_hours / self.lamp_life) * 100
-            
+
             return {
                 "success": True,
                 "operation": "get_performance_metrics",
@@ -550,12 +550,11 @@ class ProjectorBehavior:
 def create_projector_behavior(projector_id: str, properties: Dict[str, Any]) -> ProjectorBehavior:
     """
     Factory function to create a projector behavior instance
-    
+
     Args:
         projector_id: Unique identifier for the projector
-        properties: Projector properties from schema
-        
+        properties: Projector properties from schema import schema
     Returns:
         ProjectorBehavior instance
     """
-    return ProjectorBehavior(projector_id, properties) 
+    return ProjectorBehavior(projector_id, properties)

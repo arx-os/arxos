@@ -249,4 +249,4 @@ This software is licensed under the [License Type] license. See LICENSE file for
 **Release Date**: [Current Date]
 **Version**: 1.0.0
 **Compatibility**: Chrome 90+, Edge 90+, Firefox 88+, Safari 14+
-**License**: [License Type] 
+**License**: [License Type]

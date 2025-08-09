@@ -12,23 +12,23 @@ export class ObjectRegistry {
             enableIndexing: options.enableIndexing !== false,
             ...options
         };
-        
+
         // Registry storage
         this.objects = new Map();
         this.spatialIndex = new Map();
         this.metadataIndex = new Map();
         this.relationshipIndex = new Map();
-        
+
         // Cache management
         this.cache = new Map();
         this.cacheTimestamps = new Map();
-        
+
         // Search index
         this.searchIndex = new Map();
-        
+
         // Event handlers
         this.eventHandlers = new Map();
-        
+
         this.initialize();
     }
 
@@ -42,12 +42,12 @@ export class ObjectRegistry {
         document.addEventListener('objectUpdated', (event) => {
             this.handleObjectUpdate(event.detail);
         });
-        
+
         // Listen for object creation
         document.addEventListener('objectCreated', (event) => {
             this.handleObjectCreation(event.detail);
         });
-        
+
         // Listen for object deletion
         document.addEventListener('objectDeleted', (event) => {
             this.handleObjectDeletion(event.detail);
@@ -61,9 +61,9 @@ export class ObjectRegistry {
             objects.forEach(object => {
                 this.registerObject(object);
             });
-            
+
             this.triggerEvent('registryLoaded', { objectCount: this.objects.size });
-            
+
         } catch (error) {
             console.error('Failed to load initial object data:', error);
             this.triggerEvent('registryLoadFailed', { error });
@@ -73,7 +73,7 @@ export class ObjectRegistry {
     // Object registration and management
     registerObject(object) {
         const { id, building_id, floor_id, object_type, spatial_coordinates, metadata } = object;
-        
+
         // Store object data
         this.objects.set(id, {
             id,
@@ -85,25 +85,25 @@ export class ObjectRegistry {
             registered_at: Date.now(),
             updated_at: Date.now()
         });
-        
+
         // Update spatial index
         if (spatial_coordinates) {
             this.updateSpatialIndex(id, spatial_coordinates);
         }
-        
+
         // Update metadata index
         if (metadata) {
             this.updateMetadataIndex(id, metadata);
         }
-        
+
         // Update search index
         this.updateSearchIndex(id, object);
-        
+
         // Update relationship index
         if (metadata && metadata.relationships) {
             this.updateRelationshipIndex(id, metadata.relationships);
         }
-        
+
         this.triggerEvent('objectRegistered', { object });
     }
 
@@ -112,33 +112,33 @@ export class ObjectRegistry {
         if (!object) {
             throw new Error(`Object '${objectId}' not found in registry`);
         }
-        
+
         // Update object data
         const updatedObject = {
             ...object,
             ...updates,
             updated_at: Date.now()
         };
-        
+
         this.objects.set(objectId, updatedObject);
-        
+
         // Update indexes
         if (updates.spatial_coordinates) {
             this.updateSpatialIndex(objectId, updates.spatial_coordinates);
         }
-        
+
         if (updates.metadata) {
             this.updateMetadataIndex(objectId, updates.metadata);
             this.updateSearchIndex(objectId, updatedObject);
-            
+
             if (updates.metadata.relationships) {
                 this.updateRelationshipIndex(objectId, updates.metadata.relationships);
             }
         }
-        
+
         // Clear cache for this object
         this.clearCache(objectId);
-        
+
         this.triggerEvent('objectUpdated', { object: updatedObject, updates });
     }
 
@@ -147,19 +147,19 @@ export class ObjectRegistry {
         if (!object) {
             return false;
         }
-        
+
         // Remove from all indexes
         this.removeFromSpatialIndex(objectId);
         this.removeFromMetadataIndex(objectId);
         this.removeFromSearchIndex(objectId);
         this.removeFromRelationshipIndex(objectId);
-        
+
         // Remove from main registry
         this.objects.delete(objectId);
-        
+
         // Clear cache
         this.clearCache(objectId);
-        
+
         this.triggerEvent('objectUnregistered', { object });
         return true;
     }
@@ -167,11 +167,11 @@ export class ObjectRegistry {
     // Spatial indexing
     updateSpatialIndex(objectId, coordinates) {
         const key = this.generateSpatialKey(coordinates);
-        
+
         if (!this.spatialIndex.has(key)) {
             this.spatialIndex.set(key, new Set());
         }
-        
+
         this.spatialIndex.get(key).add(objectId);
     }
 
@@ -193,17 +193,17 @@ export class ObjectRegistry {
             const { x1, y1, x2, y2 } = coordinates.bounds;
             return `${Math.floor(x1/100)},${Math.floor(y1/100)},${Math.floor(x2/100)},${Math.floor(y2/100)}`;
         }
-        
+
         if (coordinates.center) {
             const { x, y } = coordinates.center;
             return `${Math.floor(x/100)},${Math.floor(y/100)}`;
         }
-        
+
         if (coordinates.position) {
             const { x, y } = coordinates.position;
             return `${Math.floor(x/100)},${Math.floor(y/100)}`;
         }
-        
+
         return 'unknown';
     }
 
@@ -211,11 +211,11 @@ export class ObjectRegistry {
     updateMetadataIndex(objectId, metadata) {
         Object.entries(metadata).forEach(([key, value]) => {
             const indexKey = `${key}:${value}`;
-            
+
             if (!this.metadataIndex.has(indexKey)) {
                 this.metadataIndex.set(indexKey, new Set());
             }
-            
+
             this.metadataIndex.get(indexKey).add(objectId);
         });
     }
@@ -234,12 +234,12 @@ export class ObjectRegistry {
     // Search indexing
     updateSearchIndex(objectId, object) {
         const searchTerms = this.extractSearchTerms(object);
-        
+
         searchTerms.forEach(term => {
             if (!this.searchIndex.has(term)) {
                 this.searchIndex.set(term, new Set());
             }
-            
+
             this.searchIndex.get(term).add(objectId);
         });
     }
@@ -257,24 +257,24 @@ export class ObjectRegistry {
 
     extractSearchTerms(object) {
         const terms = new Set();
-        
+
         // Add object ID
         terms.add(object.id.toLowerCase());
-        
+
         // Add object type
         if (object.object_type) {
             terms.add(object.object_type.toLowerCase());
         }
-        
+
         // Add building and floor IDs
         if (object.building_id) {
             terms.add(object.building_id.toLowerCase());
         }
-        
+
         if (object.floor_id) {
             terms.add(object.floor_id.toLowerCase());
         }
-        
+
         // Add metadata terms
         if (object.metadata) {
             Object.values(object.metadata).forEach(value => {
@@ -283,7 +283,7 @@ export class ObjectRegistry {
                 }
             });
         }
-        
+
         return Array.from(terms);
     }
 
@@ -291,11 +291,11 @@ export class ObjectRegistry {
     updateRelationshipIndex(objectId, relationships) {
         Object.entries(relationships).forEach(([type, relatedIds]) => {
             const relationshipKey = `${type}:${objectId}`;
-            
+
             if (!this.relationshipIndex.has(relationshipKey)) {
                 this.relationshipIndex.set(relationshipKey, new Set());
             }
-            
+
             const relatedIdArray = Array.isArray(relatedIds) ? relatedIds : [relatedIds];
             relatedIdArray.forEach(relatedId => {
                 this.relationshipIndex.get(relationshipKey).add(relatedId);
@@ -325,49 +325,49 @@ export class ObjectRegistry {
                 return cached;
             }
         }
-        
+
         const object = this.objects.get(objectId);
-        
+
         if (object && this.options.enableCaching) {
             this.setCache(objectId, object);
         }
-        
+
         return object;
     }
 
     getObjectsByBuilding(buildingId) {
         const objects = [];
-        
+
         for (const object of this.objects.values()) {
             if (object.building_id === buildingId) {
                 objects.push(object);
             }
         }
-        
+
         return objects;
     }
 
     getObjectsByFloor(buildingId, floorId) {
         const objects = [];
-        
+
         for (const object of this.objects.values()) {
             if (object.building_id === buildingId && object.floor_id === floorId) {
                 objects.push(object);
             }
         }
-        
+
         return objects;
     }
 
     getObjectsByType(objectType) {
         const objects = [];
-        
+
         for (const object of this.objects.values()) {
             if (object.object_type === objectType) {
                 objects.push(object);
             }
         }
-        
+
         return objects;
     }
 
@@ -375,19 +375,19 @@ export class ObjectRegistry {
     getObjectsInArea(bounds) {
         const objects = new Set();
         const spatialKey = this.generateSpatialKey({ bounds });
-        
+
         if (this.spatialIndex.has(spatialKey)) {
             this.spatialIndex.get(spatialKey).forEach(objectId => {
                 objects.add(this.getObject(objectId));
             });
         }
-        
+
         return Array.from(objects).filter(Boolean);
     }
 
     getObjectsNearPoint(point, radius = 100) {
         const objects = [];
-        
+
         for (const object of this.objects.values()) {
             if (object.spatial_coordinates) {
                 const distance = this.calculateDistance(point, object.spatial_coordinates);
@@ -396,13 +396,13 @@ export class ObjectRegistry {
                 }
             }
         }
-        
+
         return objects.sort((a, b) => a.distance - b.distance);
     }
 
     calculateDistance(point, coordinates) {
         let objectPoint;
-        
+
         if (coordinates.center) {
             objectPoint = coordinates.center;
         } else if (coordinates.position) {
@@ -413,7 +413,7 @@ export class ObjectRegistry {
         } else {
             return Infinity;
         }
-        
+
         const dx = point.x - objectPoint.x;
         const dy = point.y - objectPoint.y;
         return Math.sqrt(dx * dx + dy * dy);
@@ -428,10 +428,10 @@ export class ObjectRegistry {
             limit = 50,
             fuzzy = true
         } = options;
-        
+
         const searchTerms = this.tokenizeQuery(query);
         const results = new Map(); // objectId -> score
-        
+
         searchTerms.forEach(term => {
             const matchingObjects = this.searchIndex.get(term.toLowerCase());
             if (matchingObjects) {
@@ -441,7 +441,7 @@ export class ObjectRegistry {
                 });
             }
         });
-        
+
         // Convert to array and filter
         let searchResults = Array.from(results.entries())
             .map(([objectId, score]) => ({
@@ -450,26 +450,26 @@ export class ObjectRegistry {
             }))
             .filter(result => result.object)
             .sort((a, b) => b.score - a.score);
-        
+
         // Apply filters
         if (buildingId) {
-            searchResults = searchResults.filter(result => 
+            searchResults = searchResults.filter(result =>
                 result.object.building_id === buildingId
             );
         }
-        
+
         if (floorId) {
-            searchResults = searchResults.filter(result => 
+            searchResults = searchResults.filter(result =>
                 result.object.floor_id === floorId
             );
         }
-        
+
         if (objectType) {
-            searchResults = searchResults.filter(result => 
+            searchResults = searchResults.filter(result =>
                 result.object.object_type === objectType
             );
         }
-        
+
         return searchResults.slice(0, limit);
     }
 
@@ -482,7 +482,7 @@ export class ObjectRegistry {
     // Relationship queries
     getRelatedObjects(objectId, relationshipType = null) {
         const relatedObjects = [];
-        
+
         if (relationshipType) {
             const key = `${relationshipType}:${objectId}`;
             const relatedIds = this.relationshipIndex.get(key);
@@ -508,7 +508,7 @@ export class ObjectRegistry {
                 }
             }
         }
-        
+
         return relatedObjects;
     }
 
@@ -516,20 +516,20 @@ export class ObjectRegistry {
     getFromCache(objectId) {
         const cached = this.cache.get(objectId);
         if (!cached) return null;
-        
+
         const timestamp = this.cacheTimestamps.get(objectId);
         if (Date.now() - timestamp > this.options.cacheExpiry) {
             this.clearCache(objectId);
             return null;
         }
-        
+
         return cached;
     }
 
     setCache(objectId, object) {
         this.cache.set(objectId, object);
         this.cacheTimestamps.set(objectId, Date.now());
-        
+
         // Enforce cache size limit
         if (this.cache.size > this.options.maxCacheSize) {
             const oldestKey = this.cache.keys().next().value;
@@ -553,13 +553,13 @@ export class ObjectRegistry {
             const response = await fetch('/api/objects', {
                 headers: this.getAuthHeaders()
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to fetch objects: ${response.status}`);
             }
-            
+
             return await response.json();
-            
+
         } catch (error) {
             console.error('Failed to fetch objects:', error);
             return [];
@@ -576,16 +576,16 @@ export class ObjectRegistry {
                 },
                 body: JSON.stringify(object)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to save object: ${response.status}`);
             }
-            
+
             const savedObject = await response.json();
             this.registerObject(savedObject);
-            
+
             return savedObject;
-            
+
         } catch (error) {
             console.error('Failed to save object:', error);
             throw error;
@@ -602,16 +602,16 @@ export class ObjectRegistry {
                 },
                 body: JSON.stringify(updates)
             });
-            
+
             if (!response.ok) {
                 throw new Error(`Failed to update object: ${response.status}`);
             }
-            
+
             const updatedObject = await response.json();
             this.updateObject(objectId, updatedObject);
-            
+
             return updatedObject;
-            
+
         } catch (error) {
             console.error('Failed to update object:', error);
             throw error;
@@ -700,9 +700,9 @@ export class ObjectRegistry {
         this.searchIndex.clear();
         this.cache.clear();
         this.cacheTimestamps.clear();
-        
+
         if (this.eventHandlers) {
             this.eventHandlers.clear();
         }
     }
-} 
+}

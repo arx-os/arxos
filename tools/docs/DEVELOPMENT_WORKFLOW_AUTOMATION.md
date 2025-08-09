@@ -455,15 +455,15 @@ def create_building_repository(
 ) -> BuildingRepository:
     """
     Create a new building repository.
-    
+
     Args:
         name: Repository name
         description: Optional description
         metadata: Optional metadata dictionary
-        
+
     Returns:
         BuildingRepository instance
-        
+
     Raises:
         ValidationError: If name is invalid
         DuplicateError: If repository already exists
@@ -551,6 +551,6 @@ def process_large_file(file_path: str) -> Iterator[Dict[str, Any]]:
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2024-01-15  
-**Maintainer**: Arxos Development Team 
+**Version**: 1.0.0
+**Last Updated**: 2024-01-15
+**Maintainer**: Arxos Development Team

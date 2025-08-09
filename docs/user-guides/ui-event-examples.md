@@ -163,7 +163,7 @@ print(resp.json())
 ## 5. Further Reading
 - [SVGX Engine API Reference](../svgx_engine/services/api_interface.py)
 - [UI Event Schemas](../svgx_engine/runtime/behavior/ui_event_schemas.py)
-- [WebSocket Interface](../svgx_engine/services/websocket_interface.py) 
+- [WebSocket Interface](../svgx_engine/services/websocket_interface.py)
 
 ---
 
@@ -237,4 +237,4 @@ print(resp.json())
 }
 ```
 
---- 
+---

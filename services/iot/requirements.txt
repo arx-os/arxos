@@ -83,4 +83,4 @@ azure-storage-blob~=12.19.0  # Azure integration
 
 # Security scanning
 bandit~=1.7.5
-safety~=2.3.5 
+safety~=2.3.5

@@ -4,35 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arxos Platform</title>
-    
+
     <!-- HTMX for dynamic interactions -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
-    
+
     <!-- Tailwind CSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/css/main.css">
     <link rel="stylesheet" href="/static/css/components.css">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- Authentication Check -->
-    <div id="auth-check" 
-         hx-get="/auth/check" 
-         hx-trigger="load" 
+    <div id="auth-check"
+         hx-get="/auth/check"
+         hx-trigger="load"
          hx-target="#main-content"
          hx-indicator="#loading">
     </div>
-    
+
     <!-- Loading Indicator -->
     <div id="loading" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
         <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
     </div>
-    
+
     <!-- Main Content Area -->
     <div id="main-content" class="min-h-screen">
         <!-- Content will be loaded here via HTMX -->
@@ -46,7 +46,7 @@
     <script src="/static/js/websocket-manager.js"></script>
     <script src="/static/js/toast-manager.js"></script>
     <script src="/static/js/app-manager.js"></script>
-    
+
     <!-- Initialize Application -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -58,4 +58,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

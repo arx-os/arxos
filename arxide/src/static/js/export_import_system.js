@@ -12,15 +12,15 @@ class ExportImportSystem {
             supportedFormats: ['json', 'svg', 'zip'],
             ...options
         };
-        
+
         this.exportQueue = [];
         this.importQueue = [];
         this.isProcessing = false;
         this.currentOperation = null;
-        
+
         // Use shared utilities
         this.utils = window.sharedUtilities || new SharedUtilities();
-        
+
         this.initializeSystem();
     }
 
@@ -36,28 +36,28 @@ class ExportImportSystem {
         document.addEventListener('exportVersion', (event) => {
             this.handleExportRequest(event.detail);
         });
-        
+
         // Listen for import requests
         document.addEventListener('importVersion', (event) => {
             this.handleImportRequest(event.detail);
         });
-        
+
         // Listen for backup requests
         document.addEventListener('backupFloor', (event) => {
             this.handleBackupRequest(event.detail);
         });
-        
+
         // Listen for restore requests
         document.addEventListener('restoreFloor', (event) => {
             this.handleRestoreRequest(event.detail);
         });
-        
+
         // Listen for file drops
         document.addEventListener('dragover', (event) => {
             event.preventDefault();
             this.handleDragOver(event);
         });
-        
+
         document.addEventListener('drop', (event) => {
             event.preventDefault();
             this.handleFileDrop(event);
@@ -118,9 +118,9 @@ class ExportImportSystem {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(panel);
-        
+
         // Create progress modal
         const progressModal = document.createElement('div');
         progressModal.id = 'export-import-progress-modal';
@@ -144,9 +144,9 @@ class ExportImportSystem {
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(progressModal);
-        
+
         // Setup event listeners
         this.setupUIEventListeners();
     }
@@ -157,34 +157,34 @@ class ExportImportSystem {
         document.getElementById('close-export-import-panel')?.addEventListener('click', () => {
             this.hideExportImportPanel();
         });
-        
+
         // Export buttons
         document.getElementById('export-json')?.addEventListener('click', () => {
             this.exportAsJSON();
         });
-        
+
         document.getElementById('export-svg')?.addEventListener('click', () => {
             this.exportAsSVG();
         });
-        
+
         document.getElementById('export-backup')?.addEventListener('click', () => {
             this.createBackup();
         });
-        
+
         // Import buttons
         document.getElementById('import-file')?.addEventListener('click', () => {
             this.showFileImportDialog();
         });
-        
+
         document.getElementById('restore-backup')?.addEventListener('click', () => {
             this.showBackupRestoreDialog();
         });
-        
+
         // Cancel operation
         document.getElementById('cancel-operation')?.addEventListener('click', () => {
             this.cancelCurrentOperation();
         });
-        
+
         // Drop zone events
         const dropZone = document.getElementById('drop-zone');
         if (dropZone) {
@@ -192,12 +192,12 @@ class ExportImportSystem {
                 e.preventDefault();
                 dropZone.classList.add('border-blue-400', 'bg-blue-50');
             });
-            
+
             dropZone.addEventListener('dragleave', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('border-blue-400', 'bg-blue-50');
             });
-            
+
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('border-blue-400', 'bg-blue-50');
@@ -209,7 +209,7 @@ class ExportImportSystem {
     // Handle export request
     async handleExportRequest(details) {
         const { format, versionId, includeMetadata, includeHistory } = details;
-        
+
         try {
             switch (format) {
                 case 'json':
@@ -233,7 +233,7 @@ class ExportImportSystem {
     // Handle import request
     async handleImportRequest(details) {
         const { file, format, options } = details;
-        
+
         try {
             switch (format) {
                 case 'json':
@@ -257,7 +257,7 @@ class ExportImportSystem {
     // Handle backup request
     async handleBackupRequest(details) {
         const { floorId, includeAllVersions, includeMetadata } = details;
-        
+
         try {
             await this.createFloorBackup(floorId, includeAllVersions, includeMetadata);
         } catch (error) {
@@ -269,7 +269,7 @@ class ExportImportSystem {
     // Handle restore request
     async handleRestoreRequest(details) {
         const { backupFile, options } = details;
-        
+
         try {
             await this.restoreFloorFromBackup(backupFile, options);
         } catch (error) {
@@ -287,9 +287,9 @@ class ExportImportSystem {
     // Handle file drop
     handleFileDrop(event) {
         const files = Array.from(event.dataTransfer.files);
-        
+
         if (files.length === 0) return;
-        
+
         // Process each file
         files.forEach(file => {
             this.processDroppedFile(file);
@@ -300,7 +300,7 @@ class ExportImportSystem {
     async processDroppedFile(file) {
         try {
             const fileExtension = this.utils.getFileExtension(file.name);
-            
+
             switch (fileExtension) {
                 case 'json':
                     await this.importFromJSON(file);
@@ -323,13 +323,13 @@ class ExportImportSystem {
     // Export version as JSON
     async exportVersionAsJSON(versionId, includeMetadata = true, includeHistory = true) {
         this.startProgress('Exporting as JSON', 'Preparing version data...');
-        
+
         try {
             // Get version data
             const versionData = await this.getVersionData(versionId);
-            
+
             this.updateProgress(25, 'Processing version data...');
-            
+
             // Prepare export data
             const exportData = {
                 format: 'json',
@@ -338,32 +338,32 @@ class ExportImportSystem {
                 exported_by: this.getCurrentUser(),
                 version_data: versionData
             };
-            
+
             if (includeMetadata) {
                 exportData.metadata = await this.getVersionMetadata(versionId);
             }
-            
+
             if (includeHistory) {
                 exportData.history = await this.getVersionHistory(versionId);
             }
-            
+
             this.updateProgress(50, 'Compressing data...');
-            
+
             // Compress if enabled
             let finalData = exportData;
             if (this.options.compressionEnabled) {
                 finalData = await this.compressData(exportData);
             }
-            
+
             this.updateProgress(75, 'Generating file...');
-            
+
             // Create and download file
             const fileName = `version_${versionId}_${new Date().toISOString().split('T')[0]}.json`;
             await this.utils.downloadJSON(finalData, fileName);
-            
+
             this.completeProgress('Export completed successfully');
             this.utils.showNotification('Version exported as JSON successfully', 'success');
-            
+
         } catch (error) {
             this.failProgress('Export failed: ' + error.message);
             throw error;
@@ -373,30 +373,30 @@ class ExportImportSystem {
     // Export version as SVG
     async exportVersionAsSVG(versionId, includeMetadata = true) {
         this.startProgress('Exporting as SVG', 'Preparing SVG data...');
-        
+
         try {
             // Get version SVG data
             const svgData = await this.getVersionSVGData(versionId);
-            
+
             this.updateProgress(25, 'Processing SVG elements...');
-            
+
             // Prepare SVG document
             const svgDocument = this.createSVGDocument(svgData, includeMetadata);
-            
+
             this.updateProgress(50, 'Optimizing SVG...');
-            
+
             // Optimize SVG
             const optimizedSVG = await this.optimizeSVG(svgDocument);
-            
+
             this.updateProgress(75, 'Generating file...');
-            
+
             // Create and download file
             const fileName = `version_${versionId}_${new Date().toISOString().split('T')[0]}.svg`;
             await this.utils.downloadSVG(optimizedSVG, fileName);
-            
+
             this.completeProgress('Export completed successfully');
             this.utils.showNotification('Version exported as SVG successfully', 'success');
-            
+
         } catch (error) {
             this.failProgress('Export failed: ' + error.message);
             throw error;
@@ -406,20 +406,20 @@ class ExportImportSystem {
     // Create version backup
     async createVersionBackup(versionId) {
         this.startProgress('Creating Backup', 'Preparing backup data...');
-        
+
         try {
             // Get complete version data
             const versionData = await this.getVersionData(versionId);
             const metadata = await this.getVersionMetadata(versionId);
             const history = await this.getVersionHistory(versionId);
-            
+
             this.updateProgress(25, 'Collecting assets...');
-            
+
             // Collect all assets
             const assets = await this.collectVersionAssets(versionId);
-            
+
             this.updateProgress(50, 'Creating backup package...');
-            
+
             // Create backup package
             const backupPackage = {
                 type: 'version_backup',
@@ -431,21 +431,21 @@ class ExportImportSystem {
                 history: history,
                 assets: assets
             };
-            
+
             this.updateProgress(75, 'Compressing backup...');
-            
+
             // Compress backup
             const compressedBackup = await this.compressBackup(backupPackage);
-            
+
             this.updateProgress(90, 'Generating backup file...');
-            
+
             // Create and download backup file
             const fileName = `backup_version_${versionId}_${new Date().toISOString().split('T')[0]}.zip`;
             await this.utils.downloadZIP(compressedBackup, fileName);
-            
+
             this.completeProgress('Backup created successfully');
             this.utils.showNotification('Version backup created successfully', 'success');
-            
+
         } catch (error) {
             this.failProgress('Backup failed: ' + error.message);
             throw error;
@@ -455,26 +455,26 @@ class ExportImportSystem {
     // Create floor backup
     async createFloorBackup(floorId, includeAllVersions = true, includeMetadata = true) {
         this.startProgress('Creating Floor Backup', 'Preparing floor data...');
-        
+
         try {
             // Get floor data
             const floorData = await this.getFloorData(floorId);
-            
+
             this.updateProgress(20, 'Collecting versions...');
-            
+
             // Get all versions if requested
             let versions = [];
             if (includeAllVersions) {
                 versions = await this.getFloorVersions(floorId);
             }
-            
+
             this.updateProgress(40, 'Collecting assets...');
-            
+
             // Collect all floor assets
             const assets = await this.collectFloorAssets(floorId);
-            
+
             this.updateProgress(60, 'Creating backup package...');
-            
+
             // Create backup package
             const backupPackage = {
                 type: 'floor_backup',
@@ -485,25 +485,25 @@ class ExportImportSystem {
                 versions: versions,
                 assets: assets
             };
-            
+
             if (includeMetadata) {
                 backupPackage.metadata = await this.getFloorMetadata(floorId);
             }
-            
+
             this.updateProgress(80, 'Compressing backup...');
-            
+
             // Compress backup
             const compressedBackup = await this.compressBackup(backupPackage);
-            
+
             this.updateProgress(90, 'Generating backup file...');
-            
+
             // Create and download backup file
             const fileName = `backup_floor_${floorId}_${new Date().toISOString().split('T')[0]}.zip`;
             await this.utils.downloadZIP(compressedBackup, fileName);
-            
+
             this.completeProgress('Floor backup created successfully');
             this.utils.showNotification('Floor backup created successfully', 'success');
-            
+
         } catch (error) {
             this.failProgress('Backup failed: ' + error.message);
             throw error;
@@ -513,37 +513,37 @@ class ExportImportSystem {
     // Import from JSON
     async importFromJSON(file, options = {}) {
         this.startProgress('Importing JSON', 'Reading file...');
-        
+
         try {
             // Read file
             const fileContent = await this.utils.readFileAsText(file);
-            
+
             this.updateProgress(25, 'Parsing JSON data...');
-            
+
             // Parse JSON
             const importData = JSON.parse(fileContent);
-            
+
             // Validate import data
             this.validateImportData(importData);
-            
+
             this.updateProgress(50, 'Processing version data...');
-            
+
             // Process version data
             const processedData = await this.processImportData(importData, options);
-            
+
             this.updateProgress(75, 'Importing version...');
-            
+
             // Import version
             const result = await this.importVersion(processedData, options);
-            
+
             this.completeProgress('Import completed successfully');
             this.utils.showNotification('Version imported successfully', 'success');
-            
+
             // Emit import completed event
             this.emitEvent('versionImported', result);
-            
+
             return result;
-            
+
         } catch (error) {
             this.failProgress('Import failed: ' + error.message);
             throw error;
@@ -553,34 +553,34 @@ class ExportImportSystem {
     // Import from SVG
     async importFromSVG(file, options = {}) {
         this.startProgress('Importing SVG', 'Reading file...');
-        
+
         try {
             // Read file
             const fileContent = await this.readFileAsText(file);
-            
+
             this.updateProgress(25, 'Parsing SVG data...');
-            
+
             // Parse SVG
             const svgData = this.parseSVGData(fileContent);
-            
+
             this.updateProgress(50, 'Processing SVG elements...');
-            
+
             // Process SVG data
             const processedData = await this.processSVGData(svgData, options);
-            
+
             this.updateProgress(75, 'Importing SVG...');
-            
+
             // Import SVG
             const result = await this.importSVG(processedData, options);
-            
+
             this.completeProgress('Import completed successfully');
             this.showNotification('SVG imported successfully', 'success');
-            
+
             // Emit import completed event
             this.emitEvent('svgImported', result);
-            
+
             return result;
-            
+
         } catch (error) {
             this.failProgress('Import failed: ' + error.message);
             throw error;
@@ -590,34 +590,34 @@ class ExportImportSystem {
     // Restore from backup
     async restoreFromBackup(file, options = {}) {
         this.startProgress('Restoring from Backup', 'Reading backup file...');
-        
+
         try {
             // Read backup file
             const backupData = await this.readBackupFile(file);
-            
+
             this.updateProgress(25, 'Validating backup...');
-            
+
             // Validate backup
             this.validateBackup(backupData);
-            
+
             this.updateProgress(50, 'Preparing restore data...');
-            
+
             // Prepare restore data
             const restoreData = await this.prepareRestoreData(backupData, options);
-            
+
             this.updateProgress(75, 'Restoring data...');
-            
+
             // Perform restore
             const result = await this.performRestore(restoreData, options);
-            
+
             this.completeProgress('Restore completed successfully');
             this.showNotification('Backup restored successfully', 'success');
-            
+
             // Emit restore completed event
             this.emitEvent('backupRestored', result);
-            
+
             return result;
-            
+
         } catch (error) {
             this.failProgress('Restore failed: ' + error.message);
             throw error;
@@ -630,14 +630,14 @@ class ExportImportSystem {
         input.type = 'file';
         input.accept = '.json,.svg,.zip';
         input.multiple = false;
-        
+
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
                 this.processDroppedFile(file);
             }
         });
-        
+
         input.click();
     }
 
@@ -647,33 +647,33 @@ class ExportImportSystem {
         input.type = 'file';
         input.accept = '.zip';
         input.multiple = false;
-        
+
         input.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
                 this.restoreFromBackup(file);
             }
         });
-        
+
         input.click();
     }
 
     // Start progress
     startProgress(title, description) {
         this.currentOperation = { title, description, progress: 0 };
-        
+
         const modal = document.getElementById('export-import-progress-modal');
         const titleElement = document.getElementById('progress-title');
         const descriptionElement = document.getElementById('progress-description');
         const iconElement = document.getElementById('progress-icon');
-        
+
         if (modal && titleElement && descriptionElement && iconElement) {
             titleElement.textContent = title;
             descriptionElement.textContent = description;
             iconElement.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-500"></i>';
             modal.style.display = 'flex';
         }
-        
+
         this.updateProgress(0);
     }
 
@@ -685,14 +685,14 @@ class ExportImportSystem {
                 this.currentOperation.description = description;
             }
         }
-        
+
         const barElement = document.getElementById('progress-bar');
         const descriptionElement = document.getElementById('progress-description');
-        
+
         if (barElement) {
             barElement.style.width = `${progress}%`;
         }
-        
+
         if (descriptionElement && description) {
             descriptionElement.textContent = description;
         }
@@ -702,15 +702,15 @@ class ExportImportSystem {
     completeProgress(message) {
         const iconElement = document.getElementById('progress-icon');
         const titleElement = document.getElementById('progress-title');
-        
+
         if (iconElement) {
             iconElement.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
         }
-        
+
         if (titleElement) {
             titleElement.textContent = message;
         }
-        
+
         setTimeout(() => {
             this.hideProgressModal();
         }, 2000);
@@ -720,15 +720,15 @@ class ExportImportSystem {
     failProgress(message) {
         const iconElement = document.getElementById('progress-icon');
         const titleElement = document.getElementById('progress-title');
-        
+
         if (iconElement) {
             iconElement.innerHTML = '<i class="fas fa-times-circle text-red-500"></i>';
         }
-        
+
         if (titleElement) {
             titleElement.textContent = message;
         }
-        
+
         setTimeout(() => {
             this.hideProgressModal();
         }, 3000);
@@ -903,7 +903,7 @@ class ExportImportSystem {
         // Parse SVG content and extract relevant data
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgContent, 'image/svg+xml');
-        
+
         return {
             width: doc.documentElement.getAttribute('width'),
             height: doc.documentElement.getAttribute('height'),
@@ -956,7 +956,7 @@ class ExportImportSystem {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data, options })
         });
-        
+
         if (!response.ok) throw new Error('Failed to import version');
         return response.json();
     }
@@ -968,7 +968,7 @@ class ExportImportSystem {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data, options })
         });
-        
+
         if (!response.ok) throw new Error('Failed to import SVG');
         return response.json();
     }
@@ -980,7 +980,7 @@ class ExportImportSystem {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ data, options })
         });
-        
+
         if (!response.ok) throw new Error('Failed to restore backup');
         return response.json();
     }
@@ -1015,16 +1015,16 @@ class ExportImportSystem {
         // Clear queues
         this.exportQueue = [];
         this.importQueue = [];
-        
+
         // Cancel current operation
         this.cancelCurrentOperation();
-        
+
         // Remove UI elements
         const elements = [
             'export-import-panel',
             'export-import-progress-modal'
         ];
-        
+
         elements.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -1040,4 +1040,4 @@ const exportImportSystem = new ExportImportSystem();
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ExportImportSystem;
-} 
+}

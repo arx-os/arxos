@@ -45,7 +45,7 @@ class LogCategory:
 
 class StructuredFormatter(logging.Formatter):
     """Structured JSON formatter for logs."""
-    
+
     def format(self, record):
         """Format log record as structured JSON."""
         log_entry = {
@@ -57,21 +57,21 @@ class StructuredFormatter(logging.Formatter):
             'function': record.funcName,
             'line': record.lineno
         }
-        
+
         # Add extra fields if present
         if hasattr(record, 'extra_fields'):
             log_entry.update(record.extra_fields)
-        
+
         # Add exception info if present
         if record.exc_info:
             log_entry['exception'] = self.formatException(record.exc_info)
-        
+
         return json.dumps(log_entry)
 
 
 class PerformanceFormatter(logging.Formatter):
     """Performance-specific formatter."""
-    
+
     def format(self, record):
         """Format performance log record."""
         log_entry = {
@@ -84,13 +84,13 @@ class PerformanceFormatter(logging.Formatter):
             'cpu_percent': getattr(record, 'cpu_percent', 0),
             'message': record.getMessage()
         }
-        
+
         return json.dumps(log_entry)
 
 
 class SecurityFormatter(logging.Formatter):
     """Security-specific formatter."""
-    
+
     def format(self, record):
         """Format security log record."""
         log_entry = {
@@ -104,42 +104,25 @@ class SecurityFormatter(logging.Formatter):
             'resource': getattr(record, 'resource', None),
             'message': record.getMessage()
         }
-        
+
         return json.dumps(log_entry)
 
 
 class SVGXLogger:
     """Enhanced logger for SVGX Engine."""
-    
+
     def __init__(self, name: str, category: str = LogCategory.GENERAL):
-    """
-    Perform __init__ operation
-
-Args:
-        name: Description of name
-        category: Description of category
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.name = name
         self.category = category
         self.logger = logging.getLogger(name)
         self._setup_logger()
-    
+
     def _setup_logger(self):
         """Setup the logger with appropriate handlers."""
-        # Don't add handlers if they already exist
+        # Don't add handlers if they already exist'
         if self.logger.handlers:
             return
-        
+
         # Create handlers based on category
         if self.category == LogCategory.PERFORMANCE:
             handler = logging.StreamHandler(sys.stdout)
@@ -150,43 +133,42 @@ Example:
         else:
             handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(StructuredFormatter())
-        
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO)
-    
+
     def debug(self, message: str, **kwargs):
         """Log debug message with extra fields."""
         self._log(logging.DEBUG, message, **kwargs)
-    
+
     def info(self, message: str, **kwargs):
         """Log info message with extra fields."""
         self._log(logging.INFO, message, **kwargs)
-    
+
     def warning(self, message: str, **kwargs):
         """Log warning message with extra fields."""
         self._log(logging.WARNING, message, **kwargs)
-    
+
     def error(self, message: str, **kwargs):
         """Log error message with extra fields."""
         self._log(logging.ERROR, message, **kwargs)
-    
+
     def critical(self, message: str, **kwargs):
         """Log critical message with extra fields."""
         self._log(logging.CRITICAL, message, **kwargs)
-    
+
     def _log(self, level: int, message: str, **kwargs):
         """Log message with extra fields."""
         record = self.logger.makeRecord(
             self.name, level, __file__, 0, message, (), None
         )
-        
+
         # Add extra fields to record
         if kwargs:
             record.extra_fields = kwargs
-        
+
         self.logger.handle(record)
-    
-    def log_performance(self, operation: str, duration_ms: float, 
+
+    def log_performance(self, operation: str, duration_ms: float,
                        memory_mb: Optional[float] = None, cpu_percent: Optional[float] = None,
                        **kwargs):
         """Log performance metric."""
@@ -198,7 +180,7 @@ Example:
             cpu_percent=cpu_percent,
             **kwargs
         )
-    
+
     def log_security(self, event_type: str, action: str, resource: Optional[str] = None,
                      user_id: Optional[str] = None, ip_address: Optional[str] = None,
                      **kwargs):
@@ -215,29 +197,13 @@ Example:
 
 
 class LoggingManager:
-    """
-    Perform __init__ operation
-
-Args:
-        config: Description of config
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
     """Centralized logging manager for SVGX Engine."""
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or self._get_default_config()
         self.loggers: Dict[str, SVGXLogger] = {}
         self._setup_logging()
-    
+
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default logging configuration."""
         return {
@@ -301,7 +267,7 @@ Example:
                 }
             }
         }
-    
+
     def _setup_logging(self):
         """Setup logging configuration."""
         try:
@@ -313,41 +279,41 @@ Example:
                 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             )
             print(f"Warning: Failed to setup structured logging: {e}")
-    
+
     def get_logger(self, name: str, category: str = LogCategory.GENERAL) -> SVGXLogger:
         """Get a logger instance."""
         if name not in self.loggers:
             self.loggers[name] = SVGXLogger(name, category)
         return self.loggers[name]
-    
+
     def get_performance_logger(self, name: str) -> SVGXLogger:
         """Get a performance logger."""
         return self.get_logger(f"{name}.performance", LogCategory.PERFORMANCE)
-    
+
     def get_security_logger(self, name: str) -> SVGXLogger:
         """Get a security logger."""
         return self.get_logger(f"{name}.security", LogCategory.SECURITY)
-    
+
     def get_parser_logger(self, name: str) -> SVGXLogger:
         """Get a parser logger."""
         return self.get_logger(f"{name}.parser", LogCategory.PARSER)
-    
+
     def get_runtime_logger(self, name: str) -> SVGXLogger:
         """Get a runtime logger."""
         return self.get_logger(f"{name}.runtime", LogCategory.RUNTIME)
-    
+
     def get_compiler_logger(self, name: str) -> SVGXLogger:
         """Get a compiler logger."""
         return self.get_logger(f"{name}.compiler", LogCategory.COMPILER)
-    
+
     def get_api_logger(self, name: str) -> SVGXLogger:
         """Get an API logger."""
         return self.get_logger(f"{name}.api", LogCategory.API)
-    
+
     def get_database_logger(self, name: str) -> SVGXLogger:
         """Get a database logger."""
         return self.get_logger(f"{name}.database", LogCategory.DATABASE)
-    
+
     def get_telemetry_logger(self, name: str) -> SVGXLogger:
         """Get a telemetry logger."""
         return self.get_logger(f"{name}.telemetry", LogCategory.TELEMETRY)
@@ -408,7 +374,7 @@ def setup_logging(config: Optional[Dict[str, Any]] = None):
     _logging_manager = LoggingManager(config)
 
 
-def log_performance_metric(operation: str, duration_ms: float, 
+def log_performance_metric(operation: str, duration_ms: float,
                           memory_mb: Optional[float] = None, cpu_percent: Optional[float] = None,
                           **kwargs):
     """Log a performance metric."""
@@ -461,4 +427,4 @@ def log_telemetry_event(event_type: str, message: str, **kwargs):
         event_type=event_type,
         message=message,
         **kwargs
-    ) 
+    )

@@ -5,7 +5,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        
+
         <!-- Users Table -->
         <mxCell id="table_users" value="&lt;b&gt;users&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#4A90E2;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="50" y="50" width="200" height="170" as="geometry" />
@@ -28,7 +28,7 @@
         <mxCell id="col_users_created_at" value="created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_users">
           <mxGeometry x="10" y="150" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Projects Table -->
         <mxCell id="table_projects" value="&lt;b&gt;projects&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#9B59B6;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="300" y="50" width="200" height="130" as="geometry" />
@@ -45,7 +45,7 @@
         <mxCell id="col_projects_created_at" value="created_at: TIMESTAMP DEFAULT CURRENT_TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_projects">
           <mxGeometry x="10" y="110" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Buildings Table -->
         <mxCell id="table_buildings" value="&lt;b&gt;buildings&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#9B59B6;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="550" y="50" width="200" height="150" as="geometry" />
@@ -65,7 +65,7 @@
         <mxCell id="col_buildings_project_id" value="project_id: INTEGER → projects(id)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_buildings">
           <mxGeometry x="10" y="130" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Floors Table -->
         <mxCell id="table_floors" value="&lt;b&gt;floors&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#9B59B6;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="800" y="50" width="200" height="130" as="geometry" />
@@ -82,7 +82,7 @@
         <mxCell id="col_floors_svg_path" value="svg_path: VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_floors">
           <mxGeometry x="10" y="110" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Rooms Table -->
         <mxCell id="table_rooms" value="&lt;b&gt;rooms&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#50C878;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="50" y="300" width="200" height="210" as="geometry" />
@@ -111,7 +111,7 @@
         <mxCell id="col_rooms_geom" value="geom: geometry(Polygon, 4326)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_rooms">
           <mxGeometry x="10" y="190" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Walls Table -->
         <mxCell id="table_walls" value="&lt;b&gt;walls&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#50C878;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="300" y="300" width="200" height="190" as="geometry" />
@@ -137,7 +137,7 @@
         <mxCell id="col_walls_geom" value="geom: geometry(LineString, 4326)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_walls">
           <mxGeometry x="10" y="170" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Audit Logs Table -->
         <mxCell id="table_audit_logs" value="&lt;b&gt;audit_logs&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#FF6B6B;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="550" y="300" width="200" height="150" as="geometry" />
@@ -157,7 +157,7 @@
         <mxCell id="col_audit_logs_action" value="action: TEXT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_audit_logs">
           <mxGeometry x="10" y="130" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Comments Table -->
         <mxCell id="table_comments" value="&lt;b&gt;comments&lt;/b&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#FFD93D;strokeColor=#666666;fontColor=#FFFFFF;" vertex="1" parent="1">
           <mxGeometry x="800" y="300" width="200" height="150" as="geometry" />
@@ -177,7 +177,7 @@
         <mxCell id="col_comments_content" value="content: TEXT NOT NULL" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="table_comments">
           <mxGeometry x="10" y="130" width="180" height="20" as="geometry" />
         </mxCell>
-        
+
         <!-- Relationships -->
         <mxCell id="rel_projects_users" edge="1" parent="1" source="table_projects" target="table_users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
@@ -187,7 +187,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_buildings_users" edge="1" parent="1" source="table_buildings" target="table_users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -196,7 +196,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_buildings_projects" edge="1" parent="1" source="table_buildings" target="table_projects" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -205,7 +205,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_floors_buildings" edge="1" parent="1" source="table_floors" target="table_buildings" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -214,7 +214,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_rooms_buildings" edge="1" parent="1" source="table_rooms" target="table_buildings" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -223,7 +223,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_rooms_floors" edge="1" parent="1" source="table_rooms" target="table_floors" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -232,7 +232,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_walls_rooms" edge="1" parent="1" source="table_walls" target="table_rooms" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -241,7 +241,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_audit_logs_users" edge="1" parent="1" source="table_audit_logs" target="table_users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -250,7 +250,7 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
         <mxCell id="rel_comments_users" edge="1" parent="1" source="table_comments" target="table_users" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
@@ -259,8 +259,8 @@
             <mxPoint x="10" y="10" as="offset" />
           </mxGeometry>
         </mxCell>
-        
+
       </root>
     </mxGraphModel>
   </diagram>
-</mxfile> 
+</mxfile>

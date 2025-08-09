@@ -219,7 +219,7 @@ document.getElementById('pan-right').addEventListener('click', () => {
 // Update coordinate display
 function updateCoordinateDisplay(event) {
     const [svgX, svgY] = viewport.screenToSVG(event.clientX, event.clientY);
-    document.getElementById('coordinates').textContent = 
+    document.getElementById('coordinates').textContent =
         `X: ${svgX.toFixed(3)} Y: ${svgY.toFixed(3)}`;
 }
 
@@ -297,7 +297,7 @@ function customZoomHandler(data) {
 
     // Update UI
     updateZoomIndicator(data.zoom);
-    
+
     // Trigger custom logic
     if (data.zoom > 3.0) {
         showHighZoomWarning();
@@ -426,7 +426,7 @@ setInterval(monitorMemory, 5000);
 function optimizeRendering() {
     const zoom = viewport.getZoom();
     const symbolCount = getSymbolCount();
-    
+
     if (symbolCount > 1000 && zoom < 0.5) {
         // Enable level of detail
         enableLOD();
@@ -465,7 +465,7 @@ describe('ViewportManager', () => {
     test('should convert coordinates correctly', () => {
         viewport.setZoom(2.0);
         viewport.setPan(100, 200);
-        
+
         const [svgX, svgY] = viewport.screenToSVG(200, 400);
         expect(svgX).toBe(50); // (200 - 100) / 2
         expect(svgY).toBe(100); // (400 - 200) / 2
@@ -480,11 +480,11 @@ describe('Viewport Integration', () => {
     test('should integrate with symbol library', () => {
         const symbolLibrary = new SymbolLibrary();
         const viewport = new ViewportManager(svgElement);
-        
+
         // Add symbol to viewport
         const symbol = symbolLibrary.createSymbol('door');
         viewport.addSymbol(symbol);
-        
+
         // Test symbol interaction
         const symbols = viewport.getSymbolsAt(100, 200);
         expect(symbols).toContain(symbol);
@@ -498,14 +498,14 @@ describe('Viewport Integration', () => {
 describe('Viewport Performance', () => {
     test('should handle high-frequency zoom operations', () => {
         const startTime = performance.now();
-        
+
         for (let i = 0; i < 1000; i++) {
             viewport.setZoom(Math.random() * 5);
         }
-        
+
         const endTime = performance.now();
         const duration = endTime - startTime;
-        
+
         expect(duration).toBeLessThan(1000); // Should complete in <1 second
     });
 });
@@ -525,10 +525,10 @@ console.log('Performance metrics:', metrics);
 if (metrics.fps < 30) {
     // Reduce zoom level
     viewport.setZoom(Math.min(viewport.getZoom(), 2.0));
-    
+
     // Clear history
     viewport.clearZoomHistory();
-    
+
     // Enable performance mode
     viewport.setPerformanceMode('high');
 }
@@ -539,15 +539,15 @@ if (metrics.fps < 30) {
 // Check for memory leaks
 function checkMemoryLeaks() {
     const initialMemory = performance.memory.usedJSHeapSize;
-    
+
     // Perform operations
     for (let i = 0; i < 100; i++) {
         viewport.setZoom(Math.random() * 5);
     }
-    
+
     const finalMemory = performance.memory.usedJSHeapSize;
     const memoryIncrease = finalMemory - initialMemory;
-    
+
     if (memoryIncrease > 10 * 1024 * 1024) { // 10MB threshold
         console.warn('Potential memory leak detected');
     }
@@ -560,7 +560,7 @@ function checkMemoryLeaks() {
 function debugEventListeners() {
     const events = viewport.getEventListeners();
     console.log('Active event listeners:', events);
-    
+
     // Check for duplicate listeners
     const duplicates = findDuplicateListeners(events);
     if (duplicates.length > 0) {
@@ -591,20 +591,20 @@ class ViewportController {
         this.setupEventHandlers();
         this.setupUI();
     }
-    
+
     setupEventHandlers() {
         this.viewport.addEventListener('zoomChanged', this.handleZoom.bind(this));
         this.viewport.addEventListener('panChanged', this.handlePan.bind(this));
     }
-    
+
     setupUI() {
         // Setup UI controls
     }
-    
+
     handleZoom(data) {
         // Handle zoom changes
     }
-    
+
     handlePan(data) {
         // Handle pan changes
     }
@@ -624,14 +624,14 @@ class SafeViewportManager {
             this.fallbackToBasicViewport();
         }
     }
-    
+
     setupErrorHandling() {
         this.viewport.addEventListener('error', (error) => {
             console.error('Viewport error:', error);
             this.handleError(error);
         });
     }
-    
+
     handleError(error) {
         // Implement error recovery
         switch (error.type) {
@@ -658,24 +658,24 @@ class OptimizedViewportManager {
             throttleUpdates: true,
             performanceMode: 'high'
         });
-        
+
         this.setupPerformanceMonitoring();
     }
-    
+
     setupPerformanceMonitoring() {
         // Monitor and optimize performance
         setInterval(() => {
             this.optimizePerformance();
         }, 1000);
     }
-    
+
     optimizePerformance() {
         const metrics = this.viewport.performanceMetrics;
-        
+
         if (metrics.fps < 30) {
             this.enablePerformanceMode();
         }
-        
+
         if (metrics.memoryUsage > 100) {
             this.cleanupMemory();
         }
@@ -693,21 +693,21 @@ describe('ViewportManager Testing', () => {
         test('pan operations');
         test('coordinate conversion');
     });
-    
+
     // Integration tests for component interaction
     describe('Integration Tests', () => {
         test('symbol library integration');
         test('event system integration');
         test('performance monitoring');
     });
-    
+
     // Performance tests for optimization
     describe('Performance Tests', () => {
         test('high-frequency operations');
         test('memory usage');
         test('rendering performance');
     });
-    
+
     // Browser compatibility tests
     describe('Browser Tests', () => {
         test('Chrome compatibility');
@@ -723,4 +723,4 @@ describe('ViewportManager Testing', () => {
 **Documentation Version**: 1.0.0
 **Last Updated**: [Current Date]
 **Target Audience**: Developers and Technical Users
-**Compatibility**: Viewport Manager v1.0.0+ 
+**Compatibility**: Viewport Manager v1.0.0+

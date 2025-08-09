@@ -39,4 +39,4 @@ metadata:
   labels:
     name: arxos-production
     environment: production
-    purpose: arxos-platform 
+    purpose: arxos-platform

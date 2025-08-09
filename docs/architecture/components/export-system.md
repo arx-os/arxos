@@ -4,7 +4,7 @@
 
 The Advanced Export Features provide comprehensive export capabilities for professional CAD formats, enabling seamless interoperability with industry-standard tools and systems. This implementation supports IFC, GLTF, DXF, STEP, IGES, and Parasolid formats with enterprise-grade performance and reliability.
 
-**Status**: ✅ **100% COMPLETE**  
+**Status**: ✅ **100% COMPLETE**
 **Implementation**: Fully implemented with comprehensive support for all required formats
 
 ---
@@ -421,54 +421,54 @@ from svgx_engine.services.export.ifc_export import create_ifc_export_service
 from svgx_engine.services.export.gltf_export import create_gltf_export_service
 
 class TestAdvancedExportFeatures:
-    
+
     def setup_method(self):
         self.export_system = AdvancedExportSystem()
         self.ifc_service = create_ifc_export_service()
         self.gltf_service = create_gltf_export_service()
-    
+
     def test_ifc_export_complete(self):
         """Test complete IFC export functionality"""
         # Test data
         building_data = self.get_test_building_data()
-        
+
         # Perform export
         result = self.ifc_service.export_to_ifc(
             data=building_data,
             output_path="test_building.ifc",
             options={"include_properties": True}
         )
-        
+
         # Assertions
         assert result.success is True
         assert result.file_path == "test_building.ifc"
         assert result.format == "ifc"
         assert result.version == "IFC4"
-    
+
     def test_gltf_export_complete(self):
         """Test complete GLTF export functionality"""
         # Test data
         model_data = self.get_test_model_data()
-        
+
         # Perform export
         result = self.gltf_service.export_to_gltf(
             data=model_data,
             output_path="test_model.gltf",
             options={"compression": True}
         )
-        
+
         # Assertions
         assert result.success is True
         assert result.file_path == "test_model.gltf"
         assert result.format == "gltf"
         assert result.version == "2.0"
-    
+
     def test_batch_export(self):
         """Test batch export functionality"""
         # Test multiple formats
         formats = ["ifc", "gltf", "dxf", "step"]
         results = []
-        
+
         for format in formats:
             result = self.export_system.export_to_format(
                 data=self.get_test_data(),
@@ -476,15 +476,15 @@ class TestAdvancedExportFeatures:
                 output_path=f"test_output.{format}"
             )
             results.append(result)
-        
+
         # Assertions
         assert all(r.success for r in results)
         assert len(results) == len(formats)
-    
+
     def test_export_quality_options(self):
         """Test export quality options"""
         qualities = ["low", "medium", "high"]
-        
+
         for quality in qualities:
             result = self.export_system.export_to_format(
                 data=self.get_test_data(),
@@ -492,7 +492,7 @@ class TestAdvancedExportFeatures:
                 output_path=f"test_{quality}.ifc",
                 options={"quality": quality}
             )
-            
+
             assert result.success is True
             assert result.quality == quality
 ```
@@ -697,4 +697,4 @@ if response.status_code == 200:
 - ✅ Error Handling
 - ✅ Memory Optimization
 
-The Advanced Export Features provide enterprise-grade export capabilities with comprehensive format support, high performance, and robust error handling for professional CAD workflows. 
+The Advanced Export Features provide enterprise-grade export capabilities with comprehensive format support, high performance, and robust error handling for professional CAD workflows.

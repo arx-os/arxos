@@ -12,18 +12,18 @@ gates:
     threshold: 90.0
     critical: true
     description: "Minimum test success rate"
-  
+
   coverage:
     threshold: 85.0
     critical: true
     description: "Minimum code coverage percentage"
-  
+
   performance:
     max_response_time: 5.0
     max_memory_usage: 100  # MB
     critical: false
     description: "Performance thresholds"
-  
+
   code_quality:
     max_complexity: 10
     max_line_length: 120
@@ -43,27 +43,27 @@ languages:
         - "prefer-const"
       max_errors: 0
       max_warnings: 10
-    
+
     formatting:
       tool: "prettier"
       config: ".prettierrc"
       enforce: true
-    
+
     type_checking:
       tool: "typescript"
       strict: true
       no_implicit_any: true
-    
+
     testing:
       framework: "jest"
       coverage_threshold: 80
       timeout: 300
-    
+
     documentation:
       tool: "typedoc"
       output: "docs"
       include_examples: true
-  
+
   python:
     linting:
       tool: "flake8"
@@ -72,121 +72,121 @@ languages:
       max_complexity: 10
       max_errors: 0
       max_warnings: 20
-    
+
     formatting:
       tool: "black"
       line_length: 120
       enforce: true
-    
+
     type_checking:
       tool: "mypy"
       strict: true
       ignore_missing_imports: false
-    
+
     testing:
       framework: "pytest"
       coverage_threshold: 85
       timeout: 300
-    
+
     documentation:
       tool: "sphinx"
       output: "docs"
       include_examples: true
-  
+
   go:
     linting:
       tool: "golint"
       max_issues: 5
       enforce: true
-    
+
     formatting:
       tool: "gofmt"
       enforce: true
-    
+
     type_checking:
       tool: "go"
       strict: true
-    
+
     testing:
       framework: "testing"
       coverage_threshold: 85
       timeout: 300
-    
+
     documentation:
       tool: "godoc"
       output: "docs"
       include_examples: true
-  
+
   java:
     linting:
       tool: "checkstyle"
       config: "checkstyle.xml"
       max_errors: 0
       max_warnings: 10
-    
+
     formatting:
       tool: "google-java-format"
       enforce: true
-    
+
     type_checking:
       tool: "javac"
       strict: true
-    
+
     testing:
       framework: "junit"
       coverage_threshold: 80
       timeout: 300
-    
+
     documentation:
       tool: "javadoc"
       output: "docs"
       include_examples: true
-  
+
   csharp:
     linting:
       tool: "stylecop"
       config: "stylecop.json"
       max_errors: 0
       max_warnings: 10
-    
+
     formatting:
       tool: "dotnet-format"
       enforce: true
-    
+
     type_checking:
       tool: "csc"
       strict: true
-    
+
     testing:
       framework: "xunit"
       coverage_threshold: 80
       timeout: 300
-    
+
     documentation:
       tool: "docfx"
       output: "docs"
       include_examples: true
-  
+
   php:
     linting:
       tool: "phpcs"
       standard: "PSR12"
       max_errors: 0
       max_warnings: 10
-    
+
     formatting:
       tool: "phpcbf"
       enforce: true
-    
+
     type_checking:
       tool: "phpstan"
       level: 8
-    
+
     testing:
       framework: "phpunit"
       coverage_threshold: 80
       timeout: 300
-    
+
     documentation:
       tool: "phpdoc"
       output: "docs"
@@ -199,19 +199,19 @@ testing:
     timeout: 300
     parallel: true
     coverage: true
-  
+
   integration_tests:
     enabled: true
     timeout: 600
     parallel: false
     coverage: false
-  
+
   performance_tests:
     enabled: true
     timeout: 1200
     parallel: false
     coverage: false
-  
+
   quality_tests:
     enabled: true
     timeout: 300
@@ -224,13 +224,13 @@ coverage:
   xml: true
   json: true
   lcov: true
-  
+
   thresholds:
     statements: 85
     branches: 80
     functions: 85
     lines: 85
-  
+
   exclude_patterns:
     - "*/tests/*"
     - "*/examples/*"
@@ -245,15 +245,15 @@ performance:
     p50: 1.0
     p95: 3.0
     p99: 5.0
-  
+
   memory_usage:
     max_heap: 100  # MB
     max_stack: 10   # MB
-  
+
   concurrent_requests:
     max_users: 100
     max_requests_per_user: 1000
-  
+
   load_testing:
     duration: 300  # seconds
     ramp_up: 60    # seconds
@@ -262,16 +262,16 @@ performance:
 # Security configurations
 security:
   enabled: true
-  
+
   static_analysis:
     tool: "bandit"  # for Python
     config: "bandit.yaml"
     max_issues: 0
-  
+
   dependency_scanning:
     tool: "safety"  # for Python
     enabled: true
-  
+
   secret_scanning:
     enabled: true
     patterns:
@@ -283,18 +283,18 @@ security:
 # Documentation configurations
 documentation:
   enabled: true
-  
+
   formats:
     - "html"
     - "markdown"
     - "pdf"
-  
+
   include:
     - "api_reference"
     - "examples"
     - "tutorials"
     - "changelog"
-  
+
   quality:
     min_examples: 5
     min_tutorials: 2
@@ -306,21 +306,21 @@ code_quality:
     max_cyclomatic: 10
     max_cognitive: 8
     max_nesting: 4
-  
+
   maintainability:
     min_methods_per_class: 1
     max_methods_per_class: 20
     min_lines_per_method: 1
     max_lines_per_method: 50
-  
+
   naming:
     enforce_conventions: true
     max_name_length: 50
-  
+
   comments:
     require_docstrings: true
     min_comment_ratio: 10
-  
+
   duplication:
     max_duplication: 5  # percentage
     min_token_count: 50
@@ -330,17 +330,17 @@ ci_cd:
   quality_gates:
     enabled: true
     blocking: true
-  
+
   reporting:
     junit: true
     coverage: true
     performance: true
-  
+
   notifications:
     slack: false
     email: false
     webhook: false
-  
+
   artifacts:
     reports: true
     coverage: true
@@ -349,18 +349,18 @@ ci_cd:
 # Monitoring configurations
 monitoring:
   enabled: true
-  
+
   metrics:
     - "test_execution_time"
     - "coverage_percentage"
     - "code_quality_score"
     - "performance_metrics"
-  
+
   alerts:
     test_failure: true
     coverage_drop: true
     performance_degradation: true
-  
+
   dashboards:
     quality_overview: true
     test_results: true
@@ -373,7 +373,7 @@ reporting:
     - "html"
     - "xml"
     - "markdown"
-  
+
   sections:
     - "summary"
     - "test_results"
@@ -381,7 +381,7 @@ reporting:
     - "performance_metrics"
     - "quality_gates"
     - "recommendations"
-  
+
   output:
     directory: "reports"
     filename: "quality_report"
@@ -394,12 +394,12 @@ custom_rules:
     - "All SDKs must include authentication examples"
     - "All SDKs must have comprehensive README"
     - "All SDKs must include type definitions"
-  
+
   api_consistency:
     - "Method names must be consistent across languages"
     - "Parameter names must be consistent across languages"
     - "Error responses must be consistent across languages"
-  
+
   documentation:
     - "All public APIs must be documented"
     - "All examples must be tested"
@@ -411,12 +411,12 @@ enforcement:
     - "success_rate"
     - "coverage"
     - "security_issues"
-  
+
   warning:
     - "performance"
     - "code_quality"
     - "documentation"
-  
+
   info:
     - "style"
     - "formatting"
@@ -428,13 +428,13 @@ environments:
     success_rate: 80
     coverage: 70
     performance_strict: false
-  
+
   staging:
     success_rate: 90
     coverage: 80
     performance_strict: true
-  
+
   production:
     success_rate: 95
     coverage: 85
-    performance_strict: true 
+    performance_strict: true

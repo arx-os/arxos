@@ -27,15 +27,15 @@ logger = logging.getLogger(__name__)
 class PostgreSQLBuildingRepository(BuildingRepository):
     """
     PostgreSQL implementation of BuildingRepository.
-    
+
     This repository provides persistent storage for building entities
     using PostgreSQL with connection pooling and proper error handling.
     """
-    
+
     def __init__(self, connection_string: str = None, pool_size: int = 5):
         """
         Initialize the PostgreSQL repository.
-        
+
         Args:
             connection_string: PostgreSQL connection string
             pool_size: Size of the connection pool
@@ -45,7 +45,7 @@ class PostgreSQLBuildingRepository(BuildingRepository):
         self._pool = None
         self._initialize_pool()
         self._create_tables()
-    
+
     def _get_default_connection_string(self) -> str:
         """Get default connection string from environment or use defaults."""
         import os
@@ -53,7 +53,7 @@ class PostgreSQLBuildingRepository(BuildingRepository):
             'DATABASE_URL',
             'postgresql://postgres:password@localhost:5432/arxos_buildings'
         )
-    
+
     def _initialize_pool(self):
         """Initialize the connection pool."""
         try:
@@ -64,7 +64,7 @@ class PostgreSQLBuildingRepository(BuildingRepository):
         except Exception as e:
             logger.error(f"Failed to initialize connection pool: {e}")
             raise DatabaseError(f"Database connection failed: {e}")
-    
+
     def _create_tables(self):
         """Create database tables if they don't exist."""
         create_buildings_table = """
@@ -92,7 +92,7 @@ class PostgreSQLBuildingRepository(BuildingRepository):
             updated_by VARCHAR(255)
         );
         """
-        
+
         create_building_events_table = """
         CREATE TABLE IF NOT EXISTS building_events (
             id SERIAL PRIMARY KEY,
@@ -103,7 +103,7 @@ class PostgreSQLBuildingRepository(BuildingRepository):
             FOREIGN KEY (building_id) REFERENCES buildings(id)
         );
         """
-        
+
         try:
             with self._get_connection() as conn:
                 with conn.cursor() as cursor:
@@ -114,28 +114,28 @@ class PostgreSQLBuildingRepository(BuildingRepository):
         except Exception as e:
             logger.error(f"Failed to create tables: {e}")
             raise DatabaseError(f"Table creation failed: {e}")
-    
+
     def _get_connection(self):
         """Get a connection from the pool."""
         if not self._pool:
             raise DatabaseError("Connection pool not initialized")
         return self._pool.getconn()
-    
+
     def _return_connection(self, conn):
         """Return a connection to the pool."""
         if self._pool:
             self._pool.putconn(conn)
-    
+
     def save(self, building: Building) -> Building:
         """
         Save a building entity to the database.
-        
+
         Args:
             building: Building entity to save
-            
+
         Returns:
             Saved building entity
-            
+
         Raises:
             PersistenceError: If save operation fails
         """
@@ -171,7 +171,7 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                             status = EXCLUDED.status,
                             updated_at = EXCLUDED.updated_at,
                             updated_by = EXCLUDED.updated_by
-                    """, (
+                    """, ("
                         str(building.id),
                         building.name,
                         building.address.street,
@@ -194,33 +194,33 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                         building.created_by,
                         building.updated_by
                     ))
-                    
+
                     # Save domain events
                     for event in building.get_domain_events():
                         cursor.execute("""
                             INSERT INTO building_events (building_id, event_type, event_data)
                             VALUES (%s, %s, %s)
-                        """, (
+                        """, ("
                             str(building.id),
                             event.event_type,
-                            json.dumps(event.to_dict())
+                            json.dumps(event.to_dict()
                         ))
-                    
+
                     conn.commit()
                     logger.info(f"Building saved successfully: {building.id}")
                     return building
-                    
+
         except Exception as e:
             logger.error(f"Failed to save building: {e}")
             raise PersistenceError(f"Save operation failed: {e}")
-    
+
     def find_by_id(self, building_id: Identifier) -> Optional[Building]:
         """
         Find a building by its ID.
-        
+
         Args:
             building_id: Building identifier
-            
+
         Returns:
             Building entity if found, None otherwise
         """
@@ -230,24 +230,23 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                     cursor.execute("""
                         SELECT * FROM buildings WHERE id = %s
                     """, (str(building_id),))
-                    
                     row = cursor.fetchone()
                     if row:
                         return self._row_to_building(row)
                     return None
-                    
+
         except Exception as e:
             logger.error(f"Failed to find building by ID: {e}")
             raise DatabaseError(f"Find operation failed: {e}")
-    
+
     def find_all(self, limit: int = 100, offset: int = 0) -> List[Building]:
         """
         Find all buildings with pagination.
-        
+
         Args:
             limit: Maximum number of buildings to return
             offset: Number of buildings to skip
-            
+
         Returns:
             List of building entities
         """
@@ -255,25 +254,24 @@ class PostgreSQLBuildingRepository(BuildingRepository):
             with self._get_connection() as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
                     cursor.execute("""
-                        SELECT * FROM buildings 
-                        ORDER BY created_at DESC 
+                        SELECT * FROM buildings
+                        ORDER BY created_at DESC
                         LIMIT %s OFFSET %s
                     """, (limit, offset))
-                    
                     rows = cursor.fetchall()
                     return [self._row_to_building(row) for row in rows]
-                    
+
         except Exception as e:
             logger.error(f"Failed to find all buildings: {e}")
             raise DatabaseError(f"Find all operation failed: {e}")
-    
+
     def find_by_criteria(self, criteria: Dict[str, Any]) -> List[Building]:
         """
         Find buildings by search criteria.
-        
+
         Args:
             criteria: Search criteria dictionary
-            
+
         Returns:
             List of building entities matching criteria
         """
@@ -283,40 +281,40 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                     # Build dynamic query based on criteria
                     query = "SELECT * FROM buildings WHERE 1=1"
                     params = []
-                    
+
                     if 'name' in criteria:
                         query += " AND name ILIKE %s"
                         params.append(f"%{criteria['name']}%")
-                    
+
                     if 'building_type' in criteria:
                         query += " AND building_type = %s"
                         params.append(criteria['building_type'])
-                    
+
                     if 'is_active' in criteria:
                         query += " AND is_active = %s"
                         params.append(criteria['is_active'])
-                    
+
                     if 'city' in criteria:
                         query += " AND address_city ILIKE %s"
                         params.append(f"%{criteria['city']}%")
-                    
+
                     query += " ORDER BY created_at DESC"
-                    
+
                     cursor.execute(query, params)
                     rows = cursor.fetchall()
                     return [self._row_to_building(row) for row in rows]
-                    
+
         except Exception as e:
             logger.error(f"Failed to find buildings by criteria: {e}")
             raise DatabaseError(f"Find by criteria operation failed: {e}")
-    
+
     def delete(self, building_id: Identifier) -> bool:
         """
         Delete a building by ID.
-        
+
         Args:
             building_id: Building identifier
-            
+
         Returns:
             True if deleted, False if not found
         """
@@ -326,23 +324,22 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                     cursor.execute("""
                         DELETE FROM buildings WHERE id = %s
                     """, (str(building_id),))
-                    
                     deleted = cursor.rowcount > 0
                     conn.commit()
-                    
+
                     if deleted:
                         logger.info(f"Building deleted successfully: {building_id}")
-                    
+
                     return deleted
-                    
+
         except Exception as e:
             logger.error(f"Failed to delete building: {e}")
             raise DatabaseError(f"Delete operation failed: {e}")
-    
+
     def count(self) -> int:
         """
         Get the total number of buildings.
-        
+
         Returns:
             Total count of buildings
         """
@@ -351,11 +348,11 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT COUNT(*) FROM buildings")
                     return cursor.fetchone()[0]
-                    
+
         except Exception as e:
             logger.error(f"Failed to count buildings: {e}")
             raise DatabaseError(f"Count operation failed: {e}")
-    
+
     def _row_to_building(self, row: Dict[str, Any]) -> Building:
         """Convert database row to Building entity."""
         try:
@@ -368,14 +365,14 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                 country=row['address_country'],
                 unit=row['address_unit']
             )
-            
+
             # Create dimensions
             dimensions = Dimensions(
                 length=float(row['dimensions_length']),
                 width=float(row['dimensions_width']),
                 height=float(row['dimensions_height']) if row['dimensions_height'] else None
             )
-            
+
             # Create building
             building = Building(
                 id=Identifier(row['id']),
@@ -393,15 +390,15 @@ class PostgreSQLBuildingRepository(BuildingRepository):
                 created_by=row['created_by'],
                 updated_by=row['updated_by']
             )
-            
+
             return building
-            
+
         except Exception as e:
             logger.error(f"Failed to convert row to building: {e}")
             raise DatabaseError(f"Row conversion failed: {e}")
-    
+
     def close(self):
         """Close the connection pool."""
         if self._pool:
             self._pool.closeall()
-            logger.info("PostgreSQL connection pool closed") 
+            logger.info("PostgreSQL connection pool closed")

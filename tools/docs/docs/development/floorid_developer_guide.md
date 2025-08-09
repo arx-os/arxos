@@ -76,25 +76,25 @@ func (c *Connector) ValidateConnector() error {
     if err := c.ValidateBIMObject(); err != nil {
         return err
     }
-    
+
     // FloorID validation
     if c.FloorID == 0 {
         return fmt.Errorf("floor_id is required and must be > 0")
     }
-    
+
     // Capacity validation
     if c.MaxCapacity < 0 {
         return fmt.Errorf("max_capacity cannot be negative")
     }
-    
+
     if c.CurrentLoad < 0 {
         return fmt.Errorf("current_load cannot be negative")
     }
-    
+
     if c.CurrentLoad > c.MaxCapacity {
         return fmt.Errorf("current_load cannot exceed max_capacity")
     }
-    
+
     return nil
 }
 ```
@@ -184,20 +184,20 @@ func CreateConnector(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Invalid JSON", http.StatusBadRequest)
         return
     }
-    
+
     // FloorID validation
     if connector.FloorID == 0 {
         http.Error(w, "floor_id is required", http.StatusBadRequest)
         return
     }
-    
+
     // Verify floor exists
     var floor models.Floor
     if err := db.DB.First(&floor, connector.FloorID).Error; err != nil {
         http.Error(w, "Floor not found", http.StatusBadRequest)
         return
     }
-    
+
     // Geometry bounds check
     if connector.Geometry.Points != nil {
         for _, pt := range connector.Geometry.Points {
@@ -207,19 +207,19 @@ func CreateConnector(w http.ResponseWriter, r *http.Request) {
             }
         }
     }
-    
+
     // Validate connector
     if err := connector.ValidateConnector(); err != nil {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
-    
+
     // Create connector
     if err := db.DB.Create(&connector).Error; err != nil {
         http.Error(w, "Database error", http.StatusInternalServerError)
         return
     }
-    
+
     // Return response with floor info
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]interface{}{
@@ -235,26 +235,26 @@ func CreateConnector(w http.ResponseWriter, r *http.Request) {
 func UpdateConnector(w http.ResponseWriter, r *http.Request) {
     // Get connector ID
     connectorID := chi.URLParam(r, "id")
-    
+
     // Parse update data
     var updateData models.Connector
     if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
         http.Error(w, "Invalid JSON", http.StatusBadRequest)
         return
     }
-    
+
     // Get existing connector
     var connector models.Connector
     if err := db.DB.Where("object_id = ?", connectorID).First(&connector).Error; err != nil {
         http.Error(w, "Connector not found", http.StatusNotFound)
         return
     }
-    
+
     // Floor consistency check for connected objects
     if updateData.ConnectedTo != nil {
         for _, objID := range updateData.ConnectedTo {
             var floorID uint
-            
+
             // Check device
             var device models.Device
             if err := db.DB.Where("object_id = ?", objID).First(&device).Error; err == nil {
@@ -269,20 +269,20 @@ func UpdateConnector(w http.ResponseWriter, r *http.Request) {
                     return
                 }
             }
-            
+
             if floorID != connector.FloorID {
                 http.Error(w, "Connected object must be on same floor", http.StatusBadRequest)
                 return
             }
         }
     }
-    
+
     // Update connector
     if err := db.DB.Model(&connector).Updates(updateData).Error; err != nil {
         http.Error(w, "Database error", http.StatusInternalServerError)
         return
     }
-    
+
     // Return updated connector
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(connector)
@@ -297,7 +297,7 @@ func UpdateConnector(w http.ResponseWriter, r *http.Request) {
 func validateFloorConsistency(connector *models.Connector, connectedObjects []string) error {
     for _, objID := range connectedObjects {
         var floorID uint
-        
+
         // Try to find device
         var device models.Device
         if err := db.DB.Where("object_id = ?", objID).First(&device).Error; err == nil {
@@ -311,12 +311,12 @@ func validateFloorConsistency(connector *models.Connector, connectedObjects []st
                 return fmt.Errorf("connected object not found: %s", objID)
             }
         }
-        
+
         if floorID != connector.FloorID {
             return fmt.Errorf("connected object %s must be on same floor as connector", objID)
         }
     }
-    
+
     return nil
 }
 ```
@@ -328,14 +328,14 @@ func validateGeometryBounds(geometry models.Geometry, floorID uint) error {
     if geometry.Points == nil {
         return nil
     }
-    
+
     // Basic bounds check (0 <= x,y <= 10000)
     for _, pt := range geometry.Points {
         if pt.X < 0 || pt.Y < 0 || pt.X > 10000 || pt.Y > 10000 {
             return fmt.Errorf("geometry points must be within floor bounds (0 <= x,y <= 10000)")
         }
     }
-    
+
     // TODO: Add floor-specific bounds validation using floor geometry
     return nil
 }
@@ -367,13 +367,13 @@ CREATE TABLE connectors (
     created_by BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     INDEX idx_floor_id (floor_id),
     INDEX idx_system (system),
     INDEX idx_connector_type (connector_type),
     INDEX idx_status (status),
     INDEX idx_created_by (created_by),
-    
+
     FOREIGN KEY (floor_id) REFERENCES floors(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
@@ -403,25 +403,25 @@ class ConnectorManager {
         this.floors = [];
         this.currentFloorFilter = null;
     }
-    
+
     // Load connectors with floor filtering
     async loadConnectors(floorId = null) {
         const params = new URLSearchParams();
         if (floorId) {
             params.append('floor_id', floorId);
         }
-        
+
         const response = await fetch(`/api/connectors?${params}`);
         const data = await response.json();
-        
+
         this.connectors = data.results;
         this.renderConnectorList();
     }
-    
+
     // Group connectors by floor
     groupConnectorsByFloor() {
         const grouped = {};
-        
+
         this.connectors.forEach(connector => {
             const floorId = connector.floor_id;
             if (!grouped[floorId]) {
@@ -429,21 +429,21 @@ class ConnectorManager {
             }
             grouped[floorId].push(connector);
         });
-        
+
         return grouped;
     }
-    
+
     // Render connector list with floor grouping
     renderConnectorList() {
         const container = document.getElementById('connector-list');
         const grouped = this.groupConnectorsByFloor();
-        
+
         let html = '';
-        
+
         Object.keys(grouped).forEach(floorId => {
             const floor = this.getFloorInfo(floorId);
             const connectors = grouped[floorId];
-            
+
             html += `
                 <div class="floor-group">
                     <h3 class="floor-header">
@@ -456,14 +456,14 @@ class ConnectorManager {
                 </div>
             `;
         });
-        
+
         container.innerHTML = html;
     }
-    
+
     // Render individual connector with floor badge
     renderConnector(connector) {
         const floor = this.getFloorInfo(connector.floor_id);
-        
+
         return `
             <div class="connector-item">
                 <div class="connector-header">
@@ -487,30 +487,30 @@ class ContextPanel {
     // Show connector details with floor information
     showConnectorDetails(connector) {
         const floorInfo = this.getFloorInfo(connector.floor_id);
-        
+
         this.content.innerHTML = `
             <div class="connector-details">
                 <div class="floor-indicator">
                     <span class="floor-badge">Floor: ${floorInfo ? floorInfo.name : connector.floor_id}</span>
                 </div>
-                
+
                 <form class="connector-form">
                     <div class="form-group">
                         <label>Name</label>
                         <input type="text" name="name" value="${connector.name}">
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Floor</label>
                         <select name="floor_id" required>
-                            ${this.floors.map(floor => 
+                            ${this.floors.map(floor =>
                                 `<option value="${floor.id}" ${floor.id === connector.floor_id ? 'selected' : ''}>
                                     ${floor.name}
                                 </option>`
                             ).join('')}
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Connector Type</label>
                         <select name="connector_type">
@@ -520,7 +520,7 @@ class ContextPanel {
                             <option value="data" ${connector.connector_type === 'data' ? 'selected' : ''}>Data</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Connection Type</label>
                         <select name="connection_type">
@@ -529,7 +529,7 @@ class ContextPanel {
                             <option value="both" ${connector.connection_type === 'both' ? 'selected' : ''}>Both</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Connection Status</label>
                         <select name="connection_status">
@@ -538,17 +538,17 @@ class ContextPanel {
                             <option value="pending" ${connector.connection_status === 'pending' ? 'selected' : ''}>Pending</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Max Capacity</label>
                         <input type="number" name="max_capacity" value="${connector.max_capacity}" step="0.01">
                     </div>
-                    
+
                     <div class="form-group">
                         <label>Current Load</label>
                         <input type="number" name="current_load" value="${connector.current_load}" step="0.01">
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary">Update Connector</button>
                 </form>
             </div>
@@ -611,7 +611,7 @@ func TestConnectorValidation(t *testing.T) {
             wantErr: true,
         },
     }
-    
+
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             err := tt.connector.ValidateConnector()
@@ -630,12 +630,12 @@ func TestConnectorCRUD(t *testing.T) {
     // Setup test database
     db := setupTestDB(t)
     defer cleanupTestDB(t, db)
-    
+
     // Create test user and floor
     user := createTestUser(t, "test@example.com", "testuser", "admin")
     building := createTestBuilding(t, user.ID)
     floor := createTestFloor(t, building.ID, "Test Floor")
-    
+
     // Test creating connector
     connectorData := models.Connector{
         BIMObject: models.BIMObject{
@@ -649,20 +649,20 @@ func TestConnectorCRUD(t *testing.T) {
         MaxCapacity: 100.0,
         CurrentLoad: 75.0,
     }
-    
+
     // Test API endpoint
     reqBody, _ := json.Marshal(connectorData)
     req := httptest.NewRequest("POST", "/api/connectors", bytes.NewBuffer(reqBody))
     req.Header.Set("Authorization", "Bearer "+user.Token)
-    
+
     w := httptest.NewRecorder()
     handlers.CreateConnector(w, req)
-    
+
     assert.Equal(t, http.StatusOK, w.Code)
-    
+
     var response map[string]interface{}
     json.Unmarshal(w.Body.Bytes(), &response)
-    
+
     assert.NotNil(t, response["connector"])
     assert.Equal(t, floor.ID, uint(response["connector"].(map[string]interface{})["floor_id"].(float64)))
 }
@@ -676,13 +676,13 @@ func TestConnectorCRUD(t *testing.T) {
    ```sql
    -- Add FloorID column
    ALTER TABLE connectors ADD COLUMN floor_id BIGINT;
-   
+
    -- Set default floor for existing connectors
    UPDATE connectors SET floor_id = 1 WHERE floor_id IS NULL;
-   
+
    -- Add NOT NULL constraint
    ALTER TABLE connectors MODIFY COLUMN floor_id BIGINT NOT NULL;
-   
+
    -- Add index
    CREATE INDEX idx_connectors_floor_id ON connectors(floor_id);
    ```
@@ -782,10 +782,10 @@ func TestConnectorCRUD(t *testing.T) {
 1. **Database Queries**
    ```sql
    -- Check connector floor distribution
-   SELECT floor_id, COUNT(*) as count 
-   FROM connectors 
+   SELECT floor_id, COUNT(*) as count
+   FROM connectors
    GROUP BY floor_id;
-   
+
    -- Find floor consistency issues
    SELECT c.object_id, c.floor_id, d.object_id as device_id, d.floor_id as device_floor
    FROM connectors c
@@ -799,7 +799,7 @@ func TestConnectorCRUD(t *testing.T) {
    curl -X POST /api/connectors \
      -H "Authorization: Bearer $TOKEN" \
      -d '{"object_id":"TEST_001","name":"Test","floor_id":1}'
-   
+
    # Test floor filtering
    curl -X GET "/api/connectors?floor_id=1" \
      -H "Authorization: Bearer $TOKEN"
@@ -810,7 +810,7 @@ func TestConnectorCRUD(t *testing.T) {
    // Check floor data loading
    console.log('Floors:', connectorManager.floors);
    console.log('Connectors:', connectorManager.connectors);
-   
+
    // Check floor grouping
    console.log('Grouped:', connectorManager.groupConnectorsByFloor());
    ```

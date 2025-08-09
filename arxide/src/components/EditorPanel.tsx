@@ -18,7 +18,7 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({ code, onCodeChange }) 
     selectOnLineNumbers: true,
     roundedSelection: false,
     readOnly: false,
-    cursorStyle: 'line',
+    cursorStyle: 'line' as const,
     automaticLayout: true,
     theme: 'vs-dark',
     fontSize: 14,
@@ -28,10 +28,10 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({ code, onCodeChange }) 
   }
 
   return (
-    <Paper 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
+    <Paper
+      sx={{
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
         borderRadius: 0
       }}
@@ -52,4 +52,4 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({ code, onCodeChange }) 
       </Box>
     </Paper>
   )
-} 
+}

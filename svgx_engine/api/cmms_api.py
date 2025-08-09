@@ -281,7 +281,7 @@ async def create_work_order(request: WorkOrderRequest, user: User = Depends(get_
                 scheduled_start=request.scheduled_start,
                 scheduled_end=request.scheduled_end
             )
-        
+
         return {
             "success": True,
             "work_order_id": str(work_order.id),
@@ -300,7 +300,7 @@ async def get_work_order(work_order_id: UUID, user: User = Depends(get_current_u
         work_order = await work_order_service.get_work_order(work_order_id)
         if not work_order:
             raise HTTPException(status_code=404, detail="Work order not found")
-        
+
         return {"success": True, "work_order": work_order.dict()}
     except HTTPException:
         raise
@@ -322,7 +322,7 @@ async def get_work_orders(
             asset_id=asset_id,
             assigned_to=assigned_to
         )
-        
+
         return {
             "success": True,
             "work_orders": [wo.dict() for wo in work_orders],
@@ -340,7 +340,7 @@ async def update_work_order_status(work_order_id: UUID, status: str, user: User 
         work_order = await work_order_service.update_work_order_status(work_order_id, status)
         if not work_order:
             raise HTTPException(status_code=404, detail="Work order not found")
-        
+
         return {"success": True, "message": f"Work order status updated to {status}"}
     except HTTPException:
         raise
@@ -368,7 +368,7 @@ async def create_maintenance_schedule(request: MaintenanceScheduleRequest, user:
             required_tools=request.required_tools,
             required_parts=request.required_parts
         )
-        
+
         return {
             "success": True,
             "schedule_id": str(schedule.id),
@@ -408,10 +408,10 @@ async def create_maintenance_task(request: MaintenanceTaskRequest, user: User = 
             location=request.location,
             notes=request.notes
         )
-        
+
         if not task:
             raise HTTPException(status_code=404, detail="Maintenance schedule not found")
-        
+
         return {
             "success": True,
             "task_id": str(task.id),
@@ -437,7 +437,7 @@ async def get_maintenance_tasks(
             asset_id=asset_id,
             assigned_to=assigned_to
         )
-        
+
         return {
             "success": True,
             "tasks": [t.dict() for t in tasks],
@@ -455,7 +455,7 @@ async def start_maintenance_task(task_id: UUID, performer: str, user: User = Dep
         task = await maintenance_service.start_maintenance_task(task_id, performer)
         if not task:
             raise HTTPException(status_code=404, detail="Maintenance task not found")
-        
+
         return {"success": True, "message": "Maintenance task started successfully"}
     except HTTPException:
         raise
@@ -483,10 +483,10 @@ async def complete_maintenance_task(
             findings=findings,
             recommendations=recommendations
         )
-        
+
         if not task:
             raise HTTPException(status_code=404, detail="Maintenance task not found")
-        
+
         return {"success": True, "message": "Maintenance task completed successfully"}
     except HTTPException:
         raise
@@ -548,7 +548,7 @@ async def register_asset(request: AssetRegistrationRequest, user: User = Depends
             tags=request.tags,
             specifications=request.specifications
         )
-        
+
         return {
             "success": True,
             "asset_id": asset.id,
@@ -566,7 +566,7 @@ async def get_asset(asset_id: str, user: User = Depends(get_current_user)):
         asset = await asset_tracking_service.get_asset(asset_id)
         if not asset:
             raise HTTPException(status_code=404, detail="Asset not found")
-        
+
         return {"success": True, "asset": asset.dict()}
     except HTTPException:
         raise
@@ -588,7 +588,7 @@ async def get_assets(
             status=status,
             department=department
         )
-        
+
         return {
             "success": True,
             "assets": [a.dict() for a in assets],
@@ -615,7 +615,7 @@ async def update_asset_location(
     """Update asset location"""
     try:
         coords_tuple = tuple(coordinates) if coordinates else None
-        
+
         location = await asset_tracking_service.update_asset_location(
             asset_id=asset_id,
             location_name=location_name,
@@ -628,10 +628,10 @@ async def update_asset_location(
             department=department,
             updated_by=updated_by
         )
-        
+
         if not location:
             raise HTTPException(status_code=404, detail="Asset not found")
-        
+
         return {"success": True, "message": "Asset location updated successfully"}
     except HTTPException:
         raise
@@ -665,10 +665,10 @@ async def assess_asset_condition(
             recommendations=recommendations,
             next_assessment_date=next_assessment_date
         )
-        
+
         if not condition_assessment:
             raise HTTPException(status_code=404, detail="Asset not found")
-        
+
         return {"success": True, "message": "Asset condition assessed successfully"}
     except HTTPException:
         raise
@@ -697,10 +697,10 @@ async def record_performance_data(asset_id: str, request: PerformanceDataRequest
             maintenance_hours=request.maintenance_hours,
             cost_per_hour=request.cost_per_hour
         )
-        
+
         if not performance:
             raise HTTPException(status_code=404, detail="Asset not found")
-        
+
         return {"success": True, "message": "Performance data recorded successfully"}
     except HTTPException:
         raise
@@ -722,7 +722,7 @@ async def get_asset_performance_history(
             start_date=start_date,
             end_date=end_date
         )
-        
+
         return {
             "success": True,
             "performance_data": [p.dict() for p in performance_data],
@@ -750,7 +750,7 @@ async def get_asset_alerts(
             is_acknowledged=is_acknowledged,
             is_resolved=is_resolved
         )
-        
+
         return {
             "success": True,
             "alerts": [a.dict() for a in alerts],
@@ -768,7 +768,7 @@ async def acknowledge_asset_alert(asset_id: str, alert_id: UUID, acknowledged_by
         alert = await asset_tracking_service.acknowledge_alert(alert_id, acknowledged_by)
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-        
+
         return {"success": True, "message": "Alert acknowledged successfully"}
     except HTTPException:
         raise
@@ -789,7 +789,7 @@ async def resolve_asset_alert(
         alert = await asset_tracking_service.resolve_alert(alert_id, resolved_by, resolution_notes)
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
-        
+
         return {"success": True, "message": "Alert resolved successfully"}
     except HTTPException:
         raise
@@ -831,4 +831,4 @@ async def health_check(user: User = Depends(get_current_user)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8003) 
+    uvicorn.run(app, host="0.0.0.0", port=8003)

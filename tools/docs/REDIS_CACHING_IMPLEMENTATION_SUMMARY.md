@@ -92,7 +92,7 @@ redis_config = {
 
 #### **Intelligent Key Generation**
 ```python
-def generate_cache_key(self, cache_type: CacheType, identifier: str, 
+def generate_cache_key(self, cache_type: CacheType, identifier: str,
                       format: str = None, export_options: Optional[Dict[str, Any]] = None,
                       user_id: Optional[str] = None, project_id: Optional[str] = None) -> str:
 ```
@@ -118,16 +118,16 @@ def _compress_data(self, data: Any) -> bytes:
     """Compress data if it exceeds threshold"""
     if not self.cache_config['enable_compression']:
         return self._serialize_data(data)
-    
+
     serialized = self._serialize_data(data)
-    
+
     if len(serialized) > self.cache_config['compression_threshold_bytes']:
         compressed = gzip.compress(serialized)
         compression_ratio = len(compressed) / len(serialized)
-        
+
         if compression_ratio < 0.9:  # Only compress if it saves at least 10%
             return compressed
-    
+
     return serialized
 ```
 
@@ -146,7 +146,7 @@ def get_metadata(self, object_id: str, user_id: Optional[str] = None) -> Optiona
     key = self.generate_cache_key(CacheType.METADATA, object_id, user_id=user_id)
     return self.get(CacheType.METADATA, key)
 
-def set_metadata(self, object_id: str, metadata: Dict[str, Any], 
+def set_metadata(self, object_id: str, metadata: Dict[str, Any],
                 user_id: Optional[str] = None, ttl_seconds: Optional[int] = None) -> bool:
     """Set object metadata in cache"""
     key = self.generate_cache_key(CacheType.METADATA, object_id, user_id=user_id)
@@ -155,7 +155,7 @@ def set_metadata(self, object_id: str, metadata: Dict[str, Any],
 
 #### **Export Result Caching**
 ```python
-def get_export_result(self, export_id: str, format: str, 
+def get_export_result(self, export_id: str, format: str,
                      export_options: Optional[Dict[str, Any]] = None,
                      user_id: Optional[str] = None, project_id: Optional[str] = None) -> Optional[Any]:
     """Get export result from cache"""
@@ -183,23 +183,23 @@ def invalidate_by_pattern(self, pattern: str) -> int:
     """Invalidate cache entries matching pattern"""
     try:
         invalidated_count = 0
-        
+
         # Invalidate Redis entries
         if self.redis_manager:
             keys = self.redis_manager.get_keys_by_pattern(pattern)
             for key in keys:
                 if self.redis_manager.delete(CacheType.EXPORT_RESULT, key):
                     invalidated_count += 1
-        
+
         # Invalidate memory cache entries
         if self.memory_cache:
             keys_to_remove = [k for k in self.memory_cache.keys() if pattern in k]
             for key in keys_to_remove:
                 del self.memory_cache[key]
                 invalidated_count += 1
-        
+
         return invalidated_count
-        
+
     except Exception as e:
         self.logger.error(f"Cache invalidation error: {e}")
         return 0
@@ -214,11 +214,11 @@ def invalidate_object(self, object_id: str) -> int:
         f"object:{object_id}:*",
         f"export:*:{object_id}:*"
     ]
-    
+
     total_invalidated = 0
     for pattern in patterns:
         total_invalidated += self.invalidate_by_pattern(pattern)
-    
+
     return total_invalidated
 ```
 
@@ -237,28 +237,28 @@ def cache_export_result(ttl_seconds: Optional[int] = None):
             export_options = kwargs.get('export_options', {})
             user_id = kwargs.get('user_id')
             project_id = kwargs.get('project_id')
-            
+
             # Get cache service
             cache_service = get_cache_service()
-            
+
             # Try to get from cache
             cached_result = cache_service.get_export_result(
                 export_id, format, export_options, user_id, project_id
             )
-            
+
             if cached_result is not None:
                 return cached_result
-            
+
             # Execute function and cache result
             result = await func(*args, **kwargs)
-            
+
             # Cache the result
             cache_service.set_export_result(
                 export_id, result, format, export_options, user_id, project_id, ttl_seconds
             )
-            
+
             return result
-        
+
         return wrapper
     return decorator
 ```
@@ -273,27 +273,27 @@ def cache_metadata(ttl_seconds: Optional[int] = None):
             # Extract cache parameters
             object_id = kwargs.get('object_id')
             user_id = kwargs.get('user_id')
-            
+
             if not object_id:
                 return await func(*args, **kwargs)
-            
+
             # Get cache service
             cache_service = get_cache_service()
-            
+
             # Try to get from cache
             cached_metadata = cache_service.get_metadata(object_id, user_id)
-            
+
             if cached_metadata is not None:
                 return cached_metadata
-            
+
             # Execute function and cache result
             result = await func(*args, **kwargs)
-            
+
             # Cache the result
             cache_service.set_metadata(object_id, result, user_id, ttl_seconds)
-            
+
             return result
-        
+
         return wrapper
     return decorator
 ```
@@ -314,7 +314,7 @@ async def _cleanup_expired_entries_task(self):
                 "user:*",
                 "config:*"
             ]
-            
+
             total_expired = 0
             for pattern in patterns:
                 keys = self.redis_manager.get_keys_by_pattern(pattern)
@@ -323,14 +323,14 @@ async def _cleanup_expired_entries_task(self):
                     if ttl <= 0:
                         self.redis_manager.delete(CacheType.EXPORT_RESULT, key)
                         total_expired += 1
-            
+
             if total_expired > 0:
                 self.logger.info(f"Cleaned up {total_expired} expired Redis entries")
-        
+
         # Clean memory cache (TTLCache handles this automatically)
         if self.memory_cache:
             _ = len(self.memory_cache)
-            
+
     except Exception as e:
         self.logger.error(f"Cache cleanup error: {e}")
 ```
@@ -343,35 +343,35 @@ async def _update_metrics_task(self):
         # Count entries
         total_entries = 0
         total_size = 0
-        
+
         # Redis metrics
         if self.redis_manager:
             patterns = ["export:*", "metadata:*", "object:*", "user:*", "config:*"]
             for pattern in patterns:
                 keys = self.redis_manager.get_keys_by_pattern(pattern)
                 total_entries += len(keys)
-            
+
             # Get Redis memory usage
             redis_memory = self.redis_manager.get_memory_usage()
             if redis_memory:
                 total_size += redis_memory
                 self.metrics.redis_memory_usage = redis_memory
-        
+
         # Memory cache metrics
         if self.memory_cache:
             total_entries += len(self.memory_cache)
             self.metrics.memory_cache_size = len(self.memory_cache)
-        
+
         # Calculate hit rate
         total_requests = self.metrics.hit_count + self.metrics.miss_count
         hit_rate = self.metrics.hit_count / total_requests if total_requests > 0 else 0.0
-        
+
         # Update metrics
         self.metrics.total_entries = total_entries
         self.metrics.total_size_bytes = total_size
         self.metrics.hit_rate = hit_rate
         self.metrics.last_updated = datetime.utcnow()
-        
+
     except Exception as e:
         self.logger.error(f"Metrics update error: {e}")
 ```
@@ -401,7 +401,7 @@ print(cached_metadata)  # {"name": "test_object", "type": "svg", "elements": 50}
 # Cache export result
 export_data = {"data": "export_result", "format": "json", "size": 1024}
 cache_service.set_export_result(
-    "export_123", export_data, "json", 
+    "export_123", export_data, "json",
     {"precision": 2}, "user_456", "project_789"
 )
 
@@ -613,4 +613,4 @@ The Redis caching implementation provides a robust foundation for high-performan
 - **Monitoring**: Comprehensive metrics and health monitoring
 - **User Experience**: Personalized caching with user and project context
 
-The implementation establishes a strong foundation for caching across the entire Arxos Platform, ensuring fast and reliable access to export results and metadata. 
+The implementation establishes a strong foundation for caching across the entire Arxos Platform, ensuring fast and reliable access to export results and metadata.

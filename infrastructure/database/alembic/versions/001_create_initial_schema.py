@@ -1,7 +1,7 @@
-"""Create initial schema
+"""Create initial schema"
 
 Revision ID: 001
-Revises: 
+Revises:
 Create Date: 2024-01-01 00:00:00.000000
 
 """
@@ -35,7 +35,7 @@ Example:
     """
     # Enable PostGIS extension
     op.execute('CREATE EXTENSION IF NOT EXISTS postgis')
-    
+
     # Create users table
     op.create_table('users',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -49,7 +49,7 @@ Example:
         sa.UniqueConstraint('email'),
         sa.UniqueConstraint('username')
     )
-    
+
     # Create projects table
     op.create_table('projects',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -62,7 +62,7 @@ Example:
     )
     op.create_index('idx_projects_user_id', 'projects', ['user_id'])
     op.create_index('idx_projects_created_at', 'projects', ['created_at'])
-    
+
     # Create buildings table
     op.create_table('buildings',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -80,7 +80,7 @@ Example:
     op.create_index('idx_buildings_owner_id', 'buildings', ['owner_id'])
     op.create_index('idx_buildings_created_at', 'buildings', ['created_at'])
     op.create_index('idx_buildings_updated_at', 'buildings', ['updated_at'])
-    
+
     # Create floors table
     op.create_table('floors',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -94,7 +94,7 @@ Example:
     )
     op.create_index('idx_floors_building_id', 'floors', ['building_id'])
     op.create_index('idx_floors_name', 'floors', ['name'])
-    
+
     # Create categories table
     op.create_table('categories',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -108,7 +108,7 @@ Example:
     )
     op.create_index('idx_categories_building_id', 'categories', ['building_id'])
     op.create_index('idx_categories_name', 'categories', ['name'])
-    
+
     # Create rooms table
     op.create_table('rooms',
         sa.Column('id', sa.String(length=64), nullable=False),
@@ -145,7 +145,7 @@ Example:
     op.create_index('idx_rooms_category', 'rooms', ['category'])
     op.create_index('idx_rooms_layer', 'rooms', ['layer'])
     op.create_index('idx_rooms_name', 'rooms', ['name'])
-    
+
     # Create walls table
     op.create_table('walls',
         sa.Column('id', sa.String(length=64), nullable=False),
@@ -186,7 +186,7 @@ Example:
     op.create_index('idx_walls_material', 'walls', ['material'])
     op.create_index('idx_walls_layer', 'walls', ['layer'])
     op.create_index('idx_walls_category', 'walls', ['category'])
-    
+
     # Create doors table
     op.create_table('doors',
         sa.Column('id', sa.String(length=64), nullable=False),
@@ -227,7 +227,7 @@ Example:
     op.create_index('idx_doors_material', 'doors', ['material'])
     op.create_index('idx_doors_layer', 'doors', ['layer'])
     op.create_index('idx_doors_category', 'doors', ['category'])
-    
+
     # Create windows table
     op.create_table('windows',
         sa.Column('id', sa.String(length=64), nullable=False),
@@ -268,7 +268,7 @@ Example:
     op.create_index('idx_windows_material', 'windows', ['material'])
     op.create_index('idx_windows_layer', 'windows', ['layer'])
     op.create_index('idx_windows_category', 'windows', ['category'])
-    
+
     # Create devices table
     op.create_table('devices',
         sa.Column('id', sa.String(length=64), nullable=False),
@@ -313,7 +313,7 @@ Example:
     op.create_index('idx_devices_subtype', 'devices', ['subtype'])
     op.create_index('idx_devices_layer', 'devices', ['layer'])
     op.create_index('idx_devices_category', 'devices', ['category'])
-    
+
     # Create labels table
     op.create_table('labels',
         sa.Column('id', sa.String(length=64), nullable=False),
@@ -354,7 +354,7 @@ Example:
     op.create_index('idx_labels_text', 'labels', ['text'])
     op.create_index('idx_labels_layer', 'labels', ['layer'])
     op.create_index('idx_labels_category', 'labels', ['category'])
-    
+
     # Create zones table
     op.create_table('zones',
         sa.Column('id', sa.String(length=64), nullable=False),
@@ -395,7 +395,7 @@ Example:
     op.create_index('idx_zones_name', 'zones', ['name'])
     op.create_index('idx_zones_layer', 'zones', ['layer'])
     op.create_index('idx_zones_category', 'zones', ['category'])
-    
+
     # Create drawings table
     op.create_table('drawings',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -408,7 +408,7 @@ Example:
     op.create_index('idx_drawings_project_id', 'drawings', ['project_id'])
     op.create_index('idx_drawings_name', 'drawings', ['name'])
     op.create_index('idx_drawings_created_at', 'drawings', ['created_at'])
-    
+
     # Create comments table
     op.create_table('comments',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -424,7 +424,7 @@ Example:
     op.create_index('idx_comments_object_id', 'comments', ['object_id'])
     op.create_index('idx_comments_object_type', 'comments', ['object_type'])
     op.create_index('idx_comments_created_at', 'comments', ['created_at'])
-    
+
     # Create assignments table
     op.create_table('assignments',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -441,7 +441,7 @@ Example:
     op.create_index('idx_assignments_status', 'assignments', ['status'])
     op.create_index('idx_assignments_object_type', 'assignments', ['object_type'])
     op.create_index('idx_assignments_assigned_at', 'assignments', ['assigned_at'])
-    
+
     # Create object_history table
     op.create_table('object_history',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -458,7 +458,7 @@ Example:
     op.create_index('idx_object_history_change_type', 'object_history', ['change_type'])
     op.create_index('idx_object_history_object_type', 'object_history', ['object_type'])
     op.create_index('idx_object_history_changed_at', 'object_history', ['changed_at'])
-    
+
     # Create audit_logs table
     op.create_table('audit_logs',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -475,7 +475,7 @@ Example:
     op.create_index('idx_audit_logs_action', 'audit_logs', ['action'])
     op.create_index('idx_audit_logs_object_type', 'audit_logs', ['object_type'])
     op.create_index('idx_audit_logs_created_at', 'audit_logs', ['created_at'])
-    
+
     # Create user_category_permissions table
     op.create_table('user_category_permissions',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -492,7 +492,7 @@ Example:
     op.create_index('idx_user_category_permissions_category_id', 'user_category_permissions', ['category_id'])
     op.create_index('idx_user_category_permissions_project_id', 'user_category_permissions', ['project_id'])
     op.create_index('idx_user_category_permissions_can_edit', 'user_category_permissions', ['can_edit'])
-    
+
     # Create chat_messages table
     op.create_table('chat_messages',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -510,7 +510,7 @@ Example:
     op.create_index('idx_chat_messages_user_id', 'chat_messages', ['user_id'])
     op.create_index('idx_chat_messages_audit_log_id', 'chat_messages', ['audit_log_id'])
     op.create_index('idx_chat_messages_created_at', 'chat_messages', ['created_at'])
-    
+
     # Create catalog_items table
     op.create_table('catalog_items',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -557,6 +557,6 @@ def downgrade() -> None:
     op.drop_table('buildings')
     op.drop_table('projects')
     op.drop_table('users')
-    
+
     # Drop PostGIS extension
-    op.execute('DROP EXTENSION IF EXISTS postgis') 
+    op.execute('DROP EXTENSION IF EXISTS postgis')

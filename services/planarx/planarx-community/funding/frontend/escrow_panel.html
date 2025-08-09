@@ -50,8 +50,8 @@
                     <div class="relative w-32 h-32">
                         <svg class="progress-ring w-32 h-32" viewBox="0 0 120 120">
                             <circle cx="60" cy="60" r="54" fill="none" stroke="#e5e7eb" stroke-width="8"/>
-                            <circle cx="60" cy="60" r="54" fill="none" stroke="#10b981" stroke-width="8" 
-                                    stroke-dasharray="339.292" stroke-dashoffset="169.646" 
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="#10b981" stroke-width="8"
+                                    stroke-dasharray="339.292" stroke-dashoffset="169.646"
                                     class="progress-ring-circle"/>
                         </svg>
                         <div class="absolute inset-0 flex items-center justify-center">
@@ -312,7 +312,7 @@
             const percentage = data.percentage;
             const circumference = 2 * Math.PI * 54;
             const offset = circumference - (percentage / 100) * circumference;
-            
+
             document.querySelector('.progress-ring-circle').style.strokeDashoffset = offset;
             document.getElementById('funding-percentage').textContent = percentage + '%';
             document.getElementById('funding-goal').textContent = '$' + data.goal.toLocaleString();
@@ -421,7 +421,7 @@
             container.innerHTML = '';
 
             // Filter governance-related transactions
-            const governanceTransactions = escrowData.transactions.filter(t => 
+            const governanceTransactions = escrowData.transactions.filter(t =>
                 t.type === 'milestone_approved' || t.type === 'milestone_rejected'
             );
 
@@ -606,4 +606,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

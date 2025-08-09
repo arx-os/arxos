@@ -273,17 +273,17 @@ settings = PrecisionSettings(
     millimeter_precision=Decimal('0.001'),
     micron_precision=Decimal('0.000001'),
     nanometer_precision=Decimal('0.000000001'),
-    
+
     # Default precision
     default_precision=Decimal('0.001'),
-    
+
     # Rounding mode
     rounding_mode='HALF_UP',  # HALF_UP, DOWN, UP
-    
+
     # Error handling
     strict_mode=True,          # Raise errors for violations
     log_precision_errors=True, # Log precision errors
-    
+
     # Performance settings
     use_numpy_for_large_arrays=True,
     numpy_precision_threshold=1000
@@ -382,4 +382,4 @@ The system includes extensive testing:
 
 The Precision Math System provides the mathematical foundation for professional CAD functionality with sub-millimeter accuracy. Its comprehensive validation, error handling, and performance optimization ensure reliable operation in demanding engineering and design applications.
 
-The system's modular design allows for easy integration with other CAD components while maintaining the precision and performance required for professional use. The configurable precision levels and error handling modes make it suitable for a wide range of CAD applications. 
+The system's modular design allows for easy integration with other CAD components while maintaining the precision and performance required for professional use. The configurable precision levels and error handling modes make it suitable for a wide range of CAD applications.

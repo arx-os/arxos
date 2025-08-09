@@ -215,4 +215,4 @@ MIT License - see LICENSE file for details.
 
 - Documentation: [docs.arxos.com](https://docs.arxos.com)
 - Issues: [GitHub Issues](https://github.com/arxos/svgx-engine/issues)
-- Discussions: [GitHub Discussions](https://github.com/arxos/svgx-engine/discussions) 
+- Discussions: [GitHub Discussions](https://github.com/arxos/svgx-engine/discussions)

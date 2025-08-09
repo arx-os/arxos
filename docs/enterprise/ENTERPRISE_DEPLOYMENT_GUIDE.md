@@ -101,24 +101,24 @@ sudo ufw enable
 server {
     listen 443 ssl http2;
     server_name arxos.example.com;
-    
+
     ssl_certificate /path/to/certificate.crt;
     ssl_certificate_key /path/to/private.key;
-    
+
     # SSL security settings
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512;
     ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
-    
+
     # Security headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options DENY always;
     add_header X-Content-Type-Options nosniff always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    
+
     location / {
         proxy_pass http://localhost:8000;
         proxy_set_header Host $host;
@@ -232,21 +232,21 @@ class AuditLogger:
     def __init__(self):
         self.logger = logging.getLogger('audit')
         self.logger.setLevel(logging.INFO)
-        
+
         # File handler for audit logs
         file_handler = logging.FileHandler('/var/log/arxos/audit.log')
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s - %(levelname)s - %(message)s'
         ))
         self.logger.addHandler(file_handler)
-    
+
     def log_access(self, user, resource, action, success):
         self.logger.info(
             f"ACCESS: user={user}, resource={resource}, "
             f"action={action}, success={success}, "
             f"timestamp={datetime.now().isoformat()}"
         )
-    
+
     def log_security_event(self, event_type, details):
         self.logger.warning(
             f"SECURITY: type={event_type}, details={details}, "
@@ -286,7 +286,7 @@ def export_user_data(user_id):
         'preferences': get_user_preferences(user_id),
         'data_requests': get_data_requests(user_id)
     }
-    
+
     return json.dumps(user_data, indent=2)
 ```
 
@@ -299,11 +299,11 @@ def export_user_data(user_id):
 class PHIProtector:
     def __init__(self):
         self.encryption_key = get_encryption_key()
-    
+
     def encrypt_phi(self, phi_data):
         """Encrypt PHI data"""
         return encrypt_data(phi_data, self.encryption_key)
-    
+
     def decrypt_phi(self, encrypted_data):
         """Decrypt PHI data with proper authorization"""
         if not has_phi_access():
@@ -845,4 +845,4 @@ curl -f http://localhost:9090/api/v1/rules
 
 This enterprise deployment guide provides comprehensive instructions for deploying the Arxos Platform in production environments with enterprise-grade security, compliance, and monitoring capabilities. Follow these guidelines to ensure a secure, compliant, and reliable deployment.
 
-For additional support, refer to the Arxos documentation or contact the Arxos support team. 
+For additional support, refer to the Arxos documentation or contact the Arxos support team.

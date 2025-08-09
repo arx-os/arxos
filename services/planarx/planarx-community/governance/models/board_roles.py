@@ -35,33 +35,33 @@ class PermissionType(Enum):
     CREATE_PROPOSAL = "create_proposal"
     EDIT_PROPOSAL = "edit_proposal"
     DELETE_PROPOSAL = "delete_proposal"
-    
+
     # Voting
     VOTE_ON_PROPOSAL = "vote_on_proposal"
     VETO_PROPOSAL = "veto_proposal"
     OVERRIDE_VOTE = "override_vote"
-    
+
     # Fund Management
     APPROVE_FUND_RELEASE = "approve_fund_release"
     REJECT_FUND_RELEASE = "reject_fund_release"
     OVERRIDE_FUND_RELEASE = "override_fund_release"
     VIEW_FINANCIAL_DATA = "view_financial_data"
-    
+
     # Milestone Management
     APPROVE_MILESTONE = "approve_milestone"
     REJECT_MILESTONE = "reject_milestone"
     OVERRIDE_MILESTONE = "override_milestone"
-    
+
     # User Management
     ASSIGN_BOARD_ROLES = "assign_board_roles"
     REMOVE_BOARD_ROLES = "remove_board_roles"
     SUSPEND_BOARD_MEMBER = "suspend_board_member"
-    
+
     # Governance
     CALL_EMERGENCY_MEETING = "call_emergency_meeting"
     AMEND_BYLAWS = "amend_bylaws"
     OVERRIDE_QUORUM = "override_quorum"
-    
+
     # Reporting
     VIEW_AUDIT_LOGS = "view_audit_logs"
     GENERATE_REPORTS = "generate_reports"
@@ -111,8 +111,9 @@ class BoardMember:
     skills: List[str]
     bio: str
     contact_info: Dict
-    
+
     def __post_init__(self):
+        pass
     """
     Perform __post_init__ operation
 
@@ -163,7 +164,7 @@ class Proposal:
     rejected_weight: int
     metadata: Dict
     attachments: List[str]
-    
+
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
@@ -202,7 +203,7 @@ Example:
         print(result)
     """
     """Governance board management system"""
-    
+
     def __init__(self):
         self.members: Dict[str, BoardMember] = {}
         self.proposals: Dict[str, Proposal] = {}
@@ -211,13 +212,13 @@ Example:
         self.quorum_threshold: float = 0.6
         self.approval_threshold: float = 0.7
         self.logger = logging.getLogger(__name__)
-        
+
         # Initialize role permissions
         self._initialize_role_permissions()
-    
+
     def _initialize_role_permissions(self):
         """Initialize default role permissions"""
-        
+
         # Chair - Full administrative powers
         self.role_permissions[RoleType.CHAIR] = RolePermission(
             role_type=RoleType.CHAIR,
@@ -254,7 +255,7 @@ Example:
             required_skills=["leadership", "governance", "strategic_planning"],
             description="Board chair with full administrative powers"
         )
-        
+
         # Vice Chair - Deputy powers
         self.role_permissions[RoleType.VICE_CHAIR] = RolePermission(
             role_type=RoleType.VICE_CHAIR,
@@ -282,7 +283,7 @@ Example:
             required_skills=["leadership", "governance", "project_management"],
             description="Deputy chair with most administrative powers"
         )
-        
+
         # Treasurer - Financial oversight
         self.role_permissions[RoleType.TREASURER] = RolePermission(
             role_type=RoleType.TREASURER,
@@ -305,7 +306,7 @@ Example:
             required_skills=["finance", "accounting", "budgeting"],
             description="Financial oversight and fund management"
         )
-        
+
         # Technical Reviewer - Technical expertise
         self.role_permissions[RoleType.TECHNICAL_REVIEWER] = RolePermission(
             role_type=RoleType.TECHNICAL_REVIEWER,
@@ -325,7 +326,7 @@ Example:
             required_skills=["architecture", "engineering", "construction"],
             description="Technical expertise for project reviews"
         )
-        
+
         # Financial Reviewer - Financial expertise
         self.role_permissions[RoleType.FINANCIAL_REVIEWER] = RolePermission(
             role_type=RoleType.FINANCIAL_REVIEWER,
@@ -346,7 +347,7 @@ Example:
             required_skills=["finance", "investment", "risk_management"],
             description="Financial expertise for funding decisions"
         )
-        
+
         # Community Representative - Community voice
         self.role_permissions[RoleType.COMMUNITY_REPRESENTATIVE] = RolePermission(
             role_type=RoleType.COMMUNITY_REPRESENTATIVE,
@@ -365,7 +366,7 @@ Example:
             required_skills=["community_engagement", "communication", "advocacy"],
             description="Community voice and representation"
         )
-        
+
         # Legal Advisor - Legal expertise
         self.role_permissions[RoleType.LEGAL_ADVISOR] = RolePermission(
             role_type=RoleType.LEGAL_ADVISOR,
@@ -385,7 +386,7 @@ Example:
             required_skills=["legal", "compliance", "regulatory"],
             description="Legal expertise and compliance oversight"
         )
-        
+
         # Sustainability Expert - Environmental expertise
         self.role_permissions[RoleType.SUSTAINABILITY_EXPERT] = RolePermission(
             role_type=RoleType.SUSTAINABILITY_EXPERT,
@@ -404,7 +405,7 @@ Example:
             required_skills=["sustainability", "environmental_science", "green_building"],
             description="Environmental and sustainability expertise"
         )
-        
+
         # Board Member - General member
         self.role_permissions[RoleType.BOARD_MEMBER] = RolePermission(
             role_type=RoleType.BOARD_MEMBER,
@@ -421,7 +422,7 @@ Example:
             required_skills=["governance", "collaboration"],
             description="General board member with basic voting rights"
         )
-    
+
     def add_board_member(
         self,
         user_id: str,
@@ -433,20 +434,20 @@ Example:
         contact_info: Dict
     ) -> BoardMember:
         """Add a new board member"""
-        
+
         # Validate role requirements
         role_perm = self.role_permissions[role_type]
-        
+
         # Check if user already has a role
         for member in self.members.values():
             if member.user_id == user_id and member.is_active:
                 raise ValueError(f"User {user_id} already has an active board role")
-        
+
         # Create board member
-        member_id = str(uuid.uuid4())
+        member_id = str(uuid.uuid4()
         appointed_date = datetime.utcnow()
         term_end_date = appointed_date + timedelta(days=role_perm.term_duration_days)
-        
+
         member = BoardMember(
             id=member_id,
             user_id=user_id,
@@ -466,81 +467,78 @@ Example:
             bio=bio,
             contact_info=contact_info
         )
-        
+
         self.members[member_id] = member
         self.logger.info(f"Added board member {display_name} with role {role_type.value}")
-        
+
         return member
-    
+
     def remove_board_member(self, member_id: str, reason: str = "") -> bool:
         """Remove a board member"""
         if member_id not in self.members:
             raise ValueError(f"Board member {member_id} not found")
-        
+
         member = self.members[member_id]
         member.is_active = False
-        
+
         self.logger.info(f"Removed board member {member.display_name}: {reason}")
         return True
-    
+
     def suspend_board_member(self, member_id: str, duration_days: int, reason: str) -> bool:
         """Suspend a board member temporarily"""
         if member_id not in self.members:
             raise ValueError(f"Board member {member_id} not found")
-        
+
         member = self.members[member_id]
         member.is_active = False
         member.term_end_date = datetime.utcnow() + timedelta(days=duration_days)
-        
+
         self.logger.info(f"Suspended board member {member.display_name} for {duration_days} days: {reason}")
         return True
-    
+
     def has_permission(self, user_id: str, permission: PermissionType) -> bool:
         """Check if user has specific permission"""
         for member in self.members.values():
             if member.user_id == user_id and member.is_active and permission in member.permissions:
                 return True
         return False
-    
+
     def get_member_by_user_id(self, user_id: str) -> Optional[BoardMember]:
         """Get board member by user ID"""
         for member in self.members.values():
             if member.user_id == user_id and member.is_active:
                 return member
         return None
-    
+
     def get_active_members(self) -> List[BoardMember]:
         """Get all active board members"""
         return [member for member in self.members.values() if member.is_active]
-    
+
     def get_members_by_role(self, role_type: RoleType) -> List[BoardMember]:
         """Get all members with specific role"""
         return [
             member for member in self.members.values()
             if member.role_type == role_type and member.is_active
         ]
-    
+
     def update_participation_score(self, member_id: str, score: float):
         """Update member participation score"""
         if member_id in self.members:
-            self.members[member_id].participation_score = max(0.0, min(1.0, score))
-    
+            self.members[member_id].participation_score = max(0.0, min(1.0, score)
     def update_reputation_score(self, member_id: str, score: float):
         """Update member reputation score"""
         if member_id in self.members:
-            self.members[member_id].reputation_score = max(0.0, min(10.0, score))
-    
+            self.members[member_id].reputation_score = max(0.0, min(10.0, score)
     def get_board_summary(self) -> Dict:
         """Get comprehensive board summary"""
         active_members = self.get_active_members()
-        
+
         role_counts = {}
         for role_type in RoleType:
-            role_counts[role_type.value] = len(self.get_members_by_role(role_type))
-        
+            role_counts[role_type.value] = len(self.get_members_by_role(role_type)
         total_weight = sum(member.voting_weight for member in active_members)
         avg_participation = sum(member.participation_score for member in active_members) / len(active_members) if active_members else 0
-        
+
         return {
             "total_members": len(active_members),
             "role_distribution": role_counts,
@@ -565,4 +563,4 @@ Example:
 
 
 # Global governance board instance
-governance_board = GovernanceBoard() 
+governance_board = GovernanceBoard()

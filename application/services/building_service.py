@@ -355,7 +355,7 @@ class BuildingApplicationService:
                 if self.event_store:
                     building_deleted_event = BuildingDeleted(
                         building_id=building_id,
-                        building_name="",  # Would need to get from building import building
+                        building_name="",  # Building name would need to be retrieved before deletion
                         deleted_by="system"
                     )
                     self.event_store.store_event(building_deleted_event)

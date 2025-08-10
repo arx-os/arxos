@@ -8,8 +8,9 @@ device management with infrastructure integration.
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-import time
 
+from domain.entities import Device
+from domain.value_objects import DeviceId, RoomId, DeviceStatus
 from domain.repositories import UnitOfWork
 from domain.events import DeviceCreated, DeviceUpdated, DeviceDeleted
 from application.dto.device_dto import (
@@ -18,29 +19,30 @@ from application.dto.device_dto import (
     GetDeviceResponse, ListDevicesResponse,
     DeleteDeviceResponse
 )
+from application.services.base_service import BaseApplicationService
 from infrastructure.services.cache_service import RedisCacheService
 from infrastructure.services.event_store import EventStoreService
 from infrastructure.services.message_queue import MessageQueueService
 from infrastructure.monitoring.metrics import MetricsCollector
-from infrastructure.monitoring.logging import StructuredLogger
 
 
-class DeviceApplicationService:
-    """Application service for device operations with infrastructure integration."""
+class DeviceApplicationService(BaseApplicationService[Device]):
+    """Application service for device operations with comprehensive infrastructure integration."""
 
     def __init__(self, unit_of_work: UnitOfWork,
                  cache_service: Optional[RedisCacheService] = None,
                  event_store: Optional[EventStoreService] = None,
                  message_queue: Optional[MessageQueueService] = None,
-                 metrics: Optional[MetricsCollector] = None,
-                 logger: Optional[StructuredLogger] = None):
+                 metrics: Optional[MetricsCollector] = None):
         """Initialize device application service with infrastructure dependencies."""
-        self.unit_of_work = unit_of_work
-        self.cache_service = cache_service
-        self.event_store = event_store
-        self.message_queue = message_queue
-        self.metrics = metrics
-        self.logger = logger
+        super().__init__(
+            unit_of_work=unit_of_work,
+            entity_name="Device",
+            cache_service=cache_service,
+            event_store=event_store,
+            message_queue=message_queue,
+            metrics=metrics
+        )
 
     def create_device(self, room_id: str, device_type: str, name: str,
                      manufacturer: Optional[str] = None,

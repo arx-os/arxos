@@ -56,7 +56,7 @@ class Building:
     # Domain events
     _domain_events: List = field(default_factory=list, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate building data after initialization."""
         self._validate_building_data()
         self._add_domain_event(BuildingCreated(
@@ -66,7 +66,7 @@ class Building:
             created_by=self.created_by or "system"
         ))
 
-    def _validate_building_data(self):
+    def _validate_building_data(self) -> None:
         """Validate building data according to business rules."""
         if not self.name or len(self.name.strip()) == 0:
             raise InvalidBuildingError("Building name cannot be empty")
@@ -225,11 +225,11 @@ class Floor:
     # Domain events
     _domain_events: List = field(default_factory=list, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate floor data after initialization."""
         self._validate_floor_data()
 
-    def _validate_floor_data(self):
+    def _validate_floor_data(self) -> None:
         """Validate floor data according to business rules."""
         if not self.name or len(self.name.strip()) == 0:
             raise InvalidFloorError("Floor name cannot be empty")
@@ -350,11 +350,11 @@ class Room:
     # Domain events
     _domain_events: List = field(default_factory=list, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate room data after initialization."""
         self._validate_room_data()
 
-    def _validate_room_data(self):
+    def _validate_room_data(self) -> None:
         """Validate room data according to business rules."""
         if not self.name or len(self.name.strip()) == 0:
             raise InvalidRoomError("Room name cannot be empty")
@@ -394,7 +394,7 @@ class Room:
         self.updated_at = datetime.utcnow()
 
         self._add_domain_event(RoomUpdated(
-            building_id="",  # Would need building_id from context import context
+            building_id=getattr(self, '_building_id', ""),
             floor_id=str(self.floor_id),
             room_id=str(self.id),
             updated_fields=["name"],
@@ -411,7 +411,7 @@ class Room:
         self.updated_at = datetime.utcnow()
 
         self._add_domain_event(RoomStatusChanged(
-            building_id="",  # Would need building_id from context import context
+            building_id=getattr(self, '_building_id', ""),
             floor_id=str(self.floor_id),
             room_id=str(self.id),
             old_status=old_status.value,
@@ -428,7 +428,7 @@ class Room:
         self.updated_at = datetime.utcnow()
 
         self._add_domain_event(DeviceAdded(
-            building_id="",  # Would need building_id from context import context
+            building_id=getattr(self, '_building_id', ""),
             floor_id=str(self.floor_id),
             room_id=str(self.id),
             device_id=str(device.id),
@@ -490,11 +490,11 @@ class Device:
     # Domain events
     _domain_events: List = field(default_factory=list, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate device data after initialization."""
         self._validate_device_data()
 
-    def _validate_device_data(self):
+    def _validate_device_data(self) -> None:
         """Validate device data according to business rules."""
         if not self.name or len(self.name.strip()) == 0:
             raise InvalidDeviceError("Device name cannot be empty")
@@ -518,8 +518,8 @@ class Device:
         self.updated_at = datetime.utcnow()
 
         self._add_domain_event(DeviceUpdated(
-            building_id="",  # Would need building_id from context import context
-            floor_id="",     # Would need floor_id from context import context
+            building_id=getattr(self, '_building_id', ""),
+            floor_id=getattr(self, '_floor_id', ""),
             room_id=str(self.room_id),
             device_id=str(self.id),
             updated_fields=["name"],
@@ -536,8 +536,8 @@ class Device:
         self.updated_at = datetime.utcnow()
 
         self._add_domain_event(DeviceStatusChanged(
-            building_id="",  # Would need building_id from context import context
-            floor_id="",     # Would need floor_id from context import context
+            building_id=getattr(self, '_building_id', ""),
+            floor_id=getattr(self, '_floor_id', ""),
             room_id=str(self.room_id),
             device_id=str(self.id),
             old_status=old_status.value,
@@ -578,7 +578,7 @@ class User:
     # Domain events
     _domain_events: List = field(default_factory=list, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate user data after initialization."""
         self._validate_user_data()
         self._add_domain_event(UserCreated(
@@ -588,7 +588,7 @@ class User:
             created_by=self.created_by or "system"
         ))
 
-    def _validate_user_data(self):
+    def _validate_user_data(self) -> None:
         """Validate user data according to business rules."""
         if not self.username or len(self.username.strip()) == 0:
             raise InvalidUserError("Username cannot be empty")
@@ -695,7 +695,7 @@ class Project:
     # Domain events
     _domain_events: List = field(default_factory=list, init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate project data after initialization."""
         self._validate_project_data()
         self._add_domain_event(ProjectCreated(
@@ -705,7 +705,7 @@ class Project:
             created_by=self.created_by or "system"
         ))
 
-    def _validate_project_data(self):
+    def _validate_project_data(self) -> None:
         """Validate project data according to business rules."""
         if not self.name or len(self.name.strip()) == 0:
             raise InvalidProjectError("Project name cannot be empty")

@@ -1,75 +1,20 @@
 """
 Unified Building Application Service
 
-Thin service wrapper orchestrating unified repositories/use cases.
-"""
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import List, Dict, Any
-
-from domain.unified.repositories.building_repository import BuildingRepository
-from domain.unified.entities.building import Building
-from domain.unified.value_objects import Address, BuildingStatus, Dimensions
-
-
-@dataclass
-class BuildingService:
-    repository: BuildingRepository
-
-    def create(self, data: Dict[str, Any]) -> Building:
-        addr = data.get("address", {})
-        address = Address(
-            street=addr.get("street", ""),
-            city=addr.get("city", ""),
-            state=addr.get("state", ""),
-            postal_code=addr.get("postal_code", ""),
-            country=addr.get("country", "USA"),
-        )
-        dims = data.get("dimensions") or None
-        dimensions = None
-        if dims:
-            dimensions = Dimensions(
-                width=float(dims.get("width", dims.get("length", 0.0))),
-                length=float(dims.get("length", dims.get("width", 0.0))),
-                height=dims.get("height"),
-            )
-        status = str(data.get("status", "planned")).lower()
-        try:
-            status_vo = BuildingStatus(status)
-        except Exception:
-            status_vo = BuildingStatus.PLANNED
-
-        building = Building.create(
-            name=data.get("name", ""),
-            address=address,
-            status=status_vo,
-            dimensions=dimensions,
-            description=data.get("description"),
-            created_by=data.get("created_by"),
-            metadata=data.get("metadata", {}),
-        )
-        return self.repository.save(building)
-
-    def list(self) -> List[Building]:
-        return self.repository.get_all()
-
-"""
-Unified Building Service
-
 This service provides a unified interface for building operations,
 eliminating duplication between different service implementations.
 """
 
+from __future__ import annotations
+from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
-from datetime import datetime
 import logging
 
-from domain.unified.entities import Building
-from domain.unified.repositories import BuildingRepository
-from domain.unified.value_objects import BuildingId, Address, Dimensions, BuildingStatus
+from domain.unified.repositories.building_repository import BuildingRepository
+from domain.unified.entities.building import Building
+from domain.unified.value_objects import Address, BuildingStatus, Dimensions
 from domain.unified.exceptions import InvalidBuildingError, BuildingNotFoundError
+
 
 class UnifiedBuildingService:
     """
@@ -361,3 +306,53 @@ class UnifiedBuildingService:
             stats["average_volume"] = sum(b.volume for b in buildings_with_volume) / len(buildings_with_volume)
 
         return stats
+
+    def create_from_data(self, data: Dict[str, Any]) -> Building:
+        """
+        Create building from dictionary data (convenience method).
+
+        Args:
+            data: Dictionary containing building data
+
+        Returns:
+            Created building entity
+
+        Raises:
+            InvalidBuildingError: If building data is invalid
+        """
+        # Parse address
+        addr = data.get("address", {})
+        address = Address(
+            street=addr.get("street", ""),
+            city=addr.get("city", ""),
+            state=addr.get("state", ""),
+            postal_code=addr.get("postal_code", ""),
+            country=addr.get("country", "USA"),
+        )
+
+        # Parse dimensions
+        dims = data.get("dimensions")
+        dimensions = None
+        if dims:
+            dimensions = Dimensions(
+                width=float(dims.get("width", dims.get("length", 0.0))),
+                length=float(dims.get("length", dims.get("width", 0.0))),
+                height=dims.get("height"),
+            )
+
+        # Parse status
+        status = str(data.get("status", "planned")).lower()
+        try:
+            status_vo = BuildingStatus(status)
+        except Exception:
+            status_vo = BuildingStatus.PLANNED
+
+        return self.create_building(
+            name=data.get("name", ""),
+            address=address,
+            status=status_vo,
+            dimensions=dimensions,
+            description=data.get("description"),
+            created_by=data.get("created_by"),
+            metadata=data.get("metadata", {})
+        )

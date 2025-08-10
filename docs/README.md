@@ -1,8 +1,14 @@
-# Arxos Documentation Index
+# Arxos Platform Documentation
 
-## 🎯 **Welcome to Arxos Documentation**
+## 🎯 **Welcome to Arxos Platform**
 
-This is the master index for all Arxos documentation. Use this as your primary navigation hub to find the information you need quickly and efficiently.
+This is the comprehensive documentation for the Arxos Platform - an enterprise-grade building management system built with Clean Architecture principles and modern Python technologies.
+
+### Core Documentation
+
+- **[Architecture Overview](./ARCHITECTURE.md)** - System architecture, design patterns, and technical decisions
+- **[API Specification](./API_SPECIFICATION.md)** - Complete REST API documentation with examples
+- **[Development Guide](./DEVELOPMENT_GUIDE.md)** - Comprehensive guide for developers
 
 ---
 

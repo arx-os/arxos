@@ -194,7 +194,7 @@ class PrecisionValidator:
     """Validator for precision operations"""
 
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
-        """Initialize the precision validator."
+        """Initialize the precision validator.
 
         Args:
             precision_level: The precision level to validate against
@@ -245,7 +245,7 @@ class PrecisionDisplay:
     """Display utilities for precision values"""
 
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
-        """Initialize the precision display utilities."
+        """Initialize the precision display utilities.
 
         Args:
             precision_level: The precision level for display formatting

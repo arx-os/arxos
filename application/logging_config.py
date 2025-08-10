@@ -1,9 +1,10 @@
 """
-Application Logging Configuration
+Enhanced Application Logging Configuration
 
 This module provides comprehensive logging configuration for the application
 layer with structured logging, different log levels, and proper formatting
-for development and production environments.
+for development and production environments. Now integrated with enterprise-grade
+structured logging infrastructure.
 """
 
 import logging
@@ -13,6 +14,23 @@ import json
 from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
+
+# Import comprehensive logging infrastructure
+try:
+    from infrastructure.logging.structured_logging import (
+        setup_logging as setup_structured_logging,
+        LOGGING_CONFIG,
+        performance_logger,
+        security_logger, 
+        business_logger,
+        audit_logger,
+        log_context,
+        timed_operation,
+        get_logger as get_structured_logger
+    )
+    STRUCTURED_LOGGING_AVAILABLE = True
+except ImportError:
+    STRUCTURED_LOGGING_AVAILABLE = False
 
 
 class StructuredFormatter(logging.Formatter):
@@ -133,16 +151,36 @@ def setup_logging(
 ) -> None:
     """Setup logging configuration for the application."""
 
-    # Create logs directory if it doesn't exist'
+    # Create logs directory if it doesn't exist
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Configure logging based on environment
-    if environment == "production":
-        setup_production_logging(log_level, log_file, enable_console)
+    # Use structured logging if available, otherwise fallback to legacy
+    if STRUCTURED_LOGGING_AVAILABLE:
+        setup_structured_logging(log_dir=str(log_dir))
+        logger = logging.getLogger("application.logging")
+        logger.info("Using enhanced structured logging system", extra={
+            "environment": environment,
+            "log_level": log_level,
+            "structured_logging": True
+        })
     else:
-        setup_development_logging(log_level, log_file, enable_console)
+        # Fallback to legacy logging configuration
+        if environment == "production":
+            setup_production_logging(log_level, log_file, enable_console)
+        else:
+            setup_development_logging(log_level, log_file, enable_console)
+        
+        logger = logging.getLogger("application.logging")
+        logger.warning("Using legacy logging system - structured logging not available", extra={
+            "environment": environment,
+            "log_level": log_level,
+            "structured_logging": False
+        })
 
 
 def setup_development_logging(
@@ -288,8 +326,64 @@ def setup_production_logging(
 
 
 def get_logger(name: str) -> ApplicationLogger:
-    """Get an application logger instance."""
-    return ApplicationLogger(name)
+    """Get an application logger instance with enhanced capabilities."""
+    if STRUCTURED_LOGGING_AVAILABLE:
+        # Return enhanced logger wrapper that combines both approaches
+        return EnhancedApplicationLogger(name)
+    else:
+        # Fallback to original implementation
+        return ApplicationLogger(name)
+
+
+class EnhancedApplicationLogger(ApplicationLogger):
+    """Enhanced application logger that integrates structured logging capabilities."""
+    
+    def __init__(self, name: str, level: str = "INFO"):
+        """Initialize enhanced logger with structured logging integration."""
+        super().__init__(name, level)
+        if STRUCTURED_LOGGING_AVAILABLE:
+            self.structured_logger = get_structured_logger(name)
+            self.performance_logger = performance_logger
+            self.business_logger = business_logger
+    
+    def log_business_event(self, event_type: str, entity_type: str, entity_id: str, **context):
+        """Log business events with structured format."""
+        if STRUCTURED_LOGGING_AVAILABLE:
+            if event_type == "created":
+                self.business_logger.log_entity_created(entity_type, entity_id, **context)
+            elif event_type == "updated":
+                self.business_logger.log_entity_updated(
+                    entity_type, entity_id, 
+                    context.get('updated_fields', []), 
+                    context.get('updated_by')
+                )
+        else:
+            # Fallback to standard logging
+            self.info(f"Business event: {event_type} {entity_type} {entity_id}", **context)
+    
+    def log_security_event(self, event_type: str, **context):
+        """Log security events with proper categorization.""" 
+        if STRUCTURED_LOGGING_AVAILABLE and hasattr(self, 'security_logger'):
+            if event_type == "authentication":
+                security_logger.log_authentication_attempt(**context)
+            elif event_type == "authorization_failure":
+                security_logger.log_authorization_failure(**context)
+            elif event_type == "suspicious_activity":
+                security_logger.log_suspicious_activity(**context)
+        else:
+            # Fallback to warning level
+            self.warning(f"Security event: {event_type}", **context)
+    
+    def log_audit_event(self, event_type: str, **context):
+        """Log audit events for compliance."""
+        if STRUCTURED_LOGGING_AVAILABLE and hasattr(self, 'audit_logger'):
+            if event_type == "data_access":
+                audit_logger.log_data_access(**context)
+            elif event_type == "configuration_change":
+                audit_logger.log_configuration_change(**context)
+        else:
+            # Fallback to info level with audit flag
+            self.info(f"Audit event: {event_type}", audit=True, **context)
 
 
 def log_function_call(func):

@@ -79,7 +79,7 @@ class BuildingId:
     """Building identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate building ID format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("Building ID must be a non-empty string")
@@ -99,7 +99,7 @@ class FloorId:
     """Floor identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate floor ID format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("Floor ID must be a non-empty string")
@@ -114,7 +114,7 @@ class RoomId:
     """Room identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate room ID format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("Room ID must be a non-empty string")
@@ -129,7 +129,7 @@ class DeviceId:
     """Device identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate device ID format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("Device ID must be a non-empty string")
@@ -144,7 +144,7 @@ class UserId:
     """User identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate user ID format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("User ID must be a non-empty string")
@@ -159,7 +159,7 @@ class ProjectId:
     """Project identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate project ID format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("Project ID must be a non-empty string")
@@ -179,7 +179,7 @@ class Address:
     country: str = "USA"
     unit: Optional[str] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate address data."""
         if not self.street or not self.street.strip():
             raise ValueError("Street address is required")
@@ -264,7 +264,7 @@ class Coordinates:
     longitude: float
     elevation: Optional[float] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate coordinate values."""
         if not -90 <= self.latitude <= 90:
             raise ValueError("Latitude must be between -90 and 90 degrees")
@@ -306,7 +306,7 @@ class Dimensions:
     height: Optional[float] = None
     unit: str = "meters"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate dimension values."""
         if self.width <= 0:
             raise ValueError("Width must be positive")
@@ -356,7 +356,7 @@ class Email:
     """Email address value object."""
     value: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate email format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("Email must be a non-empty string")
@@ -388,7 +388,7 @@ class PhoneNumber:
     value: str
     country_code: str = "+1"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate phone number format."""
         if not self.value or not isinstance(self.value, str):
             raise ValueError("Phone number must be a non-empty string")

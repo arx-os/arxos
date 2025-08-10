@@ -2,7 +2,7 @@
 Base Repository Implementation
 
 This module contains the base repository class that provides common
-functionality for all repository implementations.
+functionality for all repository implementations with standardized error handling.
 """
 
 from typing import TypeVar, Generic, Type, Optional, List, Dict, Any
@@ -10,9 +10,13 @@ from abc import ABC, abstractmethod
 import logging
 
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
 
-from domain.exceptions import RepositoryError
+from domain.exceptions import RepositoryError, DatabaseError
+from infrastructure.error_handling import (
+    infrastructure_error_handler, handle_database_operation,
+    DatabaseConnectionError, log_error_context
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,28 +25,68 @@ M = TypeVar('M')  # Model type
 
 
 class BaseRepository(ABC, Generic[T, M]):
-    """Base repository with common CRUD operations."""
+    """Base repository with common CRUD operations and standardized error handling."""
 
-    def __init__(self, session: Session, entity_class: Type[T], model_class: Type[M]):
+    def __init__(self, session: Session, entity_class: Type[T], model_class: Type[M]) -> None:
         """Initialize repository with session and classes."""
         self.session = session
         self.entity_class = entity_class
         self.model_class = model_class
+        self.logger = logging.getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
 
+    @infrastructure_error_handler("save_entity")
     def save(self, entity: T) -> T:
-        """Save an entity to the database."""
+        """Save an entity to the database with comprehensive error handling."""
         try:
             model = self._entity_to_model(entity)
             self.session.add(model)
             self.session.flush()  # Flush to get the ID
-            return self._model_to_entity(model)
-        except SQLAlchemyError as e:
-            logger.error(f"Error saving {self.entity_class.__name__}: {e}")
+            saved_entity = self._model_to_entity(model)
+            
+            self.logger.debug(f"Successfully saved {self.entity_class.__name__} with ID: {getattr(model, 'id', 'unknown')}")
+            return saved_entity
+            
+        except IntegrityError as e:
             self.session.rollback()
-            raise RepositoryError(f"Failed to save {self.entity_class.__name__}: {str(e)}")
+            log_error_context(e, {
+                "entity_type": self.entity_class.__name__,
+                "operation": "save",
+                "constraint_violation": True
+            })
+            raise DatabaseError(f"Data integrity constraint violation while saving {self.entity_class.__name__}: {str(e)}")
+            
+        except OperationalError as e:
+            self.session.rollback()
+            log_error_context(e, {
+                "entity_type": self.entity_class.__name__,
+                "operation": "save",
+                "connection_issue": True
+            })
+            raise DatabaseConnectionError(
+                message=f"Database connection issue while saving {self.entity_class.__name__}",
+                original_error=e
+            )
+            
+        except SQLAlchemyError as e:
+            self.session.rollback()
+            log_error_context(e, {
+                "entity_type": self.entity_class.__name__,
+                "operation": "save"
+            })
+            raise DatabaseError(f"Database error while saving {self.entity_class.__name__}: {str(e)}")
+            
+        except Exception as e:
+            self.session.rollback()
+            log_error_context(e, {
+                "entity_type": self.entity_class.__name__,
+                "operation": "save",
+                "unexpected": True
+            })
+            raise RepositoryError(f"Unexpected error while saving {self.entity_class.__name__}: {str(e)}")
 
+    @infrastructure_error_handler("get_by_id")
     def get_by_id(self, entity_id) -> Optional[T]:
-        """Get an entity by its ID."""
+        """Get an entity by its ID with comprehensive error handling."""
         try:
             model = self.session.query(self.model_class).filter(
                 self.model_class.id == entity_id,
@@ -50,18 +94,41 @@ class BaseRepository(ABC, Generic[T, M]):
             ).first()
 
             if model is None:
+                self.logger.debug(f"{self.entity_class.__name__} with ID {entity_id} not found")
                 return None
 
-            return self._model_to_entity(model)
+            entity = self._model_to_entity(model)
+            self.logger.debug(f"Successfully retrieved {self.entity_class.__name__} with ID: {entity_id}")
+            return entity
+            
+        except OperationalError as e:
+            log_error_context(e, {
+                "entity_type": self.entity_class.__name__,
+                "operation": "get_by_id",
+                "entity_id": str(entity_id)
+            })
+            raise DatabaseConnectionError(
+                message=f"Database connection issue while retrieving {self.entity_class.__name__}",
+                original_error=e
+            )
+            
         except SQLAlchemyError as e:
-            logger.error(f"Error retrieving {self.entity_class.__name__} by ID: {e}")
-            raise RepositoryError(f"Failed to retrieve {self.entity_class.__name__}: {str(e)}")
+            log_error_context(e, {
+                "entity_type": self.entity_class.__name__,
+                "operation": "get_by_id",
+                "entity_id": str(entity_id)
+            })
+            raise DatabaseError(f"Database error while retrieving {self.entity_class.__name__}: {str(e)}")
 
     def get_by_id_or_raise(self, entity_id) -> T:
         """Get an entity by its ID or raise an exception if not found."""
         entity = self.get_by_id(entity_id)
         if entity is None:
-            raise RepositoryError(f"{self.entity_class.__name__} with ID {entity_id} not found")
+            # Import here to avoid circular imports
+            from domain.exceptions import format_error_message
+            error_key = f"{self.entity_class.__name__.lower()}_not_found"
+            message = format_error_message(error_key, **{f"{self.entity_class.__name__.lower()}_id": str(entity_id)})
+            raise RepositoryError(message)
         return entity
 
     def find_all(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[T]:

@@ -13,7 +13,7 @@ class DomainException(Exception):
     """Base exception for all domain-related errors."""
 
     def __init__(self, message: str, details: Optional[Any] = None):
-        """Initialize the domain exception."
+        """Initialize the domain exception.
 
         Args:
             message: Error message

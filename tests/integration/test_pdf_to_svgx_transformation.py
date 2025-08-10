@@ -198,7 +198,7 @@ class TestPDFToSVGXTransformation(unittest.TestCase):
             # Check for specific relationship types
             relationship_types = [rel['type'] for rel in layout_analysis['relationships']]
             self.assertTrue(any(rel_type in ['near', 'aligned_vertical', 'aligned_horizontal']
-                              for rel_type in relationship_types)
+                              for rel_type in relationship_types))
             self.test_results['layout_analysis'] = True
             print("✅ Layout analysis accuracy: PASSED")
 
@@ -220,7 +220,7 @@ class TestPDFToSVGXTransformation(unittest.TestCase):
             # Check for specific symbol types
             symbol_types = [sym['type'] for sym in recognized_symbols]
             self.assertTrue(any(sym_type in ['text_symbol', 'vector_symbol', 'layout_symbol']
-                              for sym_type in symbol_types)
+                              for sym_type in symbol_types))
             # Verify symbol properties
             for symbol in recognized_symbols:
                 self.assertIn('type', symbol)
@@ -446,7 +446,7 @@ class TestPDFToSVGXTransformation(unittest.TestCase):
             elements.append({
                 'type': vector_elem['type'],
                 'x': vector_elem.get('x', vector_elem.get('x1', 0)),
-                'y': vector_elem.get('y', vector_elem.get('y1', 0)
+                'y': vector_elem.get('y', vector_elem.get('y1', 0))
             })
 
         # Analyze spatial relationships
@@ -524,7 +524,7 @@ class TestPDFToSVGXTransformation(unittest.TestCase):
 
     def generate_svgx_content(self, content):
         """Generate SVGX content from extracted data"""
-        svgx_content = f'''<?xml version="1.0" encoding="UTF-8"?>'
+        svgx_content = f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      xmlns:arx="http://arxos.io/svgx"
      width="800" height="600"
@@ -602,7 +602,7 @@ class TestPDFToSVGXTransformation(unittest.TestCase):
     def generate_svgx_content_with_precision(self, content, precision):
         """Generate SVGX content with specific precision"""
         svgx_content = self.generate_svgx_content(content)
-        return svgx_content.replace('0.001', str(precision)
+        return svgx_content.replace('0.001', str(precision))
     def validate_svgx_content(self, svgx_content):
         """Validate SVGX content"""
         try:
@@ -664,7 +664,7 @@ class TestPDFToSVGXTransformation(unittest.TestCase):
         import re
 
         # Find all coordinate values
-        coord_pattern = r'[xy][12]?="([^"]*)"'"
+        coord_pattern = r'[xy][12]?="([^"]*)"'
         coordinates = re.findall(coord_pattern, svgx_content)
 
         for coord in coordinates:

@@ -409,7 +409,7 @@ class ControllerBehavior:
         execution_time = end_time - start_time
 
         # Verify all pipelines completed
-        success_count = sum(1 for r in results if r.get("success", False)
+        success_count = sum(1 for r in results if r.get("success", False))
         self.assertEqual(success_count, len(systems),
                        f"Expected {len(systems)} successful pipelines, got {success_count}")
 

@@ -177,23 +177,7 @@ class UserPatternLearningService:
     """Service for learning and analyzing user patterns"""
 
     def __init__(self):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize the User Pattern Learning Service"""
         self.actions: Dict[UUID, UserAction] = {}
         self.sessions: Dict[str, UserSession] = {}
         self.patterns: Dict[UUID, UserPattern] = {}

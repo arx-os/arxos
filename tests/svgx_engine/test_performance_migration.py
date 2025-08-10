@@ -41,7 +41,7 @@ def test_performance_optimizer_migration():
             get_performance_report
         )
         print("✅ All performance optimizer imports successful")
-        test_results.append(("Imports", True, "All classes and functions imported successfully")
+        test_results.append(("Imports", True, "All classes and functions imported successfully"))
         # Test 2: Test SVGX Adaptive Cache
         print("\n2. Testing SVGX Adaptive Cache...")
         cache = SVGXAdaptiveCache(max_size=5, strategy=CacheStrategy.SVGX_NAMESPACE)
@@ -63,7 +63,7 @@ def test_performance_optimizer_migration():
         assert "namespace_priorities" in stats
 
         print("✅ SVGX Adaptive Cache working correctly")
-        test_results.append(("SVGX Adaptive Cache", True, "Cache operations and namespace tracking working")
+        test_results.append(("SVGX Adaptive Cache", True, "Cache operations and namespace tracking working"))
         # Test 3: Test SVGX Memory Manager
         print("\n3. Testing SVGX Memory Manager...")
         limits = SVGXResourceLimits(max_memory_mb=1024.0, gc_threshold=0.8)
@@ -85,7 +85,7 @@ def test_performance_optimizer_migration():
         assert "is_windows" in optimization_result
 
         print("✅ SVGX Memory Manager working correctly")
-        test_results.append(("SVGX Memory Manager", True, "Memory management and Windows compatibility working")
+        test_results.append(("SVGX Memory Manager", True, "Memory management and Windows compatibility working"))
         # Test 4: Test SVGX Parallel Processor
         print("\n4. Testing SVGX Parallel Processor...")
         processor = SVGXParallelProcessor(max_workers=2)
@@ -95,7 +95,7 @@ def test_func(x):
             time.sleep(0.01)  # Simulate work
             return x * 2
 
-        items = list(range(10)
+        items = list(range(10))
         results = processor.execute_parallel(test_func, items, namespace="svgx.test")
         assert len(results) == 10
         assert results == [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
@@ -106,7 +106,7 @@ def test_func(x):
 
         processor.shutdown()
         print("✅ SVGX Parallel Processor working correctly")
-        test_results.append(("SVGX Parallel Processor", True, "Parallel processing and Windows optimization working")
+        test_results.append(("SVGX Parallel Processor", True, "Parallel processing and Windows optimization working"))
         # Test 5: Test SVGX Performance Profiler
         print("\n5. Testing SVGX Performance Profiler...")
         profiler = SVGXPerformanceProfiler()
@@ -128,7 +128,7 @@ def test_profiled_func():
         assert "bottlenecks" in report
 
         print("✅ SVGX Performance Profiler working correctly")
-        test_results.append(("SVGX Performance Profiler", True, "Profiling and SVGX metrics working")
+        test_results.append(("SVGX Performance Profiler", True, "Profiling and SVGX metrics working"))
         # Test 6: Test SVGX Performance Optimizer
         print("\n6. Testing SVGX Performance Optimizer...")
         optimizer = SVGXPerformanceOptimizer(OptimizationLevel.STANDARD)

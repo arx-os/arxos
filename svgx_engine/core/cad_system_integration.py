@@ -30,23 +30,7 @@ class CADSystem:
     """Main CAD system integrating all components"""
 
     def __init__(self):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize CAD system with all components."""
         # Initialize all CAD subsystems
         self.precision_system = precision_drawing_system
         self.constraint_system = constraint_manager
@@ -146,9 +130,11 @@ Example:
             if constraint_type == ConstraintType.DISTANCE:
                 constraint = self.constraint_system.create_distance_constraint(
                     entities[0], entities[1], parameters.get('distance', 0)
+                )
             elif constraint_type == ConstraintType.ANGLE:
                 constraint = self.constraint_system.create_angle_constraint(
                     entities[0], entities[1], parameters.get('angle', 0)
+                )
             elif constraint_type == ConstraintType.PARALLEL:
                 constraint = self.constraint_system.create_parallel_constraint(
                     entities[0], entities[1]
@@ -314,7 +300,7 @@ Example:
                 }
 
             if self.current_drawing:
-                self.current_drawing['views'] = list(view_data.keys()
+                self.current_drawing['views'] = list(view_data.keys())
             return view_data
 
         except Exception as e:

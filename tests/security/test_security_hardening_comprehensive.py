@@ -295,7 +295,7 @@ class MaliciousPlugin(BehaviorHandlerPlugin):
         # Test malicious input
         malicious_inputs = [
             "<script>alert('xss')</script>",
-            "'; DROP TABLE users; --",'
+            "'; DROP TABLE users; --",
             "../../../etc/passwd",
             "javascript:alert('xss')",
             "data:text/html,<script>alert('xss')</script>"
@@ -472,10 +472,10 @@ class MaliciousPlugin(BehaviorHandlerPlugin):
         """Test SQL injection protection."""
         # Test malicious SQL injection attempts
         malicious_inputs = [
-            "'; DROP TABLE users; --",'
+            "'; DROP TABLE users; --",
             "' OR '1'='1",
-            "'; INSERT INTO users VALUES ('hacker', 'password'); --",'
-            "' UNION SELECT * FROM users --"'
+            "'; INSERT INTO users VALUES ('hacker', 'password'); --",
+            "' UNION SELECT * FROM users --"
         ]
 
         for malicious_input in malicious_inputs:

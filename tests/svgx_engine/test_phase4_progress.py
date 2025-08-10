@@ -54,9 +54,9 @@ class Phase4ProgressTest:
 
             # Test SVGX document operations
             svgx_doc = SVGXDocument()
-            svgx_doc.add_element(SVGXElement('rect', {'x': '10', 'y': '10', 'width': '100', 'height': '50'})
+            svgx_doc.add_element(SVGXElement('rect', {'x': '10', 'y': '10', 'width': '100', 'height': '50'}))
             # Note: Database operations would require actual database setup
-            # For now, we'll mark as in progress'
+            # For now, we'll mark as in progress
             self.results['in_progress'].append("Database Service - Full CRUD operations")
 
             logger.info("✓ Database Service tests completed")
@@ -76,7 +76,7 @@ class Phase4ProgressTest:
 
             # Test SVGX document save/load
             svgx_doc = SVGXDocument()
-            svgx_doc.add_element(SVGXElement('rect', {'x': '10', 'y': '10', 'width': '100', 'height': '50'})
+            svgx_doc.add_element(SVGXElement('rect', {'x': '10', 'y': '10', 'width': '100', 'height': '50'}))
             test_file = "test_svgx_document.json"
             persistence_service.save_svgx_document(svgx_doc, test_file)
             loaded_doc = persistence_service.load_svgx_document(test_file)

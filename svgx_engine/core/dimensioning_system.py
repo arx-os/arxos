@@ -19,7 +19,7 @@ from typing import List, Dict, Optional, Tuple, Any
 from decimal import Decimal
 import logging
 
-from .precision_system import PrecisionPoint, PrecisionLevel
+from svgx_engine.core.precision_system import PrecisionPoint, PrecisionLevel
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +88,7 @@ class Dimension:
     def get_leader_points(self) -> List[PrecisionPoint]:
         """Get leader points for dimension"""
         raise NotImplementedError
+
 
 @dataclass
 class LinearDimension(Dimension):
@@ -202,6 +203,7 @@ class RadialDimension(Dimension):
 
         return [leader_start, leader_end]
 
+
 @dataclass
 class AngularDimension(Dimension):
     """Angular dimension for angles"""
@@ -293,23 +295,7 @@ class DimensionManager:
     """Manager for dimension operations"""
 
     def __init__(self):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize the dimension manager"""
         self.dimensions: List[Dimension] = []
         self.styles: Dict[str, DimensionStyleConfig] = {}
         self.default_style = self._create_default_style()

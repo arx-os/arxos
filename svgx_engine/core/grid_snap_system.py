@@ -68,23 +68,7 @@ class SnapConfig:
     magnetic_snap: bool = True
 
     def __post_init__(self):
-        pass
-    """
-    Perform __post_init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __post_init__(param)
-        print(result)
-    """
+        """Initialize snap configuration with default values."""
         if self.enabled_types is None:
             self.enabled_types = [
                 SnapType.GRID,
@@ -102,22 +86,6 @@ class SnapPoint:
     confidence: float = 1.0
 
 class GridSystem:
-    """
-    Perform __init__ operation
-
-Args:
-        config: Description of config
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
     """Grid system for CAD functionality"""
 
     def __init__(self, config: GridConfig):
@@ -224,9 +192,9 @@ Example:
             end_point = PrecisionPoint(x, bounds['max_y'])
 
             if int(x / self.config.spacing_x) % self.config.major_lines == 0:
-                self.major_lines.append((start_point, end_point)
+                self.major_lines.append((start_point, end_point))
             else:
-                self.minor_lines.append((start_point, end_point)
+                self.minor_lines.append((start_point, end_point))
             x += self.config.spacing_x
 
         # Generate horizontal lines
@@ -236,9 +204,9 @@ Example:
             end_point = PrecisionPoint(bounds['max_x'], y)
 
             if int(y / self.config.spacing_y) % self.config.major_lines == 0:
-                self.major_lines.append((start_point, end_point)
+                self.major_lines.append((start_point, end_point))
             else:
-                self.minor_lines.append((start_point, end_point)
+                self.minor_lines.append((start_point, end_point))
             y += self.config.spacing_y
 
     def snap_to_grid(self, point: PrecisionPoint) -> Optional[PrecisionPoint]:
@@ -317,6 +285,7 @@ class SnapSystem:
                     snap_type=point_data['type'],
                     entity_id=entity_id,
                     confidence=point_data.get('confidence', 1.0)
+                )
                 self.snap_points.append(snap_point)
 
     def find_nearest_snap(self, point: PrecisionPoint, snap_types: List[SnapType] = None) -> Optional[SnapPoint]:
@@ -348,7 +317,7 @@ class SnapSystem:
         nearest_angle = round(float(normalized_angle) / float(angle_step)) * float(angle_step)
 
         if abs(float(normalized_angle) - nearest_angle) <= float(angle_step) / 2:
-            return Decimal(str(nearest_angle)
+            return Decimal(str(nearest_angle))
         return None
 
     def get_snap_info(self) -> Dict[str, Any]:

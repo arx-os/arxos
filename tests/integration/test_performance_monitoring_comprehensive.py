@@ -44,7 +44,7 @@ class TestPerformanceMonitoringComprehensive(unittest.TestCase):
 
         # Initialize performance components
         self.performance_optimizer = SVGXPerformanceOptimizer()
-        self.plugin_manager = PluginManager(plugin_dir=str(self.plugin_dir)
+        self.plugin_manager = PluginManager(plugin_dir=str(self.plugin_dir))
         self.plugin_monitor = PluginMonitor()
 
         # Test client for API testing
@@ -191,7 +191,7 @@ class MemoryPlugin(BehaviorHandlerPlugin):
 
     def handle_ui_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
         # Simulate memory usage
-        self.data_store.append(event_data.copy()
+        self.data_store.append(event_data.copy())
         # Keep only last 100 items to prevent memory leak
         if len(self.data_store) > 100:
             self.data_store = self.data_store[-100:]
@@ -224,8 +224,8 @@ class MemoryPlugin(BehaviorHandlerPlugin):
         fast_plugin_path = self.plugin_dir / "fast_plugin.py"
         slow_plugin_path = self.plugin_dir / "slow_plugin.py"
 
-        self.plugin_manager.load_plugin(str(fast_plugin_path)
-        self.plugin_manager.load_plugin(str(slow_plugin_path)
+        self.plugin_manager.load_plugin(str(fast_plugin_path))
+        self.plugin_manager.load_plugin(str(slow_plugin_path))
         # Test fast plugin performance
         start_time = time.time()
         event_data = {"event_type": "click", "x": 100, "y": 200}
@@ -263,7 +263,7 @@ class MemoryPlugin(BehaviorHandlerPlugin):
         """Test memory usage monitoring."""
         # Load memory-intensive plugin
         memory_plugin_path = self.plugin_dir / "memory_plugin.py"
-        self.plugin_manager.load_plugin(str(memory_plugin_path)
+        self.plugin_manager.load_plugin(str(memory_plugin_path))
         # Monitor memory usage
         initial_memory = psutil.Process().memory_info().rss / 1024 / 1024  # MB
 
@@ -348,6 +348,8 @@ class MemoryPlugin(BehaviorHandlerPlugin):
         self.assertGreaterEqual(
             final_errors.get("total_errors", 0),
             initial_errors.get("total_errors", 0)
+        )
+
     def test_resource_utilization_monitoring(self):
         """Test resource utilization monitoring."""
         # Monitor CPU usage
@@ -381,7 +383,7 @@ class MemoryPlugin(BehaviorHandlerPlugin):
         """Test concurrent performance monitoring."""
         # Load fast plugin
         fast_plugin_path = self.plugin_dir / "fast_plugin.py"
-        self.plugin_manager.load_plugin(str(fast_plugin_path)
+        self.plugin_manager.load_plugin(str(fast_plugin_path))
         # Test concurrent execution
         async def execute_concurrent():
             tasks = []
@@ -394,6 +396,7 @@ class MemoryPlugin(BehaviorHandlerPlugin):
                         "handle_ui_event",
                         event_data
                     )
+                )
                 tasks.append(task)
 
             start_time = time.time()
@@ -403,7 +406,7 @@ class MemoryPlugin(BehaviorHandlerPlugin):
             return results, end_time - start_time
 
         # Run concurrent execution
-        results, execution_time = asyncio.run(execute_concurrent()
+        results, execution_time = asyncio.run(execute_concurrent())
         # All executions should succeed
         self.assertEqual(len(results), 10)
         for result in results:
@@ -431,7 +434,7 @@ class MemoryPlugin(BehaviorHandlerPlugin):
         self.assertIn("memory_savings", memory_optimization)
 
         # Test parallel processing optimization
-def expensive_function(x):
+        def expensive_function(x):
             time.sleep(0.01)
             return x * x
 
@@ -440,7 +443,7 @@ def expensive_function(x):
         ):
             results = []
             for i in range(10):
-                results.append(expensive_function(i)
+                results.append(expensive_function(i))
         self.assertEqual(len(results), 10)
         for i, result in enumerate(results):
             self.assertEqual(result, i * i)
@@ -506,7 +509,7 @@ def expensive_function(x):
         """Test performance benchmarking."""
         # Test plugin execution benchmarks
         fast_plugin_path = self.plugin_dir / "fast_plugin.py"
-        self.plugin_manager.load_plugin(str(fast_plugin_path)
+        self.plugin_manager.load_plugin(str(fast_plugin_path))
         # Benchmark fast plugin
         execution_times = []
         for i in range(100):
@@ -589,9 +592,10 @@ def expensive_function(x):
         slow_plugin_path = self.plugin_dir / "slow_plugin.py"
         memory_plugin_path = self.plugin_dir / "memory_plugin.py"
 
-        self.plugin_manager.load_plugin(str(fast_plugin_path)
-        self.plugin_manager.load_plugin(str(slow_plugin_path)
-        self.plugin_manager.load_plugin(str(memory_plugin_path)
+        self.plugin_manager.load_plugin(str(fast_plugin_path))
+        self.plugin_manager.load_plugin(str(slow_plugin_path))
+        self.plugin_manager.load_plugin(str(memory_plugin_path))
+
         # 2. Execute plugins with performance monitoring
         plugins = ["fast_plugin_1.0.0", "slow_plugin_1.0.0", "memory_plugin_1.0.0"]
 

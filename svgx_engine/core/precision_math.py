@@ -123,14 +123,15 @@ class PrecisionMath:
             if isinstance(value, Decimal):
                 return value
             elif isinstance(value, (int, float)):
-                return Decimal(str(value)
+                return Decimal(str(value))
             elif isinstance(value, str):
                 return Decimal(value)
             else:
                 raise TypeError(f"Cannot convert {type(value)} to Decimal")
         except (ValueError, decimal.InvalidOperation) as e:
-            raise ValueError(f"Invalid value for Decimal conversion: {value}") from e import e
-def round_to_precision(self, value: Union[float, Decimal],
+            raise ValueError(f"Invalid value for Decimal conversion: {value}") from e
+
+    def round_to_precision(self, value: Union[float, Decimal],
                           precision: Optional[Decimal] = None) -> Decimal:
         """
         Round value to specified precision.
@@ -538,7 +539,7 @@ def round_to_precision(self, value: Union[float, Decimal],
             precision = self.settings.default_precision
 
         total = self.sum(values, precision)
-        count = self.to_decimal(len(values)
+        count = self.to_decimal(len(values))
         return self.divide(total, count, precision)
 
     def validate_geometric_calculation(self, operation: str, result: Decimal,

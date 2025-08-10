@@ -80,7 +80,7 @@ class Parameter:
             elif self.parameter_type == ParameterType.INTEGER:
                 return isinstance(self.value, int)
             elif self.parameter_type == ParameterType.REAL:
-                return isinstance(self.value, (int, float, Decimal)
+                return isinstance(self.value, (int, float, Decimal))
             return True
 
         except Exception as e:
@@ -135,8 +135,8 @@ class ParameterExpression:
             })
 
             # Evaluate expression
-            result = # SECURITY: eval() removed - use safe alternatives
-        # eval(self.expression, {"__builtins__": {}}, locals_dict)
+            # Note: eval() removed for security - implement safe expression parser
+            result = None  # Placeholder for safe expression evaluation
             return result
 
         except Exception as e:
@@ -183,10 +183,10 @@ class ParametricGeometry:
 
     def _generate_line(self) -> Dict[str, Any]:
         """Generate line geometry"""
-        start_x = self.parameters.get('start_x', Parameter('', 'start_x', ParameterType.REAL, 0)
-        start_y = self.parameters.get('start_y', Parameter('', 'start_y', ParameterType.REAL, 0)
-        length = self.parameters.get('length', Parameter('', 'length', ParameterType.LENGTH, 10)
-        angle = self.parameters.get('angle', Parameter('', 'angle', ParameterType.ANGLE, 0)
+        start_x = self.parameters.get('start_x', Parameter('', 'start_x', ParameterType.REAL, 0))
+        start_y = self.parameters.get('start_y', Parameter('', 'start_y', ParameterType.REAL, 0))
+        length = self.parameters.get('length', Parameter('', 'length', ParameterType.LENGTH, 10))
+        angle = self.parameters.get('angle', Parameter('', 'angle', ParameterType.ANGLE, 0))
         end_x = start_x.get_value() + length.get_value() * math.cos(math.radians(angle.get_value()))
         end_y = start_y.get_value() + length.get_value() * math.sin(math.radians(angle.get_value()))
 
@@ -200,9 +200,9 @@ class ParametricGeometry:
 
     def _generate_circle(self) -> Dict[str, Any]:
         """Generate circle geometry"""
-        center_x = self.parameters.get('center_x', Parameter('', 'center_x', ParameterType.REAL, 0)
-        center_y = self.parameters.get('center_y', Parameter('', 'center_y', ParameterType.REAL, 0)
-        radius = self.parameters.get('radius', Parameter('', 'radius', ParameterType.RADIUS, 5)
+        center_x = self.parameters.get('center_x', Parameter('', 'center_x', ParameterType.REAL, 0))
+        center_y = self.parameters.get('center_y', Parameter('', 'center_y', ParameterType.REAL, 0))
+        radius = self.parameters.get('radius', Parameter('', 'radius', ParameterType.RADIUS, 5))
         return {
             'type': 'circle',
             'center': {'x': center_x.get_value(), 'y': center_y.get_value()},
@@ -212,15 +212,15 @@ class ParametricGeometry:
 
     def _generate_rectangle(self) -> Dict[str, Any]:
         """Generate rectangle geometry"""
-        center_x = self.parameters.get('center_x', Parameter('', 'center_x', ParameterType.REAL, 0)
-        center_y = self.parameters.get('center_y', Parameter('', 'center_y', ParameterType.REAL, 0)
-        width = self.parameters.get('width', Parameter('', 'width', ParameterType.LENGTH, 10)
-        height = self.parameters.get('height', Parameter('', 'height', ParameterType.LENGTH, 10)
-        angle = self.parameters.get('angle', Parameter('', 'angle', ParameterType.ANGLE, 0)
+        center_x = self.parameters.get('center_x', Parameter('', 'center_x', ParameterType.REAL, 0))
+        center_y = self.parameters.get('center_y', Parameter('', 'center_y', ParameterType.REAL, 0))
+        width = self.parameters.get('width', Parameter('', 'width', ParameterType.LENGTH, 10))
+        height = self.parameters.get('height', Parameter('', 'height', ParameterType.LENGTH, 10))
+        angle = self.parameters.get('angle', Parameter('', 'angle', ParameterType.ANGLE, 0))
         # Calculate corner points
         half_width = width.get_value() / 2
         half_height = height.get_value() / 2
-        rad_angle = math.radians(angle.get_value()
+        rad_angle = math.radians(angle.get_value())
         corners = []
         for dx, dy in [(-1, -1), (1, -1), (1, 1), (-1, 1)]:
             x = center_x.get_value() + dx * half_width * math.cos(rad_angle) - dy * half_height * math.sin(rad_angle)
@@ -238,11 +238,11 @@ class ParametricGeometry:
 
     def _generate_polygon(self) -> Dict[str, Any]:
         """Generate polygon geometry"""
-        center_x = self.parameters.get('center_x', Parameter('', 'center_x', ParameterType.REAL, 0)
-        center_y = self.parameters.get('center_y', Parameter('', 'center_y', ParameterType.REAL, 0)
-        radius = self.parameters.get('radius', Parameter('', 'radius', ParameterType.RADIUS, 5)
-        sides = self.parameters.get('sides', Parameter('', 'sides', ParameterType.INTEGER, 6)
-        start_angle = self.parameters.get('start_angle', Parameter('', 'start_angle', ParameterType.ANGLE, 0)
+        center_x = self.parameters.get('center_x', Parameter('', 'center_x', ParameterType.REAL, 0))
+        center_y = self.parameters.get('center_y', Parameter('', 'center_y', ParameterType.REAL, 0))
+        radius = self.parameters.get('radius', Parameter('', 'radius', ParameterType.RADIUS, 5))
+        sides = self.parameters.get('sides', Parameter('', 'sides', ParameterType.INTEGER, 6))
+        start_angle = self.parameters.get('start_angle', Parameter('', 'start_angle', ParameterType.ANGLE, 0))
         vertices = []
         angle_step = 2 * math.pi / sides.get_value()
 
@@ -448,7 +448,7 @@ class ParametricModelingSystem:
             'geometries_count': len(self.geometries),
             'assemblies_count': len(self.assemblies),
             'parameter_types': list(set(p.parameter_type.value for p in self.parameters.values())),
-            'geometry_types': list(set(g.geometry_type for g in self.geometries)
+            'geometry_types': list(set(g.geometry_type for g in self.geometries))
         }
 
 # Global instance for easy access

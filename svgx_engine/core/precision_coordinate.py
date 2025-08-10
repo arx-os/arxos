@@ -83,17 +83,17 @@ class PrecisionCoordinate:
         self.z = np.float64(self.z)
 
     @property
-def as_tuple(self) -> Tuple[float, float, float]:
+    def as_tuple(self) -> Tuple[float, float, float]:
         """Return coordinates as a tuple."""
         return (self.x, self.y, self.z)
 
     @property
-def as_list(self) -> List[float]:
+    def as_list(self) -> List[float]:
         """Return coordinates as a list."""
         return [self.x, self.y, self.z]
 
     @property
-def magnitude(self) -> float:
+    def magnitude(self) -> float:
         """Calculate the magnitude (distance from origin) of the coordinate."""
         return np.sqrt(self.x**2 + self.y**2 + self.z**2)
 
@@ -273,13 +273,16 @@ def magnitude(self) -> float:
 
     def __hash__(self) -> int:
         """Hash the coordinate for use in sets and dictionaries."""
-        return hash((self.x, self.y, self.z)
+        return hash((self.x, self.y, self.z))
+
     def __repr__(self) -> str:
         """String representation of the coordinate."""
-        return f"PrecisionCoordinate(x={self.x:.6f}, y={self.y:.6f}, z={self.z:.6f})
+        return f"PrecisionCoordinate(x={self.x:.6f}, y={self.y:.6f}, z={self.z:.6f})"
+
     def __str__(self) -> str:
         """User-friendly string representation."""
-        return f"({self.x:.6f}, {self.y:.6f}, {self.z:.6f})
+        return f"({self.x:.6f}, {self.y:.6f}, {self.z:.6f})"
+
     def _get_tolerance(self) -> float:
         """Get the tolerance for coordinate comparisons."""
         return 1e-6  # 0.001mm tolerance
@@ -310,7 +313,7 @@ def magnitude(self) -> float:
         }
 
     @classmethod
-def from_dict(cls, data: dict) -> 'PrecisionCoordinate':
+    def from_dict(cls, data: dict) -> 'PrecisionCoordinate':
         """Create coordinate from dictionary."""
         if data.get('type') != 'PrecisionCoordinate':
             raise ValueError("Invalid coordinate data")
@@ -319,12 +322,14 @@ def from_dict(cls, data: dict) -> 'PrecisionCoordinate':
             x=data['x'],
             y=data['y'],
             z=data.get('z', 0.0)
+        )
+
     def serialize(self) -> bytes:
         """Serialize coordinate to bytes for storage/transmission."""
         return struct.pack('ddd', self.x, self.y, self.z)
 
     @classmethod
-def deserialize(cls, data: bytes) -> 'PrecisionCoordinate':
+    def deserialize(cls, data: bytes) -> 'PrecisionCoordinate':
         """Deserialize coordinate from bytes."""
         if len(data) != 24:  # 3 * 8 bytes for double precision
             raise ValueError("Invalid serialized coordinate data")
@@ -334,9 +339,10 @@ def deserialize(cls, data: bytes) -> 'PrecisionCoordinate':
 
     def to_json(self) -> str:
         """Convert coordinate to JSON string."""
-        return json.dumps(self.to_dict()
+        return json.dumps(self.to_dict())
+
     @classmethod
-def from_json(cls, json_str: str) -> 'PrecisionCoordinate':
+    def from_json(cls, json_str: str) -> 'PrecisionCoordinate':
         """Create coordinate from JSON string."""
         data = json.loads(json_str)
         return cls.from_dict(data)
@@ -346,7 +352,7 @@ class CoordinateValidator:
     """Utility class for coordinate validation operations."""
 
     @staticmethod
-def validate_coordinate_range(coordinate: PrecisionCoordinate,
+    def validate_coordinate_range(coordinate: PrecisionCoordinate,
                                 min_range: float = -1e6,
                                 max_range: float = 1e6) -> bool:
         """
@@ -365,7 +371,7 @@ def validate_coordinate_range(coordinate: PrecisionCoordinate,
                 min_range <= coordinate.z <= max_range)
 
     @staticmethod
-def validate_coordinate_precision(coordinate: PrecisionCoordinate,
+    def validate_coordinate_precision(coordinate: PrecisionCoordinate,
                                    max_precision: float = 1e-6) -> bool:
         """
         Validate coordinate precision.
@@ -711,9 +717,11 @@ class CoordinateTransformation:
             new_x = self.precision_math.subtract(
                 self.precision_math.multiply(dx, cos_a),
                 self.precision_math.multiply(dy, sin_a)
+            )
             new_y = self.precision_math.add(
                 self.precision_math.multiply(dx, sin_a),
                 self.precision_math.multiply(dy, cos_a)
+            )
             # Translate back
             final_x = self.precision_math.add(new_x, center.x)
             final_y = self.precision_math.add(new_y, center.y)
@@ -809,7 +817,7 @@ if __name__ == "__main__":
     print(f"Coordinates are close: {coord1.is_close_to(coord2)}")
 
     # Test transformations
-    transformed = coord1.transform(scale=2.0, rotation=math.pi/4, translation=(1.0, 1.0, 0.0)
+    transformed = coord1.transform(scale=2.0, rotation=math.pi/4, translation=(1.0, 1.0, 0.0))
     print(f"Transformed coordinate: {transformed}")
 
     # Test serialization

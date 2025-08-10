@@ -63,7 +63,7 @@ class TestPrecisionValidationIntegration(unittest.TestCase):
         """Test hook manager initialization."""
         self.assertIsNotNone(self.hook_manager)
         self.assertIsNotNone(self.hook_manager.hooks)
-        self.assertEqual(len(self.hook_manager.hooks), len(HookType)
+        self.assertEqual(len(self.hook_manager.hooks), len(HookType))
     def test_hook_registration(self):
         """Test hook registration."""
 def test_hook(context: HookContext) -> HookContext:

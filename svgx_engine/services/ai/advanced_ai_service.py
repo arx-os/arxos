@@ -140,23 +140,7 @@ class AdvancedAIService:
     """Advanced AI Service for SVGX Engine"""
 
     def __init__(self):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize the Advanced AI Service"""
         self.models: Dict[str, Any] = {}
         self.scalers: Dict[str, StandardScaler] = {}
         self.model_configs: Dict[str, AIModelConfig] = {}
@@ -173,7 +157,7 @@ Example:
     async def create_model(self, config: AIModelConfig) -> str:
         """Create a new AI model"""
         try:
-            model_id = str(uuid4()
+            model_id = str(uuid4())
             if config.model_type == AIModelType.SYMBOL_GENERATION:
                 model = self._create_symbol_generation_model(config)
             elif config.model_type == AIModelType.DESIGN_OPTIMIZATION:
@@ -464,7 +448,7 @@ Example:
 
         # Create GAN
         gan_input = keras.Input(shape=(len(config.input_features),))
-        gan_output = discriminator(generator(gan_input)
+        gan_output = discriminator(generator(gan_input))
         gan = keras.Model(gan_input, gan_output)
         gan.compile(
             optimizer=keras.optimizers.Adam(learning_rate=config.learning_rate),

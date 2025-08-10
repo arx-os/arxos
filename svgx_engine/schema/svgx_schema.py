@@ -13,23 +13,7 @@ class SVGXSchemaValidator:
     """Validator for SVGX schema compliance."""
 
     def __init__(self):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize the SVGX Schema Validator"""
         self.required_namespaces = {
             'svg': 'http://www.w3.org/2000/svg',
             'arx': 'http://arxos.io/svgx'

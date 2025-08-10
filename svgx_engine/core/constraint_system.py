@@ -62,22 +62,7 @@ class ConstraintSolver:
     """Advanced CAD Constraint Solver with Sub-Millimeter Precision"""
 
     def __init__(self, precision_level: PrecisionLevel = PrecisionLevel.SUB_MILLIMETER):
-    """
-    Perform __init__ operation
-
-Args:
-        precision_level: Description of precision_level
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize constraint solver with specified precision level."""
         self.precision_level = precision_level
         self.constraints: Dict[str, Constraint] = {}
         self.objects: Dict[str, Any] = {}
@@ -118,6 +103,7 @@ Example:
             parameters=parameters,
             objects=object_ids,
             created_at=time.time()
+        )
         self.constraints[constraint_id] = constraint
         logger.info(f"Added constraint: {constraint_type.value} with {len(object_ids)} objects")
 

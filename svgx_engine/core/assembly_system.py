@@ -92,7 +92,7 @@ class Component:
         # Apply transformations to geometry points
         if 'points' in transformed_geometry:
             transformed_geometry['points'] = [
-                self.transform_point(PrecisionPoint(p['x'], p['y'])
+                self.transform_point(PrecisionPoint(p['x'], p['y']))
                 for p in transformed_geometry['points']
             ]
 
@@ -100,6 +100,7 @@ class Component:
             center = transformed_geometry['center']
             transformed_geometry['center'] = self.transform_point(
                 PrecisionPoint(center['x'], center['y'])
+            )
         return transformed_geometry
 
 @dataclass
@@ -177,23 +178,6 @@ class InterferenceChecker:
     """Interference checking system"""
 
     def __init__(self):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.tolerance = Decimal('0.001')  # Sub-millimeter tolerance
 
     def check_interference(self, component1: Component, component2: Component) -> bool:
@@ -235,33 +219,17 @@ Example:
     def check_assembly_interference(self, assembly: Assembly) -> List[Tuple[str, str]]:
         """Check for interference in entire assembly"""
         interference_pairs = []
-        component_ids = list(assembly.components.keys()
+        component_ids = list(assembly.components.keys())
         for i in range(len(component_ids)):
             for j in range(i + 1, len(component_ids)):
                 comp1 = assembly.components[component_ids[i]]
                 comp2 = assembly.components[component_ids[j]]
 
                 if self.check_interference(comp1, comp2):
-                    interference_pairs.append((component_ids[i], component_ids[j])
+                    interference_pairs.append((component_ids[i], component_ids[j]))
         return interference_pairs
 
 class AssemblyValidator:
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
     """Assembly validation system"""
 
     def __init__(self):

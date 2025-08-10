@@ -50,24 +50,24 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         """Test precision point creation and validation."""
         point = create_point(10.5, 20.75, PrecisionLevel.MICRO)
 
-        self.assertEqual(point.x, decimal.Decimal('10.500')
-        self.assertEqual(point.y, decimal.Decimal('20.750')
+        self.assertEqual(point.x, decimal.Decimal('10.500'))
+        self.assertEqual(point.y, decimal.Decimal('20.750'))
         self.assertEqual(point.precision, PrecisionLevel.MICRO)
 
     def test_precision_vector_creation(self):
         """Test precision vector creation and operations."""
         vector = create_vector(3.0, 4.0, PrecisionLevel.MICRO)
 
-        self.assertEqual(vector.dx, decimal.Decimal('3.000')
-        self.assertEqual(vector.dy, decimal.Decimal('4.000')
-        self.assertEqual(vector.magnitude(), decimal.Decimal('5.000')
+        self.assertEqual(vector.dx, decimal.Decimal('3.000'))
+        self.assertEqual(vector.dy, decimal.Decimal('4.000'))
+        self.assertEqual(vector.magnitude(), decimal.Decimal('5.000'))
     def test_distance_calculation(self):
         """Test distance calculation with high precision."""
         point1 = create_point(0, 0, PrecisionLevel.MICRO)
         point2 = create_point(3, 4, PrecisionLevel.MICRO)
 
         distance = self.precision_system.calculate_distance(point1, point2)
-        self.assertEqual(distance, decimal.Decimal('5.000')
+        self.assertEqual(distance, decimal.Decimal('5.000'))
     def test_angle_calculation(self):
         """Test angle calculation with high precision."""
         point1 = create_point(0, 0, PrecisionLevel.MICRO)
@@ -75,7 +75,7 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         point3 = create_point(0, 1, PrecisionLevel.MICRO)
 
         angle = self.precision_system.calculate_angle(point1, point2, point3)
-        expected_angle = decimal.Decimal(str(math.pi / 2)
+        expected_angle = decimal.Decimal(str(math.pi / 2))
         self.assertAlmostEqual(float(angle), float(expected_angle), places=3)
 
     def test_grid_snapping(self):
@@ -86,8 +86,8 @@ class TestPrecisionDrawingSystem(unittest.TestCase):
         snapped_point = self.precision_system.snap_to_grid(point, grid_spacing)
 
         # Should snap to nearest grid intersection
-        self.assertEqual(snapped_point.x, decimal.Decimal('10.000')
-        self.assertEqual(snapped_point.y, decimal.Decimal('20.000')
+        self.assertEqual(snapped_point.x, decimal.Decimal('10.000'))
+        self.assertEqual(snapped_point.y, decimal.Decimal('20.000'))
     def test_point_transformation(self):
         """Test point transformation with translation, rotation, and scale."""
         point = create_point(10, 20, PrecisionLevel.MICRO)
@@ -124,7 +124,7 @@ class TestConstraintSystem(unittest.TestCase):
         )
 
         self.assertIsInstance(constraint, DistanceConstraint)
-        self.assertTrue(constraint.validate()
+        self.assertTrue(constraint.validate())
     def test_angle_constraint(self):
         """Test angle constraint creation and validation."""
         # Create vectors for angle constraint
@@ -136,7 +136,7 @@ class TestConstraintSystem(unittest.TestCase):
         )
 
         self.assertIsInstance(constraint, AngleConstraint)
-        self.assertTrue(constraint.validate()
+        self.assertTrue(constraint.validate())
     def test_parallel_constraint(self):
         """Test parallel constraint creation and validation."""
         vector1 = create_vector(1, 0, PrecisionLevel.MICRO)
@@ -145,7 +145,7 @@ class TestConstraintSystem(unittest.TestCase):
         constraint = self.constraint_system.add_parallel_constraint(vector1, vector2)
 
         self.assertIsInstance(constraint, ParallelConstraint)
-        self.assertTrue(constraint.validate()
+        self.assertTrue(constraint.validate())
     def test_perpendicular_constraint(self):
         """Test perpendicular constraint creation and validation."""
         vector1 = create_vector(1, 0, PrecisionLevel.MICRO)
@@ -154,7 +154,7 @@ class TestConstraintSystem(unittest.TestCase):
         constraint = self.constraint_system.add_perpendicular_constraint(vector1, vector2)
 
         self.assertIsInstance(constraint, PerpendicularConstraint)
-        self.assertTrue(constraint.validate()
+        self.assertTrue(constraint.validate())
     def test_coincident_constraint(self):
         """Test coincident constraint creation and validation."""
         point1 = create_point(10, 10, PrecisionLevel.MICRO)
@@ -164,7 +164,7 @@ class TestConstraintSystem(unittest.TestCase):
 
         self.assertIsInstance(constraint, CoincidentConstraint)
         # Should be satisfied due to tolerance
-        self.assertTrue(constraint.validate()
+        self.assertTrue(constraint.validate())
     def test_constraint_solving(self):
         """Test constraint solving functionality."""
         # Add multiple constraints
@@ -204,12 +204,12 @@ class TestGridSnapSystem(unittest.TestCase):
         )
 
         # Should snap to nearest grid intersection
-        self.assertEqual(snapped_point.x, decimal.Decimal('10.000')
-        self.assertEqual(snapped_point.y, decimal.Decimal('20.000')
+        self.assertEqual(snapped_point.x, decimal.Decimal('10.000'))
+        self.assertEqual(snapped_point.y, decimal.Decimal('20.000'))
     def test_object_snapping(self):
         """Test object snapping functionality."""
         # Create test entities
-class MockLine:
+        class MockLine:
             def __init__(self, start, end):
                 self.start = start
                 self.end = end
@@ -217,6 +217,7 @@ class MockLine:
         line = MockLine(
             create_point(0, 0, PrecisionLevel.MICRO),
             create_point(10, 0, PrecisionLevel.MICRO)
+        )
         self.grid_snap_system.add_entity(line)
 
         # Test snapping to endpoint
@@ -226,8 +227,8 @@ class MockLine:
         )
 
         # Should snap to endpoint
-        self.assertEqual(snapped_point.x, decimal.Decimal('0.000')
-        self.assertEqual(snapped_point.y, decimal.Decimal('0.000')
+        self.assertEqual(snapped_point.x, decimal.Decimal('0.000'))
+        self.assertEqual(snapped_point.y, decimal.Decimal('0.000'))
     def test_snap_feedback(self):
         """Test snap feedback functionality."""
         cursor_point = create_point(5, 5, PrecisionLevel.MICRO)
@@ -252,8 +253,8 @@ class MockLine:
             point, snap_to_grid=True, snap_to_objects=False
         )
 
-        self.assertEqual(snapped_point.x, decimal.Decimal('5.000')
-        self.assertEqual(snapped_point.y, decimal.Decimal('5.000')
+        self.assertEqual(snapped_point.x, decimal.Decimal('5.000'))
+        self.assertEqual(snapped_point.y, decimal.Decimal('5.000'))
     def test_snap_statistics(self):
         """Test snap statistics reporting."""
         statistics = self.grid_snap_system.get_snap_statistics()
@@ -285,7 +286,7 @@ class TestDimensioningSystem(unittest.TestCase):
         )
 
         self.assertIsInstance(dimension, LinearDimension)
-        self.assertEqual(dimension.measurement, decimal.Decimal('10.000')
+        self.assertEqual(dimension.measurement, decimal.Decimal('10.000'))
         self.assertEqual(dimension.dimension_type, DimensionType.LINEAR)
 
     def test_radial_dimension_creation(self):
@@ -308,7 +309,7 @@ class TestDimensioningSystem(unittest.TestCase):
         self.assertIsInstance(dimension, AngularDimension)
         self.assertEqual(dimension.dimension_type, DimensionType.ANGULAR)
         # Should be 90 degrees
-        expected_angle = decimal.Decimal(str(math.pi / 2)
+        expected_angle = decimal.Decimal(str(math.pi / 2))
         self.assertAlmostEqual(float(dimension.measurement), float(expected_angle), places=3)
 
     def test_aligned_dimension_creation(self):
@@ -318,7 +319,7 @@ class TestDimensioningSystem(unittest.TestCase):
         )
 
         self.assertIsInstance(dimension, AlignedDimension)
-        self.assertEqual(dimension.measurement, decimal.Decimal('10.000')
+        self.assertEqual(dimension.measurement, decimal.Decimal('10.000'))
         self.assertEqual(dimension.dimension_type, DimensionType.ALIGNED)
 
     def test_ordinate_dimension_creation(self):
@@ -328,7 +329,7 @@ class TestDimensioningSystem(unittest.TestCase):
         )
 
         self.assertIsInstance(dimension, OrdinateDimension)
-        self.assertEqual(dimension.measurement, decimal.Decimal('10.000')
+        self.assertEqual(dimension.measurement, decimal.Decimal('10.000'))
         self.assertEqual(dimension.dimension_type, DimensionType.ORDINATE)
 
     def test_dimension_line_points(self):
@@ -410,7 +411,7 @@ class TestDimensioningSystem(unittest.TestCase):
         """Test dimension statistics reporting."""
         # Create some dimensions
         self.dimensioning_system.create_linear_dimension(self.point1, self.point2)
-        self.dimensioning_system.create_radial_dimension(self.center_point, decimal.Decimal('5.0')
+        self.dimensioning_system.create_radial_dimension(self.center_point, decimal.Decimal('5.0'))
         statistics = self.dimensioning_system.get_dimension_statistics()
 
         self.assertIn('total_dimensions', statistics)
@@ -440,7 +441,7 @@ class TestCADComponentsIntegration(unittest.TestCase):
         constraint = self.constraint_system.add_distance_constraint(point1, point2, 10.0)
 
         # Verify constraint works with precise points
-        self.assertTrue(constraint.validate()
+        self.assertTrue(constraint.validate())
         # Test constraint solving
         success = self.constraint_system.solve_constraints()
         self.assertTrue(success)
@@ -457,8 +458,8 @@ class TestCADComponentsIntegration(unittest.TestCase):
 
         # Verify precision is maintained
         self.assertEqual(snapped_point.precision, PrecisionLevel.MICRO)
-        self.assertEqual(snapped_point.x, decimal.Decimal('10.000')
-        self.assertEqual(snapped_point.y, decimal.Decimal('20.000')
+        self.assertEqual(snapped_point.x, decimal.Decimal('10.000'))
+        self.assertEqual(snapped_point.y, decimal.Decimal('20.000'))
     def test_dimensioning_with_precision(self):
         """Test dimensioning system integration with precision system."""
         # Create precise points

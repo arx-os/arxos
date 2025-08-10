@@ -34,7 +34,7 @@ def test_bim_extractor_migration():
             extract_bim_from_svg
         )
         print("✅ All BIM extractor imports successful")
-        test_results.append(("Imports", True, "All classes and functions imported successfully")
+        test_results.append(("Imports", True, "All classes and functions imported successfully"))
         # Test 2: Test SVGX Element Types
         print("\n2. Testing SVGX Element Types...")
         assert SVGXElementType.ELECTRICAL.value == "electrical"
@@ -44,7 +44,7 @@ def test_bim_extractor_migration():
         assert SVGXElementType.UNKNOWN.value == "unknown"
 
         print("✅ SVGX Element Types working correctly")
-        test_results.append(("SVGX Element Types", True, "All element types defined correctly")
+        test_results.append(("SVGX Element Types", True, "All element types defined correctly"))
         # Test 3: Test SVGX Geometry Types
         print("\n3. Testing SVGX Geometry Types...")
         assert SVGXGeometryType.CIRCLE.value == "circle"
@@ -55,7 +55,7 @@ def test_bim_extractor_migration():
         assert SVGXGeometryType.UNKNOWN.value == "unknown"
 
         print("✅ SVGX Geometry Types working correctly")
-        test_results.append(("SVGX Geometry Types", True, "All geometry types defined correctly")
+        test_results.append(("SVGX Geometry Types", True, "All geometry types defined correctly"))
         # Test 4: Test SVGX Element Metadata
         print("\n4. Testing SVGX Element Metadata...")
         metadata = SVGXElementMetadata(
@@ -75,7 +75,7 @@ def test_bim_extractor_migration():
         assert metadata.layer == "main"
 
         print("✅ SVGX Element Metadata working correctly")
-        test_results.append(("SVGX Element Metadata", True, "Metadata creation and access working")
+        test_results.append(("SVGX Element Metadata", True, "Metadata creation and access working"))
         # Test 5: Test SVGX BIM Extractor Initialization
         print("\n5. Testing SVGX BIM Extractor Initialization...")
         extractor = SVGXBIMExtractor()
@@ -93,7 +93,7 @@ def test_bim_extractor_migration():
         assert 'svgx_element' in extractor.label_patterns
 
         print("✅ SVGX BIM Extractor initialization working correctly")
-        test_results.append(("SVGX BIM Extractor Init", True, "Extractor initialization and mappings working")
+        test_results.append(("SVGX BIM Extractor Init", True, "Extractor initialization and mappings working"))
         # Test 6: Test SVGX Namespace Extraction
         print("\n6. Testing SVGX Namespace Extraction...")
         from lxml import etree as ET
@@ -119,7 +119,7 @@ def test_bim_extractor_migration():
         assert namespace == "svgx.physics"
 
         print("✅ SVGX Namespace Extraction working correctly")
-        test_results.append(("SVGX Namespace Extraction", True, "Namespace extraction from elements working")
+        test_results.append(("SVGX Namespace Extraction", True, "Namespace extraction from elements working"))
         # Test 7: Test SVGX System and Type Classification
         print("\n7. Testing SVGX System and Type Classification...")
         system, type_ = extractor.classify_svgx_system_and_type(
@@ -145,7 +145,7 @@ def test_bim_extractor_migration():
         assert type_ == "outlet"
 
         print("✅ SVGX System and Type Classification working correctly")
-        test_results.append(("SVGX Classification", True, "System and type classification working")
+        test_results.append(("SVGX Classification", True, "System and type classification working"))
         # Test 8: Test SVGX Geometry Extraction
         print("\n8. Testing SVGX Geometry Extraction...")
         coords, geom_type = extractor.extract_svgx_geometry(circle_elem)
@@ -160,7 +160,7 @@ def test_bim_extractor_migration():
         assert geom_type == SVGXGeometryType.RECTANGLE
 
         print("✅ SVGX Geometry Extraction working correctly")
-        test_results.append(("SVGX Geometry Extraction", True, "Geometry extraction working for all types")
+        test_results.append(("SVGX Geometry Extraction", True, "Geometry extraction working for all types"))
         # Test 9: Test SVGX Metadata Extraction
         print("\n9. Testing SVGX Metadata Extraction...")
         metadata = extractor.extract_svgx_metadata(circle_elem, "svgx.physics")
@@ -170,7 +170,7 @@ def test_bim_extractor_migration():
         assert metadata.attributes["id"] == "test-circle"
 
         print("✅ SVGX Metadata Extraction working correctly")
-        test_results.append(("SVGX Metadata Extraction", True, "Metadata extraction working")
+        test_results.append(("SVGX Metadata Extraction", True, "Metadata extraction working"))
         # Test 10: Test Full BIM Extraction
         print("\n10. Testing Full BIM Extraction...")
         test_svgx = '''
@@ -207,7 +207,7 @@ def test_bim_extractor_migration():
         assert len(svgx_elements) >= 1
 
         print("✅ Full BIM Extraction working correctly")
-        test_results.append(("Full BIM Extraction", True, "Complete BIM extraction with SVGX support working")
+        test_results.append(("Full BIM Extraction", True, "Complete BIM extraction with SVGX support working"))
         # Test 11: Test Backward Compatibility
         print("\n11. Testing Backward Compatibility...")
         response = extract_bim_from_svg(test_svgx, "building-1", "floor-1")
@@ -216,7 +216,7 @@ def test_bim_extractor_migration():
         assert len(response.elements) >= 3
 
         print("✅ Backward Compatibility working correctly")
-        test_results.append(("Backward Compatibility", True, "Backward compatibility function working")
+        test_results.append(("Backward Compatibility", True, "Backward compatibility function working"))
         # Test 12: Test Error Handling
         print("\n12. Testing Error Handling...")
         try:
@@ -227,7 +227,7 @@ def test_bim_extractor_migration():
             assert "Failed to parse SVGX content" in str(e)
 
         print("✅ Error Handling working correctly")
-        test_results.append(("Error Handling", True, "Error handling for invalid input working")
+        test_results.append(("Error Handling", True, "Error handling for invalid input working"))
         # Test 13: Test Services Package Integration
         print("\n13. Testing Services Package Integration...")
         from svgx_engine.services import (
@@ -245,7 +245,7 @@ def test_bim_extractor_migration():
         metadata = SVGXElementMetadata()
 
         print("✅ Services Package Integration working correctly")
-        test_results.append(("Services Integration", True, "All BIM extractor components available in services package")
+        test_results.append(("Services Integration", True, "All BIM extractor components available in services package"))
         # Summary
         print("\n" + "=" * 60)
         print("📊 BIM EXTRACTOR MIGRATION TEST RESULTS")

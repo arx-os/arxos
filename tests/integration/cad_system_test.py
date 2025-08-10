@@ -12,12 +12,15 @@ import unittest
 import json
 import os
 import sys
+import sys
+import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 # Add the project root to the path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root)
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 class TestCadSystem(unittest.TestCase):
     """Test suite for Arxos CAD System"""
 
@@ -441,4 +444,4 @@ class TestCadSystem(unittest.TestCase):
 
 if __name__ == '__main__':
     # Create test runner
-    unittest.main(verbosity=2) )))))
+    unittest.main(verbosity=2)

@@ -72,10 +72,10 @@ class TestValidationResult(unittest.TestCase):
         self.assertEqual(result.validation_level, ValidationLevel.CRITICAL)
         self.assertEqual(result.message, "Test validation passed")
         self.assertEqual(result.details, {'test': 'data'})
-        self.assertEqual(result.precision_used, Decimal('0.001')
+        self.assertEqual(result.precision_used, Decimal('0.001'))
         self.assertEqual(result.actual_value, 1.000)
         self.assertEqual(result.expected_value, 1.000)
-        self.assertEqual(result.tolerance, Decimal('0.001')
+        self.assertEqual(result.tolerance, Decimal('0.001'))
     def test_validation_result_to_dict(self):
         """Test validation result to dictionary conversion."""
         result = ValidationResult(
@@ -138,8 +138,8 @@ def test_rule_function(*args, **kwargs):
         self.assertEqual(rule.validation_type, ValidationType.COORDINATE)
         self.assertEqual(rule.validation_level, ValidationLevel.CRITICAL)
         self.assertEqual(rule.description, "Test validation rule")
-        self.assertEqual(rule.required_precision, Decimal('0.001')
-        self.assertEqual(rule.tolerance, Decimal('0.001')
+        self.assertEqual(rule.required_precision, Decimal('0.001'))
+        self.assertEqual(rule.tolerance, Decimal('0.001'))
         self.assertTrue(rule.enabled)
 
     def test_validation_rule_execution(self):

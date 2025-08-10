@@ -45,7 +45,7 @@ class TestPluginSystemComprehensive(unittest.TestCase):
         self.plugin_dir.mkdir(exist_ok=True)
 
         # Initialize plugin manager
-        self.plugin_manager = PluginManager(plugin_dir=str(self.plugin_dir)
+        self.plugin_manager = PluginManager(plugin_dir=str(self.plugin_dir))
         self.plugin_monitor = PluginMonitor()
         self.pdk = PluginDevelopmentKit()
 
@@ -176,14 +176,14 @@ class TestEventPlugin(EventProcessorPlugin):
     def test_plugin_manager_initialization(self):
         """Test plugin manager initialization."""
         self.assertIsNotNone(self.plugin_manager)
-        self.assertEqual(self.plugin_manager.plugin_dir, str(self.plugin_dir)
+        self.assertEqual(self.plugin_manager.plugin_dir, str(self.plugin_dir))
         self.assertIsInstance(self.plugin_manager.plugins, dict)
 
     def test_plugin_loading(self):
         """Test plugin loading functionality."""
         # Test loading behavior plugin
         behavior_plugin_path = self.plugin_dir / "test_behavior_plugin.py"
-        plugin_info = self.plugin_manager.load_plugin(str(behavior_plugin_path)
+        plugin_info = self.plugin_manager.load_plugin(str(behavior_plugin_path))
         self.assertIsNotNone(plugin_info)
         self.assertEqual(plugin_info.metadata.name, "test_behavior")
         self.assertEqual(plugin_info.metadata.version, "1.0.0")
@@ -195,7 +195,7 @@ class TestEventPlugin(EventProcessorPlugin):
         """Test plugin unloading functionality."""
         # Load plugin first
         behavior_plugin_path = self.plugin_dir / "test_behavior_plugin.py"
-        plugin_info = self.plugin_manager.load_plugin(str(behavior_plugin_path)
+        plugin_info = self.plugin_manager.load_plugin(str(behavior_plugin_path))
         # Test unloading
         success = self.plugin_manager.unload_plugin("test_behavior_1.0.0")
         self.assertTrue(success)
@@ -208,7 +208,7 @@ class TestEventPlugin(EventProcessorPlugin):
         """Test plugin execution functionality."""
         # Load plugin
         behavior_plugin_path = self.plugin_dir / "test_behavior_plugin.py"
-        self.plugin_manager.load_plugin(str(behavior_plugin_path)
+        self.plugin_manager.load_plugin(str(behavior_plugin_path))
         # Test execution
         event_data = {"event_type": "click", "x": 100, "y": 200}
         result = self.plugin_manager.execute_plugin(
@@ -224,7 +224,7 @@ class TestEventPlugin(EventProcessorPlugin):
         """Test plugin validation functionality."""
         # Test valid plugin
         behavior_plugin_path = self.plugin_dir / "test_behavior_plugin.py"
-        validation_result = self.pdk.validate_plugin_structure(str(behavior_plugin_path)
+        validation_result = self.pdk.validate_plugin_structure(str(behavior_plugin_path))
         self.assertTrue(validation_result["valid"])
         self.assertIsInstance(validation_result["metadata"], dict)
         self.assertEqual(validation_result["metadata"]["name"], "test_behavior")
@@ -233,15 +233,16 @@ class TestEventPlugin(EventProcessorPlugin):
         """Test plugin template creation."""
         template_path = self.pdk.create_plugin_template(
             "test_template", PluginType.BEHAVIOR_HANDLER, str(self.plugin_dir)
-        self.assertTrue(template_path.exists()
-        self.assertTrue((template_path / "test_template_plugin.py").exists()
-        self.assertTrue((template_path / "README.md").exists()
-        self.assertTrue((template_path / "requirements.txt").exists()
+        )
+        self.assertTrue(template_path.exists())
+        self.assertTrue((template_path / "test_template_plugin.py").exists())
+        self.assertTrue((template_path / "README.md").exists())
+        self.assertTrue((template_path / "requirements.txt").exists())
     def test_plugin_monitoring(self):
         """Test plugin monitoring functionality."""
         # Load and execute plugin
         behavior_plugin_path = self.plugin_dir / "test_behavior_plugin.py"
-        self.plugin_manager.load_plugin(str(behavior_plugin_path)
+        self.plugin_manager.load_plugin(str(behavior_plugin_path))
         event_data = {"event_type": "click", "x": 100, "y": 200}
         self.plugin_manager.execute_plugin(
             "test_behavior_1.0.0", "handle_ui_event", event_data
@@ -263,7 +264,7 @@ class TestEventPlugin(EventProcessorPlugin):
         """Test plugin security sandboxing."""
         # Test sandboxed plugin execution
         event_plugin_path = self.plugin_dir / "test_event_plugin.py"
-        plugin_info = self.plugin_manager.load_plugin(str(event_plugin_path)
+        plugin_info = self.plugin_manager.load_plugin(str(event_plugin_path))
         # Verify security level
         self.assertEqual(plugin_info.metadata.security_level, PluginSecurityLevel.SANDBOXED)
 

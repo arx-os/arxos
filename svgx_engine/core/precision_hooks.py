@@ -239,13 +239,14 @@ class PrecisionHookManager:
         # Validate constraint satisfaction
         constraint_type = context.constraint_data.get('type')
         if constraint_type == 'distance':
-            validation_results.extend(self._validate_distance_constraint(context)
+            validation_results.extend(self._validate_distance_constraint(context))
         elif constraint_type == 'angle':
-            validation_results.extend(self._validate_angle_constraint(context)
+            validation_results.extend(self._validate_angle_constraint(context))
         elif constraint_type == 'parallel':
-            validation_results.extend(self._validate_parallel_constraint(context)
+            validation_results.extend(self._validate_parallel_constraint(context))
         elif constraint_type == 'perpendicular':
-            validation_results.extend(self._validate_perpendicular_constraint(context)
+            validation_results.extend(self._validate_perpendicular_constraint(context))
+
         is_valid = len(validation_results) == 0
         return ValidationResult(
             validation_type=ValidationType.CONSTRAINT,
@@ -518,7 +519,8 @@ class PrecisionHookManager:
             priority=10,
             description="Validate coordinate creation",
             validation_level=ValidationLevel.CRITICAL
-        )
+        ))
+
         # Coordinate transformation hooks
         self.register_hook(PrecisionHook(
             hook_id="coordinate_transformation_validation",
@@ -527,7 +529,8 @@ class PrecisionHookManager:
             priority=10,
             description="Validate coordinate transformation",
             validation_level=ValidationLevel.CRITICAL
-        )
+        ))
+
         # Geometric constraint hooks
         self.register_hook(PrecisionHook(
             hook_id="geometric_constraint_validation",
@@ -536,7 +539,8 @@ class PrecisionHookManager:
             priority=10,
             description="Validate geometric constraints",
             validation_level=ValidationLevel.CRITICAL
-        )
+        ))
+
         # Precision validation hooks
         self.register_hook(PrecisionHook(
             hook_id="precision_validation_check",
@@ -545,7 +549,8 @@ class PrecisionHookManager:
             priority=5,
             description="Check precision requirements",
             validation_level=ValidationLevel.CRITICAL
-        )
+        ))
+
         # Error handling hooks
         self.register_hook(PrecisionHook(
             hook_id="error_handling_hook",
@@ -554,7 +559,8 @@ class PrecisionHookManager:
             priority=1,
             description="Handle precision errors",
             validation_level=ValidationLevel.WARNING
-        )
+        ))
+
         # Recovery mechanism hooks
         self.register_hook(PrecisionHook(
             hook_id="recovery_mechanism_hook",
@@ -563,7 +569,7 @@ class PrecisionHookManager:
             priority=1,
             description="Execute recovery mechanisms",
             validation_level=ValidationLevel.INFO
-        )
+        ))
     def _coordinate_creation_hook(self, context: HookContext) -> HookContext:
         """Hook for coordinate creation validation."""
         self.logger.debug(f"Coordinate creation hook executed for {context.operation_name}")
@@ -603,23 +609,23 @@ hook_manager = PrecisionHookManager()
 
 def precision_hook(hook_type: HookType, priority: int = 0, enabled: bool = True):
     """Decorator for registering precision validation hooks."""
-def decorator(func: Callable) -> Callable:
-    """
-    Perform decorator operation
+    def decorator(func: Callable) -> Callable:
+        """
+        Perform decorator operation
 
-Args:
-        func: Description of func
+        Args:
+            func: Description of func
 
-Returns:
-        Description of return value
+        Returns:
+            Description of return value
 
-Raises:
-        Exception: Description of exception
+        Raises:
+            Exception: Description of exception
 
-Example:
-        result = decorator(param)
-        print(result)
-    """
+        Example:
+            result = decorator(param)
+            print(result)
+        """
         hook = PrecisionHook(
             hook_id=f"{func.__module__}.{func.__name__}",
             hook_type=hook_type,
@@ -631,7 +637,7 @@ Example:
         hook_manager.register_hook(hook)
 
         @functools.wraps(func)
-def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
 
         return wrapper

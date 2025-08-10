@@ -153,7 +153,7 @@ def test_disk_cache():
             print(f"✓ Get operation: {retrieved == test_data}")
 
             # Test SVGX-specific directory structure
-            svgx_dirs = list(cache.svgx_dirs.values()
+            svgx_dirs = list(cache.svgx_dirs.values())
             print(f"✓ SVGX directories created: {len(svgx_dirs)}")
 
             # Test TTL expiration

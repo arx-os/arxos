@@ -52,23 +52,7 @@ class ErrorResponse(BaseModel):
     retry_after: Optional[int] = Field(None, description="Retry delay in seconds")
 
     def __init__(self, **data):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize error response with auto-generated error ID"""
         if 'error_id' not in data:
             data['error_id'] = f"err_{uuid.uuid4().hex[:16]}"
         super().__init__(**data)

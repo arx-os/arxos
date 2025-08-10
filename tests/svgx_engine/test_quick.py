@@ -5,7 +5,7 @@ Quick test to verify Phase 3 implementation.
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(__file__)
+sys.path.insert(0, os.path.dirname(__file__))
 def test_linter():
     """Test the SVGX linter."""
     try:
@@ -15,7 +15,7 @@ def test_linter():
         linter = SVGXLinter()
 
         # Test valid SVGX
-        valid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>'
+        valid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:arx="http://arxos.io/svgx">
   <arx:object id="test" type="electrical.light_fixture" system="electrical"/>
 </svg>'''
@@ -24,7 +24,7 @@ def test_linter():
         print(f"✅ Valid SVGX test: {is_valid}")
 
         # Test invalid SVGX
-        invalid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>'
+        invalid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg">
   <arx:object id="test" type="electrical.light_fixture"/>
 </svg>'''
@@ -46,7 +46,7 @@ def test_compiler():
 
         compiler = SVGXToSVGCompiler()
 
-        svgx_content = '''<?xml version="1.0" encoding="UTF-8"?>'
+        svgx_content = '''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:arx="http://arxos.io/svgx">
   <arx:object id="test" type="electrical.light_fixture" system="electrical"/>
   <circle cx="100" cy="100" r="20" style="fill:yellow"/>
@@ -69,7 +69,7 @@ def test_schema_validator():
 
         validator = SVGXSchemaValidator()
 
-        valid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>'
+        valid_svgx = '''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:arx="http://arxos.io/svgx">
   <arx:object id="test" type="electrical.light_fixture" system="electrical"/>
 </svg>'''

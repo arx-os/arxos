@@ -83,163 +83,35 @@ Example:
             self.value = int(value * scale)
 
     def __add__(self, other):
-        pass
-    """
-    Perform __sub__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __sub__(param)
-        print(result)
-    """
+        """Add another FixedPointNumber or numeric value"""
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value + other.value, self.scale)
         else:
-    """
-    Perform __mul__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __mul__(param)
-        print(result)
-    """
             return FixedPointNumber(self.value + int(other * self.scale), self.scale)
 
     def __sub__(self, other):
-        pass
-    """
-    Perform __truediv__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __truediv__(param)
-        print(result)
-    """
+        """Subtract another FixedPointNumber or numeric value"""
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value - other.value, self.scale)
         else:
-    """
-    Perform __lt__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __lt__(param)
-        print(result)
-    """
             return FixedPointNumber(self.value - int(other * self.scale), self.scale)
 
     def __mul__(self, other):
-        pass
-    """
-    Perform __le__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __le__(param)
-        print(result)
-    """
+        """Multiply by another FixedPointNumber or numeric value"""
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value * other.value // self.scale, self.scale)
         else:
-    """
-    Perform __eq__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __eq__(param)
-        print(result)
-    """
             return FixedPointNumber(self.value * int(other), self.scale)
 
     def __truediv__(self, other):
-        pass
-    """
-    Perform __ne__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __ne__(param)
-        print(result)
-    """
+        """Divide by another FixedPointNumber or numeric value"""
         if isinstance(other, FixedPointNumber):
             return FixedPointNumber(self.value * self.scale // other.value, self.scale)
         else:
             return FixedPointNumber(self.value // int(other), self.scale)
 
     def __lt__(self, other):
-        pass
-    """
-    Perform __ge__ operation
-
-Args:
-        other: Description of other
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __ge__(param)
-        print(result)
-    """
+        """Check if this value is less than another"""
         if isinstance(other, FixedPointNumber):
             return self.value < other.value
         else:

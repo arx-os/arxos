@@ -45,7 +45,7 @@ class ProjectModel(BaseModel):
         return f"<ProjectModel(id={self.id}, name='{self.name}', status={self.status})>"
 
     @property
-def duration_days(self) -> Optional[int]:
+    def duration_days(self) -> Optional[int]:
         """Calculate project duration in days."""
         if self.start_date and self.end_date:
             return (self.end_date - self.start_date).days

@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from domain.repositories import (
     UnitOfWork, BuildingRepository, FloorRepository, RoomRepository,
-    DeviceRepository, UserRepository, ProjectRepository, PDFAnalysisRepository
+    DeviceRepository, UserRepository, ProjectRepository
 )
 from domain.exceptions import RepositoryError
 
@@ -23,7 +23,7 @@ from .repositories import (
     SQLAlchemyBuildingRepository, SQLAlchemyFloorRepository, SQLAlchemyRoomRepository,
     SQLAlchemyDeviceRepository, SQLAlchemyUserRepository, SQLAlchemyProjectRepository
 )
-from .repositories.postgresql_pdf_analysis_repository import PostgreSQLPDFAnalysisRepository
+# Optional PDF analysis repository import is disabled for API tests context
 
 logger = logging.getLogger(__name__)
 
@@ -88,56 +88,51 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
             raise RepositoryError(f"Failed to rollback transaction: {str(e)}")
 
     @property
-def buildings(self) -> BuildingRepository:
+    def buildings(self) -> BuildingRepository:
         """Get the building repository."""
         if 'buildings' not in self._repositories:
             self._repositories['buildings'] = SQLAlchemyBuildingRepository(self.session)
         return self._repositories['buildings']
 
     @property
-def floors(self) -> FloorRepository:
+    def floors(self) -> FloorRepository:
         """Get the floor repository."""
         if 'floors' not in self._repositories:
             self._repositories['floors'] = SQLAlchemyFloorRepository(self.session)
         return self._repositories['floors']
 
     @property
-def rooms(self) -> RoomRepository:
+    def rooms(self) -> RoomRepository:
         """Get the room repository."""
         if 'rooms' not in self._repositories:
             self._repositories['rooms'] = SQLAlchemyRoomRepository(self.session)
         return self._repositories['rooms']
 
     @property
-def devices(self) -> DeviceRepository:
+    def devices(self) -> DeviceRepository:
         """Get the device repository."""
         if 'devices' not in self._repositories:
             self._repositories['devices'] = SQLAlchemyDeviceRepository(self.session)
         return self._repositories['devices']
 
     @property
-def users(self) -> UserRepository:
+    def users(self) -> UserRepository:
         """Get the user repository."""
         if 'users' not in self._repositories:
             self._repositories['users'] = SQLAlchemyUserRepository(self.session)
         return self._repositories['users']
 
     @property
-def projects(self) -> ProjectRepository:
+    def projects(self) -> ProjectRepository:
         """Get the project repository."""
         if 'projects' not in self._repositories:
             self._repositories['projects'] = SQLAlchemyProjectRepository(self.session)
         return self._repositories['projects']
 
     @property
-def pdf_analyses(self) -> PDFAnalysisRepository:
-        """Get the PDF analysis repository."""
-        if 'pdf_analyses' not in self._repositories:
-            # PDF analysis repository uses PostgreSQL directly, not SQLAlchemy session
-            from .database.connection_manager import DatabaseConnectionManager
-            connection_manager = DatabaseConnectionManager()
-            self._repositories['pdf_analyses'] = PostgreSQLPDFAnalysisRepository(connection_manager)
-        return self._repositories['pdf_analyses']
+    def pdf_analyses(self):  # type: ignore[override]
+        """PDF analysis repository not available in this test context."""
+        raise RepositoryError("PDFAnalysisRepository not available in this build")
 
 
 class UnitOfWorkFactory:

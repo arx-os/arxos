@@ -29,22 +29,6 @@ class CreateBuildingWithFloorsUseCase:
     """Use case for creating a building with multiple floors in a single transaction."""
 
     def __init__(self, unit_of_work: UnitOfWork):
-    """
-    Perform __init__ operation
-
-Args:
-        unit_of_work: Description of unit_of_work
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.unit_of_work = unit_of_work
 
     def execute(self, building_request: CreateBuildingRequest,
@@ -88,6 +72,7 @@ Example:
                 building_id=str(building_id),
                 message=f"Building created successfully with {len(created_floors)} floors",
                 created_at=datetime.utcnow()
+            )
         except DuplicateFloorError as e:
             return CreateBuildingResponse(
                 success=False,
@@ -125,7 +110,7 @@ Example:
     def execute(self, building_id: str) -> GetBuildingResponse:
         """Execute the get building hierarchy use case."""
         try:
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id)
+            building = self.unit_of_work.buildings.get_by_id(BuildingId.from_string(building_id))
             if not building:
                 return GetBuildingResponse(
                     success=False,
@@ -244,7 +229,7 @@ class AddRoomToFloorUseCase:
         """Execute the add room to floor use case."""
         try:
             # Get floor
-            floor = self.unit_of_work.floors.get_by_id(FloorId(floor_id)
+            floor = self.unit_of_work.floors.get_by_id(FloorId(floor_id))
             if not floor:
                 return {
                     'success': False,
@@ -261,6 +246,7 @@ class AddRoomToFloorUseCase:
                 status=RoomStatus.PLANNED,
                 description=room_data.get('description'),
                 created_by=room_data.get('created_by', 'system')
+            )
             # Save room
             self.unit_of_work.rooms.save(room)
 
@@ -280,6 +266,7 @@ class AddRoomToFloorUseCase:
                         serial_number=device_data.get('serial_number'),
                         description=device_data.get('description'),
                         created_by=room_data.get('created_by', 'system')
+                    )
                     self.unit_of_work.devices.save(device)
                     created_devices.append(device)
 
@@ -318,7 +305,7 @@ class UpdateBuildingStatusUseCase:
         """Execute the update building status use case."""
         try:
             # Get building
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id)
+            building = self.unit_of_work.buildings.get_by_id(BuildingId.from_string(building_id))
             if not building:
                 return {
                     'success': False,
@@ -418,7 +405,7 @@ class GetBuildingStatisticsUseCase:
     def execute(self, building_id: str) -> Dict[str, Any]:
         """Execute the get building statistics use case."""
         try:
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id)
+            building = self.unit_of_work.buildings.get_by_id(BuildingId.from_string(building_id))
             if not building:
                 return {
                     'success': False,

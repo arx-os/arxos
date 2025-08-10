@@ -69,6 +69,7 @@ class BaseRepository(ABC, Generic[T, M]):
         try:
             query = self.session.query(self.model_class).filter(
                 self.model_class.deleted_at.is_(None)
+            )
             if offset is not None:
                 query = query.offset(offset)
             if limit is not None:
@@ -139,11 +140,11 @@ class BaseRepository(ABC, Generic[T, M]):
             raise RepositoryError(f"Failed to check existence of {self.entity_class.__name__}: {str(e)}")
 
     @abstractmethod
-def _entity_to_model(self, entity: T) -> M:
+    def _entity_to_model(self, entity: T) -> M:
         """Convert domain entity to database model."""
         pass
 
     @abstractmethod
-def _model_to_entity(self, model: M) -> T:
+    def _model_to_entity(self, model: M) -> T:
         """Convert database model to domain entity."""
         pass

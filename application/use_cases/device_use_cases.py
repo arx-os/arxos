@@ -28,22 +28,6 @@ class CreateDeviceUseCase:
     """Use case for creating a new device."""
 
     def __init__(self, device_repository: DeviceRepository):
-    """
-    Perform __init__ operation
-
-Args:
-        device_repository: Description of device_repository
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.device_repository = device_repository
 
     def execute(self, request: CreateDeviceRequest) -> CreateDeviceResponse:
@@ -96,6 +80,7 @@ Example:
                 device_id=str(device_id),
                 message="Device created successfully",
                 created_at=datetime.utcnow()
+            )
         except DuplicateDeviceError as e:
             return CreateDeviceResponse(
                 success=False,
@@ -207,6 +192,7 @@ Example:
                 device_id=str(device_id),
                 message="Device updated successfully",
                 updated_at=datetime.utcnow()
+            )
         except InvalidDeviceError as e:
             return UpdateDeviceResponse(
                 success=False,
@@ -241,7 +227,7 @@ class GetDeviceUseCase:
                 )
 
             # Get device from repository import repository
-            device = self.device_repository.get_by_id(DeviceId(device_id)
+            device = self.device_repository.get_by_id(DeviceId(device_id))
             if not device:
                 return GetDeviceResponse(
                     success=False,
@@ -299,7 +285,7 @@ class ListDevicesUseCase:
 
             if room_id:
                 # Get devices by room
-                devices = self.device_repository.get_by_room_id(RoomId(room_id)
+                devices = self.device_repository.get_by_room_id(RoomId(room_id))
             elif device_type:
                 # Get devices by type
                 devices = self.device_repository.get_by_type(device_type)
@@ -376,7 +362,7 @@ class DeleteDeviceUseCase:
                 )
 
             # Check if device exists
-            device = self.device_repository.get_by_id(DeviceId(device_id)
+            device = self.device_repository.get_by_id(DeviceId(device_id))
             if not device:
                 return DeleteDeviceResponse(
                     success=False,
@@ -384,12 +370,13 @@ class DeleteDeviceUseCase:
                 )
 
             # Delete from repository import repository
-            self.device_repository.delete(DeviceId(device_id)
+            self.device_repository.delete(DeviceId(device_id))
             return DeleteDeviceResponse(
                 success=True,
                 device_id=device_id,
                 message="Device deleted successfully",
                 deleted_at=datetime.utcnow()
+            )
         except Exception as e:
             return DeleteDeviceResponse(
                 success=False,

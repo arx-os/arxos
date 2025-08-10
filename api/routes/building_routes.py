@@ -6,23 +6,39 @@ using the application services layer.
 """
 
 from datetime import datetime
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pydantic import BaseModel, Field
+from typing import Dict, Any, Optional, List
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from pydantic import BaseModel, Field, ValidationError
 
 from api.dependencies import (
-    User, require_read_permission, require_write_permission,
-    format_success_response, format_error_response
+    get_current_user,
+    require_building_read_permission,
+    require_building_create_permission,
+    require_building_update_permission,
+    require_building_delete_permission,
+    format_success_response,
+    format_error_response,
+    format_paginated_response,
+    format_not_found_response,
+    format_permission_denied_response,
+    format_validation_error_response
 )
-from application.logging import get_logger
+from application.logging_config import get_logger
 from infrastructure import get_repository_factory
 from application.factory import get_building_service
 from application.dto import (
-    CreateBuildingRequest, UpdateBuildingRequest, GetBuildingRequest
+    CreateBuildingRequest, UpdateBuildingRequest
 )
 
+from fastapi import Depends as _Depends
+
 logger = get_logger("api.building_routes")
-router = APIRouter(prefix="/buildings", tags=["buildings"])
+
+def _legacy_deprecation_notice():
+    logger.warning("Using legacy building API routes: consider enabling unified API (USE_UNIFIED_API=true)")
+    return True
+
+router = APIRouter(prefix="/buildings", tags=["buildings"], dependencies=[_Depends(_legacy_deprecation_notice)])
 
 
 # Request/Response Models
@@ -67,8 +83,7 @@ def get_building_application_service():
 )
 async def create_building(
     request: BuildingCreateRequest,
-    user: User = Depends(require_write_permission),
-    building_service = Depends(get_building_application_service)
+    user: Dict[str, Any] = Depends(require_building_create_permission)
 ) -> Dict[str, Any]:
     """Create a new building."""
     try:
@@ -85,7 +100,7 @@ async def create_building(
         )
 
         # Use application service to create building
-        result = building_service.create_building(
+        result = await get_building_application_service().create_building(
             name=create_request.name,
             address=create_request.address,
             description=create_request.description,
@@ -139,13 +154,12 @@ async def list_buildings(
     status: Optional[str] = Query(None, description="Filter by building status"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Page size"),
-    user: User = Depends(require_read_permission),
-    building_service = Depends(get_building_application_service)
+    user: Dict[str, Any] = Depends(require_building_read_permission)
 ) -> Dict[str, Any]:
     """List buildings with filtering and pagination."""
     try:
         # Use application service to list buildings
-        result = building_service.list_buildings(
+        result = await get_building_application_service().list_buildings(
             building_type=building_type,
             status=status,
             page=page,
@@ -153,31 +167,26 @@ async def list_buildings(
         )
 
         if result.success:
-            return format_success_response(
-                data={
-                    "buildings": [
-                        {
-                            "building_id": str(building.building_id),
-                            "name": building.name,
-                            "address": building.address,
-                            "description": building.description,
-                            "building_type": building.building_type,
-                            "floors": building.floors,
-                            "total_area": building.total_area,
-                            "status": building.status,
-                            "created_by": building.created_by,
-                            "created_at": building.created_at.isoformat() if building.created_at else None
-                        }
-                        for building in result.buildings
-                    ],
-                    "pagination": {
-                        "page": result.page,
-                        "page_size": result.page_size,
-                        "total_count": result.total_count,
-                        "total_pages": result.total_pages
+            return format_paginated_response(
+                items=[
+                    {
+                        "building_id": str(building.building_id),
+                        "name": building.name,
+                        "address": building.address,
+                        "description": building.description,
+                        "building_type": building.building_type,
+                        "floors": building.floors,
+                        "total_area": building.total_area,
+                        "status": building.status,
+                        "created_by": building.created_by,
+                        "created_at": building.created_at.isoformat() if building.created_at else None
                     }
-                },
-                message="Buildings retrieved successfully"
+                    for building in result.buildings
+                ],
+                total_count=result.total_count,
+                page=result.page,
+                per_page=result.page_size,
+                request=None # No Request object passed for this endpoint
             )
         else:
             return format_error_response(
@@ -203,13 +212,12 @@ async def list_buildings(
 )
 async def get_building(
     building_id: str,
-    user: User = Depends(require_read_permission),
-    building_service = Depends(get_building_application_service)
+    user: Dict[str, Any] = Depends(require_building_read_permission)
 ) -> Dict[str, Any]:
     """Get building details by ID."""
     try:
         # Use application service to get building
-        result = building_service.get_building(building_id=building_id)
+        result = await get_building_application_service().get_building(building_id=building_id)
 
         if result.success and result.building:
             building = result.building
@@ -254,8 +262,7 @@ async def get_building(
 async def update_building(
     building_id: str,
     request: BuildingUpdateRequest,
-    user: User = Depends(require_write_permission),
-    building_service = Depends(get_building_application_service)
+    user: Dict[str, Any] = Depends(require_building_update_permission)
 ) -> Dict[str, Any]:
     """Update building by ID."""
     try:
@@ -273,7 +280,7 @@ async def update_building(
         )
 
         # Use application service to update building
-        result = building_service.update_building(
+        result = await get_building_application_service().update_building(
             building_id=building_id,
             name=update_request.name,
             address=update_request.address,
@@ -325,13 +332,12 @@ async def update_building(
 )
 async def delete_building(
     building_id: str,
-    user: User = Depends(require_write_permission),
-    building_service = Depends(get_building_application_service)
+    user: Dict[str, Any] = Depends(require_building_delete_permission)
 ) -> Dict[str, Any]:
     """Delete building by ID."""
     try:
         # Use application service to delete building
-        result = building_service.delete_building(
+        result = await get_building_application_service().delete_building(
             building_id=building_id,
             deleted_by=user.user_id
         )
@@ -373,13 +379,12 @@ async def get_building_rooms(
     room_type: Optional[str] = Query(None, description="Filter by room type"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(10, ge=1, le=100, description="Page size"),
-    user: User = Depends(require_read_permission),
-    building_service = Depends(get_building_application_service)
+    user: Dict[str, Any] = Depends(require_building_read_permission)
 ) -> Dict[str, Any]:
     """Get rooms for a specific building."""
     try:
         # Use application service to get building rooms
-        result = building_service.get_building_rooms(
+        result = await get_building_application_service().get_building_rooms(
             building_id=building_id,
             floor=floor,
             room_type=room_type,
@@ -438,13 +443,12 @@ async def get_building_rooms(
 )
 async def get_building_statistics(
     building_id: str,
-    user: User = Depends(require_read_permission),
-    building_service = Depends(get_building_application_service)
+    user: Dict[str, Any] = Depends(require_building_read_permission)
 ) -> Dict[str, Any]:
     """Get building statistics."""
     try:
         # Use application service to get building statistics
-        result = building_service.get_building_statistics(building_id=building_id)
+        result = await get_building_application_service().get_building_statistics(building_id=building_id)
 
         if result.success:
             return format_success_response(

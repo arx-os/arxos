@@ -6,9 +6,10 @@ ensuring consistent request/response validation and documentation.
 """
 
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from enum import Enum
+from decimal import Decimal
 
 from application.unified.dto.building_dto import BuildingDTO
 
@@ -78,14 +79,16 @@ class DimensionsSchema(BaseModel):
     area: Optional[float] = Field(None, gt=0, description="Total area in square meters")
     volume: Optional[float] = Field(None, gt=0, description="Total volume in cubic meters")
 
-    @validator('area', pre=True, always=True)
+    @field_validator('area', mode='before')
+    @classmethod
     def calculate_area(cls, v, values):
         """Calculate area if not provided."""
         if v is None and 'length' in values and 'width' in values:
             return values['length'] * values['width']
         return v
 
-    @validator('volume', pre=True, always=True)
+    @field_validator('volume', mode='before')
+    @classmethod
     def calculate_volume(cls, v, values):
         """Calculate volume if not provided."""
         if v is None and 'length' in values and 'width' in values and 'height' in values:
@@ -302,6 +305,25 @@ class BuildingListResponse(BaseModel):
         }
 
 
+class FloorSummarySchema(BaseModel):
+    """Summary schema for a floor in a building."""
+    id: str
+    floor_number: int
+    name: str
+    status: Optional[str] = None
+    room_count: Optional[int] = None
+
+
+class DeviceSummarySchema(BaseModel):
+    """Summary schema for a device associated with a room/building."""
+    id: Optional[str] = None
+    room_id: Optional[str] = None
+    device_id: Optional[str] = None
+    device_type: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+
+
 class BuildingFilterSchema(BaseModel):
     """Schema for building filter parameters."""
     name: Optional[str] = Field(None, description="Filter by building name")
@@ -334,7 +356,7 @@ class BuildingPaginationSchema(BaseModel):
     page: int = Field(default=1, ge=1, description="Page number")
     page_size: int = Field(default=10, ge=1, le=100, description="Items per page")
     sort_by: Optional[str] = Field(default="name", description="Sort field")
-    sort_order: Optional[str] = Field(default="asc", regex="^(asc|desc)$", description="Sort order")
+    sort_order: Optional[str] = Field(default="asc", pattern="^(asc|desc)$", description="Sort order")
 
     class Config:
         schema_extra = {

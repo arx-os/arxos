@@ -226,50 +226,63 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         }
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """Process request and authenticate."""
+        """Process request and authenticate using API key or JWT."""
         # Skip authentication for certain endpoints
         if self._should_skip_auth(request):
             return await call_next(request)
 
-        # Extract API key
+        # Accept either API key or JWT (Authorization: Bearer ...)
         api_key = request.headers.get("X-API-Key")
+        auth_header = request.headers.get("Authorization")
 
-        if not api_key:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": True,
-                    "error_code": "MISSING_API_KEY",
-                    "message": "API key is required",
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+        if api_key:
+            if api_key not in self.api_keys:
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "error": True,
+                        "error_code": "INVALID_API_KEY",
+                        "message": "Invalid API key",
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                )
+            # Set user information from API key
+            request.state.user_id = self.api_keys[api_key]
+            request.state.api_key = api_key
+            self.logger.info(
+                f"API key authenticated: {api_key}",
+                request_id=getattr(request.state, 'request_id', None),
+                user_id=request.state.user_id,
+                api_key=api_key
             )
+            return await call_next(request)
 
-        # Validate API key
-        if api_key not in self.api_keys:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": True,
-                    "error_code": "INVALID_API_KEY",
-                    "message": "Invalid API key",
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-            )
+        if auth_header:
+            # Validate JWT via shared auth manager
+            try:
+                from api.dependencies import _auth_manager as auth_manager  # lazy import to avoid cycles
+                token_data = auth_manager.validate_token(auth_header)
+                if token_data:
+                    request.state.user_id = token_data.get('user_id')
+                    request.state.permissions = token_data.get('permissions', [])
+                    self.logger.info(
+                        "JWT authenticated",
+                        request_id=getattr(request.state, 'request_id', None),
+                        user_id=request.state.user_id,
+                    )
+                    return await call_next(request)
+            except Exception as e:
+                self.logger.error(f"JWT validation error in middleware: {e}")
 
-        # Set user information
-        request.state.user_id = self.api_keys[api_key]
-        request.state.api_key = api_key
-
-        # Log authentication
-        self.logger.info(
-            f"API key authenticated: {api_key}",
-            request_id=getattr(request.state, 'request_id', None),
-            user_id=request.state.user_id,
-            api_key=api_key
+        return JSONResponse(
+            status_code=401,
+            content={
+                "error": True,
+                "error_code": "UNAUTHORIZED",
+                "message": "Valid API key or JWT is required",
+                "timestamp": datetime.utcnow().isoformat()
+            }
         )
-
-        return await call_next(request)
 
     def _should_skip_auth(self, request: Request) -> bool:
         """Check if authentication should be skipped for this request."""

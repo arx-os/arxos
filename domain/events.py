@@ -51,21 +51,8 @@ class DomainEvent(ABC):
     """Base class for all domain events."""
 
     def __init__(self, event_id: str = None, occurred_on: datetime = None, version: int = 1, metadata: Dict[str, Any] = None):
-        """Initialize the domain event."
-
-        Args:
-            event_id: Unique identifier for the event
-            occurred_on: When the event occurred
-            version: Event version for compatibility
-            metadata: Additional event metadata
-
-        Returns:
-            None
-
-        Raises:
-            ValueError: If required fields are missing
-        """
-        self.event_id = event_id or str(uuid.uuid4()
+        """Initialize a domain event with standard metadata."""
+        self.event_id = event_id or str(uuid.uuid4())
         self.occurred_on = occurred_on or datetime.utcnow()
         self.version = version
         self.metadata = metadata or {}
@@ -78,7 +65,7 @@ class DomainEvent(ABC):
             raise ValueError("Event occurrence time is required")
 
     @abstractmethod
-def get_aggregate_id(self) -> str:
+    def get_aggregate_id(self) -> str:
         """Get the aggregate root ID for this event."""
         pass
 
@@ -545,7 +532,7 @@ class EventHandler(ABC):
     """Abstract base class for event handlers."""
 
     @abstractmethod
-def handle(self, event: DomainEvent) -> None:
+    def handle(self, event: DomainEvent) -> None:
         """Handle a domain event."""
         pass
 

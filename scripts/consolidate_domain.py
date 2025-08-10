@@ -294,7 +294,7 @@ def create(
         metadata: Optional[Dict[str, Any]] = None
     ) -> "Building":
         """Create a new building entity."""
-        building_id = BuildingId(str(uuid.uuid4()))
+        building_id = BuildingId.from_string(str(uuid.uuid4()))
         return cls(
             id=building_id,
             name=name,

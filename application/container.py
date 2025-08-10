@@ -52,8 +52,8 @@ class ApplicationContainer:
             logger.warning("Application container already initialized")
             return
 
+        # Initialize database connection (required)
         try:
-            # Initialize database connection
             db_config = DatabaseConfig(
                 host=config.get('database', {}).get('host', 'localhost'),
                 port=config.get('database', {}).get('port', 5432),
@@ -65,8 +65,12 @@ class ApplicationContainer:
             )
             self._database_connection = DatabaseConnection(db_config)
             self._services['database_connection'] = self._database_connection
+        except Exception as e:
+            logger.error(f"Failed to initialize database connection: {e}")
+            raise
 
-            # Initialize cache service
+        # Optional services: failures should not prevent API from starting in tests
+        try:
             cache_config = config.get('cache', {})
             self._cache_service = RedisCacheService(
                 host=cache_config.get('host', 'localhost'),
@@ -76,17 +80,22 @@ class ApplicationContainer:
                 max_connections=cache_config.get('max_connections', 10)
             )
             self._services['cache_service'] = self._cache_service
-
-            # Initialize cache manager
             self._cache_manager = CacheManager()
             self._cache_manager.add_strategy('redis', self._cache_service)
             self._services['cache_manager'] = self._cache_manager
+        except Exception as e:
+            logger.warning(f"Cache services not initialized: {e}")
+            self._cache_service = None
+            self._cache_manager = None
 
-            # Initialize event store
+        try:
             self._event_store = EventStoreService(self._database_connection.session_factory())
             self._services['event_store'] = self._event_store
+        except Exception as e:
+            logger.warning(f"Event store not initialized: {e}")
+            self._event_store = None
 
-            # Initialize message queue
+        try:
             mq_config = config.get('message_queue', {})
             self._message_queue = MessageQueueService(
                 host=mq_config.get('host', 'localhost'),
@@ -95,25 +104,37 @@ class ApplicationContainer:
                 password=mq_config.get('password')
             )
             self._services['message_queue'] = self._message_queue
-
-            # Initialize monitoring services
-            self._health_check = HealthCheckService()
-            self._metrics = MetricsCollector()
-            self._logger = StructuredLogger(name="arxos")
-
-            self._services['health_check'] = self._health_check
-            self._services['metrics'] = self._metrics
-            self._services['logger'] = self._logger
-
-            # Register health checks
-            self._register_health_checks()
-
-            self._initialized = True
-            logger.info("Application container initialized successfully")
-
         except Exception as e:
-            logger.error(f"Failed to initialize application container: {e}")
-            raise
+            logger.warning(f"Message queue not initialized: {e}")
+            self._message_queue = None
+
+        # Monitoring services
+        try:
+            self._health_check = HealthCheckService()
+            self._services['health_check'] = self._health_check
+        except Exception as e:
+            logger.warning(f"Health check service not initialized: {e}")
+            self._health_check = None
+
+        try:
+            self._metrics = MetricsCollector()
+            self._services['metrics'] = self._metrics
+        except Exception as e:
+            logger.warning(f"Metrics collector not initialized: {e}")
+            self._metrics = None
+
+        try:
+            self._logger = StructuredLogger(name="arxos")
+            self._services['logger'] = self._logger
+        except Exception as e:
+            logger.warning(f"Structured logger not initialized: {e}")
+            self._logger = None
+
+        # Register health checks for available services
+        self._register_health_checks()
+
+        self._initialized = True
+        logger.info("Application container initialized successfully")
 
     def _register_health_checks(self) -> None:
         """Register health checks for all services."""

@@ -14,11 +14,11 @@ from api.dependencies import (
     User, require_read_permission, require_write_permission,
     format_success_response, format_error_response
 )
-from application.logging import get_logger
+from application.logging_config import get_logger
 from infrastructure import get_repository_factory
 from application.factory import get_device_service
 from application.dto import (
-    CreateDeviceRequest, UpdateDeviceRequest, GetDeviceRequest
+    CreateDeviceRequest, UpdateDeviceRequest
 )
 
 logger = get_logger("api.device_routes")

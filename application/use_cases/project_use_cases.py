@@ -28,22 +28,6 @@ class CreateProjectUseCase:
     """Use case for creating a new project."""
 
     def __init__(self, project_repository: ProjectRepository):
-    """
-    Perform __init__ operation
-
-Args:
-        project_repository: Description of project_repository
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.project_repository = project_repository
 
     def execute(self, request: CreateProjectRequest) -> CreateProjectResponse:
@@ -64,7 +48,7 @@ Example:
 
             # Create domain objects
             project_id = ProjectId()
-            building_id = BuildingId(request.building_id)
+            building_id = BuildingId.from_string(request.building_id)
 
             # Create project entity
             project = Project(
@@ -87,6 +71,7 @@ Example:
                 project_id=str(project_id),
                 message="Project created successfully",
                 created_at=datetime.utcnow()
+            )
         except DuplicateProjectError as e:
             return CreateProjectResponse(
                 success=False,
@@ -185,6 +170,7 @@ Example:
                 project_id=str(project_id),
                 message="Project updated successfully",
                 updated_at=datetime.utcnow()
+            )
         except InvalidProjectError as e:
             return UpdateProjectResponse(
                 success=False,
@@ -219,7 +205,7 @@ class GetProjectUseCase:
                 )
 
             # Get project from repository import repository
-            project = self.project_repository.get_by_id(ProjectId(project_id)
+            project = self.project_repository.get_by_id(ProjectId(project_id))
             if not project:
                 return GetProjectResponse(
                     success=False,
@@ -275,7 +261,7 @@ class ListProjectsUseCase:
 
             if building_id:
                 # Get projects by building
-                projects = self.project_repository.get_by_building_id(BuildingId(building_id)
+                projects = self.project_repository.get_by_building_id(BuildingId.from_string(building_id))
             elif status:
                 # Get projects by status
                 try:
@@ -289,7 +275,7 @@ class ListProjectsUseCase:
             elif user_id:
                 # Get projects by user
                 from domain.value_objects import UserId
-                projects = self.project_repository.get_by_user_id(UserId(user_id)
+                projects = self.project_repository.get_by_user_id(UserId(user_id))
             else:
                 # Get all projects
                 projects = self.project_repository.get_all()
@@ -350,7 +336,7 @@ class DeleteProjectUseCase:
                 )
 
             # Check if project exists
-            project = self.project_repository.get_by_id(ProjectId(project_id)
+            project = self.project_repository.get_by_id(ProjectId(project_id))
             if not project:
                 return DeleteProjectResponse(
                     success=False,
@@ -358,12 +344,13 @@ class DeleteProjectUseCase:
                 )
 
             # Delete from repository import repository
-            self.project_repository.delete(ProjectId(project_id)
+            self.project_repository.delete(ProjectId(project_id))
             return DeleteProjectResponse(
                 success=True,
                 project_id=project_id,
                 message="Project deleted successfully",
                 deleted_at=datetime.utcnow()
+            )
         except Exception as e:
             return DeleteProjectResponse(
                 success=False,

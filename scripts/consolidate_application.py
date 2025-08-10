@@ -523,7 +523,7 @@ class UnifiedBuildingUseCase:
             raise InvalidFloorError(f"Floor {floor_number} already exists in building {building_id}")
 
         floor = Floor.create(
-            building_id=BuildingId(building_id),
+            building_id=BuildingId.from_string(building_id),
             floor_number=floor_number,
             name=name,
             description=description,

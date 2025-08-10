@@ -33,7 +33,7 @@ class BaseModel(Base):
     deleted_by = Column(String(255), nullable=True)
 
     @declared_attr
-def __tablename__(cls):
+    def __tablename__(cls):
         """Generate table name from class name."""
         return cls.__name__.lower() + 's'
 
@@ -54,7 +54,7 @@ def __tablename__(cls):
                 setattr(self, key, value)
 
     @property
-def is_deleted(self) -> bool:
+    def is_deleted(self) -> bool:
         """Check if the record is soft deleted."""
         return self.deleted_at is not None
 

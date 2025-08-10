@@ -28,22 +28,6 @@ class CreateFloorUseCase:
     """Use case for creating a new floor."""
 
     def __init__(self, floor_repository: FloorRepository):
-    """
-    Perform __init__ operation
-
-Args:
-        floor_repository: Description of floor_repository
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.floor_repository = floor_repository
 
     def execute(self, request: CreateFloorRequest) -> CreateFloorResponse:
@@ -78,6 +62,7 @@ Example:
                 floor_id=str(floor_id),
                 message="Floor created successfully",
                 created_at=datetime.utcnow()
+            )
         except DuplicateFloorError as e:
             return CreateFloorResponse(
                 success=False,
@@ -153,6 +138,7 @@ Example:
                 floor_id=str(floor_id),
                 message="Floor updated successfully",
                 updated_at=datetime.utcnow()
+            )
         except FloorNotFoundError:
             return UpdateFloorResponse(
                 success=False,
@@ -185,7 +171,7 @@ class GetFloorUseCase:
         """Execute the get floor use case."""
         try:
             # Get floor from repository import repository
-            floor = self.floor_repository.get_by_id(FloorId(floor_id)
+            floor = self.floor_repository.get_by_id(FloorId(floor_id))
             if not floor:
                 return GetFloorResponse(
                     success=False,
@@ -283,7 +269,7 @@ class DeleteFloorUseCase:
         """Execute the delete floor use case."""
         try:
             # Check if floor exists
-            floor = self.floor_repository.get_by_id(FloorId(floor_id)
+            floor = self.floor_repository.get_by_id(FloorId(floor_id))
             if not floor:
                 return DeleteFloorResponse(
                     success=False,
@@ -291,12 +277,13 @@ class DeleteFloorUseCase:
                 )
 
             # Delete floor
-            self.floor_repository.delete(FloorId(floor_id)
+            self.floor_repository.delete(FloorId(floor_id))
             return DeleteFloorResponse(
                 success=True,
                 floor_id=floor_id,
                 message="Floor deleted successfully",
                 deleted_at=datetime.utcnow()
+            )
         except FloorNotFoundError:
             return DeleteFloorResponse(
                 success=False,

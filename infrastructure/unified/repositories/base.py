@@ -5,85 +5,11 @@ This module provides a base repository implementation that can be
 extended by specific repository implementations.
 """
 
-from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any, TypeVar, Generic
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
-import logging
+"""
+Unified repository base: unused right now for SQLAlchemy adapters, but kept for future
+direct mappings to DB models in unified layer.
+"""
 
-from domain.unified.repositories import Repository
-
-T = TypeVar('T')
-
-class BaseRepository(Repository[T], ABC):
-    """
-    Base repository implementation with common functionality.
-
-    This class provides a foundation for all repository implementations
-    with common CRUD operations and error handling.
-    """
-
-    def __init__(self, session: Session):
-        """Initialize the base repository."""
-        self.session = session
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-    def save(self, entity: T) -> T:
-        """Save an entity to the database."""
-        try:
-            self.session.add(entity)
-            self.session.commit()
-            self.logger.info(f"Saved {entity.__class__.__name__} with ID {getattr(entity, 'id', 'unknown')}")
-            return entity
-        except SQLAlchemyError as e:
-            self.session.rollback()
-            self.logger.error(f"Error saving {entity.__class__.__name__}: {e}")
-            raise
-
-    def get_by_id(self, entity_id: str) -> Optional[T]:
-        """Get entity by ID."""
-        try:
-            return self.session.query(self.entity_class).filter_by(id=entity_id).first()
-        except SQLAlchemyError as e:
-            self.logger.error(f"Error getting {self.entity_class.__name__} by ID {entity_id}: {e}")
-            return None
-
-    def get_all(self) -> List[T]:
-        """Get all entities."""
-        try:
-            return self.session.query(self.entity_class).all()
-        except SQLAlchemyError as e:
-            self.logger.error(f"Error getting all {self.entity_class.__name__} entities: {e}")
-            return []
-
-    def delete(self, entity_id: str) -> bool:
-        """Delete entity by ID."""
-        try:
-            entity = self.get_by_id(entity_id)
-            if entity:
-                self.session.delete(entity)
-                self.session.commit()
-                self.logger.info(f"Deleted {self.entity_class.__name__} with ID {entity_id}")
-                return True
-            return False
-        except SQLAlchemyError as e:
-            self.session.rollback()
-            self.logger.error(f"Error deleting {self.entity_class.__name__} with ID {entity_id}: {e}")
-            return False
-
-    def exists(self, entity_id: str) -> bool:
-        """Check if entity exists."""
-        try:
-            return self.session.query(self.entity_class).filter_by(id=entity_id).first() is not None
-        except SQLAlchemyError as e:
-            self.logger.error(f"Error checking existence of {self.entity_class.__name__} with ID {entity_id}: {e}")
-            return False
-
-    @property
-    @abstractmethod
-def entity_class(self):
-        """Get the entity class for this repository."""
-        pass
 
 class BaseBuildingRepository(BaseRepository):
     """Base building repository with building-specific operations."""

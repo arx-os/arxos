@@ -28,22 +28,6 @@ class CreateUserUseCase:
     """Use case for creating a new user."""
 
     def __init__(self, user_repository: UserRepository):
-    """
-    Perform __init__ operation
-
-Args:
-        user_repository: Description of user_repository
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.user_repository = user_repository
 
     def execute(self, request: CreateUserRequest) -> CreateUserResponse:
@@ -114,6 +98,7 @@ Example:
                 user_id=str(user_id),
                 message="User created successfully",
                 created_at=datetime.utcnow()
+            )
         except DuplicateUserError as e:
             return CreateUserResponse(
                 success=False,
@@ -241,6 +226,7 @@ Example:
                 user_id=str(user_id),
                 message="User updated successfully",
                 updated_at=datetime.utcnow()
+            )
         except InvalidUserError as e:
             return UpdateUserResponse(
                 success=False,
@@ -275,7 +261,7 @@ class GetUserUseCase:
                 )
 
             # Get user from repository import repository
-            user = self.user_repository.get_by_id(UserId(user_id)
+            user = self.user_repository.get_by_id(UserId(user_id))
             if not user:
                 return GetUserResponse(
                     success=False,
@@ -411,7 +397,7 @@ class DeleteUserUseCase:
                 )
 
             # Check if user exists
-            user = self.user_repository.get_by_id(UserId(user_id)
+            user = self.user_repository.get_by_id(UserId(user_id))
             if not user:
                 return DeleteUserResponse(
                     success=False,
@@ -419,12 +405,13 @@ class DeleteUserUseCase:
                 )
 
             # Delete from repository import repository
-            self.user_repository.delete(UserId(user_id)
+            self.user_repository.delete(UserId(user_id))
             return DeleteUserResponse(
                 success=True,
                 user_id=user_id,
                 message="User deleted successfully",
                 deleted_at=datetime.utcnow()
+            )
         except Exception as e:
             return DeleteUserResponse(
                 success=False,

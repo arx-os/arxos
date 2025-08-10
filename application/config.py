@@ -72,8 +72,7 @@ class ConfigManager:
         self._validation_rules = {
             'required_env_vars': [
                 'ARXOS_ENV',
-                'GUS_SERVICE_URL',
-                'DATABASE_URL'
+                'GUS_SERVICE_URL'
             ],
             'optional_env_vars': [
                 'PDF_MAX_FILE_SIZE',
@@ -186,7 +185,7 @@ class ConfigManager:
     def _load_features_config(self) -> Dict[str, Any]:
         """Load feature flags configuration"""
         return {
-            'use_unified_api': self._parse_bool(os.getenv('USE_UNIFIED_API', 'false'))
+            'use_unified_api': self._parse_bool(os.getenv('USE_UNIFIED_API', 'true'))
         }
 
     def _load_environment_config(self) -> Dict[str, Any]:
@@ -315,6 +314,19 @@ class ConfigManager:
                         'pool_size': 10,
                         'max_overflow': 20
                     }
+            elif database_url.startswith('sqlite://'):
+                # SQLite database - extract the database path/file
+                database_path = database_url[9:]  # Remove 'sqlite://'
+
+                return {
+                    'host': 'localhost',
+                    'port': 0,  # SQLite doesn't use ports
+                    'database': database_path,
+                    'username': '',
+                    'password': '',
+                    'pool_size': 1,  # SQLite doesn't support connection pooling
+                    'max_overflow': 0
+                }
             else:
                 raise ValueError(f"Unsupported database URL format: {database_url}")
 
@@ -335,10 +347,11 @@ class ConfigManager:
             if not os.getenv(env_var):
                 errors.append(f"Required environment variable not set: {env_var}")
 
-        # Validate database configuration
+        # Validate database configuration (only if URL provided or host configured)
         db_config = self._config_cache.get('database', {})
-        if not db_config.get('host'):
-            errors.append("Database host not configured")
+        if os.getenv('DATABASE_URL') or db_config:
+            if not db_config.get('host'):
+                errors.append("Database host not configured")
 
         # Validate PDF analysis configuration
         pdf_config = self._config_cache.get('pdf_analysis', {})
@@ -422,7 +435,7 @@ class ConfigManager:
             'pdf_analysis_configured': bool(config.get('pdf_analysis')),
             'security_configured': bool(config.get('security', {}).get('secret_key')),
             'gus_service_configured': bool(config.get('gus_service', {}).get('url')),
-            'use_unified_api_enabled': config.get('features', {}).get('use_unified_api', False)
+            'use_unified_api_enabled': config.get('features', {}).get('use_unified_api', True)
         }
 
 
@@ -468,3 +481,50 @@ def set_setting(key: str, value: Any) -> bool:
 def reload_config() -> bool:
     """Reload configuration"""
     return _config_manager.reload_configuration()
+
+
+def get_config_summary_info() -> Dict[str, Any]:
+    """Expose configuration summary for logging/diagnostics."""
+    return _config_manager.get_config_summary()
+
+# Feature flags and configuration
+USE_UNIFIED_API = os.getenv("USE_UNIFIED_API", "true").lower() == "true"
+LEGACY_API_FALLBACK = os.getenv("LEGACY_API_FALLBACK", "true").lower() == "true"
+
+# Logging configuration
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_FORMAT = os.getenv("LOG_FORMAT", "json")
+STRUCTURED_LOGGING = os.getenv("STRUCTURED_LOGGING", "true").lower() == "true"
+
+# Test environment configuration
+TESTING = os.getenv("TESTING", "false").lower() == "true"
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
+
+# Cache and external services configuration
+CACHE_ENABLED = os.getenv("CACHE_ENABLED", "true").lower() == "true"
+MESSAGE_QUEUE_ENABLED = os.getenv("MESSAGE_QUEUE_ENABLED", "true").lower() == "true"
+EVENT_STORE_ENABLED = os.getenv("EVENT_STORE_ENABLED", "true").lower() == "true"
+
+def get_feature_flags() -> Dict[str, Any]:
+    """Get feature flags configuration."""
+    return {
+        "use_unified_api": USE_UNIFIED_API,
+        "legacy_api_fallback": LEGACY_API_FALLBACK,
+        "testing": TESTING,
+        "cache_enabled": CACHE_ENABLED,
+        "message_queue_enabled": MESSAGE_QUEUE_ENABLED,
+        "event_store_enabled": EVENT_STORE_ENABLED
+    }
+
+
+def log_feature_flags(logger):
+    """Log feature flags configuration."""
+    flags = get_feature_flags()
+    logger.info("Feature flags configuration", **flags)
+
+    if not flags["use_unified_api"] and not flags["legacy_api_fallback"]:
+        logger.warning("Both unified and legacy APIs are disabled - this may cause issues")
+
+    if flags["testing"]:
+        logger.info("Running in test mode - using SQLite fallback database")
+        logger.info("External services (cache, MQ, event store) will be optional in tests")

@@ -30,7 +30,7 @@ class BuildingDTO:
     volume: Optional[float] = None
 
     @classmethod
-def from_entity(cls, building) -> "BuildingDTO":
+    def from_entity(cls, building) -> "BuildingDTO":
         """Create DTO from building entity."""
         return cls(
             id=str(building.id),
@@ -68,7 +68,7 @@ class FloorDTO:
     device_count: int = 0
 
     @classmethod
-def from_entity(cls, floor) -> "FloorDTO":
+    def from_entity(cls, floor) -> "FloorDTO":
         """Create DTO from floor entity."""
         return cls(
             id=str(floor.id),
@@ -106,7 +106,7 @@ class RoomDTO:
     volume: Optional[float] = None
 
     @classmethod
-def from_entity(cls, room) -> "RoomDTO":
+    def from_entity(cls, room) -> "RoomDTO":
         """Create DTO from room entity."""
         return cls(
             id=str(room.id),
@@ -146,7 +146,7 @@ class DeviceDTO:
     metadata: Dict[str, Any] = None
 
     @classmethod
-def from_entity(cls, device) -> "DeviceDTO":
+    def from_entity(cls, device) -> "DeviceDTO":
         """Create DTO from device entity."""
         return cls(
             id=str(device.id),
@@ -175,7 +175,7 @@ class BuildingHierarchyDTO:
     total_devices: int
 
     @classmethod
-def from_hierarchy(cls, hierarchy: Dict[str, Any]) -> "BuildingHierarchyDTO":
+    def from_hierarchy(cls, hierarchy: Dict[str, Any]) -> "BuildingHierarchyDTO":
         """Create DTO from building hierarchy."""
         building_dto = BuildingDTO.from_entity(hierarchy["building"])
         floor_dtos = [FloorDTO.from_entity(floor) for floor in hierarchy["floors"]]

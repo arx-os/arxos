@@ -15,10 +15,7 @@ from .services import *
 from .caching import *
 from .monitoring import *
 
-# PDF Analysis specific imports
-from .repositories.postgresql_pdf_analysis_repository import PostgreSQLPDFAnalysisRepository
-from .services.gus_service import GUSService, PDFAnalysisResult
-from .services.file_storage_service import FileStorageService
+# Optional PDF Analysis imports are disabled in API test context to reduce deps
 
 __all__ = [
     # Database

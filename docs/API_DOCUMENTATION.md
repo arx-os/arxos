@@ -5,7 +5,7 @@
 The Arxos platform provides a comprehensive API for building information modeling and CAD operations.
 
 ## Authentication
-All API endpoints require authentication using JWT tokens.
+All API endpoints require authentication using JWT tokens signed with HS256. Tokens must be sent in the `Authorization` header. Expired or malformed tokens return 401; insufficient permissions return 403.
 
 ### Headers
 ```
@@ -14,6 +14,30 @@ Content-Type: application/json
 ```
 
 ## Endpoints
+
+### Unified Building API
+
+The platform provides a unified Building API exposed under `/api/v1/buildings`.
+Unified routes are enabled by default and can be disabled via configuration `features.use_unified_api=false`. When disabled, the legacy routes are used. All endpoints require a valid JWT.
+
+- POST `/api/v1/buildings/` — Create a building
+- GET `/api/v1/buildings/` — List buildings with filters and pagination
+- GET `/api/v1/buildings/{building_id}` — Retrieve building details
+- PUT `/api/v1/buildings/{building_id}` — Update building
+- DELETE `/api/v1/buildings/{building_id}` — Delete building
+
+Example (create):
+```bash
+curl -X POST "http://localhost:8000/api/v1/buildings/" \
+     -H "Authorization: Bearer <token>" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "name": "Test Tower",
+       "building_type": "commercial",
+       "status": "active",
+       "address": {"street": "1 Test Way", "city": "Testville", "state": "TS", "postal_code": "00000", "country": "USA"}
+     }'
+```
 
 ### AI Service
 - `POST /api/v1/query` - Process AI queries

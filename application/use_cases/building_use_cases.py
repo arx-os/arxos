@@ -144,7 +144,7 @@ Example:
         """Execute the update building use case."""
         try:
             # Get existing building
-            building_id = BuildingId(request.building_id)
+            building_id = BuildingId.from_string(request.building_id)
             building = self.unit_of_work.buildings.get_by_id(building_id)
 
             if not building:
@@ -240,7 +240,7 @@ class GetBuildingUseCase:
     def execute(self, building_id: str) -> GetBuildingResponse:
         """Execute the get building use case."""
         try:
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id))
+            building = self.unit_of_work.buildings.get_by_id(BuildingId.from_string(building_id))
 
             if not building:
                 return GetBuildingResponse(
@@ -374,7 +374,7 @@ class DeleteBuildingUseCase:
         """Execute the delete building use case."""
         try:
             # Check if building exists
-            building = self.unit_of_work.buildings.get_by_id(BuildingId(building_id))
+            building = self.unit_of_work.buildings.get_by_id(BuildingId.from_string(building_id))
 
             if not building:
                 return DeleteBuildingResponse(
@@ -383,7 +383,7 @@ class DeleteBuildingUseCase:
                 )
 
             # Delete building
-            self.unit_of_work.buildings.delete(BuildingId(building_id))
+            self.unit_of_work.buildings.delete(BuildingId.from_string(building_id))
 
             return DeleteBuildingResponse(
                 success=True,

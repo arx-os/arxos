@@ -25,7 +25,7 @@ class DatabaseSession:
         self._current_session: Optional[Session] = None
 
     @contextmanager
-def transaction(self):
+    def transaction(self):
         """Context manager for database transactions."""
         session = self.session_factory()
         try:
@@ -40,7 +40,7 @@ def transaction(self):
             session.close()
 
     @contextmanager
-def session(self):
+    def session(self):
         """Context manager for database sessions without automatic commit."""
         session = self.session_factory()
         try:
@@ -55,47 +55,15 @@ def session(self):
     def with_transaction(self, func: Callable) -> Callable:
         """Decorator to wrap functions with database transaction."""
         @wraps(func)
-def wrapper(*args, **kwargs) -> Any:
-    """
-    Perform wrapper operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = wrapper(param)
-        print(result)
-    """
+        def wrapper(*args, **kwargs) -> Any:
             with self.transaction() as session:
                 return func(session, *args, **kwargs)
         return wrapper
 
     def with_session(self, func: Callable) -> Callable:
-    """
-    Perform wrapper operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = wrapper(param)
-        print(result)
-    """
         """Decorator to wrap functions with database session."""
         @wraps(func)
-def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args, **kwargs) -> Any:
             with self.session() as session:
                 return func(session, *args, **kwargs)
         return wrapper
@@ -153,7 +121,7 @@ class SessionScope:
         return self._session_stack[-1] if self._session_stack else None
 
     @contextmanager
-def session_scope(self):
+    def session_scope(self):
         """Create a session scope for dependency injection."""
         session = self.session_factory()
         self._session_stack.append(session)
@@ -170,7 +138,7 @@ def session_scope(self):
     def require_session(self, func: Callable) -> Callable:
         """Decorator to require an active session."""
         @wraps(func)
-def wrapper(*args, **kwargs) -> Any:
+        def wrapper(*args, **kwargs) -> Any:
             session = self.get_current_session()
             if session is None:
                 raise RuntimeError("No active database session")

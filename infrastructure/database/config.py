@@ -38,7 +38,7 @@ class DatabaseConfig:
     echo_pool: bool = False  # Connection pool logging
 
     @classmethod
-def from_environment(cls) -> 'DatabaseConfig':
+    def from_environment(cls) -> 'DatabaseConfig':
         """Create configuration from environment variables."""
         return cls(
             host=os.getenv('DB_HOST', 'localhost'),
@@ -56,8 +56,13 @@ def from_environment(cls) -> 'DatabaseConfig':
         )
 
     @property
-def connection_string(self) -> str:
+    def connection_string(self) -> str:
         """Generate SQLAlchemy connection string."""
+        # Handle SQLite databases
+        if self.database.startswith('/:memory:'):
+            return f"sqlite://{self.database}"
+
+        # Handle PostgreSQL databases
         ssl_params = []
         if self.ssl_mode != "disable":
             ssl_params.append(f"sslmode={self.ssl_mode}")
@@ -82,10 +87,12 @@ def connection_string(self) -> str:
         if not self.database:
             raise ValueError("Database name is required")
 
-        if not self.username:
+        # For SQLite, username is not required
+        if not self.username and not self.database.startswith('/:memory:'):
             raise ValueError("Database username is required")
 
-        if self.port < 1 or self.port > 65535:
+        # Port validation only applies to non-SQLite databases
+        if self.port > 0 and (self.port < 1 or self.port > 65535):
             raise ValueError("Port must be between 1 and 65535")
 
         if self.pool_size < 1:

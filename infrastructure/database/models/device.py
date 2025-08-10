@@ -48,9 +48,9 @@ class DeviceModel(BaseModel):
         return f"<DeviceModel(id={self.id}, name='{self.name}', device_type='{self.device_type}')>"
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full device name."""
-        return f"{self.name} ({self.device_type})
+        return f"{self.name} ({self.device_type})"
     def update_status(self, new_status: DeviceStatus, updated_by: Optional[str] = None) -> None:
         """Update device status."""
         self.status = new_status

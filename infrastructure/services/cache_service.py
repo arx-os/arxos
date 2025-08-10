@@ -8,7 +8,10 @@ import json
 import logging
 from typing import Any, Optional, Dict, List
 from datetime import datetime, timedelta
-import redis
+try:
+    import redis  # type: ignore
+except Exception:  # pragma: no cover - optional in test context
+    redis = None
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +22,8 @@ class RedisCacheService:
     def __init__(self, host: str = "localhost", port: int = 6379, db: int = 0,
                  password: Optional[str] = None, max_connections: int = 10):
         """Initialize Redis cache service."""
+        if redis is None:
+            raise RuntimeError("Redis client not available in this build")
         self.redis_client = redis.Redis(
             host=host,
             port=port,

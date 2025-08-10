@@ -78,36 +78,36 @@ class Building:
             raise InvalidBuildingError("Building must have a valid address")
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full building name with address."""
         return f"{self.name} - {self.address.full_address}"
 
     @property
-def area(self) -> Optional[float]:
+    def area(self) -> Optional[float]:
         """Calculate building area in square meters."""
         if self.dimensions:
             return self.dimensions.area
         return None
 
     @property
-def volume(self) -> Optional[float]:
+    def volume(self) -> Optional[float]:
         """Calculate building volume in cubic meters."""
         if self.dimensions:
             return self.dimensions.volume
         return None
 
     @property
-def floor_count(self) -> int:
+    def floor_count(self) -> int:
         """Get the number of floors in the building."""
         return len(self.floors)
 
     @property
-def room_count(self) -> int:
+    def room_count(self) -> int:
         """Get the total number of rooms in the building."""
         return sum(len(floor.rooms) for floor in self.floors)
 
     @property
-def device_count(self) -> int:
+    def device_count(self) -> int:
         """Get the total number of devices in the building."""
         return sum(len(room.devices) for floor in self.floors for room in floor.rooms)
 
@@ -183,6 +183,7 @@ def device_count(self) -> int:
             raise_domain_exception(
                 FloorNotFoundError, 'floor_not_found',
                 floor_id=str(floor_id), building_id=str(self.id)
+            )
         self.floors.remove(floor)
         self.updated_at = datetime.utcnow()
 
@@ -237,16 +238,16 @@ class Floor:
             raise InvalidFloorError("Floor number must be non-negative")
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full floor name."""
-        return f"{self.name} (Floor {self.floor_number})
+        return f"{self.name} (Floor {self.floor_number})"
     @property
-def room_count(self) -> int:
+    def room_count(self) -> int:
         """Get the number of rooms on this floor."""
         return len(self.rooms)
 
     @property
-def device_count(self) -> int:
+    def device_count(self) -> int:
         """Get the total number of devices on this floor."""
         return sum(len(room.devices) for room in self.rooms)
 
@@ -305,6 +306,7 @@ def device_count(self) -> int:
             raise_domain_exception(
                 RoomNotFoundError, 'room_not_found',
                 room_id=str(room_id), floor_id=str(self.id)
+            )
         self.rooms.remove(room)
         self.updated_at = datetime.utcnow()
 
@@ -361,25 +363,25 @@ class Room:
             raise InvalidRoomError("Room number cannot be empty")
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full room name."""
-        return f"{self.name} ({self.room_number})
+        return f"{self.name} ({self.room_number})"
     @property
-def area(self) -> Optional[float]:
+    def area(self) -> Optional[float]:
         """Calculate room area in square meters."""
         if self.dimensions:
             return self.dimensions.area
         return None
 
     @property
-def volume(self) -> Optional[float]:
+    def volume(self) -> Optional[float]:
         """Calculate room volume in cubic meters."""
         if self.dimensions:
             return self.dimensions.volume
         return None
 
     @property
-def device_count(self) -> int:
+    def device_count(self) -> int:
         """Get the number of devices in this room."""
         return len(self.devices)
 
@@ -441,6 +443,7 @@ def device_count(self) -> int:
             raise_domain_exception(
                 DeviceNotFoundError, 'device_not_found',
                 device_id=str(device_id), room_id=str(self.id)
+            )
         self.devices.remove(device)
         self.updated_at = datetime.utcnow()
 
@@ -503,9 +506,9 @@ class Device:
             raise InvalidDeviceError("Device type cannot be empty")
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full device name."""
-        return f"{self.name} ({self.device_type})
+        return f"{self.name} ({self.device_type})"
     def update_name(self, new_name: str, updated_by: str) -> None:
         """Update device name."""
         if not new_name or len(new_name.strip()) == 0:
@@ -594,7 +597,7 @@ class User:
             raise InvalidUserError("Username must be at least 3 characters long")
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the user's full name."""
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
@@ -711,7 +714,7 @@ class Project:
             raise InvalidProjectError("Start date cannot be after end date")
 
     @property
-def duration_days(self) -> Optional[int]:
+    def duration_days(self) -> Optional[int]:
         """Calculate project duration in days."""
         if self.start_date and self.end_date:
             return (self.end_date - self.start_date).days

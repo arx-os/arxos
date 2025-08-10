@@ -21,27 +21,27 @@ class CacheStrategy(ABC):
         self.misses = 0
 
     @abstractmethod
-def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Optional[Any]:
         """Get a value from cache."""
         pass
 
     @abstractmethod
-def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set a value in cache."""
         pass
 
     @abstractmethod
-def delete(self, key: str) -> bool:
+    def delete(self, key: str) -> bool:
         """Delete a key from cache."""
         pass
 
     @abstractmethod
-def clear(self) -> bool:
+    def clear(self) -> bool:
         """Clear all cache entries."""
         pass
 
     @abstractmethod
-def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> Dict[str, Any]:
         """Perform health check on cache."""
         pass
 

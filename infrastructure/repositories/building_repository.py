@@ -5,14 +5,16 @@ This module contains the SQLAlchemy implementation of the BuildingRepository
 interface defined in the domain layer.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func
+import uuid
+from sqlalchemy.exc import SQLAlchemyError
 
 from domain.entities import Building
 from domain.value_objects import BuildingId, BuildingStatus, Address, Coordinates, Dimensions
 from domain.repositories import BuildingRepository
-from domain.exceptions import BuildingNotFoundError, DuplicateBuildingError, RepositoryError
+from domain.exceptions import BuildingNotFoundError, DuplicateBuildingError, RepositoryError, DatabaseError
 
 from .base import BaseRepository
 from infrastructure.database.models.building import BuildingModel
@@ -37,9 +39,12 @@ class SQLAlchemyBuildingRepository(BaseRepository[Building, BuildingModel], Buil
     def get_by_id(self, building_id: BuildingId) -> Optional[Building]:
         """Get a building by its ID."""
         try:
+            # Convert string UUID to UUID object for SQLAlchemy
+            uuid_obj = uuid.UUID(building_id.value)
+
             model = self.session.query(BuildingModel).filter(
                 and_(
-                    BuildingModel.id == building_id.value,
+                    BuildingModel.id == uuid_obj,
                     BuildingModel.deleted_at.is_(None)
                 )
             ).first()
@@ -98,9 +103,12 @@ class SQLAlchemyBuildingRepository(BaseRepository[Building, BuildingModel], Buil
     def delete(self, building_id: BuildingId) -> None:
         """Delete a building by ID."""
         try:
+            # Convert string UUID to UUID object for SQLAlchemy
+            uuid_obj = uuid.UUID(building_id.value)
+
             model = self.session.query(BuildingModel).filter(
                 and_(
-                    BuildingModel.id == building_id.value,
+                    BuildingModel.id == uuid_obj,
                     BuildingModel.deleted_at.is_(None)
                 )
             ).first()
@@ -116,126 +124,171 @@ class SQLAlchemyBuildingRepository(BaseRepository[Building, BuildingModel], Buil
     def exists(self, building_id: BuildingId) -> bool:
         """Check if a building exists."""
         try:
+            # Convert string UUID to UUID object for SQLAlchemy
+            uuid_obj = uuid.UUID(building_id.value)
+
             return self.session.query(BuildingModel).filter(
                 and_(
-                    BuildingModel.id == building_id.value,
+                    BuildingModel.id == uuid_obj,
                     BuildingModel.deleted_at.is_(None)
                 )
             ).first() is not None
         except Exception as e:
             raise RepositoryError(f"Failed to check building existence: {str(e)}")
 
+    def find_by_name(self, name: str) -> Optional[Building]:
+        """Find building by name."""
+        try:
+            building_model = self.session.query(BuildingModel).filter(
+                BuildingModel.name == name
+            ).first()
+
+            if building_model:
+                return self._model_to_entity(building_model)
+            return None
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error finding building by name '{name}': {e}")
+            raise DatabaseError(f"Failed to find building by name: {e}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error finding building by name '{name}': {e}")
+            raise RepositoryError(f"Unexpected error finding building by name: {e}")
+
+    def find_by_status(self, status: str) -> List[Building]:
+        """Find buildings by status."""
+        try:
+            building_models = self.session.query(BuildingModel).filter(
+                BuildingModel.status == status
+            ).all()
+
+            return [self._model_to_entity(model) for model in building_models]
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error finding buildings by status '{status}': {e}")
+            raise DatabaseError(f"Failed to find buildings by status: {e}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error finding buildings by status '{status}': {e}")
+            raise RepositoryError(f"Unexpected error finding buildings by status: {e}")
+
     def count(self) -> int:
-        """Get the total number of buildings."""
+        """Get total count of buildings."""
+        try:
+            return self.session.query(BuildingModel).count()
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error counting buildings: {e}")
+            raise DatabaseError(f"Failed to count buildings: {e}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error counting buildings: {e}")
+            raise RepositoryError(f"Unexpected error counting buildings: {e}")
+
+    def count_by_status(self, status: str) -> int:
+        """Get count of buildings by status."""
         try:
             return self.session.query(BuildingModel).filter(
-                BuildingModel.deleted_at.is_(None)
+                BuildingModel.status == status
             ).count()
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error counting buildings by status '{status}': {e}")
+            raise DatabaseError(f"Failed to count buildings by status: {e}")
         except Exception as e:
-            raise RepositoryError(f"Failed to count buildings: {str(e)}")
+            self.logger.error(f"Unexpected error counting buildings by status '{status}': {e}")
+            raise RepositoryError(f"Unexpected error counting buildings by status: {e}")
 
-    def get_with_floors(self, building_id: BuildingId) -> Optional[Building]:
-        """Get a building with all its floors."""
+    def find_by_city(self, city: str) -> List[Building]:
+        """Find buildings by city."""
         try:
-            model = self.session.query(BuildingModel).filter(
-                and_(
-                    BuildingModel.id == building_id.value,
-                    BuildingModel.deleted_at.is_(None)
-                )
-            ).first()
+            building_models = self.session.query(BuildingModel).filter(
+                BuildingModel.address_city == city
+            ).all()
 
-            if model is None:
-                return None
+            return [self._model_to_entity(model) for model in building_models]
 
-            # Load floors relationship
-            building = self._model_to_entity(model)
-            # Note: This would need to be implemented based on the actual relationship structure
-            # For now, we return the building without floors
-            return building
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error finding buildings by city '{city}': {e}")
+            raise DatabaseError(f"Failed to find buildings by city: {e}")
         except Exception as e:
-            raise RepositoryError(f"Failed to get building with floors: {str(e)}")
+            self.logger.error(f"Unexpected error finding buildings by city '{city}': {e}")
+            raise RepositoryError(f"Unexpected error finding buildings by city: {e}")
 
-    def find_by_name(self, name: str) -> Optional[Building]:
-        """Find a building by name."""
+    def find_by_building_type(self, building_type: str) -> List[Building]:
+        """Find buildings by building type."""
         try:
-            model = self.session.query(BuildingModel).filter(
-                and_(
-                    BuildingModel.name == name,
-                    BuildingModel.deleted_at.is_(None)
-                )
-            ).first()
+            building_models = self.session.query(BuildingModel).filter(
+                BuildingModel.building_type == building_type
+            ).all()
 
-            if model is None:
-                return None
+            return [self._model_to_entity(model) for model in building_models]
 
-            return self._model_to_entity(model)
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error finding buildings by type '{building_type}': {e}")
+            raise DatabaseError(f"Failed to find buildings by type: {e}")
         except Exception as e:
-            raise RepositoryError(f"Failed to find building by name: {str(e)}")
+            self.logger.error(f"Unexpected error finding buildings by type '{building_type}': {e}")
+            raise RepositoryError(f"Unexpected error finding buildings by type: {e}")
 
-    def find_by_address(self, address: Address) -> List[Building]:
-        """Find buildings by address."""
+    def search_buildings(self, query: str) -> List[Building]:
+        """Search buildings by name, address, or description."""
         try:
-            models = self.session.query(BuildingModel).filter(
-                and_(
-                    BuildingModel.address_street == address.street,
-                    BuildingModel.address_city == address.city,
-                    BuildingModel.address_state == address.state,
-                    BuildingModel.address_postal_code == address.postal_code,
-                    BuildingModel.deleted_at.is_(None)
+            search_term = f"%{query}%"
+            building_models = self.session.query(BuildingModel).filter(
+                or_(
+                    BuildingModel.name.ilike(search_term),
+                    BuildingModel.address_street.ilike(search_term),
+                    BuildingModel.description.ilike(search_term)
                 )
             ).all()
 
-            return [self._model_to_entity(model) for model in models]
+            return [self._model_to_entity(model) for model in building_models]
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error searching buildings with query '{query}': {e}")
+            raise DatabaseError(f"Failed to search buildings: {e}")
         except Exception as e:
-            raise RepositoryError(f"Failed to find buildings by address: {str(e)}")
+            self.logger.error(f"Unexpected error searching buildings with query '{query}': {e}")
+            raise RepositoryError(f"Unexpected error searching buildings: {e}")
 
-    def search_buildings(self, search_term: str) -> List[Building]:
-        """Search buildings by name or description."""
-        try:
-            search_pattern = f"%{search_term}%"
-            models = self.session.query(BuildingModel).filter(
-                and_(
-                    or_(
-                        BuildingModel.name.ilike(search_pattern),
-                        BuildingModel.description.ilike(search_pattern)
-                    ),
-                    BuildingModel.deleted_at.is_(None)
-                )
-            ).all()
-
-            return [self._model_to_entity(model) for model in models]
-        except Exception as e:
-            raise RepositoryError(f"Failed to search buildings: {str(e)}")
-
-    def get_building_statistics(self) -> dict:
+    def get_building_statistics(self) -> Dict[str, Any]:
         """Get building statistics."""
         try:
-            total_buildings = self.session.query(BuildingModel).filter(
-                BuildingModel.deleted_at.is_(None)
+            total_buildings = self.session.query(BuildingModel).count()
+            active_buildings = self.session.query(BuildingModel).filter(
+                BuildingModel.status == "active"
+            ).count()
+            inactive_buildings = self.session.query(BuildingModel).filter(
+                BuildingModel.status == "inactive"
             ).count()
 
-            # Count by status
-            status_counts = {}
-            for status in BuildingStatus:
-                count = self.session.query(BuildingModel).filter(
-                    and_(
-                        BuildingModel.status == status,
-                        BuildingModel.deleted_at.is_(None)
-                    )
-                ).count()
-                status_counts[status.value] = count
+            # Get building types distribution
+            type_counts = self.session.query(
+                BuildingModel.building_type,
+                func.count(BuildingModel.id)
+            ).group_by(BuildingModel.building_type).all()
+
+            # Get cities distribution
+            city_counts = self.session.query(
+                BuildingModel.address_city,
+                func.count(BuildingModel.id)
+            ).group_by(BuildingModel.address_city).all()
 
             return {
-                'total_buildings': total_buildings,
-                'status_counts': status_counts
+                "total_buildings": total_buildings,
+                "active_buildings": active_buildings,
+                "inactive_buildings": inactive_buildings,
+                "building_types": dict(type_counts),
+                "cities": dict(city_counts)
             }
+
+        except SQLAlchemyError as e:
+            self.logger.error(f"Database error getting building statistics: {e}")
+            raise DatabaseError(f"Failed to get building statistics: {e}")
         except Exception as e:
-            raise RepositoryError(f"Failed to get building statistics: {str(e)}")
+            self.logger.error(f"Unexpected error getting building statistics: {e}")
+            raise RepositoryError(f"Unexpected error getting building statistics: {e}")
 
     def _entity_to_model(self, entity: Building) -> BuildingModel:
         """Convert Building entity to BuildingModel."""
         model = BuildingModel(
-            id=entity.id.value,
+            id=uuid.UUID(entity.id.value),
             name=entity.name,
             address_street=entity.address.street,
             address_city=entity.address.city,
@@ -245,7 +298,7 @@ class SQLAlchemyBuildingRepository(BaseRepository[Building, BuildingModel], Buil
             status=entity.status,
             description=entity.description,
             created_by=entity.created_by,
-            updated_by=entity.updated_by
+            updated_by=getattr(entity, 'updated_by', None)
         )
 
         # Set coordinates if available
@@ -296,7 +349,7 @@ class SQLAlchemyBuildingRepository(BaseRepository[Building, BuildingModel], Buil
             )
 
         building = Building(
-            id=BuildingId(model.id),
+            id=BuildingId.from_string(str(model.id)),
             name=model.name,
             address=address,
             status=model.status,
@@ -304,7 +357,6 @@ class SQLAlchemyBuildingRepository(BaseRepository[Building, BuildingModel], Buil
             dimensions=dimensions,
             description=model.description,
             created_by=model.created_by,
-            updated_by=model.updated_by
         )
 
         # Copy metadata if available

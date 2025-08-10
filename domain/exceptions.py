@@ -195,6 +195,11 @@ class RepositoryTransactionError(RepositoryError):
     pass
 
 
+class DatabaseError(RepositoryError):
+    """Raised when a database-specific error occurs."""
+    pass
+
+
 class DomainServiceError(DomainException):
     """Base exception for domain service errors."""
     pass

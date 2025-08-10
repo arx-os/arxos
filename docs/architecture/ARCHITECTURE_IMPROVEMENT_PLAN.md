@@ -185,7 +185,7 @@ class PostgreSQLBuildingRepository(BuildingRepository):
             return None
 
         return Building(
-            id=BuildingId(building_model.id),
+            id=BuildingId.from_string(str(building_model.id)),
             address=Address.from_string(building_model.address),
             status=BuildingStatus(building_model.status)
         )
@@ -226,7 +226,7 @@ async def get_building(
 ):
     """Get building by ID."""
     use_case = GetBuildingUseCase(building_repository)
-    result = use_case.execute(BuildingId(building_id))
+            result = use_case.execute(BuildingId.from_string(building_id))
 
     if not result.success:
         raise HTTPException(status_code=404, detail="Building not found")

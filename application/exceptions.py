@@ -14,7 +14,7 @@ class ApplicationError(Exception):
     """Base exception for all application layer errors."""
 
     def __init__(self, message: str, error_code: str = None, details: Dict[str, Any] = None):
-        """Initialize the application error."
+        """Initialize the application error.
 
         Args:
             message: Error message
@@ -63,7 +63,7 @@ class ValidationError(ApplicationError):
     """Exception raised when input validation fails."""
 
     def __init__(self, message: str, field: str = None, value: Any = None):
-        """Initialize the validation error."
+        """Initialize the validation error.
 
         Args:
             message: Error message
@@ -237,10 +237,10 @@ class DataIntegrityError(ApplicationError):
 # Error handling utilities
 def handle_application_error(func):
     """Decorator to handle application errors and provide consistent error responses."""
-def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except ApplicationError as e:
+        except ApplicationError:
             # Re-raise application errors as-is
             raise
         except Exception as e:
@@ -275,7 +275,8 @@ def validate_required_fields(data: Dict[str, Any], required_fields: list) -> Non
     if missing_fields:
         raise ValidationError(
             message=f"Missing required fields: {', '.join(missing_fields)}",
-            details={"missing_fields": missing_fields}
+            field="missing_fields",
+            value=", ".join(missing_fields)
         )
 
 

@@ -9,13 +9,16 @@ across all API endpoints.
 from typing import Optional, Dict, Any
 from fastapi import Request, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
 import logging
 from datetime import datetime, timedelta
 
 from application.unified.services.auth_service import AuthService
 from application.unified.dto.user_dto import UserDTO
-from .exceptions import AuthenticationError, AuthorizationError
+class AuthenticationError(Exception):
+    pass
+
+class AuthorizationError(Exception):
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +70,22 @@ class AuthMiddleware:
             user = await self._get_user_from_token(payload)
             if not user:
                 return None
+
+            # Merge permissions/roles from token claims into user profile
+            try:
+                token_perms = payload.get("permissions") or []
+                token_roles = payload.get("roles") or []
+                # Normalize to lists
+                if isinstance(token_perms, str):
+                    token_perms = [token_perms]
+                if isinstance(token_roles, str):
+                    token_roles = [token_roles]
+                # Merge unique
+                user.permissions = sorted(list({*(user.permissions or []), *token_perms}))
+                user.roles = sorted(list({*(user.roles or []), *token_roles}))
+            except Exception:
+                # Non-fatal; proceed with existing user perms/roles
+                pass
 
             # Store user in request state
             request.state.user = user

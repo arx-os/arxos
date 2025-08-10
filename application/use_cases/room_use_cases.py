@@ -28,22 +28,6 @@ class CreateRoomUseCase:
     """Use case for creating a new room."""
 
     def __init__(self, room_repository: RoomRepository):
-    """
-    Perform __init__ operation
-
-Args:
-        room_repository: Description of room_repository
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
         self.room_repository = room_repository
 
     def execute(self, request: CreateRoomRequest) -> CreateRoomResponse:
@@ -79,6 +63,7 @@ Example:
                     width=request.dimensions.get('width', 0.0),
                     length=request.dimensions.get('length', 0.0),
                     height=request.dimensions.get('height', 0.0)
+                )
             # Create room entity
             room = Room(
                 id=room_id,
@@ -101,6 +86,7 @@ Example:
                 room_id=str(room_id),
                 message="Room created successfully",
                 created_at=datetime.utcnow()
+            )
         except DuplicateRoomError as e:
             return CreateRoomResponse(
                 success=False,
@@ -186,6 +172,7 @@ Example:
                     width=request.dimensions.get('width', 0.0),
                     length=request.dimensions.get('length', 0.0),
                     height=request.dimensions.get('height', 0.0)
+                )
                 room.updated_at = datetime.utcnow()
 
             if request.status is not None:
@@ -211,6 +198,7 @@ Example:
                 room_id=str(room_id),
                 message="Room updated successfully",
                 updated_at=datetime.utcnow()
+            )
         except InvalidRoomError as e:
             return UpdateRoomResponse(
                 success=False,
@@ -245,7 +233,7 @@ class GetRoomUseCase:
                 )
 
             # Get room from repository import repository
-            room = self.room_repository.get_by_id(RoomId(room_id)
+            room = self.room_repository.get_by_id(RoomId(room_id))
             if not room:
                 return GetRoomResponse(
                     success=False,
@@ -310,11 +298,11 @@ class ListRoomsUseCase:
 
             if floor_id:
                 # Get rooms by floor
-                rooms = self.room_repository.get_by_floor_id(FloorId(floor_id)
+                rooms = self.room_repository.get_by_floor_id(FloorId(floor_id))
             elif building_id:
                 # Get rooms by building
                 from domain.value_objects import BuildingId
-                rooms = self.room_repository.get_by_building_id(BuildingId(building_id)
+                rooms = self.room_repository.get_by_building_id(BuildingId.from_string(building_id))
             elif status:
                 # Get rooms by status
                 try:
@@ -396,7 +384,7 @@ class DeleteRoomUseCase:
                 )
 
             # Check if room exists
-            room = self.room_repository.get_by_id(RoomId(room_id)
+            room = self.room_repository.get_by_id(RoomId(room_id))
             if not room:
                 return DeleteRoomResponse(
                     success=False,
@@ -404,12 +392,13 @@ class DeleteRoomUseCase:
                 )
 
             # Delete from repository import repository
-            self.room_repository.delete(RoomId(room_id)
+            self.room_repository.delete(RoomId(room_id))
             return DeleteRoomResponse(
                 success=True,
                 room_id=room_id,
                 message="Room deleted successfully",
                 deleted_at=datetime.utcnow()
+            )
         except Exception as e:
             return DeleteRoomResponse(
                 success=False,

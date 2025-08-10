@@ -149,7 +149,7 @@ class TestBuilding:
     def test_create_building_with_valid_data(self):
         """Test building creation with valid data."""
         # Arrange
-        building_id = BuildingId("bldg-001")
+        building_id = BuildingId.from_string("bldg-001")
         address = Address("123 Main St", "City", "State", "12345")
 
         # Act
@@ -165,7 +165,7 @@ class TestBuilding:
     def test_create_building_with_invalid_address(self):
         """Test building creation with invalid address."""
         # Arrange
-        building_id = BuildingId("bldg-001")
+        building_id = BuildingId.from_string("bldg-001")
         invalid_address = Address("", "", "", "")  # Invalid address
 
         # Act & Assert

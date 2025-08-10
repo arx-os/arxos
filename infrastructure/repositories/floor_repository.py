@@ -196,7 +196,7 @@ class SQLAlchemyFloorRepository(BaseRepository[Floor, FloorModel], FloorReposito
 
         floor = Floor(
             id=FloorId(model.id),
-            building_id=BuildingId(model.building_id),
+            building_id=BuildingId.from_string(str(model.building_id)),
             name=model.name,
             floor_number=model.floor_number,
             status=model.status,

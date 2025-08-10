@@ -11,14 +11,13 @@ from fastapi import HTTPException, status
 from pydantic import BaseModel
 import logging
 
-from application.unified.use_cases.base_use_case import BaseUseCase
-from application.unified.dto.base_dto import BaseDTO
+from typing import Any
 from .exceptions import ControllerError, ValidationError, NotFoundError
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T', bound=BaseDTO)
-U = TypeVar('U', bound=BaseUseCase)
+T = TypeVar('T')
+U = TypeVar('U')
 
 
 class BaseController(ABC, Generic[T, U]):
@@ -72,10 +71,11 @@ class BaseController(ABC, Generic[T, U]):
                 detail="Internal server error"
             )
         except Exception as e:
+            # If repository factory or DB not initialized, surface as 503 to signal retry
             self.logger.error(f"Unexpected error creating {self.entity_name}: {e}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Internal server error"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service unavailable"
             )
 
     async def get_by_id(self, entity_id: str) -> T:

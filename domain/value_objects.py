@@ -85,21 +85,15 @@ class BuildingId:
             raise ValueError("Building ID must be a non-empty string")
 
     def __str__(self) -> str:
-        """Return string representation of the building ID."
-
-        Args:
-            None
-
-        Returns:
-            String representation of the building ID
-
-        Raises:
-            None
-        """
         return self.value
 
     def __repr__(self) -> str:
-        return f"BuildingId('{self.value}')
+        return f"BuildingId('{self.value}')"
+
+    @classmethod
+    def from_string(cls, value: str) -> 'BuildingId':
+        """Create a BuildingId from a string value."""
+        return cls(value=value)
 @dataclass(frozen=True)
 class FloorId:
     """Floor identifier value object."""
@@ -114,7 +108,7 @@ class FloorId:
         return self.value
 
     def __repr__(self) -> str:
-        return f"FloorId('{self.value}')
+        return f"FloorId('{self.value}')"
 @dataclass(frozen=True)
 class RoomId:
     """Room identifier value object."""
@@ -129,7 +123,7 @@ class RoomId:
         return self.value
 
     def __repr__(self) -> str:
-        return f"RoomId('{self.value}')
+        return f"RoomId('{self.value}')"
 @dataclass(frozen=True)
 class DeviceId:
     """Device identifier value object."""
@@ -144,25 +138,9 @@ class DeviceId:
         return self.value
 
     def __repr__(self) -> str:
-        return f"DeviceId('{self.value}')
+        return f"DeviceId('{self.value}')"
 @dataclass(frozen=True)
 class UserId:
-    """
-    Perform __repr__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __repr__(param)
-        print(result)
-    """
     """User identifier value object."""
     value: str = field(default_factory=lambda: str(uuid.uuid4()))
 
@@ -175,7 +153,7 @@ Example:
         return self.value
 
     def __repr__(self) -> str:
-        return f"UserId('{self.value}')
+        return f"UserId('{self.value}')"
 @dataclass(frozen=True)
 class ProjectId:
     """Project identifier value object."""
@@ -190,7 +168,7 @@ class ProjectId:
         return self.value
 
     def __repr__(self) -> str:
-        return f"ProjectId('{self.value}')
+        return f"ProjectId('{self.value}')"
 @dataclass(frozen=True)
 class Address:
     """Address value object."""
@@ -213,7 +191,7 @@ class Address:
             raise ValueError("Postal code is required")
 
     @property
-def full_address(self) -> str:
+    def full_address(self) -> str:
         """Get the complete address string."""
         address_parts = [self.street]
         if self.unit:
@@ -236,9 +214,9 @@ def full_address(self) -> str:
         return self.full_address
 
     def __repr__(self) -> str:
-        return f"Address('{self.full_address}')
+        return f"Address('{self.full_address}')"
     @classmethod
-def from_string(cls, address_string: str) -> 'Address':
+    def from_string(cls, address_string: str) -> 'Address':
         """Create an Address from a string representation."""
         if not address_string or not address_string.strip():
             raise ValueError("Address string cannot be empty")
@@ -309,7 +287,7 @@ class Coordinates:
 
         a = (math.sin(dlat/2)**2 +
              math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2)
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
         return R * c
 
     def __str__(self) -> str:
@@ -319,7 +297,7 @@ class Coordinates:
         return coord_str
 
     def __repr__(self) -> str:
-        return f"Coordinates({self.__str__()})
+        return f"Coordinates({self.__str__()})"
 @dataclass(frozen=True)
 class Dimensions:
     """Physical dimensions value object."""
@@ -340,7 +318,7 @@ class Dimensions:
             raise ValueError("Invalid unit specified")
 
     @property
-def area(self) -> float:
+    def area(self) -> float:
         """Calculate area in square meters."""
         area = self.width * self.length
         if self.unit == "feet":
@@ -352,7 +330,7 @@ def area(self) -> float:
         return area  # meters
 
     @property
-def volume(self) -> Optional[float]:
+    def volume(self) -> Optional[float]:
         """Calculate volume in cubic meters."""
         if self.height is None:
             return None
@@ -372,7 +350,7 @@ def volume(self) -> Optional[float]:
         return f"{dim_str} {self.unit}"
 
     def __repr__(self) -> str:
-        return f"Dimensions({self.__str__()})
+        return f"Dimensions({self.__str__()})"
 @dataclass(frozen=True)
 class Email:
     """Email address value object."""
@@ -392,36 +370,20 @@ class Email:
         return self.value
 
     def __repr__(self) -> str:
-        return f"Email('{self.value}')
+        return f"Email('{self.value}')"
     @property
-def domain(self) -> str:
+    def domain(self) -> str:
         """Get the email domain."""
         return self.value.split('@')[1]
 
     @property
-def local_part(self) -> str:
+    def local_part(self) -> str:
         """Get the local part of the email."""
         return self.value.split('@')[0]
 
 
 @dataclass(frozen=True)
 class PhoneNumber:
-    """
-    Perform __str__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __str__(param)
-        print(result)
-    """
     """Phone number value object."""
     value: str
     country_code: str = "+1"
@@ -440,9 +402,9 @@ Example:
         return f"{self.country_code} {self.value}"
 
     def __repr__(self) -> str:
-        return f"PhoneNumber('{self.__str__()}')
+        return f"PhoneNumber('{self.__str__()}')"
     @property
-def formatted(self) -> str:
+    def formatted(self) -> str:
         """Get formatted phone number."""
         digits_only = re.sub(r'\D', '', self.value)
         if len(digits_only) == 10:

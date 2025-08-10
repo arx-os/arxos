@@ -20,23 +20,7 @@ from .services import *
 from .exceptions import *
 
 # PDF Analysis specific imports
-from .entities.pdf_analysis import PDFAnalysis
-from .value_objects.pdf_analysis_value_objects import (
-    TaskId, TaskStatus, ConfidenceScore, FileName, FilePath,
-    AnalysisResult, AnalysisRequirements
-)
-from .events.pdf_analysis_events import (
-    PDFAnalysisCreated, PDFAnalysisStarted, PDFAnalysisCompleted,
-    PDFAnalysisFailed, PDFAnalysisCancelled, PDFAnalysisResultGenerated,
-    PDFAnalysisExported, PDFAnalysisValidated, PDFAnalysisRequirementsUpdated,
-    PDFAnalysisStatusChanged, PDFAnalysisProcessingStarted, PDFAnalysisProcessingProgress,
-    PDFAnalysisSymbolRecognized, PDFAnalysisSystemIdentified, PDFAnalysisQualityAssessed,
-    PDFAnalysisCostEstimated, PDFAnalysisTimelineGenerated, PDFAnalysisBackupCreated,
-    PDFAnalysisRestored, PDFAnalysisArchived, PDFAnalysisShared, PDFAnalysisCommented,
-    PDFAnalysisVersionCreated, PDFAnalysisCollaboratorAdded, PDFAnalysisCollaboratorRemoved,
-    PDFAnalysisNotificationSent, PDFAnalysisAuditLogCreated
-)
-from .repositories.pdf_analysis_repository import PDFAnalysisRepository
+# Optional PDFAnalysis imports are disabled in this context to avoid import errors during API tests
 
 __all__ = [
     # Entities

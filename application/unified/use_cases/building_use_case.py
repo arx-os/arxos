@@ -5,20 +5,21 @@ This module provides unified use cases that eliminate duplication
 and provide consistent business logic across the application.
 """
 
+from __future__ import annotations
+
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
 
-from domain.unified.entities import Building, Floor, Room, Device, User, Project
+from domain.unified.entities import Building  # Using Building for create path
 from domain.unified.repositories import (
     BuildingRepository, FloorRepository, RoomRepository,
     DeviceRepository, UserRepository, ProjectRepository
 )
 from domain.unified.value_objects import (
-    BuildingId, FloorId, RoomId, DeviceId, UserId, ProjectId,
-    Address, Dimensions, BuildingStatus, FloorStatus, RoomStatus,
-    DeviceStatus, UserRole, ProjectStatus
+    BuildingId, Address, Dimensions, BuildingStatus, FloorId, RoomId
 )
+from domain.unified.entities import Floor as UnifiedFloor, Room as UnifiedRoom, Device as UnifiedDevice
 from domain.unified.exceptions import (
     InvalidBuildingError, BuildingNotFoundError,
     InvalidFloorError, FloorNotFoundError,
@@ -96,7 +97,7 @@ class UnifiedBuildingUseCase:
 
         # Create floors
         for floor_info in floor_data:
-            floor = Floor.create(
+            floor = UnifiedFloor.create(
                 building_id=saved_building.id,
                 floor_number=floor_info["floor_number"],
                 name=floor_info["name"],
@@ -159,7 +160,7 @@ class UnifiedBuildingUseCase:
         name: str,
         description: Optional[str] = None,
         created_by: Optional[str] = None
-    ) -> Floor:
+    ) -> UnifiedFloor:
         """
         Add a floor to a building.
 
@@ -182,8 +183,8 @@ class UnifiedBuildingUseCase:
         if existing_floor:
             raise InvalidFloorError(f"Floor {floor_number} already exists in building {building_id}")
 
-        floor = Floor.create(
-            building_id=BuildingId(building_id),
+        floor = UnifiedFloor.create(
+            building_id=BuildingId.from_string(building_id),
             floor_number=floor_number,
             name=name,
             description=description,
@@ -207,7 +208,7 @@ class UnifiedBuildingUseCase:
         dimensions: Optional[Dimensions] = None,
         description: Optional[str] = None,
         created_by: Optional[str] = None
-    ) -> Room:
+    ) -> UnifiedRoom:
         """
         Add a room to a floor.
 
@@ -232,14 +233,14 @@ class UnifiedBuildingUseCase:
         if existing_room:
             raise InvalidRoomError(f"Room {room_number} already exists on floor {floor_id}")
 
-        room = Room.create(
+        room = UnifiedRoom.create(
             floor_id=FloorId(floor_id),
             room_number=room_number,
             name=name,
             room_type=room_type,
             dimensions=dimensions,
             description=description,
-            created_by=created_by
+            created_by=created_by,
         )
 
         saved_room = self.room_repository.save(room)
@@ -261,7 +262,7 @@ class UnifiedBuildingUseCase:
         serial_number: Optional[str] = None,
         description: Optional[str] = None,
         created_by: Optional[str] = None
-    ) -> Device:
+    ) -> UnifiedDevice:
         """
         Add a device to a room.
 
@@ -283,7 +284,7 @@ class UnifiedBuildingUseCase:
         if not room:
             raise RoomNotFoundError(f"Room with ID {room_id} not found")
 
-        device = Device.create(
+        device = UnifiedDevice.create(
             room_id=RoomId(room_id),
             device_id=device_id,
             device_type=device_type,
@@ -292,7 +293,7 @@ class UnifiedBuildingUseCase:
             model=model,
             serial_number=serial_number,
             description=description,
-            created_by=created_by
+            created_by=created_by,
         )
 
         saved_device = self.device_repository.save(device)

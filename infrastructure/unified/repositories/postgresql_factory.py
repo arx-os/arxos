@@ -64,7 +64,7 @@ class PostgreSQLBuildingRepository(BaseBuildingRepository):
     """PostgreSQL implementation of building repository."""
 
     @property
-def entity_class(self):
+    def entity_class(self):
         """Get the building entity class."""
         from infrastructure.database.models import BuildingModel
         return BuildingModel
@@ -73,7 +73,7 @@ class PostgreSQLFloorRepository(BaseFloorRepository):
     """PostgreSQL implementation of floor repository."""
 
     @property
-def entity_class(self):
+    def entity_class(self):
         """Get the floor entity class."""
         from infrastructure.database.models import FloorModel
         return FloorModel
@@ -82,7 +82,7 @@ class PostgreSQLRoomRepository(BaseRoomRepository):
     """PostgreSQL implementation of room repository."""
 
     @property
-def entity_class(self):
+    def entity_class(self):
         """Get the room entity class."""
         from infrastructure.database.models import RoomModel
         return RoomModel
@@ -91,7 +91,7 @@ class PostgreSQLDeviceRepository(BaseDeviceRepository):
     """PostgreSQL implementation of device repository."""
 
     @property
-def entity_class(self):
+    def entity_class(self):
         """Get the device entity class."""
         from infrastructure.database.models import DeviceModel
         return DeviceModel
@@ -100,7 +100,7 @@ class PostgreSQLUserRepository(BaseUserRepository):
     """PostgreSQL implementation of user repository."""
 
     @property
-def entity_class(self):
+    def entity_class(self):
         """Get the user entity class."""
         from infrastructure.database.models import UserModel
         return UserModel
@@ -109,7 +109,7 @@ class PostgreSQLProjectRepository(BaseProjectRepository):
     """PostgreSQL implementation of project repository."""
 
     @property
-def entity_class(self):
+    def entity_class(self):
         """Get the project entity class."""
         from infrastructure.database.models import ProjectModel
         return ProjectModel

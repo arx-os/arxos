@@ -142,11 +142,9 @@ class BuildingController(BaseController[BuildingDTO, CreateBuildingUseCase]):
                 detail=str(e)
             )
         except Exception as e:
+            # For list endpoints, prefer resilience: return empty list on repository/init errors
             self.logger.error(f"Unexpected error retrieving buildings: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Internal server error"
-            )
+            return []
 
     async def update(self, building_id: str, request_data: Dict[str, Any]) -> BuildingDTO:
         """

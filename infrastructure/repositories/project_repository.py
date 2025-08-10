@@ -241,7 +241,7 @@ class SQLAlchemyProjectRepository(BaseRepository[Project, ProjectModel], Project
 
         project = Project(
             id=ProjectId(model.id),
-            building_id=BuildingId(model.building_id),
+            building_id=BuildingId.from_string(str(model.building_id)),
             name=model.name,
             status=model.status,
             description=model.description,

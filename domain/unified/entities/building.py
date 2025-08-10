@@ -11,13 +11,13 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
 
-from .value_objects import (
+from ..value_objects import (
     BuildingId, Address, Coordinates, Dimensions, BuildingStatus
 )
-from .events import (
+from ..events import (
     BuildingCreated, BuildingUpdated, BuildingStatusChanged
 )
-from .exceptions import InvalidBuildingError, InvalidStatusTransitionError
+from domain.exceptions import InvalidBuildingError, InvalidStatusTransitionError
 
 @dataclass
 class Building:
@@ -83,36 +83,36 @@ class Building:
             raise InvalidBuildingError("Building must have a valid address")
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full building name with address."""
         return f"{self.name} - {self.address.full_address}"
 
     @property
-def area(self) -> Optional[float]:
+    def area(self) -> Optional[float]:
         """Calculate building area in square meters."""
         if self.dimensions:
             return self.dimensions.area
         return None
 
     @property
-def volume(self) -> Optional[float]:
+    def volume(self) -> Optional[float]:
         """Calculate building volume in cubic meters."""
         if self.dimensions:
             return self.dimensions.volume
         return None
 
     @property
-def floor_count(self) -> int:
+    def floor_count(self) -> int:
         """Get the number of floors in the building."""
         return len(self.floors)
 
     @property
-def room_count(self) -> int:
+    def room_count(self) -> int:
         """Get the total number of rooms in the building."""
         return sum(len(floor.rooms) for floor in self.floors)
 
     @property
-def device_count(self) -> int:
+    def device_count(self) -> int:
         """Get the total number of devices in the building."""
         return sum(len(room.devices) for floor in self.floors for room in floor.rooms)
 
@@ -253,7 +253,7 @@ def device_count(self) -> int:
         self._domain_events.clear()
 
     @classmethod
-def create(
+    def create(
         cls,
         name: str,
         address: Address,
@@ -264,7 +264,7 @@ def create(
         metadata: Optional[Dict[str, Any]] = None
     ) -> "Building":
         """Create a new building entity."""
-        building_id = BuildingId(str(uuid.uuid4()))
+        building_id = BuildingId.from_string(str(uuid.uuid4()))
         return cls(
             id=building_id,
             name=name,

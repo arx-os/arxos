@@ -50,16 +50,16 @@ class RoomModel(BaseModel):
         return f"<RoomModel(id={self.id}, name='{self.name}', room_number='{self.room_number}')>"
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full room name."""
-        return f"{self.name} ({self.room_number})
+        return f"{self.name} ({self.room_number})"
     @property
-def device_count(self) -> int:
+    def device_count(self) -> int:
         """Get the number of devices in this room."""
         return len([d for d in self.devices if not d.is_deleted])
 
     @property
-def dimensions_dict(self) -> Optional[dict]:
+    def dimensions_dict(self) -> Optional[dict]:
         """Get dimensions as dictionary."""
         if self.width is not None and self.length is not None:
             dims = {

@@ -43,16 +43,16 @@ class FloorModel(BaseModel):
         return f"<FloorModel(id={self.id}, name='{self.name}', floor_number={self.floor_number})>"
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the full floor name."""
-        return f"{self.name} (Floor {self.floor_number})
+        return f"{self.name} (Floor {self.floor_number})"
     @property
-def room_count(self) -> int:
+    def room_count(self) -> int:
         """Get the number of rooms on this floor."""
         return len([r for r in self.rooms if not r.is_deleted])
 
     @property
-def device_count(self) -> int:
+    def device_count(self) -> int:
         """Get the total number of devices on this floor."""
         count = 0
         for room in self.rooms:

@@ -12,7 +12,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from .base import BaseModel
-from domain.value_objects import BuildingStatus
+from domain.unified.value_objects import BuildingStatus
 
 
 class BuildingModel(BaseModel):
@@ -58,7 +58,7 @@ class BuildingModel(BaseModel):
         return f"<BuildingModel(id={self.id}, name='{self.name}', status={self.status})>"
 
     @property
-def full_address(self) -> str:
+    def full_address(self) -> str:
         """Get the complete address string."""
         address_parts = [self.address_street]
         if self.address_unit:
@@ -73,7 +73,7 @@ def full_address(self) -> str:
         return ", ".join(address_parts)
 
     @property
-def coordinates_dict(self) -> Optional[dict]:
+    def coordinates_dict(self) -> Optional[dict]:
         """Get coordinates as dictionary."""
         if self.latitude is not None and self.longitude is not None:
             coords = {
@@ -86,7 +86,7 @@ def coordinates_dict(self) -> Optional[dict]:
         return None
 
     @property
-def dimensions_dict(self) -> Optional[dict]:
+    def dimensions_dict(self) -> Optional[dict]:
         """Get dimensions as dictionary."""
         if self.width is not None and self.length is not None:
             dims = {
@@ -100,12 +100,12 @@ def dimensions_dict(self) -> Optional[dict]:
         return None
 
     @property
-def floor_count(self) -> int:
+    def floor_count(self) -> int:
         """Get the number of floors."""
         return len([f for f in self.floors if not f.is_deleted])
 
     @property
-def room_count(self) -> int:
+    def room_count(self) -> int:
         """Get the total number of rooms."""
         count = 0
         for floor in self.floors:
@@ -114,7 +114,7 @@ def room_count(self) -> int:
         return count
 
     @property
-def device_count(self) -> int:
+    def device_count(self) -> int:
         """Get the total number of devices."""
         count = 0
         for floor in self.floors:

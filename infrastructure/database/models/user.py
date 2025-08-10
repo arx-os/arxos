@@ -44,7 +44,7 @@ class UserModel(BaseModel):
         return f"<UserModel(id={self.id}, username='{self.username}', email='{self.email}')>"
 
     @property
-def full_name(self) -> str:
+    def full_name(self) -> str:
         """Get the user's full name."""
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"

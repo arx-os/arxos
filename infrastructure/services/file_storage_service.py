@@ -27,11 +27,16 @@ class FileStorageService:
     """
 
     def __init__(self, storage_base_path: str, max_file_size: int = 100 * 1024 * 1024):
-    """
-    Perform __init__ operation
+        """
+        Initialize the file storage service.
 
-Args:
-        storage_base_path: Description of storage_base_path
+        Args:
+            storage_base_path: Base directory for file storage
+            max_file_size: Maximum allowed file size in bytes (default: 100MB)
+        """
+        self.storage_base_path = Path(storage_base_path)
+        self.max_file_size = max_file_size
+        self.storage_base_path.mkdir(parents=True, exist_ok=True)
         max_file_size: Description of max_file_size
 
 Returns:

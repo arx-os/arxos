@@ -22,7 +22,7 @@ class PDFAnalysisRepository(ABC):
     """
 
     @abstractmethod
-def create(self, pdf_analysis: PDFAnalysis) -> PDFAnalysis:
+    def create(self, pdf_analysis: PDFAnalysis) -> PDFAnalysis:
         """
         Create a new PDF analysis.
 

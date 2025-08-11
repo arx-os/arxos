@@ -9,15 +9,13 @@ import unittest
 from unittest.mock import Mock, patch
 from datetime import datetime
 
-# Domain Layer Imports
-from svgx_engine.domain.value_objects.address import Address
-from svgx_engine.domain.value_objects.coordinates import Coordinates
-from svgx_engine.domain.value_objects.dimensions import Dimensions
-from svgx_engine.domain.value_objects.status import Status, StatusType
-from svgx_engine.domain.value_objects.identifier import Identifier
-from svgx_engine.domain.value_objects.money import Money
-from svgx_engine.domain.aggregates.building_aggregate import BuildingAggregate
-from svgx_engine.domain.services.building_service import BuildingService
+# Domain Layer Imports - Updated to use Unified Domain
+from domain.unified.value_objects import (
+    Address, Coordinates, Dimensions, BuildingStatus, 
+    BuildingId, Money
+)
+from domain.unified.entities.building import Building
+from domain.unified.repositories.building_repository import BuildingRepository
 
 # Application Layer Imports
 from svgx_engine.application.dto.building_dto import (

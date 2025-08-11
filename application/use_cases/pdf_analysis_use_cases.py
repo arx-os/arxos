@@ -42,22 +42,12 @@ class CreatePDFAnalysisUseCase:
     """Use case for creating a new PDF analysis."""
 
     def __init__(self, repository: PDFAnalysisRepository):
-    """
-    Perform __init__ operation
+        """
+        Initialize the CreatePDFAnalysisUseCase.
 
-Args:
-        repository: Description of repository
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        Args:
+            repository: The PDF analysis repository for persistence operations.
+        """
         self.repository = repository
 
     def execute(self, request: CreatePDFAnalysisRequest) -> CreatePDFAnalysisResponse:

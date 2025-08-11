@@ -131,7 +131,7 @@ Example:
                         ) VALUES (
                             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                         )
-                    """, ("
+                    """, (
                         str(pdf_analysis.task_id),
                         str(pdf_analysis.user_id),
                         str(pdf_analysis.filename),

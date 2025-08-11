@@ -178,7 +178,7 @@ class InputSanitizer:
             r'(\b(and|or)\b\s+\"[^\"]*\"\s*=\s*\"[^\"]*\"\s*\*\s*$)',
             r'(\b(and|or)\b\s+\'[^\']*\'\s*=\s*\'[^\']*\'\s*\*\s*$)',
             r'(\b(and|or)\b\s+\"[^\"]*\"\s*=\s*\"[^\"]*\"\s*;\s*$)',
-            r'(\b(and|or)\b\s+\'[^\']*\'\s*=\s*\'[^\']*\'\s*;\s*$)
+            r'(\b(and|or)\b\s+\'[^\']*\'\s*=\s*\'[^\']*\'\s*;\s*$)'
         ]
 
         # Path traversal patterns

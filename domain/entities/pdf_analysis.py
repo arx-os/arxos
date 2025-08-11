@@ -243,7 +243,7 @@ class PDFAnalysis:
         }
 
     @classmethod
-def from_dict(cls, data: Dict[str, Any]) -> 'PDFAnalysis':
+    def from_dict(cls, data: Dict[str, Any]) -> 'PDFAnalysis':
         """Create entity from dictionary."""
         from ..value_objects import TaskId, UserId, FileName, FilePath, TaskStatus, ConfidenceScore, AnalysisResult
 

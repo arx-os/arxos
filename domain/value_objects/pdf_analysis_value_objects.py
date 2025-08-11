@@ -36,7 +36,7 @@ class TaskId(ValueObject):
             raise_validation_error("Task ID must be at least 3 characters")
 
     @classmethod
-def generate(cls) -> 'TaskId':
+    def generate(cls) -> 'TaskId':
         """Generate a new task ID."""
         return cls(str(uuid.uuid4()))
 

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Repository | Arxos Platform</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Discover, search, and contribute building as-builts to the Arxos building repository. GitHub-style collaboration for building information.">
+    <meta name="keywords" content="Building Repository, As-Built Drawings, BIM Library, Building Information, Architecture Database">
+    
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    
+    <style>
+        .repository-card {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        
+        .repository-card:hover {
+            border-color: #0969da;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+        }
+        
+        .search-bar {
+            background: #f6f8fa;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+        }
+        
+        .search-bar:focus {
+            background: white;
+            border-color: #0969da;
+            box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+        }
+        
+        .filter-tab {
+            border: 1px solid transparent;
+            border-radius: 6px 6px 0 0;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-tab.active {
+            background: white;
+            border-color: #d1d9e0;
+            border-bottom-color: white;
+        }
+        
+        .commit-badge {
+            background: #1f883d;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        .language-bar {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+        
+        .building-type-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-8">
+                    <div class="flex items-center">
+                        <a href="landing.html" class="font-bold text-xl text-gray-900">Arxos</a>
+                        <span class="mx-2 text-gray-400">/</span>
+                        <span class="text-gray-600">Buildings</span>
+                    </div>
+                    
+                    <div class="hidden md:flex items-center space-x-6">
+                        <a href="#" class="text-gray-900 font-medium border-b-2 border-orange-400 pb-2">Repositories</a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900">Projects</a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900">Organizations</a>
+                        <a href="#" class="text-gray-600 hover:text-gray-900">Analytics</a>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-medium">
+                        📤 New Building
+                    </button>
+                    <div class="w-8 h-8 bg-gray-300 rounded-full"></div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">Discover Buildings</h1>
+            <p class="text-lg text-gray-600">
+                Explore millions of building as-builts, floor plans, and BIM models contributed by the community.
+            </p>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="mb-8">
+            <!-- Search Bar -->
+            <div class="flex flex-col lg:flex-row gap-4 mb-6">
+                <div class="flex-1">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="building-search"
+                            placeholder="Search buildings... (e.g., 'office building San Francisco', '123 Main St', 'LEED certified')"
+                            class="search-bar w-full pl-10 pr-4 py-3 text-base outline-none"
+                        >
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <select class="search-bar px-4 py-3 text-base outline-none">
+                        <option>Building Type</option>
+                        <option>Commercial Office</option>
+                        <option>Residential</option>
+                        <option>Industrial</option>
+                        <option>Healthcare</option>
+                        <option>Educational</option>
+                        <option>Retail</option>
+                        <option>Mixed Use</option>
+                    </select>
+                    
+                    <select class="search-bar px-4 py-3 text-base outline-none">
+                        <option>Location</option>
+                        <option>San Francisco, CA</option>
+                        <option>New York, NY</option>
+                        <option>Los Angeles, CA</option>
+                        <option>Chicago, IL</option>
+                        <option>Seattle, WA</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8">
+                    <button class="filter-tab active py-2 px-1 text-sm font-medium text-gray-900">
+                        All Buildings
+                        <span class="ml-2 bg-gray-100 text-gray-600 py-1 px-2 rounded-full text-xs">2,847</span>
+                    </button>
+                    <button class="filter-tab py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        Recently Updated
+                        <span class="ml-2 bg-gray-100 text-gray-600 py-1 px-2 rounded-full text-xs">432</span>
+                    </button>
+                    <button class="filter-tab py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        Most Popular
+                        <span class="ml-2 bg-gray-100 text-gray-600 py-1 px-2 rounded-full text-xs">156</span>
+                    </button>
+                    <button class="filter-tab py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        LEED Certified
+                        <span class="ml-2 bg-green-100 text-green-600 py-1 px-2 rounded-full text-xs">89</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="grid grid-cols-1 gap-4">
+            <!-- Featured Building Repository -->
+            <div class="repository-card p-6 mb-6 border-l-4 border-l-yellow-400">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <svg class="w-4 h-4 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                            <span class="text-sm font-medium text-yellow-600 bg-yellow-50 px-2 py-1 rounded">Featured</span>
+                        </div>
+                        
+                        <div class="flex items-center mb-3">
+                            <h3 class="text-xl font-semibold text-blue-600 hover:underline cursor-pointer">
+                                salesforce-tower-sf
+                            </h3>
+                            <span class="ml-2 text-sm text-gray-500">Public</span>
+                        </div>
+                        
+                        <p class="text-gray-600 mb-4">
+                            Complete BIM model of Salesforce Tower San Francisco. 61-story mixed-use skyscraper with LEED Platinum certification. 
+                            Includes detailed MEP systems, structural drawings, and sustainability features.
+                        </p>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Commercial</span>
+                            <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">LEED Platinum</span>
+                            <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">High-Rise</span>
+                            <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Mixed-Use</span>
+                        </div>
+                        
+                        <div class="flex items-center text-sm text-gray-500 space-x-6">
+                            <span class="flex items-center">
+                                <div class="building-type-dot bg-blue-500"></div>
+                                Revit 87.2%
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                </svg>
+                                1,247
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                                </svg>
+                                342 forks
+                            </span>
+                            <span>Updated 2 hours ago</span>
+                        </div>
+                        
+                        <!-- Language Bar -->
+                        <div class="language-bar mt-3">
+                            <div class="flex h-full">
+                                <div class="bg-blue-500 flex-1" style="flex-basis: 87.2%"></div>
+                                <div class="bg-green-500" style="flex-basis: 8.3%"></div>
+                                <div class="bg-yellow-500" style="flex-basis: 4.5%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ml-6">
+                        <button class="bg-gray-100 hover:bg-gray-200 border border-gray-300 px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.318 4.059m-2.22-4.059v4.059m0 0c.652 0 1.21.301 1.576.777M9.75 12l1.576-4.777m0 0c.652-.477 1.576-.777 2.474-.777s1.822.3 2.474.777M15 12l-1.576-4.777m0 0L15 12m-6 0l1.576 4.777M9.75 12l6 0"></path>
+                            </svg>
+                            Star
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Regular Building Repositories -->
+            <div class="repository-card p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <h3 class="text-lg font-medium text-blue-600 hover:underline cursor-pointer">
+                                apple-park-cupertino
+                            </h3>
+                            <span class="ml-2 text-sm text-gray-500">Public</span>
+                            <span class="commit-badge ml-2">Updated</span>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-3">
+                            Apple Park headquarters campus BIM model including the main ring building, theater, and visitor center.
+                        </p>
+                        
+                        <div class="flex items-center text-sm text-gray-500 space-x-4">
+                            <span class="flex items-center">
+                                <div class="building-type-dot bg-green-500"></div>
+                                AutoCAD
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                </svg>
+                                892
+                            </span>
+                            <span>Updated 1 day ago</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button class="text-gray-400 hover:text-gray-600 px-2 py-1 text-sm">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="repository-card p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <h3 class="text-lg font-medium text-blue-600 hover:underline cursor-pointer">
+                                empire-state-building
+                            </h3>
+                            <span class="ml-2 text-sm text-gray-500">Public</span>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-3">
+                            Historic Art Deco skyscraper in NYC. Complete renovation drawings from 2019 energy efficiency upgrade.
+                        </p>
+                        
+                        <div class="flex items-center text-sm text-gray-500 space-x-4">
+                            <span class="flex items-center">
+                                <div class="building-type-dot bg-purple-500"></div>
+                                Revit
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                </svg>
+                                1,456
+                            </span>
+                            <span>Updated 3 days ago</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button class="text-gray-400 hover:text-gray-600 px-2 py-1 text-sm">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="repository-card p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <h3 class="text-lg font-medium text-blue-600 hover:underline cursor-pointer">
+                                microsoft-redmond-campus
+                            </h3>
+                            <span class="ml-2 text-sm text-gray-500">Public</span>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-3">
+                            Microsoft headquarters campus with 125 buildings. Includes recent renovations and new construction as-builts.
+                        </p>
+                        
+                        <div class="flex items-center text-sm text-gray-500 space-x-4">
+                            <span class="flex items-center">
+                                <div class="building-type-dot bg-blue-500"></div>
+                                Revit
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                </svg>
+                                2,103
+                            </span>
+                            <span>Updated 1 week ago</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button class="text-gray-400 hover:text-gray-600 px-2 py-1 text-sm">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="repository-card p-4">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center mb-2">
+                            <h3 class="text-lg font-medium text-blue-600 hover:underline cursor-pointer">
+                                burj-khalifa-dubai
+                            </h3>
+                            <span class="ml-2 text-sm text-gray-500">Public</span>
+                            <span class="ml-2 bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">Verified</span>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-3">
+                            World's tallest building BIM model. 163 floors above ground with complete MEP and structural systems.
+                        </p>
+                        
+                        <div class="flex items-center text-sm text-gray-500 space-x-4">
+                            <span class="flex items-center">
+                                <div class="building-type-dot bg-red-500"></div>
+                                Revit
+                            </span>
+                            <span class="flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                </svg>
+                                3,421
+                            </span>
+                            <span>Updated 2 weeks ago</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button class="text-yellow-400 hover:text-yellow-500 px-2 py-1 text-sm">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Load More -->
+        <div class="text-center mt-8">
+            <button class="bg-gray-100 hover:bg-gray-200 border border-gray-300 px-6 py-3 rounded-md text-sm font-medium">
+                Load more buildings...
+            </button>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mt-12 bg-white rounded-lg border border-gray-200 p-6">
+            <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 border border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer">
+                    <h3 class="font-medium text-gray-900 mb-2">📤 Upload As-Built</h3>
+                    <p class="text-sm text-gray-600">Share your building's current condition drawings</p>
+                </div>
+                
+                <div class="p-4 border border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer">
+                    <h3 class="font-medium text-gray-900 mb-2">🏗️ Create New Building</h3>
+                    <p class="text-sm text-gray-600">Start a new building repository from scratch</p>
+                </div>
+                
+                <div class="p-4 border border-gray-200 rounded-lg hover:border-blue-300 cursor-pointer">
+                    <h3 class="font-medium text-gray-900 mb-2">📋 Import from CAD</h3>
+                    <p class="text-sm text-gray-600">Convert existing CAD files to Arxos format</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/api-client.js"></script>
+    <script src="/static/js/repository-interface.js"></script>
+    <script src="/static/js/building-search.js"></script>
+    <script src="/static/js/performance-optimizer.js"></script>
+</body>
+</html>

@@ -12,6 +12,7 @@ import { ContributionModule } from './modules/contribution/contribution.module';
 import { HealthModule } from './modules/health/health.module';
 import { MetricsModule } from './modules/metrics/metrics.module';
 import { WebSocketModule } from './modules/websocket/websocket.module';
+import { PerformanceModule } from './modules/performance/performance.module';
 
 import configuration from './config/configuration';
 import { FractalArxObject } from './entities/fractal-arxobject.entity';
@@ -91,6 +92,7 @@ import { PerformanceMetric } from './entities/performance-metric.entity';
     HealthModule,
     MetricsModule,
     WebSocketModule,
+    PerformanceModule,
   ],
 })
 export class AppModule {}

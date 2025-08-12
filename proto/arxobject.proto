@@ -1,0 +1,384 @@
+syntax = "proto3";
+
+package arxos.arxobject.v1;
+
+option go_package = "github.com/arxos/arxos/pkg/arxobject/v1;arxobjectv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ArxObject service provides high-performance building element operations
+service ArxObjectService {
+  // Object CRUD operations
+  rpc CreateObject(CreateObjectRequest) returns (CreateObjectResponse);
+  rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
+  rpc UpdateObject(UpdateObjectRequest) returns (UpdateObjectResponse);
+  rpc DeleteObject(DeleteObjectRequest) returns (DeleteObjectResponse);
+  
+  // Batch operations for performance
+  rpc BatchCreateObjects(BatchCreateObjectsRequest) returns (BatchCreateObjectsResponse);
+  rpc BatchUpdateObjects(BatchUpdateObjectsRequest) returns (BatchUpdateObjectsResponse);
+  rpc BatchDeleteObjects(BatchDeleteObjectsRequest) returns (BatchDeleteObjectsResponse);
+  
+  // Spatial queries
+  rpc QueryRegion(QueryRegionRequest) returns (QueryRegionResponse);
+  rpc QueryNearby(QueryNearbyRequest) returns (QueryNearbyResponse);
+  rpc CheckCollisions(CheckCollisionsRequest) returns (CheckCollisionsResponse);
+  
+  // Relationship operations
+  rpc CreateRelationship(CreateRelationshipRequest) returns (CreateRelationshipResponse);
+  rpc GetRelationships(GetRelationshipsRequest) returns (GetRelationshipsResponse);
+  rpc DeleteRelationship(DeleteRelationshipRequest) returns (DeleteRelationshipResponse);
+  
+  // Constraint operations
+  rpc ValidateConstraints(ValidateConstraintsRequest) returns (ValidateConstraintsResponse);
+  rpc AddConstraint(AddConstraintRequest) returns (AddConstraintResponse);
+  
+  // Streaming operations for real-time updates
+  rpc StreamObjectChanges(StreamObjectChangesRequest) returns (stream ObjectChangeEvent);
+  rpc StreamSpatialUpdates(StreamSpatialUpdatesRequest) returns (stream SpatialUpdateEvent);
+}
+
+// Core data types
+enum ObjectType {
+  OBJECT_TYPE_UNSPECIFIED = 0;
+  
+  // Structural (Priority 1)
+  STRUCTURAL_BEAM = 1;
+  STRUCTURAL_COLUMN = 2;
+  STRUCTURAL_WALL = 3;
+  STRUCTURAL_SLAB = 4;
+  STRUCTURAL_FOUNDATION = 5;
+  
+  // Life Safety (Priority 2)
+  FIRE_SPRINKLER = 10;
+  FIRE_ALARM = 11;
+  EMERGENCY_EXIT = 12;
+  SMOKE_DETECTOR = 13;
+  
+  // MEP Systems (Priority 3)
+  ELECTRICAL_OUTLET = 20;
+  ELECTRICAL_PANEL = 21;
+  ELECTRICAL_CONDUIT = 22;
+  HVAC_DUCT = 30;
+  HVAC_UNIT = 31;
+  PLUMBING_PIPE = 40;
+  PLUMBING_FIXTURE = 41;
+}
+
+enum PrecisionLevel {
+  PRECISION_UNSPECIFIED = 0;
+  PRECISION_COARSE = 1;      // 1 foot
+  PRECISION_STANDARD = 2;    // 1 inch
+  PRECISION_FINE = 3;        // 1/16 inch
+  PRECISION_ULTRA_FINE = 4;  // 1/64 inch
+  PRECISION_MICRO = 5;       // 1/1000 inch
+}
+
+enum RelationshipType {
+  RELATIONSHIP_TYPE_UNSPECIFIED = 0;
+  CONNECTED_TO = 1;
+  MOUNTED_ON = 2;
+  CONTAINED_IN = 3;
+  ADJACENT_TO = 4;
+  SUPPORTS = 5;
+  DEPENDS_ON = 6;
+  FEEDS = 7;
+  CONTROLS = 8;
+  PART_OF = 9;
+  INTERSECTS = 10;
+}
+
+// Core ArxObject message
+message ArxObject {
+  uint64 id = 1;
+  ObjectType type = 2;
+  Geometry geometry = 3;
+  PrecisionLevel precision = 4;
+  uint32 priority = 5;
+  Properties properties = 6;
+  repeated uint64 relationship_ids = 7;
+  repeated Constraint constraints = 8;
+  Metadata metadata = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  uint32 version = 12;
+  bool active = 13;
+}
+
+// Geometry in millimeters for precision
+message Geometry {
+  int32 x = 1;        // Position in mm
+  int32 y = 2;
+  int32 z = 3;
+  int32 length = 4;   // Dimensions in mm
+  int32 width = 5;
+  int32 height = 6;
+  int32 rotation_x = 7;  // Rotation in decidegrees
+  int32 rotation_y = 8;
+  int32 rotation_z = 9;
+  string shape = 10;  // box, cylinder, sphere, custom
+}
+
+// Properties as key-value pairs
+message Properties {
+  map<string, string> values = 1;
+}
+
+// Metadata for extended information
+message Metadata {
+  string name = 1;
+  string description = 2;
+  string manufacturer = 3;
+  string model_number = 4;
+  repeated string tags = 5;
+  map<string, string> custom = 6;
+}
+
+// Constraint definition
+message Constraint {
+  string id = 1;
+  string type = 2;
+  string expression = 3;
+  map<string, string> parameters = 4;
+  string severity = 5;  // error, warning, info
+  bool active = 6;
+}
+
+// Relationship between objects
+message Relationship {
+  uint64 id = 1;
+  uint64 source_id = 2;
+  uint64 target_id = 3;
+  RelationshipType type = 4;
+  map<string, string> properties = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// Request/Response messages
+
+message CreateObjectRequest {
+  ObjectType type = 1;
+  Geometry geometry = 2;
+  PrecisionLevel precision = 3;
+  Properties properties = 4;
+  Metadata metadata = 5;
+}
+
+message CreateObjectResponse {
+  ArxObject object = 1;
+}
+
+message GetObjectRequest {
+  uint64 id = 1;
+  bool include_relationships = 2;
+  bool include_constraints = 3;
+}
+
+message GetObjectResponse {
+  ArxObject object = 1;
+  repeated Relationship relationships = 2;
+}
+
+message UpdateObjectRequest {
+  uint64 id = 1;
+  Geometry geometry = 2;
+  Properties properties = 3;
+  Metadata metadata = 4;
+  bool validate_constraints = 5;
+}
+
+message UpdateObjectResponse {
+  ArxObject object = 1;
+  repeated ValidationError errors = 2;
+}
+
+message DeleteObjectRequest {
+  uint64 id = 1;
+  bool cascade = 2;
+  bool soft_delete = 3;
+}
+
+message DeleteObjectResponse {
+  bool success = 1;
+  uint32 deleted_count = 2;
+}
+
+message BatchCreateObjectsRequest {
+  repeated CreateObjectRequest objects = 1;
+  bool validate_all = 2;
+  bool transaction = 3;
+}
+
+message BatchCreateObjectsResponse {
+  repeated ArxObject objects = 1;
+  uint32 created_count = 2;
+  repeated BatchError errors = 3;
+}
+
+message BatchUpdateObjectsRequest {
+  repeated UpdateObjectRequest updates = 1;
+  bool validate_all = 2;
+  bool transaction = 3;
+}
+
+message BatchUpdateObjectsResponse {
+  repeated ArxObject objects = 1;
+  uint32 updated_count = 2;
+  repeated BatchError errors = 3;
+}
+
+message BatchDeleteObjectsRequest {
+  repeated uint64 ids = 1;
+  bool cascade = 2;
+  bool transaction = 3;
+}
+
+message BatchDeleteObjectsResponse {
+  uint32 deleted_count = 2;
+  repeated BatchError errors = 3;
+}
+
+message QueryRegionRequest {
+  BoundingBox region = 1;
+  repeated ObjectType types = 2;
+  uint32 limit = 3;
+  uint32 offset = 4;
+}
+
+message QueryRegionResponse {
+  repeated ArxObject objects = 1;
+  uint32 total_count = 2;
+}
+
+message QueryNearbyRequest {
+  Point3D center = 1;
+  int32 radius_mm = 2;
+  repeated ObjectType types = 3;
+  uint32 limit = 4;
+}
+
+message QueryNearbyResponse {
+  repeated ObjectDistance results = 1;
+}
+
+message ObjectDistance {
+  ArxObject object = 1;
+  int32 distance_mm = 2;
+}
+
+message CheckCollisionsRequest {
+  uint64 object_id = 1;
+  int32 clearance_mm = 2;
+}
+
+message CheckCollisionsResponse {
+  repeated Collision collisions = 1;
+}
+
+message Collision {
+  uint64 object_id = 1;
+  ObjectType object_type = 2;
+  string severity = 3;
+  string description = 4;
+}
+
+message CreateRelationshipRequest {
+  uint64 source_id = 1;
+  uint64 target_id = 2;
+  RelationshipType type = 3;
+  map<string, string> properties = 4;
+}
+
+message CreateRelationshipResponse {
+  Relationship relationship = 1;
+}
+
+message GetRelationshipsRequest {
+  uint64 object_id = 1;
+  RelationshipType type = 2;
+  string direction = 3;  // both, outgoing, incoming
+}
+
+message GetRelationshipsResponse {
+  repeated Relationship relationships = 1;
+}
+
+message DeleteRelationshipRequest {
+  uint64 id = 1;
+}
+
+message DeleteRelationshipResponse {
+  bool success = 1;
+}
+
+message ValidateConstraintsRequest {
+  uint64 object_id = 1;
+  map<string, string> context = 2;
+}
+
+message ValidateConstraintsResponse {
+  bool valid = 1;
+  repeated ValidationError violations = 2;
+  repeated ValidationError warnings = 3;
+}
+
+message AddConstraintRequest {
+  uint64 object_id = 1;
+  Constraint constraint = 2;
+}
+
+message AddConstraintResponse {
+  string constraint_id = 1;
+  bool success = 2;
+}
+
+// Streaming messages
+
+message StreamObjectChangesRequest {
+  repeated ObjectType types = 1;
+  BoundingBox region = 2;
+}
+
+message ObjectChangeEvent {
+  string event_type = 1;  // created, updated, deleted
+  ArxObject object = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string user_id = 4;
+}
+
+message StreamSpatialUpdatesRequest {
+  BoundingBox region = 1;
+  int32 precision_mm = 2;
+}
+
+message SpatialUpdateEvent {
+  uint64 object_id = 1;
+  Geometry old_geometry = 2;
+  Geometry new_geometry = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Common types
+
+message Point3D {
+  int32 x = 1;
+  int32 y = 2;
+  int32 z = 3;
+}
+
+message BoundingBox {
+  Point3D min = 1;
+  Point3D max = 2;
+}
+
+message ValidationError {
+  string field = 1;
+  string message = 2;
+  string severity = 3;
+}
+
+message BatchError {
+  uint32 index = 1;
+  string message = 2;
+}

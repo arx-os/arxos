@@ -1,0 +1,132 @@
+# Fractal ArxObject Infrastructure Services
+# This extends the main docker-compose.yml with fractal-specific services
+
+version: '3.8'
+
+services:
+  # TimescaleDB for time-series and scale-based data
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: arxos-timescaledb
+    environment:
+      POSTGRES_DB: arxos_fractal
+      POSTGRES_USER: arxos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arxos_dev_2025}
+      TS_TUNE_MAX_CONNS: 100
+      TS_TUNE_MAX_BG_WORKERS: 8
+    ports:
+      - "5433:5432"  # Different port to avoid conflict with main postgres
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./migrations/fractal:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arxos -d arxos_fractal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arxos-network
+
+  # MinIO for binary object storage
+  minio:
+    image: minio/minio:latest
+    container_name: arxos-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-arxos}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-arxos_minio_2025}
+      MINIO_DOMAIN: minio
+    ports:
+      - "9000:9000"  # S3 API
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - arxos-network
+
+  # Tile server for map-style data delivery
+  tile-server:
+    build:
+      context: ./services/tile-server
+      dockerfile: Dockerfile
+    container_name: arxos-tile-server
+    environment:
+      DATABASE_URL: postgresql://arxos:${POSTGRES_PASSWORD:-arxos_dev_2025}@timescaledb:5432/arxos_fractal
+      REDIS_URL: redis://redis:6379/1
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-arxos}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-arxos_minio_2025}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    networks:
+      - arxos-network
+
+  # Redis with additional memory for fractal caching
+  redis:
+    image: redis:7-alpine
+    container_name: arxos-redis-fractal
+    command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
+    ports:
+      - "6380:6379"  # Different port to avoid conflict
+    volumes:
+      - redis_fractal_data:/data
+    networks:
+      - arxos-network
+
+  # Performance monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: arxos-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - arxos-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: arxos-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-arxos_grafana_2025}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    ports:
+      - "3001:3000"  # Different port to avoid conflict
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - arxos-network
+
+volumes:
+  timescale_data:
+  minio_data:
+  redis_fractal_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  arxos-network:
+    external: true

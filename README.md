@@ -1,17 +1,18 @@
 # Arxos Platform
 
-A comprehensive infrastructure platform for building information modeling, featuring CAD-level precision, AI assistance, and cloud synchronization.
+A clean, focused infrastructure platform for building information modeling, featuring CAD-level precision, AI assistance, and spatial data management.
 
-## 🚀 Quick Start with GitHub Codespaces
+> **🎯 Codebase recently cleaned (August 2024)** - Reduced by 70% for better maintainability and developer onboarding
 
-### Option 1: One-Click Setup (Recommended)
-1. Click the green **"Code"** button above
-2. Select the **"Codespaces"** tab
-3. Click **"Create codespace on main"**
-4. Wait for the environment to build (2-3 minutes)
-5. Run `make dev` to start all services
+## 🚀 Quick Start
 
-### Option 2: Manual Setup
+### Prerequisites
+- Docker and Docker Compose
+- Go 1.21+
+- Python 3.11+
+- Node.js 18+ (for web frontend)
+
+### Setup
 ```bash
 # Clone the repository
 git clone https://github.com/[your-username]/arxos.git
@@ -21,16 +22,28 @@ cd arxos
 make dev
 ```
 
-## 📋 Development Environment
+## 📋 Core Architecture (Post-Cleanup)
 
-The Arxos platform includes:
+The Arxos platform now focuses on essential components:
 
-- **Go Backend** (Chi framework) - Core API and business logic
-- **Python GUS Agent** - AI assistance and natural language processing
-- **Browser CAD** - Web-based CAD interface with Canvas 2D
-- **ArxIDE** - Desktop CAD IDE built with Tauri
-- **PostgreSQL 17/PostGIS 3.5.3** - Spatial database for CAD/BIM data
+### Backend Services
+- **`core/backend/`** - Go backend with Chi framework (main API)
+- **`services/gus/`** - GUS AI agent for intelligent assistance
+- **`services/iot/`** - IoT device integration and telemetry
+- **`services/arxobject/`** - ArxObject spatial data service
+- **`services/scale-engine/`** - Performance scaling service
+- **`services/tile-server/`** - Spatial tile serving
+
+### Frontend
+- **`frontend/web/`** - Modern web interface (HTML/CSS/JS with Canvas 2D)
+
+### Core Engine
+- **`svgx_engine/`** - High-precision SVG-X rendering and behavior engine
+
+### Infrastructure
+- **PostgreSQL 17/PostGIS 3.5.3** - Spatial database
 - **Redis** - Caching and real-time features
+- **Docker** - Containerized development environment
 
 ## 🛠️ Available Commands
 
@@ -65,40 +78,47 @@ make health       # Check service health
 
 Once running, services are available at:
 
-- **Browser CAD**: http://localhost:3000
-- **ArxIDE**: http://localhost:3001
+- **Web Interface**: http://localhost:3000
 - **Backend API**: http://localhost:8080
 - **GUS Agent**: http://localhost:8000
 - **PostgreSQL**: localhost:5432 (arxos_db_pg17)
 - **Redis**: localhost:6379
 
-## 🏗️ Architecture
+## 🏗️ Simplified Architecture
 
-### Core Components
-
+### What We Kept (Essential Components)
 - **SVGX Engine** - High-precision SVG processing with CAD capabilities
-- **GUS Agent** - AI-powered assistance for design and compliance
-- **Cloud Sync** - Real-time file synchronization across platforms
-- **Design Marketplace** - Component library and collaboration platform
+- **GUS Agent** - AI-powered assistance for design and compliance  
+- **Web Interface** - Primary user interface for CAD operations
+- **IoT Integration** - Device telemetry and real-time data
+- **Spatial Database** - PostGIS-powered spatial data management
+
+### What We Removed (70% reduction)
+- ❌ Desktop applications (ArxIDE)
+- ❌ Mobile frontends (iOS/Android)
+- ❌ Unused services (CMMS, construction, partners, etc.)
+- ❌ Example/demo code
+- ❌ Excessive documentation
+- ❌ SDK generation tools
 
 ### Technology Stack
-
 - **Backend**: Go with Chi framework
 - **AI Services**: Python with FastAPI
-- **Frontend**: HTML/HTMX/CSS/JS + Canvas 2D
-- **Desktop**: Tauri (Rust + WebView)
+- **Frontend**: Modern HTML/CSS/JS with Canvas 2D
 - **Database**: PostgreSQL 17 with PostGIS 3.5.3
 - **Cache**: Redis
 - **Development**: Docker Compose
 
 ## 📚 Documentation
 
-- **[Development Tracker](ARXOS_DEVELOPMENT_TRACKER.md)** - Single source of truth for development progress
 - [Architecture Overview](docs/architecture/README.md)
-- [Development Guide](docs/development/README.md)
-- [User Guides](docs/user-guides/README.md)
 - [API Reference](docs/api/README.md)
-- [Phase 5 Implementation](docs/DEVELOPMENT/PHASE5_ENTERPRISE_DEPLOYMENT_PLAN.md) - Enterprise deployment roadmap
+- [User Guides](docs/user-guides/README.md)
+- [Database Documentation](docs/database/README.md)
+
+### Cleanup Information
+- **[Cleanup Preview](CLEANUP_PREVIEW.md)** - What was removed and why
+- **Backup Location**: `../arxos_cleanup_backup_YYYYMMDD_HHMMSS/`
 
 ## 🤝 Contributing
 

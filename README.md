@@ -1,143 +1,114 @@
-# Arxos Platform
+# Arxos - Google Maps for Buildings
 
-A clean, focused infrastructure platform for building information modeling, featuring CAD-level precision, AI assistance, and spatial data management.
+A lightweight, performance-first building infrastructure platform that treats every element as an **ArxObject** - from entire campuses down to individual circuit traces.
 
-> **🎯 Codebase recently cleaned (August 2024)** - Reduced by 70% for better maintainability and developer onboarding
+## 🎯 Core Philosophy
+
+**The magic is in the ArxObject design, not framework complexity.**
+
+Arxos implements fractal scaling for buildings - just like Google Maps, but for infrastructure. Zoom from satellite view to circuit board level in one seamless experience.
+
+## 🏗️ Architecture
+
+### Four Core Components (Vanilla JS)
+
+1. **DataManager** - Handles ArxObject data and API communication
+2. **StateManager** - Manages application state with fractal navigation
+3. **SvgRenderer** - Pure SVG rendering with scale-aware optimization
+4. **InteractionManager** - Handles user input and navigation
+
+### Backend (Go)
+
+- **ArxObject Engine** - Optimized for speed with fixed-point math
+- **Spatial Indexing** - Flat quadtree for cache-efficient queries
+- **PostgreSQL + PostGIS** - Spatial data storage
+- **Redis** - Caching and real-time updates
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Docker and Docker Compose
-- Go 1.21+
-- Python 3.11+
-- Node.js 18+ (for web frontend)
-
-### Setup
 ```bash
-# Clone the repository
-git clone https://github.com/[your-username]/arxos.git
-cd arxos
+# Start all services
+docker-compose up -d
 
-# Start development environment
-make dev
+# Access the app
+open http://localhost
 ```
 
-## 📋 Core Architecture (Post-Cleanup)
+## 🔍 Scale Levels
 
-The Arxos platform now focuses on essential components:
-
-### Backend Services
-- **`core/backend/`** - Go backend with Chi framework (main API)
-- **`services/gus/`** - GUS AI agent for intelligent assistance
-- **`services/iot/`** - IoT device integration and telemetry
-- **`services/arxobject/`** - ArxObject spatial data service
-- **`services/scale-engine/`** - Performance scaling service
-- **`services/tile-server/`** - Spatial tile serving
-
-### Frontend
-- **`frontend/web/`** - Modern web interface (HTML/CSS/JS with Canvas 2D)
-
-### Core Engine
-- **ArxObject System** - Intelligent object-based architecture for SVG rendering and behavior
-
-### Infrastructure
-- **PostgreSQL 17/PostGIS 3.5.3** - Spatial database
-- **Redis** - Caching and real-time features
-- **Docker** - Containerized development environment
-
-## 🛠️ Available Commands
-
-```bash
-# Development
-make dev          # Start all services
-make build        # Build all services
-make test         # Run all tests
-make clean        # Clean build artifacts
-
-# Dependencies
-make install      # Install all dependencies
-make deps         # Install development tools
-
-# Code Quality
-make lint         # Run linting
-make format       # Format code
-
-# Docker
-make docker-up    # Start Docker services
-make docker-down  # Stop Docker services
-
-# Database
-make db-migrate   # Run migrations
-make db-seed      # Seed database
-
-# Health Check
-make health       # Check service health
+```
+10,000,000  GLOBAL     - Continental view
+1,000,000   REGIONAL   - State/province level
+100,000     MUNICIPAL  - City level
+10,000      CAMPUS     - Property level
+1,000       BUILDING   - Building exterior
+100         FLOOR      - Floor plans
+10          ROOM       - Room details
+1           COMPONENT  - Equipment level
+0.001       CIRCUIT    - Circuit board level
+0.0001      TRACE      - Individual traces
 ```
 
-## 🌐 Service URLs
+## 🎮 Controls
 
-Once running, services are available at:
+- **Scroll** - Zoom in/out through scale levels
+- **Drag** - Pan around the view
+- **Click** - Select ArxObject
+- **1-4** - Toggle systems (Electrical, HVAC, Plumbing, Structural)
+- **F** - Fit to view
+- **ESC** - Clear selection
 
-- **Web Interface**: http://localhost:3000
-- **Backend API**: http://localhost:8080
-- **GUS Agent**: http://localhost:8000
-- **PostgreSQL**: localhost:5432 (arxos_db_pg17)
-- **Redis**: localhost:6379
+## 📦 ArxObject Structure
 
-## 🏗️ Simplified Architecture
+```go
+type ArxObject struct {
+    ID       uint64        // Fast numeric ID
+    Type     ArxObjectType // Building system type
+    X, Y, Z  int32        // Position in millimeters
+    Width    int16        // Dimensions
+    Height   int16
+    System   string       // electrical, hvac, plumbing, structural
+}
+```
 
-### What We Kept (Essential Components)
-- **ArxObject System** - Intelligent object-based SVG processing with CAD capabilities
-- **GUS Agent** - AI-powered assistance for design and compliance  
-- **Web Interface** - Primary user interface for CAD operations
-- **IoT Integration** - Device telemetry and real-time data
-- **Spatial Database** - PostGIS-powered spatial data management
+## 🏃 Performance
 
-### What We Removed (70% reduction)
-- ❌ Desktop applications (ArxIDE)
-- ❌ Mobile frontends (iOS/Android)
-- ❌ Unused services (CMMS, construction, partners, etc.)
-- ❌ Example/demo code
-- ❌ Excessive documentation
-- ❌ SDK generation tools
+- **< 16ms** frame time (60fps)
+- **< 2s** initial load
+- **< 500ms** scale transitions
+- **< 2GB** memory for complete navigation
+- **1M+** ArxObjects per building
 
-### Technology Stack
-- **Backend**: Go with Chi framework
-- **AI Services**: Python with FastAPI
-- **Frontend**: Modern HTML/CSS/JS with Canvas 2D
-- **Database**: PostgreSQL 17 with PostGIS 3.5.3
-- **Cache**: Redis
-- **Development**: Docker Compose
+## 🛠️ Development
 
-## 📚 Documentation
+```bash
+# Backend (Go)
+cd core/backend
+go run main.go
 
-- [Architecture Overview](docs/architecture/README.md)
-- [API Reference](docs/api/README.md)
-- [User Guides](docs/user-guides/README.md)
-- [Database Documentation](docs/database/README.md)
+# Frontend (Vanilla JS)
+cd frontend/web
+# Just open index.html - no build needed!
+```
 
-### Cleanup Information
-- **[Cleanup Preview](CLEANUP_PREVIEW.md)** - What was removed and why
-- **Backup Location**: `../arxos_cleanup_backup_YYYYMMDD_HHMMSS/`
+## 📊 Three Ingestion Methods
 
-## 🤝 Contributing
+1. **PDF/IFC** - Symbol recognition from digital plans
+2. **Photo** - OCR + perspective correction for paper maps
+3. **LiDAR** - Real-time field capture
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `make test`
-5. Submit a pull request
+## 🌟 Key Features
 
-## 📄 License
+- **Fractal Hierarchy** - `arx:building:floor:room:outlet:terminal`
+- **Scale-Based Visibility** - Objects appear/disappear based on zoom
+- **System Planes** - Z-order layering for overlapping systems
+- **Real-time Updates** - WebSocket synchronization
+- **Community Reporting** - Infrastructure issue tracking
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 📝 License
 
-## 🆘 Support
-
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/[your-username]/arxos/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/[your-username]/arxos/discussions)
+MIT
 
 ---
 
-**Note**: This platform is designed for development and prototyping. Production deployment requires additional security and performance considerations.
+**Remember:** Keep it simple. The innovation is ArxObject, not complexity.

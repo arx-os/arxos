@@ -1,105 +1,31 @@
-# Multi-stage Dockerfile for SVGX Engine
-FROM python:3.9-slim as base
+# Build stage
+FROM golang:1.21-alpine AS builder
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+WORKDIR /build
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
 
-# Create app user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Copy source code
+COPY . .
 
-# Set work directory
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o arxos-api ./core/backend/main.go
+
+# Runtime stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY requirements.txt requirements-dev.txt ./
+# Copy binary from builder
+COPY --from=builder /build/arxos-api .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy static files
+COPY --from=builder /build/frontend/web ./static
 
-# Development stage
-FROM base as development
+EXPOSE 8080
 
-# Install development dependencies
-RUN pip install --no-cache-dir -r requirements-dev.txt
-
-# Copy source code
-COPY . .
-
-# Create necessary directories
-RUN mkdir -p /app/logs /app/data /app/cache
-
-# Set permissions
-RUN chown -R appuser:appuser /app
-
-# Switch to app user
-USER appuser
-
-# Expose port
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health/ || exit 1
-
-# Development command
-CMD ["uvicorn", "svgx_engine.services.api_interface:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-
-# Production stage
-FROM base as production
-
-# Copy source code
-COPY . .
-
-# Create necessary directories
-RUN mkdir -p /app/logs /app/data /app/cache
-
-# Set permissions
-RUN chown -R appuser:appuser /app
-
-# Switch to app user
-USER appuser
-
-# Expose port
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health/ || exit 1
-
-# Production command
-CMD ["uvicorn", "svgx_engine.services.api_interface:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
-
-# Testing stage
-FROM base as testing
-
-# Install testing dependencies
-RUN pip install --no-cache-dir -r requirements-dev.txt
-
-# Copy source code
-COPY . .
-
-# Create necessary directories
-RUN mkdir -p /app/logs /app/data /app/cache
-
-# Set permissions
-RUN chown -R appuser:appuser /app
-
-# Switch to app user
-USER appuser
-
-# Expose port
-EXPOSE 8000
-
-# Testing command
-CMD ["pytest", "tests/", "-v", "--cov=svgx_engine", "--cov-report=html"]
+CMD ["./arxos-api"]

@@ -1,135 +1,75 @@
 version: '3.8'
 
 services:
-  # Core Services
-
-  backend:
-    build:
-      context: ./arx-backend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    environment:
-      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
-      - JWT_SECRET=${JWT_SECRET}
-    depends_on:
-      - postgres
-    volumes:
-      - ./data:/app/data
-
-  # Frontend Services
-  web-frontend:
-    build:
-      context: ./frontend/web
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - REACT_APP_API_URL=http://localhost:8080
-    depends_on:
-      - backend
-
-  # Specialized Services
-  ai-service:
-    build:
-      context: ./services/ai
-      dockerfile: Dockerfile
-    ports:
-      - "8001:8001"
-    environment:
-      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
-    depends_on:
-      - postgres
-
-  iot-service:
-    build:
-      context: ./services/iot
-      dockerfile: Dockerfile
-    ports:
-      - "8002:8002"
-    environment:
-      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
-    depends_on:
-      - postgres
-
-  cmms-service:
-    build:
-      context: ./services/cmms
-      dockerfile: Dockerfile
-    ports:
-      - "8003:8003"
-    environment:
-      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
-    depends_on:
-      - postgres
-
-  data-vendor-service:
-    build:
-      context: ./services/data-vendor
-      dockerfile: Dockerfile
-    ports:
-      - "8004:8004"
-    environment:
-      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
-    depends_on:
-      - postgres
-
-  # Infrastructure Services
+  # PostgreSQL with PostGIS for spatial data
   postgres:
-    image: postgis/postgis:15-3.3
+    image: postgis/postgis:15-3.3-alpine
     environment:
-      - POSTGRES_DB=arxos
-      - POSTGRES_USER=arxos
-      - POSTGRES_PASSWORD=password
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: arxos
+      POSTGRES_USER: arxos
+      POSTGRES_PASSWORD: arxos_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/database/init:/docker-entrypoint-initdb.d
+      - ./infrastructure/database:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arxos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Redis for caching and real-time
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Monitoring and Observability
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./infrastructure/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-
-  # Development Tools
-  cli:
+  # Arxos Core API (Go)
+  arxos-api:
     build:
-      context: ./tools/cli
+      context: .
       dockerfile: Dockerfile
-    volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+    ports:
+      - "8080:8080"
     environment:
-      - DATABASE_URL=postgresql://arxos:password@postgres:5432/arxos
+      - PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=arxos
+      - DB_USER=arxos
+      - DB_PASSWORD=arxos_dev
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=arxos_dev_secret_change_in_production
+      - ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./frontend/web:/app/static
+    restart: unless-stopped
+
+  # Nginx for static files and reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend/web:/usr/share/nginx/html
+    depends_on:
+      - arxos-api
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
-  prometheus_data:
-  grafana_data:
-
-networks:
-  default:
-    name: arxos-network

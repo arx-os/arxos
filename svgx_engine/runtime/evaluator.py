@@ -108,8 +108,8 @@ class SVGXEvaluator:
             formula = formula.replace('^', '**')
 
             # Evaluate the formula
-            result = # SECURITY: eval() removed - use safe alternatives
-        # eval(formula, {"__builtins__": {}}, safe_dict)
+            result = None  # SECURITY: eval() removed - use safe alternatives
+            # eval(formula, {"__builtins__": {}}, safe_dict)
 
             if isinstance(result, (int, float)):
                 return float(result)
@@ -230,11 +230,11 @@ class SVGXEvaluator:
             if 'system_type' in system_data:
                 system_type = system_data['system_type']
                 if system_type == 'electrical':
-                    results.update(self._evaluate_electrical_system(system_data)
+                    results.update(self._evaluate_electrical_system(system_data))
                 elif system_type == 'mechanical':
-                    results.update(self._evaluate_mechanical_system(system_data)
+                    results.update(self._evaluate_mechanical_system(system_data))
                 elif system_type == 'plumbing':
-                    results.update(self._evaluate_plumbing_system(system_data)
+                    results.update(self._evaluate_plumbing_system(system_data))
             return results
 
         except Exception as e:

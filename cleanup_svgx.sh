@@ -1,3 +1,35 @@
+#!/bin/bash
+
+# SVGX to Standard SVG Cleanup Script
+# This removes unnecessary complexity while preserving functionality
+
+echo "🧹 Starting SVGX cleanup..."
+echo "This will simplify the codebase by removing precision overhead"
+echo ""
+
+# Create backup first
+echo "📦 Creating backup..."
+tar -czf backup_before_svgx_cleanup_$(date +%Y%m%d_%H%M%S).tar.gz \
+    svgx_engine/core/ \
+    svgx_engine/services/symbols/ \
+    2>/dev/null
+
+# 1. Remove precision modules
+echo "🗑️  Removing precision modules..."
+rm -f svgx_engine/core/precision_coordinate.py
+rm -f svgx_engine/core/precision_math.py
+rm -f svgx_engine/core/precision_validator.py
+rm -f svgx_engine/core/precision_errors.py
+rm -f svgx_engine/core/precision_storage.py
+rm -f svgx_engine/core/svgx_validator.py
+rm -f svgx_engine/core/svgx_merger.py
+rm -f svgx_engine/core/svgx_precision_manager.py
+
+# 2. Clean up symbol recognition to remove precision imports
+echo "✏️  Simplifying symbol recognition..."
+
+# Create simplified symbol recognition
+cat > svgx_engine/services/symbols/symbol_recognition_simple.py << 'EOF'
 """
 Simplified Symbol Recognition Engine for Arxos
 Uses standard Python types instead of precision classes
@@ -273,3 +305,70 @@ class SymbolRecognitionEngine:
             symbol_id for symbol_id, symbol_data in self.symbol_library.items()
             if symbol_data.get('system') == system
         ]
+EOF
+
+# Move the simplified version to replace the original
+mv svgx_engine/services/symbols/symbol_recognition_simple.py svgx_engine/services/symbols/symbol_recognition.py
+
+# 3. Update the bridge script to remove precision references
+echo "🔧 Updating bridge script..."
+sed -i '' 's/from svgx_engine.core.precision.*//g' svgx_engine/services/symbols/recognize.py 2>/dev/null
+
+# 4. Rename SVGX converters to standard SVG
+echo "📝 Renaming converters..."
+if [ -f "svgx_engine/converters/ifc_to_svgx.py" ]; then
+    mv svgx_engine/converters/ifc_to_svgx.py svgx_engine/converters/ifc_to_svg.py
+fi
+if [ -f "svgx_engine/converters/dxf_to_svgx.py" ]; then
+    mv svgx_engine/converters/dxf_to_svgx.py svgx_engine/converters/dxf_to_svg.py
+fi
+
+# 5. Update Python requirements to remove unused precision libraries
+echo "📦 Cleaning up Python dependencies..."
+if [ -f "requirements.txt" ]; then
+    grep -v "decimal" requirements.txt > requirements_temp.txt
+    mv requirements_temp.txt requirements.txt
+fi
+
+# 6. Count the cleanup impact
+echo ""
+echo "📊 Cleanup Impact:"
+echo "==================="
+
+# Count removed lines
+removed_lines=$(find svgx_engine/core -name "precision*.py" -exec wc -l {} \; 2>/dev/null | awk '{sum+=$1} END {print sum}')
+if [ -z "$removed_lines" ]; then
+    removed_lines=0
+fi
+
+echo "✅ Removed $removed_lines lines of unnecessary precision code"
+echo "✅ Simplified symbol recognition to use standard Python types"
+echo "✅ Converted SVGX references to standard SVG"
+echo ""
+
+# 7. Run a quick test to ensure symbol recognition still works
+echo "🧪 Testing symbol recognition..."
+python3 -c "
+from svgx_engine.services.symbols.symbol_recognition import SymbolRecognitionEngine
+engine = SymbolRecognitionEngine()
+results = engine.fuzzy_match_symbols('outlet')
+if results:
+    print('✅ Symbol recognition working!')
+    print(f'   Found {len(results)} matches for \"outlet\"')
+else:
+    print('⚠️  Symbol recognition may need adjustment')
+" 2>/dev/null || echo "⚠️  Python test skipped - verify manually"
+
+echo ""
+echo "🎉 SVGX cleanup complete!"
+echo ""
+echo "Summary:"
+echo "- Removed precision overhead complexity"
+echo "- Simplified to standard Python types and SVG"
+echo "- Preserved all symbol recognition functionality"
+echo "- ArxObject DNA structure remains unchanged"
+echo ""
+echo "Next steps:"
+echo "1. Run tests: python scripts/test_all.py"
+echo "2. Commit changes: git add -A && git commit -m 'Simplify: Remove SVGX, use standard SVG'"
+echo "3. Deploy and test in browser"

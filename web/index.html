@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos - Google Maps for Buildings</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/viewport.css">
+    <link rel="stylesheet" href="css/controls.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">📍 Arxos</h1>
+                <span class="tagline">Google Maps for Buildings</span>
+            </div>
+            <div class="header-center">
+                <div class="building-selector">
+                    <select id="building-select">
+                        <option value="">Select Building...</option>
+                    </select>
+                </div>
+                <div class="zoom-indicator">
+                    <span id="zoom-level">Zoom: 1.0x</span>
+                    <span id="view-level">View: Floor</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="btn-upload" class="btn-primary">📤 Upload</button>
+                <button id="btn-capture" class="btn-secondary">📷 Capture</button>
+                <div class="user-info">
+                    <span id="user-name">Field Worker</span>
+                    <span id="bilt-balance">🪙 0 BILT</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Sidebar - Systems Panel -->
+            <aside class="sidebar sidebar-left" id="systems-panel">
+                <h3>Systems</h3>
+                <div class="systems-list">
+                    <label class="system-toggle">
+                        <input type="checkbox" data-system="electrical" checked>
+                        <span>⚡ Electrical</span>
+                    </label>
+                    <label class="system-toggle">
+                        <input type="checkbox" data-system="mechanical" checked>
+                        <span>⚙️ Mechanical</span>
+                    </label>
+                    <label class="system-toggle">
+                        <input type="checkbox" data-system="plumbing" checked>
+                        <span>🚰 Plumbing</span>
+                    </label>
+                    <label class="system-toggle">
+                        <input type="checkbox" data-system="fire_protection" checked>
+                        <span>🔥 Fire Protection</span>
+                    </label>
+                    <label class="system-toggle">
+                        <input type="checkbox" data-system="structural" checked>
+                        <span>🏗️ Structural</span>
+                    </label>
+                    <label class="system-toggle">
+                        <input type="checkbox" data-system="data" checked>
+                        <span>📡 Data/Network</span>
+                    </label>
+                </div>
+                
+                <h3>Layers</h3>
+                <div class="layer-controls">
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="show-labels" checked>
+                        <span>Show Labels</span>
+                    </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="show-dimensions" checked>
+                        <span>Show Dimensions</span>
+                    </label>
+                    <label class="layer-toggle">
+                        <input type="checkbox" id="show-connections">
+                        <span>Show Connections</span>
+                    </label>
+                </div>
+            </aside>
+
+            <!-- Center - Viewport -->
+            <div class="viewport-container" id="viewport">
+                <div class="viewport-canvas" id="canvas-container">
+                    <!-- SVG canvas will be inserted here -->
+                    <svg id="arxos-svg" width="100%" height="100%" viewBox="0 0 1000 1000">
+                        <defs>
+                            <!-- Define patterns and gradients -->
+                            <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#f0f0f0" stroke-width="0.5"/>
+                            </pattern>
+                        </defs>
+                        
+                        <!-- Background -->
+                        <rect width="100%" height="100%" fill="url(#grid)"/>
+                        
+                        <!-- Content layers will be added here -->
+                        <g id="structural-layer" class="system-layer"></g>
+                        <g id="mechanical-layer" class="system-layer"></g>
+                        <g id="electrical-layer" class="system-layer"></g>
+                        <g id="plumbing-layer" class="system-layer"></g>
+                        <g id="fire-layer" class="system-layer"></g>
+                        <g id="data-layer" class="system-layer"></g>
+                        <g id="overlay-layer"></g>
+                    </svg>
+                </div>
+                
+                <!-- Zoom Controls -->
+                <div class="zoom-controls">
+                    <button id="zoom-in" class="zoom-btn">+</button>
+                    <input type="range" id="zoom-slider" min="0.001" max="100" step="0.001" value="1">
+                    <button id="zoom-out" class="zoom-btn">−</button>
+                </div>
+                
+                <!-- Mini Map -->
+                <div class="mini-map" id="mini-map">
+                    <canvas id="mini-map-canvas"></canvas>
+                    <div class="mini-map-viewport"></div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Object Details -->
+            <aside class="sidebar sidebar-right" id="details-panel">
+                <h3>Object Details</h3>
+                <div id="object-details" class="details-content">
+                    <p class="no-selection">Select an object to view details</p>
+                </div>
+                
+                <h3>Properties</h3>
+                <div id="object-properties" class="properties-list">
+                    <!-- Properties will be populated here -->
+                </div>
+                
+                <h3>Connections</h3>
+                <div id="object-connections" class="connections-list">
+                    <!-- Connections will be populated here -->
+                </div>
+                
+                <div class="actions-panel">
+                    <button id="btn-edit" class="btn-action" disabled>✏️ Edit</button>
+                    <button id="btn-verify" class="btn-action" disabled>✓ Verify</button>
+                    <button id="btn-report" class="btn-action" disabled>⚠️ Report Issue</button>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Upload Modal -->
+        <div id="upload-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>Upload Building Data</h2>
+                <div class="upload-options">
+                    <div class="upload-option" id="upload-pdf">
+                        <div class="upload-icon">📄</div>
+                        <h3>PDF/IFC File</h3>
+                        <p>Upload building plans or IFC models</p>
+                        <input type="file" id="pdf-input" accept=".pdf,.ifc" hidden>
+                        <button class="btn-primary" onclick="document.getElementById('pdf-input').click()">Choose File</button>
+                    </div>
+                    
+                    <div class="upload-option" id="upload-photo">
+                        <div class="upload-icon">📸</div>
+                        <h3>Photo of Map</h3>
+                        <p>Take or upload a photo of paper map</p>
+                        <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+                        <button class="btn-primary" onclick="document.getElementById('photo-input').click()">Take Photo</button>
+                    </div>
+                    
+                    <div class="upload-option" id="start-lidar">
+                        <div class="upload-icon">📡</div>
+                        <h3>LiDAR Capture</h3>
+                        <p>Start real-time field capture</p>
+                        <button class="btn-primary" id="btn-start-lidar">Start Capture</button>
+                    </div>
+                </div>
+                <button class="btn-close" onclick="closeModal('upload-modal')">✕</button>
+            </div>
+        </div>
+
+        <!-- LiDAR Capture Modal -->
+        <div id="lidar-modal" class="modal hidden">
+            <div class="modal-content modal-large">
+                <h2>LiDAR Field Capture</h2>
+                <div class="lidar-interface">
+                    <div class="lidar-viewport">
+                        <canvas id="lidar-canvas"></canvas>
+                        <div class="lidar-overlay">
+                            <div class="lidar-status">
+                                <span id="lidar-state">Ready</span>
+                                <span id="lidar-progress">0%</span>
+                            </div>
+                            <div class="lidar-stats">
+                                <span>Points: <span id="point-count">0</span></span>
+                                <span>Walls: <span id="wall-count">0</span></span>
+                                <span>Objects: <span id="object-count">0</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lidar-controls">
+                        <button id="btn-start-room" class="btn-primary">Start Room</button>
+                        <button id="btn-mark-outlet" class="btn-tool">⚡ Mark Outlet</button>
+                        <button id="btn-mark-light" class="btn-tool">💡 Mark Light</button>
+                        <button id="btn-mark-hvac" class="btn-tool">🌡️ Mark HVAC</button>
+                        <button id="btn-mark-sprinkler" class="btn-tool">💧 Mark Sprinkler</button>
+                        <button id="btn-complete-room" class="btn-success">Complete Room</button>
+                    </div>
+                </div>
+                <button class="btn-close" onclick="closeModal('lidar-modal')">✕</button>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="connection-status" class="status-indicator status-connected">● Connected</span>
+                <span id="sync-status">Synced</span>
+            </div>
+            <div class="status-center">
+                <span id="cursor-position">X: 0, Y: 0</span>
+                <span id="selected-object">No selection</span>
+            </div>
+            <div class="status-right">
+                <span id="contribution-count">0 contributions today</span>
+                <span id="last-update">Last update: now</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/arxos-core.js"></script>
+    <script src="js/viewport.js"></script>
+    <script src="js/systems.js"></script>
+    <script src="js/upload.js"></script>
+    <script src="js/lidar.js"></script>
+    <script src="js/websocket.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

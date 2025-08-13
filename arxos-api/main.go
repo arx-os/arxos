@@ -6,6 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
@@ -16,18 +19,109 @@ import (
 
 // Server represents the Arxos API server
 type Server struct {
-	router     *mux.Router
-	arxRepo    *arxoscore.ArxObjectRepository
-	ingestion  *ingestion.PDFIngestion
-	upgrader   websocket.Upgrader
-	clients    map[*websocket.Conn]bool
-	broadcast  chan []byte
+	router      *mux.Router
+	arxRepo     *arxoscore.ArxObjectRepository
+	ingestion   *ingestion.PDFIngestion
+	upgrader    websocket.Upgrader
+	clients     map[*websocket.Conn]bool
+	broadcast   chan []byte
+	authManager *AuthManager
+}
+
+// Config holds server configuration
+type Config struct {
+	Port                string
+	DatabaseURL         string
+	RedisURL            string
+	JWTSecret           string
+	Environment         string
+	LogLevel            string
+	EnableAuth          bool
+	MaxUploadSize       int64
+	CORSOrigins         []string
+	RateLimitPerMinute  int
+}
+
+// NewConfigFromEnv creates configuration from environment variables
+func NewConfigFromEnv() *Config {
+	config := &Config{
+		Port:               getEnv("PORT", "8080"),
+		DatabaseURL:        getEnv("DATABASE_URL", buildDatabaseURL()),
+		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379"),
+		JWTSecret:          getEnv("JWT_SECRET", "arxos-dev-secret-key-change-in-production"),
+		Environment:        getEnv("ENVIRONMENT", "development"),
+		LogLevel:           getEnv("LOG_LEVEL", "info"),
+		EnableAuth:         getBoolEnv("ENABLE_AUTH", true),
+		MaxUploadSize:      getIntEnv("MAX_UPLOAD_SIZE", 100*1024*1024), // 100MB default
+		CORSOrigins:        getStringSliceEnv("CORS_ORIGINS", []string{"*"}),
+		RateLimitPerMinute: getIntEnv("RATE_LIMIT_PER_MINUTE", 60),
+	}
+	
+	// Validate critical configuration
+	if config.JWTSecret == "arxos-dev-secret-key-change-in-production" && config.Environment == "production" {
+		log.Fatal("JWT_SECRET must be changed in production environment")
+	}
+	
+	return config
+}
+
+// buildDatabaseURL constructs database URL from individual components
+func buildDatabaseURL() string {
+	host := getEnv("POSTGRES_HOST", "localhost")
+	port := getEnv("POSTGRES_PORT", "5432")
+	db := getEnv("POSTGRES_DB", "arxos")
+	user := getEnv("POSTGRES_USER", "arxos")
+	password := getEnv("POSTGRES_PASSWORD", "")
+	
+	if password == "" {
+		log.Fatal("POSTGRES_PASSWORD must be set")
+	}
+	
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, db)
+}
+
+// getEnv gets environment variable with default value
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// getBoolEnv gets boolean environment variable with default value
+func getBoolEnv(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := strconv.ParseBool(value); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
+}
+
+// getIntEnv gets integer environment variable with default value
+func getIntEnv(key string, defaultValue int64) int64 {
+	if value := os.Getenv(key); value != "" {
+		if parsed, err := strconv.ParseInt(value, 10, 64); err == nil {
+			return parsed
+		}
+	}
+	return defaultValue
+}
+
+// getStringSliceEnv gets string slice from comma-separated environment variable
+func getStringSliceEnv(key string, defaultValue []string) []string {
+	if value := os.Getenv(key); value != "" {
+		return strings.Split(value, ",")
+	}
+	return defaultValue
 }
 
 // NewServer creates a new API server
 func NewServer() (*Server, error) {
+	config := NewConfigFromEnv()
+	
 	// Initialize storage
-	db, err := storage.NewConnection()
+	db, err := storage.NewConnectionWithURL(config.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -41,13 +135,29 @@ func NewServer() (*Server, error) {
 		return nil, fmt.Errorf("failed to initialize PDF ingestion: %w", err)
 	}
 
+	// Initialize authentication
+	authConfig := NewAuthConfigFromEnv(config)
+	authManager := NewAuthManager(authConfig)
+
 	server := &Server{
-		router:    mux.NewRouter(),
-		arxRepo:   arxRepo,
-		ingestion: pdfIngestion,
+		router:      mux.NewRouter(),
+		arxRepo:     arxRepo,
+		ingestion:   pdfIngestion,
+		authManager: authManager,
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
-				return true // Allow all origins in development
+				// Check origin against allowed origins
+				origin := r.Header.Get("Origin")
+				if config.Environment == "development" {
+					return true // Allow all origins in development
+				}
+				
+				for _, allowed := range config.CORSOrigins {
+					if allowed == "*" || allowed == origin {
+						return true
+					}
+				}
+				return false
 			},
 		},
 		clients:   make(map[*websocket.Conn]bool),
@@ -63,12 +173,19 @@ func (s *Server) setupRoutes() {
 	// API prefix
 	api := s.router.PathPrefix("/api/v1").Subrouter()
 
+	// Authentication endpoints (no auth required)
+	api.HandleFunc("/auth/login", s.handleLogin).Methods("POST")
+
+	// Apply authentication middleware to all other routes
+	api.Use(s.authManager.AuthMiddleware)
+
 	// ArxObject endpoints
-	api.HandleFunc("/arxobjects", s.getArxObjects).Methods("GET")
-	api.HandleFunc("/arxobjects", s.createArxObject).Methods("POST")
-	api.HandleFunc("/arxobjects/{id}", s.getArxObject).Methods("GET")
-	api.HandleFunc("/arxobjects/{id}", s.updateArxObject).Methods("PUT")
-	api.HandleFunc("/arxobjects/{id}", s.deleteArxObject).Methods("DELETE")
+	arxObjectRoutes := api.PathPrefix("/arxobjects").Subrouter()
+	arxObjectRoutes.HandleFunc("", s.getArxObjects).Methods("GET")
+	arxObjectRoutes.HandleFunc("", s.authManager.RequirePermission(PermCreateArxObject)(http.HandlerFunc(s.createArxObject))).Methods("POST")
+	arxObjectRoutes.HandleFunc("/{id}", s.getArxObject).Methods("GET")
+	arxObjectRoutes.HandleFunc("/{id}", s.authManager.RequirePermission(PermUpdateArxObject)(http.HandlerFunc(s.updateArxObject))).Methods("PUT")
+	arxObjectRoutes.HandleFunc("/{id}", s.authManager.RequirePermission(PermDeleteArxObject)(http.HandlerFunc(s.deleteArxObject))).Methods("DELETE")
 
 	// Hierarchy endpoints
 	api.HandleFunc("/arxobjects/{id}/children", s.getChildren).Methods("GET")
@@ -84,10 +201,11 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/systems", s.getSystems).Methods("GET")
 	api.HandleFunc("/systems/{system}/objects", s.getObjectsBySystem).Methods("GET")
 
-	// Ingestion endpoints
-	api.HandleFunc("/ingest/pdf", s.ingestPDF).Methods("POST")
-	api.HandleFunc("/ingest/image", s.ingestImage).Methods("POST")
-	api.HandleFunc("/ingest/lidar", s.startLidarSession).Methods("POST")
+	// Ingestion endpoints - require specific permissions
+	ingestRoutes := api.PathPrefix("/ingest").Subrouter()
+	ingestRoutes.HandleFunc("/pdf", s.authManager.RequirePermission(PermIngestPDF)(http.HandlerFunc(s.ingestPDF))).Methods("POST")
+	ingestRoutes.HandleFunc("/image", s.authManager.RequirePermission(PermIngestImage)(http.HandlerFunc(s.ingestImage))).Methods("POST")
+	ingestRoutes.HandleFunc("/lidar", s.authManager.RequirePermission(PermIngestLidar)(http.HandlerFunc(s.startLidarSession))).Methods("POST")
 
 	// Symbol library endpoints
 	api.HandleFunc("/symbols", s.getSymbols).Methods("GET")
@@ -520,15 +638,26 @@ func respondJSON(w http.ResponseWriter, data interface{}) {
 }
 
 // Start starts the server
-func (s *Server) Start(port string) error {
-	log.Printf("Starting Arxos API server on port %s", port)
-	return http.ListenAndServe(":"+port, s.router)
+func (s *Server) Start(config *Config) error {
+	log.Printf("Starting Arxos API server on port %s", config.Port)
+	log.Printf("Environment: %s", config.Environment)
+	log.Printf("Auth enabled: %v", config.EnableAuth)
+	log.Printf("CORS origins: %v", config.CORSOrigins)
+	log.Printf("Max upload size: %d bytes", config.MaxUploadSize)
+	
+	return http.ListenAndServe(":"+config.Port, s.router)
 }
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	config := NewConfigFromEnv()
+	
+	// Set up logging based on environment
+	if config.Environment == "production" {
+		// In production, you might want structured logging
+		log.SetFlags(log.LstdFlags | log.LUTC)
+	} else {
+		// Development logging
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
 	}
 
 	server, err := NewServer()
@@ -536,7 +665,7 @@ func main() {
 		log.Fatalf("Failed to create server: %v", err)
 	}
 
-	if err := server.Start(port); err != nil {
+	if err := server.Start(config); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

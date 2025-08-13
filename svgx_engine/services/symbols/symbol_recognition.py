@@ -26,23 +26,7 @@ class SymbolRecognitionEngine:
     """Enhanced engine for recognizing building system symbols with fuzzy matching and context awareness."""
 
     def __init__(self):
-        pass
-    """
-    Perform __init__ operation
-
-Args:
-        None
-
-Returns:
-        Description of return value
-
-Raises:
-        Exception: Description of exception
-
-Example:
-        result = __init__(param)
-        print(result)
-    """
+        """Initialize the SymbolRecognitionEngine with symbol library and rules."""
         self.symbol_library = self._load_complete_symbol_library()
         self.recognition_patterns = self._build_recognition_patterns()
         self.context_rules = self._build_context_rules()
@@ -510,6 +494,7 @@ Example:
                 position.get('x', 0.0),
                 position.get('y', 0.0),
                 position.get('z', 0.0)
+            )
         except Exception as e:
             return {'error': f'Invalid position coordinates: {e}'}
 
@@ -524,6 +509,7 @@ Example:
                 existing_pos.get('x', 0.0),
                 existing_pos.get('y', 0.0),
                 existing_pos.get('z', 0.0)
+            )
             # Calculate distance using precision math
             distance = self.precision_math.distance(precision_position, existing_precision_pos)
 
@@ -537,12 +523,12 @@ Example:
         # Check boundary constraints
         boundaries = context.get('boundaries', {})
         if boundaries:
-            min_x = boundaries.get('min_x', float('-inf')
-            max_x = boundaries.get('max_x', float('inf')
-            min_y = boundaries.get('min_y', float('-inf')
-            max_y = boundaries.get('max_y', float('inf')
-            min_z = boundaries.get('min_z', float('-inf')
-            max_z = boundaries.get('max_z', float('inf')
+            min_x = boundaries.get('min_x', float('-inf'))
+            max_x = boundaries.get('max_x', float('inf'))
+            min_y = boundaries.get('min_y', float('-inf'))
+            max_y = boundaries.get('max_y', float('inf'))
+            min_z = boundaries.get('min_z', float('-inf'))
+            max_z = boundaries.get('max_z', float('inf'))
             if (precision_position.x < min_x or precision_position.x > max_x or
                 precision_position.y < min_y or precision_position.y > max_y or
                 precision_position.z < min_z or precision_position.z > max_z):
@@ -567,8 +553,8 @@ Example:
     def _symbols_overlap(self, pos1: Dict[str, float], pos2: Dict[str, float]) -> bool:
         """Check if two symbols overlap using precision coordinates."""
         try:
-            precision_pos1 = PrecisionCoordinate(pos1.get('x', 0.0), pos1.get('y', 0.0), pos1.get('z', 0.0)
-            precision_pos2 = PrecisionCoordinate(pos2.get('x', 0.0), pos2.get('y', 0.0), pos2.get('z', 0.0)
+            precision_pos1 = PrecisionCoordinate(pos1.get('x', 0.0), pos1.get('y', 0.0), pos1.get('z', 0.0))
+            precision_pos2 = PrecisionCoordinate(pos2.get('x', 0.0), pos2.get('y', 0.0), pos2.get('z', 0.0))
             distance = self.precision_math.distance(precision_pos1, precision_pos2)
             return distance < 0.1  # Minimum clearance threshold
         except Exception:
@@ -632,7 +618,7 @@ Example:
                 abbreviations.append(word[:3])
                 abbreviations.append(word)
 
-        return list(set(abbreviations)
+        return list(set(abbreviations))
     def _extract_shapes_from_svg(self, svg_content: str) -> List[Dict[str, Any]]:
         """Extract geometric shapes from SVG content."""
         shapes = []
@@ -648,7 +634,7 @@ Example:
                         'type': 'circle',
                         'cx': float(element.get('cx', 0)),
                         'cy': float(element.get('cy', 0)),
-                        'r': float(element.get('r', 1)
+                        'r': float(element.get('r', 1))
                     }
                 elif element.tag.endswith('rect'):
                     shape_info = {
@@ -656,7 +642,7 @@ Example:
                         'x': float(element.get('x', 0)),
                         'y': float(element.get('y', 0)),
                         'width': float(element.get('width', 1)),
-                        'height': float(element.get('height', 1)
+                        'height': float(element.get('height', 1))
                     }
                 elif element.tag.endswith('line'):
                     shape_info = {
@@ -664,7 +650,7 @@ Example:
                         'x1': float(element.get('x1', 0)),
                         'y1': float(element.get('y1', 0)),
                         'x2': float(element.get('x2', 1)),
-                        'y2': float(element.get('y2', 1)
+                        'y2': float(element.get('y2', 1))
                     }
                 elif element.tag.endswith('path'):
                     shape_info = {
@@ -717,7 +703,7 @@ Example:
 
                 # Check abbreviations
                 if confidence == 0.0:
-                    abbreviations = self._get_abbreviations(symbol_id, symbol_data.get('display_name', '')
+                    abbreviations = self._get_abbreviations(symbol_id, symbol_data.get('display_name', ''))
                     for abbrev in abbreviations:
                         if abbrev.lower() in text_lower:
                             confidence = 0.7
@@ -783,7 +769,7 @@ Example:
                     'type': 'circle',
                     'cx': float(element.get('cx', 0)),
                     'cy': float(element.get('cy', 0)),
-                    'r': float(element.get('r', 1)
+                    'r': float(element.get('r', 1))
                 }
             elif element.tag.endswith('rect'):
                 shape_info = {
@@ -791,7 +777,7 @@ Example:
                     'x': float(element.get('x', 0)),
                     'y': float(element.get('y', 0)),
                     'width': float(element.get('width', 1)),
-                    'height': float(element.get('height', 1)
+                    'height': float(element.get('height', 1))
                 }
             elif element.tag.endswith('line'):
                 shape_info = {
@@ -799,7 +785,7 @@ Example:
                     'x1': float(element.get('x1', 0)),
                     'y1': float(element.get('y1', 0)),
                     'x2': float(element.get('x2', 1)),
-                    'y2': float(element.get('y2', 1)
+                    'y2': float(element.get('y2', 1))
                 }
             elif element.tag.endswith('path'):
                 shape_info = {
@@ -836,11 +822,11 @@ Example:
         categories = set()
 
         for symbol_data in self.symbol_library.values():
-            systems.add(symbol_data.get('system', 'unknown')
-            categories.add(symbol_data.get('category', 'unknown')
+            systems.add(symbol_data.get('system', 'unknown'))
+            categories.add(symbol_data.get('category', 'unknown'))
         return {
             'total_symbols': len(self.symbol_library),
             'systems': list(systems),
             'categories': list(categories),
-            'symbol_ids': list(self.symbol_library.keys()
+            'symbol_ids': list(self.symbol_library.keys())
         }

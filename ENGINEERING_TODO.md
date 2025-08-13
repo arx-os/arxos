@@ -1,141 +1,211 @@
-# Engineering TODO - Production Readiness
+# Engineering TODO - Pure Stack Implementation
 
-## 🔴 Critical (Must Have)
+> **Build the entire vision with just Go, vanilla JS, HTML/CSS, and PostgreSQL/PostGIS.**
 
-### 1. Authentication & Security
-- [ ] JWT-based API authentication
-- [ ] User roles (field_worker, validator, admin)
-- [ ] API rate limiting
-- [ ] Input sanitization for SQL injection prevention
-- [ ] CORS configuration for production
-- [ ] API key management for external integrations
+## ✅ Completed (The Great Cleanup)
+- [x] Removed Python entirely (GUS, IoT, tests)
+- [x] Removed TypeScript/NestJS services
+- [x] Removed 78 redundant JS files
+- [x] Removed enterprise patterns (DTOs, factories)
+- [x] Created 4-component vanilla JS architecture
+- [x] Simplified to single Docker compose
+- [x] Reduced from 198K to 29K lines of code
 
-### 2. Python Bridge Implementation
-- [ ] Complete `svgx_engine/services/symbols/recognize.py` bridge script
-- [ ] Docker container for Python symbol recognition service
-- [ ] Proper IPC between Go and Python (gRPC or REST)
-- [ ] Handle PDF parsing with actual libraries (pdf2image, PyPDF2)
-- [ ] OpenCV integration for photo perspective correction
-- [ ] Tesseract OCR integration
+## 🎯 Priority 1: Core Functionality
 
-### 3. Database & Persistence
-- [ ] Database migration system (golang-migrate)
-- [ ] Connection pooling configuration
-- [ ] Indexes optimization based on query patterns
-- [ ] Backup and recovery procedures
-- [ ] Redis caching for viewport queries
+### Tile Service (Go)
+```go
+// Implement Google Maps-like tile generation
+- [ ] Create TileService in core/backend/tiles/
+- [ ] Implement GetTile(zoom, x, y) function
+- [ ] Add tile caching with Redis
+- [ ] Create tile coordinate helpers
+```
 
-### 4. Testing
-- [ ] Unit tests for ArxObject operations
-- [ ] Integration tests for ingestion pipeline
-- [ ] API endpoint tests
-- [ ] Frontend E2E tests
-- [ ] Load testing for viewport queries
-- [ ] Symbol recognition accuracy tests
+### WebSocket Real-time (Go)
+```go
+// Real-time updates for collaboration
+- [ ] Implement WebSocket hub in core/backend/ws/
+- [ ] Create client connection manager
+- [ ] Add broadcast for ArxObject updates
+- [ ] Handle reconnection logic
+```
 
-## 🟡 Important (Should Have)
+### PostGIS Integration (SQL + Go)
+```sql
+-- Spatial queries and indexing
+- [ ] Create arx_objects table with GEOMETRY column
+- [ ] Add spatial indexes (GIST)
+- [ ] Implement ST_Contains queries for rooms
+- [ ] Add scale-based visibility indexes
+```
 
-### 5. Mobile Application
-- [ ] React Native or Flutter app for field workers
-- [ ] ARCore/ARKit integration for LiDAR capture
-- [ ] Offline mode with sync capability
-- [ ] Camera integration for photo capture
-- [ ] Real-time position tracking
+## 🎯 Priority 2: Fractal Navigation
 
-### 6. WebSocket Implementation
-- [ ] Complete real-time updates system
-- [ ] Presence system for collaborative editing
-- [ ] Conflict resolution for concurrent edits
-- [ ] Event streaming for large buildings
-- [ ] Connection recovery and retry logic
+### Frontend Scale System (Vanilla JS)
+```javascript
+// Implement 10 scale levels
+- [ ] Add scale definitions to StateManager
+- [ ] Implement smooth zoom transitions
+- [ ] Add scale-based object filtering
+- [ ] Create scale indicator UI
+```
 
-### 7. File Processing
-- [ ] Actual PDF parsing (not mock data)
-- [ ] IFC file format support
-- [ ] DWG/DXF file support
-- [ ] Image preprocessing pipeline
-- [ ] Batch processing queue (Redis + workers)
+### Backend Scale Queries (Go)
+```go
+// Scale-aware data fetching
+- [ ] Add scale_min/scale_max to ArxObject
+- [ ] Filter queries by current scale
+- [ ] Implement LOD (Level of Detail) system
+- [ ] Add predictive pre-loading
+```
 
-### 8. Deployment & DevOps
-- [ ] Docker compose for local development
-- [ ] Kubernetes manifests for production
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Environment configuration management
-- [ ] Monitoring (Prometheus + Grafana)
-- [ ] Centralized logging (ELK stack)
+## 🎯 Priority 3: Ingestion Pipeline
 
-## 🟢 Nice to Have (Could Have)
+### PDF Processing (Go)
+```go
+// Using pdfcpu or unipdf
+- [ ] Extract pages as images
+- [ ] Implement symbol detection
+- [ ] Add OCR for text labels
+- [ ] Convert to ArxObjects
+```
 
-### 9. Advanced Features
-- [ ] Machine learning for symbol recognition improvement
-- [ ] Automatic floor plan generation from point clouds
-- [ ] Path finding between objects
-- [ ] Clash detection between systems
-- [ ] Change tracking and version control
-- [ ] 3D visualization mode
+### Photo Processing (Go)
+```go
+// Using image and gocv packages
+- [ ] Perspective correction algorithm
+- [ ] Symbol recognition
+- [ ] OCR integration
+- [ ] ArxObject generation
+```
 
-### 10. Frontend Improvements
-- [ ] React/Vue.js for better state management
-- [ ] WebGL for better rendering performance
-- [ ] Progressive Web App (PWA) capabilities
-- [ ] Touch gestures for mobile browsers
-- [ ] Keyboard shortcuts for power users
-- [ ] Dark mode
+### LiDAR Processing (Go)
+```go
+// Point cloud to ArxObject
+- [ ] Point clustering algorithm
+- [ ] Surface detection
+- [ ] Equipment recognition
+- [ ] 3D to 2D projection
+```
 
-### 11. API Enhancements
-- [ ] GraphQL endpoint for flexible queries
-- [ ] API versioning strategy
-- [ ] Swagger/OpenAPI documentation
-- [ ] SDK generation for multiple languages
-- [ ] Webhook system for integrations
+## 🎯 Priority 4: UI Polish
 
-### 12. Performance Optimizations
-- [ ] Spatial indexing (R-tree) for faster queries
-- [ ] Level-of-detail (LOD) rendering
-- [ ] Tile-based loading for large buildings
-- [ ] CDN for static assets
-- [ ] Database query optimization
+### HTMX Integration (Optional)
+```html
+<!-- Partial updates without JS -->
+- [ ] Add HTMX to index.html
+- [ ] Create partial templates
+- [ ] Implement hx-trigger="revealed" for lazy loading
+- [ ] Add hx-swap for smooth updates
+```
 
-## 📊 Technical Debt
+### CSS attr() for Chrome 133+
+```css
+/* Dynamic styling based on data attributes */
+- [ ] Add data attributes to ArxObjects
+- [ ] Implement attr() styling rules
+- [ ] Create fallbacks for older browsers
+- [ ] Test performance impact
+```
 
-### Code Quality
-- [ ] Add comprehensive error handling
-- [ ] Remove hardcoded values
-- [ ] Add proper logging throughout
-- [ ] Code documentation (godoc)
-- [ ] Consistent error messages
-- [ ] Input validation schemas
+## 🎯 Priority 5: Performance
 
-### Architecture
-- [ ] Separate concerns (service layer, repository pattern)
-- [ ] Event-driven architecture for ingestion
-- [ ] Message queue for async processing
-- [ ] Microservices consideration
-- [ ] API gateway for routing
+### Client-side Optimizations
+```javascript
+// Vanilla JS performance
+- [ ] Implement virtual DOM-like object recycling
+- [ ] Add requestAnimationFrame batching
+- [ ] Create efficient SVG updates
+- [ ] Implement viewport culling
+```
 
-## 🚀 Implementation Priority
+### Server-side Optimizations
+```go
+// Go backend performance
+- [ ] Add connection pooling
+- [ ] Implement query result caching
+- [ ] Add gzip compression
+- [ ] Profile and optimize hot paths
+```
 
-1. **Week 1-2**: Python bridge + Basic auth
-2. **Week 3-4**: Testing suite + Docker setup
-3. **Week 5-6**: Mobile app MVP for LiDAR
-4. **Week 7-8**: WebSocket real-time + Caching
-5. **Week 9-10**: Production deployment
-6. **Week 11-12**: Performance optimization
+## 🎯 Priority 6: Testing
 
-## 📈 Success Metrics
+### Go Tests
+```go
+// Core functionality tests
+- [ ] ArxObject CRUD tests
+- [ ] Spatial query tests
+- [ ] WebSocket tests
+- [ ] Tile generation tests
+```
 
-- API response time < 100ms for viewport queries
-- Symbol recognition accuracy > 90%
-- Photo ingestion success rate > 80%
-- LiDAR capture precision within 5cm
-- Support 100+ concurrent users
-- 99.9% uptime SLA
+### Frontend Tests
+```javascript
+// Simple vanilla JS tests
+- [ ] Scale navigation tests
+- [ ] Object selection tests
+- [ ] System toggle tests
+- [ ] Performance benchmarks
+```
 
-## 🔧 Technology Stack Decisions Needed
+## 🎯 Priority 7: Deployment
 
-1. **Mobile Framework**: React Native vs Flutter vs Native
-2. **Message Queue**: RabbitMQ vs Kafka vs Redis Streams
-3. **Search Engine**: Elasticsearch vs PostgreSQL FTS
-4. **Cloud Provider**: AWS vs GCP vs Azure
-5. **CDN**: CloudFlare vs CloudFront
-6. **Monitoring**: DataDog vs New Relic vs Open Source
+### Production Setup
+```bash
+# Single binary deployment
+- [ ] Create systemd service file
+- [ ] Add nginx configuration
+- [ ] Setup SSL with Let's Encrypt
+- [ ] Create backup scripts
+```
+
+### Monitoring
+```go
+// Simple monitoring
+- [ ] Add health check endpoint
+- [ ] Implement basic metrics
+- [ ] Create performance dashboard
+- [ ] Add error tracking
+```
+
+## 📊 Success Metrics
+
+Target performance with pure stack:
+- [ ] < 16ms frame time (60fps)
+- [ ] < 1 second initial load
+- [ ] < 100KB per tile
+- [ ] < 50MB client memory
+- [ ] 1000+ concurrent users
+- [ ] 1M+ ArxObjects per building
+
+## 🚫 What NOT to Do
+
+**DO NOT ADD:**
+- ❌ Any JavaScript frameworks
+- ❌ Any Python code
+- ❌ Any TypeScript
+- ❌ Build tools (webpack, etc)
+- ❌ Complex state management
+- ❌ Microservices
+- ❌ GraphQL
+- ❌ ORM libraries
+
+**KEEP IT SIMPLE:**
+- ✅ Go for backend
+- ✅ PostgreSQL + PostGIS for data
+- ✅ Vanilla JS for frontend
+- ✅ HTML/CSS for markup
+- ✅ HTMX for updates (optional)
+
+## 💡 Remember
+
+The entire Google Maps for Buildings vision can be built with this minimal stack. The innovation is in the ArxObject design and fractal scaling, not in framework complexity.
+
+Every feature should be implementable with:
+- A Go function
+- A SQL query
+- A vanilla JS class method
+- Some HTML/CSS
+
+If you need more than that, you're overcomplicating it.

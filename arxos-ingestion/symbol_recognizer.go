@@ -50,7 +50,7 @@ type RecognitionStats struct {
 func NewSymbolRecognizer() (*SymbolRecognizer, error) {
 	return &SymbolRecognizer{
 		pythonPath: "python3",
-		scriptPath: filepath.Join("svgx_engine", "services", "symbols", "recognize.py"),
+		scriptPath: filepath.Join("services", "symbols", "recognize.py"),
 	}, nil
 }
 
@@ -147,10 +147,10 @@ import json
 import base64
 from io import BytesIO
 
-# Add the svgx_engine to path
+# Add the services to path
 sys.path.insert(0, '.')
 
-from svgx_engine.services.symbols.symbol_recognition import SymbolRecognitionEngine
+from services.symbols.symbol_recognition import SymbolRecognitionEngine
 
 def process_recognition_request():
     """Process a recognition request from Go."""

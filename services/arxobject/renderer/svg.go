@@ -143,8 +143,8 @@ func (r *SVGRenderer) RenderBatch(objects []*engine.ArxObject, opts *RenderOptio
 
 func (r *SVGRenderer) renderFloorPlan(buf *strings.Builder, obj *engine.ArxObject, opts *RenderOptions) {
 	// Convert coordinates to SVG space
-	x := r.toSVGX(float64(obj.X) / 1000.0)
-	y := r.toSVGY(float64(obj.Y) / 1000.0)
+	x := r.toSVGCoordX(float64(obj.X) / 1000.0)
+	y := r.toSVGCoordY(float64(obj.Y) / 1000.0)
 	width := r.toSVGScale(float64(obj.Length) / 1000.0)
 	height := r.toSVGScale(float64(obj.Width) / 1000.0)
 	
@@ -185,8 +185,8 @@ func (r *SVGRenderer) renderFloorPlan(buf *strings.Builder, obj *engine.ArxObjec
 
 func (r *SVGRenderer) renderElevation(buf *strings.Builder, obj *engine.ArxObject, opts *RenderOptions) {
 	// Elevation view (X-Z plane)
-	x := r.toSVGX(float64(obj.X) / 1000.0)
-	z := r.toSVGY(float64(obj.Z) / 1000.0) // Z becomes Y in elevation
+	x := r.toSVGCoordX(float64(obj.X) / 1000.0)
+	z := r.toSVGCoordY(float64(obj.Z) / 1000.0) // Z becomes Y in elevation
 	width := r.toSVGScale(float64(obj.Length) / 1000.0)
 	height := r.toSVGScale(float64(obj.Height) / 1000.0)
 	
@@ -347,11 +347,11 @@ func (r *SVGRenderer) groupByType(objects []*engine.ArxObject) map[engine.ArxObj
 	return grouped
 }
 
-func (r *SVGRenderer) toSVGX(x float64) float64 {
+func (r *SVGRenderer) toSVGCoordX(x float64) float64 {
 	return x * r.scale
 }
 
-func (r *SVGRenderer) toSVGY(y float64) float64 {
+func (r *SVGRenderer) toSVGCoordY(y float64) float64 {
 	return y * r.scale
 }
 

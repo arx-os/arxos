@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: svgx-engine
-  labels:
-    name: svgx-engine
-    app: svgx-engine
-    environment: production

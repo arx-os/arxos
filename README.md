@@ -38,7 +38,7 @@ The Arxos platform now focuses on essential components:
 - **`frontend/web/`** - Modern web interface (HTML/CSS/JS with Canvas 2D)
 
 ### Core Engine
-- **`svgx_engine/`** - High-precision SVG-X rendering and behavior engine
+- **ArxObject System** - Intelligent object-based architecture for SVG rendering and behavior
 
 ### Infrastructure
 - **PostgreSQL 17/PostGIS 3.5.3** - Spatial database
@@ -87,7 +87,7 @@ Once running, services are available at:
 ## 🏗️ Simplified Architecture
 
 ### What We Kept (Essential Components)
-- **SVGX Engine** - High-precision SVG processing with CAD capabilities
+- **ArxObject System** - Intelligent object-based SVG processing with CAD capabilities
 - **GUS Agent** - AI-powered assistance for design and compliance  
 - **Web Interface** - Primary user interface for CAD operations
 - **IoT Integration** - Device telemetry and real-time data

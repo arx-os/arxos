@@ -144,7 +144,6 @@ class ArxosTestRunner:
         docker_files = [
             "docker-compose.production.yml",
             "Dockerfile.go-api",
-            "Dockerfile.svgx",
             "Dockerfile.python-api",
             "Dockerfile.gus",
             "Dockerfile.nginx"
@@ -166,7 +165,6 @@ class ArxosTestRunner:
         # Check that all services have proper configuration
         services = {
             "arxos-api": self.project_root / "arxos-api",
-            "svgx_engine": self.project_root / "svgx_engine",
             "services/gus": self.project_root / "services" / "gus"
         }
         

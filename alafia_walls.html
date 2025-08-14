@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alafia Elementary - Accurate Wall Structure</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+        
+        #viewport {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        svg:active {
+            cursor: grabbing;
+        }
+        
+        .wall {
+            stroke: #000;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .room {
+            fill: white;
+            stroke: #000;
+            stroke-width: 1.5;
+        }
+        
+        .room-label {
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            text-anchor: middle;
+            fill: #333;
+        }
+        
+        .idf-marker {
+            fill: #0066cc;
+            stroke: #003366;
+            stroke-width: 2;
+        }
+        
+        .idf-label {
+            font-size: 11px;
+            font-weight: bold;
+            fill: #0066cc;
+            text-anchor: middle;
+        }
+        
+        .mdf-marker {
+            fill: #cc0000;
+            stroke: #660000;
+            stroke-width: 2;
+        }
+        
+        .mdf-label {
+            font-size: 11px;
+            font-weight: bold;
+            fill: #cc0000;
+            text-anchor: middle;
+        }
+        
+        .controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .controls h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .controls button {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .controls button:hover {
+            background: #0052a3;
+        }
+        
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewport">
+        <svg id="floorplan" viewBox="0 0 1600 1000">
+            <!-- Background -->
+            <rect width="1600" height="1000" fill="#fafafa"/>
+            
+            <!-- Grid for reference -->
+            <defs>
+                <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect width="1600" height="1000" fill="url(#grid)" />
+            
+            <!-- Main Building Outline -->
+            <g id="building-outline">
+                <!-- Exterior walls -->
+                <rect x="200" y="150" width="1200" height="700" class="room" fill="#fff"/>
+            </g>
+            
+            <!-- Rooms based on Alafia Elementary -->
+            <g id="rooms">
+                <!-- 500 Wing (Left side) -->
+                <!-- Room 516 area with IDF -->
+                <rect x="250" y="200" width="80" height="60" class="room"/>
+                <text x="290" y="235" class="room-label">516</text>
+                <rect x="280" y="210" width="20" height="15" class="idf-marker"/>
+                <text x="290" y="220" class="idf-label">IDF</text>
+                
+                <rect x="340" y="200" width="80" height="60" class="room"/>
+                <text x="380" y="235" class="room-label">517</text>
+                
+                <rect x="430" y="200" width="80" height="60" class="room"/>
+                <text x="470" y="235" class="room-label">518</text>
+                
+                <!-- Room 511-515 -->
+                <rect x="250" y="270" width="80" height="60" class="room"/>
+                <text x="290" y="305" class="room-label">511</text>
+                
+                <rect x="340" y="270" width="80" height="60" class="room"/>
+                <text x="380" y="305" class="room-label">512</text>
+                
+                <rect x="430" y="270" width="80" height="60" class="room"/>
+                <text x="470" y="305" class="room-label">513</text>
+                
+                <rect x="520" y="270" width="80" height="60" class="room"/>
+                <text x="560" y="305" class="room-label">514</text>
+                
+                <rect x="610" y="270" width="80" height="60" class="room"/>
+                <text x="650" y="305" class="room-label">515</text>
+                
+                <!-- Room 501-510 with IDF 507a -->
+                <rect x="250" y="340" width="80" height="60" class="room"/>
+                <text x="290" y="375" class="room-label">501</text>
+                
+                <rect x="340" y="340" width="80" height="60" class="room"/>
+                <text x="380" y="375" class="room-label">502</text>
+                
+                <rect x="430" y="340" width="80" height="60" class="room"/>
+                <text x="470" y="375" class="room-label">503</text>
+                
+                <rect x="520" y="340" width="80" height="60" class="room"/>
+                <text x="560" y="375" class="room-label">504</text>
+                
+                <rect x="610" y="340" width="80" height="60" class="room"/>
+                <text x="650" y="375" class="room-label">505</text>
+                
+                <rect x="250" y="410" width="80" height="60" class="room"/>
+                <text x="290" y="445" class="room-label">506</text>
+                
+                <rect x="340" y="410" width="80" height="60" class="room"/>
+                <text x="380" y="445" class="room-label">507</text>
+                <rect x="370" y="420" width="20" height="15" class="idf-marker"/>
+                <text x="380" y="430" class="idf-label">507a</text>
+                
+                <rect x="430" y="410" width="80" height="60" class="room"/>
+                <text x="470" y="445" class="room-label">508</text>
+                
+                <rect x="520" y="410" width="80" height="60" class="room"/>
+                <text x="560" y="445" class="room-label">509</text>
+                
+                <rect x="610" y="410" width="80" height="60" class="room"/>
+                <text x="650" y="445" class="room-label">510</text>
+                
+                <!-- Central area with MDF -->
+                <rect x="700" y="340" width="100" height="80" class="room"/>
+                <text x="750" y="385" class="room-label">300c</text>
+                <rect x="730" y="370" width="40" height="20" class="mdf-marker"/>
+                <text x="750" y="383" class="idf-label" fill="white">MDF</text>
+                
+                <!-- 600 Wing (Bottom) -->
+                <rect x="250" y="520" width="80" height="60" class="room"/>
+                <text x="290" y="555" class="room-label">601</text>
+                
+                <rect x="340" y="520" width="80" height="60" class="room"/>
+                <text x="380" y="555" class="room-label">602</text>
+                
+                <rect x="430" y="520" width="80" height="60" class="room"/>
+                <text x="470" y="555" class="room-label">603</text>
+                
+                <rect x="520" y="520" width="80" height="60" class="room"/>
+                <text x="560" y="555" class="room-label">604</text>
+                
+                <rect x="610" y="520" width="80" height="60" class="room"/>
+                <text x="650" y="555" class="room-label">605</text>
+                
+                <rect x="700" y="520" width="80" height="60" class="room"/>
+                <text x="740" y="555" class="room-label">606</text>
+                <rect x="730" y="530" width="20" height="15" class="idf-marker"/>
+                <text x="740" y="540" class="idf-label">606a</text>
+                
+                <rect x="790" y="520" width="80" height="60" class="room"/>
+                <text x="830" y="555" class="room-label">607</text>
+                
+                <rect x="880" y="520" width="80" height="60" class="room"/>
+                <text x="920" y="555" class="room-label">608</text>
+                
+                <rect x="970" y="520" width="80" height="60" class="room"/>
+                <text x="1010" y="555" class="room-label">609</text>
+                
+                <!-- 700 Wing -->
+                <rect x="700" y="590" width="80" height="60" class="room"/>
+                <text x="740" y="625" class="room-label">700a</text>
+                
+                <rect x="790" y="590" width="80" height="60" class="room"/>
+                <text x="830" y="625" class="room-label">700</text>
+                
+                <rect x="880" y="590" width="80" height="60" class="room"/>
+                <text x="920" y="625" class="room-label">701</text>
+                
+                <rect x="970" y="590" width="80" height="60" class="room"/>
+                <text x="1010" y="625" class="room-label">702</text>
+                
+                <rect x="1060" y="590" width="80" height="60" class="room"/>
+                <text x="1100" y="625" class="room-label">703</text>
+                
+                <rect x="1150" y="590" width="80" height="60" class="room"/>
+                <text x="1190" y="625" class="room-label">704</text>
+                
+                <rect x="1240" y="590" width="80" height="60" class="room"/>
+                <text x="1280" y="625" class="room-label">705</text>
+                
+                <!-- 800 Wing (Right side) -->
+                <rect x="900" y="200" width="80" height="60" class="room"/>
+                <text x="940" y="235" class="room-label">800</text>
+                <rect x="930" y="210" width="20" height="15" class="idf-marker"/>
+                <text x="940" y="220" class="idf-label">800b</text>
+                
+                <rect x="990" y="200" width="80" height="60" class="room"/>
+                <text x="1030" y="235" class="room-label">801</text>
+                
+                <rect x="1080" y="200" width="80" height="60" class="room"/>
+                <text x="1120" y="235" class="room-label">802</text>
+                
+                <rect x="1170" y="200" width="80" height="60" class="room"/>
+                <text x="1210" y="235" class="room-label">803</text>
+                
+                <rect x="1260" y="200" width="80" height="60" class="room"/>
+                <text x="1300" y="235" class="room-label">804</text>
+                
+                <rect x="900" y="270" width="80" height="60" class="room"/>
+                <text x="940" y="305" class="room-label">805</text>
+                
+                <rect x="990" y="270" width="80" height="60" class="room"/>
+                <text x="1030" y="305" class="room-label">806</text>
+                
+                <rect x="1080" y="270" width="80" height="60" class="room"/>
+                <text x="1120" y="305" class="room-label">807</text>
+                
+                <rect x="1170" y="270" width="80" height="60" class="room"/>
+                <text x="1210" y="305" class="room-label">808</text>
+                
+                <rect x="1260" y="270" width="80" height="60" class="room"/>
+                <text x="1300" y="305" class="room-label">809</text>
+                
+                <!-- Admin/Common areas -->
+                <rect x="810" y="340" width="120" height="80" class="room"/>
+                <text x="870" y="385" class="room-label">Admin</text>
+                
+                <rect x="940" y="340" width="120" height="80" class="room"/>
+                <text x="1000" y="385" class="room-label">Library</text>
+                
+                <rect x="1070" y="340" width="120" height="80" class="room"/>
+                <text x="1130" y="385" class="room-label">Cafeteria</text>
+                
+                <!-- Corridors (simplified) -->
+                <line x1="250" y1="480" x2="1350" y2="480" stroke="#666" stroke-width="1" stroke-dasharray="5,5"/>
+                <line x1="700" y1="200" x2="700" y2="650" stroke="#666" stroke-width="1" stroke-dasharray="5,5"/>
+                <line x1="900" y1="200" x2="900" y2="520" stroke="#666" stroke-width="1" stroke-dasharray="5,5"/>
+            </g>
+            
+            <!-- North arrow -->
+            <g transform="translate(100, 850)">
+                <path d="M 0 0 L 0 -30 L -5 -25 M 0 -30 L 5 -25" stroke="#000" stroke-width="2" fill="none"/>
+                <text x="0" y="15" text-anchor="middle" font-size="14" font-weight="bold">N</text>
+            </g>
+            
+            <!-- Title Block -->
+            <g transform="translate(1200, 850)">
+                <rect x="0" y="0" width="350" height="100" fill="white" stroke="#000" stroke-width="1"/>
+                <text x="175" y="25" text-anchor="middle" font-size="14" font-weight="bold">ALAFIA ELEMENTARY SCHOOL</text>
+                <text x="175" y="45" text-anchor="middle" font-size="12">3835 CULBREATH DR, VALRICO, FLORIDA</text>
+                <text x="175" y="65" text-anchor="middle" font-size="10">SCHOOL CODE: 0271</text>
+                <text x="175" y="85" text-anchor="middle" font-size="10">MASTER SITE PLAN - NETWORK INFRASTRUCTURE</text>
+            </g>
+        </svg>
+    </div>
+    
+    <div class="controls">
+        <h3>Alafia Elementary</h3>
+        <button onclick="zoomToFit()">Fit to Screen</button>
+        <button onclick="showIDFs()">Highlight IDFs</button>
+        <button onclick="showTopology()">Show Network Topology</button>
+        <button onclick="exportData()">Export ArxObjects</button>
+    </div>
+    
+    <div class="info">
+        <strong>MDF:</strong> Room 300c | 
+        <strong>IDFs:</strong> 516, 507a, 606a, 800b | 
+        <strong>Total Rooms:</strong> 45+
+    </div>
+    
+    <script>
+        let svg = document.getElementById('floorplan');
+        let isPanning = false;
+        let startPoint = { x: 0, y: 0 };
+        let viewBox = { x: 0, y: 0, width: 1600, height: 1000 };
+        
+        // Pan functionality
+        svg.addEventListener('mousedown', (e) => {
+            isPanning = true;
+            startPoint = { x: e.clientX, y: e.clientY };
+        });
+        
+        svg.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            
+            let dx = (startPoint.x - e.clientX) * 2;
+            let dy = (startPoint.y - e.clientY) * 2;
+            
+            viewBox.x += dx;
+            viewBox.y += dy;
+            
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+            
+            startPoint = { x: e.clientX, y: e.clientY };
+        });
+        
+        svg.addEventListener('mouseup', () => {
+            isPanning = false;
+        });
+        
+        svg.addEventListener('mouseleave', () => {
+            isPanning = false;
+        });
+        
+        // Zoom functionality
+        svg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            
+            let scale = e.deltaY > 0 ? 1.1 : 0.9;
+            
+            let mouseX = e.clientX;
+            let mouseY = e.clientY;
+            
+            let svgPoint = svg.createSVGPoint();
+            svgPoint.x = mouseX;
+            svgPoint.y = mouseY;
+            
+            let point = svgPoint.matrixTransform(svg.getScreenCTM().inverse());
+            
+            viewBox.width *= scale;
+            viewBox.height *= scale;
+            
+            viewBox.x = point.x - (mouseX / window.innerWidth) * viewBox.width;
+            viewBox.y = point.y - (mouseY / window.innerHeight) * viewBox.height;
+            
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        });
+        
+        function zoomToFit() {
+            viewBox = { x: 0, y: 0, width: 1600, height: 1000 };
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        }
+        
+        function showIDFs() {
+            // Highlight all IDF markers
+            document.querySelectorAll('.idf-marker, .mdf-marker').forEach(marker => {
+                marker.style.animation = 'pulse 2s infinite';
+            });
+            
+            // Add pulse animation
+            if (!document.getElementById('pulse-style')) {
+                let style = document.createElement('style');
+                style.id = 'pulse-style';
+                style.innerHTML = `
+                    @keyframes pulse {
+                        0% { opacity: 1; transform: scale(1); }
+                        50% { opacity: 0.7; transform: scale(1.2); }
+                        100% { opacity: 1; transform: scale(1); }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        function showTopology() {
+            // Add lines showing network connections from MDF to IDFs
+            let topologyGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            topologyGroup.id = 'topology';
+            
+            // MDF position
+            let mdfX = 750, mdfY = 380;
+            
+            // IDF positions
+            let idfs = [
+                { x: 290, y: 220, label: 'IDF-516' },
+                { x: 380, y: 430, label: 'IDF-507a' },
+                { x: 740, y: 540, label: 'IDF-606a' },
+                { x: 940, y: 220, label: 'IDF-800b' }
+            ];
+            
+            idfs.forEach(idf => {
+                let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', mdfX);
+                line.setAttribute('y1', mdfY);
+                line.setAttribute('x2', idf.x);
+                line.setAttribute('y2', idf.y);
+                line.setAttribute('stroke', '#00ff00');
+                line.setAttribute('stroke-width', '3');
+                line.setAttribute('stroke-dasharray', '10,5');
+                line.setAttribute('opacity', '0.7');
+                topologyGroup.appendChild(line);
+            });
+            
+            svg.appendChild(topologyGroup);
+            
+            setTimeout(() => {
+                topologyGroup.remove();
+            }, 5000);
+        }
+        
+        function exportData() {
+            const arxObjects = [];
+            
+            // Export room data
+            document.querySelectorAll('.room').forEach((room, index) => {
+                let bbox = room.getBBox();
+                arxObjects.push({
+                    type: 'room',
+                    system: 'structural',
+                    x: bbox.x + bbox.width/2,
+                    y: bbox.y + bbox.height/2,
+                    width: bbox.width,
+                    height: bbox.height,
+                    properties: {
+                        roomNumber: room.nextElementSibling?.textContent || `Room ${index}`
+                    }
+                });
+            });
+            
+            console.log('ArxObjects:', arxObjects);
+            alert(`Exported ${arxObjects.length} ArxObjects to console`);
+        }
+    </script>
+</body>
+</html>

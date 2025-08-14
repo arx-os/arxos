@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alafia Elementary - Accurate Floor Plan</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif;
+            background: #fff;
+            overflow: hidden;
+        }
+        
+        #viewport {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        svg {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            background: white;
+        }
+        
+        svg:active {
+            cursor: grabbing;
+        }
+        
+        .wall {
+            stroke: #000;
+            stroke-width: 1.5;
+            fill: none;
+        }
+        
+        .wall-thick {
+            stroke: #000;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .room-fill {
+            fill: white;
+            stroke: none;
+        }
+        
+        .room-label {
+            font-size: 8px;
+            font-family: Arial, sans-serif;
+            text-anchor: middle;
+            fill: #000;
+        }
+        
+        .idf-box {
+            fill: none;
+            stroke: #0066cc;
+            stroke-width: 2;
+        }
+        
+        .idf-label {
+            font-size: 7px;
+            font-weight: bold;
+            fill: #0066cc;
+            text-anchor: middle;
+        }
+        
+        .mdf-box {
+            fill: none;
+            stroke: #cc0000;
+            stroke-width: 2;
+        }
+        
+        .door {
+            stroke: #000;
+            stroke-width: 1;
+            fill: none;
+        }
+        
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border: 1px solid #ccc;
+            z-index: 100;
+        }
+        
+        button {
+            display: block;
+            margin: 5px 0;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="viewport">
+        <svg id="floorplan" viewBox="0 0 1400 900">
+            <!-- Main building outline - irregular shape matching PDF -->
+            <g id="building">
+                <!-- Complex building perimeter -->
+                <path class="wall-thick" d="
+                    M 200 300
+                    L 550 300
+                    L 550 200
+                    L 750 200
+                    L 750 150
+                    L 950 150
+                    L 950 200
+                    L 1150 200
+                    L 1150 350
+                    L 1200 350
+                    L 1200 550
+                    L 1150 550
+                    L 1150 650
+                    L 950 650
+                    L 950 700
+                    L 750 700
+                    L 750 750
+                    L 600 750
+                    L 600 700
+                    L 450 700
+                    L 450 650
+                    L 300 650
+                    L 300 600
+                    L 200 600
+                    Z
+                " fill="white"/>
+                
+                <!-- Interior walls creating rooms -->
+                <!-- 500 Wing rooms -->
+                <line class="wall" x1="250" y1="300" x2="250" y2="400"/>
+                <line class="wall" x1="300" y1="300" x2="300" y2="400"/>
+                <line class="wall" x1="350" y1="300" x2="350" y2="400"/>
+                <line class="wall" x1="400" y1="300" x2="400" y2="400"/>
+                <line class="wall" x1="450" y1="300" x2="450" y2="400"/>
+                <line class="wall" x1="500" y1="300" x2="500" y2="400"/>
+                
+                <line class="wall" x1="200" y1="400" x2="550" y2="400"/>
+                <line class="wall" x1="200" y1="450" x2="550" y2="450"/>
+                
+                <!-- 516 room with IDF -->
+                <rect x="255" y="305" width="40" height="40" class="room-fill"/>
+                <text x="275" y="328" class="room-label">516</text>
+                <rect x="265" y="315" width="20" height="10" class="idf-box"/>
+                <text x="275" y="321" class="idf-label">IDF 516</text>
+                
+                <!-- 517 -->
+                <text x="325" y="328" class="room-label">517</text>
+                
+                <!-- 518 -->
+                <text x="375" y="328" class="room-label">518</text>
+                
+                <!-- 519 -->
+                <text x="425" y="328" class="room-label">519</text>
+                
+                <!-- 520 -->
+                <text x="475" y="328" class="room-label">520</text>
+                
+                <!-- Lower 500s -->
+                <line class="wall" x1="250" y1="450" x2="250" y2="550"/>
+                <line class="wall" x1="300" y1="450" x2="300" y2="550"/>
+                <line class="wall" x1="350" y1="450" x2="350" y2="550"/>
+                <line class="wall" x1="400" y1="450" x2="400" y2="550"/>
+                <line class="wall" x1="450" y1="450" x2="450" y2="550"/>
+                <line class="wall" x1="500" y1="450" x2="500" y2="550"/>
+                
+                <line class="wall" x1="200" y1="550" x2="550" y2="550"/>
+                
+                <!-- 501-510 rooms -->
+                <text x="225" y="475" class="room-label">501</text>
+                <text x="275" y="475" class="room-label">502</text>
+                <text x="325" y="475" class="room-label">503</text>
+                <text x="375" y="475" class="room-label">504</text>
+                <text x="425" y="475" class="room-label">505</text>
+                <text x="475" y="475" class="room-label">506</text>
+                
+                <!-- 507 with IDF 507a -->
+                <text x="225" y="525" class="room-label">507</text>
+                <rect x="205" y="505" width="30" height="15" class="idf-box"/>
+                <text x="220" y="514" class="idf-label">IDF 507a</text>
+                
+                <text x="275" y="525" class="room-label">508</text>
+                <text x="325" y="525" class="room-label">509</text>
+                <text x="375" y="525" class="room-label">510</text>
+                <text x="425" y="525" class="room-label">511</text>
+                <text x="475" y="525" class="room-label">512</text>
+                <text x="525" y="525" class="room-label">513</text>
+                
+                <!-- Central corridor area -->
+                <line class="wall" x1="550" y1="300" x2="750" y2="300"/>
+                <line class="wall" x1="550" y1="400" x2="750" y2="400"/>
+                <line class="wall" x1="550" y1="500" x2="750" y2="500"/>
+                
+                <!-- MDF 300c location -->
+                <rect x="620" y="350" width="60" height="40" class="room-fill"/>
+                <text x="650" y="373" class="room-label">300c</text>
+                <rect x="630" y="360" width="40" height="20" class="mdf-box"/>
+                <text x="650" y="371" class="idf-label">MDF 300c</text>
+                
+                <!-- 600 Wing -->
+                <line class="wall" x1="600" y1="500" x2="600" y2="600"/>
+                <line class="wall" x1="650" y1="500" x2="650" y2="600"/>
+                <line class="wall" x1="700" y1="500" x2="700" y2="600"/>
+                <line class="wall" x1="750" y1="500" x2="750" y2="600"/>
+                <line class="wall" x1="800" y1="500" x2="800" y2="600"/>
+                <line class="wall" x1="850" y1="500" x2="850" y2="600"/>
+                <line class="wall" x1="900" y1="500" x2="900" y2="600"/>
+                
+                <line class="wall" x1="450" y1="600" x2="950" y2="600"/>
+                
+                <!-- 601-609 rooms -->
+                <text x="475" y="575" class="room-label">601</text>
+                <text x="525" y="575" class="room-label">602</text>
+                <text x="575" y="575" class="room-label">603</text>
+                <text x="625" y="575" class="room-label">604</text>
+                <text x="675" y="575" class="room-label">605</text>
+                
+                <!-- 606 with IDF 606a -->
+                <text x="725" y="575" class="room-label">606</text>
+                <rect x="705" y="555" width="30" height="15" class="idf-box"/>
+                <text x="720" y="564" class="idf-label">IDF 606a</text>
+                
+                <text x="775" y="575" class="room-label">607</text>
+                <text x="825" y="575" class="room-label">608</text>
+                <text x="875" y="575" class="room-label">609</text>
+                <text x="925" y="575" class="room-label">610</text>
+                
+                <!-- 700 Wing -->
+                <line class="wall" x1="600" y1="600" x2="600" y2="650"/>
+                <line class="wall" x1="650" y1="600" x2="650" y2="650"/>
+                <line class="wall" x1="700" y1="600" x2="700" y2="650"/>
+                <line class="wall" x1="750" y1="600" x2="750" y2="650"/>
+                <line class="wall" x1="800" y1="600" x2="800" y2="650"/>
+                <line class="wall" x1="850" y1="600" x2="850" y2="650"/>
+                <line class="wall" x1="900" y1="600" x2="900" y2="650"/>
+                
+                <!-- 700 series rooms -->
+                <text x="625" y="628" class="room-label">700a</text>
+                <text x="675" y="628" class="room-label">700</text>
+                <text x="725" y="628" class="room-label">701</text>
+                <text x="775" y="628" class="room-label">702</text>
+                <text x="825" y="628" class="room-label">703</text>
+                <text x="875" y="628" class="room-label">704</text>
+                <text x="925" y="628" class="room-label">705</text>
+                
+                <!-- 800 Wing -->
+                <line class="wall" x1="950" y1="200" x2="950" y2="350"/>
+                <line class="wall" x1="1000" y1="200" x2="1000" y2="350"/>
+                <line class="wall" x1="1050" y1="200" x2="1050" y2="350"/>
+                <line class="wall" x1="1100" y1="200" x2="1100" y2="350"/>
+                
+                <line class="wall" x1="750" y1="250" x2="1150" y2="250"/>
+                <line class="wall" x1="750" y1="300" x2="1150" y2="300"/>
+                
+                <!-- 800 with IDF 800b -->
+                <text x="875" y="228" class="room-label">800</text>
+                <rect x="855" y="208" width="30" height="15" class="idf-box"/>
+                <text x="870" y="217" class="idf-label">IDF 800b</text>
+                
+                <text x="925" y="228" class="room-label">801</text>
+                <text x="975" y="228" class="room-label">802</text>
+                <text x="1025" y="228" class="room-label">803</text>
+                <text x="1075" y="228" class="room-label">804</text>
+                <text x="1125" y="228" class="room-label">805</text>
+                
+                <text x="875" y="278" class="room-label">806</text>
+                <text x="925" y="278" class="room-label">807</text>
+                <text x="975" y="278" class="room-label">808</text>
+                <text x="1025" y="278" class="room-label">809</text>
+                <text x="1075" y="278" class="room-label">810</text>
+                
+                <!-- Admin/Office areas -->
+                <rect x="750" y="350" width="100" height="50" class="room-fill"/>
+                <text x="800" y="378" class="room-label">Admin</text>
+                
+                <rect x="850" y="350" width="100" height="50" class="room-fill"/>
+                <text x="900" y="378" class="room-label">Office</text>
+                
+                <rect x="950" y="350" width="100" height="50" class="room-fill"/>
+                <text x="1000" y="378" class="room-label">Library</text>
+                
+                <rect x="1050" y="350" width="100" height="50" class="room-fill"/>
+                <text x="1100" y="378" class="room-label">Media</text>
+                
+                <!-- Cafeteria/Large spaces -->
+                <rect x="850" y="450" width="150" height="100" class="room-fill"/>
+                <text x="925" y="503" class="room-label">Cafeteria</text>
+                
+                <rect x="1000" y="450" width="150" height="100" class="room-fill"/>
+                <text x="1075" y="503" class="room-label">Gym</text>
+            </g>
+            
+            <!-- North arrow -->
+            <g transform="translate(100, 750)">
+                <path d="M 0 0 L 0 -30 L -5 -25 M 0 -30 L 5 -25" stroke="#000" stroke-width="1.5" fill="none"/>
+                <circle cx="0" cy="0" r="20" fill="none" stroke="#000" stroke-width="1"/>
+                <text x="0" y="35" text-anchor="middle" font-size="12" font-weight="bold">N</text>
+            </g>
+        </svg>
+    </div>
+    
+    <div class="controls">
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="highlightIDFs()">Show IDFs</button>
+        <button onclick="showTopology()">Network Topology</button>
+    </div>
+    
+    <script>
+        let svg = document.getElementById('floorplan');
+        let viewBox = { x: 0, y: 0, width: 1400, height: 900 };
+        let isPanning = false;
+        let startPoint = { x: 0, y: 0 };
+        
+        // Pan and zoom functionality
+        svg.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                isPanning = true;
+                startPoint = { x: e.clientX, y: e.clientY };
+            }
+        });
+        
+        svg.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            
+            let dx = (startPoint.x - e.clientX) * (viewBox.width / window.innerWidth);
+            let dy = (startPoint.y - e.clientY) * (viewBox.height / window.innerHeight);
+            
+            viewBox.x += dx;
+            viewBox.y += dy;
+            
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+            
+            startPoint = { x: e.clientX, y: e.clientY };
+        });
+        
+        svg.addEventListener('mouseup', () => {
+            isPanning = false;
+        });
+        
+        svg.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            
+            let scale = e.deltaY > 0 ? 1.1 : 0.9;
+            let mouseX = e.clientX;
+            let mouseY = e.clientY;
+            
+            // Convert mouse position to SVG coordinates
+            let svgX = viewBox.x + (mouseX / window.innerWidth) * viewBox.width;
+            let svgY = viewBox.y + (mouseY / window.innerHeight) * viewBox.height;
+            
+            // Scale viewBox
+            viewBox.width *= scale;
+            viewBox.height *= scale;
+            
+            // Adjust position to zoom towards mouse
+            viewBox.x = svgX - (mouseX / window.innerWidth) * viewBox.width;
+            viewBox.y = svgY - (mouseY / window.innerHeight) * viewBox.height;
+            
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        });
+        
+        function resetView() {
+            viewBox = { x: 0, y: 0, width: 1400, height: 900 };
+            svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        }
+        
+        function highlightIDFs() {
+            document.querySelectorAll('.idf-box, .mdf-box').forEach(box => {
+                box.style.strokeWidth = '4';
+                box.style.stroke = '#ff0000';
+                setTimeout(() => {
+                    box.style.strokeWidth = '2';
+                    box.style.stroke = box.classList.contains('mdf-box') ? '#cc0000' : '#0066cc';
+                }, 2000);
+            });
+        }
+        
+        function showTopology() {
+            alert('Network Topology:\nMDF 300c → IDF 516 (Fiber)\nMDF 300c → IDF 507a (Fiber)\nMDF 300c → IDF 606a (Fiber)\nMDF 300c → IDF 800b (Fiber)');
+        }
+    </script>
+</body>
+</html>

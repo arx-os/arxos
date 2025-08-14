@@ -4,248 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arxos - Google Maps for Buildings</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a1a;
-            color: #ffffff;
-            overflow: hidden;
-        }
-
-        /* Main viewport */
-        #arxos-viewport {
-            width: 100vw;
-            height: 100vh;
-            background: #0a0a0a;
-            cursor: grab;
-        }
-
-        #arxos-viewport.panning {
-            cursor: grabbing;
-        }
-
-        /* ArxObject styling with CSS attr() ready for Chrome 133+ */
-        .arx-object {
-            transition: opacity 0.2s;
-            cursor: pointer;
-        }
-
-        .arx-object:hover {
-            opacity: 0.8;
-        }
-
-        .arx-object.selected {
-            stroke: #00ff00 !important;
-            stroke-width: 2 !important;
-        }
-
-        /* Scale indicator */
-        .scale-indicator {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 14px;
-        }
-
-        .scale-indicator .scale-level {
-            color: #00ff00;
-            font-weight: bold;
-        }
-
-        /* System toggles */
-        .system-toggles {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        .system-toggle {
-            display: block;
-            margin: 5px 0;
-            padding: 5px 10px;
-            background: none;
-            border: 1px solid #444;
-            color: #888;
-            cursor: pointer;
-            border-radius: 3px;
-            transition: all 0.2s;
-        }
-
-        .system-toggle.active {
-            border-color: #00ff00;
-            color: #00ff00;
-        }
-
-        .system-toggle.electrical.active { border-color: #FFD700; color: #FFD700; }
-        .system-toggle.hvac.active { border-color: #FF6B35; color: #FF6B35; }
-        .system-toggle.plumbing.active { border-color: #4A90E2; color: #4A90E2; }
-        .system-toggle.structural.active { border-color: #795548; color: #795548; }
-
-        /* Object details panel */
-        .details-panel {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            max-width: 400px;
-            background: rgba(0, 0, 0, 0.9);
-            padding: 15px;
-            border-radius: 5px;
-            display: none;
-        }
-
-        .details-panel.active {
-            display: block;
-        }
-
-        .details-panel h3 {
-            margin-bottom: 10px;
-            color: #00ff00;
-        }
-
-        .details-panel .property {
-            margin: 5px 0;
-            font-size: 12px;
-        }
-
-        .details-panel .property-key {
-            color: #888;
-            display: inline-block;
-            width: 100px;
-        }
-
-        .details-panel .property-value {
-            color: #fff;
-        }
-
-        /* Keyboard shortcuts help */
-        .help {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            font-size: 11px;
-            color: #666;
-        }
-
-        .help kbd {
-            background: #333;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin: 0 2px;
-        }
-    </style>
+    <link rel="stylesheet" href="static/css/styles.css">
 </head>
 <body>
-    <!-- Main viewport -->
+    <!-- Main viewport for SVG rendering -->
     <div id="arxos-viewport"></div>
-
-    <!-- Scale indicator -->
-    <div class="scale-indicator">
-        Scale: <span class="scale-level" id="scale-level">ROOM</span>
+    
+    <!-- Controls overlay -->
+    <div class="controls">
+        <!-- Scale indicator -->
+        <div class="scale-indicator">
+            <span id="scale-level">BUILDING</span>
+            <span id="scale-value">1:100</span>
+        </div>
+        
+        <!-- System toggles -->
+        <div class="system-toggles">
+            <button class="system-toggle electrical active" data-system="electrical">
+                ⚡ Electrical (1)
+            </button>
+            <button class="system-toggle hvac active" data-system="hvac">
+                🌡️ HVAC (2)
+            </button>
+            <button class="system-toggle plumbing" data-system="plumbing">
+                🚰 Plumbing (3)
+            </button>
+            <button class="system-toggle structural" data-system="structural">
+                🏗️ Structural (4)
+            </button>
+        </div>
     </div>
-
-    <!-- System toggles -->
-    <div class="system-toggles">
-        <button class="system-toggle electrical active" data-system="electrical">
-            Electrical [1]
-        </button>
-        <button class="system-toggle hvac active" data-system="hvac">
-            HVAC [2]
-        </button>
-        <button class="system-toggle plumbing active" data-system="plumbing">
-            Plumbing [3]
-        </button>
-        <button class="system-toggle structural active" data-system="structural">
-            Structural [4]
-        </button>
+    
+    <!-- Info panel (hidden by default) -->
+    <div class="info-panel" id="info-panel">
+        <h3>Object Details</h3>
+        <dl id="info-content"></dl>
     </div>
-
-    <!-- Object details panel -->
-    <div class="details-panel" id="details-panel">
-        <h3 id="object-name">ArxObject</h3>
-        <div id="object-properties"></div>
-    </div>
-
-    <!-- Help -->
-    <div class="help">
-        <kbd>Scroll</kbd> Zoom | 
-        <kbd>Drag</kbd> Pan | 
-        <kbd>1-4</kbd> Toggle Systems | 
-        <kbd>F</kbd> Fit View | 
-        <kbd>ESC</kbd> Clear Selection
-    </div>
-
-    <!-- Load the core app -->
+    
+    <!-- Loading indicator -->
+    <div class="loading" id="loading">Loading...</div>
+    
+    <!-- Core JavaScript -->
+    <script src="static/js/arxos-coordinates.js"></script>
     <script src="static/js/arxos-core.js"></script>
-    <script>
-        // Enhanced UI interactions
-        document.addEventListener('DOMContentLoaded', () => {
-            // Update scale indicator
-            if (window.arxosApp) {
-                window.arxosApp.stateManager.subscribe((updates) => {
-                    if ('scaleLevel' in updates) {
-                        const level = window.arxosApp.stateManager.getCurrentScaleLevel();
-                        document.getElementById('scale-level').textContent = level;
-                    }
-                    
-                    if ('selectedObject' in updates) {
-                        const panel = document.getElementById('details-panel');
-                        const obj = updates.selectedObject;
-                        
-                        if (obj) {
-                            document.getElementById('object-name').textContent = 
-                                obj.name || `${obj.type} (${obj.id})`;
-                            
-                            const props = document.getElementById('object-properties');
-                            props.innerHTML = Object.entries(obj)
-                                .filter(([key]) => !['id', 'name'].includes(key))
-                                .map(([key, value]) => `
-                                    <div class="property">
-                                        <span class="property-key">${key}:</span>
-                                        <span class="property-value">${value}</span>
-                                    </div>
-                                `).join('');
-                            
-                            panel.classList.add('active');
-                        } else {
-                            panel.classList.remove('active');
-                        }
-                    }
-                });
-            }
-
-            // System toggle buttons
-            document.querySelectorAll('.system-toggle').forEach(button => {
-                button.addEventListener('click', () => {
-                    button.classList.toggle('active');
-                    const system = button.dataset.system;
-                    const visible = window.arxosApp.stateManager.state.visibleSystems;
-                    
-                    if (visible.includes(system)) {
-                        visible.splice(visible.indexOf(system), 1);
-                    } else {
-                        visible.push(system);
-                    }
-                    
-                    window.arxosApp.stateManager.updateState({ 
-                        visibleSystems: [...visible] 
-                    });
-                });
-            });
-        });
-    </script>
 </body>
 </html>

@@ -1,7 +1,15 @@
 /**
  * Arxos Core - Lightweight Performance-First Architecture
  * The magic is in ArxObject, not framework complexity
+ * Now with nanometer precision for campus-to-circuit zooming
  */
+
+// Load coordinate system if not already loaded
+if (typeof CoordinateSystem === 'undefined') {
+    const script = document.createElement('script');
+    script.src = '/static/js/arxos-coordinates.js';
+    document.head.appendChild(script);
+}
 
 // ============================================================================
 // 1. DataManager - Handles ArxObject data and API communication
@@ -11,10 +19,23 @@ class DataManager {
         this.arxObjects = new Map();
         this.scaleCache = new Map();
         this.apiBase = '/api/v1';
+        // Initialize coordinate system
+        this.coordinateSystem = typeof CoordinateSystem !== 'undefined' ? 
+            new CoordinateSystem() : null;
     }
 
     async fetchArxObjectsAtScale(scale, viewport) {
-        const cacheKey = `${scale}:${viewport.x}:${viewport.y}:${viewport.width}:${viewport.height}`;
+        // Convert viewport to nanometers for backend
+        const viewportNano = {
+            x: viewport.x,  // Already in nanometers from coordinateSystem
+            y: viewport.y,
+            width: viewport.width,
+            height: viewport.height,
+            scale_level: this.coordinateSystem ? 
+                this.coordinateSystem.getCurrentScaleLevel() : 2
+        };
+        
+        const cacheKey = `${scale}:${viewportNano.x}:${viewportNano.y}:${viewportNano.width}:${viewportNano.height}`;
         
         if (this.scaleCache.has(cacheKey)) {
             return this.scaleCache.get(cacheKey);
@@ -24,14 +45,22 @@ class DataManager {
             const response = await fetch(`${this.apiBase}/arxobjects`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ scale, viewport })
+                body: JSON.stringify({ scale, viewport: viewportNano })
             });
             
             const objects = await response.json();
             this.scaleCache.set(cacheKey, objects);
             
-            // Store individual objects
-            objects.forEach(obj => this.arxObjects.set(obj.id, obj));
+            // Store individual objects with nanometer coordinates
+            objects.forEach(obj => {
+                // Convert to ArxObjectNano if coordinate system is available
+                if (typeof ArxObjectNano !== 'undefined') {
+                    const nanoObj = new ArxObjectNano(obj);
+                    this.arxObjects.set(obj.id, nanoObj);
+                } else {
+                    this.arxObjects.set(obj.id, obj);
+                }
+            });
             
             return objects;
         } catch (error) {

@@ -6,6 +6,7 @@
     <title>Arxos - PDF Wall Extractor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src='https://unpkg.com/tesseract.js@4.0.0/dist/tesseract.min.js'></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -401,6 +402,9 @@
             }
             
             async loadPDF(file) {
+                // Store the file for later upload
+                this.pdfFile = file;
+                
                 const arrayBuffer = await file.arrayBuffer();
                 
                 this.showProcessingStatus('Loading PDF...');
@@ -459,16 +463,23 @@
             
             calculateOptimalRenderScale() {
                 // Calculate what scale we need based on current zoom level
-                const minScale = this.baseScale;
-                const maxScale = 8.0; // Maximum 8x resolution
+                const minScale = this.baseScale || 2.0; // Start with at least 2x for clarity
+                const maxScale = 10.0; // Maximum 10x resolution for very high zoom
                 
-                // If user has zoomed in significantly, increase render resolution
+                // Current zoom factor
                 const zoomFactor = this.currentScale || 1;
                 
-                let targetScale = minScale;
-                if (zoomFactor > 2) {
-                    targetScale = Math.min(maxScale, minScale * Math.sqrt(zoomFactor));
-                }
+                // Always render at a scale that provides sharp details
+                // Use a more aggressive scaling to ensure crisp rendering
+                let targetScale = minScale * Math.max(1, zoomFactor);
+                
+                // Cap at maximum to prevent memory issues
+                targetScale = Math.min(maxScale, targetScale);
+                
+                // Ensure we never go below the minimum for quality
+                targetScale = Math.max(minScale, targetScale);
+                
+                console.log(`Zoom: ${zoomFactor.toFixed(2)}x, Render scale: ${targetScale.toFixed(2)}x`);
                 
                 return targetScale;
             }
@@ -486,7 +497,7 @@
                 }
             }
             
-            processImage() {
+            async processImage() {
                 this.processingStartTime = Date.now();
                 this.showProcessingStatus('Detecting walls...');
                 
@@ -503,10 +514,10 @@
                 // Find rooms from walls
                 this.rooms = this.findRooms(this.walls);
                 
-                this.showProcessingStatus('Extracting labels...');
+                this.showProcessingStatus('Extracting labels with OCR...');
                 
-                // Extract text labels (simplified - would use OCR in production)
-                this.labels = this.extractLabels(imageData);
+                // Extract text labels using Tesseract OCR
+                this.labels = await this.extractLabels(imageData);
                 
                 // Update statistics
                 this.updateStats();
@@ -1054,11 +1065,55 @@
                 return rooms;
             }
             
-            extractLabels(imageData) {
+            async extractLabels(imageData) {
                 const labels = [];
                 
-                // Simplified - would use Tesseract.js or cloud OCR
-                // For demo, just mark potential text areas
+                try {
+                    // Convert ImageData to canvas for Tesseract
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = imageData.width;
+                    tempCanvas.height = imageData.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.putImageData(imageData, 0, 0);
+                    
+                    // Run OCR with Tesseract.js
+                    const result = await Tesseract.recognize(
+                        tempCanvas,
+                        'eng',
+                        {
+                            logger: m => {
+                                if (m.status === 'recognizing text') {
+                                    this.showProcessingStatus(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+                                }
+                            }
+                        }
+                    );
+                    
+                    // Parse room numbers and labels from OCR results
+                    const lines = result.data.lines;
+                    for (const line of lines) {
+                        const text = line.text.trim();
+                        
+                        // Pattern matching for room numbers
+                        const roomNumberPattern = /^[A-Z]*[-]?\d{2,4}[A-Z]?$|^(IDF|MDF|ELEC|MECH)[-]?\d*$/;
+                        const isRoomNumber = roomNumberPattern.test(text);
+                        
+                        if (text.length > 0 && text.length < 20) {
+                            labels.push({
+                                text: text,
+                                type: isRoomNumber ? 'room_number' : 'label',
+                                confidence: line.confidence,
+                                bbox: line.bbox,
+                                x: line.bbox.x0,
+                                y: line.bbox.y0
+                            });
+                        }
+                    }
+                    
+                    console.log(`Extracted ${labels.length} text labels via OCR`);
+                } catch (error) {
+                    console.warn('OCR extraction failed, continuing without labels:', error);
+                }
                 
                 return labels;
             }
@@ -1259,19 +1314,65 @@
                     }
                 };
                 
-                // Download as JSON
-                const filename = `arxobjects_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], 
-                    { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                a.click();
-                URL.revokeObjectURL(url);
+                // Try to upload to backend first
+                this.uploadToBackend(exportData).then(response => {
+                    if (response && response.success) {
+                        alert(`Successfully uploaded ${arxObjects.length} objects to building ${response.building_id}`);
+                        console.log('Upload successful:', response);
+                    }
+                }).catch(error => {
+                    console.warn('Backend upload failed, saving locally:', error);
+                    // Fallback to local download
+                    const filename = `arxobjects_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], 
+                        { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    console.log('Exported ArxObjects locally:', exportData);
+                    alert(`Exported ${arxObjects.length} objects to ${filename}`);
+                });
+            }
+            
+            async uploadToBackend(exportData) {
+                // Create FormData for multipart upload
+                const formData = new FormData();
                 
-                console.log('Exported ArxObjects:', exportData);
-                alert(`Exported ${arxObjects.length} objects to ${filename}`);
+                // Add the PDF file if available
+                if (this.pdfFile) {
+                    formData.append('pdf', this.pdfFile);
+                }
+                
+                // Add metadata
+                formData.append('building_name', 'Uploaded Building');
+                formData.append('floor', '1');
+                formData.append('coordinate_system', 'normalized');
+                formData.append('width_meters', '100'); // Default 100m width
+                formData.append('height_meters', '100'); // Default 100m height
+                
+                // Add the extracted objects as JSON
+                formData.append('arxobjects', JSON.stringify(exportData));
+                
+                try {
+                    const response = await fetch('/api/buildings/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    return result;
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    throw error;
+                }
             }
             
             showProcessingStatus(message) {

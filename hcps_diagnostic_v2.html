@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCPS BIM Diagnostic Tool v2 - Enhanced</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    padding: 10px;
+}
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+}
+h1 {
+    background: linear-gradient(135deg, #4a9eff, #00ff88);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 15px;
+    font-size: 24px;
+}
+.controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+button {
+    padding: 8px 16px;
+    background: #2a4a6a;
+    color: #e0e0e0;
+    border: 1px solid #3a5a7a;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+button:hover {
+    background: #3a5a7a;
+    border-color: #4a6a8a;
+}
+button.primary {
+    background: #4a9eff;
+    border-color: #5aafff;
+    color: #000;
+    font-weight: 500;
+}
+button.primary:hover {
+    background: #5aafff;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+.panel {
+    background: #151515;
+    border: 1px solid #252525;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.panel-header {
+    background: #1a1a1a;
+    padding: 10px 15px;
+    border-bottom: 1px solid #252525;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a9eff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.panel-content {
+    padding: 15px;
+    position: relative;
+}
+canvas {
+    width: 100%;
+    height: 300px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #000;
+    display: block;
+}
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+.stat {
+    background: #0a0a0a;
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+    border: 1px solid #222;
+}
+.stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4a9eff;
+}
+.stat-label {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+.log {
+    background: #0a0a0a;
+    border: 1px solid #222;
+    border-radius: 4px;
+    padding: 8px;
+    height: 300px;
+    overflow-y: auto;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 11px;
+}
+.log-entry {
+    margin: 1px 0;
+    padding: 2px 4px;
+}
+.log-info { color: #888; }
+.log-success { color: #4f4; }
+.log-error { color: #f44; }
+.log-warn { color: #fa0; }
+.log-debug { color: #88f; }
+
+.slider-control {
+    margin-top: 10px;
+    padding: 10px;
+    background: #0a0a0a;
+    border-radius: 4px;
+    border: 1px solid #222;
+}
+.slider-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+}
+input[type="range"] {
+    width: 100%;
+    margin: 5px 0;
+}
+.tab-buttons {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+.tab-btn {
+    padding: 5px 12px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: #888;
+    cursor: pointer;
+    font-size: 12px;
+}
+.tab-btn.active {
+    background: #2a4a6a;
+    border-color: #3a5a7a;
+    color: #e0e0e0;
+}
+.overlay-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.8);
+    padding: 5px;
+    border-radius: 4px;
+    display: flex;
+    gap: 5px;
+}
+.overlay-btn {
+    padding: 4px 8px;
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 3px;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 11px;
+}
+.overlay-btn.active {
+    background: #4a9eff;
+    border-color: #5aafff;
+    color: #000;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏗️ HCPS BIM Diagnostic Tool v2</h1>
+    
+    <div class="controls">
+        <input type="file" id="fileInput" accept=".pdf" style="display:none">
+        <button class="primary" onclick="document.getElementById('fileInput').click()">📄 Upload PDF</button>
+        <button onclick="Diagnostic.extractWithMethod('simple')">Simple Extract</button>
+        <button onclick="Diagnostic.extractWithMethod('enhanced')">Enhanced Extract</button>
+        <button onclick="Diagnostic.extractWithMethod('hough')">Hough Transform</button>
+        <button onclick="Diagnostic.testDirectDraw()">Test Draw</button>
+        <button onclick="Diagnostic.clearAll()">Clear All</button>
+        <button onclick="Diagnostic.exportWalls()">Export JSON</button>
+        <button onclick="Diagnostic.toggleDebug()">Toggle Debug</button>
+    </div>
+    
+    <div class="grid">
+        <!-- PDF Original -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>📄 PDF Original</span>
+                <span id="pdfInfo">No PDF</span>
+            </div>
+            <div class="panel-content">
+                <canvas id="pdfCanvas"></canvas>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Threshold</span>
+                        <span id="thresholdValue">240</span>
+                    </div>
+                    <input type="range" id="thresholdSlider" min="50" max="255" value="240" 
+                           oninput="Diagnostic.updateThreshold(this.value)">
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="pdfWidth">0</div>
+                        <div class="stat-label">Width</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="pdfHeight">0</div>
+                        <div class="stat-label">Height</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="darkPercent">0%</div>
+                        <div class="stat-label">Dark</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Processing View -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>🔍 Processing View</span>
+                <span id="processInfo">Ready</span>
+            </div>
+            <div class="panel-content">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="Diagnostic.showProcessTab('binary')">Binary</button>
+                    <button class="tab-btn" onclick="Diagnostic.showProcessTab('edges')">Edges</button>
+                    <button class="tab-btn" onclick="Diagnostic.showProcessTab('lines')">Lines</button>
+                    <button class="tab-btn" onclick="Diagnostic.showProcessTab('merged')">Merged</button>
+                </div>
+                <canvas id="processCanvas"></canvas>
+                <div class="overlay-controls">
+                    <button class="overlay-btn" onclick="Diagnostic.toggleOverlay('grid')">Grid</button>
+                    <button class="overlay-btn" onclick="Diagnostic.toggleOverlay('raw')">Raw</button>
+                    <button class="overlay-btn" onclick="Diagnostic.toggleOverlay('clean')">Clean</button>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="rawCount">0</div>
+                        <div class="stat-label">Raw</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="filteredCount">0</div>
+                        <div class="stat-label">Filtered</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="mergedCount">0</div>
+                        <div class="stat-label">Merged</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BIM Result -->
+        <div class="panel">
+            <div class="panel-header">
+                <span>✅ BIM Result</span>
+                <span id="bimInfo">0 walls</span>
+            </div>
+            <div class="panel-content">
+                <canvas id="bimCanvas"></canvas>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Zoom</span>
+                        <span id="zoomValue">1.0x</span>
+                    </div>
+                    <input type="range" id="zoomSlider" min="10" max="300" value="100" 
+                           oninput="Diagnostic.setZoom(this.value/100)">
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-value" id="wallCount">0</div>
+                        <div class="stat-label">Walls</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="hCount">0</div>
+                        <div class="stat-label">Horiz</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="vCount">0</div>
+                        <div class="stat-label">Vert</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Console Log -->
+    <div class="panel" style="margin-top: 15px;">
+        <div class="panel-header">
+            <span>📝 Console Log</span>
+            <button onclick="Diagnostic.clearLog()" style="padding: 2px 8px; font-size: 11px;">Clear</button>
+        </div>
+        <div class="panel-content">
+            <div class="log" id="log"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enhanced Diagnostic System v2
+const Diagnostic = {
+    // Canvas contexts
+    pdfCanvas: null,
+    pdfCtx: null,
+    processCanvas: null,
+    processCtx: null,
+    bimCanvas: null,
+    bimCtx: null,
+    
+    // Data
+    pdfData: null,
+    imageData: null,
+    walls: [],
+    rawWalls: [],
+    processedWalls: [],
+    
+    // Settings
+    threshold: 240,
+    zoom: 1.0,
+    pan: { x: 0, y: 0 },
+    debug: false,
+    currentTab: 'binary',
+    overlays: new Set(),
+    
+    // State
+    dragStart: null,
+    
+    init() {
+        this.log('🚀 Initializing Enhanced Diagnostic System v2', 'success');
+        
+        // Setup canvases
+        this.pdfCanvas = document.getElementById('pdfCanvas');
+        this.pdfCtx = this.pdfCanvas.getContext('2d');
+        
+        this.processCanvas = document.getElementById('processCanvas');
+        this.processCtx = this.processCanvas.getContext('2d');
+        
+        this.bimCanvas = document.getElementById('bimCanvas');
+        this.bimCtx = this.bimCanvas.getContext('2d');
+        
+        // Set canvas sizes
+        [this.pdfCanvas, this.processCanvas, this.bimCanvas].forEach(canvas => {
+            canvas.width = 500;
+            canvas.height = 300;
+        });
+        
+        // BIM canvas interactions
+        this.bimCanvas.onmousedown = (e) => this.mouseDown(e);
+        this.bimCanvas.onmousemove = (e) => this.mouseMove(e);
+        this.bimCanvas.onmouseup = (e) => this.mouseUp(e);
+        this.bimCanvas.onwheel = (e) => this.wheel(e);
+        
+        // File input
+        document.getElementById('fileInput').onchange = (e) => this.handleFile(e);
+        
+        this.renderBIM();
+        this.log('✅ System ready', 'success');
+    },
+    
+    log(message, type = 'info') {
+        const log = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        const time = new Date().toLocaleTimeString();
+        entry.textContent = `[${time}] ${message}`;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+        
+        if (this.debug || type !== 'debug') {
+            console.log(`[${type}] ${message}`);
+        }
+    },
+    
+    clearLog() {
+        document.getElementById('log').innerHTML = '';
+        this.log('Log cleared', 'info');
+    },
+    
+    async handleFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        this.log(`📄 Loading PDF: ${file.name}`, 'info');
+        
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+            
+            this.log(`✅ PDF loaded: ${pdf.numPages} pages`, 'success');
+            
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 2.0 });
+            
+            // Update info
+            document.getElementById('pdfInfo').textContent = `${Math.round(viewport.width)}×${Math.round(viewport.height)}`;
+            document.getElementById('pdfWidth').textContent = Math.round(viewport.width);
+            document.getElementById('pdfHeight').textContent = Math.round(viewport.height);
+            
+            // Render to canvas
+            this.pdfCanvas.width = viewport.width;
+            this.pdfCanvas.height = viewport.height;
+            
+            await page.render({
+                canvasContext: this.pdfCtx,
+                viewport: viewport
+            }).promise;
+            
+            this.log('✅ PDF rendered', 'success');
+            
+            // Store data
+            this.pdfData = {
+                canvas: this.pdfCanvas,
+                ctx: this.pdfCtx,
+                width: viewport.width,
+                height: viewport.height,
+                filename: file.name
+            };
+            
+            // Get image data
+            this.imageData = this.pdfCtx.getImageData(0, 0, viewport.width, viewport.height);
+            
+            // Auto-extract with enhanced method
+            this.extractWithMethod('enhanced');
+            
+        } catch (error) {
+            this.log(`❌ Error: ${error.message}`, 'error');
+        }
+    },
+    
+    extractWithMethod(method) {
+        if (!this.pdfData) {
+            this.log('❌ No PDF loaded', 'error');
+            return;
+        }
+        
+        this.log(`🔍 Extracting with ${method} method...`, 'info');
+        document.getElementById('processInfo').textContent = `${method}`;
+        
+        switch (method) {
+            case 'simple':
+                this.simpleExtraction();
+                break;
+            case 'enhanced':
+                this.enhancedExtraction();
+                break;
+            case 'hough':
+                this.houghExtraction();
+                break;
+        }
+    },
+    
+    simpleExtraction() {
+        const startTime = performance.now();
+        this.rawWalls = [];
+        
+        const { width, height } = this.pdfData;
+        const data = this.imageData.data;
+        const scale = 400 / Math.max(width, height);
+        
+        // Count dark pixels
+        let darkCount = 0;
+        for (let i = 0; i < data.length; i += 4) {
+            const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+            if (brightness < this.threshold) darkCount++;
+        }
+        
+        const darkPercent = ((darkCount / (width * height)) * 100).toFixed(2);
+        document.getElementById('darkPercent').textContent = darkPercent + '%';
+        this.log(`Dark pixels: ${darkPercent}%`, 'debug');
+        
+        // Simple line detection
+        let wallId = 0;
+        
+        // Horizontal lines
+        for (let y = 0; y < height; y += 3) {
+            let lineStart = -1;
+            let darkRun = 0;
+            
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                
+                if (brightness < this.threshold) {
+                    if (lineStart === -1) lineStart = x;
+                    darkRun++;
+                } else {
+                    if (lineStart !== -1 && darkRun > 10) {
+                        const x1 = (lineStart - width/2) * scale;
+                        const y1 = (y - height/2) * scale;
+                        const x2 = (x - 1 - width/2) * scale;
+                        const y2 = y1;
+                        
+                        this.rawWalls.push({
+                            id: `w${wallId++}`,
+                            x1, y1, x2, y2,
+                            type: 'horizontal'
+                        });
+                    }
+                    lineStart = -1;
+                    darkRun = 0;
+                }
+            }
+        }
+        
+        // Vertical lines
+        for (let x = 0; x < width; x += 3) {
+            let lineStart = -1;
+            let darkRun = 0;
+            
+            for (let y = 0; y < height; y++) {
+                const idx = (y * width + x) * 4;
+                const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                
+                if (brightness < this.threshold) {
+                    if (lineStart === -1) lineStart = y;
+                    darkRun++;
+                } else {
+                    if (lineStart !== -1 && darkRun > 10) {
+                        const x1 = (x - width/2) * scale;
+                        const y1 = (lineStart - height/2) * scale;
+                        const x2 = x1;
+                        const y2 = (y - 1 - height/2) * scale;
+                        
+                        this.rawWalls.push({
+                            id: `w${wallId++}`,
+                            x1, y1, x2, y2,
+                            type: 'vertical'
+                        });
+                    }
+                    lineStart = -1;
+                    darkRun = 0;
+                }
+            }
+        }
+        
+        const elapsed = performance.now() - startTime;
+        this.log(`Simple extraction: ${this.rawWalls.length} raw walls in ${elapsed.toFixed(1)}ms`, 'success');
+        
+        this.postProcess();
+    },
+    
+    enhancedExtraction() {
+        const startTime = performance.now();
+        this.rawWalls = [];
+        
+        const { width, height } = this.pdfData;
+        const data = this.imageData.data;
+        const scale = 400 / Math.max(width, height);
+        
+        // Create binary image
+        const binary = new Uint8Array(width * height);
+        let darkCount = 0;
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                
+                if (brightness < this.threshold) {
+                    binary[y * width + x] = 1;
+                    darkCount++;
+                }
+            }
+        }
+        
+        const darkPercent = ((darkCount / (width * height)) * 100).toFixed(2);
+        document.getElementById('darkPercent').textContent = darkPercent + '%';
+        
+        // Enhanced line detection with connected component analysis
+        let wallId = 0;
+        const visited = new Uint8Array(width * height);
+        
+        // Find connected horizontal segments
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                
+                if (binary[idx] && !visited[idx]) {
+                    // Try to grow a horizontal line
+                    let endX = x;
+                    while (endX < width && binary[y * width + endX]) {
+                        visited[y * width + endX] = 1;
+                        endX++;
+                    }
+                    
+                    const length = endX - x;
+                    if (length > 15) {
+                        const x1 = (x - width/2) * scale;
+                        const y1 = (y - height/2) * scale;
+                        const x2 = (endX - 1 - width/2) * scale;
+                        const y2 = y1;
+                        
+                        this.rawWalls.push({
+                            id: `w${wallId++}`,
+                            x1, y1, x2, y2,
+                            type: 'horizontal',
+                            confidence: length / width
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Reset visited for vertical scan
+        visited.fill(0);
+        
+        // Find connected vertical segments
+        for (let x = 0; x < width; x++) {
+            for (let y = 0; y < height; y++) {
+                const idx = y * width + x;
+                
+                if (binary[idx] && !visited[idx]) {
+                    // Try to grow a vertical line
+                    let endY = y;
+                    while (endY < height && binary[endY * width + x]) {
+                        visited[endY * width + x] = 1;
+                        endY++;
+                    }
+                    
+                    const length = endY - y;
+                    if (length > 15) {
+                        const x1 = (x - width/2) * scale;
+                        const y1 = (y - height/2) * scale;
+                        const x2 = x1;
+                        const y2 = (endY - 1 - height/2) * scale;
+                        
+                        this.rawWalls.push({
+                            id: `w${wallId++}`,
+                            x1, y1, x2, y2,
+                            type: 'vertical',
+                            confidence: length / height
+                        });
+                    }
+                }
+            }
+        }
+        
+        const elapsed = performance.now() - startTime;
+        this.log(`Enhanced extraction: ${this.rawWalls.length} raw walls in ${elapsed.toFixed(1)}ms`, 'success');
+        
+        // Show binary image
+        this.showBinaryImage(binary);
+        
+        this.postProcess();
+    },
+    
+    houghExtraction() {
+        this.log('Hough transform extraction not yet implemented', 'warn');
+        // TODO: Implement Hough transform
+    },
+    
+    postProcess() {
+        this.log(`Post-processing ${this.rawWalls.length} raw walls...`, 'info');
+        
+        // Update raw count
+        document.getElementById('rawCount').textContent = this.rawWalls.length;
+        
+        // Step 1: Filter short segments
+        let filtered = this.rawWalls.filter(wall => {
+            const length = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1);
+            return length > 20;
+        });
+        
+        this.log(`Filtered to ${filtered.length} walls (removed ${this.rawWalls.length - filtered.length} short segments)`, 'debug');
+        document.getElementById('filteredCount').textContent = filtered.length;
+        
+        // Step 2: Merge nearby parallel walls
+        this.processedWalls = this.mergeWalls(filtered);
+        
+        this.log(`Merged to ${this.processedWalls.length} walls`, 'debug');
+        document.getElementById('mergedCount').textContent = this.processedWalls.length;
+        
+        // Step 3: Snap to grid
+        this.walls = this.snapToGrid(this.processedWalls, 5);
+        
+        // Update final counts
+        const hCount = this.walls.filter(w => w.type === 'horizontal').length;
+        const vCount = this.walls.filter(w => w.type === 'vertical').length;
+        
+        document.getElementById('wallCount').textContent = this.walls.length;
+        document.getElementById('hCount').textContent = hCount;
+        document.getElementById('vCount').textContent = vCount;
+        document.getElementById('bimInfo').textContent = `${this.walls.length} walls`;
+        
+        this.log(`✅ Final result: ${this.walls.length} walls (${hCount}H, ${vCount}V)`, 'success');
+        
+        // Render results
+        this.renderProcessing();
+        this.renderBIM();
+    },
+    
+    mergeWalls(walls) {
+        const merged = [];
+        const used = new Set();
+        const threshold = 10; // Distance threshold
+        
+        for (let i = 0; i < walls.length; i++) {
+            if (used.has(i)) continue;
+            
+            const wall1 = walls[i];
+            const group = [wall1];
+            used.add(i);
+            
+            // Find nearby parallel walls
+            for (let j = i + 1; j < walls.length; j++) {
+                if (used.has(j)) continue;
+                
+                const wall2 = walls[j];
+                
+                // Check if same type and nearby
+                if (wall1.type === wall2.type) {
+                    if (wall1.type === 'horizontal') {
+                        // Check Y distance
+                        if (Math.abs(wall1.y1 - wall2.y1) < threshold) {
+                            // Check X overlap
+                            const min1 = Math.min(wall1.x1, wall1.x2);
+                            const max1 = Math.max(wall1.x1, wall1.x2);
+                            const min2 = Math.min(wall2.x1, wall2.x2);
+                            const max2 = Math.max(wall2.x1, wall2.x2);
+                            
+                            if (max2 >= min1 - threshold && min2 <= max1 + threshold) {
+                                group.push(wall2);
+                                used.add(j);
+                            }
+                        }
+                    } else {
+                        // Vertical - check X distance
+                        if (Math.abs(wall1.x1 - wall2.x1) < threshold) {
+                            // Check Y overlap
+                            const min1 = Math.min(wall1.y1, wall1.y2);
+                            const max1 = Math.max(wall1.y1, wall1.y2);
+                            const min2 = Math.min(wall2.y1, wall2.y2);
+                            const max2 = Math.max(wall2.y1, wall2.y2);
+                            
+                            if (max2 >= min1 - threshold && min2 <= max1 + threshold) {
+                                group.push(wall2);
+                                used.add(j);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Merge group
+            if (group.length > 1) {
+                merged.push(this.mergeGroup(group));
+            } else {
+                merged.push(wall1);
+            }
+        }
+        
+        return merged;
+    },
+    
+    mergeGroup(group) {
+        const type = group[0].type;
+        
+        if (type === 'horizontal') {
+            const y = group.reduce((sum, w) => sum + w.y1, 0) / group.length;
+            const minX = Math.min(...group.map(w => Math.min(w.x1, w.x2)));
+            const maxX = Math.max(...group.map(w => Math.max(w.x1, w.x2)));
+            
+            return {
+                id: 'm' + Date.now(),
+                x1: minX,
+                y1: y,
+                x2: maxX,
+                y2: y,
+                type: 'horizontal',
+                merged: true,
+                sourceCount: group.length
+            };
+        } else {
+            const x = group.reduce((sum, w) => sum + w.x1, 0) / group.length;
+            const minY = Math.min(...group.map(w => Math.min(w.y1, w.y2)));
+            const maxY = Math.max(...group.map(w => Math.max(w.y1, w.y2)));
+            
+            return {
+                id: 'm' + Date.now(),
+                x1: x,
+                y1: minY,
+                x2: x,
+                y2: maxY,
+                type: 'vertical',
+                merged: true,
+                sourceCount: group.length
+            };
+        }
+    },
+    
+    snapToGrid(walls, gridSize) {
+        return walls.map(wall => ({
+            ...wall,
+            x1: Math.round(wall.x1 / gridSize) * gridSize,
+            y1: Math.round(wall.y1 / gridSize) * gridSize,
+            x2: Math.round(wall.x2 / gridSize) * gridSize,
+            y2: Math.round(wall.y2 / gridSize) * gridSize
+        }));
+    },
+    
+    showBinaryImage(binary) {
+        if (this.currentTab !== 'binary') return;
+        
+        const { width, height } = this.pdfData;
+        const canvas = this.processCanvas;
+        const ctx = this.processCtx;
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const imageData = ctx.createImageData(width, height);
+        
+        for (let i = 0; i < binary.length; i++) {
+            const idx = i * 4;
+            const value = binary[i] ? 0 : 255;
+            imageData.data[idx] = value;
+            imageData.data[idx + 1] = value;
+            imageData.data[idx + 2] = value;
+            imageData.data[idx + 3] = 255;
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+    },
+    
+    renderProcessing() {
+        // Render based on current tab
+        const canvas = this.processCanvas;
+        const ctx = this.processCtx;
+        
+        canvas.width = 500;
+        canvas.height = 300;
+        
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, 500, 300);
+        
+        ctx.save();
+        ctx.translate(250, 150);
+        ctx.scale(0.6, 0.6);
+        
+        // Draw based on tab
+        switch (this.currentTab) {
+            case 'lines':
+                this.drawWalls(ctx, this.rawWalls, '#444');
+                break;
+            case 'merged':
+                this.drawWalls(ctx, this.processedWalls, '#4a9eff');
+                break;
+        }
+        
+        ctx.restore();
+    },
+    
+    drawWalls(ctx, walls, color) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        
+        for (const wall of walls) {
+            ctx.beginPath();
+            ctx.moveTo(wall.x1, wall.y1);
+            ctx.lineTo(wall.x2, wall.y2);
+            ctx.stroke();
+        }
+    },
+    
+    renderBIM() {
+        const ctx = this.bimCtx;
+        const canvas = this.bimCanvas;
+        
+        // Clear
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.save();
+        ctx.translate(canvas.width/2 + this.pan.x, canvas.height/2 + this.pan.y);
+        ctx.scale(this.zoom, this.zoom);
+        
+        // Grid
+        if (this.overlays.has('grid')) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 0.5;
+            
+            for (let i = -20; i <= 20; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * 50, -500);
+                ctx.lineTo(i * 50, 500);
+                ctx.moveTo(-500, i * 50);
+                ctx.lineTo(500, i * 50);
+                ctx.stroke();
+            }
+        }
+        
+        // Draw walls
+        for (const wall of this.walls) {
+            ctx.strokeStyle = wall.merged ? '#00ff88' : '#4a9eff';
+            ctx.lineWidth = wall.merged ? 3 : 2;
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(wall.x1, wall.y1);
+            ctx.lineTo(wall.x2, wall.y2);
+            ctx.stroke();
+            
+            // Draw endpoints
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.beginPath();
+            ctx.arc(wall.x1, wall.y1, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(wall.x2, wall.y2, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
+    },
+    
+    updateThreshold(value) {
+        this.threshold = parseInt(value);
+        document.getElementById('thresholdValue').textContent = value;
+        
+        if (this.pdfData) {
+            this.extractWithMethod('enhanced');
+        }
+    },
+    
+    setZoom(value) {
+        this.zoom = value;
+        document.getElementById('zoomValue').textContent = value.toFixed(1) + 'x';
+        this.renderBIM();
+    },
+    
+    showProcessTab(tab) {
+        this.currentTab = tab;
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        if (tab === 'binary' && this.imageData) {
+            this.enhancedExtraction();
+        } else {
+            this.renderProcessing();
+        }
+    },
+    
+    toggleOverlay(type) {
+        if (this.overlays.has(type)) {
+            this.overlays.delete(type);
+            event.target.classList.remove('active');
+        } else {
+            this.overlays.add(type);
+            event.target.classList.add('active');
+        }
+        this.renderBIM();
+    },
+    
+    toggleDebug() {
+        this.debug = !this.debug;
+        this.log(`Debug mode: ${this.debug ? 'ON' : 'OFF'}`, 'info');
+    },
+    
+    testDirectDraw() {
+        this.walls = [
+            { id: 't1', x1: -200, y1: -100, x2: 200, y2: -100, type: 'horizontal' },
+            { id: 't2', x1: 200, y1: -100, x2: 200, y2: 100, type: 'vertical' },
+            { id: 't3', x1: 200, y1: 100, x2: -200, y2: 100, type: 'horizontal' },
+            { id: 't4', x1: -200, y1: 100, x2: -200, y2: -100, type: 'vertical' },
+            { id: 't5', x1: -200, y1: 0, x2: 200, y2: 0, type: 'horizontal' },
+            { id: 't6', x1: 0, y1: -100, x2: 0, y2: 100, type: 'vertical' }
+        ];
+        
+        document.getElementById('wallCount').textContent = this.walls.length;
+        document.getElementById('hCount').textContent = 3;
+        document.getElementById('vCount').textContent = 3;
+        document.getElementById('bimInfo').textContent = '6 test walls';
+        
+        this.log('Test walls added', 'success');
+        this.renderBIM();
+    },
+    
+    clearAll() {
+        this.walls = [];
+        this.rawWalls = [];
+        this.processedWalls = [];
+        this.pdfData = null;
+        this.imageData = null;
+        
+        // Clear canvases
+        [this.pdfCtx, this.processCtx, this.bimCtx].forEach(ctx => {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        });
+        
+        // Reset stats
+        document.querySelectorAll('.stat-value').forEach(el => {
+            if (!el.id.includes('zoom')) el.textContent = '0';
+        });
+        
+        this.log('Cleared all data', 'info');
+        this.renderBIM();
+    },
+    
+    exportWalls() {
+        const data = {
+            walls: this.walls,
+            metadata: {
+                source: this.pdfData?.filename || 'unknown',
+                threshold: this.threshold,
+                count: this.walls.length,
+                timestamp: new Date().toISOString()
+            }
+        };
+        
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'walls_export.json';
+        a.click();
+        
+        this.log(`Exported ${this.walls.length} walls to JSON`, 'success');
+    },
+    
+    // Mouse interactions
+    mouseDown(e) {
+        const rect = this.bimCanvas.getBoundingClientRect();
+        this.dragStart = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            panX: this.pan.x,
+            panY: this.pan.y
+        };
+    },
+    
+    mouseMove(e) {
+        if (!this.dragStart) return;
+        
+        const rect = this.bimCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        this.pan.x = this.dragStart.panX + (x - this.dragStart.x);
+        this.pan.y = this.dragStart.panY + (y - this.dragStart.y);
+        
+        this.renderBIM();
+    },
+    
+    mouseUp() {
+        this.dragStart = null;
+    },
+    
+    wheel(e) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        this.zoom = Math.max(0.1, Math.min(5, this.zoom * delta));
+        document.getElementById('zoomSlider').value = this.zoom * 100;
+        document.getElementById('zoomValue').textContent = this.zoom.toFixed(1) + 'x';
+        this.renderBIM();
+    }
+};
+
+// Initialize on load
+window.onload = () => {
+    Diagnostic.init();
+};
+</script>
+
+</body>
+</html>

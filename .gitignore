@@ -1,75 +1,50 @@
-# Arxos Project Root .gitignore
+########################
+# Arxos Project .gitignore
+########################
 
-# Log files
-*.log
-logs/
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-
-# OS generated files
+# ============================================
+# Operating System Files
+# ============================================
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
 ehthumbs.db
 Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
 
-# Temporary files
-*.tmp
-*.temp
-*.swp
-*.swo
+# Linux
 *~
+.directory
+.Trash-*
 
-# Build artifacts
-*.exe
-*.bat
-dist/
-build/
-
-# Environment files
-.env
-.env.local
-.env.*.local
-
-# IDE files
+# ============================================
+# IDE and Editor Files
+# ============================================
 .vscode/
 .idea/
 *.sublime-*
+.cursor/
+*.swp
+*.swo
+*.swn
+.project
+.classpath
+.settings/
+.vimrc
+.nvimrc
 
-# Node.js (if any frontend components)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-develop-eggs/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Go (for backend services)
+# ============================================
+# Language Specific
+# ============================================
+# Go
 *.exe
 *.exe~
 *.dll
@@ -77,53 +52,130 @@ MANIFEST
 *.dylib
 *.test
 *.out
+vendor/
+go.work
 
-# Arxos specific
-arxos_dev.db
-svgx_engine/cache/
-
-# Service-specific virtual environments and models
-services/*/venv/
-services/*/ml_models/
-services/*/*.db
-
-# IDE and Development Tools
-.cursor/
-
-# Rust build artifacts
-target/
-**/target/
-
-# Python cache and compiled files
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-.pytest_cache/
-
-# Node.js build artifacts
+# JavaScript/Node
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn/
+.pnp.*
+
+# ============================================
+# Build Artifacts and Compiled Files
+# ============================================
 dist/
 build/
+target/
+**/target/
+out/
+bin/
+obj/
 
-# Temporary and backup files
+# ============================================
+# Temporary and Backup Files
+# ============================================
 *.tmp
 *.temp
 *.bak
 *.backup
-*~
-*.swp
-*.swo
+*.old
+*.orig
+*.rej
+*_backup
+*_old
+.tmp/
+tmp/
+temp/
 
-# Cache files
-*.cache
-.cache/
-
-# Log files
+# ============================================
+# Cache and Log Files
+# ============================================
 *.log
 logs/
+*.cache
+.cache/
+.parcel-cache/
+.sass-cache/
 
-# Test artifacts
-*.test
-*.out
+# ============================================
+# Database Files
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ============================================
+# Environment and Config Files
+# ============================================
+.env
+.env.*
+!.env.example
+!.env.template
+config.local.js
+config.local.json
+secrets.json
+credentials.json
+
+# ============================================
+# Arxos Specific
+# ============================================
+# Development databases
+arxos_dev.db
+test.db
+
+# Cache directories
+svgx_engine/cache/
+services/*/*.db
+
+# Generated files
+alafia_es_data.json
+
+# Archive folder (for reference only)
+# Uncomment if you don't want to track archived files
+# archive/
+
+# ============================================
+# Testing
+# ============================================
+coverage/
+.coverage
+*.cover
+.pytest_cache/
+test-results/
+junit.xml
+
+# ============================================
+# Documentation Build
+# ============================================
+docs/_build/
+site/
+.docusaurus/
+
+# ============================================
+# Package Files
+# ============================================
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.dmg
+*.iso
+*.jar
+
+# ============================================
+# Security
+# ============================================
+*.pem
+*.key
+*.crt
+*.p12
+.htpasswd

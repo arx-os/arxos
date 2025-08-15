@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Arxos 10KB</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:14px sans-serif;background:#000;color:#fff;overflow:hidden}
+#c{width:100vw;height:100vh;cursor:grab}
+#c:active{cursor:grabbing}
+.h{position:fixed;top:10px;left:10px;background:rgba(0,0,0,0.8);padding:10px;border-radius:4px}
+.b{padding:5px 10px;margin:2px;background:#246;color:#fff;border:0;border-radius:3px;cursor:pointer}
+.b:hover{background:#357}
+.i{position:fixed;bottom:10px;left:10px;font-size:12px;opacity:0.7}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="h">
+<button class="b" onclick="A.t='w'">Wall</button>
+<button class="b" onclick="A.t='d'">Door</button>
+<button class="b" onclick="A.t='o'">Outlet</button>
+<button class="b" onclick="A.m=A.m=='2d'?'3d':'2d'">3D</button>
+<button class="b" onclick="A.clear()">Clear</button>
+</div>
+<div class="i" id="i">0,0</div>
+<script>
+// Arxos Ultra-Minimal BIM Engine - 10KB Target
+const A={
+// State
+m:'2d',t:'w',z:1,a:30,
+f:[{w:[],d:[],o:[]}],
+p:{x:0,y:0},
+dr:null,dg:0,
+
+// Init
+init(){
+this.c=document.getElementById('c');
+this.x=this.c.getContext('2d');
+this.c.width=innerWidth;
+this.c.height=innerHeight;
+
+// Events
+this.c.onmousedown=e=>this.dn(e);
+this.c.onmousemove=e=>this.mv(e);
+this.c.onmouseup=e=>this.up(e);
+this.c.onwheel=e=>{e.preventDefault();this.z*=e.deltaY>0?0.9:1.1;this.r()};
+onresize=()=>{this.c.width=innerWidth;this.c.height=innerHeight;this.r()};
+
+// Load & render
+const s=localStorage.getItem('a');
+if(s)this.f=JSON.parse(s);
+this.r();
+},
+
+// Input
+dn(e){
+const p=this.gp(e);
+if(e.shiftKey){this.dg=2;return}
+
+switch(this.t){
+case'w':this.dr={x1:p.x,y1:p.y,x2:p.x,y2:p.y};break;
+case'd':
+case'o':
+const w=this.pw(p);
+if(w){
+const t=this.pt(p,w);
+this.f[0][this.t=='d'?'d':'o'].push({w,t});
+this.sv();
+this.r();
+}
+break;
+}
+},
+
+mv(e){
+const p=this.gp(e);
+document.getElementById('i').textContent=`${p.x|0},${p.y|0}`;
+
+if(this.dg==2){
+this.p.x+=e.movementX;
+this.p.y+=e.movementY;
+}else if(this.dr){
+this.dr.x2=p.x;
+this.dr.y2=p.y;
+}
+this.r();
+},
+
+up(e){
+if(this.dr&&this.t=='w'){
+const d=Math.hypot(this.dr.x2-this.dr.x1,this.dr.y2-this.dr.y1);
+if(d>20){
+this.f[0].w.push({...this.dr});
+this.sv();
+}
+this.dr=null;
+}
+this.dg=0;
+this.r();
+},
+
+// Utils
+gp(e){
+const r=this.c.getBoundingClientRect();
+return{
+x:(e.clientX-r.left-this.c.width/2-this.p.x)/this.z,
+y:(e.clientY-r.top-this.c.height/2-this.p.y)/this.z
+}
+},
+
+pw(p){
+let m=Infinity,b=null;
+for(let w of this.f[0].w){
+const d=this.dl(p,w);
+if(d<m&&d<20){m=d;b=w}
+}
+return b;
+},
+
+dl(p,l){
+const A=p.x-l.x1,B=p.y-l.y1,C=l.x2-l.x1,D=l.y2-l.y1;
+const d=A*C+B*D,n=C*C+D*D;
+let t=n?d/n:-1;
+t=Math.max(0,Math.min(1,t));
+return Math.hypot(p.x-(l.x1+t*C),p.y-(l.y1+t*D));
+},
+
+pt(p,l){
+const A=p.x-l.x1,B=p.y-l.y1,C=l.x2-l.x1,D=l.y2-l.y1;
+const n=C*C+D*D;
+return n?(A*C+B*D)/n:0;
+},
+
+// Render
+r(){
+const x=this.x;
+x.clearRect(0,0,this.c.width,this.c.height);
+x.save();
+x.translate(this.c.width/2+this.p.x,this.c.height/2+this.p.y);
+x.scale(this.z,this.z);
+
+if(this.m=='2d'){
+// Grid
+x.strokeStyle='#222';
+x.lineWidth=0.5;
+for(let i=-10;i<=10;i++){
+x.beginPath();
+x.moveTo(i*100,-1000);
+x.lineTo(i*100,1000);
+x.moveTo(-1000,i*100);
+x.lineTo(1000,i*100);
+x.stroke();
+}
+
+// Walls
+x.strokeStyle='#fff';
+x.lineWidth=3;
+for(let w of this.f[0].w){
+x.beginPath();
+x.moveTo(w.x1,w.y1);
+x.lineTo(w.x2,w.y2);
+x.stroke();
+}
+
+// Doors
+x.strokeStyle='#fa0';
+x.lineWidth=2;
+for(let d of this.f[0].d){
+const p=this.ip(d.w,d.t);
+x.beginPath();
+x.arc(p.x,p.y,30,0,Math.PI*2);
+x.stroke();
+}
+
+// Outlets
+x.fillStyle='#ff0';
+for(let o of this.f[0].o){
+const p=this.ip(o.w,o.t);
+x.beginPath();
+x.arc(p.x,p.y,5,0,Math.PI*2);
+x.fill();
+}
+
+// Drawing
+if(this.dr){
+x.strokeStyle='#4af';
+x.setLineDash([5,5]);
+x.beginPath();
+x.moveTo(this.dr.x1,this.dr.y1);
+x.lineTo(this.dr.x2,this.dr.y2);
+x.stroke();
+x.setLineDash([]);
+}
+}else{
+// 3D
+const p3=(x,y,z)=>{
+const a=this.a*Math.PI/180;
+const rx=x*Math.cos(a)-y*Math.sin(a);
+const ry=x*Math.sin(a)+y*Math.cos(a);
+return{x:(rx-ry)*0.866,y:(rx+ry)*0.5-z}
+};
+
+// Floor
+x.fillStyle='rgba(50,50,50,0.5)';
+x.beginPath();
+const c=[p3(-500,-500,0),p3(500,-500,0),p3(500,500,0),p3(-500,500,0)];
+x.moveTo(c[0].x,c[0].y);
+for(let i=1;i<4;i++)x.lineTo(c[i].x,c[i].y);
+x.closePath();
+x.fill();
+
+// Walls 3D
+x.fillStyle='rgba(150,150,150,0.8)';
+x.strokeStyle='#fff';
+for(let w of this.f[0].w){
+const b1=p3(w.x1,w.y1,0);
+const b2=p3(w.x2,w.y2,0);
+const t1=p3(w.x1,w.y1,300);
+const t2=p3(w.x2,w.y2,300);
+
+x.beginPath();
+x.moveTo(b1.x,b1.y);
+x.lineTo(b2.x,b2.y);
+x.lineTo(t2.x,t2.y);
+x.lineTo(t1.x,t1.y);
+x.closePath();
+x.fill();
+x.stroke();
+}
+}
+
+x.restore();
+},
+
+ip(w,t){
+return{x:w.x1+t*(w.x2-w.x1),y:w.y1+t*(w.y2-w.y1)}
+},
+
+// Actions
+clear(){
+if(confirm('Clear?')){
+this.f[0]={w:[],d:[],o:[]};
+this.sv();
+this.r();
+}
+},
+
+sv(){
+localStorage.setItem('a',JSON.stringify(this.f));
+}
+};
+
+// Start
+A.init();
+
+// Progressive enhancement with HTMX
+if(window.htmx){
+document.body.setAttribute('hx-ext','ws');
+document.body.setAttribute('ws-connect','/ws');
+}
+</script>
+</body>
+</html>

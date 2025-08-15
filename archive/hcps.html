@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCPS Property Management - Arxos BIM</title>
+<script src="https://cdn.jsdelivr.net/npm/pdf.js@3.11.174/build/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdf.js@3.11.174/build/pdf.worker.min.js';</script>
+<style>
+* {margin:0;padding:0;box-sizing:border-box}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    overflow: hidden;
+}
+
+.app {
+    display: grid;
+    grid-template-columns: 300px 1fr 350px;
+    height: 100vh;
+}
+
+/* Left Sidebar - Properties */
+.properties-panel {
+    background: #111;
+    border-right: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-header {
+    padding: 20px;
+    border-bottom: 1px solid #222;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 300;
+    background: linear-gradient(135deg, #4a9eff, #00ff88);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    font-size: 12px;
+    color: #666;
+}
+
+.property-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.property-item {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.property-item:hover {
+    background: #222;
+    border-color: #4a9eff;
+}
+
+.property-item.active {
+    background: #1a2a3a;
+    border-color: #4a9eff;
+}
+
+.property-name {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.property-address {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.property-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 11px;
+    color: #666;
+}
+
+.add-property {
+    margin: 10px;
+    padding: 12px;
+    background: #4a9eff;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.add-property:hover {
+    background: #5aafff;
+}
+
+/* Center - Viewer */
+.viewer {
+    position: relative;
+    background: #050505;
+}
+
+#canvas {
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+#canvas.pan {
+    cursor: grab;
+}
+
+#canvas.pan:active {
+    cursor: grabbing;
+}
+
+.viewer-tools {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(17,17,17,0.95);
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    gap: 5px;
+}
+
+.tool-btn {
+    width: 36px;
+    height: 36px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.tool-btn:hover {
+    background: #222;
+    border-color: #444;
+    color: #fff;
+}
+
+.tool-btn.active {
+    background: #4a9eff;
+    border-color: #4a9eff;
+    color: #000;
+}
+
+.view-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(17,17,17,0.95);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.view-btn {
+    padding: 8px 16px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+.view-btn.active {
+    background: #4a9eff;
+    border-color: #4a9eff;
+    color: #000;
+}
+
+.status-bar {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(17,17,17,0.95);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #888;
+}
+
+/* Right Panel - Details */
+.details-panel {
+    background: #111;
+    border-left: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+}
+
+.tabs {
+    display: flex;
+    border-bottom: 1px solid #222;
+}
+
+.tab {
+    flex: 1;
+    padding: 15px;
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    background: #1a1a1a;
+    color: #888;
+}
+
+.tab.active {
+    color: #4a9eff;
+    border-bottom: 2px solid #4a9eff;
+}
+
+.tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Upload Section */
+.upload-zone {
+    border: 2px dashed #333;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.upload-zone:hover {
+    border-color: #444;
+    background: rgba(74,158,255,0.05);
+}
+
+.upload-zone.dragover {
+    border-color: #4a9eff;
+    background: rgba(74,158,255,0.1);
+}
+
+.upload-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.upload-text {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: #666;
+}
+
+.file-input {
+    display: none;
+}
+
+/* Processing Status */
+.processing {
+    padding: 20px;
+    background: #1a1a1a;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.processing-title {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.progress-bar {
+    height: 4px;
+    background: #222;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a9eff, #00ff88);
+    transition: width 0.3s;
+}
+
+.processing-status {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Floor/Room List */
+.floor-list {
+    margin-top: 20px;
+}
+
+.floor-item {
+    background: #1a1a1a;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.floor-header {
+    padding: 12px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.floor-header:hover {
+    background: #222;
+}
+
+.floor-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.floor-count {
+    font-size: 11px;
+    color: #666;
+}
+
+.room-list {
+    padding: 0 12px 12px;
+    display: none;
+}
+
+.floor-item.expanded .room-list {
+    display: block;
+}
+
+.room-item {
+    padding: 8px;
+    background: #0a0a0a;
+    border-radius: 4px;
+    margin-top: 5px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.room-name {
+    color: #888;
+}
+
+.room-area {
+    color: #666;
+}
+
+/* Details Section */
+.detail-group {
+    margin-bottom: 25px;
+}
+
+.detail-label {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.detail-value {
+    font-size: 14px;
+    color: #e0e0e0;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.metric {
+    background: #1a1a1a;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.metric-value {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 3px;
+}
+
+.metric-label {
+    font-size: 11px;
+    color: #666;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 30px;
+    width: 500px;
+    max-width: 90%;
+}
+
+.modal-title {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #e0e0e0;
+    font-size: 14px;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: #333;
+    color: #888;
+}
+
+.btn-cancel:hover {
+    background: #444;
+}
+
+.btn-primary {
+    background: #4a9eff;
+    color: #000;
+}
+
+.btn-primary:hover {
+    background: #5aafff;
+}
+
+/* Loading Spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #222;
+    border-top-color: #4a9eff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+    <!-- Left Panel - Properties -->
+    <div class="properties-panel">
+        <div class="panel-header">
+            <div class="logo">HCPS Arxos</div>
+            <div class="subtitle">Property Management System</div>
+        </div>
+        
+        <div class="property-list" id="propertyList">
+            <!-- Properties will be added here -->
+        </div>
+        
+        <button class="add-property" onclick="showAddPropertyModal()">+ Add Property</button>
+    </div>
+    
+    <!-- Center - BIM Viewer -->
+    <div class="viewer">
+        <canvas id="canvas"></canvas>
+        
+        <div class="viewer-tools">
+            <button class="tool-btn active" onclick="BIM.setTool('select')" title="Select">⬚</button>
+            <button class="tool-btn" onclick="BIM.setTool('wall')" title="Wall">╱</button>
+            <button class="tool-btn" onclick="BIM.setTool('door')" title="Door">🚪</button>
+            <button class="tool-btn" onclick="BIM.setTool('window')" title="Window">⬜</button>
+            <button class="tool-btn" onclick="BIM.setTool('room')" title="Room">▭</button>
+            <button class="tool-btn" onclick="BIM.setTool('measure')" title="Measure">📏</button>
+        </div>
+        
+        <div class="view-controls">
+            <button class="view-btn active" onclick="BIM.setMode('2d')">2D</button>
+            <button class="view-btn" onclick="BIM.setMode('3d')">3D</button>
+            <button class="view-btn" onclick="BIM.fitView()">Fit</button>
+        </div>
+        
+        <div class="status-bar" id="statusBar">
+            Select a property to view
+        </div>
+    </div>
+    
+    <!-- Right Panel - Details -->
+    <div class="details-panel">
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('upload')">Upload</button>
+            <button class="tab" onclick="showTab('floors')">Floors</button>
+            <button class="tab" onclick="showTab('details')">Details</button>
+        </div>
+        
+        <div class="tab-content">
+            <!-- Upload Tab -->
+            <div id="uploadTab" class="tab-panel">
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Drop PDF files here</div>
+                    <div class="upload-hint">or click to browse</div>
+                    <input type="file" id="fileInput" class="file-input" accept=".pdf" multiple>
+                </div>
+                
+                <div id="processingStatus" class="processing" style="display:none">
+                    <div class="processing-title">Processing PDF...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                    </div>
+                    <div class="processing-status" id="processingText">Extracting pages...</div>
+                </div>
+            </div>
+            
+            <!-- Floors Tab -->
+            <div id="floorsTab" class="tab-panel" style="display:none">
+                <div class="floor-list" id="floorList">
+                    <!-- Floors will be added here -->
+                </div>
+            </div>
+            
+            <!-- Details Tab -->
+            <div id="detailsTab" class="tab-panel" style="display:none">
+                <div class="detail-group">
+                    <div class="detail-label">Property Information</div>
+                    <div class="detail-value" id="propertyInfo">No property selected</div>
+                </div>
+                
+                <div class="detail-group">
+                    <div class="detail-label">Building Metrics</div>
+                    <div class="detail-grid">
+                        <div class="metric">
+                            <div class="metric-value" id="totalArea">0</div>
+                            <div class="metric-label">Total Area (sq ft)</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="floorCount">0</div>
+                            <div class="metric-label">Floors</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="roomCount">0</div>
+                            <div class="metric-label">Rooms</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value" id="wallCount">0</div>
+                            <div class="metric-label">Walls</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Property Modal -->
+<div class="modal" id="addPropertyModal">
+    <div class="modal-content">
+        <div class="modal-title">Add New Property</div>
+        
+        <div class="form-group">
+            <label class="form-label">Property Name</label>
+            <input type="text" class="form-input" id="propertyName" placeholder="e.g., Hillsborough High School">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Address</label>
+            <input type="text" class="form-input" id="propertyAddress" placeholder="e.g., 5000 N Central Ave, Tampa, FL">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Building Type</label>
+            <select class="form-input" id="buildingType">
+                <option>School</option>
+                <option>Administrative</option>
+                <option>Maintenance</option>
+                <option>Athletic Facility</option>
+                <option>Other</option>
+            </select>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="addProperty()">Add Property</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// HCPS Property Management System
+const HCPS = {
+    properties: [],
+    currentProperty: null,
+    currentFloor: 0,
+    
+    init() {
+        // Load saved properties
+        const saved = localStorage.getItem('hcps-properties');
+        if (saved) {
+            this.properties = JSON.parse(saved);
+            this.renderProperties();
+        } else {
+            // Add demo properties
+            this.properties = [
+                {
+                    id: 'p1',
+                    name: 'Hillsborough High School',
+                    address: '5000 N Central Ave, Tampa, FL',
+                    type: 'School',
+                    floors: 3,
+                    area: 285000,
+                    data: null
+                },
+                {
+                    id: 'p2',
+                    name: 'Plant High School',
+                    address: '2415 S Himes Ave, Tampa, FL',
+                    type: 'School',
+                    floors: 2,
+                    area: 245000,
+                    data: null
+                }
+            ];
+            this.renderProperties();
+        }
+        
+        // Initialize upload zone
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadZone.onclick = () => fileInput.click();
+        
+        uploadZone.ondragover = (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        };
+        
+        uploadZone.ondragleave = () => {
+            uploadZone.classList.remove('dragover');
+        };
+        
+        uploadZone.ondrop = (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            this.handleFiles(e.dataTransfer.files);
+        };
+        
+        fileInput.onchange = (e) => {
+            this.handleFiles(e.target.files);
+        };
+    },
+    
+    renderProperties() {
+        const list = document.getElementById('propertyList');
+        list.innerHTML = this.properties.map(p => `
+            <div class="property-item ${p.id === this.currentProperty?.id ? 'active' : ''}" 
+                 onclick="HCPS.selectProperty('${p.id}')">
+                <div class="property-name">${p.name}</div>
+                <div class="property-address">${p.address}</div>
+                <div class="property-stats">
+                    <span>${p.floors} floors</span>
+                    <span>${(p.area/1000).toFixed(0)}k sq ft</span>
+                    <span>${p.type}</span>
+                </div>
+            </div>
+        `).join('');
+    },
+    
+    selectProperty(id) {
+        this.currentProperty = this.properties.find(p => p.id === id);
+        this.renderProperties();
+        
+        if (this.currentProperty) {
+            document.getElementById('statusBar').textContent = this.currentProperty.name;
+            document.getElementById('propertyInfo').textContent = 
+                `${this.currentProperty.name} - ${this.currentProperty.address}`;
+            document.getElementById('totalArea').textContent = 
+                (this.currentProperty.area/1000).toFixed(0) + 'k';
+            document.getElementById('floorCount').textContent = this.currentProperty.floors;
+            
+            if (this.currentProperty.data) {
+                BIM.loadData(this.currentProperty.data);
+            } else {
+                BIM.clear();
+            }
+        }
+    },
+    
+    handleFiles(files) {
+        for (let file of files) {
+            if (file.type === 'application/pdf') {
+                this.processPDF(file);
+            }
+        }
+    },
+    
+    async processPDF(file) {
+        document.getElementById('processingStatus').style.display = 'block';
+        document.getElementById('processingText').textContent = 'Loading PDF...';
+        document.getElementById('progressFill').style.width = '10%';
+        
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        
+        document.getElementById('processingText').textContent = `Processing ${pdf.numPages} pages...`;
+        document.getElementById('progressFill').style.width = '30%';
+        
+        const walls = [];
+        
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({scale: 2});
+            
+            // Create canvas for rendering
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            
+            await page.render({
+                canvasContext: ctx,
+                viewport: viewport
+            }).promise;
+            
+            // Extract walls using image processing
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pageWalls = this.extractWalls(imageData);
+            walls.push(...pageWalls);
+            
+            const progress = 30 + (i / pdf.numPages * 60);
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('processingText').textContent = 
+                `Extracted walls from page ${i}/${pdf.numPages}`;
+        }
+        
+        // Convert to BIM data
+        document.getElementById('processingText').textContent = 'Converting to BIM...';
+        document.getElementById('progressFill').style.width = '95%';
+        
+        if (this.currentProperty) {
+            this.currentProperty.data = {
+                floors: [{
+                    id: 'f1',
+                    name: 'Floor 1',
+                    walls: walls.map(w => ({
+                        id: 'w' + Date.now() + Math.random(),
+                        x1: w.x1,
+                        y1: w.y1,
+                        x2: w.x2,
+                        y2: w.y2,
+                        thickness: 200
+                    })),
+                    rooms: [],
+                    doors: [],
+                    windows: []
+                }]
+            };
+            
+            BIM.loadData(this.currentProperty.data);
+            this.saveProperties();
+        }
+        
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('processingText').textContent = 'Complete!';
+        
+        setTimeout(() => {
+            document.getElementById('processingStatus').style.display = 'none';
+            showTab('floors');
+        }, 1000);
+    },
+    
+    extractWalls(imageData) {
+        const walls = [];
+        const width = imageData.width;
+        const height = imageData.height;
+        const data = imageData.data;
+        
+        // Simple edge detection for walls
+        for (let y = 0; y < height; y += 10) {
+            let inWall = false;
+            let wallStart = 0;
+            
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                const brightness = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+                
+                if (brightness < 128) { // Dark pixel (wall)
+                    if (!inWall) {
+                        inWall = true;
+                        wallStart = x;
+                    }
+                } else { // Light pixel
+                    if (inWall && x - wallStart > 20) {
+                        walls.push({
+                            x1: wallStart,
+                            y1: y,
+                            x2: x,
+                            y2: y
+                        });
+                    }
+                    inWall = false;
+                }
+            }
+        }
+        
+        // Vertical scan
+        for (let x = 0; x < width; x += 10) {
+            let inWall = false;
+            let wallStart = 0;
+            
+            for (let y = 0; y < height; y++) {
+                const idx = (y * width + x) * 4;
+                const brightness = (data[idx] + data[idx+1] + data[idx+2]) / 3;
+                
+                if (brightness < 128) {
+                    if (!inWall) {
+                        inWall = true;
+                        wallStart = y;
+                    }
+                } else {
+                    if (inWall && y - wallStart > 20) {
+                        walls.push({
+                            x1: x,
+                            y1: wallStart,
+                            x2: x,
+                            y2: y
+                        });
+                    }
+                    inWall = false;
+                }
+            }
+        }
+        
+        return walls;
+    },
+    
+    saveProperties() {
+        localStorage.setItem('hcps-properties', JSON.stringify(this.properties));
+    }
+};
+
+// BIM Viewer Engine
+const BIM = {
+    canvas: null,
+    ctx: null,
+    mode: '2d',
+    tool: 'select',
+    zoom: 1,
+    pan: {x: 0, y: 0},
+    data: null,
+    currentFloor: 0,
+    selected: null,
+    drawing: null,
+    
+    init() {
+        this.canvas = document.getElementById('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        
+        // Mouse events
+        this.canvas.onmousedown = (e) => this.mouseDown(e);
+        this.canvas.onmousemove = (e) => this.mouseMove(e);
+        this.canvas.onmouseup = (e) => this.mouseUp(e);
+        this.canvas.onwheel = (e) => this.wheel(e);
+        
+        this.render();
+    },
+    
+    resize() {
+        this.canvas.width = this.canvas.offsetWidth;
+        this.canvas.height = this.canvas.offsetHeight;
+        this.render();
+    },
+    
+    loadData(data) {
+        this.data = data;
+        this.currentFloor = 0;
+        this.render();
+        this.updateFloorList();
+    },
+    
+    clear() {
+        this.data = null;
+        this.render();
+    },
+    
+    setTool(tool) {
+        this.tool = tool;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        this.drawing = null;
+        this.render();
+    },
+    
+    setMode(mode) {
+        this.mode = mode;
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        this.render();
+    },
+    
+    fitView() {
+        this.zoom = 1;
+        this.pan = {x: 0, y: 0};
+        this.render();
+    },
+    
+    mouseDown(e) {
+        const pt = this.getPoint(e);
+        
+        if (e.shiftKey) {
+            this.canvas.classList.add('pan');
+            this.dragStart = {x: e.clientX, y: e.clientY};
+            return;
+        }
+        
+        if (!this.data) return;
+        
+        const floor = this.data.floors[this.currentFloor];
+        
+        switch(this.tool) {
+            case 'select':
+                this.selected = this.pick(pt, floor);
+                break;
+                
+            case 'wall':
+                if (!this.drawing) {
+                    this.drawing = {type: 'wall', x1: pt.x, y1: pt.y, x2: pt.x, y2: pt.y};
+                } else {
+                    floor.walls.push({
+                        id: 'w' + Date.now(),
+                        x1: this.drawing.x1,
+                        y1: this.drawing.y1,
+                        x2: pt.x,
+                        y2: pt.y,
+                        thickness: 200
+                    });
+                    this.drawing = null;
+                    HCPS.saveProperties();
+                }
+                break;
+                
+            case 'door':
+                const wall = this.pickWall(pt, floor);
+                if (wall) {
+                    floor.doors.push({
+                        id: 'd' + Date.now(),
+                        wall: wall.id,
+                        position: 0.5,
+                        width: 900
+                    });
+                    HCPS.saveProperties();
+                }
+                break;
+        }
+        
+        this.render();
+    },
+    
+    mouseMove(e) {
+        const pt = this.getPoint(e);
+        
+        if (this.dragStart) {
+            const dx = e.clientX - this.dragStart.x;
+            const dy = e.clientY - this.dragStart.y;
+            this.pan.x = dx;
+            this.pan.y = dy;
+        } else if (this.drawing && this.drawing.type === 'wall') {
+            this.drawing.x2 = pt.x;
+            this.drawing.y2 = pt.y;
+        }
+        
+        this.render();
+    },
+    
+    mouseUp(e) {
+        if (this.dragStart) {
+            this.pan.x += e.clientX - this.dragStart.x;
+            this.pan.y += e.clientY - this.dragStart.y;
+            this.dragStart = null;
+            this.canvas.classList.remove('pan');
+        }
+        this.render();
+    },
+    
+    wheel(e) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        this.zoom = Math.max(0.1, Math.min(5, this.zoom * delta));
+        this.render();
+    },
+    
+    getPoint(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: (e.clientX - rect.left - this.canvas.width/2 - this.pan.x) / this.zoom,
+            y: (e.clientY - rect.top - this.canvas.height/2 - this.pan.y) / this.zoom
+        };
+    },
+    
+    pick(pt, floor) {
+        for (let wall of floor.walls) {
+            if (this.distToLine(pt, wall) < 10) return wall;
+        }
+        return null;
+    },
+    
+    pickWall(pt, floor) {
+        let minDist = Infinity;
+        let closest = null;
+        for (let wall of floor.walls) {
+            const dist = this.distToLine(pt, wall);
+            if (dist < minDist && dist < 20) {
+                minDist = dist;
+                closest = wall;
+            }
+        }
+        return closest;
+    },
+    
+    distToLine(pt, line) {
+        const A = pt.x - line.x1;
+        const B = pt.y - line.y1;
+        const C = line.x2 - line.x1;
+        const D = line.y2 - line.y1;
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let t = lenSq ? dot / lenSq : -1;
+        t = Math.max(0, Math.min(1, t));
+        const x = line.x1 + t * C;
+        const y = line.y1 + t * D;
+        return Math.hypot(pt.x - x, pt.y - y);
+    },
+    
+    render() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        
+        // Clear
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, w, h);
+        
+        // Setup transform
+        ctx.save();
+        ctx.translate(w/2 + this.pan.x, h/2 + this.pan.y);
+        ctx.scale(this.zoom, this.zoom);
+        
+        if (this.data && this.data.floors[this.currentFloor]) {
+            if (this.mode === '2d') {
+                this.render2D(ctx);
+            } else {
+                this.render3D(ctx);
+            }
+        }
+        
+        // Drawing preview
+        if (this.drawing) {
+            ctx.strokeStyle = '#4a9eff';
+            ctx.setLineDash([5, 5]);
+            if (this.drawing.type === 'wall') {
+                ctx.beginPath();
+                ctx.moveTo(this.drawing.x1, this.drawing.y1);
+                ctx.lineTo(this.drawing.x2, this.drawing.y2);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+        }
+        
+        ctx.restore();
+    },
+    
+    render2D(ctx) {
+        const floor = this.data.floors[this.currentFloor];
+        
+        // Grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 0.5;
+        for (let i = -20; i <= 20; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * 100, -2000);
+            ctx.lineTo(i * 100, 2000);
+            ctx.moveTo(-2000, i * 100);
+            ctx.lineTo(2000, i * 100);
+            ctx.stroke();
+        }
+        
+        // Walls
+        for (let wall of floor.walls) {
+            ctx.strokeStyle = wall === this.selected ? '#4a9eff' : '#e0e0e0';
+            ctx.lineWidth = wall === this.selected ? 4 : 3;
+            ctx.beginPath();
+            ctx.moveTo(wall.x1, wall.y1);
+            ctx.lineTo(wall.x2, wall.y2);
+            ctx.stroke();
+        }
+        
+        // Doors
+        if (floor.doors) {
+            ctx.strokeStyle = '#fa9500';
+            ctx.lineWidth = 2;
+            for (let door of floor.doors) {
+                const wall = floor.walls.find(w => w.id === door.wall);
+                if (wall) {
+                    const x = wall.x1 + (wall.x2 - wall.x1) * door.position;
+                    const y = wall.y1 + (wall.y2 - wall.y1) * door.position;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 30, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+    },
+    
+    render3D(ctx) {
+        const floor = this.data.floors[this.currentFloor];
+        const angle = 30 * Math.PI / 180;
+        
+        // 3D projection
+        const project = (x, y, z) => {
+            const rx = x * Math.cos(angle) - y * Math.sin(angle);
+            const ry = x * Math.sin(angle) + y * Math.cos(angle);
+            return {
+                x: (rx - ry) * 0.866,
+                y: (rx + ry) * 0.5 - z * 0.3
+            };
+        };
+        
+        // Floor
+        ctx.fillStyle = 'rgba(30,30,30,0.5)';
+        const corners = [
+            project(-1000, -1000, 0),
+            project(1000, -1000, 0),
+            project(1000, 1000, 0),
+            project(-1000, 1000, 0)
+        ];
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x, corners[0].y);
+        for (let i = 1; i < 4; i++) {
+            ctx.lineTo(corners[i].x, corners[i].y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        // Walls 3D
+        ctx.fillStyle = 'rgba(200,200,200,0.9)';
+        ctx.strokeStyle = '#e0e0e0';
+        for (let wall of floor.walls) {
+            const h = 270;
+            const b1 = project(wall.x1, wall.y1, 0);
+            const b2 = project(wall.x2, wall.y2, 0);
+            const t1 = project(wall.x1, wall.y1, h);
+            const t2 = project(wall.x2, wall.y2, h);
+            
+            ctx.beginPath();
+            ctx.moveTo(b1.x, b1.y);
+            ctx.lineTo(b2.x, b2.y);
+            ctx.lineTo(t2.x, t2.y);
+            ctx.lineTo(t1.x, t1.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+    },
+    
+    updateFloorList() {
+        if (!this.data) return;
+        
+        const floorList = document.getElementById('floorList');
+        floorList.innerHTML = this.data.floors.map((floor, i) => `
+            <div class="floor-item ${i === this.currentFloor ? 'expanded' : ''}">
+                <div class="floor-header" onclick="BIM.selectFloor(${i})">
+                    <div class="floor-name">${floor.name || 'Floor ' + (i+1)}</div>
+                    <div class="floor-count">${floor.walls.length} walls</div>
+                </div>
+                <div class="room-list">
+                    ${floor.rooms ? floor.rooms.map(room => `
+                        <div class="room-item">
+                            <div class="room-name">${room.name}</div>
+                            <div class="room-area">${room.area || '---'} sq ft</div>
+                        </div>
+                    `).join('') : '<div class="room-item"><div class="room-name">No rooms defined</div></div>'}
+                </div>
+            </div>
+        `).join('');
+        
+        // Update metrics
+        document.getElementById('roomCount').textContent = 
+            this.data.floors.reduce((sum, f) => sum + (f.rooms?.length || 0), 0);
+        document.getElementById('wallCount').textContent = 
+            this.data.floors.reduce((sum, f) => sum + f.walls.length, 0);
+    },
+    
+    selectFloor(index) {
+        this.currentFloor = index;
+        this.render();
+        this.updateFloorList();
+    }
+};
+
+// Tab Management
+function showTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Update tab content
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.style.display = 'none');
+    document.getElementById(tabName + 'Tab').style.display = 'block';
+}
+
+// Modal Management
+function showAddPropertyModal() {
+    document.getElementById('addPropertyModal').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('addPropertyModal').classList.remove('active');
+}
+
+function addProperty() {
+    const name = document.getElementById('propertyName').value;
+    const address = document.getElementById('propertyAddress').value;
+    const type = document.getElementById('buildingType').value;
+    
+    if (name && address) {
+        const property = {
+            id: 'p' + Date.now(),
+            name: name,
+            address: address,
+            type: type,
+            floors: 1,
+            area: 0,
+            data: null
+        };
+        
+        HCPS.properties.push(property);
+        HCPS.saveProperties();
+        HCPS.renderProperties();
+        HCPS.selectProperty(property.id);
+        
+        closeModal();
+        
+        // Clear form
+        document.getElementById('propertyName').value = '';
+        document.getElementById('propertyAddress').value = '';
+    }
+}
+
+// Initialize on load
+window.onload = () => {
+    HCPS.init();
+    BIM.init();
+};
+</script>
+
+</body>
+</html>

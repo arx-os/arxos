@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos BIM - Building Information Model</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #0066cc;
+            --secondary: #40a9ff;
+            --success: #52c41a;
+            --warning: #faad14;
+            --error: #f5222d;
+            --bg-dark: #001529;
+            --bg-medium: #002140;
+            --bg-light: #003a5c;
+            --text-primary: #fff;
+            --text-secondary: rgba(255,255,255,0.65);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Layout */
+        .app-container {
+            display: grid;
+            grid-template-columns: 60px 280px 1fr 320px;
+            grid-template-rows: 48px 1fr 32px;
+            height: 100vh;
+            gap: 1px;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* Header Bar */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--bg-medium);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header h1 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-right: auto;
+        }
+        
+        .header .project-name {
+            color: var(--secondary);
+            margin-left: 8px;
+        }
+        
+        /* Tool Palette */
+        .tool-palette {
+            background: var(--bg-medium);
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            gap: 4px;
+        }
+        
+        .tool-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.2s;
+        }
+        
+        .tool-btn:hover {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+        
+        .tool-btn.active {
+            background: var(--primary);
+            color: var(--text-primary);
+        }
+        
+        .tool-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+        
+        .tool-separator {
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 4px 0;
+        }
+        
+        /* Left Panel - Layers & Structure */
+        .left-panel {
+            background: var(--bg-dark);
+            overflow-y: auto;
+        }
+        
+        .panel-section {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .panel-header {
+            padding: 12px 16px;
+            background: var(--bg-medium);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .panel-content {
+            padding: 8px;
+        }
+        
+        /* Building Tree */
+        .tree-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .tree-item:hover {
+            background: var(--bg-medium);
+            color: var(--text-primary);
+        }
+        
+        .tree-item.selected {
+            background: var(--primary);
+            color: var(--text-primary);
+        }
+        
+        .tree-item .icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.65;
+        }
+        
+        .tree-children {
+            margin-left: 20px;
+        }
+        
+        /* Main Viewport */
+        .viewport {
+            background: #0a0a0a;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #bim-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        #bim-canvas:active {
+            cursor: grabbing;
+        }
+        
+        /* SVG Styles */
+        .wall {
+            cursor: pointer;
+            transition: fill 0.2s;
+        }
+        
+        .wall:hover {
+            fill: var(--secondary) !important;
+            fill-opacity: 0.8;
+        }
+        
+        .wall.selected {
+            stroke: var(--primary) !important;
+            stroke-width: 3 !important;
+        }
+        
+        .room {
+            fill: rgba(100, 200, 255, 0.1);
+            stroke: none;
+            pointer-events: all;
+            cursor: pointer;
+        }
+        
+        .room:hover {
+            fill: rgba(100, 200, 255, 0.2);
+        }
+        
+        .room-label {
+            fill: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+        
+        .door {
+            stroke: var(--warning);
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .electrical-outlet {
+            fill: var(--warning);
+            stroke: #000;
+            stroke-width: 1;
+        }
+        
+        .hvac-diffuser {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 2;
+        }
+        
+        /* Right Panel - Properties */
+        .right-panel {
+            background: var(--bg-dark);
+            overflow-y: auto;
+        }
+        
+        .property-group {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .property-group h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .property-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 13px;
+        }
+        
+        .property-label {
+            color: var(--text-secondary);
+        }
+        
+        .property-value {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .property-input {
+            background: var(--bg-medium);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            grid-column: 1 / -1;
+            background: var(--bg-medium);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            gap: 24px;
+        }
+        
+        .status-item {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .status-label {
+            opacity: 0.65;
+        }
+        
+        /* View Controls */
+        .view-controls {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--bg-medium);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .view-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .view-btn:hover {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+        
+        /* Floor Selector */
+        .floor-selector {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: var(--bg-medium);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .floor-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .floor-btn:hover {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+        
+        .floor-btn.active {
+            background: var(--primary);
+            color: var(--text-primary);
+        }
+        
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            background: var(--bg-medium);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            padding: 4px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        
+        .context-menu.visible {
+            display: block;
+        }
+        
+        .context-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+        
+        .context-item:hover {
+            background: var(--bg-light);
+            color: var(--text-primary);
+        }
+        
+        .context-separator {
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 4px 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Arxos BIM <span class="project-name">Tech Campus Building A</span></h1>
+            <button class="tool-btn">💾</button>
+            <button class="tool-btn">↩️</button>
+            <button class="tool-btn">↪️</button>
+            <button class="tool-btn">📤</button>
+            <button class="tool-btn">⚙️</button>
+        </header>
+        
+        <!-- Tool Palette -->
+        <aside class="tool-palette">
+            <button class="tool-btn active" data-tool="select" title="Select">
+                <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2z"/>
+                </svg>
+            </button>
+            <button class="tool-btn" data-tool="wall" title="Wall">
+                <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M4 4h16v16H4z"/>
+                </svg>
+            </button>
+            <button class="tool-btn" data-tool="door" title="Door">
+                <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm7 6h2v2h-2v-2z"/>
+                </svg>
+            </button>
+            <button class="tool-btn" data-tool="window" title="Window">
+                <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 3h18v18H3V3zm2 2v14h14V5H5zm2 2h10v10H7V7z"/>
+                </svg>
+            </button>
+            
+            <div class="tool-separator"></div>
+            
+            <button class="tool-btn" data-tool="outlet" title="Outlet">⚡</button>
+            <button class="tool-btn" data-tool="switch" title="Switch">🔘</button>
+            <button class="tool-btn" data-tool="light" title="Light">💡</button>
+            
+            <div class="tool-separator"></div>
+            
+            <button class="tool-btn" data-tool="hvac" title="HVAC">🌡️</button>
+            <button class="tool-btn" data-tool="plumbing" title="Plumbing">🚿</button>
+            
+            <div class="tool-separator"></div>
+            
+            <button class="tool-btn" data-tool="measure" title="Measure">📏</button>
+            <button class="tool-btn" data-tool="annotate" title="Annotate">✏️</button>
+        </aside>
+        
+        <!-- Left Panel -->
+        <aside class="left-panel">
+            <!-- Building Structure -->
+            <div class="panel-section">
+                <div class="panel-header">
+                    Building Structure
+                    <span>▼</span>
+                </div>
+                <div class="panel-content">
+                    <div class="tree-item selected">
+                        <span class="icon">🏢</span>
+                        Building A
+                    </div>
+                    <div class="tree-children">
+                        <div class="tree-item">
+                            <span class="icon">📐</span>
+                            Floor 1
+                        </div>
+                        <div class="tree-item">
+                            <span class="icon">📐</span>
+                            Floor 2
+                        </div>
+                        <div class="tree-item">
+                            <span class="icon">📐</span>
+                            Floor 3
+                        </div>
+                        <div class="tree-item">
+                            <span class="icon">📐</span>
+                            Roof
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Layers -->
+            <div class="panel-section">
+                <div class="panel-header">
+                    Layers
+                    <span>▼</span>
+                </div>
+                <div class="panel-content">
+                    <label class="tree-item">
+                        <input type="checkbox" checked> Walls
+                    </label>
+                    <label class="tree-item">
+                        <input type="checkbox" checked> Doors
+                    </label>
+                    <label class="tree-item">
+                        <input type="checkbox" checked> Windows
+                    </label>
+                    <label class="tree-item">
+                        <input type="checkbox" checked> Rooms
+                    </label>
+                    <label class="tree-item">
+                        <input type="checkbox"> Electrical
+                    </label>
+                    <label class="tree-item">
+                        <input type="checkbox"> HVAC
+                    </label>
+                    <label class="tree-item">
+                        <input type="checkbox"> Plumbing
+                    </label>
+                    <label class="tree-item">
+                        <input type="checkbox"> Fire Safety
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Systems -->
+            <div class="panel-section">
+                <div class="panel-header">
+                    Systems
+                    <span>▼</span>
+                </div>
+                <div class="panel-content">
+                    <div class="tree-item">
+                        <span class="icon">⚡</span>
+                        Electrical
+                    </div>
+                    <div class="tree-item">
+                        <span class="icon">🌡️</span>
+                        HVAC
+                    </div>
+                    <div class="tree-item">
+                        <span class="icon">💧</span>
+                        Plumbing
+                    </div>
+                    <div class="tree-item">
+                        <span class="icon">🔥</span>
+                        Fire Protection
+                    </div>
+                    <div class="tree-item">
+                        <span class="icon">📡</span>
+                        Data/Telecom
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Viewport -->
+        <main class="viewport">
+            <!-- Floor Selector -->
+            <div class="floor-selector">
+                <button class="floor-btn">Basement</button>
+                <button class="floor-btn active">Floor 1</button>
+                <button class="floor-btn">Floor 2</button>
+                <button class="floor-btn">Floor 3</button>
+                <button class="floor-btn">Roof</button>
+            </div>
+            
+            <!-- BIM Canvas -->
+            <svg id="bim-canvas" viewBox="0 0 10000 10000">
+                <!-- Dynamic content will be loaded here via HTMX -->
+                <g id="floor-content" 
+                   hx-get="/api/floors/1/svg" 
+                   hx-trigger="load, floor-changed from:body"
+                   hx-swap="innerHTML">
+                    <!-- Floor plan will be rendered here -->
+                </g>
+            </svg>
+            
+            <!-- View Controls -->
+            <div class="view-controls">
+                <button class="view-btn" onclick="bimViewer.zoomIn()">➕</button>
+                <button class="view-btn" onclick="bimViewer.zoomOut()">➖</button>
+                <button class="view-btn" onclick="bimViewer.fitToScreen()">⬜</button>
+                <button class="view-btn" onclick="bimViewer.toggle3D()">🎲</button>
+            </div>
+        </main>
+        
+        <!-- Right Panel - Properties -->
+        <aside class="right-panel">
+            <div id="properties-panel"
+                 hx-get="/api/properties/none"
+                 hx-trigger="object-selected from:body"
+                 hx-swap="innerHTML">
+                
+                <!-- Default view when nothing selected -->
+                <div class="property-group">
+                    <h3>No Selection</h3>
+                    <div class="property-row">
+                        <span class="property-label">Select an object to view properties</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-item">
+                <span class="status-label">Mode:</span>
+                <span id="current-mode">Select</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Floor:</span>
+                <span id="current-floor">1</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Scale:</span>
+                <span id="current-scale">1:100</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Objects:</span>
+                <span id="object-count">0</span>
+            </div>
+            <div class="status-item" style="margin-left: auto;">
+                <span class="status-label">Cursor:</span>
+                <span id="cursor-pos">0, 0</span>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-item" onclick="bimViewer.addOutlet()">Add Outlet</div>
+        <div class="context-item" onclick="bimViewer.addSwitch()">Add Switch</div>
+        <div class="context-separator"></div>
+        <div class="context-item" onclick="bimViewer.splitWall()">Split Wall</div>
+        <div class="context-item" onclick="bimViewer.deleteWall()">Delete Wall</div>
+        <div class="context-separator"></div>
+        <div class="context-item" onclick="bimViewer.properties()">Properties</div>
+    </div>
+    
+    <script>
+        class BIMViewer {
+            constructor() {
+                this.canvas = document.getElementById('bim-canvas');
+                this.currentTool = 'select';
+                this.currentFloor = 1;
+                this.selectedObjects = new Set();
+                this.viewBox = { x: 0, y: 0, width: 10000, height: 10000 };
+                this.scale = 1;
+                this.isPanning = false;
+                this.isDrawing = false;
+                this.tempLine = null;
+                
+                this.init();
+            }
+            
+            init() {
+                // Tool selection
+                document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentTool = btn.dataset.tool;
+                        document.getElementById('current-mode').textContent = 
+                            btn.title || this.currentTool;
+                    });
+                });
+                
+                // Floor selection
+                document.querySelectorAll('.floor-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.loadFloor(btn.textContent);
+                    });
+                });
+                
+                // Canvas interactions
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+                this.canvas.addEventListener('contextmenu', (e) => this.handleContextMenu(e));
+                
+                // HTMX events
+                document.body.addEventListener('htmx:afterSwap', (e) => {
+                    if (e.detail.target.id === 'floor-content') {
+                        this.attachObjectListeners();
+                        this.updateObjectCount();
+                    }
+                });
+                
+                // WebSocket for real-time updates
+                this.connectWebSocket();
+                
+                // Keyboard shortcuts
+                document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+            }
+            
+            connectWebSocket() {
+                this.ws = new WebSocket('ws://localhost:8080/ws/bim');
+                
+                this.ws.onmessage = (event) => {
+                    const update = JSON.parse(event.data);
+                    this.handleRealtimeUpdate(update);
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+            }
+            
+            handleRealtimeUpdate(update) {
+                switch (update.type) {
+                    case 'wall_added':
+                        this.addWallToSVG(update.data);
+                        break;
+                    case 'outlet_added':
+                        this.addOutletToSVG(update.data);
+                        break;
+                    case 'object_moved':
+                        this.updateObjectPosition(update.data);
+                        break;
+                    case 'object_deleted':
+                        this.removeObjectFromSVG(update.data.id);
+                        break;
+                }
+                
+                this.updateObjectCount();
+            }
+            
+            handleMouseDown(e) {
+                const pt = this.getSVGPoint(e);
+                
+                if (e.button === 1 || e.shiftKey) {
+                    // Middle mouse or shift - pan
+                    this.isPanning = true;
+                    this.panStart = pt;
+                    return;
+                }
+                
+                switch (this.currentTool) {
+                    case 'select':
+                        this.handleSelect(pt, e);
+                        break;
+                    case 'wall':
+                        this.startDrawingWall(pt);
+                        break;
+                    case 'door':
+                        this.placeDoor(pt);
+                        break;
+                    case 'outlet':
+                        this.placeOutlet(pt);
+                        break;
+                    case 'measure':
+                        this.startMeasure(pt);
+                        break;
+                }
+            }
+            
+            handleMouseMove(e) {
+                const pt = this.getSVGPoint(e);
+                
+                // Update cursor position
+                document.getElementById('cursor-pos').textContent = 
+                    `${Math.round(pt.x)}, ${Math.round(pt.y)}`;
+                
+                if (this.isPanning && this.panStart) {
+                    const dx = pt.x - this.panStart.x;
+                    const dy = pt.y - this.panStart.y;
+                    this.pan(dx, dy);
+                    this.panStart = pt;
+                }
+                
+                if (this.isDrawing && this.tempLine) {
+                    this.updateTempLine(pt);
+                }
+                
+                // Highlight on hover
+                if (this.currentTool === 'select') {
+                    this.highlightHover(e);
+                }
+            }
+            
+            handleMouseUp(e) {
+                if (this.isPanning) {
+                    this.isPanning = false;
+                    this.panStart = null;
+                }
+                
+                if (this.isDrawing) {
+                    const pt = this.getSVGPoint(e);
+                    this.finishDrawing(pt);
+                }
+            }
+            
+            handleWheel(e) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                this.zoom(delta, e);
+            }
+            
+            handleContextMenu(e) {
+                e.preventDefault();
+                const menu = document.getElementById('context-menu');
+                menu.style.left = e.pageX + 'px';
+                menu.style.top = e.pageY + 'px';
+                menu.classList.add('visible');
+                
+                // Hide menu on click outside
+                setTimeout(() => {
+                    document.addEventListener('click', () => {
+                        menu.classList.remove('visible');
+                    }, { once: true });
+                }, 100);
+            }
+            
+            handleKeyboard(e) {
+                switch (e.key) {
+                    case 'Delete':
+                    case 'Backspace':
+                        if (this.selectedObjects.size > 0) {
+                            this.deleteSelected();
+                        }
+                        break;
+                    case 'Escape':
+                        this.cancelOperation();
+                        break;
+                    case 'w':
+                        this.setTool('wall');
+                        break;
+                    case 'd':
+                        this.setTool('door');
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        this.setTool('select');
+                        break;
+                }
+            }
+            
+            getSVGPoint(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const pt = this.canvas.createSVGPoint();
+                pt.x = e.clientX - rect.left;
+                pt.y = e.clientY - rect.top;
+                return pt.matrixTransform(this.canvas.getScreenCTM().inverse());
+            }
+            
+            startDrawingWall(pt) {
+                this.isDrawing = true;
+                this.drawStart = pt;
+                
+                // Create temporary line
+                this.tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                this.tempLine.setAttribute('x1', pt.x);
+                this.tempLine.setAttribute('y1', pt.y);
+                this.tempLine.setAttribute('x2', pt.x);
+                this.tempLine.setAttribute('y2', pt.y);
+                this.tempLine.setAttribute('stroke', '#4a9eff');
+                this.tempLine.setAttribute('stroke-width', '20');
+                this.tempLine.setAttribute('stroke-dasharray', '20,10');
+                this.tempLine.setAttribute('opacity', '0.5');
+                
+                document.getElementById('floor-content').appendChild(this.tempLine);
+            }
+            
+            updateTempLine(pt) {
+                if (this.tempLine) {
+                    // Snap to grid or orthogonal
+                    const snapped = this.snapPoint(pt);
+                    this.tempLine.setAttribute('x2', snapped.x);
+                    this.tempLine.setAttribute('y2', snapped.y);
+                }
+            }
+            
+            finishDrawing(pt) {
+                if (this.tempLine) {
+                    const snapped = this.snapPoint(pt);
+                    
+                    // Send wall creation to backend
+                    fetch('/api/walls', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            floor_id: this.currentFloor,
+                            start: { x: this.drawStart.x, y: this.drawStart.y },
+                            end: { x: snapped.x, y: snapped.y },
+                            thickness: 200, // 200mm default
+                            type: 'interior'
+                        })
+                    });
+                    
+                    // Remove temp line
+                    this.tempLine.remove();
+                    this.tempLine = null;
+                }
+                
+                this.isDrawing = false;
+                this.drawStart = null;
+            }
+            
+            snapPoint(pt) {
+                const gridSize = 100; // 100mm grid
+                
+                if (this.drawStart) {
+                    const dx = Math.abs(pt.x - this.drawStart.x);
+                    const dy = Math.abs(pt.y - this.drawStart.y);
+                    
+                    // Snap to orthogonal
+                    if (dx < dy * 0.2) {
+                        pt.x = this.drawStart.x;
+                    } else if (dy < dx * 0.2) {
+                        pt.y = this.drawStart.y;
+                    }
+                }
+                
+                // Snap to grid
+                return {
+                    x: Math.round(pt.x / gridSize) * gridSize,
+                    y: Math.round(pt.y / gridSize) * gridSize
+                };
+            }
+            
+            handleSelect(pt, e) {
+                const target = e.target;
+                
+                if (target.classList.contains('wall') || 
+                    target.classList.contains('room') ||
+                    target.classList.contains('door')) {
+                    
+                    const objectId = target.dataset.id;
+                    
+                    if (e.ctrlKey || e.metaKey) {
+                        // Multi-select
+                        if (this.selectedObjects.has(objectId)) {
+                            this.selectedObjects.delete(objectId);
+                            target.classList.remove('selected');
+                        } else {
+                            this.selectedObjects.add(objectId);
+                            target.classList.add('selected');
+                        }
+                    } else {
+                        // Single select
+                        this.clearSelection();
+                        this.selectedObjects.add(objectId);
+                        target.classList.add('selected');
+                    }
+                    
+                    // Trigger property panel update
+                    htmx.trigger('body', 'object-selected', { 
+                        objectId: objectId,
+                        objectType: target.classList[0]
+                    });
+                }
+            }
+            
+            clearSelection() {
+                document.querySelectorAll('.selected').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                this.selectedObjects.clear();
+            }
+            
+            placeOutlet(pt) {
+                // Find nearest wall
+                const wall = this.findNearestWall(pt);
+                if (wall) {
+                    // Project point onto wall
+                    const projected = this.projectPointOntoWall(pt, wall);
+                    
+                    fetch('/api/outlets', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            wall_id: wall.dataset.id,
+                            position: projected.t, // Position along wall (0-1)
+                            height: 450, // Standard outlet height mm
+                            type: 'standard_120v'
+                        })
+                    });
+                }
+            }
+            
+            findNearestWall(pt) {
+                let nearestWall = null;
+                let minDist = Infinity;
+                
+                document.querySelectorAll('.wall').forEach(wall => {
+                    const dist = this.distanceToWall(pt, wall);
+                    if (dist < minDist && dist < 500) { // Within 500mm
+                        minDist = dist;
+                        nearestWall = wall;
+                    }
+                });
+                
+                return nearestWall;
+            }
+            
+            zoom(delta, e) {
+                const pt = this.getSVGPoint(e);
+                
+                const newScale = this.scale * delta;
+                if (newScale < 0.1 || newScale > 10) return;
+                
+                // Zoom towards cursor
+                const dx = (pt.x - this.viewBox.x) * (1 - delta);
+                const dy = (pt.y - this.viewBox.y) * (1 - delta);
+                
+                this.viewBox.x += dx;
+                this.viewBox.y += dy;
+                this.viewBox.width /= delta;
+                this.viewBox.height /= delta;
+                
+                this.scale = newScale;
+                this.updateViewBox();
+                
+                document.getElementById('current-scale').textContent = 
+                    `1:${Math.round(100 / this.scale)}`;
+            }
+            
+            pan(dx, dy) {
+                this.viewBox.x -= dx;
+                this.viewBox.y -= dy;
+                this.updateViewBox();
+            }
+            
+            updateViewBox() {
+                this.canvas.setAttribute('viewBox', 
+                    `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
+            }
+            
+            fitToScreen() {
+                const bbox = document.getElementById('floor-content').getBBox();
+                const padding = 500;
+                
+                this.viewBox = {
+                    x: bbox.x - padding,
+                    y: bbox.y - padding,
+                    width: bbox.width + padding * 2,
+                    height: bbox.height + padding * 2
+                };
+                
+                this.updateViewBox();
+            }
+            
+            updateObjectCount() {
+                const count = document.querySelectorAll('#floor-content > *').length;
+                document.getElementById('object-count').textContent = count;
+            }
+            
+            attachObjectListeners() {
+                // Attach event listeners to newly loaded SVG elements
+                document.querySelectorAll('#floor-content .wall, #floor-content .room, #floor-content .door')
+                    .forEach(el => {
+                        el.style.cursor = 'pointer';
+                    });
+            }
+            
+            // Tool operations
+            zoomIn() {
+                this.zoom(1.2, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
+            }
+            
+            zoomOut() {
+                this.zoom(0.8, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
+            }
+            
+            toggle3D() {
+                // Switch between 2D and 3D view
+                alert('3D view coming soon!');
+            }
+            
+            setTool(tool) {
+                const btn = document.querySelector(`[data-tool="${tool}"]`);
+                if (btn) btn.click();
+            }
+            
+            deleteSelected() {
+                this.selectedObjects.forEach(id => {
+                    fetch(`/api/objects/${id}`, { method: 'DELETE' });
+                });
+                this.clearSelection();
+            }
+        }
+        
+        // Initialize viewer
+        const bimViewer = new BIMViewer();
+    </script>
+</body>
+</html>

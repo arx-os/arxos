@@ -9,7 +9,7 @@ You only need:
 - PostgreSQL with PostGIS
 - A web browser
 
-That's it. No Node.js, no Python, no complex toolchain.
+That's it. No Node.js, no complex toolchain.
 
 ## Option 1: Docker (Easiest)
 
@@ -63,9 +63,9 @@ cd frontend/web
 # Just open the HTML file!
 open index.html
 
-# Or use any local server
-python3 -m http.server 3000
-# Then open http://localhost:3000
+# Or use the Go test server
+go run ../../test_server.go
+# Then open http://localhost:8080
 ```
 
 ✅ **That's it!** No npm install, no webpack, no build process.

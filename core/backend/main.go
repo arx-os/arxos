@@ -16,6 +16,9 @@ import (
 	"arx/middleware/auth"
 	"arx/models"
 	"arx/services"
+	// Temporarily comment out until module structure is fixed
+	// "arx/api"
+	// "arx/ingestion"
 
 	"github.com/joho/godotenv"
 
@@ -83,6 +86,26 @@ func main() {
 
 	// Initialize Data Vendor Admin handler
 	dataVendorAdminHandler := handlers.NewDataVendorAdminHandler(db.DB, loggingService, monitoringService)
+
+	// Initialize PDF Upload handler
+	// TODO: Uncomment when module structure is fixed
+	/*
+	uploadConfig := api.UploadConfig{
+		MaxFileSize:      50 * 1024 * 1024, // 50MB
+		AllowedFormats:   []string{".pdf"},
+		ProcessTimeout:   30 * time.Second,
+		EnableOCR:        true,
+		EnableValidation: true,
+		StorageBackend:   "postgres",
+	}
+	uploadHandler, err := api.NewUploadHandler(uploadConfig, logger)
+	if err != nil {
+		log.Printf("Warning: Failed to initialize upload handler: %v", err)
+		uploadHandler = nil
+	}
+	*/
+	_ = logger // Use logger to avoid unused variable error
+	// var uploadHandler interface{} = nil // Placeholder (removed to fix compilation)
 
 	// Set up router
 	r := chi.NewRouter()
@@ -230,6 +253,20 @@ func main() {
 			r.Get("/devices", handlers.ListDevices)
 			r.Get("/labels", handlers.ListLabels)
 			r.Get("/zones", handlers.ListZones)
+
+			// PDF Upload and Building endpoints
+			// Simple upload endpoint for testing
+			r.Post("/buildings/upload", handlers.SimplePDFUpload)
+			
+			// TODO: Enable full upload handler when module structure is fixed
+			/*
+			if uploadHandler != nil {
+				r.Post("/buildings/upload", uploadHandler.HandlePDFUpload)
+				r.Get("/buildings/{id}", uploadHandler.GetBuilding)
+				r.Get("/buildings/{id}/objects", uploadHandler.GetBuildingObjects)
+				r.Get("/buildings/{id}/tiles/{z}/{x}/{y}", uploadHandler.GetTile)
+			}
+			*/
 
 			// BIM Export endpoints
 			r.Get("/bim/export/json", handlers.ExportBIMAsJSON)

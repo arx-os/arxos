@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos BIM - 3D View (No WebGL)</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .viewport {
+            flex: 1;
+            position: relative;
+        }
+        
+        #canvas-3d {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        #canvas-3d:active {
+            cursor: grabbing;
+        }
+        
+        #svg-3d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+        
+        .controls h3 {
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4a9eff;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        
+        .control-group select {
+            width: 100%;
+            padding: 5px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .control-buttons button {
+            flex: 1;
+            padding: 8px;
+            background: #4a9eff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .control-buttons button:hover {
+            background: #6bb3ff;
+        }
+        
+        .view-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .view-info span {
+            margin-right: 20px;
+            color: #999;
+        }
+        
+        .view-info span strong {
+            color: #fff;
+        }
+        
+        .floor-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .floor-selector h4 {
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: #999;
+        }
+        
+        .floor-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin: 2px 0;
+            background: transparent;
+            color: #999;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .floor-btn:hover {
+            background: #222;
+            color: #fff;
+            border-color: #444;
+        }
+        
+        .floor-btn.active {
+            background: #4a9eff;
+            color: #fff;
+            border-color: #4a9eff;
+        }
+        
+        .floor-btn.visible {
+            opacity: 1;
+        }
+        
+        .floor-btn.hidden {
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="viewport">
+            <!-- Canvas for smooth 3D rendering -->
+            <canvas id="canvas-3d"></canvas>
+            
+            <!-- SVG overlay for interactive elements -->
+            <svg id="svg-3d" viewBox="-5000 -5000 10000 10000">
+                <g id="building-3d" hx-get="/api/building/3d/svg" hx-trigger="load">
+                    <!-- 3D building will be loaded here -->
+                </g>
+            </svg>
+        </div>
+        
+        <!-- Controls -->
+        <div class="controls">
+            <h3>3D View Controls</h3>
+            
+            <div class="control-group">
+                <label>View Type</label>
+                <select id="view-type" onchange="viewer3D.setViewType(this.value)">
+                    <option value="isometric">Isometric</option>
+                    <option value="perspective">Perspective</option>
+                    <option value="top">Top View</option>
+                    <option value="front">Front View</option>
+                    <option value="side">Side View</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Rotation: <span id="rotation-value">30°</span></label>
+                <input type="range" id="rotation-slider" min="0" max="360" value="30" 
+                       oninput="viewer3D.setRotation(this.value)">
+            </div>
+            
+            <div class="control-group">
+                <label>Elevation: <span id="elevation-value">45°</span></label>
+                <input type="range" id="elevation-slider" min="0" max="90" value="45"
+                       oninput="viewer3D.setElevation(this.value)">
+            </div>
+            
+            <div class="control-group">
+                <label>Zoom: <span id="zoom-value">1.0x</span></label>
+                <input type="range" id="zoom-slider" min="0.1" max="5" step="0.1" value="1"
+                       oninput="viewer3D.setZoom(this.value)">
+            </div>
+            
+            <div class="control-group">
+                <label>Floor Spacing: <span id="spacing-value">3.0m</span></label>
+                <input type="range" id="spacing-slider" min="1" max="10" step="0.5" value="3"
+                       oninput="viewer3D.setFloorSpacing(this.value)">
+            </div>
+            
+            <div class="control-buttons">
+                <button onclick="viewer3D.resetView()">Reset</button>
+                <button onclick="viewer3D.explodeView()">Explode</button>
+                <button onclick="viewer3D.animateRotation()">Rotate</button>
+            </div>
+        </div>
+        
+        <!-- Floor Selector -->
+        <div class="floor-selector">
+            <h4>Floors</h4>
+            <button class="floor-btn visible active" data-floor="0">Basement</button>
+            <button class="floor-btn visible active" data-floor="1">Floor 1</button>
+            <button class="floor-btn visible active" data-floor="2">Floor 2</button>
+            <button class="floor-btn visible active" data-floor="3">Floor 3</button>
+            <button class="floor-btn visible active" data-floor="4">Roof</button>
+        </div>
+        
+        <!-- View Info -->
+        <div class="view-info">
+            <span>Mode: <strong id="view-mode">Isometric</strong></span>
+            <span>Angle: <strong id="view-angle">30°</strong></span>
+            <span>Floors: <strong id="floor-count">5</strong></span>
+            <span>FPS: <strong id="fps">60</strong></span>
+        </div>
+    </div>
+    
+    <script>
+        class BIM3DViewer {
+            constructor() {
+                this.canvas = document.getElementById('canvas-3d');
+                this.ctx = this.canvas.getContext('2d');
+                this.svg = document.getElementById('svg-3d');
+                
+                // Camera settings
+                this.camera = {
+                    type: 'isometric',
+                    rotation: 30,  // Horizontal rotation
+                    elevation: 45, // Vertical angle
+                    zoom: 1,
+                    center: { x: 0, y: 0, z: 0 }
+                };
+                
+                // Building data
+                this.floors = [];
+                this.visibleFloors = new Set([0, 1, 2, 3, 4]);
+                this.floorSpacing = 3000; // 3 meters in mm
+                this.exploded = false;
+                this.explodeDistance = 0;
+                
+                // Animation
+                this.isAnimating = false;
+                this.animationFrame = null;
+                this.lastFrameTime = 0;
+                this.fps = 0;
+                
+                // Interaction
+                this.isDragging = false;
+                this.lastMouse = { x: 0, y: 0 };
+                
+                this.init();
+            }
+            
+            init() {
+                // Set canvas size
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // Mouse controls
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+                
+                // Floor toggles
+                document.querySelectorAll('.floor-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.toggleFloor(e));
+                });
+                
+                // Load building data
+                this.loadBuilding();
+                
+                // Start render loop
+                this.render();
+            }
+            
+            resizeCanvas() {
+                this.canvas.width = this.canvas.offsetWidth;
+                this.canvas.height = this.canvas.offsetHeight;
+            }
+            
+            loadBuilding() {
+                // Mock building data - in production, load via HTMX
+                this.floors = [
+                    { id: 0, name: 'Basement', elevation: -3000, walls: this.generateFloorWalls(0) },
+                    { id: 1, name: 'Floor 1', elevation: 0, walls: this.generateFloorWalls(1) },
+                    { id: 2, name: 'Floor 2', elevation: 3000, walls: this.generateFloorWalls(2) },
+                    { id: 3, name: 'Floor 3', elevation: 6000, walls: this.generateFloorWalls(3) },
+                    { id: 4, name: 'Roof', elevation: 9000, walls: [] }
+                ];
+            }
+            
+            generateFloorWalls(floorId) {
+                // Generate sample walls for demonstration
+                const walls = [];
+                const size = 5000; // 5m square floor
+                
+                // Perimeter walls
+                walls.push({ x1: -size, y1: -size, x2: size, y2: -size, height: 3000 });
+                walls.push({ x1: size, y1: -size, x2: size, y2: size, height: 3000 });
+                walls.push({ x1: size, y1: size, x2: -size, y2: size, height: 3000 });
+                walls.push({ x1: -size, y1: size, x2: -size, y2: -size, height: 3000 });
+                
+                // Interior walls
+                if (floorId > 0) {
+                    walls.push({ x1: 0, y1: -size, x2: 0, y2: 0, height: 3000 });
+                    walls.push({ x1: -size, y1: 0, x2: 0, y2: 0, height: 3000 });
+                }
+                
+                return walls;
+            }
+            
+            project3D(x, y, z) {
+                // Apply explode offset
+                if (this.exploded) {
+                    const floorIndex = Math.floor(z / 3000);
+                    z += floorIndex * this.explodeDistance;
+                }
+                
+                // Rotate around Z axis (horizontal rotation)
+                const rad = this.camera.rotation * Math.PI / 180;
+                const rotX = x * Math.cos(rad) - y * Math.sin(rad);
+                const rotY = x * Math.sin(rad) + y * Math.cos(rad);
+                
+                // Apply projection based on view type
+                let screenX, screenY;
+                
+                switch (this.camera.type) {
+                    case 'isometric':
+                        // Standard isometric projection
+                        screenX = (rotX - rotY) * Math.cos(30 * Math.PI / 180);
+                        screenY = (rotX + rotY) * Math.sin(30 * Math.PI / 180) - z;
+                        break;
+                        
+                    case 'perspective':
+                        // Simple perspective projection
+                        const distance = 10000;
+                        const factor = distance / (distance + rotY);
+                        screenX = rotX * factor;
+                        screenY = -z * factor;
+                        break;
+                        
+                    case 'top':
+                        screenX = rotX;
+                        screenY = rotY;
+                        break;
+                        
+                    case 'front':
+                        screenX = rotX;
+                        screenY = -z;
+                        break;
+                        
+                    case 'side':
+                        screenX = rotY;
+                        screenY = -z;
+                        break;
+                        
+                    default:
+                        screenX = rotX;
+                        screenY = rotY - z * 0.5;
+                }
+                
+                // Apply zoom and center
+                screenX = screenX * this.camera.zoom + this.canvas.width / 2;
+                screenY = screenY * this.camera.zoom + this.canvas.height / 2;
+                
+                return { x: screenX, y: screenY };
+            }
+            
+            render(timestamp = 0) {
+                // Calculate FPS
+                if (timestamp) {
+                    const delta = timestamp - this.lastFrameTime;
+                    this.fps = Math.round(1000 / delta);
+                    document.getElementById('fps').textContent = this.fps;
+                    this.lastFrameTime = timestamp;
+                }
+                
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid
+                this.drawGrid();
+                
+                // Sort floors for proper rendering order
+                const sortedFloors = [...this.floors].sort((a, b) => {
+                    if (this.camera.type === 'isometric') {
+                        return a.elevation - b.elevation;
+                    }
+                    return b.elevation - a.elevation;
+                });
+                
+                // Draw each floor
+                sortedFloors.forEach(floor => {
+                    if (this.visibleFloors.has(floor.id)) {
+                        this.drawFloor(floor);
+                    }
+                });
+                
+                // Continue animation loop
+                this.animationFrame = requestAnimationFrame((t) => this.render(t));
+            }
+            
+            drawGrid() {
+                this.ctx.save();
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.lineWidth = 0.5;
+                
+                const gridSize = 1000; // 1 meter
+                const gridCount = 20;
+                
+                for (let i = -gridCount; i <= gridCount; i++) {
+                    // X lines
+                    const start1 = this.project3D(i * gridSize, -gridCount * gridSize, 0);
+                    const end1 = this.project3D(i * gridSize, gridCount * gridSize, 0);
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(start1.x, start1.y);
+                    this.ctx.lineTo(end1.x, end1.y);
+                    this.ctx.stroke();
+                    
+                    // Y lines
+                    const start2 = this.project3D(-gridCount * gridSize, i * gridSize, 0);
+                    const end2 = this.project3D(gridCount * gridSize, i * gridSize, 0);
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(start2.x, start2.y);
+                    this.ctx.lineTo(end2.x, end2.y);
+                    this.ctx.stroke();
+                }
+                
+                this.ctx.restore();
+            }
+            
+            drawFloor(floor) {
+                this.ctx.save();
+                
+                // Draw floor slab
+                this.ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                this.ctx.lineWidth = 1;
+                
+                const corners = [
+                    this.project3D(-5000, -5000, floor.elevation),
+                    this.project3D(5000, -5000, floor.elevation),
+                    this.project3D(5000, 5000, floor.elevation),
+                    this.project3D(-5000, 5000, floor.elevation)
+                ];
+                
+                this.ctx.beginPath();
+                corners.forEach((corner, i) => {
+                    if (i === 0) {
+                        this.ctx.moveTo(corner.x, corner.y);
+                    } else {
+                        this.ctx.lineTo(corner.x, corner.y);
+                    }
+                });
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                // Draw walls
+                floor.walls.forEach(wall => {
+                    this.drawWall(wall, floor.elevation);
+                });
+                
+                // Draw floor label
+                const center = this.project3D(0, 0, floor.elevation + 1500);
+                this.ctx.fillStyle = '#fff';
+                this.ctx.font = '14px sans-serif';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(floor.name, center.x, center.y);
+                
+                this.ctx.restore();
+            }
+            
+            drawWall(wall, elevation) {
+                // Calculate wall faces
+                const thickness = 200; // 200mm wall thickness
+                
+                // Wall vertices
+                const vertices = [
+                    // Bottom
+                    this.project3D(wall.x1, wall.y1, elevation),
+                    this.project3D(wall.x2, wall.y2, elevation),
+                    // Top
+                    this.project3D(wall.x1, wall.y1, elevation + wall.height),
+                    this.project3D(wall.x2, wall.y2, elevation + wall.height)
+                ];
+                
+                // Draw wall face
+                this.ctx.fillStyle = 'rgba(150, 150, 150, 0.8)';
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                this.ctx.lineWidth = 1;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(vertices[0].x, vertices[0].y);
+                this.ctx.lineTo(vertices[1].x, vertices[1].y);
+                this.ctx.lineTo(vertices[3].x, vertices[3].y);
+                this.ctx.lineTo(vertices[2].x, vertices[2].y);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                // Draw wall edges for definition
+                this.ctx.strokeStyle = 'rgba(74, 158, 255, 0.5)';
+                this.ctx.lineWidth = 2;
+                
+                // Top edge
+                this.ctx.beginPath();
+                this.ctx.moveTo(vertices[2].x, vertices[2].y);
+                this.ctx.lineTo(vertices[3].x, vertices[3].y);
+                this.ctx.stroke();
+            }
+            
+            // Control methods
+            setViewType(type) {
+                this.camera.type = type;
+                document.getElementById('view-mode').textContent = 
+                    type.charAt(0).toUpperCase() + type.slice(1);
+            }
+            
+            setRotation(value) {
+                this.camera.rotation = parseFloat(value);
+                document.getElementById('rotation-value').textContent = value + '°';
+                document.getElementById('view-angle').textContent = value + '°';
+            }
+            
+            setElevation(value) {
+                this.camera.elevation = parseFloat(value);
+                document.getElementById('elevation-value').textContent = value + '°';
+            }
+            
+            setZoom(value) {
+                this.camera.zoom = parseFloat(value);
+                document.getElementById('zoom-value').textContent = value + 'x';
+            }
+            
+            setFloorSpacing(value) {
+                this.floorSpacing = parseFloat(value) * 1000;
+                document.getElementById('spacing-value').textContent = value + 'm';
+            }
+            
+            resetView() {
+                this.camera = {
+                    type: 'isometric',
+                    rotation: 30,
+                    elevation: 45,
+                    zoom: 1,
+                    center: { x: 0, y: 0, z: 0 }
+                };
+                
+                document.getElementById('rotation-slider').value = 30;
+                document.getElementById('elevation-slider').value = 45;
+                document.getElementById('zoom-slider').value = 1;
+                document.getElementById('view-type').value = 'isometric';
+                
+                this.setRotation(30);
+                this.setElevation(45);
+                this.setZoom(1);
+            }
+            
+            explodeView() {
+                this.exploded = !this.exploded;
+                
+                if (this.exploded) {
+                    // Animate explosion
+                    const animate = () => {
+                        if (this.explodeDistance < 2000) {
+                            this.explodeDistance += 100;
+                            requestAnimationFrame(animate);
+                        }
+                    };
+                    animate();
+                } else {
+                    // Animate collapse
+                    const animate = () => {
+                        if (this.explodeDistance > 0) {
+                            this.explodeDistance -= 100;
+                            requestAnimationFrame(animate);
+                        }
+                    };
+                    animate();
+                }
+            }
+            
+            animateRotation() {
+                this.isAnimating = !this.isAnimating;
+                
+                if (this.isAnimating) {
+                    const rotate = () => {
+                        if (this.isAnimating) {
+                            this.camera.rotation = (this.camera.rotation + 1) % 360;
+                            document.getElementById('rotation-slider').value = this.camera.rotation;
+                            document.getElementById('rotation-value').textContent = 
+                                Math.round(this.camera.rotation) + '°';
+                            requestAnimationFrame(rotate);
+                        }
+                    };
+                    rotate();
+                }
+            }
+            
+            toggleFloor(e) {
+                const btn = e.target;
+                const floorId = parseInt(btn.dataset.floor);
+                
+                if (this.visibleFloors.has(floorId)) {
+                    this.visibleFloors.delete(floorId);
+                    btn.classList.remove('active');
+                    btn.classList.add('hidden');
+                } else {
+                    this.visibleFloors.add(floorId);
+                    btn.classList.add('active');
+                    btn.classList.remove('hidden');
+                }
+                
+                document.getElementById('floor-count').textContent = this.visibleFloors.size;
+            }
+            
+            // Mouse interaction
+            handleMouseDown(e) {
+                this.isDragging = true;
+                this.lastMouse = { x: e.clientX, y: e.clientY };
+                this.canvas.style.cursor = 'grabbing';
+            }
+            
+            handleMouseMove(e) {
+                if (!this.isDragging) return;
+                
+                const dx = e.clientX - this.lastMouse.x;
+                const dy = e.clientY - this.lastMouse.y;
+                
+                // Rotate camera based on mouse movement
+                this.camera.rotation = (this.camera.rotation + dx * 0.5) % 360;
+                this.camera.elevation = Math.max(0, Math.min(90, 
+                    this.camera.elevation - dy * 0.3));
+                
+                // Update UI
+                document.getElementById('rotation-slider').value = this.camera.rotation;
+                document.getElementById('elevation-slider').value = this.camera.elevation;
+                document.getElementById('rotation-value').textContent = 
+                    Math.round(this.camera.rotation) + '°';
+                document.getElementById('elevation-value').textContent = 
+                    Math.round(this.camera.elevation) + '°';
+                
+                this.lastMouse = { x: e.clientX, y: e.clientY };
+            }
+            
+            handleMouseUp(e) {
+                this.isDragging = false;
+                this.canvas.style.cursor = 'grab';
+            }
+            
+            handleWheel(e) {
+                e.preventDefault();
+                
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                this.camera.zoom = Math.max(0.1, Math.min(5, this.camera.zoom * delta));
+                
+                document.getElementById('zoom-slider').value = this.camera.zoom;
+                document.getElementById('zoom-value').textContent = 
+                    this.camera.zoom.toFixed(1) + 'x';
+            }
+        }
+        
+        // Initialize viewer
+        const viewer3D = new BIM3DViewer();
+    </script>
+</body>
+</html>

@@ -25,8 +25,8 @@ type User struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"last_modified"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-	Email     string         `gorm:"uniqueIndex;not null" json:"email"`
-	Username  string         `gorm:"uniqueIndex;not null" json:"username"`
+	Email     string         `gorm:"unique;not null" json:"email"`
+	Username  string         `gorm:"unique;not null" json:"username"`
 	Password  string         `json:"-"` // never expose in API responses
 	Role      string         `gorm:"not null;default:'user'" json:"role"`
 	Projects  []Project      `gorm:"constraint:OnDelete:CASCADE;" json:"projects"`
@@ -953,7 +953,7 @@ type ComplianceReport struct {
 	CompletedAt  *time.Time     `json:"completed_at"`
 
 	// Relationships
-	User User `json:"user,omitempty"`
+	User User `gorm:"foreignKey:GeneratedBy;references:ID" json:"user,omitempty"`
 }
 
 // DataAccessLog tracks detailed data access for auditors

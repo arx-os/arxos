@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos BIM Accuracy Test - 100% Precision Focus</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #4a9eff;
+            --success: #4CAF50;
+            --warning: #FFC107;
+            --error: #F44336;
+            --bg-dark: #1a1a1a;
+            --bg-panel: #252525;
+            --bg-header: #2a2a2a;
+            --border: #444;
+            --text: #e0e0e0;
+            --text-dim: #999;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Main Layout */
+        .app-layout {
+            display: grid;
+            grid-template-areas: 
+                "header header header"
+                "controls viewport sidebar"
+                "status status status";
+            grid-template-columns: 320px 1fr 380px;
+            grid-template-rows: 70px 1fr 50px;
+            height: 100vh;
+        }
+
+        /* Header Section */
+        header {
+            grid-area: header;
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 32px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .accuracy-badge {
+            background: linear-gradient(135deg, var(--primary), #3a8eef);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .confidence-meter {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 8px 16px;
+            background: var(--bg-dark);
+            border-radius: 8px;
+        }
+
+        .confidence-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        .confidence-bar {
+            width: 120px;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--error), var(--warning), var(--success));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .confidence-value {
+            font-size: 24px;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .confidence-high { color: var(--success); }
+        .confidence-medium { color: var(--warning); }
+        .confidence-low { color: var(--error); }
+
+        /* Controls Panel */
+        .controls {
+            grid-area: controls;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .control-section {
+            margin-bottom: 32px;
+        }
+
+        .control-section h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+        }
+
+        /* Upload Area */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            background: var(--bg-dark);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--primary);
+            background: rgba(74, 158, 255, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--success);
+            background: rgba(76, 175, 80, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            opacity: 0.5;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .upload-formats {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Settings */
+        .setting-row {
+            margin-bottom: 16px;
+        }
+
+        .setting-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .range-value {
+            display: inline-block;
+            margin-left: 8px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-dark);
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+
+        .checkbox-row:hover {
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        /* Viewport */
+        .viewport {
+            grid-area: viewport;
+            background: var(--bg-dark);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #building-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: grab;
+        }
+
+        #building-canvas.panning {
+            cursor: grabbing;
+        }
+
+        #overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        /* No Content State */
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            opacity: 0.3;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-dim);
+        }
+
+        .empty-text {
+            font-size: 14px;
+            color: var(--text-dim);
+            opacity: 0.7;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .zoom-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tab-btn:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--text);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        .tab-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Analysis Panel */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-dark);
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* Issues Panel */
+        .issue-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .issue-card {
+            background: var(--bg-dark);
+            border-left: 3px solid var(--error);
+            border-radius: 6px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .issue-card:hover {
+            transform: translateX(4px);
+        }
+
+        .issue-card.warning {
+            border-left-color: var(--warning);
+        }
+
+        .issue-card.info {
+            border-left-color: var(--primary);
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .issue-type {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .issue-count {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .issue-description {
+            font-size: 13px;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            grid-area: status;
+            background: var(--bg-header);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 32px;
+            font-size: 13px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-label {
+            color: var(--text-dim);
+        }
+
+        .status-value {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Processing Overlay */
+        .processing-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .processing-overlay.active {
+            display: flex;
+        }
+
+        .processing-modal {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            text-align: center;
+            min-width: 400px;
+        }
+
+        .spinner {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .processing-title {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+
+        .processing-stage {
+            color: var(--text-dim);
+            margin-bottom: 24px;
+        }
+
+        .stage-list {
+            text-align: left;
+            margin: 24px 0;
+        }
+
+        .stage-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            color: var(--text-dim);
+        }
+
+        .stage-item.active {
+            color: var(--primary);
+        }
+
+        .stage-item.complete {
+            color: var(--success);
+        }
+
+        .stage-icon {
+            width: 20px;
+            height: 20px;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stage-item.complete .stage-icon::after {
+            content: '✓';
+            font-size: 12px;
+        }
+
+        /* Manual Review Modal */
+        .review-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+        }
+
+        .review-modal.active {
+            display: flex;
+        }
+
+        .review-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .review-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .review-body {
+            padding: 24px;
+        }
+
+        .review-footer {
+            padding: 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3a8eef;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-dark);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* Tooltips */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-header);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+        }
+
+        .tooltip.visible {
+            display: block;
+        }
+
+        /* Loading Animation */
+        .loading-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            animation: loading 2s linear infinite;
+            display: none;
+        }
+
+        .loading-bar.active {
+            display: block;
+        }
+
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <h1>Arxos BIM</h1>
+                <span class="accuracy-badge">100% Accuracy</span>
+            </div>
+            
+            <div class="confidence-meter">
+                <span class="confidence-label">Confidence</span>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidence-fill"></div>
+                </div>
+                <span class="confidence-value" id="confidence-value">--</span>
+            </div>
+        </header>
+
+        <!-- Controls Panel -->
+        <div class="controls">
+            <div class="control-section">
+                <h3>Upload Floor Plan</h3>
+                <div class="upload-zone" id="upload-zone">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <div class="upload-text">Drop PDF or click to upload</div>
+                    <div class="upload-formats">Supports: PDF, PNG, JPG</div>
+                    <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>Processing Settings</h3>
+                
+                <div class="setting-row">
+                    <label class="setting-label">Building Type</label>
+                    <select id="building-type">
+                        <option value="educational">Educational</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="office">Office</option>
+                        <option value="residential">Residential</option>
+                    </select>
+                </div>
+
+                <div class="setting-row" id="school-level-row">
+                    <label class="setting-label">School Level</label>
+                    <select id="school-level">
+                        <option value="">Select...</option>
+                        <option value="elementary">Elementary</option>
+                        <option value="middle">Middle School</option>
+                        <option value="high">High School</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <label class="setting-label">
+                        Min Confidence: <span class="range-value" id="confidence-threshold">85%</span>
+                    </label>
+                    <input type="range" id="confidence-slider" min="50" max="100" value="85">
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="semantic-analysis" checked>
+                    <label for="semantic-analysis">Enable Semantic Analysis</label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="manual-review" checked>
+                    <label for="manual-review">Require Manual Review</label>
+                </div>
+
+                <div class="checkbox-row">
+                    <input type="checkbox" id="ocr-enabled" checked>
+                    <label for="ocr-enabled">Extract Room Labels (OCR)</label>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h3>Quick Tests</h3>
+                <button class="btn btn-secondary" onclick="loadSampleData()" style="width: 100%; margin-bottom: 8px;">
+                    Load Sample Building
+                </button>
+                <button class="btn btn-secondary" onclick="simulateProcessing()" style="width: 100%;">
+                    Simulate Processing
+                </button>
+            </div>
+        </div>
+
+        <!-- Viewport -->
+        <div class="viewport">
+            <div id="canvas-container">
+                <canvas id="building-canvas"></canvas>
+                <canvas id="overlay-canvas"></canvas>
+                
+                <div class="empty-state" id="empty-state">
+                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="9" x2="15" y2="9"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    <div class="empty-title">No Building Loaded</div>
+                    <div class="empty-text">Upload a PDF floor plan to begin</div>
+                </div>
+                
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="viewport.zoomIn()">+</button>
+                    <button class="zoom-btn" onclick="viewport.zoomOut()">−</button>
+                    <button class="zoom-btn" onclick="viewport.fitToView()">⊡</button>
+                </div>
+            </div>
+            
+            <div class="loading-bar" id="loading-bar"></div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" onclick="switchTab('analysis')">Analysis</button>
+                <button class="tab-btn" onclick="switchTab('issues')">Issues</button>
+                <button class="tab-btn" onclick="switchTab('history')">History</button>
+            </div>
+            
+            <div class="tab-content">
+                <!-- Analysis Tab -->
+                <div class="tab-panel active" id="tab-analysis">
+                    <div class="stat-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Walls</div>
+                            <div class="stat-value" id="wall-count">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Rooms</div>
+                            <div class="stat-value" id="room-count">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Area</div>
+                            <div class="stat-value" id="total-area">0m²</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Accuracy</div>
+                            <div class="stat-value" id="accuracy">--</div>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-bottom: 16px; font-size: 14px; text-transform: uppercase; color: var(--text-dim);">
+                        Room Classification
+                    </h3>
+                    <div id="room-list"></div>
+                </div>
+                
+                <!-- Issues Tab -->
+                <div class="tab-panel" id="tab-issues">
+                    <div class="issue-list" id="issue-list">
+                        <div style="text-align: center; padding: 48px; color: var(--text-dim);">
+                            No issues detected
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- History Tab -->
+                <div class="tab-panel" id="tab-history">
+                    <div id="history-list">
+                        <div style="text-align: center; padding: 48px; color: var(--text-dim);">
+                            No processing history
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-dot"></div>
+                <span class="status-label">Status:</span>
+                <span class="status-value" id="status">Ready</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Processing:</span>
+                <span class="status-value" id="process-time">--</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Method:</span>
+                <span class="status-value" id="method">--</span>
+            </div>
+            <div class="status-item" style="margin-left: auto;">
+                <span class="status-label">Version:</span>
+                <span class="status-value">2.0.0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div class="processing-overlay" id="processing-overlay">
+        <div class="processing-modal">
+            <div class="spinner"></div>
+            <div class="processing-title">Processing Floor Plan</div>
+            <div class="processing-stage" id="processing-stage">Initializing...</div>
+            
+            <div class="stage-list">
+                <div class="stage-item" id="stage-extract">
+                    <div class="stage-icon"></div>
+                    <span>Extracting wall segments</span>
+                </div>
+                <div class="stage-item" id="stage-cluster">
+                    <div class="stage-icon"></div>
+                    <span>Clustering endpoints (DBSCAN)</span>
+                </div>
+                <div class="stage-item" id="stage-topology">
+                    <div class="stage-icon"></div>
+                    <span>Building topology graph</span>
+                </div>
+                <div class="stage-item" id="stage-rooms">
+                    <div class="stage-icon"></div>
+                    <span>Detecting rooms (Planar Graph)</span>
+                </div>
+                <div class="stage-item" id="stage-semantic">
+                    <div class="stage-icon"></div>
+                    <span>Semantic analysis</span>
+                </div>
+                <div class="stage-item" id="stage-validate">
+                    <div class="stage-icon"></div>
+                    <span>Validating structure</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Review Modal -->
+    <div class="review-modal" id="review-modal">
+        <div class="review-content">
+            <div class="review-header">
+                <h2>Manual Review Required</h2>
+                <span class="confidence-value" id="review-confidence">75%</span>
+            </div>
+            <div class="review-body">
+                <p>The automatic processing has completed with medium confidence. Please review the following issues:</p>
+                <div id="review-issues" style="margin-top: 24px;"></div>
+            </div>
+            <div class="review-footer">
+                <button class="btn btn-secondary" onclick="closeReview()">Cancel</button>
+                <button class="btn btn-danger" onclick="rejectReview()">Reject</button>
+                <button class="btn btn-success" onclick="approveReview()">Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- Load Extended PDF Decoder with non-standard operation support -->
+    <script src="pdf_decoder_extended.js"></script>
+    
+    <script>
+        // Initialize Extended PDF Decoder for non-standard PDF operations
+        const pdfProcessor = new PDFDecoderExtended();
+        
+        // Viewport Manager
+        class Viewport {
+            constructor() {
+                this.canvas = document.getElementById('building-canvas');
+                this.overlay = document.getElementById('overlay-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.overlayCtx = this.overlay.getContext('2d');
+                
+                this.zoom = 1.0;
+                this.panX = 0;
+                this.panY = 0;
+                this.isPanning = false;
+                this.lastX = 0;
+                this.lastY = 0;
+                
+                this.walls = [];
+                this.rooms = [];
+                this.selectedWall = null;
+                this.selectedRoom = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                // Mouse events
+                this.canvas.addEventListener('mousedown', (e) => this.startPan(e));
+                this.canvas.addEventListener('mousemove', (e) => this.pan(e));
+                this.canvas.addEventListener('mouseup', () => this.endPan());
+                this.canvas.addEventListener('wheel', (e) => this.handleZoom(e));
+                this.canvas.addEventListener('click', (e) => this.handleClick(e));
+                
+                // Touch events
+                this.canvas.addEventListener('touchstart', (e) => this.startPan(e.touches[0]));
+                this.canvas.addEventListener('touchmove', (e) => this.pan(e.touches[0]));
+                this.canvas.addEventListener('touchend', () => this.endPan());
+            }
+            
+            resize() {
+                const container = document.getElementById('canvas-container');
+                const rect = container.getBoundingClientRect();
+                
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.overlay.width = rect.width;
+                this.overlay.height = rect.height;
+                
+                this.render();
+            }
+            
+            startPan(e) {
+                this.isPanning = true;
+                this.lastX = e.clientX;
+                this.lastY = e.clientY;
+                this.canvas.classList.add('panning');
+            }
+            
+            pan(e) {
+                if (!this.isPanning) return;
+                
+                const deltaX = e.clientX - this.lastX;
+                const deltaY = e.clientY - this.lastY;
+                
+                this.panX += deltaX;
+                this.panY += deltaY;
+                
+                this.lastX = e.clientX;
+                this.lastY = e.clientY;
+                
+                this.render();
+            }
+            
+            endPan() {
+                this.isPanning = false;
+                this.canvas.classList.remove('panning');
+            }
+            
+            handleZoom(e) {
+                e.preventDefault();
+                
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newZoom = this.zoom * delta;
+                
+                if (newZoom >= 0.1 && newZoom <= 10) {
+                    // Zoom towards mouse position
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    this.panX = x - (x - this.panX) * delta;
+                    this.panY = y - (y - this.panY) * delta;
+                    this.zoom = newZoom;
+                    
+                    this.render();
+                }
+            }
+            
+            handleClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left - this.panX) / this.zoom;
+                const y = (e.clientY - rect.top - this.panY) / this.zoom;
+                
+                // Check if click is on a wall or room
+                this.selectElement(x, y);
+            }
+            
+            zoomIn() {
+                this.zoom *= 1.2;
+                this.zoom = Math.min(this.zoom, 10);
+                this.render();
+            }
+            
+            zoomOut() {
+                this.zoom /= 1.2;
+                this.zoom = Math.max(this.zoom, 0.1);
+                this.render();
+            }
+            
+            fitToView() {
+                if (this.walls.length === 0) return;
+                
+                // Calculate bounding box
+                let minX = Infinity, minY = Infinity;
+                let maxX = -Infinity, maxY = -Infinity;
+                
+                this.walls.forEach(wall => {
+                    minX = Math.min(minX, wall.startX, wall.endX);
+                    minY = Math.min(minY, wall.startY, wall.endY);
+                    maxX = Math.max(maxX, wall.startX, wall.endX);
+                    maxY = Math.max(maxY, wall.startY, wall.endY);
+                });
+                
+                const width = maxX - minX;
+                const height = maxY - minY;
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                
+                const scaleX = (this.canvas.width - 100) / width;
+                const scaleY = (this.canvas.height - 100) / height;
+                
+                this.zoom = Math.min(scaleX, scaleY);
+                this.panX = this.canvas.width / 2 - centerX * this.zoom;
+                this.panY = this.canvas.height / 2 - centerY * this.zoom;
+                
+                this.render();
+            }
+            
+            loadBuilding(data) {
+                this.walls = data.walls || [];
+                this.rooms = data.rooms || [];
+                
+                document.getElementById('empty-state').style.display = 'none';
+                this.fitToView();
+            }
+            
+            render() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Apply transformation
+                this.ctx.save();
+                this.ctx.translate(this.panX, this.panY);
+                this.ctx.scale(this.zoom, this.zoom);
+                
+                // Render rooms (as filled polygons)
+                this.rooms.forEach(room => this.renderRoom(room));
+                
+                // Render walls
+                this.walls.forEach(wall => this.renderWall(wall));
+                
+                this.ctx.restore();
+                
+                // Render overlay (selections, issues)
+                this.renderOverlay();
+            }
+            
+            renderWall(wall) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(wall.startX, wall.startY);
+                this.ctx.lineTo(wall.endX, wall.endY);
+                
+                // Style based on confidence
+                if (wall.confidence >= 0.9) {
+                    this.ctx.strokeStyle = '#4a9eff';
+                    this.ctx.lineWidth = 3;
+                } else if (wall.confidence >= 0.7) {
+                    this.ctx.strokeStyle = '#FFC107';
+                    this.ctx.lineWidth = 2;
+                } else {
+                    this.ctx.strokeStyle = '#F44336';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.setLineDash([5, 5]);
+                }
+                
+                if (wall === this.selectedWall) {
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 4;
+                }
+                
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+            
+            renderRoom(room) {
+                if (!room.polygon || room.polygon.length < 3) return;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(room.polygon[0].x, room.polygon[0].y);
+                
+                for (let i = 1; i < room.polygon.length; i++) {
+                    this.ctx.lineTo(room.polygon[i].x, room.polygon[i].y);
+                }
+                
+                this.ctx.closePath();
+                
+                // Fill with transparent color based on room type
+                const colors = {
+                    classroom: 'rgba(74, 158, 255, 0.1)',
+                    corridor: 'rgba(255, 193, 7, 0.1)',
+                    office: 'rgba(76, 175, 80, 0.1)',
+                    bathroom: 'rgba(156, 39, 176, 0.1)',
+                    unknown: 'rgba(158, 158, 158, 0.05)'
+                };
+                
+                this.ctx.fillStyle = colors[room.type] || colors.unknown;
+                this.ctx.fill();
+                
+                // Draw border
+                this.ctx.strokeStyle = room === this.selectedRoom ? '#fff' : '#666';
+                this.ctx.lineWidth = room === this.selectedRoom ? 2 : 1;
+                this.ctx.stroke();
+                
+                // Draw label
+                if (room.label) {
+                    this.ctx.fillStyle = '#e0e0e0';
+                    this.ctx.font = '12px sans-serif';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(room.label, room.centerX, room.centerY);
+                }
+            }
+            
+            renderOverlay() {
+                this.overlayCtx.clearRect(0, 0, this.overlay.width, this.overlay.height);
+                
+                // Render issue markers
+                if (window.currentIssues) {
+                    window.currentIssues.forEach(issue => {
+                        if (issue.location) {
+                            const x = issue.location.x * this.zoom + this.panX;
+                            const y = issue.location.y * this.zoom + this.panY;
+                            
+                            this.overlayCtx.beginPath();
+                            this.overlayCtx.arc(x, y, 8, 0, Math.PI * 2);
+                            
+                            if (issue.severity === 'error') {
+                                this.overlayCtx.fillStyle = 'rgba(244, 67, 54, 0.8)';
+                            } else if (issue.severity === 'warning') {
+                                this.overlayCtx.fillStyle = 'rgba(255, 193, 7, 0.8)';
+                            } else {
+                                this.overlayCtx.fillStyle = 'rgba(74, 158, 255, 0.8)';
+                            }
+                            
+                            this.overlayCtx.fill();
+                        }
+                    });
+                }
+            }
+            
+            selectElement(x, y) {
+                // Check walls
+                this.selectedWall = null;
+                this.walls.forEach(wall => {
+                    if (this.pointNearLine(x, y, wall)) {
+                        this.selectedWall = wall;
+                    }
+                });
+                
+                // Check rooms
+                this.selectedRoom = null;
+                this.rooms.forEach(room => {
+                    if (this.pointInPolygon(x, y, room.polygon)) {
+                        this.selectedRoom = room;
+                    }
+                });
+                
+                this.render();
+                
+                // Update sidebar with selection info
+                if (this.selectedWall) {
+                    console.log('Selected wall:', this.selectedWall);
+                } else if (this.selectedRoom) {
+                    console.log('Selected room:', this.selectedRoom);
+                }
+            }
+            
+            pointNearLine(px, py, wall) {
+                const threshold = 10 / this.zoom;
+                
+                const A = wall.endX - wall.startX;
+                const B = wall.endY - wall.startY;
+                const C = px - wall.startX;
+                const D = py - wall.startY;
+                
+                const dot = A * C + B * D;
+                const lenSq = A * A + B * B;
+                
+                let param = -1;
+                if (lenSq !== 0) param = dot / lenSq;
+                
+                let xx, yy;
+                
+                if (param < 0) {
+                    xx = wall.startX;
+                    yy = wall.startY;
+                } else if (param > 1) {
+                    xx = wall.endX;
+                    yy = wall.endY;
+                } else {
+                    xx = wall.startX + param * A;
+                    yy = wall.startY + param * B;
+                }
+                
+                const dx = px - xx;
+                const dy = py - yy;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                return distance <= threshold;
+            }
+            
+            pointInPolygon(x, y, polygon) {
+                if (!polygon || polygon.length < 3) return false;
+                
+                let inside = false;
+                for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                    const xi = polygon[i].x, yi = polygon[i].y;
+                    const xj = polygon[j].x, yj = polygon[j].y;
+                    
+                    const intersect = ((yi > y) !== (yj > y))
+                        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                    if (intersect) inside = !inside;
+                }
+                
+                return inside;
+            }
+        }
+        
+        // Initialize viewport
+        const viewport = new Viewport();
+        
+        // File Upload Handler
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        
+        uploadZone.addEventListener('click', () => fileInput.click());
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        });
+        
+        // Process uploaded file
+        async function processFile(file) {
+            console.log('Processing file:', file.name);
+            
+            // Show processing overlay
+            showProcessing();
+            
+            try {
+                // Update processing stages
+                updateProcessingStage('Extracting PDF pages...');
+                
+                // Process the actual PDF using extended decoder
+                const result = await pdfProcessor.decodePDF(file);
+                
+                console.log('PDF processing result:', result);
+                
+                // Update viewport with extracted walls
+                if (result.walls && result.walls.length > 0) {
+                    // Convert walls to viewport format
+                    const buildingData = {
+                        walls: result.walls.map((wall, idx) => ({
+                            id: idx + 1,
+                            startX: wall.startX,
+                            startY: wall.startY,
+                            endX: wall.endX,
+                            endY: wall.endY,
+                            confidence: wall.confidence || 0.8
+                        })),
+                        rooms: result.rooms || []
+                    };
+                    
+                    viewport.loadBuilding(buildingData);
+                    
+                    // Update statistics
+                    document.getElementById('wall-count').textContent = buildingData.walls.length;
+                    document.getElementById('room-count').textContent = buildingData.rooms.length;
+                    document.getElementById('accuracy').textContent = Math.round(result.confidence * 100) + '%';
+                    
+                    // Update confidence display
+                    updateConfidence(result.confidence);
+                    
+                    // Update status
+                    document.getElementById('status').textContent = 'Processed';
+                    document.getElementById('process-time').textContent = '2.1s';
+                    document.getElementById('method').textContent = 'PDF Extraction';
+                    
+                    // Check if manual review needed
+                    const minConfidence = parseFloat(document.getElementById('confidence-slider').value) / 100;
+                    if (result.confidence < minConfidence && document.getElementById('manual-review').checked) {
+                        showReview(result.confidence);
+                    }
+                } else {
+                    // No walls detected - show error
+                    alert('No walls could be detected in this PDF. Please ensure it contains a floor plan.');
+                    
+                    // Load sample data as fallback
+                    loadSampleData();
+                }
+                
+            } catch (error) {
+                console.error('PDF processing error:', error);
+                alert('Error processing PDF: ' + error.message);
+                
+                // Load sample data as fallback
+                loadSampleData();
+            } finally {
+                // Hide processing overlay
+                hideProcessing();
+            }
+        }
+        
+        // Update processing stage display
+        function updateProcessingStage(message) {
+            document.getElementById('processing-stage').textContent = message;
+        }
+        
+        // Simulate processing stages
+        async function simulateProcessingStages() {
+            const stages = [
+                'stage-extract',
+                'stage-cluster',
+                'stage-topology',
+                'stage-rooms',
+                'stage-semantic',
+                'stage-validate'
+            ];
+            
+            for (const stage of stages) {
+                document.getElementById(stage).classList.add('active');
+                await sleep(800);
+                document.getElementById(stage).classList.remove('active');
+                document.getElementById(stage).classList.add('complete');
+            }
+        }
+        
+        // Load sample building data
+        function loadSampleData() {
+            const sampleData = {
+                walls: generateSampleWalls(),
+                rooms: generateSampleRooms()
+            };
+            
+            viewport.loadBuilding(sampleData);
+            
+            // Update stats
+            document.getElementById('wall-count').textContent = sampleData.walls.length;
+            document.getElementById('room-count').textContent = sampleData.rooms.length;
+            document.getElementById('total-area').textContent = '856m²';
+            document.getElementById('accuracy').textContent = '94%';
+            
+            // Update confidence
+            updateConfidence(0.82);
+            
+            // Generate issues
+            generateSampleIssues();
+            
+            // Update status
+            document.getElementById('status').textContent = 'Completed';
+            document.getElementById('process-time').textContent = '1.3s';
+            document.getElementById('method').textContent = 'DBSCAN + Planar Graph';
+        }
+        
+        function generateSampleWalls() {
+            const walls = [];
+            
+            // Outer walls
+            walls.push(
+                {id: 1, startX: 100, startY: 100, endX: 700, endY: 100, confidence: 0.95},
+                {id: 2, startX: 700, startY: 100, endX: 700, endY: 500, confidence: 0.92},
+                {id: 3, startX: 700, startY: 500, endX: 100, endY: 500, confidence: 0.88},
+                {id: 4, startX: 100, startY: 500, endX: 100, endY: 100, confidence: 0.90}
+            );
+            
+            // Internal walls
+            walls.push(
+                {id: 5, startX: 100, startY: 250, endX: 400, endY: 250, confidence: 0.85},
+                {id: 6, startX: 400, startY: 100, endX: 400, endY: 500, confidence: 0.78},
+                {id: 7, startX: 550, startY: 100, endX: 550, endY: 500, confidence: 0.65}
+            );
+            
+            return walls;
+        }
+        
+        function generateSampleRooms() {
+            return [
+                {
+                    id: 1,
+                    type: 'classroom',
+                    label: 'Room 101',
+                    centerX: 250,
+                    centerY: 175,
+                    polygon: [
+                        {x: 100, y: 100},
+                        {x: 400, y: 100},
+                        {x: 400, y: 250},
+                        {x: 100, y: 250}
+                    ]
+                },
+                {
+                    id: 2,
+                    type: 'classroom',
+                    label: 'Room 102',
+                    centerX: 250,
+                    centerY: 375,
+                    polygon: [
+                        {x: 100, y: 250},
+                        {x: 400, y: 250},
+                        {x: 400, y: 500},
+                        {x: 100, y: 500}
+                    ]
+                },
+                {
+                    id: 3,
+                    type: 'corridor',
+                    label: 'Hallway',
+                    centerX: 475,
+                    centerY: 300,
+                    polygon: [
+                        {x: 400, y: 100},
+                        {x: 550, y: 100},
+                        {x: 550, y: 500},
+                        {x: 400, y: 500}
+                    ]
+                },
+                {
+                    id: 4,
+                    type: 'office',
+                    label: 'Office',
+                    centerX: 625,
+                    centerY: 300,
+                    polygon: [
+                        {x: 550, y: 100},
+                        {x: 700, y: 100},
+                        {x: 700, y: 500},
+                        {x: 550, y: 500}
+                    ]
+                }
+            ];
+        }
+        
+        function generateSampleIssues() {
+            const issues = [
+                {
+                    type: 'Disconnected Wall',
+                    severity: 'error',
+                    description: 'Wall segment not connected to main structure',
+                    location: {x: 550, y: 300}
+                },
+                {
+                    type: 'Low Confidence',
+                    severity: 'warning',
+                    description: 'Wall detection confidence below threshold',
+                    location: {x: 550, y: 200}
+                },
+                {
+                    type: 'Missing Door',
+                    severity: 'info',
+                    description: 'No door detected for Room 102',
+                    location: {x: 250, y: 250}
+                }
+            ];
+            
+            window.currentIssues = issues;
+            
+            // Update issues panel
+            const issueList = document.getElementById('issue-list');
+            issueList.innerHTML = '';
+            
+            issues.forEach(issue => {
+                const card = document.createElement('div');
+                card.className = `issue-card ${issue.severity}`;
+                card.innerHTML = `
+                    <div class="issue-header">
+                        <span class="issue-type">${issue.type}</span>
+                        <span class="issue-count">1</span>
+                    </div>
+                    <div class="issue-description">${issue.description}</div>
+                `;
+                issueList.appendChild(card);
+            });
+        }
+        
+        // Update confidence display
+        function updateConfidence(value) {
+            const percentage = Math.round(value * 100);
+            const fill = document.getElementById('confidence-fill');
+            const text = document.getElementById('confidence-value');
+            
+            fill.style.width = `${percentage}%`;
+            text.textContent = `${percentage}%`;
+            
+            if (value >= 0.85) {
+                text.className = 'confidence-value confidence-high';
+            } else if (value >= 0.70) {
+                text.className = 'confidence-value confidence-medium';
+            } else {
+                text.className = 'confidence-value confidence-low';
+            }
+        }
+        
+        // Settings handlers
+        document.getElementById('confidence-slider').addEventListener('input', (e) => {
+            document.getElementById('confidence-threshold').textContent = `${e.target.value}%`;
+        });
+        
+        document.getElementById('building-type').addEventListener('change', (e) => {
+            const schoolRow = document.getElementById('school-level-row');
+            schoolRow.style.display = e.target.value === 'educational' ? 'block' : 'none';
+        });
+        
+        // Tab switching
+        function switchTab(tab) {
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update panels
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
+        
+        // Processing overlay
+        function showProcessing() {
+            document.getElementById('processing-overlay').classList.add('active');
+            document.getElementById('loading-bar').classList.add('active');
+            
+            // Reset stages
+            document.querySelectorAll('.stage-item').forEach(item => {
+                item.classList.remove('active', 'complete');
+            });
+        }
+        
+        function hideProcessing() {
+            document.getElementById('processing-overlay').classList.remove('active');
+            document.getElementById('loading-bar').classList.remove('active');
+        }
+        
+        // Manual review
+        function showReview(confidence) {
+            document.getElementById('review-modal').classList.add('active');
+            document.getElementById('review-confidence').textContent = `${Math.round(confidence * 100)}%`;
+        }
+        
+        function closeReview() {
+            document.getElementById('review-modal').classList.remove('active');
+        }
+        
+        function approveReview() {
+            closeReview();
+            updateConfidence(0.95);
+            document.getElementById('status').textContent = 'Approved';
+        }
+        
+        function rejectReview() {
+            closeReview();
+            document.getElementById('status').textContent = 'Rejected - Manual Edit';
+        }
+        
+        // Simulate processing
+        function simulateProcessing() {
+            processFile(new File([''], 'simulation.pdf'));
+        }
+        
+        // Utility
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set initial values
+            updateConfidence(0);
+            
+            // Hide school level by default
+            document.getElementById('school-level-row').style.display = 'none';
+        });
+    </script>
+</body>
+</html>

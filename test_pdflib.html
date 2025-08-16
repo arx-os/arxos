@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF-Lib Test - Arxos</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            border-bottom: 2px solid #0f0;
+            padding-bottom: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #0f0;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            background: rgba(0,255,0,0.1);
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #000;
+            border: 1px solid #0f0;
+            min-height: 200px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        canvas {
+            border: 1px solid #0f0;
+            margin: 10px 0;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 PDF-Lib Extraction Test</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drop PDF file here or click to upload</p>
+            <p style="font-size: 12px; color: #999; margin-top: 10px;">Testing pdf-lib library for direct PDF parsing</p>
+            <input type="file" id="fileInput" accept=".pdf">
+        </div>
+        
+        <canvas id="visualCanvas" width="800" height="600"></canvas>
+        
+        <div class="results" id="results">
+            <p>Waiting for PDF upload...</p>
+        </div>
+    </div>
+
+    <script src="pdf_decoder_pdflib.js"></script>
+    <script>
+        const decoder = new PDFDecoderPdfLib();
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const results = document.getElementById('results');
+        const canvas = document.getElementById('visualCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // File upload handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(0,255,0,0.1)';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '';
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        async function handleFile(file) {
+            results.innerHTML = '<p>🔄 Processing PDF with pdf-lib...</p>';
+            
+            try {
+                console.log('Processing with pdf-lib:', file.name);
+                const startTime = performance.now();
+                
+                const data = await decoder.decodePDF(file);
+                
+                const endTime = performance.now();
+                const processingTime = ((endTime - startTime) / 1000).toFixed(2);
+                
+                console.log('Extraction complete:', data);
+                
+                // Visualize walls
+                visualizeWalls(data);
+                
+                // Display results
+                let html = `<p>✅ Extraction complete in ${processingTime}s</p>`;
+                html += `<p>📊 Found ${data.walls.length} walls</p>`;
+                html += '<hr style="border-color: #0f0; margin: 10px 0;">';
+                
+                // Show first 10 walls
+                data.walls.slice(0, 10).forEach((wall, idx) => {
+                    html += `<p style="font-size: 12px; color: #0ff;">
+                        Wall ${idx + 1}: (${wall.startX.toFixed(1)}, ${wall.startY.toFixed(1)}) → 
+                        (${wall.endX.toFixed(1)}, ${wall.endY.toFixed(1)}) 
+                        | Source: ${wall.source}
+                    </p>`;
+                });
+                
+                if (data.walls.length > 10) {
+                    html += `<p style="color: #999;">... and ${data.walls.length - 10} more walls</p>`;
+                }
+                
+                results.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                results.innerHTML = `<p style="color: #f00;">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        function visualizeWalls(data) {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (data.walls.length === 0) return;
+            
+            // Calculate bounds
+            let minX = Infinity, minY = Infinity;
+            let maxX = -Infinity, maxY = -Infinity;
+            
+            data.walls.forEach(wall => {
+                minX = Math.min(minX, wall.startX, wall.endX);
+                minY = Math.min(minY, wall.startY, wall.endY);
+                maxX = Math.max(maxX, wall.startX, wall.endX);
+                maxY = Math.max(maxY, wall.startY, wall.endY);
+            });
+            
+            // Calculate scale to fit canvas
+            const padding = 40;
+            const scaleX = (canvas.width - 2 * padding) / (maxX - minX);
+            const scaleY = (canvas.height - 2 * padding) / (maxY - minY);
+            const scale = Math.min(scaleX, scaleY);
+            
+            // Draw walls
+            data.walls.forEach(wall => {
+                const x1 = (wall.startX - minX) * scale + padding;
+                const y1 = (wall.startY - minY) * scale + padding;
+                const x2 = (wall.endX - minX) * scale + padding;
+                const y2 = (wall.endY - minY) * scale + padding;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                
+                // Color by source
+                if (wall.source === 'pdflib') {
+                    ctx.strokeStyle = '#0f0';
+                    ctx.lineWidth = 2;
+                } else if (wall.source === 'boundary') {
+                    ctx.strokeStyle = '#f00';
+                    ctx.lineWidth = 1;
+                } else {
+                    ctx.strokeStyle = '#ff0';
+                    ctx.lineWidth = 1.5;
+                }
+                
+                ctx.stroke();
+            });
+            
+            // Add legend
+            ctx.fillStyle = '#0f0';
+            ctx.font = '12px monospace';
+            ctx.fillText('PDF-Lib extraction', 10, 20);
+            ctx.fillStyle = '#ff0';
+            ctx.fillText(`${data.walls.length} walls`, 10, 35);
+        }
+        
+        console.log('PDF-Lib test ready');
+    </script>
+</body>
+</html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Extraction Test - Arxos</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            border-bottom: 2px solid #0f0;
+            padding-bottom: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #0f0;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            background: rgba(0,255,0,0.1);
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #000;
+            border: 1px solid #0f0;
+            min-height: 200px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .stat {
+            background: #000;
+            border: 1px solid #0f0;
+            padding: 10px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0ff;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        canvas {
+            border: 1px solid #0f0;
+            margin: 10px 0;
+            display: block;
+        }
+        .wall-item {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(0,255,0,0.1);
+            font-size: 12px;
+        }
+        .confidence-high { color: #0f0; }
+        .confidence-medium { color: #ff0; }
+        .confidence-low { color: #f00; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ Arxos PDF Extraction Test</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <p>📄 Drop PDF file here or click to upload</p>
+            <p style="font-size: 12px; color: #999; margin-top: 10px;">Testing non-standard PDF operation decoding</p>
+            <input type="file" id="fileInput" accept=".pdf">
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="wallCount">0</div>
+                <div class="stat-label">WALLS DETECTED</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="roomCount">0</div>
+                <div class="stat-label">ROOMS FOUND</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="confidence">0%</div>
+                <div class="stat-label">CONFIDENCE</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="operations">0</div>
+                <div class="stat-label">PDF OPERATIONS</div>
+            </div>
+        </div>
+        
+        <canvas id="visualCanvas" width="800" height="600"></canvas>
+        
+        <div class="results" id="results">
+            <p>Waiting for PDF upload...</p>
+        </div>
+    </div>
+
+    <script src="pdf_decoder_v2.js"></script>
+    <script>
+        const decoder = new PDFDecoderV2();
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const results = document.getElementById('results');
+        const canvas = document.getElementById('visualCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // File upload handling
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = 'rgba(0,255,0,0.1)';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '';
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        async function handleFile(file) {
+            results.innerHTML = '<p>🔄 Processing PDF...</p>';
+            
+            try {
+                console.log('Starting PDF decode:', file.name);
+                const startTime = performance.now();
+                
+                const data = await decoder.decodePDF(file);
+                
+                const endTime = performance.now();
+                const processingTime = ((endTime - startTime) / 1000).toFixed(2);
+                
+                console.log('Extraction complete:', data);
+                
+                // Update statistics
+                document.getElementById('wallCount').textContent = data.walls.length;
+                document.getElementById('roomCount').textContent = data.rooms.length;
+                document.getElementById('confidence').textContent = Math.round(data.confidence * 100) + '%';
+                
+                // Visualize walls
+                visualizeWalls(data);
+                
+                // Display detailed results
+                let html = `<p>✅ Extraction complete in ${processingTime}s</p>`;
+                html += `<p>📊 Found ${data.walls.length} walls with average confidence ${(data.confidence * 100).toFixed(1)}%</p>`;
+                html += '<hr style="border-color: #0f0; margin: 10px 0;">';
+                
+                // Group walls by confidence
+                const highConf = data.walls.filter(w => w.confidence >= 0.9);
+                const medConf = data.walls.filter(w => w.confidence >= 0.7 && w.confidence < 0.9);
+                const lowConf = data.walls.filter(w => w.confidence < 0.7);
+                
+                html += `<p class="confidence-high">High confidence walls: ${highConf.length}</p>`;
+                html += `<p class="confidence-medium">Medium confidence walls: ${medConf.length}</p>`;
+                html += `<p class="confidence-low">Low confidence walls: ${lowConf.length}</p>`;
+                
+                html += '<hr style="border-color: #0f0; margin: 10px 0;">';
+                html += '<p>Wall segments (first 20):</p>';
+                
+                data.walls.slice(0, 20).forEach((wall, idx) => {
+                    const conf = wall.confidence || 0.5;
+                    const confClass = conf >= 0.9 ? 'confidence-high' : conf >= 0.7 ? 'confidence-medium' : 'confidence-low';
+                    html += `<div class="wall-item ${confClass}">
+                        Wall ${idx + 1}: (${wall.startX.toFixed(1)}, ${wall.startY.toFixed(1)}) → 
+                        (${wall.endX.toFixed(1)}, ${wall.endY.toFixed(1)}) 
+                        | Confidence: ${(conf * 100).toFixed(0)}% 
+                        | Source: ${wall.source}
+                    </div>`;
+                });
+                
+                if (data.walls.length > 20) {
+                    html += `<p style="color: #999; margin-top: 10px;">... and ${data.walls.length - 20} more walls</p>`;
+                }
+                
+                results.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                results.innerHTML = `<p style="color: #f00;">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        function visualizeWalls(data) {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (data.walls.length === 0) return;
+            
+            // Calculate bounds
+            let minX = Infinity, minY = Infinity;
+            let maxX = -Infinity, maxY = -Infinity;
+            
+            data.walls.forEach(wall => {
+                minX = Math.min(minX, wall.startX, wall.endX);
+                minY = Math.min(minY, wall.startY, wall.endY);
+                maxX = Math.max(maxX, wall.startX, wall.endX);
+                maxY = Math.max(maxY, wall.startY, wall.endY);
+            });
+            
+            // Calculate scale to fit canvas
+            const padding = 40;
+            const scaleX = (canvas.width - 2 * padding) / (maxX - minX);
+            const scaleY = (canvas.height - 2 * padding) / (maxY - minY);
+            const scale = Math.min(scaleX, scaleY);
+            
+            // Draw walls
+            data.walls.forEach(wall => {
+                const x1 = (wall.startX - minX) * scale + padding;
+                const y1 = (wall.startY - minY) * scale + padding;
+                const x2 = (wall.endX - minX) * scale + padding;
+                const y2 = (wall.endY - minY) * scale + padding;
+                
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                
+                // Color based on confidence
+                const conf = wall.confidence || 0.5;
+                if (conf >= 0.9) {
+                    ctx.strokeStyle = '#0f0';
+                    ctx.lineWidth = 2;
+                } else if (conf >= 0.7) {
+                    ctx.strokeStyle = '#ff0';
+                    ctx.lineWidth = 1.5;
+                } else {
+                    ctx.strokeStyle = '#f00';
+                    ctx.lineWidth = 1;
+                }
+                
+                ctx.stroke();
+            });
+            
+            // Draw legend
+            ctx.fillStyle = '#0f0';
+            ctx.font = '12px monospace';
+            ctx.fillText('High confidence', 10, 20);
+            ctx.fillStyle = '#ff0';
+            ctx.fillText('Medium confidence', 10, 35);
+            ctx.fillStyle = '#f00';
+            ctx.fillText('Low confidence', 10, 50);
+            
+            // Add source legend
+            ctx.fillStyle = '#0ff';
+            ctx.fillText(`Vector: ${data.walls.filter(w => w.source === 'vector').length} walls`, 10, 70);
+            ctx.fillText(`Raster: ${data.walls.filter(w => w.source === 'raster').length} walls`, 10, 85);
+        }
+        
+        // Log ready status
+        console.log('PDF Extraction Test ready - using PDFDecoderExtended');
+    </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Debug Analysis</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .upload {
+            border: 2px dashed #0f0;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .results {
+            background: #111;
+            padding: 20px;
+            border: 1px solid #0f0;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 PDF Coordinate Debug Analysis</h1>
+    
+    <div class="upload" id="upload">
+        <p>Drop PDF here or click to upload</p>
+        <input type="file" id="fileInput" accept=".pdf">
+    </div>
+    
+    <div class="results" id="results">
+        <pre>Waiting for PDF...</pre>
+    </div>
+    
+    <script src="pdf_decoder_debug.js"></script>
+    <script>
+        const decoder = new PDFDecoderDebug();
+        const upload = document.getElementById('upload');
+        const fileInput = document.getElementById('fileInput');
+        const results = document.getElementById('results');
+        
+        upload.addEventListener('click', () => fileInput.click());
+        
+        upload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            upload.style.background = 'rgba(0,255,0,0.1)';
+        });
+        
+        upload.addEventListener('dragleave', () => {
+            upload.style.background = '';
+        });
+        
+        upload.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            upload.style.background = '';
+            if (e.dataTransfer.files.length > 0) {
+                await handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                await handleFile(e.target.files[0]);
+            }
+        });
+        
+        async function handleFile(file) {
+            results.innerHTML = '<pre>Analyzing PDF...</pre>';
+            
+            try {
+                const data = await decoder.debugPDF(file);
+                
+                let output = '📊 PDF ANALYSIS RESULTS\n';
+                output += '========================\n\n';
+                
+                output += 'OPERATION COUNTS:\n';
+                Object.entries(data.opCounts).forEach(([op, count]) => {
+                    output += `  Op ${op}: ${count}\n`;
+                });
+                
+                output += '\n\nTRANSFORM OPERATIONS:\n';
+                data.analysis.transforms.forEach(t => {
+                    output += `  Index ${t.index}: [${t.matrix.map(n => n.toFixed(2)).join(', ')}]\n`;
+                });
+                
+                output += '\n\nCONSTRUCT PATH OPERATIONS:\n';
+                data.analysis.constructPaths.forEach(p => {
+                    output += `  Index ${p.index}: ${p.opCount} ops, ${p.coordCount} coords\n`;
+                    output += `    Transform: [${p.transform.map(n => n.toFixed(2)).join(', ')}]\n`;
+                    output += `    Sample coords: ${p.sampleCoords.slice(0, 6).map(n => n.toFixed(2)).join(', ')}\n`;
+                });
+                
+                output += '\n\nEXTRACTED LINES:\n';
+                output += `Total: ${data.extraction.length} lines\n`;
+                
+                // Show first 10 lines with details
+                data.extraction.slice(0, 10).forEach((line, i) => {
+                    output += `  Line ${i + 1}:\n`;
+                    output += `    Start: (${line.start.x.toFixed(2)}, ${line.start.y.toFixed(2)})\n`;
+                    output += `    End: (${line.end.x.toFixed(2)}, ${line.end.y.toFixed(2)})\n`;
+                    if (line.transform) {
+                        output += `    Transform: [${line.transform.map(n => n.toFixed(2)).join(', ')}]\n`;
+                    }
+                });
+                
+                // Check console for detailed logs
+                output += '\n\n✅ Check browser console for detailed transformation logs';
+                
+                results.innerHTML = `<pre>${output}</pre>`;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                results.innerHTML = `<pre style="color: #f00;">Error: ${error.message}</pre>`;
+            }
+        }
+    </script>
+</body>
+</html>

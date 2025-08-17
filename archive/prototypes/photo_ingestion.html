@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos Photo Ingestion - Paper Map to BIM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            padding: 20px;
+            border-bottom: 1px solid #333;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .panel {
+            padding: 20px;
+            border-right: 1px solid #333;
+        }
+        
+        .left-panel {
+            width: 400px;
+            background: #111;
+            overflow-y: auto;
+        }
+        
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0a0a0a;
+        }
+        
+        .upload-zone {
+            border: 2px dashed #444;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        
+        .upload-zone:hover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.05);
+        }
+        
+        .upload-zone.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .upload-text {
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        .upload-button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .upload-button:hover {
+            background: #45a049;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .processing-options {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .option-group {
+            margin-bottom: 15px;
+        }
+        
+        .option-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group input {
+            margin-right: 8px;
+        }
+        
+        .checkbox-group label {
+            font-size: 14px;
+        }
+        
+        .slider-group {
+            margin-bottom: 10px;
+        }
+        
+        .slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .slider-value {
+            text-align: right;
+            color: #4CAF50;
+            font-size: 14px;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: grab;
+        }
+        
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .control-btn:hover {
+            background: #444;
+        }
+        
+        .control-btn.active {
+            background: #4CAF50;
+        }
+        
+        .process-btn {
+            background: #2196F3;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .process-btn:hover {
+            background: #1976D2;
+        }
+        
+        .process-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        
+        .status-bar {
+            background: #1a1a1a;
+            padding: 10px 20px;
+            border-top: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .status-text {
+            color: #888;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #444;
+            margin-right: 8px;
+            display: inline-block;
+        }
+        
+        .status-indicator.ready {
+            background: #4CAF50;
+        }
+        
+        .status-indicator.processing {
+            background: #FFC107;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-indicator.error {
+            background: #f44336;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .preview-info {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            color: #888;
+        }
+        
+        .info-value {
+            color: #e0e0e0;
+        }
+        
+        .corner-handles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .corner-handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4CAF50;
+            background: rgba(76, 175, 80, 0.3);
+            cursor: move;
+            pointer-events: all;
+        }
+        
+        .corner-handle.tl { top: 0; left: 0; cursor: nw-resize; }
+        .corner-handle.tr { top: 0; right: 0; cursor: ne-resize; }
+        .corner-handle.bl { bottom: 0; left: 0; cursor: sw-resize; }
+        .corner-handle.br { bottom: 0; right: 0; cursor: se-resize; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Arxos Photo Ingestion</h1>
+        <div class="subtitle">Convert paper floor plans and site maps to ArxObject BIM</div>
+    </header>
+    
+    <div class="container">
+        <div class="panel left-panel">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">Drop photo here or click to browse</div>
+                <button class="upload-button">Select Photo</button>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+            
+            <div class="processing-options">
+                <div class="option-group">
+                    <label class="option-label">Preprocessing</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="perspectiveCorrection" checked>
+                        <label for="perspectiveCorrection">Perspective Correction</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enhanceContrast" checked>
+                        <label for="enhanceContrast">Enhance Contrast</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="removeNoise" checked>
+                        <label for="removeNoise">Noise Reduction</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoRotate" checked>
+                        <label for="autoRotate">Auto-Rotate</label>
+                    </div>
+                </div>
+                
+                <div class="option-group">
+                    <label class="option-label">Wall Detection</label>
+                    <div class="slider-group">
+                        <label for="threshold">Threshold</label>
+                        <input type="range" id="threshold" class="slider" min="50" max="200" value="128">
+                        <div class="slider-value" id="thresholdValue">128</div>
+                    </div>
+                    <div class="slider-group">
+                        <label for="minWallLength">Min Wall Length (px)</label>
+                        <input type="range" id="minWallLength" class="slider" min="10" max="100" value="30">
+                        <div class="slider-value" id="minWallLengthValue">30</div>
+                    </div>
+                </div>
+                
+                <div class="option-group">
+                    <label class="option-label">OCR Settings</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="extractRoomNumbers" checked>
+                        <label for="extractRoomNumbers">Extract Room Numbers</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="extractLabels" checked>
+                        <label for="extractLabels">Extract Labels</label>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="process-btn" id="processBtn" disabled>Process Image</button>
+            
+            <button class="process-btn" id="exportBtn" style="display: none; background: #4CAF50;">Export ArxObjects</button>
+            
+            <button class="process-btn" id="saveBtn" style="display: none; background: #2196F3;">Save to Database</button>
+            
+            <div class="preview-info" id="previewInfo" style="display: none;">
+                <div class="info-row">
+                    <span class="info-label">Dimensions:</span>
+                    <span class="info-value" id="imageDimensions">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">File Size:</span>
+                    <span class="info-value" id="fileSize">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value" id="imageType">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Walls Detected:</span>
+                    <span class="info-value" id="wallCount">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Rooms Found:</span>
+                    <span class="info-value" id="roomCount">-</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-panel">
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="imageCanvas"></canvas>
+                <canvas id="overlayCanvas" style="pointer-events: none;"></canvas>
+                <div class="corner-handles" id="cornerHandles" style="display: none;">
+                    <div class="corner-handle tl" data-corner="tl"></div>
+                    <div class="corner-handle tr" data-corner="tr"></div>
+                    <div class="corner-handle bl" data-corner="bl"></div>
+                    <div class="corner-handle br" data-corner="br"></div>
+                </div>
+                <div class="controls">
+                    <button class="control-btn" id="zoomIn">Zoom In</button>
+                    <button class="control-btn" id="zoomOut">Zoom Out</button>
+                    <button class="control-btn" id="fitView">Fit</button>
+                    <button class="control-btn" id="toggleOverlay">Toggle Overlay</button>
+                    <button class="control-btn" id="perspectiveMode">Perspective</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div>
+            <span class="status-indicator" id="statusIndicator"></span>
+            <span class="status-text" id="statusText">Ready - Drop or select a photo to begin</span>
+        </div>
+        <div id="coordinates">-</div>
+    </div>
+    
+    <script>
+        // Load wall extraction modules
+        const loadScript = (src) => {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        };
+        
+        // Photo processing class
+        class PhotoProcessor {
+            constructor() {
+                this.image = null;
+                this.canvas = document.getElementById('imageCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.overlayCanvas = document.getElementById('overlayCanvas');
+                this.overlayCtx = this.overlayCanvas.getContext('2d');
+                this.scale = 1;
+                this.offset = { x: 0, y: 0 };
+                this.isDragging = false;
+                this.lastMouse = { x: 0, y: 0 };
+                this.perspectiveCorners = [];
+                this.walls = [];
+                this.arxObjects = [];
+                
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                // File upload
+                const uploadZone = document.getElementById('uploadZone');
+                const fileInput = document.getElementById('fileInput');
+                
+                uploadZone.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files[0]));
+                
+                // Drag and drop
+                uploadZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.add('dragover');
+                });
+                
+                uploadZone.addEventListener('dragleave', () => {
+                    uploadZone.classList.remove('dragover');
+                });
+                
+                uploadZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.remove('dragover');
+                    this.handleFileSelect(e.dataTransfer.files[0]);
+                });
+                
+                // Canvas navigation
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', () => this.handleMouseUp());
+                this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+                
+                // Controls
+                document.getElementById('zoomIn').addEventListener('click', () => this.zoom(1.2));
+                document.getElementById('zoomOut').addEventListener('click', () => this.zoom(0.8));
+                document.getElementById('fitView').addEventListener('click', () => this.fitToView());
+                document.getElementById('toggleOverlay').addEventListener('click', () => this.toggleOverlay());
+                document.getElementById('perspectiveMode').addEventListener('click', () => this.togglePerspectiveMode());
+                
+                // Process button
+                document.getElementById('processBtn').addEventListener('click', () => this.processImage());
+                
+                // Export button
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportArxObjects());
+                
+                // Save button
+                document.getElementById('saveBtn').addEventListener('click', () => this.saveToDatabase());
+                
+                // Sliders
+                document.getElementById('threshold').addEventListener('input', (e) => {
+                    document.getElementById('thresholdValue').textContent = e.target.value;
+                });
+                
+                document.getElementById('minWallLength').addEventListener('input', (e) => {
+                    document.getElementById('minWallLengthValue').textContent = e.target.value;
+                });
+            }
+            
+            handleFileSelect(file) {
+                if (!file || !file.type.startsWith('image/')) {
+                    this.updateStatus('Please select an image file', 'error');
+                    return;
+                }
+                
+                this.currentFileName = file.name;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.loadImage(img, file);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            loadImage(img, file) {
+                this.image = img;
+                this.resizeCanvas();
+                this.fitToView();
+                this.render();
+                
+                // Update info
+                document.getElementById('previewInfo').style.display = 'block';
+                document.getElementById('imageDimensions').textContent = `${img.width} × ${img.height}`;
+                document.getElementById('fileSize').textContent = this.formatFileSize(file.size);
+                document.getElementById('imageType').textContent = file.type;
+                
+                // Enable process button
+                document.getElementById('processBtn').disabled = false;
+                this.updateStatus('Image loaded - Ready to process', 'ready');
+            }
+            
+            resizeCanvas() {
+                const container = document.getElementById('canvasContainer');
+                this.canvas.width = container.clientWidth;
+                this.canvas.height = container.clientHeight;
+                this.overlayCanvas.width = container.clientWidth;
+                this.overlayCanvas.height = container.clientHeight;
+            }
+            
+            render() {
+                if (!this.image) return;
+                
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.save();
+                this.ctx.translate(this.offset.x, this.offset.y);
+                this.ctx.scale(this.scale, this.scale);
+                this.ctx.drawImage(this.image, 0, 0);
+                this.ctx.restore();
+            }
+            
+            async processImage() {
+                this.updateStatus('Processing image...', 'processing');
+                document.getElementById('processBtn').disabled = true;
+                
+                try {
+                    // Step 1: Preprocess image
+                    let processedImageData = await this.preprocessImage();
+                    
+                    // Step 2: Extract walls
+                    this.walls = await this.extractWalls(processedImageData);
+                    
+                    // Step 3: Convert to ArxObjects
+                    this.arxObjects = this.convertToArxObjects(this.walls);
+                    
+                    // Step 4: Extract text if OCR is enabled
+                    if (document.getElementById('extractRoomNumbers').checked) {
+                        await this.extractText(processedImageData);
+                    }
+                    
+                    // Update display
+                    this.renderWalls();
+                    document.getElementById('wallCount').textContent = this.walls.length;
+                    document.getElementById('roomCount').textContent = this.arxObjects.filter(obj => obj.type === 'room').length;
+                    
+                    // Show export and save buttons
+                    document.getElementById('exportBtn').style.display = 'block';
+                    document.getElementById('saveBtn').style.display = 'block';
+                    
+                    this.updateStatus(`Processing complete - ${this.walls.length} walls detected, ${this.arxObjects.length} ArxObjects created`, 'ready');
+                    
+                    // Log ArxObjects for debugging
+                    console.log('ArxObjects created:', this.arxObjects);
+                    console.log('Sample ArxObject:', this.arxObjects[0]);
+                } catch (error) {
+                    console.error('Processing error:', error);
+                    this.updateStatus('Error processing image', 'error');
+                } finally {
+                    document.getElementById('processBtn').disabled = false;
+                }
+            }
+            
+            async preprocessImage() {
+                const canvas = document.createElement('canvas');
+                canvas.width = this.image.width;
+                canvas.height = this.image.height;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.drawImage(this.image, 0, 0);
+                let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Apply preprocessing based on options
+                if (document.getElementById('enhanceContrast').checked) {
+                    imageData = this.enhanceContrast(imageData);
+                }
+                
+                if (document.getElementById('removeNoise').checked) {
+                    imageData = this.removeNoise(imageData);
+                }
+                
+                if (document.getElementById('perspectiveCorrection').checked && this.perspectiveCorners.length === 4) {
+                    imageData = this.applyPerspectiveCorrection(imageData);
+                }
+                
+                return imageData;
+            }
+            
+            enhanceContrast(imageData) {
+                const data = imageData.data;
+                const factor = 1.5; // Contrast factor
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i] = Math.min(255, (data[i] - 128) * factor + 128);
+                    data[i + 1] = Math.min(255, (data[i + 1] - 128) * factor + 128);
+                    data[i + 2] = Math.min(255, (data[i + 2] - 128) * factor + 128);
+                }
+                
+                return imageData;
+            }
+            
+            removeNoise(imageData) {
+                // Simple median filter for noise reduction
+                const width = imageData.width;
+                const height = imageData.height;
+                const data = imageData.data;
+                const output = new Uint8ClampedArray(data);
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = (y * width + x) * 4;
+                        
+                        // Get surrounding pixels
+                        const pixels = [];
+                        for (let dy = -1; dy <= 1; dy++) {
+                            for (let dx = -1; dx <= 1; dx++) {
+                                const nIdx = ((y + dy) * width + (x + dx)) * 4;
+                                pixels.push(data[nIdx]);
+                            }
+                        }
+                        
+                        // Apply median
+                        pixels.sort((a, b) => a - b);
+                        output[idx] = pixels[4]; // Middle value
+                        output[idx + 1] = pixels[4];
+                        output[idx + 2] = pixels[4];
+                    }
+                }
+                
+                imageData.data.set(output);
+                return imageData;
+            }
+            
+            applyPerspectiveCorrection(imageData) {
+                // Simplified perspective correction
+                // In production, would use proper homography transformation
+                return imageData;
+            }
+            
+            async extractWalls(imageData) {
+                const threshold = parseInt(document.getElementById('threshold').value);
+                const minLength = parseInt(document.getElementById('minWallLength').value);
+                
+                // Convert to grayscale
+                const gray = this.toGrayscale(imageData);
+                
+                // Apply threshold
+                const binary = this.applyThreshold(gray, threshold);
+                
+                // Detect edges
+                const edges = this.detectEdges(binary);
+                
+                // Find lines using simplified Hough transform
+                const lines = this.detectLines(edges, minLength);
+                
+                // Merge and clean up lines
+                const walls = this.mergeLines(lines);
+                
+                return walls;
+            }
+            
+            toGrayscale(imageData) {
+                const width = imageData.width;
+                const height = imageData.height;
+                const gray = new Uint8Array(width * height);
+                const data = imageData.data;
+                
+                for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+                    gray[j] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+                }
+                
+                return { data: gray, width, height };
+            }
+            
+            applyThreshold(gray, threshold) {
+                const binary = new Uint8Array(gray.data.length);
+                
+                for (let i = 0; i < gray.data.length; i++) {
+                    binary[i] = gray.data[i] > threshold ? 255 : 0;
+                }
+                
+                return { data: binary, width: gray.width, height: gray.height };
+            }
+            
+            detectEdges(binary) {
+                // Simplified edge detection (Sobel-like)
+                const width = binary.width;
+                const height = binary.height;
+                const edges = new Uint8Array(binary.data.length);
+                
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = y * width + x;
+                        
+                        // Horizontal gradient
+                        const gx = binary.data[idx + 1] - binary.data[idx - 1];
+                        
+                        // Vertical gradient
+                        const gy = binary.data[idx + width] - binary.data[idx - width];
+                        
+                        // Magnitude
+                        edges[idx] = Math.min(255, Math.sqrt(gx * gx + gy * gy));
+                    }
+                }
+                
+                return { data: edges, width, height };
+            }
+            
+            detectLines(edges, minLength) {
+                const lines = [];
+                const width = edges.width;
+                const height = edges.height;
+                
+                // Simplified line detection
+                // In production, would use proper Hough transform
+                for (let y = 0; y < height; y += 5) {
+                    let lineStart = null;
+                    
+                    for (let x = 0; x < width; x++) {
+                        const idx = y * width + x;
+                        
+                        if (edges.data[idx] > 128) {
+                            if (!lineStart) {
+                                lineStart = x;
+                            }
+                        } else if (lineStart !== null) {
+                            const length = x - lineStart;
+                            if (length >= minLength) {
+                                lines.push({
+                                    x1: lineStart,
+                                    y1: y,
+                                    x2: x,
+                                    y2: y,
+                                    type: 'horizontal'
+                                });
+                            }
+                            lineStart = null;
+                        }
+                    }
+                }
+                
+                // Similar for vertical lines
+                for (let x = 0; x < width; x += 5) {
+                    let lineStart = null;
+                    
+                    for (let y = 0; y < height; y++) {
+                        const idx = y * width + x;
+                        
+                        if (edges.data[idx] > 128) {
+                            if (!lineStart) {
+                                lineStart = y;
+                            }
+                        } else if (lineStart !== null) {
+                            const length = y - lineStart;
+                            if (length >= minLength) {
+                                lines.push({
+                                    x1: x,
+                                    y1: lineStart,
+                                    x2: x,
+                                    y2: y,
+                                    type: 'vertical'
+                                });
+                            }
+                            lineStart = null;
+                        }
+                    }
+                }
+                
+                return lines;
+            }
+            
+            mergeLines(lines) {
+                // Merge nearby parallel lines
+                const merged = [];
+                const used = new Set();
+                
+                for (let i = 0; i < lines.length; i++) {
+                    if (used.has(i)) continue;
+                    
+                    const line = lines[i];
+                    const group = [line];
+                    used.add(i);
+                    
+                    // Find nearby parallel lines
+                    for (let j = i + 1; j < lines.length; j++) {
+                        if (used.has(j)) continue;
+                        
+                        const other = lines[j];
+                        if (line.type === other.type) {
+                            const dist = line.type === 'horizontal' ?
+                                Math.abs(line.y1 - other.y1) :
+                                Math.abs(line.x1 - other.x1);
+                            
+                            if (dist < 10) {
+                                group.push(other);
+                                used.add(j);
+                            }
+                        }
+                    }
+                    
+                    // Average the group
+                    if (group.length > 0) {
+                        const avgLine = {
+                            x1: Math.round(group.reduce((sum, l) => sum + l.x1, 0) / group.length),
+                            y1: Math.round(group.reduce((sum, l) => sum + l.y1, 0) / group.length),
+                            x2: Math.round(group.reduce((sum, l) => sum + l.x2, 0) / group.length),
+                            y2: Math.round(group.reduce((sum, l) => sum + l.y2, 0) / group.length),
+                            type: line.type
+                        };
+                        merged.push(avgLine);
+                    }
+                }
+                
+                return merged;
+            }
+            
+            convertToArxObjects(walls) {
+                const arxObjects = [];
+                const scale = 0.01; // Assume 1 pixel = 0.01 meters (1cm) for better scale
+                
+                // Convert to nanometer precision (Arxos standard)
+                const METER_TO_NANO = 1000000000;
+                
+                walls.forEach((wall, index) => {
+                    const length = Math.sqrt(Math.pow(wall.x2 - wall.x1, 2) + Math.pow(wall.y2 - wall.y1, 2));
+                    
+                    arxObjects.push({
+                        id: `wall_${Date.now()}_${index}`,
+                        type: 'StructuralWall',
+                        // Store in nanometers for precision
+                        x_nano: Math.round(wall.x1 * scale * METER_TO_NANO),
+                        y_nano: Math.round(wall.y1 * scale * METER_TO_NANO),
+                        z_nano: 0,
+                        // Display values in meters
+                        x: wall.x1 * scale,
+                        y: wall.y1 * scale,
+                        z: 0,
+                        length: length * scale,
+                        width: 0.2, // 20cm wall thickness
+                        height: 3.0, // 3m ceiling height
+                        rotation: Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1),
+                        system: 'structural',
+                        source: 'photo_ingestion',
+                        confidence: 0.85, // Confidence score for photo-based detection
+                        metadata: {
+                            source_file: this.currentFileName || 'uploaded_photo',
+                            processed_at: new Date().toISOString(),
+                            wall_type: wall.type || 'detected',
+                            pixel_coords: {
+                                x1: wall.x1,
+                                y1: wall.y1,
+                                x2: wall.x2,
+                                y2: wall.y2
+                            }
+                        }
+                    });
+                });
+                
+                return arxObjects;
+            }
+            
+            exportArxObjects() {
+                if (!this.arxObjects || this.arxObjects.length === 0) {
+                    this.updateStatus('No ArxObjects to export', 'error');
+                    return;
+                }
+                
+                const exportData = {
+                    version: '1.0',
+                    source: 'photo_ingestion',
+                    timestamp: new Date().toISOString(),
+                    image_info: {
+                        width: this.image.width,
+                        height: this.image.height,
+                        filename: this.currentFileName || 'uploaded_photo'
+                    },
+                    processing_options: {
+                        perspective_correction: document.getElementById('perspectiveCorrection').checked,
+                        enhance_contrast: document.getElementById('enhanceContrast').checked,
+                        remove_noise: document.getElementById('removeNoise').checked,
+                        threshold: parseInt(document.getElementById('threshold').value),
+                        min_wall_length: parseInt(document.getElementById('minWallLength').value)
+                    },
+                    statistics: {
+                        walls_detected: this.walls.length,
+                        arxobjects_created: this.arxObjects.length
+                    },
+                    arxobjects: this.arxObjects
+                };
+                
+                // Create download link
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `arxobjects_${Date.now()}.json`;
+                link.click();
+                
+                this.updateStatus(`Exported ${this.arxObjects.length} ArxObjects`, 'ready');
+            }
+            
+            async saveToDatabase() {
+                if (!this.arxObjects || this.arxObjects.length === 0) {
+                    this.updateStatus('No ArxObjects to save', 'error');
+                    return;
+                }
+                
+                this.updateStatus('Saving to database...', 'processing');
+                
+                try {
+                    // Send to backend API
+                    const response = await fetch('/api/v1/arxobjects/batch', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            source: 'photo_ingestion',
+                            objects: this.arxObjects
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.updateStatus(`Saved ${result.count || this.arxObjects.length} ArxObjects to database`, 'ready');
+                    } else {
+                        // Fallback: save locally if API not available
+                        localStorage.setItem(`arxobjects_${Date.now()}`, JSON.stringify(this.arxObjects));
+                        this.updateStatus('API not available - Saved locally', 'ready');
+                    }
+                } catch (error) {
+                    console.error('Save error:', error);
+                    // Save to localStorage as fallback
+                    localStorage.setItem(`arxobjects_${Date.now()}`, JSON.stringify(this.arxObjects));
+                    this.updateStatus('Saved to local storage (backend not connected)', 'ready');
+                }
+            }
+            
+            async extractText(imageData) {
+                // Placeholder for OCR integration
+                // Would use Tesseract.js or server-side OCR
+                console.log('Text extraction would happen here');
+            }
+            
+            renderWalls() {
+                this.overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
+                this.overlayCtx.save();
+                this.overlayCtx.translate(this.offset.x, this.offset.y);
+                this.overlayCtx.scale(this.scale, this.scale);
+                
+                this.overlayCtx.strokeStyle = '#4CAF50';
+                this.overlayCtx.lineWidth = 2;
+                
+                this.walls.forEach(wall => {
+                    this.overlayCtx.beginPath();
+                    this.overlayCtx.moveTo(wall.x1, wall.y1);
+                    this.overlayCtx.lineTo(wall.x2, wall.y2);
+                    this.overlayCtx.stroke();
+                });
+                
+                this.overlayCtx.restore();
+            }
+            
+            // Navigation methods
+            handleMouseDown(e) {
+                this.isDragging = true;
+                this.lastMouse = { x: e.clientX, y: e.clientY };
+                this.canvas.style.cursor = 'grabbing';
+            }
+            
+            handleMouseMove(e) {
+                const coords = document.getElementById('coordinates');
+                const rect = this.canvas.getBoundingClientRect();
+                const x = Math.round((e.clientX - rect.left - this.offset.x) / this.scale);
+                const y = Math.round((e.clientY - rect.top - this.offset.y) / this.scale);
+                coords.textContent = `${x}, ${y}`;
+                
+                if (this.isDragging) {
+                    const dx = e.clientX - this.lastMouse.x;
+                    const dy = e.clientY - this.lastMouse.y;
+                    this.offset.x += dx;
+                    this.offset.y += dy;
+                    this.lastMouse = { x: e.clientX, y: e.clientY };
+                    this.render();
+                    this.renderWalls();
+                }
+            }
+            
+            handleMouseUp() {
+                this.isDragging = false;
+                this.canvas.style.cursor = 'grab';
+            }
+            
+            handleWheel(e) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                this.zoom(delta);
+            }
+            
+            zoom(factor) {
+                this.scale *= factor;
+                this.scale = Math.max(0.1, Math.min(10, this.scale));
+                this.render();
+                this.renderWalls();
+            }
+            
+            fitToView() {
+                if (!this.image) return;
+                
+                const container = document.getElementById('canvasContainer');
+                const scaleX = container.clientWidth / this.image.width;
+                const scaleY = container.clientHeight / this.image.height;
+                this.scale = Math.min(scaleX, scaleY) * 0.9;
+                
+                this.offset.x = (container.clientWidth - this.image.width * this.scale) / 2;
+                this.offset.y = (container.clientHeight - this.image.height * this.scale) / 2;
+                
+                this.render();
+                this.renderWalls();
+            }
+            
+            toggleOverlay() {
+                this.overlayCanvas.style.display = 
+                    this.overlayCanvas.style.display === 'none' ? 'block' : 'none';
+            }
+            
+            togglePerspectiveMode() {
+                const handles = document.getElementById('cornerHandles');
+                const btn = document.getElementById('perspectiveMode');
+                
+                if (handles.style.display === 'none') {
+                    handles.style.display = 'block';
+                    btn.classList.add('active');
+                    this.initPerspectiveHandles();
+                } else {
+                    handles.style.display = 'none';
+                    btn.classList.remove('active');
+                }
+            }
+            
+            initPerspectiveHandles() {
+                // Initialize corner handles for perspective correction
+                const handles = document.querySelectorAll('.corner-handle');
+                handles.forEach(handle => {
+                    handle.addEventListener('mousedown', (e) => {
+                        e.stopPropagation();
+                        // Handle dragging logic here
+                    });
+                });
+            }
+            
+            updateStatus(text, type) {
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                
+                indicator.className = 'status-indicator ' + type;
+                statusText.textContent = text;
+            }
+            
+            formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const processor = new PhotoProcessor();
+            window.processor = processor; // For debugging
+        });
+    </script>
+</body>
+</html>

@@ -22,6 +22,88 @@ class DataManager {
         // Initialize coordinate system
         this.coordinateSystem = typeof CoordinateSystem !== 'undefined' ? 
             new CoordinateSystem() : null;
+        // Initialize confidence manager if available
+        this.confidenceManager = typeof ConfidenceManager !== 'undefined' ?
+            new ConfidenceManager() : null;
+        // WebSocket for real-time updates
+        this.ws = null;
+        this.initWebSocket();
+    }
+
+    initWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/ws/validation`;
+        
+        try {
+            this.ws = new WebSocket(wsUrl);
+            
+            this.ws.onopen = () => {
+                console.log('WebSocket connected for real-time updates');
+            };
+            
+            this.ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                this.handleWebSocketMessage(data);
+            };
+            
+            this.ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            this.ws.onclose = () => {
+                console.log('WebSocket disconnected, attempting reconnect in 5s...');
+                setTimeout(() => this.initWebSocket(), 5000);
+            };
+        } catch (error) {
+            console.error('Failed to initialize WebSocket:', error);
+        }
+    }
+
+    handleWebSocketMessage(data) {
+        switch (data.type) {
+            case 'confidence_update':
+                this.updateObjectConfidence(data.objectId, data.confidence);
+                break;
+            case 'validation_complete':
+                this.handleValidationComplete(data);
+                break;
+            case 'pattern_learned':
+                this.handlePatternLearned(data);
+                break;
+        }
+    }
+
+    updateObjectConfidence(objectId, confidence) {
+        const obj = this.arxObjects.get(objectId);
+        if (obj) {
+            obj.confidence = confidence;
+            // Notify confidence manager if available
+            if (this.confidenceManager) {
+                this.confidenceManager.updateConfidence(objectId, confidence);
+            }
+            // Trigger re-render
+            document.dispatchEvent(new CustomEvent('arxObjectUpdated', { 
+                detail: { objectId, confidence }
+            }));
+        }
+    }
+
+    handleValidationComplete(data) {
+        console.log('Validation complete:', data);
+        // Update multiple objects if cascade occurred
+        if (data.affectedObjects) {
+            data.affectedObjects.forEach(obj => {
+                this.updateObjectConfidence(obj.id, obj.confidence);
+            });
+        }
+    }
+
+    handlePatternLearned(data) {
+        console.log('Pattern learned:', data);
+        // Could show notification to user about improved confidence
+        if (window.showNotification) {
+            window.showNotification(`Pattern learned! ${data.objectsImproved} objects improved.`);
+        }
     }
 
     async fetchArxObjectsAtScale(scale, viewport) {
@@ -71,6 +153,36 @@ class DataManager {
 
     getArxObject(id) {
         return this.arxObjects.get(id);
+    }
+
+    // Get objects needing validation
+    getObjectsNeedingValidation(threshold = 0.7) {
+        const objects = [];
+        this.arxObjects.forEach(obj => {
+            const confidence = obj.confidence?.overall || 1.0;
+            if (confidence < threshold) {
+                objects.push(obj);
+            }
+        });
+        return objects.sort((a, b) => 
+            (a.confidence?.overall || 0) - (b.confidence?.overall || 0)
+        );
+    }
+
+    // Flag object for validation
+    flagForValidation(objectId, reason) {
+        fetch(`${this.apiBase}/validations/flag`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ object_id: objectId, reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Object flagged for validation:', data);
+        })
+        .catch(error => {
+            console.error('Failed to flag object:', error);
+        });
     }
 }
 
@@ -204,6 +316,10 @@ class SvgRenderer {
         g.setAttribute('data-system', arxObject.system || 'unknown');
         g.setAttribute('transform', `translate(${arxObject.x}, ${arxObject.y})`);
         
+        // Add confidence data attribute
+        const confidence = arxObject.confidence?.overall || 1.0;
+        g.setAttribute('data-confidence', confidence);
+        
         // Create the actual shape based on type
         const shape = this.createShape(arxObject);
         g.appendChild(shape);
@@ -211,7 +327,59 @@ class SvgRenderer {
         // Apply system-based styling
         this.applySystemStyle(shape, arxObject.system);
         
+        // Apply confidence-based styling
+        this.applyConfidenceStyle(shape, confidence);
+        
+        // Add confidence indicator if low
+        if (confidence < 0.7) {
+            const indicator = this.createConfidenceIndicator(confidence);
+            g.appendChild(indicator);
+        }
+        
         return g;
+    }
+
+    createConfidenceIndicator(confidence) {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', '0');
+        circle.setAttribute('cy', '0');
+        circle.setAttribute('r', '3');
+        circle.setAttribute('class', 'confidence-indicator');
+        
+        // Color based on confidence level
+        let color;
+        if (confidence < 0.3) color = '#ff4444';
+        else if (confidence < 0.5) color = '#ff8800';
+        else if (confidence < 0.7) color = '#ffaa00';
+        else color = '#88aa00';
+        
+        circle.setAttribute('fill', color);
+        circle.setAttribute('fill-opacity', '0.8');
+        circle.setAttribute('stroke', '#ffffff');
+        circle.setAttribute('stroke-width', '0.5');
+        
+        // Add pulsing animation for very low confidence
+        if (confidence < 0.3) {
+            const animate = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+            animate.setAttribute('attributeName', 'r');
+            animate.setAttribute('values', '3;5;3');
+            animate.setAttribute('dur', '2s');
+            animate.setAttribute('repeatCount', 'indefinite');
+            circle.appendChild(animate);
+        }
+        
+        return circle;
+    }
+
+    applyConfidenceStyle(element, confidence) {
+        // Apply opacity based on confidence
+        const opacity = 0.3 + (confidence * 0.7); // Range from 0.3 to 1.0
+        element.setAttribute('fill-opacity', opacity);
+        
+        // Add dashed stroke for low confidence
+        if (confidence < 0.5) {
+            element.setAttribute('stroke-dasharray', '2,2');
+        }
     }
 
     createShape(arxObject) {
@@ -380,8 +548,71 @@ class InteractionManager {
     }
 
     showObjectDetails(arxObject) {
-        // Simple detail display - can be enhanced
+        // Enhanced detail display with confidence info
         console.log('ArxObject:', arxObject);
+        
+        const panel = document.getElementById('info-panel');
+        const content = document.getElementById('info-content');
+        
+        if (panel && content) {
+            // Clear previous content
+            content.innerHTML = '';
+            
+            // Add basic info
+            this.addDetailRow(content, 'ID', arxObject.id);
+            this.addDetailRow(content, 'Type', arxObject.type || 'Unknown');
+            this.addDetailRow(content, 'System', arxObject.system || 'Unknown');
+            
+            // Add confidence info
+            if (arxObject.confidence) {
+                const overall = (arxObject.confidence.overall * 100).toFixed(1);
+                this.addDetailRow(content, 'Confidence', `${overall}%`, 
+                    this.getConfidenceColor(arxObject.confidence.overall));
+                
+                // Add validation button if low confidence
+                if (arxObject.confidence.overall < 0.7) {
+                    const validateBtn = document.createElement('button');
+                    validateBtn.className = 'btn-validate';
+                    validateBtn.textContent = 'Validate This Object';
+                    validateBtn.onclick = () => this.startValidation(arxObject);
+                    content.appendChild(validateBtn);
+                }
+            }
+            
+            // Show panel
+            panel.style.display = 'block';
+        }
+    }
+
+    addDetailRow(container, label, value, color) {
+        const dt = document.createElement('dt');
+        dt.textContent = label;
+        container.appendChild(dt);
+        
+        const dd = document.createElement('dd');
+        dd.textContent = value;
+        if (color) dd.style.color = color;
+        container.appendChild(dd);
+    }
+
+    getConfidenceColor(confidence) {
+        if (confidence < 0.3) return '#ff4444';
+        if (confidence < 0.5) return '#ff8800';
+        if (confidence < 0.7) return '#ffaa00';
+        if (confidence < 0.9) return '#88aa00';
+        return '#44aa44';
+    }
+
+    startValidation(arxObject) {
+        // Trigger validation modal if available
+        if (window.ValidationUI) {
+            const validationUI = new ValidationUI();
+            validationUI.showValidationModal(arxObject);
+        } else {
+            // Fallback: flag for validation
+            this.dataManager.flagForValidation(arxObject.id, 'User requested validation');
+            alert('Object flagged for validation');
+        }
     }
 
     fitToView() {
@@ -415,8 +646,81 @@ class ArxosApp {
             this.renderer
         );
         
+        // Initialize confidence visualization if available
+        if (typeof initConfidenceVisualization === 'function') {
+            initConfidenceVisualization();
+        }
+        
+        // Listen for confidence updates
+        document.addEventListener('arxObjectUpdated', (event) => {
+            const { objectId, confidence } = event.detail;
+            // Update visual representation
+            const element = this.renderer.renderedObjects.get(objectId);
+            if (element) {
+                element.setAttribute('data-confidence', confidence.overall);
+                // Re-apply confidence styling
+                const shape = element.querySelector('rect, circle, path');
+                if (shape) {
+                    this.renderer.applyConfidenceStyle(shape, confidence.overall);
+                }
+            }
+        });
+        
+        // Add validation keyboard shortcut
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'v' && this.stateManager.state.selectedObject) {
+                this.interaction.startValidation(this.stateManager.state.selectedObject);
+            }
+        });
+        
         // Initial render
         this.renderer.renderAtScale(1.0);
+        
+        // Show confidence panel if available
+        const confidencePanel = document.getElementById('confidence-panel');
+        if (confidencePanel) {
+            confidencePanel.style.display = 'block';
+            this.updateConfidenceOverview();
+        }
+    }
+
+    updateConfidenceOverview() {
+        const overview = document.getElementById('confidence-overview');
+        if (!overview) return;
+        
+        const objects = this.dataManager.getObjectsNeedingValidation();
+        const total = this.dataManager.arxObjects.size;
+        const needValidation = objects.length;
+        const avgConfidence = this.calculateAverageConfidence();
+        
+        overview.innerHTML = `
+            <div class="confidence-stat">
+                <span class="stat-label">Total Objects:</span>
+                <span class="stat-value">${total}</span>
+            </div>
+            <div class="confidence-stat">
+                <span class="stat-label">Need Validation:</span>
+                <span class="stat-value" style="color: ${needValidation > 0 ? '#ff8800' : '#44aa44'}">
+                    ${needValidation}
+                </span>
+            </div>
+            <div class="confidence-stat">
+                <span class="stat-label">Avg Confidence:</span>
+                <span class="stat-value" style="color: ${this.interaction.getConfidenceColor(avgConfidence)}">
+                    ${(avgConfidence * 100).toFixed(1)}%
+                </span>
+            </div>
+        `;
+    }
+
+    calculateAverageConfidence() {
+        let sum = 0;
+        let count = 0;
+        this.dataManager.arxObjects.forEach(obj => {
+            sum += obj.confidence?.overall || 1.0;
+            count++;
+        });
+        return count > 0 ? sum / count : 1.0;
     }
 }
 

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arxos - Google Maps for Buildings</title>
     <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="static/css/arxos-core.css">
 </head>
 <body>
     <!-- Main viewport for SVG rendering -->
@@ -44,8 +45,23 @@
     <!-- Loading indicator -->
     <div class="loading" id="loading">Loading...</div>
     
+    <!-- Confidence Panel -->
+    <div class="confidence-panel" id="confidence-panel" style="display: none;">
+        <h3>Confidence Overview</h3>
+        <div id="confidence-overview"></div>
+        <button id="start-validation" class="btn-primary">Start Validation</button>
+    </div>
+    
+    <!-- Validation Modal Container -->
+    <div id="validation-container"></div>
+    
     <!-- Core JavaScript -->
     <script src="static/js/arxos-coordinates.js"></script>
     <script src="static/js/arxos-core.js"></script>
+    <script src="static/js/arxos-confidence.js"></script>
+    <script src="static/js/arxos-validation.js"></script>
+    
+    <!-- Add confidence CSS -->
+    <link rel="stylesheet" href="static/css/confidence.css">
 </body>
 </html>

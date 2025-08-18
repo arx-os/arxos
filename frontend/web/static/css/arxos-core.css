@@ -1,0 +1,314 @@
+/* Arxos Core Styles with Confidence Visualization */
+
+/* Main viewport */
+#arxos-viewport {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+    background: #1a1a1a;
+    overflow: hidden;
+}
+
+/* SVG styles */
+#arxos-viewport svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* ArxObject base styles */
+.arx-object {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.arx-object:hover {
+    filter: brightness(1.2);
+}
+
+.arx-object.selected {
+    stroke: #00ff00 !important;
+    stroke-width: 2 !important;
+}
+
+/* Confidence indicator styles */
+.confidence-indicator {
+    pointer-events: none;
+    transform-origin: center;
+}
+
+/* Low confidence object styles */
+[data-confidence="0.3"] {
+    animation: pulse-low-confidence 2s infinite;
+}
+
+@keyframes pulse-low-confidence {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Controls overlay */
+.controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 15px;
+    border-radius: 8px;
+    color: white;
+}
+
+/* Scale indicator */
+.scale-indicator {
+    margin-bottom: 15px;
+    font-family: monospace;
+}
+
+.scale-indicator span {
+    display: block;
+    margin: 5px 0;
+}
+
+#scale-level {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00ff88;
+}
+
+#scale-value {
+    font-size: 14px;
+    color: #888;
+}
+
+/* System toggles */
+.system-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.system-toggle {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.system-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.system-toggle.active {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: currentColor;
+}
+
+.system-toggle.electrical { color: #FFD700; }
+.system-toggle.hvac { color: #FF6B35; }
+.system-toggle.plumbing { color: #4A90E2; }
+.system-toggle.structural { color: #795548; }
+
+/* Info panel */
+.info-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    z-index: 100;
+    display: none;
+}
+
+.info-panel h3 {
+    margin-top: 0;
+    color: #00ff88;
+    font-size: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 10px;
+}
+
+.info-panel dl {
+    margin: 15px 0;
+}
+
+.info-panel dt {
+    font-weight: bold;
+    color: #888;
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+.info-panel dd {
+    margin: 5px 0 15px 0;
+    font-size: 14px;
+}
+
+/* Validate button in info panel */
+.btn-validate {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 15px;
+    transition: transform 0.2s;
+}
+
+.btn-validate:hover {
+    transform: scale(1.02);
+}
+
+/* Loading indicator */
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 18px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px 40px;
+    border-radius: 8px;
+}
+
+/* Confidence panel styles */
+.confidence-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    z-index: 100;
+    min-width: 250px;
+}
+
+.confidence-panel h3 {
+    margin-top: 0;
+    font-size: 16px;
+    color: #00ff88;
+    margin-bottom: 15px;
+}
+
+#confidence-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.confidence-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#start-validation {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+#start-validation:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    animation: slideInRight 0.3s ease;
+    border-left: 4px solid #00ff88;
+    max-width: 300px;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .controls {
+        top: 10px;
+        left: 10px;
+        padding: 10px;
+    }
+    
+    .info-panel {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+    }
+    
+    .confidence-panel {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        min-width: auto;
+    }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+    .arx-object {
+        filter: brightness(0.9);
+    }
+}
+
+/* Print styles */
+@media print {
+    .controls,
+    .info-panel,
+    .confidence-panel,
+    .loading {
+        display: none !important;
+    }
+}

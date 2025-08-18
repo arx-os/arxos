@@ -10,12 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"arx/db"
-	"arx/handlers"
-	securityMiddleware "arx/middleware"
-	"arx/middleware/auth"
-	"arx/models"
-	"arx/services"
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/handlers"
+	securityMiddleware "github.com/arxos/arxos/core/backend/middleware"
+	"github.com/arxos/arxos/core/backend/middleware/auth"
+	"github.com/arxos/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/backend/services"
 	// Temporarily comment out until module structure is fixed
 	// "arx/api"
 	// "arx/ingestion"
@@ -86,6 +87,11 @@ func main() {
 
 	// Initialize Data Vendor Admin handler
 	dataVendorAdminHandler := handlers.NewDataVendorAdminHandler(db.DB, loggingService, monitoringService)
+
+	// Initialize Validation Service and Handler
+	validationService := services.NewValidationService(db.DB)
+	arxEngine := arxobject.NewEngine(10000) // Initialize with capacity for 10000 objects
+	validationHandler := handlers.NewValidationHandler(validationService, arxEngine)
 
 	// Initialize PDF Upload handler
 	// TODO: Uncomment when module structure is fixed
@@ -458,6 +464,19 @@ func main() {
 				// Data Vendor Usage Tracking
 				r.Post("/data-vendor-usage", exportActivityHandler.CreateDataVendorUsage)
 				r.Get("/data-vendor-usage", exportActivityHandler.GetDataVendorUsage)
+			})
+
+			// Validation endpoints for confidence system
+			r.Group(func(r chi.Router) {
+				// Public validation endpoints (any authenticated user can validate)
+				r.Get("/validations/pending", validationHandler.GetPendingValidations)
+				r.Post("/validations/flag", validationHandler.FlagForValidation)
+				r.Post("/validations/submit", validationHandler.SubmitValidation)
+				r.Get("/validations/history", validationHandler.GetValidationHistory)
+				r.Get("/validations/leaderboard", validationHandler.GetValidationLeaderboard)
+				
+				// WebSocket for real-time validation updates
+				r.Get("/ws/validation", validationHandler.WebSocketHandler)
 			})
 
 			// Compliance and Reporting endpoints

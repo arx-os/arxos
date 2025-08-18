@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,23 +17,24 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // TopologyHandler manages building topology endpoints
 type TopologyHandler struct {
 	processor *pipeline.Processor
 	logger    *zap.Logger
-	db        *db.DB
+	database  *gorm.DB
 }
 
 // NewTopologyHandler creates a new handler instance
-func NewTopologyHandler(logger *zap.Logger, database *db.DB) *TopologyHandler {
+func NewTopologyHandler(logger *zap.Logger, database *gorm.DB) *TopologyHandler {
 	config := pipeline.DefaultConfig()
 	
 	return &TopologyHandler{
 		processor: pipeline.NewProcessor(config),
 		logger:    logger,
-		db:        database,
+		database:  database,
 	}
 }
 

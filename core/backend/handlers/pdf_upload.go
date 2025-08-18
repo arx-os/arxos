@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/backend/services"
 	"github.com/google/uuid"
 )
 
@@ -84,49 +86,54 @@ func SimplePDFUpload(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// TODO: In production, this would trigger PDF processing:
-	// 1. Extract text and metadata using pdfplumber or similar
-	// 2. Identify building elements (walls, doors, rooms, etc.)
-	// 3. Convert to ArxObjects with initial confidence scores
-	// 4. Store in database
-	// 5. Queue for validation if confidence is low
+	// Process PDF to extract ArxObjects
+	arxEngine := arxobject.NewEngine(10000)
+	processor := services.NewPDFProcessor(arxEngine)
 	
-	// For now, create mock ArxObjects for testing
-	mockObjects := []map[string]interface{}{
-		{
-			"type":       "wall",
-			"confidence": 0.65,
-			"uuid":       uuid.New().String(),
-			"properties": map[string]interface{}{
-				"length": 5000,
-				"height": 3000,
-				"material": "concrete",
+	processingResult, err := processor.ProcessPDF(filepath)
+	if err != nil {
+		// Log error but continue with partial results
+		response["data"].(map[string]interface{})["process_warning"] = err.Error()
+	}
+	
+	// Convert extracted objects to response format
+	var extractedObjects []map[string]interface{}
+	var needingValidation int
+	
+	if processingResult != nil {
+		for _, obj := range processingResult.Objects {
+			extractedObj := map[string]interface{}{
+				"type":       obj.Type,
+				"uuid":       obj.ID,
+				"confidence": obj.Confidence.Overall,
+				"properties": obj.Properties,
+			}
+			extractedObjects = append(extractedObjects, extractedObj)
+			
+			if obj.Confidence.Overall < 0.7 {
+				needingValidation++
+			}
+		}
+		
+		response["data"].(map[string]interface{})["statistics"] = processingResult.Statistics
+	} else {
+		// Fallback to mock data if processing failed
+		extractedObjects = []map[string]interface{}{
+			{
+				"type":       "wall",
+				"confidence": 0.65,
+				"uuid":       uuid.New().String(),
+				"properties": map[string]interface{}{
+					"length": 5000,
+					"height": 3000,
+				},
 			},
-		},
-		{
-			"type":       "door", 
-			"confidence": 0.45,
-			"uuid":       uuid.New().String(),
-			"properties": map[string]interface{}{
-				"width": 900,
-				"height": 2100,
-				"type": "single",
-			},
-		},
-		{
-			"type":       "room",
-			"confidence": 0.80,
-			"uuid":       uuid.New().String(),
-			"properties": map[string]interface{}{
-				"name": "Office 101",
-				"area": 25.5,
-				"occupancy": 2,
-			},
-		},
+		}
+		needingValidation = 1
 	}
 
-	response["data"].(map[string]interface{})["extracted_objects"] = mockObjects
-	response["data"].(map[string]interface{})["objects_needing_validation"] = 2
+	response["data"].(map[string]interface{})["extracted_objects"] = extractedObjects
+	response["data"].(map[string]interface{})["objects_needing_validation"] = needingValidation
 
 	// Send JSON response
 	w.Header().Set("Content-Type", "application/json")

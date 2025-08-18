@@ -197,7 +197,7 @@ func (pe *PropagationEngine) findRelatedObjects(obj *arxobject.ArxObject) []*arx
 	related := make([]*arxobject.ArxObject, 0)
 	
 	// 1. Find spatially adjacent objects
-	x, y, z := obj.GetPositionMeters()
+	x, y, _ := obj.GetPositionMeters() // z not used for 2D search
 	searchRadius := float32(20.0) // 20 meter radius
 	
 	nearbyIDs := pe.arxEngine.QueryRegion(

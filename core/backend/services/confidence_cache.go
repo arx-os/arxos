@@ -322,13 +322,9 @@ func (cc *ConfidenceCache) GetStats() CacheStats {
 	}
 	
 	return CacheStats{
-		Hits:              cc.stats.Hits,
-		Misses:            cc.stats.Misses,
-		Evictions:         cc.stats.Evictions,
-		TotalObjects:      cc.stats.TotalObjects,
-		MemoryUsage:       cc.stats.MemoryUsage,
-		LastEviction:      cc.stats.LastEviction,
-		AverageAccessTime: cc.stats.AverageAccessTime,
+		Hits:    cc.stats.Hits,
+		Misses:  cc.stats.Misses,
+		HitRate: hitRate,
 	}
 }
 
@@ -509,7 +505,7 @@ func (cc *ConfidenceCache) setInRedis(objectID uint64, cached *CachedConfidence)
 	}
 	
 	ttl := cached.ExpiresAt.Sub(time.Now())
-	cc.redisService.SetWithTTL(key, string(data), ttl)
+	cc.redisService.Set(key, string(data), ttl)
 }
 
 func (cc *ConfidenceCache) batchSetInRedis(confidences map[uint64]*arxobject.ConfidenceScore) {
@@ -537,7 +533,7 @@ func (cc *ConfidenceCache) batchSetInRedis(confidences map[uint64]*arxobject.Con
 	
 	// Execute pipeline
 	for key, value := range pipeline {
-		cc.redisService.Set(key, value)
+		cc.redisService.Set(key, value, cc.config.DefaultTTL)
 	}
 }
 
@@ -571,13 +567,13 @@ func (cc *ConfidenceCache) updateRedisAfterValidation(
 	}
 	
 	if data, err := json.Marshal(cached); err == nil {
-		cc.redisService.SetWithTTL(key, string(data), cc.config.HighConfidenceTTL)
+		cc.redisService.Set(key, string(data), cc.config.HighConfidenceTTL)
 	}
 	
 	// Mark cascaded objects
 	for _, cascadedID := range cascadedObjects {
 		cascadeKey := fmt.Sprintf("%s%d:cascaded", cc.config.RedisKeyPrefix, cascadedID)
-		cc.redisService.SetWithTTL(cascadeKey, "1", cc.config.DefaultTTL)
+		cc.redisService.Set(cascadeKey, "1", cc.config.DefaultTTL)
 	}
 }
 

@@ -607,14 +607,4 @@ func max(a, b int64) int64 {
 	return b
 }
 
-// Response helpers
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write(response)
-}
-
-func respondWithError(w http.ResponseWriter, code int, message string) {
-	respondWithJSON(w, code, map[string]string{"error": message})
-}
+// Use respondWithJSON and respondWithError from helpers.go

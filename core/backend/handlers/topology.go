@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"arx/db"
-	"arx/middleware"
-	"arxos/core/pipeline"
-	"arxos/core/topology"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/middleware"
+	"github.com/arxos/arxos/core/pipeline"
+	"github.com/arxos/arxos/core/topology"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"

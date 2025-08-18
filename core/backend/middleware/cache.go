@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"arx/handlers"
+	"github.com/arxos/arxos/core/backend/services"
 
 	"go.uber.org/zap"
 )
@@ -176,7 +176,7 @@ func CacheMiddleware(config *CacheConfig) func(http.Handler) http.Handler {
 			}
 
 			// Get cache service
-			cacheService := handlers.GetCacheService()
+			cacheService := services.GetCacheService()
 			if cacheService == nil {
 				// Cache service not available, proceed without caching
 				next.ServeHTTP(w, r)
@@ -354,7 +354,7 @@ func CacheInvalidationMiddleware(patterns []string, config *CacheConfig) func(ht
 			}
 
 			if shouldInvalidate {
-				cacheService := handlers.GetCacheService()
+				cacheService := services.GetCacheService()
 				if cacheService != nil {
 					// Invalidate cache based on the operation
 					for _, pattern := range patterns {
@@ -391,7 +391,7 @@ func CacheStatsMiddleware(config *CacheConfig) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Add cache stats to response headers
-			cacheService := handlers.GetCacheService()
+			cacheService := services.GetCacheService()
 			if cacheService != nil {
 				if stats, err := cacheService.GetStats(); err == nil {
 					w.Header().Set("X-Cache-Hits", fmt.Sprintf("%d", stats.Hits))

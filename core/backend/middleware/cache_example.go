@@ -153,7 +153,7 @@ func ExampleMainIntegration() {
 			}
 
 			// Make cache service available to handlers
-			handlers.SetCacheService(cacheService)
+			services.SetCacheService(cacheService)
 
 			// Set up router
 			r := chi.NewRouter()

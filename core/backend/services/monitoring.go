@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

@@ -3,7 +3,7 @@ package bim
 import (
 	"sync"
 	"math"
-	"arxos/core/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 )
 
 // BuildingModel represents a complete building information model

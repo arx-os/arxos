@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"arx/db"
+	"github.com/arxos/arxos/core/backend/db"
 
 	"github.com/go-chi/chi/v5"
 )

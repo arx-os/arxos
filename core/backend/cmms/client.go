@@ -1,7 +1,7 @@
 package cmms
 
 import (
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/models"
 	"context"
 	"time"
 

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"

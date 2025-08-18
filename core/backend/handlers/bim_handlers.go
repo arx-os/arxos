@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
 	
-	// "arxos/core/bim"
+	// "github.com/arxos/arxos/core/bim"
 )
 
 var upgrader = websocket.Upgrader{

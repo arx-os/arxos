@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"arx/db"
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/models"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"

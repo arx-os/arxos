@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"arxos/core/arxobject"
-	"arxos/core/ingestion"
-	"arxos/core/backend/database"
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/ingestion"
+	"github.com/arxos/arxos/core/backend/database"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"arxos/core/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

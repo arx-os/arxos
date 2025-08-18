@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

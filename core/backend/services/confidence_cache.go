@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 )
 
 // ConfidenceCache provides high-performance caching for confidence scores
@@ -19,10 +19,10 @@ type ConfidenceCache struct {
 	redisService *RedisService
 	
 	// Cache statistics
-	stats CacheStats
+	stats ConfidenceCacheStats
 	
 	// Configuration
-	config CacheConfig
+	config ConfidenceCacheConfig
 }
 
 // CachedConfidence represents cached confidence data
@@ -37,8 +37,8 @@ type CachedConfidence struct {
 	PropagationDepth int                      `json:"propagation_depth"`
 }
 
-// CacheStats tracks cache performance
-type CacheStats struct {
+// ConfidenceCacheStats tracks cache performance
+type ConfidenceCacheStats struct {
 	Hits              int64     `json:"hits"`
 	Misses            int64     `json:"misses"`
 	Evictions         int64     `json:"evictions"`
@@ -49,8 +49,8 @@ type CacheStats struct {
 	mu                sync.RWMutex
 }
 
-// CacheConfig defines cache configuration
-type CacheConfig struct {
+// ConfidenceCacheConfig defines cache configuration
+type ConfidenceCacheConfig struct {
 	MaxMemoryObjects   int           `json:"max_memory_objects"`
 	DefaultTTL         time.Duration `json:"default_ttl"`
 	HighConfidenceTTL  time.Duration `json:"high_confidence_ttl"`
@@ -62,9 +62,9 @@ type CacheConfig struct {
 }
 
 // NewConfidenceCache creates a new confidence cache
-func NewConfidenceCache(redisService *RedisService, config *CacheConfig) *ConfidenceCache {
+func NewConfidenceCache(redisService *RedisService, config *ConfidenceCacheConfig) *ConfidenceCache {
 	if config == nil {
-		config = &CacheConfig{
+		config = &ConfidenceCacheConfig{
 			MaxMemoryObjects:  10000,
 			DefaultTTL:        5 * time.Minute,
 			HighConfidenceTTL: 15 * time.Minute,
@@ -80,7 +80,7 @@ func NewConfidenceCache(redisService *RedisService, config *CacheConfig) *Confid
 		memCache:     make(map[uint64]*CachedConfidence),
 		redisService: redisService,
 		config:       *config,
-		stats:        CacheStats{},
+		stats:        ConfidenceCacheStats{},
 	}
 	
 	// Start background maintenance
@@ -230,8 +230,9 @@ func (cc *ConfidenceCache) InvalidatePattern(objectType arxobject.ArxObjectType)
 	// Clear Redis pattern if enabled
 	if cc.config.EnableRedis && cc.redisService != nil {
 		// Pattern-based deletion in Redis
-		pattern := fmt.Sprintf("%s*", cc.config.RedisKeyPrefix)
-		cc.redisService.DeletePattern(pattern)
+		// pattern := fmt.Sprintf("%s*", cc.config.RedisKeyPrefix)
+		// TODO: Implement DeletePattern in RedisService
+		// cc.redisService.DeletePattern(pattern)
 	}
 }
 

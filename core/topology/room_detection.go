@@ -609,7 +609,7 @@ func (rd *RoomDetector) mergeSmallRooms() {
 		
 		// Find adjacent room to merge with
 		for _, adjID := range room.AdjacentRooms {
-			for j, adjRoom := range rd.rooms {
+			for _, adjRoom := range rd.rooms {
 				if adjRoom.ID == adjID {
 					// Merge rooms
 					adjRoom.Area += room.Area

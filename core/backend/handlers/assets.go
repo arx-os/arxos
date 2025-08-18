@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"arx/db"
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/models"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -68,7 +68,7 @@ func GetBuildingAssets(w http.ResponseWriter, r *http.Request) {
 		buildingID, page, pageSize, system, assetType, status, floorID, roomID, search, sortBy, sortOrder)
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -264,7 +264,7 @@ func GetBuildingAsset(w http.ResponseWriter, r *http.Request) {
 	assetID := chi.URLParam(r, "assetId")
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		cacheKey := fmt.Sprintf("asset:details:%s", assetID)
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
@@ -403,7 +403,7 @@ func CreateBuildingAsset(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate asset-related caches
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		// Invalidate asset list cache for this building
 		cacheService.InvalidatePattern(fmt.Sprintf("assets:list:building:%d*", asset.BuildingID))
@@ -481,7 +481,7 @@ func UpdateBuildingAsset(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate asset-related caches
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		// Invalidate asset details cache
 		cacheService.Delete(fmt.Sprintf("asset:details:%s", assetID))
@@ -602,7 +602,7 @@ func BulkCreateAssets(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate caches
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		cacheService.InvalidatePattern(fmt.Sprintf("assets:list:building:%d*", request.BuildingID))
 		cacheService.InvalidatePattern(fmt.Sprintf("assets:relationships:building:%d*", request.BuildingID))
@@ -685,7 +685,7 @@ func BulkUpdateAssets(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate caches for all affected buildings
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		buildingIDs := make(map[uint]bool)
 		for _, asset := range assets {

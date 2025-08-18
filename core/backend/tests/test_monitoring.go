@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"arx/db"
-	"arx/handlers"
-	"arx/services"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/handlers"
+	"github.com/arxos/arxos/core/backend/services"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

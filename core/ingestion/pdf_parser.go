@@ -18,7 +18,7 @@ import (
 	"sync"
 	"sync/atomic"
 	
-	"arxos/core/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/otiai10/gosseract/v2"

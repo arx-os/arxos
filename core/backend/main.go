@@ -18,8 +18,8 @@ import (
 	"github.com/arxos/arxos/core/backend/models"
 	"github.com/arxos/arxos/core/backend/services"
 	// Temporarily comment out until module structure is fixed
-	// "arx/api"
-	// "arx/ingestion"
+	// "github.com/arxos/arxos/core/backend/api"
+	// "github.com/arxos/arxos/core/backend/ingestion"
 
 	"github.com/joho/godotenv"
 
@@ -67,8 +67,8 @@ func main() {
 		log.Println("⚠️  Cache service disabled - Redis not available")
 	}
 
-	// Make cache service available to handlers
-	handlers.SetCacheService(cacheService)
+	// Make cache service available globally
+	services.SetCacheService(cacheService)
 
 	// Initialize CMMS client
 	handlers.InitCMMSClient()

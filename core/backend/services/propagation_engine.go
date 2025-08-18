@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 )
 
 // PropagationEngine handles confidence propagation across related objects

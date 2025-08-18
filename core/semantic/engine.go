@@ -2,7 +2,7 @@
 package semantic
 
 import (
-	"arxos/core/topology"
+	"github.com/arxos/arxos/core/topology"
 	"encoding/json"
 	"fmt"
 	"math"

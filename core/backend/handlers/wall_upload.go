@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 	
-	// "arxos/core/arxobject"
-	// "arxos/core/backend/converters"
+	// "github.com/arxos/arxos/core/arxobject"
+	// "github.com/arxos/arxos/core/backend/converters"
 )
 
 // WallUploadRequest represents the incoming wall data from the frontend

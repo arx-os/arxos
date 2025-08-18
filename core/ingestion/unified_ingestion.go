@@ -11,7 +11,7 @@ import (
 	"io"
 	"time"
 	
-	"arxos/core/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 )
 
 // IngestionType represents the type of data being ingested

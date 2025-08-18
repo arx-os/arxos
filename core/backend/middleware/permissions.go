@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"gorm.io/gorm"
 )

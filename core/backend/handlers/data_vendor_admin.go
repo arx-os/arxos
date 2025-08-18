@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"arx/models"
-	"arx/services"
+	"github.com/arxos/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/backend/services"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"

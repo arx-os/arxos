@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"arx/db"
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/models"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 
-	"arx/services"
+	"github.com/arxos/arxos/core/backend/services"
 )
 
 // DataVendorHandler handles data vendor API endpoints

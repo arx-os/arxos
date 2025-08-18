@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/arxos/core/arxobject"
-	"github.com/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/backend/models"
 )
 
 // ValidationService handles validation business logic

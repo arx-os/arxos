@@ -2,10 +2,11 @@
 package pipeline
 
 import (
-	"arxos/core/semantic"
-	"arxos/core/topology"
+	"github.com/arxos/arxos/core/semantic"
+	"github.com/arxos/arxos/core/topology"
 	"fmt"
 	"log"
+	"math"
 	"time"
 )
 
@@ -327,7 +328,7 @@ func (p *Processor) detectRooms(building *topology.Building) {
 	room := &topology.Room{
 		ID:            1,
 		BoundaryWalls: []uint64{1, 2, 3, 4},
-		Area:          80 * 1e18, // 80 m²
+		Area:          80, // 80 m²
 		CeilingHeight: 3 * 1e9,
 		Function:      topology.RoomFunctionClassroom,
 	}
@@ -541,6 +542,4 @@ func (q *ManualReviewQueue) AddTask(result *ProcessingResult) *ReviewTask {
 	return task
 }
 
-func math.Sqrt(x float64) float64 {
-	return x // Placeholder for actual math.Sqrt
-}
+// Note: math.Sqrt is already provided by the math package

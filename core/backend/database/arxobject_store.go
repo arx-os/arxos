@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"arxos/core/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"github.com/jmoiron/sqlx"

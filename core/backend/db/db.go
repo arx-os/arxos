@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"arx/models"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"

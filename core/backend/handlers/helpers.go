@@ -1,29 +1,16 @@
 package handlers
 
 import (
-	"arx/db"
-	"arx/logic_engine"
-	"arx/models"
-	"arx/services"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/logic_engine"
+	"github.com/arxos/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/backend/services"
 	"encoding/json"
 	"net/http"
 	"os"
 
 	"github.com/golang-jwt/jwt/v4"
 )
-
-// Global cache service instance
-var globalCacheService *services.CacheService
-
-// SetCacheService sets the global cache service instance
-func SetCacheService(cacheService *services.CacheService) {
-	globalCacheService = cacheService
-}
-
-// GetCacheService returns the global cache service instance
-func GetCacheService() *services.CacheService {
-	return globalCacheService
-}
 
 // getUserFromRequest extracts the user from the JWT and fetches the user object from the database.
 func GetUserFromRequest(r *http.Request) (*models.User, error) {

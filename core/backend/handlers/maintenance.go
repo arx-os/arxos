@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"arx/db"
+	"github.com/arxos/arxos/core/backend/db"
 	"encoding/json"
 	"fmt"
 	"net/http"

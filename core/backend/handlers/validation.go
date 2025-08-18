@@ -8,9 +8,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-	"github.com/arxos/core/arxobject"
-	"github.com/arxos/core/backend/models"
-	"github.com/arxos/core/backend/services"
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/backend/services"
 )
 
 // ValidationHandler handles field validation endpoints

@@ -82,6 +82,7 @@ const (
 
 // ArxObject is the DNA of building elements
 // Optimized for the full scale range: campus to circuit traces
+// Now with confidence scoring for AI-driven intelligence
 type ArxObject struct {
 	// Identity (16 bytes)
 	ID   uint64 // Fast numeric ID instead of string
@@ -104,17 +105,67 @@ type ArxObject struct {
 	RelationshipCount uint16
 	ConstraintBits    uint16 // Bit flags for common constraints
 	
+	// Confidence (40 bytes) - AI confidence scoring
+	Confidence ConfidenceScore
+	
+	// Validation (16 bytes) - validation tracking
+	ValidationState uint8 // 0=pending, 1=partial, 2=complete, 3=conflict
+	_padding3       [7]byte
+	ValidatedAt     int64 // Unix timestamp
+	
 	// Metadata (8 bytes) - pointer to extended data only when needed
 	MetadataPtr *ArxMetadata
+}
+
+// ConfidenceScore represents multi-dimensional confidence for AI-driven intelligence
+type ConfidenceScore struct {
+	Classification float32 // How certain about object type (0-1)
+	Position       float32 // Spatial accuracy confidence (0-1)
+	Properties     float32 // Data accuracy confidence (0-1)
+	Relationships  float32 // Connection validity (0-1)
+	Overall        float32 // Weighted average (0-1)
+}
+
+// NewConfidenceScore creates a confidence score with automatic overall calculation
+func NewConfidenceScore(classification, position, properties, relationships float32) ConfidenceScore {
+	cs := ConfidenceScore{
+		Classification: clamp32(classification, 0, 1),
+		Position:       clamp32(position, 0, 1),
+		Properties:     clamp32(properties, 0, 1),
+		Relationships:  clamp32(relationships, 0, 1),
+	}
+	cs.CalculateOverall()
+	return cs
+}
+
+// CalculateOverall computes weighted average of confidence dimensions
+func (cs *ConfidenceScore) CalculateOverall() {
+	cs.Overall = cs.Classification*0.35 +
+		cs.Position*0.30 +
+		cs.Properties*0.20 +
+		cs.Relationships*0.15
+	cs.Overall = clamp32(cs.Overall, 0, 1)
+}
+
+// IsHighConfidence returns true if overall confidence > 0.85
+func (cs *ConfidenceScore) IsHighConfidence() bool {
+	return cs.Overall > 0.85
+}
+
+// IsLowConfidence returns true if overall confidence < 0.6
+func (cs *ConfidenceScore) IsLowConfidence() bool {
+	return cs.Overall < 0.6
 }
 
 // ArxMetadata holds optional extended data
 // Only allocated when needed to save memory
 type ArxMetadata struct {
-	Properties map[string]interface{}
-	Tags       []string
-	Version    uint32
-	UpdatedAt  int64
+	Properties   map[string]interface{}
+	Tags         []string
+	Version      uint32
+	UpdatedAt    int64
+	Source       string // pdf, field, inference, etc.
+	ValidatedBy  string // Who validated this object
 }
 
 // SpatialIndex uses a flat quadtree for cache-efficient queries
@@ -151,7 +202,7 @@ func NewEngine(capacity int) *Engine {
 	}
 }
 
-// CreateObject adds a new ArxObject with minimal overhead
+// CreateObject adds a new ArxObject with minimal overhead and default confidence
 // x, y, z are in meters by default for backward compatibility
 func (e *Engine) CreateObject(objType ArxObjectType, x, y, z float32) uint64 {
 	e.mu.Lock()
@@ -173,6 +224,42 @@ func (e *Engine) CreateObject(objType ArxObjectType, x, y, z float32) uint64 {
 		Length:     Meter, // 1m default in nanometers
 		Width:      Meter,
 		Height:     Meter,
+		// Default confidence for manually created objects
+		Confidence: NewConfidenceScore(0.5, 0.7, 0.5, 0.3),
+		ValidationState: 0, // Pending
+	}
+	
+	idx := len(e.objects)
+	e.objects = append(e.objects, obj)
+	e.idIndex[id] = idx
+	e.spatial.Insert(&obj)
+	
+	return id
+}
+
+// CreateObjectWithConfidence adds a new ArxObject with specified confidence
+func (e *Engine) CreateObjectWithConfidence(objType ArxObjectType, x, y, z float32, confidence ConfidenceScore) uint64 {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	
+	id := e.nextID
+	e.nextID++
+	
+	obj := ArxObject{
+		ID:         id,
+		Type:       objType,
+		Precision:  PrecisionStandard,
+		Priority:   getPriority(objType),
+		Flags:      1, // Active flag
+		ScaleLevel: getScaleLevel(objType),
+		X:          int64(x * float32(Meter)),
+		Y:          int64(y * float32(Meter)),
+		Z:          int64(z * float32(Meter)),
+		Length:     Meter,
+		Width:      Meter,
+		Height:     Meter,
+		Confidence: confidence,
+		ValidationState: 0, // Pending
 	}
 	
 	idx := len(e.objects)
@@ -567,4 +654,50 @@ func (a *ArxObject) SetPositionMicrometers(x, y, z float64) {
 	a.X = int64(x * float64(Micrometer))
 	a.Y = int64(y * float64(Micrometer))
 	a.Z = int64(z * float64(Micrometer))
+}
+
+// Validate marks the object as validated and improves confidence
+func (a *ArxObject) Validate(validator string, measurementConfidence float32) {
+	a.ValidationState = 2 // Complete
+	a.ValidatedAt = time.Now().Unix()
+	
+	// Improve confidence scores
+	a.Confidence.Classification = clamp32(a.Confidence.Classification+0.2, 0, 1)
+	a.Confidence.Position = clamp32(a.Confidence.Position*0.5+measurementConfidence*0.5, 0, 1)
+	a.Confidence.Properties = clamp32(a.Confidence.Properties+0.15, 0, 1)
+	
+	// Recalculate overall
+	a.Confidence.CalculateOverall()
+	
+	// Update metadata if present
+	if a.MetadataPtr != nil {
+		a.MetadataPtr.ValidatedBy = validator
+		a.MetadataPtr.UpdatedAt = time.Now().Unix()
+	}
+}
+
+// GetConfidenceLevel returns a string representation of confidence level
+func (a *ArxObject) GetConfidenceLevel() string {
+	if a.Confidence.IsHighConfidence() {
+		return "high"
+	} else if a.Confidence.IsLowConfidence() {
+		return "low"
+	}
+	return "medium"
+}
+
+// NeedsValidation returns true if object needs field validation
+func (a *ArxObject) NeedsValidation() bool {
+	return a.ValidationState == 0 || a.Confidence.IsLowConfidence()
+}
+
+// clamp32 clamps a float32 value between min and max
+func clamp32(value, min, max float32) float32 {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
 }

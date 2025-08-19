@@ -73,10 +73,13 @@ func (p *PDFProcessor) extractText(filepath string) ([]TextElement, error) {
 	
 	// Use pdfcpu's text extraction
 	// Note: This is simplified - real implementation would use more advanced extraction
-	text, err := api.ExtractContentFile(filepath, "", nil, nil)
+	err := api.ExtractContentFile(filepath, "", nil, nil)
 	if err != nil {
 		return textElements, err
 	}
+	
+	// For now, return empty until we implement proper extraction
+	text := []byte{}
 	
 	// Parse the extracted text into elements
 	lines := strings.Split(string(text), "\n")

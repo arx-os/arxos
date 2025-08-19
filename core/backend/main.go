@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -65,6 +66,15 @@ func main() {
 
 	// Make cache service available globally
 	services.SetCacheService(cacheService)
+
+	// Initialize tile service
+	tileService := NewTileService(db.DB)
+	log.Println("✅ Tile service initialized")
+
+	// Initialize WebSocket hub
+	wsHub := NewHub()
+	go wsHub.Run()
+	log.Println("✅ WebSocket hub started")
 
 	// Initialize CMMS client
 	handlers.InitCMMSClient()
@@ -148,6 +158,30 @@ func main() {
 
 		// Public health check endpoint
 		r.Get("/health", handlers.HealthCheck)
+
+		// Tile service endpoints (public for now, add auth later if needed)
+		r.Get("/tiles/{zoom}/{x}/{y}", func(w http.ResponseWriter, r *http.Request) {
+			zoom := chi.URLParam(r, "zoom")
+			x := chi.URLParam(r, "x")
+			y := chi.URLParam(r, "y")
+			
+			// Convert params to integers
+			var zoomInt, xInt, yInt int
+			fmt.Sscanf(zoom, "%d", &zoomInt)
+			fmt.Sscanf(x, "%d", &xInt)
+			fmt.Sscanf(y, "%d", &yInt)
+			
+			// Get tile data
+			objects, err := tileService.GetTile(zoomInt, xInt, yInt)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			
+			// Return JSON response
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(objects)
+		})
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth.RequireAuth)
@@ -565,6 +599,30 @@ func main() {
 	// Data Vendor API routes (separate from authenticated routes)
 	r.Route("/api/vendor", func(r chi.Router) {
 		dataVendorHandler.RegisterDataVendorRoutes(r)
+	})
+
+	// WebSocket endpoint for real-time updates
+	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		// Upgrade HTTP connection to WebSocket
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Printf("WebSocket upgrade failed: %v", err)
+			return
+		}
+
+		// Create new client
+		client := &Client{
+			hub:  wsHub,
+			conn: conn,
+			send: make(chan []byte, 256),
+		}
+
+		// Register client with hub
+		client.hub.register <- client
+
+		// Start goroutines for reading and writing
+		go client.writePump()
+		go client.readPump()
 	})
 
 	// Start metrics server in background

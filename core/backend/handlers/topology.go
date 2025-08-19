@@ -130,11 +130,10 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 	processID := uuid.New().String()
 	
 	// Log processing start
-	h.logger.Printf("[INFO] "Starting building processing",
-		"processID)
-		"req.Metadata.BuildingName)
-		"req.Metadata.BuildingType)
-	)
+	h.logger.Printf("[INFO] Starting building processing - processID: %s, building: %s, type: %s",
+		processID,
+		req.Metadata.BuildingName,
+		req.Metadata.BuildingType)
 	
 	// Process asynchronously
 	go func() {
@@ -143,10 +142,8 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 		// Download or decode file
 		pdfPath, err := h.preparePDFFile(req)
 		if err != nil {
-			h.logger.Printf("[ERROR] "Failed to prepare PDF file",
-				"processID)
-				, %v", err)
-			)
+			h.logger.Printf("[ERROR] Failed to prepare PDF file - processID: %s, error: %v",
+				processID, err)
 			h.updateProcessingStatus(processID, "failed", err.Error())
 			return
 		}
@@ -154,10 +151,8 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 		// Run processing pipeline
 		result, err := h.processor.ProcessPDF(pdfPath, req.Metadata)
 		if err != nil {
-			h.logger.Printf("[ERROR] "Processing failed",
-				"processID)
-				, %v", err)
-			)
+			h.logger.Printf("[ERROR] Processing failed - processID: %s, error: %v",
+				processID, err)
 			h.updateProcessingStatus(processID, "failed", err.Error())
 			return
 		}
@@ -165,21 +160,15 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 		// Store results in database
 		buildingID, err := h.storeProcessingResults(result)
 		if err != nil {
-			h.logger.Printf("[ERROR] "Failed to store results",
-				"processID)
-				, %v", err)
-			)
+			h.logger.Printf("[ERROR] Failed to store results - processID: %s, error: %v",
+				processID, err)
 			h.updateProcessingStatus(processID, "failed", err.Error())
 			return
 		}
 		
 		// Log completion
-		h.logger.Printf("[INFO] "Building processing completed",
-			"processID)
-			"buildingID)
-			, %.2f", result.Confidence)
-			, %v", time.Since(startTime))
-		)
+		h.logger.Printf("[INFO] Building processing completed - processID: %s, buildingID: %s, confidence: %.2f, duration: %v",
+			processID, buildingID, result.Confidence, time.Since(startTime))
 		
 		// Update status
 		status := "completed"
@@ -244,13 +233,13 @@ func (h *TopologyHandler) GetBuilding(w http.ResponseWriter, r *http.Request) {
 	// Get walls
 	building.Walls, err = h.getBuildingWalls(buildingID)
 	if err != nil {
-		h.logger.Printf("[ERROR] "Failed to get walls", , %v", err))
+		h.logger.Printf("[ERROR] Failed to get walls: %v", err)
 	}
 	
 	// Get rooms
 	building.Rooms, err = h.getBuildingRooms(buildingID)
 	if err != nil {
-		h.logger.Printf("[ERROR] "Failed to get rooms", , %v", err))
+		h.logger.Printf("[ERROR] Failed to get rooms: %v", err)
 	}
 	
 	h.respondJSON(w, http.StatusOK, building)
@@ -343,7 +332,7 @@ func (h *TopologyHandler) GetReviewQueue(w http.ResponseWriter, r *http.Request)
 			&task.IssueCount,
 		)
 		if err != nil {
-			h.logger.Printf("[ERROR] "Failed to scan review task", , %v", err))
+			h.logger.Printf("[ERROR] Failed to scan review task: %v", err)
 			continue
 		}
 		tasks = append(tasks, task)
@@ -401,7 +390,7 @@ func (h *TopologyHandler) SubmitCorrections(w http.ResponseWriter, r *http.Reque
 		)
 		
 		if err != nil {
-			h.logger.Printf("[ERROR] "Failed to save correction", , %v", err))
+			h.logger.Printf("[ERROR] Failed to save correction: %v", err)
 			continue
 		}
 		
@@ -451,16 +440,16 @@ func (h *TopologyHandler) respondJSON(w http.ResponseWriter, status int, data in
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		h.logger.Printf("[ERROR] "Failed to encode response", , %v", err))
+		h.logger.Printf("[ERROR] Failed to encode response: %v", err)
 	}
 }
 
 func (h *TopologyHandler) respondError(w http.ResponseWriter, status int, message string, err error) {
-	h.logger.Printf("[ERROR] message, , %v", err))
+	h.logger.Printf("[ERROR] %s: %v", message, err)
 	
 	response := map[string]interface{}{
 		"error":     message,
-		"timestamp": time.Now().UTC()
+		"timestamp": time.Now().UTC(),
 	}
 	
 	if err != nil && h.isDebugMode() {

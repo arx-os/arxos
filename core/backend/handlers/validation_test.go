@@ -3,14 +3,16 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/backend/models"
 	"github.com/arxos/arxos/core/backend/services"
-	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -22,6 +24,9 @@ type MockValidationService struct {
 
 func (m *MockValidationService) GetPendingValidations(priority, objectType, limit string) ([]*models.ValidationTask, error) {
 	args := m.Called(priority, objectType, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]*models.ValidationTask), args.Error(1)
 }
 
@@ -33,6 +38,16 @@ func (m *MockValidationService) CreateValidationTask(task *models.ValidationTask
 func (m *MockValidationService) SaveValidation(submission *models.ValidationSubmission, impact *models.ValidationImpact) error {
 	args := m.Called(submission, impact)
 	return args.Error(0)
+}
+
+func (m *MockValidationService) GetValidationHistory(objectID, validator, startDate, endDate string) ([]models.ValidationRecord, error) {
+	args := m.Called(objectID, validator, startDate, endDate)
+	return args.Get(0).([]models.ValidationRecord), args.Error(1)
+}
+
+func (m *MockValidationService) GetLeaderboard(period string) ([]models.ValidatorStats, error) {
+	args := m.Called(period)
+	return args.Get(0).([]models.ValidatorStats), args.Error(1)
 }
 
 func (m *MockValidationService) LearnPattern(validated *arxobject.ArxObject, similar []*arxobject.ArxObject, submission models.ValidationSubmission) bool {
@@ -105,10 +120,10 @@ func TestFlagForValidation(t *testing.T) {
 	mockService.On("CreateValidationTask", mock.AnythingOfType("*models.ValidationTask")).Return(nil)
 	
 	// Create request
-	reqBody := ValidationSubmission{
-		ObjectID: fmt.Sprintf("%d", objID),
-		Reason:   "Low confidence detected",
-		Priority: 7,
+	reqBody := map[string]interface{}{
+		"object_id": fmt.Sprintf("%d", objID),
+		"reason":    "Low confidence detected",
+		"priority":  7,
 	}
 	
 	body, _ := json.Marshal(reqBody)

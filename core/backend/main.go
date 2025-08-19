@@ -13,7 +13,7 @@ import (
 	"github.com/arxos/arxos/core/arxobject"
 	"github.com/arxos/arxos/core/backend/db"
 	"github.com/arxos/arxos/core/backend/handlers"
-	securityMiddleware "github.com/arxos/arxos/core/backend/middleware"
+	"github.com/arxos/arxos/core/backend/middleware"
 	"github.com/arxos/arxos/core/backend/middleware/auth"
 	"github.com/arxos/arxos/core/backend/models"
 	"github.com/arxos/arxos/core/backend/services"
@@ -93,6 +93,22 @@ func main() {
 	arxEngine := arxobject.NewEngine(10000) // Initialize with capacity for 10000 objects
 	validationHandler := handlers.NewValidationHandler(validationService, arxEngine)
 
+	// Initialize Authentication Service and Handler
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "your-secret-key-change-in-production" // Default for development
+		log.Println("Warning: Using default JWT secret. Set JWT_SECRET environment variable in production")
+	}
+	refreshSecret := os.Getenv("REFRESH_SECRET")
+	if refreshSecret == "" {
+		refreshSecret = "your-refresh-secret-change-in-production"
+	}
+	
+	// Get Redis client for auth service  
+	authHandler := handlers.NewAuthHandler(db.DB, redisService.GetClient(), jwtSecret, refreshSecret)
+	authService := services.NewAuthService(jwtSecret, refreshSecret, redisService.GetClient())
+	authMiddleware := middleware.NewAuthMiddleware(authService)
+
 	// Initialize PDF Upload handler
 	// TODO: Uncomment when module structure is fixed
 	/*
@@ -119,9 +135,9 @@ func main() {
 	r.Use(cors.AllowAll().Handler)
 
 	// Apply security middleware globally
-	r.Use(securityMiddleware.SecurityHeadersMiddleware)
-	r.Use(securityMiddleware.AuditLoggingMiddleware)
-	r.Use(securityMiddleware.RateLimitMiddleware(100, 200)) // 100 requests per second, burst of 200
+	r.Use(middleware.SecurityHeadersMiddleware)
+	r.Use(middleware.AuditLoggingMiddleware)
+	r.Use(middleware.RateLimitMiddleware(100, 200)) // 100 requests per second, burst of 200
 
 	// Add request logging middleware
 	r.Use(func(next http.Handler) http.Handler {
@@ -147,6 +163,13 @@ func main() {
 	})
 
 	r.Route("/api", func(r chi.Router) {
+		// Authentication endpoints (public)
+		r.Post("/auth/register", authHandler.Register)
+		r.Post("/auth/login", authHandler.Login)
+		r.Post("/auth/refresh", authHandler.Refresh)
+		r.Post("/auth/logout", authHandler.Logout)
+		
+		// Legacy endpoints (deprecated - will be removed)
 		r.Post("/register", handlers.Register)
 		r.Post("/login", handlers.Login)
 
@@ -154,8 +177,13 @@ func main() {
 		r.Get("/health", handlers.HealthCheck)
 
 		r.Group(func(r chi.Router) {
-			r.Use(auth.RequireAuth)
-			r.Use(securityMiddleware.RateLimitMiddleware(50, 100)) // Stricter rate limiting for authenticated users
+			// Use new authentication middleware
+			r.Use(authMiddleware.RequireAuth)
+			r.Use(middleware.RateLimitMiddleware(50, 100)) // Stricter rate limiting for authenticated users
+			
+			// User profile endpoints
+			r.Get("/auth/profile", authHandler.GetProfile)
+			r.Put("/auth/password", authHandler.UpdatePassword)
 			r.Get("/floor/svg", handlers.ServeFloorSVG)
 			r.Get("/object/{objectId}/info", handlers.ServeObjectInfo)
 			r.Post("/object/{objectId}/comment", handlers.PostObjectComment)
@@ -188,7 +216,7 @@ func main() {
 
 			// BIM Object endpoints (edit)
 			r.Group(func(r chi.Router) {
-				r.Use(auth.RequireRole("admin", "editor"))
+				r.Use(authMiddleware.RequireRole("admin", "editor"))
 
 				// Wall CRUD operations
 				r.Post("/walls", handlers.CreateWall)
@@ -283,7 +311,7 @@ func main() {
 
 			// Category admin endpoints (admin only)
 			r.Group(func(r chi.Router) {
-				r.Use(auth.RequireRole("admin"))
+				r.Use(authMiddleware.RequireRole("admin"))
 				r.Post("/categories", handlers.CreateCategory)
 				r.Get("/categories", handlers.ListCategories)
 				r.Put("/categories/{id}", handlers.UpdateCategory)

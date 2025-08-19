@@ -8,19 +8,23 @@ import (
 
 	"github.com/arxos/arxos/core/arxobject"
 	"github.com/arxos/arxos/core/backend/models"
+	"gorm.io/gorm"
 )
 
 // ValidationService handles validation business logic
 type ValidationService struct {
-	db            *sql.DB
+	db            *gorm.DB
+	sqlDB         *sql.DB // For raw SQL queries
 	patternEngine *PatternEngine
 	cache         *ValidationCache
 }
 
 // NewValidationService creates a new validation service
-func NewValidationService(db *sql.DB) *ValidationService {
+func NewValidationService(db *gorm.DB) *ValidationService {
+	sqlDB, _ := db.DB() // Get underlying SQL database
 	return &ValidationService{
 		db:            db,
+		sqlDB:         sqlDB,
 		patternEngine: NewPatternEngine(),
 		cache:         NewValidationCache(),
 	}
@@ -105,7 +109,7 @@ func (s *ValidationService) GetPendingValidations(priority, objectType, limit st
 		args = append(args, limit)
 	}
 	
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.sqlDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +145,7 @@ func (s *ValidationService) CreateValidationTask(task *models.ValidationTask) er
 		RETURNING id
 	`
 	
-	err := s.db.QueryRow(
+	err := s.sqlDB.QueryRow(
 		query,
 		task.ObjectID, task.ObjectType, task.Confidence,
 		task.Priority, task.PotentialImpact, task.CreatedAt,
@@ -162,7 +166,8 @@ func (s *ValidationService) SaveValidation(
 	submission *models.ValidationSubmission,
 	impact *models.ValidationImpact,
 ) error {
-	tx, err := s.db.Begin()
+	tx := s.db.Begin()
+	err := tx.Error
 	if err != nil {
 		return err
 	}
@@ -180,13 +185,13 @@ func (s *ValidationService) SaveValidation(
 	dataJSON, _ := json.Marshal(submission.Data)
 	var validationID int64
 	
-	err = tx.QueryRow(
-		validationQuery,
+	// Use GORM's raw query
+	err = tx.Raw(validationQuery,
 		submission.ObjectID, submission.ValidationType,
 		submission.Validator, submission.Confidence,
 		dataJSON, submission.PhotoURL, submission.Notes,
 		submission.Timestamp,
-	).Scan(&validationID)
+	).Scan(&validationID).Error
 	
 	if err != nil {
 		return err
@@ -204,14 +209,14 @@ func (s *ValidationService) SaveValidation(
 	
 	cascadedJSON, _ := json.Marshal(impact.CascadedObjects)
 	
-	_, err = tx.Exec(
+	err = tx.Exec(
 		impactQuery,
 		validationID, impact.ObjectID, impact.OldConfidence,
 		impact.NewConfidence, impact.ConfidenceImprovement,
 		cascadedJSON, impact.CascadedCount, impact.PatternLearned,
 		impact.TotalConfidenceGain, impact.TimeSaved,
 		time.Now(),
-	)
+	).Error
 	
 	if err != nil {
 		return err
@@ -235,11 +240,11 @@ func (s *ValidationService) SaveValidation(
 		"relationships":  submission.Confidence * 0.7,
 	})
 	
-	_, err = tx.Exec(
+	err = tx.Exec(
 		updateQuery,
 		confidenceJSON, submission.Validator,
 		submission.Timestamp, submission.ObjectID,
-	)
+	).Error
 	
 	if err != nil {
 		return err
@@ -254,12 +259,12 @@ func (s *ValidationService) SaveValidation(
 		WHERE object_id = $3 AND status = 'pending'
 	`
 	
-	_, err = tx.Exec(taskUpdateQuery, time.Now(), submission.Validator, submission.ObjectID)
+	err = tx.Exec(taskUpdateQuery, time.Now(), submission.Validator, submission.ObjectID).Error
 	if err != nil {
 		return err
 	}
 	
-	return tx.Commit()
+	return tx.Commit().Error
 }
 
 // LearnPattern learns a pattern from validation
@@ -373,7 +378,7 @@ func (s *ValidationService) GetValidationHistory(
 	
 	query += " ORDER BY v.validated_at DESC"
 	
-	rows, err := s.db.Query(query, args...)
+	rows, err := s.sqlDB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +435,7 @@ func (s *ValidationService) GetLeaderboard(period string) ([]models.ValidatorSta
 		LIMIT 20
 	`, timeFilter)
 	
-	rows, err := s.db.Query(query)
+	rows, err := s.sqlDB.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -553,12 +558,12 @@ func (s *ValidationService) savePatternToDB(pattern *ValidationPattern) error {
 	
 	patternJSON, _ := json.Marshal(pattern.Pattern)
 	
-	_, err := s.db.Exec(
+	err := s.db.Exec(
 		query,
 		pattern.ID, pattern.ObjectType, patternJSON,
 		pattern.Confidence, pattern.OccurrenceCount,
 		pattern.ValidationSource, time.Now(), pattern.LastUpdated,
-	)
+	).Error
 	
 	return err
 }
@@ -572,11 +577,11 @@ func (s *ValidationService) updatePatternInDB(pattern *ValidationPattern) error 
 		WHERE pattern_id = $4
 	`
 	
-	_, err := s.db.Exec(
+	err := s.db.Exec(
 		query,
 		pattern.Confidence, pattern.OccurrenceCount,
 		pattern.LastUpdated, pattern.ID,
-	)
+	).Error
 	
 	return err
 }

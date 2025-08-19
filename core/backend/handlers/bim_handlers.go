@@ -22,8 +22,8 @@ var upgrader = websocket.Upgrader{
 // BIMHandler manages building information model endpoints
 // Temporarily simplified until BIM module is set up
 type BIMHandler struct {
-	// model    *bim.BuildingModel
-	clients  map[*websocket.Conn]bool
+	model     *bim.BuildingModel
+	clients   map[*websocket.Conn]bool
 	broadcast chan interface{} // chan bim.Update
 }
 
@@ -434,7 +434,7 @@ func (h *BIMHandler) UpdateObject(w http.ResponseWriter, r *http.Request) {
 				}
 				
 				// Mark floor as dirty for re-render
-				floor.isDirty = true
+				// floor.isDirty = true  // Cannot access unexported field
 				
 				// Broadcast update
 				h.broadcast <- bim.Update{

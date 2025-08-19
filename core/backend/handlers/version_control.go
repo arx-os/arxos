@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/arxos/arxos/core/backend/db"
 	"github.com/arxos/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/backend/services"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -45,7 +46,7 @@ func GetVersionHistory(w http.ResponseWriter, r *http.Request) {
 		floorID, page, pageSize, actionType, userID, includeData, dateFrom, dateTo)
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -242,7 +243,7 @@ func GetVersionDiff(w http.ResponseWriter, r *http.Request) {
 	cacheKey := fmt.Sprintf("version:diff:%s:%s", versionID1, versionID2)
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -334,7 +335,7 @@ func GetVersionData(w http.ResponseWriter, r *http.Request) {
 	cacheKey := fmt.Sprintf("version:data:%s:svg:%t", versionID, includeSVG)
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -490,7 +491,7 @@ func CreateVersion(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate version-related caches
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		cacheService.InvalidatePattern(fmt.Sprintf("version:history:floor:%d*", request.FloorID))
 		cacheService.InvalidatePattern(fmt.Sprintf("version:data:*"))
@@ -571,7 +572,7 @@ func RestoreVersion(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate caches
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		cacheService.InvalidatePattern(fmt.Sprintf("version:history:floor:%d*", version.FloorID))
 		cacheService.InvalidatePattern(fmt.Sprintf("version:data:*"))

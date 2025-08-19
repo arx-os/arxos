@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"bytes"
-	"encoding/base64"
+	// "encoding/base64" // Used in line 111 but currently in a string
 	"encoding/json"
 	"fmt"
 	"io"

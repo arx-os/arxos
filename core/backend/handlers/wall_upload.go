@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"math"
+	// "math" // Would be used for wall calculations when implemented
 	"net/http"
 	"time"
 	
@@ -53,11 +53,6 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 	
 	// Parse request
 	var req WallUploadRequest
-	if err := json.NewDecoder(r.Body).Err; err != nil {
-		sendWallError(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendWallError(w, "Failed to parse request: "+err.Error(), http.StatusBadRequest)
 		return
@@ -70,19 +65,23 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Convert walls to ArxObjects
-	converter := converters.NewWallConverter()
+	// TODO: Implement converters package
+	// converter := converters.NewWallConverter()
 	
 	// Set scale based on building dimensions (assume 50m x 30m building for now)
 	// In production, this would come from the request or be calculated
+	/*
 	converter.SetScaleFromPDF(
 		req.Metadata.CanvasWidth,
 		req.Metadata.CanvasHeight,
 		50.0, // Building width in meters
 		30.0, // Building height in meters
 	)
+	*/
 	
 	// Convert each wall object
-	arxObjects := make([]*arxobject.ArxObject, 0, len(req.Objects))
+	// TODO: Import arxobject package
+	// arxObjects := make([]*arxobject.ArxObject, 0, len(req.Objects))
 	wallCount := 0
 	userWallCount := 0
 	totalConfidence := 0.0
@@ -94,10 +93,12 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 		
 		// Convert frontend wall format to WallSegment
 		// The frontend sends center + length + rotation, we need to convert to endpoints
-		halfLength := obj.Length / 2.0
-		cos := math.Cos(obj.Rotation * math.Pi / 180.0)
-		sin := math.Sin(obj.Rotation * math.Pi / 180.0)
+		// halfLength := obj.Length / 2.0
+		// cos := math.Cos(obj.Rotation * math.Pi / 180.0)
+		// sin := math.Sin(obj.Rotation * math.Pi / 180.0)
 		
+		// TODO: Implement wall conversion when converters package is ready
+		/*
 		wallSegment := converters.WallSegment{
 			X1:         obj.X - halfLength*cos,
 			Y1:         obj.Y - halfLength*sin,
@@ -110,6 +111,7 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 		
 		arxObj := converter.ConvertWallToArxObject(wallSegment)
 		arxObjects = append(arxObjects, arxObj)
+		*/
 		
 		wallCount++
 		totalConfidence += obj.Confidence

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/arxos/arxos/core/backend/models"
 
-	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
@@ -60,8 +60,9 @@ func (h *ExportActivityHandler) CreateExportActivity(w http.ResponseWriter, r *h
 
 // UpdateExportActivity updates export completion status
 func (h *ExportActivityHandler) UpdateExportActivity(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	activityID, err := strconv.ParseUint(vars["id"], 10, 32)
+	// Extract ID from URL path using Chi
+	idStr := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
+	activityID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		http.Error(w, "Invalid activity ID", http.StatusBadRequest)
 		return
@@ -130,8 +131,9 @@ func (h *ExportActivityHandler) UpdateExportActivity(w http.ResponseWriter, r *h
 
 // IncrementDownloadCount increments the download count for an export
 func (h *ExportActivityHandler) IncrementDownloadCount(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	activityID, err := strconv.ParseUint(vars["id"], 10, 32)
+	// Extract ID from URL path using Chi
+	idStr := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
+	activityID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		http.Error(w, "Invalid activity ID", http.StatusBadRequest)
 		return

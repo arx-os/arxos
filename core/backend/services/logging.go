@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -11,9 +12,6 @@ import (
 	"time"
 
 	"github.com/arxos/arxos/core/backend/models"
-
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
 )
 
@@ -44,9 +42,20 @@ type LogContext struct {
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
 }
 
+// LogEntry represents a single log entry
+type LogEntry struct {
+	Timestamp time.Time              `json:"timestamp"`
+	Level     LogLevel               `json:"level"`
+	Message   string                 `json:"message"`
+	Context   *LogContext            `json:"context,omitempty"`
+	Fields    map[string]interface{} `json:"fields,omitempty"`
+	Caller    string                 `json:"caller,omitempty"`
+	Function  string                 `json:"function,omitempty"`
+}
+
 // LoggingService handles structured logging throughout the application
 type LoggingService struct {
-	logger *zap.Logger
+	logger *log.Logger
 	db     *gorm.DB
 
 	// Log file management
@@ -62,6 +71,9 @@ type LoggingService struct {
 	// Performance tracking
 	performanceMutex sync.RWMutex
 	performanceStats map[string]*PerformanceStats
+
+	// Log level filtering
+	minLogLevel LogLevel
 }
 
 // PerformanceStats tracks performance metrics
@@ -81,33 +93,31 @@ func NewLoggingService(db *gorm.DB, logDir string) (*LoggingService, error) {
 		return nil, fmt.Errorf("failed to create log directory: %w", err)
 	}
 
-	// Configure zap logger
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{
-		filepath.Join(logDir, "application.log"),
-		"stdout",
-	}
-	config.ErrorOutputPaths = []string{
-		filepath.Join(logDir, "error.log"),
-		"stderr",
-	}
-	config.EncoderConfig.TimeKey = "timestamp"
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	config.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
-
-	logger, err := config.Build()
+	// Open log file
+	logFilePath := filepath.Join(logDir, "application.log")
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create logger: %w", err)
+		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
+
+	// Create multi-writer for both file and stdout
+	multiWriter := io.MultiWriter(logFile, os.Stdout)
 
 	ls := &LoggingService{
-		logger:           logger,
+		logger:           log.New(multiWriter, "", 0), // No prefix, we'll format ourselves
 		db:               db,
 		logDir:           logDir,
+		logFile:          logFile,
 		maxLogSize:       100 * 1024 * 1024,  // 100MB
 		maxLogAge:        7 * 24 * time.Hour, // 7 days
 		maxLogBackups:    10,
 		performanceStats: make(map[string]*PerformanceStats),
+		minLogLevel:      LogLevelInfo,
+	}
+
+	// Set minimum log level from environment
+	if level := os.Getenv("LOG_LEVEL"); level != "" {
+		ls.minLogLevel = LogLevel(level)
 	}
 
 	// Start log rotation
@@ -154,9 +164,12 @@ func (ls *LoggingService) rotateLogFile(logFile string) {
 	timestamp := time.Now().Format("2006-01-02-15-04-05")
 	backupFile := logFile + "." + timestamp
 
+	// Close current log file
+	ls.logFile.Close()
+
 	// Rename current log file
 	if err := os.Rename(logFile, backupFile); err != nil {
-		ls.logger.Error("Failed to rotate log file", zap.Error(err))
+		log.Printf("Failed to rotate log file: %v", err)
 		return
 	}
 
@@ -164,7 +177,17 @@ func (ls *LoggingService) rotateLogFile(logFile string) {
 	ls.cleanupOldLogs()
 
 	// Reopen log file
-	ls.logger.Info("Log file rotated", zap.String("backup_file", backupFile))
+	newLogFile, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Printf("Failed to reopen log file: %v", err)
+		return
+	}
+
+	ls.logFile = newLogFile
+	multiWriter := io.MultiWriter(newLogFile, os.Stdout)
+	ls.logger = log.New(multiWriter, "", 0)
+
+	log.Printf("Log file rotated to: %s", backupFile)
 }
 
 // cleanupOldLogs removes old log files
@@ -174,83 +197,66 @@ func (ls *LoggingService) cleanupOldLogs() {
 		return
 	}
 
-	// Sort files by modification time (oldest first)
-	type fileInfo struct {
-		path    string
-		modTime time.Time
-	}
-
-	var fileInfos []fileInfo
+	// Remove files older than maxLogAge
+	cutoff := time.Now().Add(-ls.maxLogAge)
 	for _, file := range files {
 		info, err := os.Stat(file)
 		if err != nil {
 			continue
 		}
-		fileInfos = append(fileInfos, fileInfo{file, info.ModTime()})
-	}
-
-	// Remove files older than maxLogAge
-	cutoff := time.Now().Add(-ls.maxLogAge)
-	for _, fi := range fileInfos {
-		if fi.modTime.Before(cutoff) {
-			os.Remove(fi.path)
-			ls.logger.Info("Removed old log file", zap.String("file", fi.path))
+		if info.ModTime().Before(cutoff) {
+			os.Remove(file)
+			log.Printf("Removed old log file: %s", file)
 		}
 	}
 }
 
+// shouldLog checks if a message should be logged based on the level
+func (ls *LoggingService) shouldLog(level LogLevel) bool {
+	levelOrder := map[LogLevel]int{
+		LogLevelDebug:   0,
+		LogLevelInfo:    1,
+		LogLevelWarning: 2,
+		LogLevelError:   3,
+		LogLevelFatal:   4,
+	}
+
+	return levelOrder[level] >= levelOrder[ls.minLogLevel]
+}
+
 // Log logs a message with the given level and context
-func (ls *LoggingService) Log(level LogLevel, message string, ctx *LogContext, fields ...zap.Field) {
-	// Add context fields
-	if ctx != nil {
-		fields = append(fields,
-			zap.String("request_id", ctx.RequestID),
-			zap.Uint("user_id", ctx.UserID),
-			zap.String("user_role", ctx.UserRole),
-			zap.String("ip_address", ctx.IPAddress),
-			zap.String("user_agent", ctx.UserAgent),
-			zap.String("endpoint", ctx.Endpoint),
-			zap.String("method", ctx.Method),
-			zap.String("session_id", ctx.SessionID),
-		)
+func (ls *LoggingService) Log(level LogLevel, message string, ctx *LogContext, fields map[string]interface{}) {
+	if !ls.shouldLog(level) {
+		return
+	}
 
-		if ctx.BuildingID != nil {
-			fields = append(fields, zap.Uint("building_id", *ctx.BuildingID))
-		}
-
-		if ctx.ObjectType != "" {
-			fields = append(fields, zap.String("object_type", ctx.ObjectType))
-		}
-
-		if ctx.ObjectID != "" {
-			fields = append(fields, zap.String("object_id", ctx.ObjectID))
-		}
-
-		if ctx.Metadata != nil {
-			fields = append(fields, zap.Any("metadata", ctx.Metadata))
-		}
+	// Create log entry
+	entry := LogEntry{
+		Timestamp: time.Now(),
+		Level:     level,
+		Message:   message,
+		Context:   ctx,
+		Fields:    fields,
 	}
 
 	// Add caller information
 	if pc, file, line, ok := runtime.Caller(2); ok {
-		fields = append(fields,
-			zap.String("caller", fmt.Sprintf("%s:%d", filepath.Base(file), line)),
-			zap.String("function", runtime.FuncForPC(pc).Name()),
-		)
+		entry.Caller = fmt.Sprintf("%s:%d", filepath.Base(file), line)
+		entry.Function = runtime.FuncForPC(pc).Name()
 	}
 
-	// Log based on level
-	switch level {
-	case LogLevelDebug:
-		ls.logger.Debug(message, fields...)
-	case LogLevelInfo:
-		ls.logger.Info(message, fields...)
-	case LogLevelWarning:
-		ls.logger.Warn(message, fields...)
-	case LogLevelError:
-		ls.logger.Error(message, fields...)
-	case LogLevelFatal:
-		ls.logger.Fatal(message, fields...)
+	// Format and write log entry
+	jsonEntry, err := json.Marshal(entry)
+	if err != nil {
+		ls.logger.Printf("Failed to marshal log entry: %v", err)
+		return
+	}
+
+	ls.logger.Println(string(jsonEntry))
+
+	// Handle fatal level
+	if level == LogLevelFatal {
+		os.Exit(1)
 	}
 }
 
@@ -264,12 +270,13 @@ func (ls *LoggingService) LogAPIRequest(ctx *LogContext, statusCode int, duratio
 		level = LogLevelError
 	}
 
-	ls.Log(level, "API Request",
-		ctx,
-		zap.Int("status_code", statusCode),
-		zap.Duration("duration", duration),
-		zap.Int64("response_size", responseSize),
-	)
+	fields := map[string]interface{}{
+		"status_code":   statusCode,
+		"duration":      duration.String(),
+		"response_size": responseSize,
+	}
+
+	ls.Log(level, "API Request", ctx, fields)
 
 	// Track performance
 	ls.trackPerformance(ctx.Endpoint, duration)
@@ -277,12 +284,13 @@ func (ls *LoggingService) LogAPIRequest(ctx *LogContext, statusCode int, duratio
 
 // LogAPIError logs an API error
 func (ls *LoggingService) LogAPIError(ctx *LogContext, err error, statusCode int) {
-	ls.Log(LogLevelError, "API Error",
-		ctx,
-		zap.Error(err),
-		zap.Int("status_code", statusCode),
-		zap.String("error_type", "api_error"),
-	)
+	fields := map[string]interface{}{
+		"error":       err.Error(),
+		"status_code": statusCode,
+		"error_type":  "api_error",
+	}
+
+	ls.Log(LogLevelError, "API Error", ctx, fields)
 
 	// Store error in database for monitoring
 	ls.storeErrorLog(ctx, err, "api_error", statusCode)
@@ -295,14 +303,15 @@ func (ls *LoggingService) LogExportJob(ctx *LogContext, exportType, format, stat
 		level = LogLevelError
 	}
 
-	ls.Log(level, "Export Job",
-		ctx,
-		zap.String("export_type", exportType),
-		zap.String("format", format),
-		zap.String("status", status),
-		zap.Duration("duration", duration),
-		zap.Int64("file_size", fileSize),
-	)
+	fields := map[string]interface{}{
+		"export_type": exportType,
+		"format":      format,
+		"status":      status,
+		"duration":    duration.String(),
+		"file_size":   fileSize,
+	}
+
+	ls.Log(level, "Export Job", ctx, fields)
 
 	// Track performance
 	ls.trackPerformance(fmt.Sprintf("export_%s", exportType), duration)
@@ -322,12 +331,13 @@ func (ls *LoggingService) LogSecurityEvent(ctx *LogContext, eventType, severity 
 		level = LogLevelFatal
 	}
 
-	ls.Log(level, "Security Event",
-		ctx,
-		zap.String("event_type", eventType),
-		zap.String("severity", severity),
-		zap.Any("details", details),
-	)
+	fields := map[string]interface{}{
+		"event_type": eventType,
+		"severity":   severity,
+		"details":    details,
+	}
+
+	ls.Log(level, "Security Event", ctx, fields)
 
 	// Store security event in database
 	ls.storeSecurityEvent(ctx, eventType, severity, details)
@@ -335,13 +345,14 @@ func (ls *LoggingService) LogSecurityEvent(ctx *LogContext, eventType, severity 
 
 // LogDatabaseOperation logs a database operation
 func (ls *LoggingService) LogDatabaseOperation(ctx *LogContext, operation, table string, duration time.Duration, rowsAffected int64) {
-	ls.Log(LogLevelDebug, "Database Operation",
-		ctx,
-		zap.String("operation", operation),
-		zap.String("table", table),
-		zap.Duration("duration", duration),
-		zap.Int64("rows_affected", rowsAffected),
-	)
+	fields := map[string]interface{}{
+		"operation":     operation,
+		"table":         table,
+		"duration":      duration.String(),
+		"rows_affected": rowsAffected,
+	}
+
+	ls.Log(LogLevelDebug, "Database Operation", ctx, fields)
 
 	// Track performance
 	ls.trackPerformance(fmt.Sprintf("db_%s_%s", operation, table), duration)
@@ -349,22 +360,24 @@ func (ls *LoggingService) LogDatabaseOperation(ctx *LogContext, operation, table
 
 // LogSystemEvent logs a system event
 func (ls *LoggingService) LogSystemEvent(ctx *LogContext, eventType, message string, metadata map[string]interface{}) {
-	ls.Log(LogLevelInfo, "System Event",
-		ctx,
-		zap.String("event_type", eventType),
-		zap.String("message", message),
-		zap.Any("metadata", metadata),
-	)
+	fields := map[string]interface{}{
+		"event_type": eventType,
+		"message":    message,
+		"metadata":   metadata,
+	}
+
+	ls.Log(LogLevelInfo, "System Event", ctx, fields)
 }
 
 // LogPerformance logs performance metrics
 func (ls *LoggingService) LogPerformance(ctx *LogContext, operation string, duration time.Duration, metadata map[string]interface{}) {
-	ls.Log(LogLevelDebug, "Performance",
-		ctx,
-		zap.String("operation", operation),
-		zap.Duration("duration", duration),
-		zap.Any("metadata", metadata),
-	)
+	fields := map[string]interface{}{
+		"operation": operation,
+		"duration":  duration.String(),
+		"metadata":  metadata,
+	}
+
+	ls.Log(LogLevelDebug, "Performance", ctx, fields)
 
 	// Track performance
 	ls.trackPerformance(operation, duration)
@@ -534,5 +547,11 @@ func (ls *LoggingService) ExportLogs(filters map[string]interface{}, format stri
 
 // Close closes the logging service
 func (ls *LoggingService) Close() error {
-	return ls.logger.Sync()
+	ls.logFileMutex.Lock()
+	defer ls.logFileMutex.Unlock()
+
+	if ls.logFile != nil {
+		return ls.logFile.Close()
+	}
+	return nil
 }

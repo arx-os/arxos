@@ -16,19 +16,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
+	"log"
 	"gorm.io/gorm"
 )
 
 // TopologyHandler manages building topology endpoints
 type TopologyHandler struct {
 	processor *pipeline.Processor
-	logger    *zap.Logger
+	logger    *log.Logger
 	database  *gorm.DB
 }
 
 // NewTopologyHandler creates a new handler instance
-func NewTopologyHandler(logger *zap.Logger, database *gorm.DB) *TopologyHandler {
+func NewTopologyHandler(logger *log.Logger, database *gorm.DB) *TopologyHandler {
 	config := pipeline.DefaultConfig()
 	
 	return &TopologyHandler{
@@ -130,10 +130,10 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 	processID := uuid.New().String()
 	
 	// Log processing start
-	h.logger.Info("Starting building processing",
-		zap.String("process_id", processID),
-		zap.String("building_name", req.Metadata.BuildingName),
-		zap.String("building_type", req.Metadata.BuildingType),
+	h.logger.Printf("[INFO] "Starting building processing",
+		"processID)
+		"req.Metadata.BuildingName)
+		"req.Metadata.BuildingType)
 	)
 	
 	// Process asynchronously
@@ -143,9 +143,9 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 		// Download or decode file
 		pdfPath, err := h.preparePDFFile(req)
 		if err != nil {
-			h.logger.Error("Failed to prepare PDF file",
-				zap.String("process_id", processID),
-				zap.Error(err),
+			h.logger.Printf("[ERROR] "Failed to prepare PDF file",
+				"processID)
+				, %v", err)
 			)
 			h.updateProcessingStatus(processID, "failed", err.Error())
 			return
@@ -154,9 +154,9 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 		// Run processing pipeline
 		result, err := h.processor.ProcessPDF(pdfPath, req.Metadata)
 		if err != nil {
-			h.logger.Error("Processing failed",
-				zap.String("process_id", processID),
-				zap.Error(err),
+			h.logger.Printf("[ERROR] "Processing failed",
+				"processID)
+				, %v", err)
 			)
 			h.updateProcessingStatus(processID, "failed", err.Error())
 			return
@@ -165,20 +165,20 @@ func (h *TopologyHandler) ProcessBuilding(w http.ResponseWriter, r *http.Request
 		// Store results in database
 		buildingID, err := h.storeProcessingResults(result)
 		if err != nil {
-			h.logger.Error("Failed to store results",
-				zap.String("process_id", processID),
-				zap.Error(err),
+			h.logger.Printf("[ERROR] "Failed to store results",
+				"processID)
+				, %v", err)
 			)
 			h.updateProcessingStatus(processID, "failed", err.Error())
 			return
 		}
 		
 		// Log completion
-		h.logger.Info("Building processing completed",
-			zap.String("process_id", processID),
-			zap.String("building_id", buildingID),
-			zap.Float64("confidence", result.Confidence),
-			zap.Duration("processing_time", time.Since(startTime)),
+		h.logger.Printf("[INFO] "Building processing completed",
+			"processID)
+			"buildingID)
+			, %.2f", result.Confidence)
+			, %v", time.Since(startTime))
 		)
 		
 		// Update status
@@ -244,13 +244,13 @@ func (h *TopologyHandler) GetBuilding(w http.ResponseWriter, r *http.Request) {
 	// Get walls
 	building.Walls, err = h.getBuildingWalls(buildingID)
 	if err != nil {
-		h.logger.Error("Failed to get walls", zap.Error(err))
+		h.logger.Printf("[ERROR] "Failed to get walls", , %v", err))
 	}
 	
 	// Get rooms
 	building.Rooms, err = h.getBuildingRooms(buildingID)
 	if err != nil {
-		h.logger.Error("Failed to get rooms", zap.Error(err))
+		h.logger.Printf("[ERROR] "Failed to get rooms", , %v", err))
 	}
 	
 	h.respondJSON(w, http.StatusOK, building)
@@ -343,7 +343,7 @@ func (h *TopologyHandler) GetReviewQueue(w http.ResponseWriter, r *http.Request)
 			&task.IssueCount,
 		)
 		if err != nil {
-			h.logger.Error("Failed to scan review task", zap.Error(err))
+			h.logger.Printf("[ERROR] "Failed to scan review task", , %v", err))
 			continue
 		}
 		tasks = append(tasks, task)
@@ -401,7 +401,7 @@ func (h *TopologyHandler) SubmitCorrections(w http.ResponseWriter, r *http.Reque
 		)
 		
 		if err != nil {
-			h.logger.Error("Failed to save correction", zap.Error(err))
+			h.logger.Printf("[ERROR] "Failed to save correction", , %v", err))
 			continue
 		}
 		
@@ -451,16 +451,16 @@ func (h *TopologyHandler) respondJSON(w http.ResponseWriter, status int, data in
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		h.logger.Error("Failed to encode response", zap.Error(err))
+		h.logger.Printf("[ERROR] "Failed to encode response", , %v", err))
 	}
 }
 
 func (h *TopologyHandler) respondError(w http.ResponseWriter, status int, message string, err error) {
-	h.logger.Error(message, zap.Error(err))
+	h.logger.Printf("[ERROR] message, , %v", err))
 	
 	response := map[string]interface{}{
 		"error":     message,
-		"timestamp": time.Now().UTC(),
+		"timestamp": time.Now().UTC()
 	}
 	
 	if err != nil && h.isDebugMode() {

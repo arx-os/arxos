@@ -12,13 +12,13 @@ import (
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"github.com/jmoiron/sqlx"
-	"go.uber.org/zap"
+	"log"
 )
 
 // ArxObjectStore manages ArxObject persistence
 type ArxObjectStore struct {
 	db       *sqlx.DB
-	logger   *zap.Logger
+	logger   *log.Logger
 	config   StoreConfig
 	prepared map[string]*sqlx.Stmt
 }
@@ -80,7 +80,7 @@ func NewArxObjectStoreWithConfig(config StoreConfig) (*ArxObjectStore, error) {
 
 	store := &ArxObjectStore{
 		db:       db,
-		logger:   zap.NewNop(), // Default to no-op logger
+		logger:   nil, // Default to no logger
 		config:   config,
 		prepared: make(map[string]*sqlx.Stmt),
 	}
@@ -158,9 +158,10 @@ func (s *ArxObjectStore) storeBatchTx(ctx context.Context, buildingID string, ob
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	s.logger.Info("Stored ArxObject batch",
-		zap.String("building_id", buildingID),
-		zap.Int("objects", len(objects)))
+	if s.logger != nil {
+		s.logger.Printf("[INFO] Stored ArxObject batch: building_id=%s, objects=%d",
+			buildingID, len(objects))
+	}
 
 	return nil
 }
@@ -523,7 +524,7 @@ func (s *ArxObjectStore) Close() error {
 }
 
 // SetLogger sets the logger for the store
-func (s *ArxObjectStore) SetLogger(logger *zap.Logger) {
+func (s *ArxObjectStore) SetLogger(logger *log.Logger) {
 	s.logger = logger
 }
 

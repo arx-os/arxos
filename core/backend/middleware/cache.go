@@ -11,7 +11,6 @@ import (
 
 	"github.com/arxos/arxos/core/backend/services"
 
-	"go.uber.org/zap"
 )
 
 // CacheConfig holds configuration for the cache middleware
@@ -22,7 +21,7 @@ type CacheConfig struct {
 	IncludeBody    bool
 	IncludeHeaders []string
 	MaxBodySize    int64
-	Logger         *zap.Logger
+	Logger         interface{}
 }
 
 // DefaultCacheConfig returns a default cache configuration

@@ -26,7 +26,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -46,12 +45,9 @@ func main() {
 	// Initialize monitoring service
 	monitoringService := services.NewMonitoringService(db.DB)
 
-	// Initialize logger
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
 
 	// Initialize Redis service
-	redisService, err := services.NewRedisService(nil, logger)
+	redisService, err := services.NewRedisService(nil, nil)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize Redis service: %v", err)
 		log.Println("Caching will be disabled")
@@ -61,7 +57,7 @@ func main() {
 	// Initialize cache service
 	var cacheService *services.CacheService
 	if redisService != nil {
-		cacheService = services.NewCacheService(redisService, nil, logger)
+		cacheService = services.NewCacheService(redisService, nil, nil)
 		log.Println("✅ Cache service initialized successfully")
 	} else {
 		log.Println("⚠️  Cache service disabled - Redis not available")

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/arxos/arxos/core/arxobject"
 	"github.com/arxos/arxos/core/backend/models"

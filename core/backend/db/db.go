@@ -15,7 +15,6 @@ import (
 
 	"github.com/arxos/arxos/core/backend/models"
 
-	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -53,11 +52,8 @@ var (
 
 // Connect initializes the database connection with optimized pooling settings.
 func Connect() {
-	// Load environment variables
-	viper.AutomaticEnv()
-
-	// Get database configuration
-	dsn := viper.GetString("DATABASE_URL")
+	// Get database configuration from environment
+	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		log.Fatal("DATABASE_URL is not set")
 	}
@@ -131,41 +127,41 @@ func loadConnectionConfig() {
 	config.EnableMetrics = true
 
 	// Override with environment variables
-	if maxOpen := viper.GetString("DB_MAX_OPEN_CONNS"); maxOpen != "" {
+	if maxOpen := os.Getenv("DB_MAX_OPEN_CONNS"); maxOpen != "" {
 		if val, err := strconv.Atoi(maxOpen); err == nil && val > 0 {
 			config.MaxOpenConns = val
 		}
 	}
 
-	if maxIdle := viper.GetString("DB_MAX_IDLE_CONNS"); maxIdle != "" {
+	if maxIdle := os.Getenv("DB_MAX_IDLE_CONNS"); maxIdle != "" {
 		if val, err := strconv.Atoi(maxIdle); err == nil && val > 0 {
 			config.MaxIdleConns = val
 		}
 	}
 
-	if maxLifetime := viper.GetString("DB_CONN_MAX_LIFETIME"); maxLifetime != "" {
+	if maxLifetime := os.Getenv("DB_CONN_MAX_LIFETIME"); maxLifetime != "" {
 		if val, err := time.ParseDuration(maxLifetime); err == nil && val > 0 {
 			config.ConnMaxLifetime = val
 		}
 	}
 
-	if maxIdleTime := viper.GetString("DB_CONN_MAX_IDLE_TIME"); maxIdleTime != "" {
+	if maxIdleTime := os.Getenv("DB_CONN_MAX_IDLE_TIME"); maxIdleTime != "" {
 		if val, err := time.ParseDuration(maxIdleTime); err == nil && val > 0 {
 			config.ConnMaxIdleTime = val
 		}
 	}
 
-	if prepareStmt := viper.GetString("DB_PREPARE_STMT"); prepareStmt != "" {
+	if prepareStmt := os.Getenv("DB_PREPARE_STMT"); prepareStmt != "" {
 		config.PrepareStmt = prepareStmt == "true"
 	}
 
-	if slowThreshold := viper.GetString("DB_SLOW_THRESHOLD"); slowThreshold != "" {
+	if slowThreshold := os.Getenv("DB_SLOW_THRESHOLD"); slowThreshold != "" {
 		if val, err := time.ParseDuration(slowThreshold); err == nil && val > 0 {
 			config.SlowThreshold = val
 		}
 	}
 
-	if logLevel := viper.GetString("DB_LOG_LEVEL"); logLevel != "" {
+	if logLevel := os.Getenv("DB_LOG_LEVEL"); logLevel != "" {
 		switch logLevel {
 		case "silent":
 			config.LogLevel = logger.Silent
@@ -178,7 +174,7 @@ func loadConnectionConfig() {
 		}
 	}
 
-	if enableMetrics := viper.GetString("DB_ENABLE_METRICS"); enableMetrics != "" {
+	if enableMetrics := os.Getenv("DB_ENABLE_METRICS"); enableMetrics != "" {
 		config.EnableMetrics = enableMetrics == "true"
 	}
 

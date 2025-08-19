@@ -4,14 +4,14 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
+	"log"
 )
 
 // ExampleCacheIntegration demonstrates how to integrate cache middleware
 // This is an example file showing different cache configurations
 func ExampleCacheIntegration() {
 	// Example logger
-	logger, _ := zap.NewProduction()
+	logger := log.New(log.Writer(), "[CACHE] ", log.LstdFlags)
 
 	// Create router
 	r := chi.NewRouter()

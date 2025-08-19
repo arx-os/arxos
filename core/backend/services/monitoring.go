@@ -5,30 +5,131 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/arxos/arxos/core/backend/models"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/gorm"
 )
+
+// MetricCounter represents a simple counter metric
+type MetricCounter struct {
+	value int64
+	mu    sync.RWMutex
+	labels map[string]map[string]int64 // label -> value -> count
+}
+
+func NewMetricCounter() *MetricCounter {
+	return &MetricCounter{
+		labels: make(map[string]map[string]int64),
+	}
+}
+
+func (m *MetricCounter) Inc() {
+	atomic.AddInt64(&m.value, 1)
+}
+
+func (m *MetricCounter) IncWithLabels(labels ...string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	key := ""
+	for i := 0; i < len(labels); i += 2 {
+		if i+1 < len(labels) {
+			key += labels[i] + "=" + labels[i+1] + ","
+		}
+	}
+	
+	if m.labels[key] == nil {
+		m.labels[key] = make(map[string]int64)
+	}
+	m.labels[key]["count"]++
+}
+
+func (m *MetricCounter) Value() int64 {
+	return atomic.LoadInt64(&m.value)
+}
+
+// MetricHistogram represents a simple histogram metric
+type MetricHistogram struct {
+	mu     sync.RWMutex
+	values []float64
+	sum    float64
+	count  int64
+}
+
+func NewMetricHistogram() *MetricHistogram {
+	return &MetricHistogram{
+		values: make([]float64, 0, 1000),
+	}
+}
+
+func (m *MetricHistogram) Observe(value float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	m.values = append(m.values, value)
+	m.sum += value
+	m.count++
+	
+	// Keep only last 1000 values to prevent memory growth
+	if len(m.values) > 1000 {
+		m.values = m.values[len(m.values)-1000:]
+	}
+}
+
+func (m *MetricHistogram) Summary() map[string]float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	if m.count == 0 {
+		return map[string]float64{"count": 0, "sum": 0, "avg": 0}
+	}
+	
+	return map[string]float64{
+		"count": float64(m.count),
+		"sum":   m.sum,
+		"avg":   m.sum / float64(m.count),
+	}
+}
+
+// MetricGauge represents a simple gauge metric
+type MetricGauge struct {
+	value float64
+	mu    sync.RWMutex
+}
+
+func NewMetricGauge() *MetricGauge {
+	return &MetricGauge{}
+}
+
+func (m *MetricGauge) Set(value float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.value = value
+}
+
+func (m *MetricGauge) Value() float64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.value
+}
 
 // MonitoringService handles system monitoring and metrics collection
 type MonitoringService struct {
 	db *gorm.DB
 
-	// Prometheus metrics
-	apiRequestsTotal    *prometheus.CounterVec
-	apiRequestDuration  *prometheus.HistogramVec
-	apiErrorsTotal      *prometheus.CounterVec
-	exportJobsTotal     *prometheus.CounterVec
-	exportJobDuration   *prometheus.HistogramVec
-	exportJobErrors     *prometheus.CounterVec
-	activeUsers         *prometheus.GaugeVec
-	databaseConnections *prometheus.GaugeVec
-	rateLimitHits       *prometheus.CounterVec
-	securityAlerts      *prometheus.CounterVec
+	// Simple metrics
+	apiRequestsTotal    *MetricCounter
+	apiRequestDuration  *MetricHistogram
+	apiErrorsTotal      *MetricCounter
+	exportJobsTotal     *MetricCounter
+	exportJobDuration   *MetricHistogram
+	exportJobErrors     *MetricCounter
+	activeUsers         *MetricGauge
+	databaseConnections *MetricGauge
+	rateLimitHits       *MetricCounter
+	securityAlerts      *MetricCounter
 
 	// Internal metrics
 	metricsMutex sync.RWMutex
@@ -42,120 +143,25 @@ type MonitoringService struct {
 // NewMonitoringService creates a new monitoring service
 func NewMonitoringService(db *gorm.DB) *MonitoringService {
 	ms := &MonitoringService{
-		db:         db,
-		metrics:    make(map[string]interface{}),
-		healthData: make(map[string]interface{}),
+		db:                  db,
+		metrics:            make(map[string]interface{}),
+		healthData:         make(map[string]interface{}),
+		apiRequestsTotal:    NewMetricCounter(),
+		apiRequestDuration:  NewMetricHistogram(),
+		apiErrorsTotal:      NewMetricCounter(),
+		exportJobsTotal:     NewMetricCounter(),
+		exportJobDuration:   NewMetricHistogram(),
+		exportJobErrors:     NewMetricCounter(),
+		activeUsers:         NewMetricGauge(),
+		databaseConnections: NewMetricGauge(),
+		rateLimitHits:       NewMetricCounter(),
+		securityAlerts:      NewMetricCounter(),
 	}
-
-	// Initialize Prometheus metrics
-	ms.initializeMetrics()
 
 	// Start background monitoring
 	go ms.startBackgroundMonitoring()
 
 	return ms
-}
-
-// initializeMetrics sets up Prometheus metrics
-func (ms *MonitoringService) initializeMetrics() {
-	// API metrics
-	ms.apiRequestsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "arxos_api_requests_total",
-			Help: "Total number of API requests",
-		},
-		[]string{"method", "endpoint", "status", "user_role"},
-	)
-
-	ms.apiRequestDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "arxos_api_request_duration_seconds",
-			Help:    "API request duration in seconds",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"method", "endpoint"},
-	)
-
-	ms.apiErrorsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "arxos_api_errors_total",
-			Help: "Total number of API errors",
-		},
-		[]string{"method", "endpoint", "error_type"},
-	)
-
-	// Export metrics
-	ms.exportJobsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "arxos_export_jobs_total",
-			Help: "Total number of export jobs",
-		},
-		[]string{"export_type", "format", "status"},
-	)
-
-	ms.exportJobDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "arxos_export_job_duration_seconds",
-			Help:    "Export job duration in seconds",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"export_type", "format"},
-	)
-
-	ms.exportJobErrors = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "arxos_export_job_errors_total",
-			Help: "Total number of export job errors",
-		},
-		[]string{"export_type", "error_type"},
-	)
-
-	// System metrics
-	ms.activeUsers = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "arxos_active_users",
-			Help: "Number of active users",
-		},
-		[]string{"role"},
-	)
-
-	ms.databaseConnections = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "arxos_database_connections",
-			Help: "Number of database connections",
-		},
-		[]string{"status"},
-	)
-
-	ms.rateLimitHits = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "arxos_rate_limit_hits_total",
-			Help: "Total number of rate limit hits",
-		},
-		[]string{"client_type", "endpoint"},
-	)
-
-	ms.securityAlerts = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "arxos_security_alerts_total",
-			Help: "Total number of security alerts",
-		},
-		[]string{"alert_type", "severity"},
-	)
-
-	// Register metrics
-	prometheus.MustRegister(
-		ms.apiRequestsTotal,
-		ms.apiRequestDuration,
-		ms.apiErrorsTotal,
-		ms.exportJobsTotal,
-		ms.exportJobDuration,
-		ms.exportJobErrors,
-		ms.activeUsers,
-		ms.databaseConnections,
-		ms.rateLimitHits,
-		ms.securityAlerts,
-	)
 }
 
 // startBackgroundMonitoring runs background monitoring tasks
@@ -189,9 +195,11 @@ func (ms *MonitoringService) collectSystemMetrics() {
 		GROUP BY role
 	`).Scan(&activeUsers)
 
+	totalActiveUsers := int64(0)
 	for _, user := range activeUsers {
-		ms.activeUsers.WithLabelValues(user.Role).Set(float64(user.Count))
+		totalActiveUsers += user.Count
 	}
+	ms.activeUsers.Set(float64(totalActiveUsers))
 
 	// Collect database connection stats
 	var dbStats struct {
@@ -206,9 +214,7 @@ func (ms *MonitoringService) collectSystemMetrics() {
 	dbStats.Idle = int64(sqlDB.Stats().Idle)
 	dbStats.Active = dbStats.InUse + dbStats.Idle
 
-	ms.databaseConnections.WithLabelValues("active").Set(float64(dbStats.Active))
-	ms.databaseConnections.WithLabelValues("in_use").Set(float64(dbStats.InUse))
-	ms.databaseConnections.WithLabelValues("idle").Set(float64(dbStats.Idle))
+	ms.databaseConnections.Set(float64(dbStats.Active))
 
 	// Update internal metrics
 	ms.metrics["active_users"] = activeUsers
@@ -260,36 +266,36 @@ func (ms *MonitoringService) updateHealthData() {
 
 // RecordAPIRequest records an API request for monitoring
 func (ms *MonitoringService) RecordAPIRequest(method, endpoint, status, userRole string, duration time.Duration) {
-	ms.apiRequestsTotal.WithLabelValues(method, endpoint, status, userRole).Inc()
-	ms.apiRequestDuration.WithLabelValues(method, endpoint).Observe(duration.Seconds())
+	ms.apiRequestsTotal.IncWithLabels("method", method, "endpoint", endpoint, "status", status, "user_role", userRole)
+	ms.apiRequestDuration.Observe(duration.Seconds())
 }
 
 // RecordAPIError records an API error for monitoring
 func (ms *MonitoringService) RecordAPIError(method, endpoint, errorType string) {
-	ms.apiErrorsTotal.WithLabelValues(method, endpoint, errorType).Inc()
+	ms.apiErrorsTotal.IncWithLabels("method", method, "endpoint", endpoint, "error_type", errorType)
 }
 
 // RecordExportJob records an export job for monitoring
 func (ms *MonitoringService) RecordExportJob(exportType, format, status string, duration time.Duration) {
-	ms.exportJobsTotal.WithLabelValues(exportType, format, status).Inc()
+	ms.exportJobsTotal.IncWithLabels("export_type", exportType, "format", format, "status", status)
 	if duration > 0 {
-		ms.exportJobDuration.WithLabelValues(exportType, format).Observe(duration.Seconds())
+		ms.exportJobDuration.Observe(duration.Seconds())
 	}
 }
 
 // RecordExportError records an export job error for monitoring
 func (ms *MonitoringService) RecordExportError(exportType, errorType string) {
-	ms.exportJobErrors.WithLabelValues(exportType, errorType).Inc()
+	ms.exportJobErrors.IncWithLabels("export_type", exportType, "error_type", errorType)
 }
 
 // RecordRateLimitHit records a rate limit hit for monitoring
 func (ms *MonitoringService) RecordRateLimitHit(clientType, endpoint string) {
-	ms.rateLimitHits.WithLabelValues(clientType, endpoint).Inc()
+	ms.rateLimitHits.IncWithLabels("client_type", clientType, "endpoint", endpoint)
 }
 
 // RecordSecurityAlert records a security alert for monitoring
 func (ms *MonitoringService) RecordSecurityAlert(alertType, severity string) {
-	ms.securityAlerts.WithLabelValues(alertType, severity).Inc()
+	ms.securityAlerts.IncWithLabels("alert_type", alertType, "severity", severity)
 }
 
 // GetMetrics returns current system metrics
@@ -305,7 +311,16 @@ func (ms *MonitoringService) GetMetrics() map[string]interface{} {
 
 	// Add real-time metrics
 	metrics["timestamp"] = time.Now()
-	metrics["uptime"] = time.Since(time.Now()).String()
+	metrics["api_requests_total"] = ms.apiRequestsTotal.Value()
+	metrics["api_request_duration"] = ms.apiRequestDuration.Summary()
+	metrics["api_errors_total"] = ms.apiErrorsTotal.Value()
+	metrics["export_jobs_total"] = ms.exportJobsTotal.Value()
+	metrics["export_job_duration"] = ms.exportJobDuration.Summary()
+	metrics["export_job_errors"] = ms.exportJobErrors.Value()
+	metrics["active_users"] = ms.activeUsers.Value()
+	metrics["database_connections"] = ms.databaseConnections.Value()
+	metrics["rate_limit_hits"] = ms.rateLimitHits.Value()
+	metrics["security_alerts"] = ms.securityAlerts.Value()
 
 	return metrics
 }
@@ -470,9 +485,14 @@ func (ms *MonitoringService) GetSystemAlerts(limit int) ([]models.SecurityAlert,
 	return alerts, err
 }
 
-// StartMetricsServer starts the Prometheus metrics server
+// StartMetricsServer starts the metrics server
 func (ms *MonitoringService) StartMetricsServer(addr string) {
-	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		metrics := ms.GetMetrics()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(metrics)
+	})
+	
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		health := ms.GetHealthStatus()
 		w.Header().Set("Content-Type", "application/json")

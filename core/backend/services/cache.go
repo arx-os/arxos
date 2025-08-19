@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 // CacheService provides a high-level caching abstraction with TTL and invalidation
 type CacheService struct {
 	redis  *RedisService
-	logger *zap.Logger
+	logger *log.Logger
 	ctx    context.Context
 }
 
@@ -53,7 +52,7 @@ type CacheStats struct {
 }
 
 // NewCacheService creates a new cache service
-func NewCacheService(redisService *RedisService, config *CacheConfig, logger *zap.Logger) *CacheService {
+func NewCacheService(redisService *RedisService, config *CacheConfig, logger *log.Logger) *CacheService {
 	if config == nil {
 		config = DefaultCacheConfig()
 	}
@@ -64,11 +63,10 @@ func NewCacheService(redisService *RedisService, config *CacheConfig, logger *za
 		ctx:    context.Background(),
 	}
 
-	logger.Info("Cache service initialized",
-		zap.Duration("default_ttl", config.DefaultTTL),
-		zap.Duration("max_ttl", config.MaxTTL),
-		zap.String("key_prefix", config.KeyPrefix),
-	)
+	if logger != nil {
+		logger.Printf("Cache service initialized - default_ttl: %v, max_ttl: %v, key_prefix: %s",
+			config.DefaultTTL, config.MaxTTL, config.KeyPrefix)
+	}
 
 	return service
 }
@@ -80,25 +78,33 @@ func (c *CacheService) Get(key string) (interface{}, error) {
 	// Get raw value from Redis
 	rawValue, err := c.redis.Get(fullKey)
 	if err != nil {
-		c.logger.Debug("Cache miss", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("DEBUG: Cache miss - key: %s, error: %v", key, err)
+		}
 		return nil, fmt.Errorf("cache get failed for key %s: %w", key, err)
 	}
 
 	if rawValue == "" {
-		c.logger.Debug("Cache miss - key not found", zap.String("key", key))
+		if c.logger != nil {
+			c.logger.Printf("DEBUG: Cache miss - key not found: %s", key)
+		}
 		return nil, nil
 	}
 
 	// Unmarshal cache entry
 	var entry CacheEntry
 	if err := json.Unmarshal([]byte(rawValue), &entry); err != nil {
-		c.logger.Error("Failed to unmarshal cache entry", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to unmarshal cache entry - key: %s, error: %v", key, err)
+		}
 		return nil, fmt.Errorf("failed to unmarshal cache entry for key %s: %w", key, err)
 	}
 
 	// Check if entry has expired
 	if time.Now().After(entry.ExpiresAt) {
-		c.logger.Debug("Cache entry expired", zap.String("key", key))
+		if c.logger != nil {
+			c.logger.Printf("DEBUG: Cache entry expired - key: %s", key)
+		}
 		c.Delete(key) // Clean up expired entry
 		return nil, nil
 	}
@@ -109,10 +115,14 @@ func (c *CacheService) Get(key string) (interface{}, error) {
 
 	// Update the entry in cache
 	if err := c.updateEntry(fullKey, entry); err != nil {
-		c.logger.Warn("Failed to update cache entry stats", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("WARN: Failed to update cache entry stats - key: %s, error: %v", key, err)
+		}
 	}
 
-	c.logger.Debug("Cache hit", zap.String("key", key), zap.Int64("access_count", entry.AccessCount))
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: Cache hit - key: %s, access_count: %d", key, entry.AccessCount)
+	}
 	return entry.Value, nil
 }
 
@@ -140,17 +150,23 @@ func (c *CacheService) Set(key string, value interface{}, ttl time.Duration) err
 	// Marshal entry to JSON
 	entryData, err := json.Marshal(entry)
 	if err != nil {
-		c.logger.Error("Failed to marshal cache entry", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to marshal cache entry - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("failed to marshal cache entry for key %s: %w", key, err)
 	}
 
 	// Store in Redis with TTL
 	if err := c.redis.Set(fullKey, string(entryData), ttl); err != nil {
-		c.logger.Error("Failed to set cache entry", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to set cache entry - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("failed to set cache entry for key %s: %w", key, err)
 	}
 
-	c.logger.Debug("Cache entry set", zap.String("key", key), zap.Duration("ttl", ttl))
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: Cache entry set - key: %s, ttl: %v", key, ttl)
+	}
 	return nil
 }
 
@@ -159,11 +175,15 @@ func (c *CacheService) Delete(key string) error {
 	fullKey := c.buildKey(key)
 
 	if err := c.redis.Delete(fullKey); err != nil {
-		c.logger.Error("Failed to delete cache entry", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to delete cache entry - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("failed to delete cache entry for key %s: %w", key, err)
 	}
 
-	c.logger.Debug("Cache entry deleted", zap.String("key", key))
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: Cache entry deleted - key: %s", key)
+	}
 	return nil
 }
 
@@ -180,17 +200,23 @@ func (c *CacheService) InvalidatePattern(pattern string) error {
 		// Scan for keys matching pattern
 		keys, cursor, err = c.redis.GetClient().Scan(c.ctx, cursor, fullPattern, 100).Result()
 		if err != nil {
-			c.logger.Error("Failed to scan for cache keys", zap.String("pattern", pattern), zap.Error(err))
+			if c.logger != nil {
+				c.logger.Printf("ERROR: Failed to scan for cache keys - pattern: %s, error: %v", pattern, err)
+			}
 			return fmt.Errorf("failed to scan for cache keys with pattern %s: %w", pattern, err)
 		}
 
 		// Delete matching keys
 		if len(keys) > 0 {
 			if err := c.redis.GetClient().Del(c.ctx, keys...).Err(); err != nil {
-				c.logger.Error("Failed to delete cache keys", zap.Strings("keys", keys), zap.Error(err))
+				if c.logger != nil {
+					c.logger.Printf("ERROR: Failed to delete cache keys - keys: %v, error: %v", keys, err)
+				}
 				return fmt.Errorf("failed to delete cache keys: %w", err)
 			}
-			c.logger.Info("Invalidated cache keys", zap.String("pattern", pattern), zap.Int("count", len(keys)))
+			if c.logger != nil {
+				c.logger.Printf("INFO: Invalidated cache keys - pattern: %s, count: %d", pattern, len(keys))
+			}
 		}
 
 		// Continue scanning if there are more keys
@@ -216,7 +242,9 @@ func (c *CacheService) GetWithTTL(key string) (interface{}, time.Duration, error
 	fullKey := c.buildKey(key)
 	ttl, err := c.redis.TTL(fullKey)
 	if err != nil {
-		c.logger.Warn("Failed to get TTL for cache key", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("WARN: Failed to get TTL for cache key - key: %s, error: %v", key, err)
+		}
 		return value, 0, nil
 	}
 
@@ -245,17 +273,23 @@ func (c *CacheService) SetWithMetadata(key string, value interface{}, ttl time.D
 	// Marshal to JSON
 	data, err := json.Marshal(entryData)
 	if err != nil {
-		c.logger.Error("Failed to marshal cache entry with metadata", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to marshal cache entry with metadata - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("failed to marshal cache entry with metadata for key %s: %w", key, err)
 	}
 
 	// Store in Redis
 	if err := c.redis.Set(fullKey, string(data), ttl); err != nil {
-		c.logger.Error("Failed to set cache entry with metadata", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to set cache entry with metadata - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("failed to set cache entry with metadata for key %s: %w", key, err)
 	}
 
-	c.logger.Debug("Cache entry with metadata set", zap.String("key", key), zap.Duration("ttl", ttl))
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: Cache entry with metadata set - key: %s, ttl: %v", key, ttl)
+	}
 	return nil
 }
 
@@ -264,7 +298,9 @@ func (c *CacheService) GetOrSet(key string, ttl time.Duration, setter func() (in
 	// Try to get from cache first
 	value, err := c.Get(key)
 	if err != nil {
-		c.logger.Warn("Failed to get from cache, will use setter", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("WARN: Failed to get from cache, will use setter - key: %s, error: %v", key, err)
+		}
 	} else if value != nil {
 		return value, nil
 	}
@@ -272,13 +308,17 @@ func (c *CacheService) GetOrSet(key string, ttl time.Duration, setter func() (in
 	// Value not in cache, use setter function
 	value, err = setter()
 	if err != nil {
-		c.logger.Error("Setter function failed", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Setter function failed - key: %s, error: %v", key, err)
+		}
 		return nil, fmt.Errorf("setter function failed for key %s: %w", key, err)
 	}
 
 	// Store in cache
 	if err := c.Set(key, value, ttl); err != nil {
-		c.logger.Warn("Failed to store value in cache", zap.String("key", key), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("WARN: Failed to store value in cache - key: %s, error: %v", key, err)
+		}
 		// Don't return error, just log warning
 	}
 
@@ -300,7 +340,9 @@ func (c *CacheService) MGet(keys ...string) (map[string]interface{}, error) {
 	// Get values from Redis
 	values, err := c.redis.GetClient().MGet(c.ctx, fullKeys...).Result()
 	if err != nil {
-		c.logger.Error("Failed to MGet from cache", zap.Strings("keys", keys), zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to MGet from cache - keys: %v, error: %v", keys, err)
+		}
 		return nil, fmt.Errorf("failed to MGet from cache: %w", err)
 	}
 
@@ -311,7 +353,9 @@ func (c *CacheService) MGet(keys ...string) (map[string]interface{}, error) {
 			// Unmarshal cache entry
 			var entry CacheEntry
 			if err := json.Unmarshal([]byte(values[i].(string)), &entry); err != nil {
-				c.logger.Warn("Failed to unmarshal cache entry", zap.String("key", key), zap.Error(err))
+				if c.logger != nil {
+					c.logger.Printf("WARN: Failed to unmarshal cache entry - key: %s, error: %v", key, err)
+				}
 				continue
 			}
 
@@ -325,7 +369,9 @@ func (c *CacheService) MGet(keys ...string) (map[string]interface{}, error) {
 		}
 	}
 
-	c.logger.Debug("MGet completed", zap.Strings("keys", keys), zap.Int("found", len(result)))
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: MGet completed - keys: %v, found: %d", keys, len(result))
+	}
 	return result, nil
 }
 
@@ -353,7 +399,9 @@ func (c *CacheService) MSet(entries map[string]interface{}, ttl time.Duration) e
 		// Marshal entry
 		entryData, err := json.Marshal(entry)
 		if err != nil {
-			c.logger.Error("Failed to marshal cache entry", zap.String("key", key), zap.Error(err))
+			if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to marshal cache entry - key: %s, error: %v", key, err)
+		}
 			continue
 		}
 
@@ -364,11 +412,15 @@ func (c *CacheService) MSet(entries map[string]interface{}, ttl time.Duration) e
 	// Execute pipeline
 	_, err := pipe.Exec(c.ctx)
 	if err != nil {
-		c.logger.Error("Failed to execute MSet pipeline", zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("ERROR: Failed to execute MSet pipeline - error: %v", err)
+		}
 		return fmt.Errorf("failed to execute MSet pipeline: %w", err)
 	}
 
-	c.logger.Debug("MSet completed", zap.Int("count", len(entries)))
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: MSet completed - count: %d", len(entries))
+	}
 	return nil
 }
 
@@ -404,7 +456,9 @@ func (c *CacheService) GetStats() (*CacheStats, error) {
 		var keys []string
 		keys, cursor, err = c.redis.GetClient().Scan(c.ctx, cursor, pattern, 1000).Result()
 		if err != nil {
-			c.logger.Error("Failed to scan for cache keys during stats", zap.Error(err))
+			if c.logger != nil {
+				c.logger.Printf("ERROR: Failed to scan for cache keys during stats - error: %v", err)
+			}
 			break
 		}
 
@@ -429,12 +483,10 @@ func (c *CacheService) GetStats() (*CacheStats, error) {
 		TotalKeys: totalKeys,
 	}
 
-	c.logger.Debug("Cache stats retrieved",
-		zap.Int64("hits", stats.Hits),
-		zap.Int64("misses", stats.Misses),
-		zap.Float64("hit_rate", stats.HitRate),
-		zap.Int64("total_keys", stats.TotalKeys),
-	)
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: Cache stats retrieved - hits: %d, misses: %d, hit_rate: %.2f, total_keys: %d",
+			stats.Hits, stats.Misses, stats.HitRate, stats.TotalKeys)
+	}
 
 	return stats, nil
 }
@@ -473,10 +525,14 @@ func (c *CacheService) HealthCheck() error {
 
 	// Clean up
 	if err := c.Delete(testKey); err != nil {
-		c.logger.Warn("Failed to clean up health check test key", zap.Error(err))
+		if c.logger != nil {
+			c.logger.Printf("WARN: Failed to clean up health check test key - error: %v", err)
+		}
 	}
 
-	c.logger.Debug("Cache health check passed")
+	if c.logger != nil {
+		c.logger.Printf("DEBUG: Cache health check passed")
+	}
 	return nil
 }
 

@@ -124,17 +124,43 @@ class DataManager {
         }
 
         try {
+            // Add authentication header if available
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('arxos_token');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch(`${this.apiBase}/arxobjects`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify({ scale, viewport: viewportNano })
             });
             
-            const objects = await response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const objects = data.objects || data; // Handle different response formats
+            
+            // Cache with TTL
             this.scaleCache.set(cacheKey, objects);
+            setTimeout(() => this.scaleCache.delete(cacheKey), 300000); // 5 minute TTL
             
             // Store individual objects with nanometer coordinates
             objects.forEach(obj => {
+                // Ensure confidence scores are present
+                if (!obj.confidence) {
+                    obj.confidence = {
+                        overall: 1.0,
+                        classification: 1.0,
+                        position: 1.0,
+                        properties: 1.0,
+                        relationships: 1.0
+                    };
+                }
+                
                 // Convert to ArxObjectNano if coordinate system is available
                 if (typeof ArxObjectNano !== 'undefined') {
                     const nanoObj = new ArxObjectNano(obj);
@@ -147,8 +173,53 @@ class DataManager {
             return objects;
         } catch (error) {
             console.error('Failed to fetch ArxObjects:', error);
+            
+            // Return mock data for development
+            if (window.location.hostname === 'localhost') {
+                return this.generateMockObjects(viewportNano);
+            }
+            
             return [];
         }
+    }
+
+    // Generate mock objects for development/testing
+    generateMockObjects(viewport) {
+        const mockObjects = [];
+        const types = ['wall', 'door', 'window', 'electrical_outlet', 'hvac_unit'];
+        const systems = ['electrical', 'hvac', 'plumbing', 'structural'];
+        
+        for (let i = 0; i < 20; i++) {
+            const type = types[Math.floor(Math.random() * types.length)];
+            const system = systems[Math.floor(Math.random() * systems.length)];
+            const confidence = 0.3 + Math.random() * 0.7; // Random confidence 0.3-1.0
+            
+            const obj = {
+                id: `mock_${i}`,
+                type: type,
+                system: system,
+                x: viewport.x + Math.random() * viewport.width,
+                y: viewport.y + Math.random() * viewport.height,
+                width: 10 + Math.random() * 40,
+                height: 10 + Math.random() * 40,
+                confidence: {
+                    overall: confidence,
+                    classification: confidence + (Math.random() - 0.5) * 0.2,
+                    position: confidence + (Math.random() - 0.5) * 0.2,
+                    properties: confidence + (Math.random() - 0.5) * 0.2,
+                    relationships: confidence + (Math.random() - 0.5) * 0.2
+                },
+                properties: {
+                    material: type === 'wall' ? 'drywall' : 'unknown',
+                    color: '#' + Math.floor(Math.random()*16777215).toString(16)
+                }
+            };
+            
+            mockObjects.push(obj);
+            this.arxObjects.set(obj.id, obj);
+        }
+        
+        return mockObjects;
     }
 
     getArxObject(id) {
@@ -170,19 +241,100 @@ class DataManager {
     }
 
     // Flag object for validation
-    flagForValidation(objectId, reason) {
-        fetch(`${this.apiBase}/validations/flag`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ object_id: objectId, reason })
-        })
-        .then(response => response.json())
-        .then(data => {
+    async flagForValidation(objectId, reason) {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('arxos_token');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${this.apiBase}/validations/flag`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ object_id: objectId, reason })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
             console.log('Object flagged for validation:', data);
-        })
-        .catch(error => {
+            
+            // Show user feedback
+            if (window.showNotification) {
+                window.showNotification('Object flagged for validation', 'success');
+            }
+            
+            return data;
+        } catch (error) {
             console.error('Failed to flag object:', error);
-        });
+            if (window.showNotification) {
+                window.showNotification('Failed to flag object for validation', 'error');
+            }
+            throw error;
+        }
+    }
+
+    // Get validation tasks for current user
+    async getValidationTasks(filters = {}) {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('arxos_token');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const queryParams = new URLSearchParams(filters);
+            const response = await fetch(`${this.apiBase}/validations/tasks?${queryParams}`, {
+                headers: headers
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch validation tasks:', error);
+            return { tasks: [], total: 0 };
+        }
+    }
+
+    // Submit validation result
+    async submitValidation(validationData) {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            const token = localStorage.getItem('arxos_token');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${this.apiBase}/validations/submit`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(validationData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            // Update affected objects in cache
+            if (result.affected_objects) {
+                result.affected_objects.forEach(obj => {
+                    this.updateObjectConfidence(obj.id, obj.confidence);
+                });
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('Failed to submit validation:', error);
+            throw error;
+        }
     }
 }
 
@@ -280,6 +432,34 @@ class SvgRenderer {
         if ('selectedObject' in updates) {
             this.updateSelection();
         }
+        if ('visibleSystems' in updates) {
+            this.updateSystemVisibility();
+        }
+    }
+
+    updateSystemVisibility() {
+        const visibleSystems = this.stateManager.state.visibleSystems;
+        
+        // Update all rendered objects
+        this.renderedObjects.forEach((element, id) => {
+            const system = element.getAttribute('data-system');
+            if (visibleSystems.includes(system)) {
+                element.style.display = '';
+                element.style.opacity = '1';
+            } else {
+                element.style.display = 'none';
+            }
+        });
+        
+        // Update system toggle buttons
+        document.querySelectorAll('.system-toggle').forEach(button => {
+            const system = button.getAttribute('data-system');
+            if (visibleSystems.includes(system)) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
     }
 
     async renderAtScale(scale) {
@@ -298,16 +478,68 @@ class SvgRenderer {
 
     renderArxObject(arxObject) {
         if (this.renderedObjects.has(arxObject.id)) {
-            return; // Already rendered
+            // Update existing object if confidence changed
+            const existingElement = this.renderedObjects.get(arxObject.id);
+            this.updateArxObjectElement(existingElement, arxObject);
+            return;
         }
 
         const element = this.createSVGElement(arxObject);
         
         // Get or create scale group
-        const scaleGroup = this.getOrCreateScaleGroup(arxObject.scaleMin);
+        const scaleGroup = this.getOrCreateScaleGroup(arxObject.scaleMin || 1.0);
         scaleGroup.appendChild(element);
         
+        // Add to rendered objects map
         this.renderedObjects.set(arxObject.id, element);
+        
+        // Apply system visibility filters
+        this.applySystemVisibility(element, arxObject.system);
+    }
+
+    updateArxObjectElement(element, arxObject) {
+        // Update confidence attributes
+        const confidence = arxObject.confidence?.overall || 1.0;
+        element.setAttribute('data-confidence', confidence);
+        
+        // Update confidence styling
+        const shape = element.querySelector('rect, circle, path, polygon');
+        if (shape) {
+            this.applyConfidenceStyle(shape, confidence);
+        }
+        
+        // Update confidence indicator
+        const existingIndicator = element.querySelector('.confidence-indicator');
+        if (confidence < 0.7) {
+            if (!existingIndicator) {
+                const indicator = this.createConfidenceIndicator(confidence);
+                element.appendChild(indicator);
+            } else {
+                this.updateConfidenceIndicator(existingIndicator, confidence);
+            }
+        } else if (existingIndicator) {
+            existingIndicator.remove();
+        }
+    }
+
+    updateConfidenceIndicator(indicator, confidence) {
+        // Update color based on confidence level
+        let color;
+        if (confidence < 0.3) color = '#ff4444';
+        else if (confidence < 0.5) color = '#ff8800';
+        else if (confidence < 0.7) color = '#ffaa00';
+        else color = '#88aa00';
+        
+        indicator.setAttribute('fill', color);
+    }
+
+    applySystemVisibility(element, system) {
+        const visibleSystems = this.stateManager.state.visibleSystems;
+        if (visibleSystems.includes(system)) {
+            element.style.display = '';
+        } else {
+            element.style.display = 'none';
+        }
     }
 
     createSVGElement(arxObject) {
@@ -383,12 +615,163 @@ class SvgRenderer {
     }
 
     createShape(arxObject) {
-        // Simple shapes for now - can be extended
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('width', arxObject.width || 10);
-        rect.setAttribute('height', arxObject.height || 10);
-        rect.setAttribute('class', 'arx-object');
-        return rect;
+        const type = arxObject.type?.toLowerCase();
+        const width = arxObject.width || 10;
+        const height = arxObject.height || 10;
+        
+        let shape;
+        
+        switch (type) {
+            case 'door':
+                // Create door shape with arc for swing
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                // Door frame
+                const doorFrame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                doorFrame.setAttribute('width', width);
+                doorFrame.setAttribute('height', height);
+                doorFrame.setAttribute('fill', 'none');
+                doorFrame.setAttribute('stroke', '#8B4513');
+                doorFrame.setAttribute('stroke-width', '2');
+                shape.appendChild(doorFrame);
+                
+                // Door swing arc
+                const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const radius = Math.min(width, height) * 0.8;
+                arc.setAttribute('d', `M 0 0 A ${radius} ${radius} 0 0 1 ${radius} ${radius}`);
+                arc.setAttribute('fill', 'none');
+                arc.setAttribute('stroke', '#8B4513');
+                arc.setAttribute('stroke-width', '1');
+                arc.setAttribute('stroke-dasharray', '2,2');
+                shape.appendChild(arc);
+                break;
+                
+            case 'window':
+                // Create window shape
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                // Window frame
+                const windowFrame = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                windowFrame.setAttribute('width', width);
+                windowFrame.setAttribute('height', height);
+                windowFrame.setAttribute('fill', '#87CEEB');
+                windowFrame.setAttribute('stroke', '#4682B4');
+                windowFrame.setAttribute('stroke-width', '1');
+                windowFrame.setAttribute('fill-opacity', '0.6');
+                shape.appendChild(windowFrame);
+                
+                // Window cross
+                const crossH = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                crossH.setAttribute('x1', '0');
+                crossH.setAttribute('y1', height/2);
+                crossH.setAttribute('x2', width);
+                crossH.setAttribute('y2', height/2);
+                crossH.setAttribute('stroke', '#4682B4');
+                crossH.setAttribute('stroke-width', '1');
+                shape.appendChild(crossH);
+                
+                const crossV = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                crossV.setAttribute('x1', width/2);
+                crossV.setAttribute('y1', '0');
+                crossV.setAttribute('x2', width/2);
+                crossV.setAttribute('y2', height);
+                crossV.setAttribute('stroke', '#4682B4');
+                crossV.setAttribute('stroke-width', '1');
+                shape.appendChild(crossV);
+                break;
+                
+            case 'electrical_outlet':
+                // Create outlet shape
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                // Outlet body
+                const outlet = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                outlet.setAttribute('width', width);
+                outlet.setAttribute('height', height);
+                outlet.setAttribute('fill', '#F5F5F5');
+                outlet.setAttribute('stroke', '#333');
+                outlet.setAttribute('stroke-width', '1');
+                outlet.setAttribute('rx', '2');
+                shape.appendChild(outlet);
+                
+                // Outlet holes
+                const hole1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                hole1.setAttribute('cx', width * 0.3);
+                hole1.setAttribute('cy', height * 0.5);
+                hole1.setAttribute('r', '1');
+                hole1.setAttribute('fill', '#333');
+                shape.appendChild(hole1);
+                
+                const hole2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                hole2.setAttribute('cx', width * 0.7);
+                hole2.setAttribute('cy', height * 0.5);
+                hole2.setAttribute('r', '1');
+                hole2.setAttribute('fill', '#333');
+                shape.appendChild(hole2);
+                break;
+                
+            case 'hvac_unit':
+                // Create HVAC vent shape
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                // Vent body
+                const vent = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                vent.setAttribute('width', width);
+                vent.setAttribute('height', height);
+                vent.setAttribute('fill', '#C0C0C0');
+                vent.setAttribute('stroke', '#808080');
+                vent.setAttribute('stroke-width', '1');
+                shape.appendChild(vent);
+                
+                // Vent lines
+                for (let i = 1; i < 4; i++) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '0');
+                    line.setAttribute('y1', (height * i) / 4);
+                    line.setAttribute('x2', width);
+                    line.setAttribute('y2', (height * i) / 4);
+                    line.setAttribute('stroke', '#808080');
+                    line.setAttribute('stroke-width', '0.5');
+                    shape.appendChild(line);
+                }
+                break;
+                
+            case 'wall':
+                // Create wall shape - thicker rectangle
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shape.setAttribute('width', width);
+                shape.setAttribute('height', height);
+                shape.setAttribute('fill', '#444');
+                shape.setAttribute('stroke', '#222');
+                shape.setAttribute('stroke-width', '0.5');
+                break;
+                
+            case 'room':
+                // Create room outline
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shape.setAttribute('width', width);
+                shape.setAttribute('height', height);
+                shape.setAttribute('fill', 'none');
+                shape.setAttribute('stroke', '#666');
+                shape.setAttribute('stroke-width', '2');
+                shape.setAttribute('stroke-dasharray', '5,5');
+                break;
+                
+            default:
+                // Default rectangular shape
+                shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                shape.setAttribute('width', width);
+                shape.setAttribute('height', height);
+                shape.setAttribute('class', 'arx-object');
+                break;
+        }
+        
+        // Add common class if not already set
+        if (shape.tagName !== 'g') {
+            shape.setAttribute('class', 'arx-object');
+        }
+        
+        return shape;
     }
 
     applySystemStyle(element, system) {
@@ -457,6 +840,41 @@ class InteractionManager {
         
         // Keyboard shortcuts
         document.addEventListener('keydown', this.handleKeyboard.bind(this));
+        
+        // System toggle buttons
+        document.querySelectorAll('.system-toggle').forEach(button => {
+            button.addEventListener('click', this.handleSystemToggle.bind(this));
+        });
+        
+        // Confidence panel start validation button
+        const startValidationBtn = document.getElementById('start-validation');
+        if (startValidationBtn) {
+            startValidationBtn.addEventListener('click', this.startValidationSession.bind(this));
+        }
+    }
+
+    handleSystemToggle(event) {
+        const button = event.currentTarget;
+        const system = button.getAttribute('data-system');
+        
+        if (system) {
+            this.toggleSystem(system);
+        }
+    }
+
+    toggleSystem(system) {
+        const visible = this.stateManager.state.visibleSystems;
+        const index = visible.indexOf(system);
+        
+        if (index !== -1) {
+            // Remove system
+            visible.splice(index, 1);
+        } else {
+            // Add system
+            visible.push(system);
+        }
+        
+        this.stateManager.updateState({ visibleSystems: [...visible] });
     }
 
     handleZoom(event) {
@@ -521,29 +939,63 @@ class InteractionManager {
         switch(event.key) {
             case 'Escape':
                 this.stateManager.updateState({ selectedObject: null });
+                this.hideInfoPanel();
                 break;
             case '1': case '2': case '3': case '4':
-                this.toggleSystem(parseInt(event.key) - 1);
+                this.toggleSystemByIndex(parseInt(event.key) - 1);
                 break;
             case 'f':
                 this.fitToView();
                 break;
+            case 'v':
+                if (this.stateManager.state.selectedObject) {
+                    this.startValidation(this.stateManager.state.selectedObject);
+                }
+                break;
+            case 'c':
+                this.toggleConfidencePanel();
+                break;
         }
     }
 
-    toggleSystem(index) {
+    toggleSystemByIndex(index) {
         const systems = ['electrical', 'hvac', 'plumbing', 'structural'];
         if (index < systems.length) {
-            const system = systems[index];
-            const visible = this.stateManager.state.visibleSystems;
-            
-            if (visible.includes(system)) {
-                visible.splice(visible.indexOf(system), 1);
-            } else {
-                visible.push(system);
+            this.toggleSystem(systems[index]);
+        }
+    }
+
+    toggleConfidencePanel() {
+        const panel = document.getElementById('confidence-panel');
+        if (panel) {
+            const isVisible = panel.style.display !== 'none';
+            panel.style.display = isVisible ? 'none' : 'block';
+        }
+    }
+
+    hideInfoPanel() {
+        const panel = document.getElementById('info-panel');
+        if (panel) {
+            panel.style.display = 'none';
+        }
+    }
+
+    startValidationSession() {
+        // Get objects needing validation
+        const needsValidation = this.dataManager.getObjectsNeedingValidation();
+        
+        if (needsValidation.length === 0) {
+            if (window.showNotification) {
+                window.showNotification('No objects need validation!', 'success');
             }
-            
-            this.stateManager.updateState({ visibleSystems: [...visible] });
+            return;
+        }
+        
+        // Start validation UI if available
+        if (window.arxosValidation) {
+            window.arxosValidation.showValidationTasks();
+        } else {
+            alert(`Found ${needsValidation.length} objects that need validation. Validation UI not available.`);
         }
     }
 
@@ -664,6 +1116,15 @@ class ArxosApp {
                     this.renderer.applyConfidenceStyle(shape, confidence.overall);
                 }
             }
+            // Update confidence overview
+            this.updateConfidenceOverview();
+        });
+        
+        // Listen for state changes to update scale indicator
+        this.stateManager.subscribe((updates) => {
+            if ('scaleLevel' in updates) {
+                this.updateScaleIndicator();
+            }
         });
         
         // Add validation keyboard shortcut
@@ -676,12 +1137,92 @@ class ArxosApp {
         // Initial render
         this.renderer.renderAtScale(1.0);
         
+        // Initialize UI elements
+        this.initializeUI();
+    }
+
+    initializeUI() {
         // Show confidence panel if available
         const confidencePanel = document.getElementById('confidence-panel');
         if (confidencePanel) {
             confidencePanel.style.display = 'block';
             this.updateConfidenceOverview();
         }
+        
+        // Update initial scale indicator
+        this.updateScaleIndicator();
+        
+        // Add notification system
+        if (!window.showNotification) {
+            window.showNotification = this.showNotification.bind(this);
+        }
+    }
+
+    updateScaleIndicator() {
+        const scaleLevelElement = document.getElementById('scale-level');
+        const scaleValueElement = document.getElementById('scale-value');
+        
+        if (scaleLevelElement && scaleValueElement) {
+            const currentLevel = this.stateManager.getCurrentScaleLevel();
+            const scale = this.stateManager.state.scaleLevel;
+            
+            scaleLevelElement.textContent = currentLevel;
+            scaleValueElement.textContent = `1:${Math.round(scale)}`;
+        }
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        `;
+        
+        // Set colors based on type
+        switch (type) {
+            case 'success':
+                notification.style.backgroundColor = '#10b981';
+                break;
+            case 'error':
+                notification.style.backgroundColor = '#ef4444';
+                break;
+            case 'warning':
+                notification.style.backgroundColor = '#f59e0b';
+                break;
+            default:
+                notification.style.backgroundColor = '#3b82f6';
+        }
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Animate in
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 10);
+        
+        // Animate out and remove
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
     }
 
     updateConfidenceOverview() {

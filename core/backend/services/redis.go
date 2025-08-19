@@ -3,18 +3,18 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/go-redis/redis/extra/redisotel/v8"
 	"github.com/go-redis/redis/v8"
-	"go.uber.org/zap"
 )
 
 // RedisService provides Redis caching functionality with connection pooling and health checks
 type RedisService struct {
 	client *redis.Client
 	ctx    context.Context
-	logger *zap.Logger
+	logger *log.Logger
 }
 
 // RedisConfig holds configuration for Redis connection
@@ -48,7 +48,7 @@ func DefaultRedisConfig() *RedisConfig {
 }
 
 // NewRedisService creates a new Redis service with the given configuration
-func NewRedisService(config *RedisConfig, logger *zap.Logger) (*RedisService, error) {
+func NewRedisService(config *RedisConfig, logger *log.Logger) (*RedisService, error) {
 	if config == nil {
 		config = DefaultRedisConfig()
 	}
@@ -67,7 +67,9 @@ func NewRedisService(config *RedisConfig, logger *zap.Logger) (*RedisService, er
 		IdleTimeout:  config.IdleTimeout,
 		// Enable connection pooling metrics
 		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
-			logger.Debug("Redis connection established", zap.String("addr", config.Addr))
+			if logger != nil {
+				logger.Printf("DEBUG: Redis connection established - addr: %s", config.Addr)
+			}
 			return nil
 		},
 	})
@@ -87,11 +89,10 @@ func NewRedisService(config *RedisConfig, logger *zap.Logger) (*RedisService, er
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	logger.Info("Redis service initialized successfully",
-		zap.String("addr", config.Addr),
-		zap.Int("pool_size", config.PoolSize),
-		zap.Int("min_idle_conns", config.MinIdleConns),
-	)
+	if logger != nil {
+		logger.Printf("INFO: Redis service initialized successfully - addr: %s, pool_size: %d, min_idle_conns: %d",
+			config.Addr, config.PoolSize, config.MinIdleConns)
+	}
 
 	return service, nil
 }
@@ -103,7 +104,9 @@ func (r *RedisService) Ping() error {
 
 	_, err := r.client.Ping(ctx).Result()
 	if err != nil {
-		r.logger.Error("Redis ping failed", zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis ping failed - error: %v", err)
+		}
 		return fmt.Errorf("redis ping failed: %w", err)
 	}
 
@@ -118,14 +121,20 @@ func (r *RedisService) Get(key string) (string, error) {
 	val, err := r.client.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			r.logger.Debug("Redis key not found", zap.String("key", key))
+			if r.logger != nil {
+				r.logger.Printf("DEBUG: Redis key not found - key: %s", key)
+			}
 			return "", nil
 		}
-		r.logger.Error("Redis get failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis get failed - key: %s, error: %v", key, err)
+		}
 		return "", fmt.Errorf("redis get failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis get successful", zap.String("key", key))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis get successful - key: %s", key)
+	}
 	return val, nil
 }
 
@@ -136,11 +145,15 @@ func (r *RedisService) Set(key string, value interface{}, expiration time.Durati
 
 	err := r.client.Set(ctx, key, value, expiration).Err()
 	if err != nil {
-		r.logger.Error("Redis set failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis set failed - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("redis set failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis set successful", zap.String("key", key), zap.Duration("expiration", expiration))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis set successful - key: %s, expiration: %v", key, expiration)
+	}
 	return nil
 }
 
@@ -151,11 +164,15 @@ func (r *RedisService) Delete(key string) error {
 
 	err := r.client.Del(ctx, key).Err()
 	if err != nil {
-		r.logger.Error("Redis delete failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis delete failed - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("redis delete failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis delete successful", zap.String("key", key))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis delete successful - key: %s", key)
+	}
 	return nil
 }
 
@@ -166,12 +183,16 @@ func (r *RedisService) Exists(key string) (bool, error) {
 
 	result, err := r.client.Exists(ctx, key).Result()
 	if err != nil {
-		r.logger.Error("Redis exists check failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis exists check failed - key: %s, error: %v", key, err)
+		}
 		return false, fmt.Errorf("redis exists check failed for key %s: %w", key, err)
 	}
 
 	exists := result > 0
-	r.logger.Debug("Redis exists check", zap.String("key", key), zap.Bool("exists", exists))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis exists check - key: %s, exists: %v", key, exists)
+	}
 	return exists, nil
 }
 
@@ -182,11 +203,15 @@ func (r *RedisService) Expire(key string, expiration time.Duration) error {
 
 	err := r.client.Expire(ctx, key, expiration).Err()
 	if err != nil {
-		r.logger.Error("Redis expire failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis expire failed - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("redis expire failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis expire set", zap.String("key", key), zap.Duration("expiration", expiration))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis expire set - key: %s, expiration: %v", key, expiration)
+	}
 	return nil
 }
 
@@ -197,11 +222,15 @@ func (r *RedisService) TTL(key string) (time.Duration, error) {
 
 	ttl, err := r.client.TTL(ctx, key).Result()
 	if err != nil {
-		r.logger.Error("Redis TTL check failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis TTL check failed - key: %s, error: %v", key, err)
+		}
 		return 0, fmt.Errorf("redis TTL check failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis TTL", zap.String("key", key), zap.Duration("ttl", ttl))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis TTL - key: %s, ttl: %v", key, ttl)
+	}
 	return ttl, nil
 }
 
@@ -212,11 +241,15 @@ func (r *RedisService) Incr(key string) (int64, error) {
 
 	val, err := r.client.Incr(ctx, key).Result()
 	if err != nil {
-		r.logger.Error("Redis incr failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis incr failed - key: %s, error: %v", key, err)
+		}
 		return 0, fmt.Errorf("redis incr failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis incr successful", zap.String("key", key), zap.Int64("value", val))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis incr successful - key: %s, value: %d", key, val)
+	}
 	return val, nil
 }
 
@@ -227,11 +260,15 @@ func (r *RedisService) IncrBy(key string, value int64) (int64, error) {
 
 	val, err := r.client.IncrBy(ctx, key, value).Result()
 	if err != nil {
-		r.logger.Error("Redis incrby failed", zap.String("key", key), zap.Int64("value", value), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis incrby failed - key: %s, value: %d, error: %v", key, value, err)
+		}
 		return 0, fmt.Errorf("redis incrby failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis incrby successful", zap.String("key", key), zap.Int64("value", val))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis incrby successful - key: %s, value: %d", key, val)
+	}
 	return val, nil
 }
 
@@ -243,14 +280,20 @@ func (r *RedisService) HGet(key, field string) (string, error) {
 	val, err := r.client.HGet(ctx, key, field).Result()
 	if err != nil {
 		if err == redis.Nil {
-			r.logger.Debug("Redis hash field not found", zap.String("key", key), zap.String("field", field))
+			if r.logger != nil {
+				r.logger.Printf("DEBUG: Redis hash field not found - key: %s, field: %s", key, field)
+			}
 			return "", nil
 		}
-		r.logger.Error("Redis hget failed", zap.String("key", key), zap.String("field", field), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis hget failed - key: %s, field: %s, error: %v", key, field, err)
+		}
 		return "", fmt.Errorf("redis hget failed for key %s field %s: %w", key, field, err)
 	}
 
-	r.logger.Debug("Redis hget successful", zap.String("key", key), zap.String("field", field))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis hget successful - key: %s, field: %s", key, field)
+	}
 	return val, nil
 }
 
@@ -261,11 +304,15 @@ func (r *RedisService) HSet(key, field string, value interface{}) error {
 
 	err := r.client.HSet(ctx, key, field, value).Err()
 	if err != nil {
-		r.logger.Error("Redis hset failed", zap.String("key", key), zap.String("field", field), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis hset failed - key: %s, field: %s, error: %v", key, field, err)
+		}
 		return fmt.Errorf("redis hset failed for key %s field %s: %w", key, field, err)
 	}
 
-	r.logger.Debug("Redis hset successful", zap.String("key", key), zap.String("field", field))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis hset successful - key: %s, field: %s", key, field)
+	}
 	return nil
 }
 
@@ -276,11 +323,15 @@ func (r *RedisService) HGetAll(key string) (map[string]string, error) {
 
 	val, err := r.client.HGetAll(ctx, key).Result()
 	if err != nil {
-		r.logger.Error("Redis hgetall failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis hgetall failed - key: %s, error: %v", key, err)
+		}
 		return nil, fmt.Errorf("redis hgetall failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis hgetall successful", zap.String("key", key), zap.Int("field_count", len(val)))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis hgetall successful - key: %s, field_count: %d", key, len(val))
+	}
 	return val, nil
 }
 
@@ -291,11 +342,15 @@ func (r *RedisService) LPush(key string, values ...interface{}) error {
 
 	err := r.client.LPush(ctx, key, values...).Err()
 	if err != nil {
-		r.logger.Error("Redis lpush failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis lpush failed - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("redis lpush failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis lpush successful", zap.String("key", key), zap.Int("value_count", len(values)))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis lpush successful - key: %s, value_count: %d", key, len(values))
+	}
 	return nil
 }
 
@@ -307,14 +362,20 @@ func (r *RedisService) RPop(key string) (string, error) {
 	val, err := r.client.RPop(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			r.logger.Debug("Redis list is empty", zap.String("key", key))
+			if r.logger != nil {
+				r.logger.Printf("DEBUG: Redis list is empty - key: %s", key)
+			}
 			return "", nil
 		}
-		r.logger.Error("Redis rpop failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis rpop failed - key: %s, error: %v", key, err)
+		}
 		return "", fmt.Errorf("redis rpop failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis rpop successful", zap.String("key", key))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis rpop successful - key: %s", key)
+	}
 	return val, nil
 }
 
@@ -325,11 +386,15 @@ func (r *RedisService) SAdd(key string, members ...interface{}) error {
 
 	err := r.client.SAdd(ctx, key, members...).Err()
 	if err != nil {
-		r.logger.Error("Redis sadd failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis sadd failed - key: %s, error: %v", key, err)
+		}
 		return fmt.Errorf("redis sadd failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis sadd successful", zap.String("key", key), zap.Int("member_count", len(members)))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis sadd successful - key: %s, member_count: %d", key, len(members))
+	}
 	return nil
 }
 
@@ -340,11 +405,15 @@ func (r *RedisService) SMembers(key string) ([]string, error) {
 
 	val, err := r.client.SMembers(ctx, key).Result()
 	if err != nil {
-		r.logger.Error("Redis smembers failed", zap.String("key", key), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis smembers failed - key: %s, error: %v", key, err)
+		}
 		return nil, fmt.Errorf("redis smembers failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis smembers successful", zap.String("key", key), zap.Int("member_count", len(val)))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis smembers successful - key: %s, member_count: %d", key, len(val))
+	}
 	return val, nil
 }
 
@@ -355,11 +424,15 @@ func (r *RedisService) ZAdd(key string, score float64, member string) error {
 
 	err := r.client.ZAdd(ctx, key, &redis.Z{Score: score, Member: member}).Err()
 	if err != nil {
-		r.logger.Error("Redis zadd failed", zap.String("key", key), zap.Float64("score", score), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis zadd failed - key: %s, score: %f, error: %v", key, score, err)
+		}
 		return fmt.Errorf("redis zadd failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis zadd successful", zap.String("key", key), zap.Float64("score", score), zap.String("member", member))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis zadd successful - key: %s, score: %f, member: %s", key, score, member)
+	}
 	return nil
 }
 
@@ -370,11 +443,15 @@ func (r *RedisService) ZRange(key string, start, stop int64) ([]string, error) {
 
 	val, err := r.client.ZRange(ctx, key, start, stop).Result()
 	if err != nil {
-		r.logger.Error("Redis zrange failed", zap.String("key", key), zap.Int64("start", start), zap.Int64("stop", stop), zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis zrange failed - key: %s, start: %d, stop: %d, error: %v", key, start, stop, err)
+		}
 		return nil, fmt.Errorf("redis zrange failed for key %s: %w", key, err)
 	}
 
-	r.logger.Debug("Redis zrange successful", zap.String("key", key), zap.Int64("start", start), zap.Int64("stop", stop), zap.Int("member_count", len(val)))
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis zrange successful - key: %s, start: %d, stop: %d, member_count: %d", key, start, stop, len(val))
+	}
 	return val, nil
 }
 
@@ -385,25 +462,26 @@ func (r *RedisService) FlushDB() error {
 
 	err := r.client.FlushDB(ctx).Err()
 	if err != nil {
-		r.logger.Error("Redis flushdb failed", zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("ERROR: Redis flushdb failed - error: %v", err)
+		}
 		return fmt.Errorf("redis flushdb failed: %w", err)
 	}
 
-	r.logger.Info("Redis database flushed successfully")
+	if r.logger != nil {
+		r.logger.Printf("INFO: Redis database flushed successfully")
+	}
 	return nil
 }
 
 // GetStats returns Redis connection pool statistics
 func (r *RedisService) GetStats() *redis.PoolStats {
 	stats := r.client.PoolStats()
-	r.logger.Debug("Redis pool stats",
-		zap.Int("hits", int(stats.Hits)),
-		zap.Int("misses", int(stats.Misses)),
-		zap.Int("timeouts", int(stats.Timeouts)),
-		zap.Int("total_conns", int(stats.TotalConns)),
-		zap.Int("idle_conns", int(stats.IdleConns)),
-		zap.Int("stale_conns", int(stats.StaleConns)),
-	)
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis pool stats - hits: %d, misses: %d, timeouts: %d, total_conns: %d, idle_conns: %d, stale_conns: %d",
+			int(stats.Hits), int(stats.Misses), int(stats.Timeouts),
+			int(stats.TotalConns), int(stats.IdleConns), int(stats.StaleConns))
+	}
 	return stats
 }
 
@@ -433,10 +511,14 @@ func (r *RedisService) HealthCheck() error {
 
 	// Clean up test key
 	if err := r.Delete(testKey); err != nil {
-		r.logger.Warn("Failed to clean up health check test key", zap.Error(err))
+		if r.logger != nil {
+			r.logger.Printf("WARN: Failed to clean up health check test key - error: %v", err)
+		}
 	}
 
-	r.logger.Debug("Redis health check passed")
+	if r.logger != nil {
+		r.logger.Printf("DEBUG: Redis health check passed")
+	}
 	return nil
 }
 
@@ -445,10 +527,14 @@ func (r *RedisService) Close() error {
 	if r.client != nil {
 		err := r.client.Close()
 		if err != nil {
-			r.logger.Error("Failed to close Redis connection", zap.Error(err))
+			if r.logger != nil {
+				r.logger.Printf("ERROR: Failed to close Redis connection - error: %v", err)
+			}
 			return fmt.Errorf("failed to close Redis connection: %w", err)
 		}
-		r.logger.Info("Redis connection closed successfully")
+		if r.logger != nil {
+			r.logger.Printf("INFO: Redis connection closed successfully")
+		}
 	}
 	return nil
 }

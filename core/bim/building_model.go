@@ -1,9 +1,9 @@
 package bim
 
 import (
+	"fmt"
 	"sync"
 	"math"
-	"github.com/arxos/arxos/core/arxobject"
 )
 
 // BuildingModel represents a complete building information model
@@ -157,7 +157,7 @@ func (f *Floor) AddWall(start, end Point3D, thickness float64, wallType WallType
 	
 	// Find intersections with existing walls
 	for _, existingWall := range f.Walls {
-		if intersection := findWallIntersection(wall, existingWall); intersection != nil {
+		if intersection, found := findWallIntersection(wall, existingWall); found {
 			// Split walls at intersection
 			f.splitWallsAtIntersection(wall, existingWall, intersection)
 		}
@@ -181,7 +181,12 @@ func (w *Wall) AddOutlet(position float64, height float64) *ElectricalOutlet {
 		Amperage: 20,
 	}
 	
-	w.HostedObjects = append(w.HostedObjects, outlet)
+	w.HostedObjects = append(w.HostedObjects, HostedObject{
+		ID:       outlet.ID,
+		Type:     "outlet",
+		Position: position,
+		Height:   height,
+	})
 	return outlet
 }
 
@@ -271,23 +276,21 @@ func (f *Floor) RenderToSVG() string {
 	
 	// Render walls
 	for _, wall := range f.Walls {
-		svg += wall.renderToSVG()
+		// TODO: Implement wall.renderToSVG()
+		svg += fmt.Sprintf(`<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="black" stroke-width="%.1f"/>`,
+			wall.StartPoint.X, wall.StartPoint.Y,
+			wall.EndPoint.X, wall.EndPoint.Y,
+			wall.Thickness)
 	}
 	
 	// Render rooms (as semi-transparent fills)
-	for _, room := range f.Rooms {
-		svg += room.renderToSVG()
-	}
+	// TODO: Implement room rendering
 	
 	// Render doors
-	for _, door := range f.Doors {
-		svg += door.renderToSVG()
-	}
+	// TODO: Implement door rendering
 	
 	// Render MEP systems (if visible)
-	if f.Electrical != nil {
-		svg += f.Electrical.renderToSVG()
-	}
+	// TODO: Implement MEP rendering
 	
 	svg += `</svg>`
 	

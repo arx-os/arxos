@@ -10,7 +10,6 @@ import (
 
 	"github.com/arxos/arxos/core/arxobject"
 	"github.com/arxos/arxos/core/backend/services"
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

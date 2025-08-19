@@ -51,11 +51,11 @@ func (wc *WallConverter) ConvertWallToArxObject(wall WallSegment) *arxobject.Arx
 	// 1 meter = 1000 mm, so pixels * (meters/pixel) * 1000 = mm
 	mmPerPixel := (1.0 / wc.PixelsPerMeter) * 1000.0
 	
-	centerXMM := int64(centerX * mmPerPixel) * arxobject.Millimeter
-	centerYMM := int64(centerY * mmPerPixel) * arxobject.Millimeter
-	lengthMM := int64(length * mmPerPixel) * arxobject.Millimeter
-	thicknessMM := int64(wall.Thickness * mmPerPixel) * arxobject.Millimeter
-	heightMM := int64(wc.FloorHeight * 1000) * arxobject.Millimeter
+	centerXMM := int64(centerX * mmPerPixel * arxobject.Millimeter)
+	centerYMM := int64(centerY * mmPerPixel * arxobject.Millimeter)
+	lengthMM := int64(length * mmPerPixel * arxobject.Millimeter)
+	thicknessMM := int64(wall.Thickness * mmPerPixel * arxobject.Millimeter)
+	heightMM := int64(wc.FloorHeight * 1000 * arxobject.Millimeter)
 	
 	// Create ArxObject
 	obj := &arxobject.ArxObject{

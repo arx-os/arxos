@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	// "github.com/gorilla/mux" // Not used
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/arxos/arxos/core/arxobject"
 	"github.com/arxos/arxos/core/backend/models"
@@ -86,26 +86,18 @@ func (h *ValidationHandler) GetPendingValidations(w http.ResponseWriter, r *http
 		return
 	}
 	
-	// Convert to handler's ValidationTask type and enrich with calculated fields
-	handlerTasks := make([]ValidationTask, len(tasks))
-	for i, task := range tasks {
-		handlerTasks[i] = ValidationTask{
-			ObjectID:        task.ObjectID,
-			ObjectType:      task.ObjectType,
-			Confidence:      task.Confidence,
-			Priority:        task.Priority,
-			SimilarCount:    h.countSimilarObjects(task.ObjectID),
-			PotentialImpact: h.calculateValidationImpact(task.ObjectID),
-			CreatedAt:       task.CreatedAt,
-		}
+	// Calculate potential impact for each task
+	for i := range tasks {
+		tasks[i].PotentialImpact = h.calculateValidationImpact(tasks[i].ObjectID)
+		tasks[i].SimilarCount = h.countSimilarObjects(tasks[i].ObjectID)
 	}
 	
 	// Sort by priority and impact
-	handlerTasks = h.prioritizeValidationTasks(handlerTasks)
+	tasks = h.prioritizeValidationTasks(tasks)
 	
 	respondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"validations": handlerTasks,
-		"total": len(handlerTasks),
+		"validations": tasks,
+		"total": len(tasks),
 	})
 }
 
@@ -138,18 +130,8 @@ func (h *ValidationHandler) FlagForValidation(w http.ResponseWriter, r *http.Req
 		CreatedAt:   time.Now(),
 	}
 	
-	// Convert to models.ValidationTask for database
-	modelTask := &models.ValidationTask{
-		ObjectID:        task.ObjectID,
-		ObjectType:      task.ObjectType,
-		Confidence:      task.Confidence,
-		Priority:        task.Priority,
-		PotentialImpact: h.calculateValidationImpact(task.ObjectID),
-		CreatedAt:       task.CreatedAt,
-	}
-	
 	// Save to database
-	if err := h.validationService.CreateValidationTask(modelTask); err != nil {
+	if err := h.validationService.CreateValidationTask(&task); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create validation task")
 		return
 	}
@@ -198,18 +180,7 @@ func (h *ValidationHandler) SubmitValidation(w http.ResponseWriter, r *http.Requ
 	// Check if pattern should be learned
 	patternLearned := false
 	if len(cascadedObjects) >= 3 {
-		// Convert handler's ValidationSubmission to models.ValidationSubmission
-		modelSubmission := models.ValidationSubmission{
-			ObjectID:       submission.ObjectID,
-			ValidationType: submission.ValidationType,
-			Data:           submission.Data,
-			Validator:      submission.Validator,
-			Confidence:     submission.Confidence,
-			Timestamp:      submission.Timestamp,
-			PhotoURL:       submission.PhotoURL,
-			Notes:          submission.Notes,
-		}
-		patternLearned = h.validationService.LearnPattern(obj, similarObjects, modelSubmission)
+		patternLearned = h.validationService.LearnPattern(obj, similarObjects, submission)
 	}
 	
 	// Calculate impact
@@ -225,32 +196,8 @@ func (h *ValidationHandler) SubmitValidation(w http.ResponseWriter, r *http.Requ
 		TimeSaved:             float32(len(cascadedObjects)) * 2.5, // Estimate 2.5 min per object
 	}
 	
-	// Convert to models types for database
-	modelSubmission := &models.ValidationSubmission{
-		ObjectID:       submission.ObjectID,
-		ValidationType: submission.ValidationType,
-		Data:           submission.Data,
-		Validator:      submission.Validator,
-		Confidence:     submission.Confidence,
-		Timestamp:      submission.Timestamp,
-		PhotoURL:       submission.PhotoURL,
-		Notes:          submission.Notes,
-	}
-	
-	modelImpact := &models.ValidationImpact{
-		ObjectID:              impact.ObjectID,
-		OldConfidence:         impact.OldConfidence,
-		NewConfidence:         impact.NewConfidence,
-		ConfidenceImprovement: impact.ConfidenceImprovement,
-		CascadedObjects:       impact.CascadedObjects,
-		CascadedCount:         impact.CascadedCount,
-		PatternLearned:        impact.PatternLearned,
-		TotalConfidenceGain:   impact.TotalConfidenceGain,
-		TimeSaved:             impact.TimeSaved,
-	}
-	
 	// Save validation to database
-	if err := h.validationService.SaveValidation(modelSubmission, modelImpact); err != nil {
+	if err := h.validationService.SaveValidation(&submission, &impact); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to save validation")
 		return
 	}
@@ -454,12 +401,12 @@ func (h *ValidationHandler) calculateSimilarity(obj1, obj2 *arxobject.ArxObject)
 	
 	// Check dimensional similarity
 	if obj1.Length > 0 && obj2.Length > 0 {
-		lengthRatio := float32(min(float32(obj1.Length), float32(obj2.Length))) / float32(max(obj1.Length, obj2.Length))
+		lengthRatio := float32(min(obj1.Length, obj2.Length)) / float32(max(obj1.Length, obj2.Length))
 		similarity += lengthRatio * 0.25
 	}
 	
 	if obj1.Width > 0 && obj2.Width > 0 {
-		widthRatio := float32(min(float32(obj1.Width), float32(obj2.Width))) / float32(max(obj1.Width, obj2.Width))
+		widthRatio := float32(min(obj1.Width, obj2.Width)) / float32(max(obj1.Width, obj2.Width))
 		similarity += widthRatio * 0.25
 	}
 	
@@ -529,7 +476,7 @@ func (h *ValidationHandler) calculatePriority(obj *arxobject.ArxObject, userPrio
 		basePriority += 1
 	}
 	
-	return int(min(float32(basePriority), 10))
+	return min(basePriority, 10)
 }
 
 func (h *ValidationHandler) getObjectCriticality(objType arxobject.ArxObjectType) float32 {
@@ -660,4 +607,4 @@ func max(a, b int64) int64 {
 	return b
 }
 
-// Helper functions are imported from helpers.go
+// Use respondWithJSON and respondWithError from helpers.go

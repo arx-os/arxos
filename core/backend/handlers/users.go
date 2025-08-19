@@ -20,7 +20,7 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
-type LegacyAuthResponse struct {
+type AuthResponse struct {
 	Token string `json:"token"`
 }
 
@@ -83,7 +83,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// TODO: Generate proper JWT token
 	token := "mock-jwt-token-" + fmt.Sprintf("%d", user.ID)
 
-	resp := LegacyAuthResponse{Token: token}
+	resp := AuthResponse{Token: token}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }

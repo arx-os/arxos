@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/logic_engine"
-	"github.com/arxos/arxos/core/backend/models"
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/db"
+	"arxos/logic_engine"
+	"arxos/models"
+	"arxos/services"
 	"encoding/json"
 	"net/http"
 	"os"

@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/arxobject"
+	"arxos/services"
 	"github.com/google/uuid"
 )
 
@@ -87,20 +88,46 @@ func SimplePDFUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Process PDF to extract ArxObjects
-	arxEngine := arxobject.NewEngine(10000)
-	processor := services.NewPDFProcessor(arxEngine)
+	arxEngine := arxobject.NewEngine(nil) // TODO: pass actual DB connection
 	
-	processingResult, err := processor.ProcessPDF(filepath)
-	if err != nil {
+	// Try AI processor first, fall back to basic processor if AI service is not available
+	var processingResult *services.ProcessingResult
+	var processingErr error
+	
+	// Check if AI service is enabled
+	useAI := os.Getenv("USE_AI_PDF_PROCESSOR") != "false"
+	
+	if useAI {
+		aiProcessor := services.NewAIPDFProcessor(arxEngine)
+		processingResult, processingErr = aiProcessor.ProcessPDF(filepath)
+		
+		if processingErr != nil {
+			// Log AI processing error
+			response["data"].(map[string]interface{})["ai_warning"] = processingErr.Error()
+			
+			// Fall back to basic processor
+			processor := services.NewPDFProcessor(arxEngine)
+			processingResult, processingErr = processor.ProcessPDF(filepath)
+		} else {
+			response["data"].(map[string]interface{})["processing_method"] = "ai"
+		}
+	} else {
+		// Use basic processor
+		processor := services.NewPDFProcessor(arxEngine)
+		processingResult, processingErr = processor.ProcessPDF(filepath)
+		response["data"].(map[string]interface{})["processing_method"] = "basic"
+	}
+	
+	if processingErr != nil {
 		// Log error but continue with partial results
-		response["data"].(map[string]interface{})["process_warning"] = err.Error()
+		response["data"].(map[string]interface{})["process_warning"] = processingErr.Error()
 	}
 	
 	// Convert extracted objects to response format
 	var extractedObjects []map[string]interface{}
 	var needingValidation int
 	
-	if processingResult != nil {
+	if processingResult != nil && len(processingResult.Objects) > 0 {
 		for _, obj := range processingResult.Objects {
 			extractedObj := map[string]interface{}{
 				"type":       obj.Type,
@@ -117,19 +144,26 @@ func SimplePDFUpload(w http.ResponseWriter, r *http.Request) {
 		
 		response["data"].(map[string]interface{})["statistics"] = processingResult.Statistics
 	} else {
-		// Fallback to mock data if processing failed
-		extractedObjects = []map[string]interface{}{
-			{
-				"type":       "wall",
-				"confidence": 0.65,
-				"uuid":       uuid.New().String(),
-				"properties": map[string]interface{}{
-					"length": 5000,
-					"height": 3000,
-				},
-			},
+		// Return empty result with error message instead of mock data
+		if processingErr != nil {
+			response["success"] = false
+			response["message"] = "PDF processing failed"
+			response["data"].(map[string]interface{})["error"] = processingErr.Error()
+			response["data"].(map[string]interface{})["status"] = "failed"
+			
+			// Still return the response but with empty objects
+			extractedObjects = []map[string]interface{}{}
+			response["data"].(map[string]interface{})["extracted_objects"] = extractedObjects
+			response["data"].(map[string]interface{})["objects_needing_validation"] = 0
+			
+			// Log the error for debugging
+			fmt.Printf("PDF processing error for %s: %v\n", handler.Filename, processingErr)
+		} else {
+			// Processing succeeded but no objects found
+			response["data"].(map[string]interface{})["status"] = "completed"
+			response["data"].(map[string]interface{})["message"] = "No objects detected in PDF"
+			extractedObjects = []map[string]interface{}{}
 		}
-		needingValidation = 1
 	}
 
 	response["data"].(map[string]interface{})["extracted_objects"] = extractedObjects
@@ -150,24 +184,13 @@ func PDFProcessingStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement actual status checking from database
-	// For now, return mock status
+	// Since we process PDFs synchronously for now, always return completed
+	// In a production system, this would check a job queue or database
 	status := map[string]interface{}{
 		"id":     pdfID,
-		"status": "processing",
-		"progress": map[string]interface{}{
-			"current_step": "extracting_elements",
-			"total_steps":  5,
-			"completed":    2,
-			"percentage":   40,
-		},
-		"stats": map[string]interface{}{
-			"pages_processed":    5,
-			"total_pages":        12,
-			"objects_extracted":  47,
-			"confidence_average": 0.72,
-		},
-		"estimated_completion": time.Now().Add(2 * time.Minute).UTC(),
+		"status": "completed",
+		"message": "PDF processing is synchronous - check upload response for results",
+		"note": "Asynchronous processing not yet implemented",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -176,27 +199,52 @@ func PDFProcessingStatus(w http.ResponseWriter, r *http.Request) {
 
 // ListUploadedPDFs returns a list of uploaded PDFs
 func ListUploadedPDFs(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement actual listing from database
-	// For now, return mock data
-	pdfs := []map[string]interface{}{
-		{
-			"id":          "abc-123",
-			"filename":    "building_plans_v2.pdf",
-			"upload_date": time.Now().Add(-24 * time.Hour).UTC(),
-			"status":      "completed",
-			"pages":       12,
-			"objects":     156,
-		},
-		{
-			"id":          "def-456",
-			"filename":    "floor_2_electrical.pdf",
-			"upload_date": time.Now().Add(-2 * time.Hour).UTC(),
-			"status":      "processing",
-			"pages":       8,
-			"objects":     0,
-		},
+	// List actual files from upload directory
+	uploadDir := "uploads"
+	pdfs := []map[string]interface{}{}
+	
+	files, err := os.ReadDir(uploadDir)
+	if err != nil {
+		// Upload directory doesn't exist or can't be read
+		response := map[string]interface{}{
+			"success": true,
+			"data":    pdfs,
+			"total":   0,
+			"message": "No PDFs uploaded yet",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		return
 	}
-
+	
+	for _, file := range files {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".pdf" {
+			info, err := file.Info()
+			if err != nil {
+				continue
+			}
+			
+			// Extract UUID from filename (format: UUID_originalname.pdf)
+			parts := strings.SplitN(file.Name(), "_", 2)
+			id := parts[0]
+			originalName := file.Name()
+			if len(parts) > 1 {
+				originalName = parts[1]
+			}
+			
+			pdfs = append(pdfs, map[string]interface{}{
+				"id":          id,
+				"filename":    originalName,
+				"upload_date": info.ModTime().UTC(),
+				"status":      "completed", // All uploaded PDFs are processed synchronously
+				"size":        info.Size(),
+			})
+		}
+	}
+	
+	// Sort by upload date (newest first)
+	// Note: In production, this would be handled by database with proper indexing
+	
 	response := map[string]interface{}{
 		"success": true,
 		"data":    pdfs,

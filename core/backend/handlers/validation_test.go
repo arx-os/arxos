@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/arxobject"
+	"arxos/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

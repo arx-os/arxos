@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
+	"arxos/arxobject"
 	"github.com/google/uuid"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )

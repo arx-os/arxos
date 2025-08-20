@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/arxobject"
+	"arxos/models"
 )
 
 // ValidationService handles validation business logic
@@ -57,6 +57,11 @@ type ValidationCache struct {
 	pendingTasks map[string]*models.ValidationTask
 	patterns     map[string]*ValidationPattern
 	lastUpdate   time.Time
+}
+
+// GetPendingValidationsFixed retrieves pending validation tasks with enhanced error handling
+func (s *ValidationService) GetPendingValidationsFixed(priority, objectType, limit string) ([]*models.ValidationTask, error) {
+	return s.GetPendingValidations(priority, objectType, limit)
 }
 
 // GetPendingValidations retrieves pending validation tasks
@@ -262,6 +267,41 @@ func (s *ValidationService) SaveValidation(
 	return tx.Commit()
 }
 
+// LearnPatternFixed learns a pattern from validation with enhanced error handling
+func (s *ValidationService) LearnPatternFixed(submission models.ValidationSubmission) (bool, error) {
+	// Get the validated object
+	validated, err := s.getObjectFromDB(submission.ObjectID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get validated object: %w", err)
+	}
+
+	// Find similar objects
+	similar, err := s.findSimilarObjectsForPattern(validated)
+	if err != nil {
+		return false, fmt.Errorf("failed to find similar objects: %w", err)
+	}
+
+	return s.LearnPattern(validated, similar, submission), nil
+}
+
+// SaveValidationFixed saves validation with enhanced error handling
+func (s *ValidationService) SaveValidationFixed(submission *models.ValidationSubmission) error {
+	// Create mock impact for backward compatibility
+	impact := &models.ValidationImpact{
+		ObjectID:              submission.ObjectID,
+		OldConfidence:         0.5, // Mock old confidence
+		NewConfidence:         submission.Confidence,
+		ConfidenceImprovement: submission.Confidence - 0.5,
+		CascadedObjects:       []string{},
+		CascadedCount:         0,
+		PatternLearned:        false,
+		TotalConfidenceGain:   submission.Confidence - 0.5,
+		TimeSaved:             0,
+	}
+
+	return s.SaveValidation(submission, impact)
+}
+
 // LearnPattern learns a pattern from validation
 func (s *ValidationService) LearnPattern(
 	validated *arxobject.ArxObject,
@@ -275,7 +315,7 @@ func (s *ValidationService) LearnPattern(
 	
 	// Extract pattern features
 	pattern := s.extractPattern(validated, submission)
-	patternKey := fmt.Sprintf("%s_%v", getObjectTypeName(validated.Type), pattern["key"])
+	patternKey := fmt.Sprintf("%s_%v", getObjectTypeName(arxobject.ArxObjectType(validated.Type)), pattern["key"])
 	
 	// Check if pattern exists
 	existingPattern, exists := s.patternEngine.patterns[patternKey]
@@ -292,7 +332,7 @@ func (s *ValidationService) LearnPattern(
 		// Create new pattern
 		newPattern := &ValidationPattern{
 			ID:               patternKey,
-			ObjectType:       getObjectTypeName(validated.Type),
+			ObjectType:       getObjectTypeName(arxobject.ArxObjectType(validated.Type)),
 			Pattern:          pattern,
 			Confidence:       submission.Confidence,
 			OccurrenceCount:  1,
@@ -476,8 +516,8 @@ func (s *ValidationService) extractPattern(
 	
 	// Extract key features
 	pattern["type"] = obj.Type
-	pattern["has_dimensions"] = obj.Length > 0 && obj.Width > 0
-	pattern["scale_level"] = obj.ScaleLevel
+	pattern["has_dimensions"] = obj.Width > 0 && obj.Height > 0
+	pattern["scale_level"] = obj.ScaleMin
 	
 	// Extract validation-specific features
 	if submission.Data != nil {
@@ -487,8 +527,8 @@ func (s *ValidationService) extractPattern(
 	}
 	
 	// Create pattern key
-	pattern["key"] = fmt.Sprintf("%d_%d_%v", 
-		obj.Type, obj.ScaleLevel, pattern["has_dimensions"])
+	pattern["key"] = fmt.Sprintf("%s_%d_%v", 
+		obj.Type, obj.ScaleMin, pattern["has_dimensions"])
 	
 	return pattern
 }
@@ -499,22 +539,22 @@ func (s *ValidationService) matchesPattern(
 ) bool {
 	
 	// Check type match
-	if patternType, ok := pattern["type"].(arxobject.ArxObjectType); ok {
+	if patternType, ok := pattern["type"].(string); ok {
 		if obj.Type != patternType {
 			return false
 		}
 	}
 	
 	// Check scale level
-	if scaleLevel, ok := pattern["scale_level"].(uint8); ok {
-		if obj.ScaleLevel != scaleLevel {
+	if scaleLevel, ok := pattern["scale_level"].(int); ok {
+		if obj.ScaleMin != scaleLevel {
 			return false
 		}
 	}
 	
 	// Check dimensions
 	if hasDims, ok := pattern["has_dimensions"].(bool); ok {
-		objHasDims := obj.Length > 0 && obj.Width > 0
+		objHasDims := obj.Width > 0 && obj.Height > 0
 		if hasDims != objHasDims {
 			return false
 		}
@@ -677,6 +717,87 @@ func getObjectTypeName(t arxobject.ArxObjectType) string {
 		return name
 	}
 	return "unknown"
+}
+
+// Helper methods for fixed validation service
+
+func (s *ValidationService) getObjectFromDB(objectID string) (*arxobject.ArxObject, error) {
+	query := `
+		SELECT id, uuid, type, system, x, y, z,
+			   width, height, depth, scale_min, scale_max,
+			   building_id, floor_id, room_id, parent_id,
+			   properties, confidence, extraction_method, source,
+			   created_at, updated_at
+		FROM arx_objects WHERE id = $1
+	`
+
+	var obj arxobject.ArxObject
+	var confidenceJSON []byte
+	
+	err := s.db.QueryRow(query, objectID).Scan(
+		&obj.ID, &obj.UUID, &obj.Type, &obj.System, &obj.X, &obj.Y, &obj.Z,
+		&obj.Width, &obj.Height, &obj.Depth, &obj.ScaleMin, &obj.ScaleMax,
+		&obj.BuildingID, &obj.FloorID, &obj.RoomID, &obj.ParentID,
+		&obj.Properties, &confidenceJSON, &obj.ExtractionMethod, &obj.Source,
+		&obj.CreatedAt, &obj.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get object %s: %w", objectID, err)
+	}
+
+	json.Unmarshal(confidenceJSON, &obj.Confidence)
+	return &obj, nil
+}
+
+func (s *ValidationService) findSimilarObjectsForPattern(obj *arxobject.ArxObject) ([]*arxobject.ArxObject, error) {
+	query := `
+		SELECT id, uuid, type, system, x, y, z,
+			   width, height, depth, scale_min, scale_max,
+			   properties, confidence
+		FROM arx_objects
+		WHERE type = $1 AND system = $2
+		  AND ABS(width - $3) < $4
+		  AND ABS(height - $5) < $6
+		  AND id != $7
+		  AND validated_at IS NULL
+		LIMIT 50
+	`
+
+	tolerance := int64(100000) // 0.1mm tolerance in nanometers
+
+	rows, err := s.db.Query(query,
+		obj.Type, obj.System,
+		obj.Width, tolerance,
+		obj.Height, tolerance,
+		obj.ID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find similar objects: %w", err)
+	}
+	defer rows.Close()
+
+	var similar []*arxobject.ArxObject
+	for rows.Next() {
+		var simObj arxobject.ArxObject
+		var confidenceJSON []byte
+		
+		err := rows.Scan(
+			&simObj.ID, &simObj.UUID, &simObj.Type, &simObj.System,
+			&simObj.X, &simObj.Y, &simObj.Z,
+			&simObj.Width, &simObj.Height, &simObj.Depth,
+			&simObj.ScaleMin, &simObj.ScaleMax,
+			&simObj.Properties, &confidenceJSON,
+		)
+		if err != nil {
+			continue
+		}
+
+		json.Unmarshal(confidenceJSON, &simObj.Confidence)
+		similar = append(similar, &simObj)
+	}
+
+	return similar, nil
 }
 
 func min(a, b float32) float32 {

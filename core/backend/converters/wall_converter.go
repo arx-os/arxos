@@ -2,7 +2,7 @@ package converters
 
 import (
 	"math"
-	"github.com/arxos/arxos/core/arxobject"
+	"arxos/arxobject"
 )
 
 // WallSegment represents a detected wall from the PDF parser

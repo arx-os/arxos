@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/arxos/arxos/core/backend/db"
+	"arxos/db"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/arxos/arxos/core/backend/cmms"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/cmms"
+	"arxos/models"
 
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/services"
 )
 
 // CacheConfig holds configuration for the cache middleware

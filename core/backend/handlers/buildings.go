@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/db"
+	"arxos/models"
+	"arxos/services"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -50,7 +51,7 @@ func ListBuildings(w http.ResponseWriter, r *http.Request) {
 		userID, page, pageSize, status, buildingType, search, sortBy, sortOrder)
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -203,7 +204,7 @@ func CreateBuilding(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate building list cache for this user
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		cacheService.InvalidatePattern(fmt.Sprintf("buildings:list:user:%d:*", userID))
 	}
@@ -223,7 +224,7 @@ func GetBuilding(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		cacheKey := fmt.Sprintf("building:details:%s:user:%d", idParam, userID)
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
@@ -377,7 +378,7 @@ func UpdateBuilding(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	// Invalidate building-related caches
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		// Invalidate building details cache
 		cacheService.Delete(fmt.Sprintf("building:details:%s:user:%d", idParam, userID))
@@ -432,7 +433,7 @@ func ListFloors(w http.ResponseWriter, r *http.Request) {
 	cacheKey := fmt.Sprintf("floors:list:building:%s:user:%d:page:%d:size:%d", buildingID, userID, page, pageSize)
 
 	// Try to get from cache first
-	cacheService := GetCacheService()
+	cacheService := services.GetCacheService()
 	if cacheService != nil {
 		if cached, err := cacheService.Get(cacheKey); err == nil && cached != nil {
 			w.Header().Set("Content-Type", "application/json")

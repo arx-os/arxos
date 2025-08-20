@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/arxos/arxos/core/arxobject"
-	"github.com/arxos/arxos/core/backend/models"
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/arxobject"
+	"arxos/models"
+	"arxos/services"
 )
 
 // ValidationHandler handles field validation endpoints
@@ -35,41 +35,16 @@ func NewValidationHandler(vs *services.ValidationService, engine *arxobject.Engi
 	}
 }
 
-// ValidationSubmission represents a validation submission from the field
-type ValidationSubmission struct {
-	ObjectID        string                 `json:"object_id"`
-	ValidationType  string                 `json:"validation_type"`
-	Data            map[string]interface{} `json:"data"`
-	Validator       string                 `json:"validator"`
-	Confidence      float32                `json:"confidence"`
-	Timestamp       time.Time              `json:"timestamp"`
-	PhotoURL        string                 `json:"photo_url,omitempty"`
-	Notes           string                 `json:"notes,omitempty"`
-}
+// Use models.ValidationSubmission instead of local definition
 
-// ValidationTask represents a validation task for the queue
-type ValidationTask struct {
-	ObjectID       string   `json:"object_id"`
-	ObjectType     string   `json:"object_type"`
-	Confidence     float32  `json:"confidence"`
-	Priority       int      `json:"priority"`
-	SimilarCount   int      `json:"similar_count"`
-	PotentialImpact float32 `json:"potential_impact"`
-	CreatedAt      time.Time `json:"created_at"`
-}
+// Deprecated: Use models.ValidationTask instead
+type ValidationTask = models.ValidationTask
 
-// ValidationImpact represents the impact of a validation
-type ValidationImpact struct {
-	ObjectID             string   `json:"object_id"`
-	OldConfidence        float32  `json:"old_confidence"`
-	NewConfidence        float32  `json:"new_confidence"`
-	ConfidenceImprovement float32 `json:"confidence_improvement"`
-	CascadedObjects      []string `json:"cascaded_objects"`
-	CascadedCount        int      `json:"cascaded_count"`
-	PatternLearned       bool     `json:"pattern_learned"`
-	TotalConfidenceGain  float32  `json:"total_confidence_gain"`
-	TimeSaved            float32  `json:"time_saved"`
-}
+// Deprecated: Use models.ValidationImpact instead  
+type ValidationImpact = models.ValidationImpact
+
+// Deprecated: Use models.ValidationSubmission instead
+type ValidationSubmission = models.ValidationSubmission
 
 // GetPendingValidations returns list of validation tasks
 func (h *ValidationHandler) GetPendingValidations(w http.ResponseWriter, r *http.Request) {
@@ -114,23 +89,23 @@ func (h *ValidationHandler) FlagForValidation(w http.ResponseWriter, r *http.Req
 	}
 	
 	// Get object from engine
-	obj, exists := h.arxEngine.GetObject(parseObjectID(request.ObjectID))
-	if !exists {
+	obj, err := h.arxEngine.GetObject(request.ObjectID)
+	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Object not found")
 		return
 	}
 	
 	// Create validation task
-	task := ValidationTask{
+	task := &models.ValidationTask{
 		ObjectID:    request.ObjectID,
-		ObjectType:  getObjectTypeName(obj.Type),
+		ObjectType:  obj.Type,
 		Confidence:  obj.Confidence.Overall,
 		Priority:    h.calculatePriority(obj, request.Priority),
 		CreatedAt:   time.Now(),
 	}
 	
 	// Save to database
-	if err := h.validationService.CreateValidationTask(&task); err != nil {
+	if err := h.validationService.CreateValidationTask(task); err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create validation task")
 		return
 	}
@@ -157,9 +132,8 @@ func (h *ValidationHandler) SubmitValidation(w http.ResponseWriter, r *http.Requ
 	}
 	
 	// Get object from engine
-	objID := parseObjectID(submission.ObjectID)
-	obj, exists := h.arxEngine.GetObject(objID)
-	if !exists {
+	obj, err := h.arxEngine.GetObject(submission.ObjectID)
+	if err != nil {
 		respondWithError(w, http.StatusNotFound, "Object not found")
 		return
 	}
@@ -330,7 +304,7 @@ func (h *ValidationHandler) updateObjectConfidence(obj *arxobject.ArxObject, sub
 	obj.Confidence.CalculateOverall()
 	
 	// Mark as validated
-	obj.Validate(submission.Validator, submission.Confidence)
+	obj.Validate(submission.Validator)
 }
 
 func (h *ValidationHandler) findSimilarObjects(obj *arxobject.ArxObject) []*arxobject.ArxObject {
@@ -349,8 +323,8 @@ func (h *ValidationHandler) findSimilarObjects(obj *arxobject.ArxObject) []*arxo
 			continue
 		}
 		
-		nearbyObj, exists := h.arxEngine.GetObject(id)
-		if !exists {
+		nearbyObj, err := h.arxEngine.GetObject(id)
+		if err != nil {
 			continue
 		}
 		
@@ -399,23 +373,22 @@ func (h *ValidationHandler) calculateSimilarity(obj1, obj2 *arxobject.ArxObject)
 	similarity := float32(0.5) // Base similarity for same type
 	
 	// Check dimensional similarity
-	if obj1.Length > 0 && obj2.Length > 0 {
-		lengthRatio := float32(min(obj1.Length, obj2.Length)) / float32(max(obj1.Length, obj2.Length))
-		similarity += lengthRatio * 0.25
+	if obj1.Width > 0 && obj2.Width > 0 {
+		widthRatio := float32(min64(obj1.Width, obj2.Width)) / float32(max64(obj1.Width, obj2.Width))
+		similarity += widthRatio * 0.25
 	}
 	
-	if obj1.Width > 0 && obj2.Width > 0 {
-		widthRatio := float32(min(obj1.Width, obj2.Width)) / float32(max(obj1.Width, obj2.Width))
-		similarity += widthRatio * 0.25
+	if obj1.Height > 0 && obj2.Height > 0 {
+		heightRatio := float32(min64(obj1.Height, obj2.Height)) / float32(max64(obj1.Height, obj2.Height))
+		similarity += heightRatio * 0.25
 	}
 	
 	return min(similarity, 1.0)
 }
 
 func (h *ValidationHandler) calculateValidationImpact(objectID string) float32 {
-	objID := parseObjectID(objectID)
-	obj, exists := h.arxEngine.GetObject(objID)
-	if !exists {
+	obj, err := h.arxEngine.GetObject(objectID)
+	if err != nil {
 		return 0
 	}
 	
@@ -432,9 +405,8 @@ func (h *ValidationHandler) calculateValidationImpact(objectID string) float32 {
 }
 
 func (h *ValidationHandler) countSimilarObjects(objectID string) int {
-	objID := parseObjectID(objectID)
-	obj, exists := h.arxEngine.GetObject(objID)
-	if !exists {
+	obj, err := h.arxEngine.GetObject(objectID)
+	if err != nil {
 		return 0
 	}
 	
@@ -442,7 +414,7 @@ func (h *ValidationHandler) countSimilarObjects(objectID string) int {
 	return len(similar)
 }
 
-func (h *ValidationHandler) prioritizeValidationTasks(tasks []ValidationTask) []ValidationTask {
+func (h *ValidationHandler) prioritizeValidationTasks(tasks []*models.ValidationTask) []*models.ValidationTask {
 	// Sort by priority (descending) and potential impact (descending)
 	// This is a simple bubble sort for clarity - use sort.Slice in production
 	for i := 0; i < len(tasks); i++ {
@@ -464,9 +436,12 @@ func (h *ValidationHandler) calculatePriority(obj *arxobject.ArxObject, userPrio
 	// Auto-calculate priority based on object type and confidence
 	basePriority := 5
 	
-	// Critical objects get higher priority
-	criticality := h.getObjectCriticality(obj.Type)
-	basePriority += int(criticality * 5)
+	// Critical objects get higher priority - simplified calculation
+	if obj.Type == "structural" {
+		basePriority += 3
+	} else if obj.Type == "fire_safety" {
+		basePriority += 2
+	}
 	
 	// Low confidence increases priority
 	if obj.Confidence.Overall < 0.3 {
@@ -475,24 +450,24 @@ func (h *ValidationHandler) calculatePriority(obj *arxobject.ArxObject, userPrio
 		basePriority += 1
 	}
 	
-	return min(basePriority, 10)
+	if basePriority > 10 {
+		return 10
+	}
+	return basePriority
 }
 
-func (h *ValidationHandler) getObjectCriticality(objType arxobject.ArxObjectType) float32 {
-	// Structural elements most critical
-	if objType <= arxobject.StructuralFoundation {
+func (h *ValidationHandler) getObjectCriticality(objType string) float32 {
+	// Simplified criticality calculation based on string type
+	switch objType {
+	case "structural":
 		return 1.0
-	}
-	// Fire safety critical
-	if objType >= arxobject.FireSprinkler && objType <= arxobject.SmokeDetector {
+	case "fire_safety":
 		return 0.9
-	}
-	// MEP systems important
-	if objType >= arxobject.ElectricalOutlet && objType <= arxobject.PlumbingFixture {
+	case "electrical", "hvac", "plumbing":
 		return 0.7
+	default:
+		return 0.5
 	}
-	// Others
-	return 0.5
 }
 
 func (h *ValidationHandler) calculateTotalGain(cascaded []*arxobject.ArxObject, baseOldConfidence float32) float32 {
@@ -560,34 +535,21 @@ func (h *ValidationHandler) calculateValidationStats(history []models.Validation
 // Helper utility functions
 
 func parseObjectID(id string) uint64 {
-	// Parse string ID to uint64
-	// Implementation depends on ID format
+	// Deprecated: Objects now use string IDs directly
 	var result uint64
 	fmt.Sscanf(id, "%d", &result)
 	return result
 }
 
-func getObjectTypeName(t arxobject.ArxObjectType) string {
-	// Map ArxObjectType to string name
-	typeNames := map[arxobject.ArxObjectType]string{
-		arxobject.StructuralWall:   "wall",
-		arxobject.StructuralColumn: "column",
-		arxobject.StructuralBeam:   "beam",
-		arxobject.ElectricalPanel:  "electrical_panel",
-		arxobject.HVACUnit:         "hvac_unit",
-		// Add more mappings as needed
-	}
-	
-	if name, ok := typeNames[t]; ok {
-		return name
-	}
-	return "unknown"
+func getObjectTypeName(t string) string {
+	// Objects now use string types directly
+	return t
 }
 
 func getObjectIDs(objects []*arxobject.ArxObject) []string {
 	ids := make([]string, len(objects))
 	for i, obj := range objects {
-		ids[i] = fmt.Sprintf("%d", obj.ID)
+		ids[i] = obj.ID
 	}
 	return ids
 }
@@ -599,8 +561,15 @@ func min(a, b float32) float32 {
 	return b
 }
 
-func max(a, b int64) int64 {
+func max64(a, b int64) int64 {
 	if a > b {
+		return a
+	}
+	return b
+}
+
+func min64(a, b int64) int64 {
+	if a < b {
 		return a
 	}
 	return b

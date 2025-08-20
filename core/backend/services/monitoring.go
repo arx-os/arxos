@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/models"
 	"gorm.io/gorm"
 )
 

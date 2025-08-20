@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/db"
+	"arxos/models"
 
 	"github.com/go-chi/chi/v5"
 )

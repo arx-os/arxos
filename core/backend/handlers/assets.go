@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/models"
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/db"
+	"arxos/models"
+	"arxos/services"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"

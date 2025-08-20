@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos PDF Wall Extractor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .upload-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+        
+        .file-input-wrapper:hover {
+            transform: scale(1.05);
+        }
+        
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .results-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: auto;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #svg-container {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: auto;
+            background: #f5f5f5;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .status.show {
+            display: block;
+        }
+        
+        .status.processing {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .arxobject-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .arxobject-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .arxobject-type {
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .confidence-bar {
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .confidence-high { background: #28a745; }
+        .confidence-medium { background: #ffc107; }
+        .confidence-low { background: #dc3545; }
+        
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Arxos PDF Wall Extractor</h1>
+        
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="file-input" accept=".pdf">
+                <span>Choose PDF File</span>
+            </div>
+            
+            <div id="file-info" style="margin-top: 15px; color: #666;"></div>
+            
+            <div class="controls">
+                <button id="process-btn" disabled>Process PDF</button>
+                <button id="upload-btn" disabled>Upload to Backend</button>
+                <button id="clear-btn">Clear</button>
+            </div>
+            
+            <div id="status" class="status"></div>
+            <div class="loading-spinner" id="loading"></div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="wall-count">0</div>
+                <div class="stat-label">Walls Detected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="room-count">0</div>
+                <div class="stat-label">Rooms Found</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="confidence-avg">0%</div>
+                <div class="stat-label">Avg Confidence</div>
+            </div>
+        </div>
+        
+        <div class="results-section">
+            <div class="panel">
+                <h2>Original PDF</h2>
+                <div id="canvas-container">
+                    <canvas id="pdf-canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h2>Extracted ArxObjects</h2>
+                <div id="svg-container">
+                    <svg id="arxos-svg" width="100%" height="100%"></svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel" style="margin-top: 20px;">
+            <h2>ArxObject Details</h2>
+            <div id="arxobject-list" class="arxobject-list"></div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        class PDFWallExtractor {
+            constructor() {
+                this.pdfFile = null;
+                this.arxObjects = [];
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('file-input').addEventListener('change', (e) => this.handleFileSelect(e));
+                document.getElementById('process-btn').addEventListener('click', () => this.processPDF());
+                document.getElementById('upload-btn').addEventListener('click', () => this.uploadToBackend());
+                document.getElementById('clear-btn').addEventListener('click', () => this.clear());
+            }
+            
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file || file.type !== 'application/pdf') {
+                    this.showStatus('Please select a valid PDF file', 'error');
+                    return;
+                }
+                
+                this.pdfFile = file;
+                document.getElementById('file-info').textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                document.getElementById('process-btn').disabled = false;
+                
+                // Preview PDF
+                this.previewPDF(file);
+            }
+            
+            async previewPDF(file) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                const page = await pdf.getPage(1);
+                
+                const canvas = document.getElementById('pdf-canvas');
+                const context = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale: 1.5 });
+                
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+            }
+            
+            async processPDF() {
+                if (!this.pdfFile) return;
+                
+                this.showLoading(true);
+                this.showStatus('Processing PDF...', 'processing');
+                document.getElementById('process-btn').disabled = true;
+                
+                // For now, use direct backend upload
+                // In production, this would first process locally then upload
+                await this.uploadToBackend();
+            }
+            
+            async uploadToBackend() {
+                if (!this.pdfFile) return;
+                
+                this.showLoading(true);
+                this.showStatus('Uploading to backend...', 'processing');
+                
+                const formData = new FormData();
+                formData.append('pdf', this.pdfFile);
+                
+                try {
+                    const response = await fetch('http://localhost:8080/api/buildings/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success && result.data.extracted_objects) {
+                        this.arxObjects = result.data.extracted_objects;
+                        this.displayResults(result.data);
+                        this.showStatus(`Successfully extracted ${this.arxObjects.length} objects`, 'success');
+                        document.getElementById('upload-btn').disabled = false;
+                    } else {
+                        throw new Error('No objects extracted');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    this.showStatus(`Error: ${error.message}`, 'error');
+                } finally {
+                    this.showLoading(false);
+                    document.getElementById('process-btn').disabled = false;
+                }
+            }
+            
+            displayResults(data) {
+                // Update statistics
+                const wallCount = data.extracted_objects.filter(obj => obj.type === 'wall').length;
+                const roomCount = data.extracted_objects.filter(obj => obj.type === 'room').length;
+                const avgConfidence = data.extracted_objects.reduce((sum, obj) => sum + (obj.confidence || 0), 0) / data.extracted_objects.length;
+                
+                document.getElementById('wall-count').textContent = wallCount;
+                document.getElementById('room-count').textContent = roomCount;
+                document.getElementById('confidence-avg').textContent = `${Math.round(avgConfidence * 100)}%`;
+                
+                // Draw ArxObjects on SVG
+                this.drawArxObjects();
+                
+                // List ArxObjects
+                this.listArxObjects();
+            }
+            
+            drawArxObjects() {
+                const svg = document.getElementById('arxos-svg');
+                svg.innerHTML = '';
+                
+                // Get canvas dimensions for scaling
+                const canvas = document.getElementById('pdf-canvas');
+                const scaleX = svg.clientWidth / canvas.width;
+                const scaleY = svg.clientHeight / canvas.height;
+                const scale = Math.min(scaleX, scaleY);
+                
+                this.arxObjects.forEach(obj => {
+                    if (obj.type === 'wall' && obj.properties) {
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', (obj.properties.start_x || 0) * scale);
+                        line.setAttribute('y1', (obj.properties.start_y || 0) * scale);
+                        line.setAttribute('x2', (obj.properties.end_x || 100) * scale);
+                        line.setAttribute('y2', (obj.properties.end_y || 100) * scale);
+                        line.setAttribute('stroke', this.getConfidenceColor(obj.confidence));
+                        line.setAttribute('stroke-width', '3');
+                        line.setAttribute('data-id', obj.uuid);
+                        svg.appendChild(line);
+                    } else if (obj.type === 'room' && obj.properties) {
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', (obj.properties.center_x || 50) * scale - 25);
+                        rect.setAttribute('y', (obj.properties.center_y || 50) * scale - 25);
+                        rect.setAttribute('width', '50');
+                        rect.setAttribute('height', '50');
+                        rect.setAttribute('fill', this.getConfidenceColor(obj.confidence));
+                        rect.setAttribute('fill-opacity', '0.3');
+                        rect.setAttribute('stroke', this.getConfidenceColor(obj.confidence));
+                        rect.setAttribute('stroke-width', '2');
+                        svg.appendChild(rect);
+                    }
+                });
+            }
+            
+            listArxObjects() {
+                const list = document.getElementById('arxobject-list');
+                list.innerHTML = '';
+                
+                this.arxObjects.forEach(obj => {
+                    const item = document.createElement('div');
+                    item.className = 'arxobject-item';
+                    
+                    const confidenceClass = this.getConfidenceClass(obj.confidence);
+                    const confidencePercent = Math.round((obj.confidence || 0) * 100);
+                    
+                    item.innerHTML = `
+                        <div class="arxobject-type">${obj.type.toUpperCase()}</div>
+                        <div style="font-size: 0.85em; color: #6c757d;">ID: ${obj.uuid}</div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill ${confidenceClass}" style="width: ${confidencePercent}%"></div>
+                        </div>
+                        <div style="font-size: 0.85em;">Confidence: ${confidencePercent}%</div>
+                        ${obj.properties ? `<div style="font-size: 0.85em; margin-top: 5px;">Properties: ${JSON.stringify(obj.properties, null, 2)}</div>` : ''}
+                    `;
+                    
+                    list.appendChild(item);
+                });
+            }
+            
+            getConfidenceColor(confidence) {
+                if (confidence >= 0.7) return '#28a745';
+                if (confidence >= 0.4) return '#ffc107';
+                return '#dc3545';
+            }
+            
+            getConfidenceClass(confidence) {
+                if (confidence >= 0.7) return 'confidence-high';
+                if (confidence >= 0.4) return 'confidence-medium';
+                return 'confidence-low';
+            }
+            
+            showStatus(message, type) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = `status ${type} show`;
+            }
+            
+            showLoading(show) {
+                document.getElementById('loading').style.display = show ? 'block' : 'none';
+            }
+            
+            clear() {
+                this.pdfFile = null;
+                this.arxObjects = [];
+                document.getElementById('file-input').value = '';
+                document.getElementById('file-info').textContent = '';
+                document.getElementById('process-btn').disabled = true;
+                document.getElementById('upload-btn').disabled = true;
+                document.getElementById('pdf-canvas').getContext('2d').clearRect(0, 0, 10000, 10000);
+                document.getElementById('arxos-svg').innerHTML = '';
+                document.getElementById('arxobject-list').innerHTML = '';
+                document.getElementById('wall-count').textContent = '0';
+                document.getElementById('room-count').textContent = '0';
+                document.getElementById('confidence-avg').textContent = '0%';
+                document.getElementById('status').className = 'status';
+            }
+        }
+        
+        // Initialize
+        const extractor = new PDFWallExtractor();
+    </script>
+</body>
+</html>

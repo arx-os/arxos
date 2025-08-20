@@ -121,67 +121,27 @@ func checkServices() map[string]string {
 
 // checkDatabaseHealth checks database connectivity and performance
 func checkDatabaseHealth() string {
-	// This would need to be implemented based on your database setup
-	// For now, return healthy as a placeholder
-	// In a real implementation, you would:
-	// 1. Test database connection
-	// 2. Run a simple query
-	// 3. Check connection pool status
-	// 4. Monitor query performance
-
-	return "healthy"
+	return checkDatabaseHealthImpl()
 }
 
 // checkRedisHealth checks Redis connectivity and performance
 func checkRedisHealth() string {
-	// This would need to be implemented based on your Redis setup
-	// For now, return healthy as a placeholder
-	// In a real implementation, you would:
-	// 1. Test Redis connection
-	// 2. Run a simple PING command
-	// 3. Check memory usage
-	// 4. Monitor response times
-
-	return "healthy"
+	return checkRedisHealthImpl()
 }
 
 // checkCacheHealth checks cache system health
 func checkCacheHealth() string {
-	// This would need to be implemented based on your cache setup
-	// For now, return healthy as a placeholder
-	// In a real implementation, you would:
-	// 1. Test cache connectivity
-	// 2. Check cache hit/miss ratios
-	// 3. Monitor cache size
-	// 4. Test cache operations
-
-	return "healthy"
+	return checkCacheHealthImpl()
 }
 
 // checkAPIHealth checks API endpoint health
 func checkAPIHealth() string {
-	// This would need to be implemented based on your API setup
-	// For now, return healthy as a placeholder
-	// In a real implementation, you would:
-	// 1. Test internal API endpoints
-	// 2. Check response times
-	// 3. Monitor error rates
-	// 4. Test authentication
-
-	return "healthy"
+	return checkAPIHealthImpl()
 }
 
 // checkFilesystemHealth checks file system health
 func checkFilesystemHealth() string {
-	// This would need to be implemented based on your file system setup
-	// For now, return healthy as a placeholder
-	// In a real implementation, you would:
-	// 1. Check disk space
-	// 2. Test file read/write operations
-	// 3. Monitor I/O performance
-	// 4. Check file permissions
-
-	return "healthy"
+	return checkFilesystemHealthImpl()
 }
 
 // getSystemMetrics collects comprehensive system metrics
@@ -264,70 +224,20 @@ func DetailedHealthCheck(w http.ResponseWriter, r *http.Request) {
 
 // checkDetailedDatabaseHealth provides detailed database health information
 func checkDetailedDatabaseHealth() map[string]interface{} {
-	// This would need to be implemented based on your database setup
-	return map[string]interface{}{
-		"status": "healthy",
-		"details": map[string]interface{}{
-			"connection_pool": map[string]interface{}{
-				"open_connections": 0,
-				"in_use":          0,
-				"idle":            0,
-			},
-			"performance": map[string]interface{}{
-				"avg_query_time": "0ms",
-				"slow_queries":   0,
-			},
-		},
-	}
+	return checkDetailedDatabaseHealthImpl()
 }
 
 // checkDetailedRedisHealth provides detailed Redis health information
 func checkDetailedRedisHealth() map[string]interface{} {
-	// This would need to be implemented based on your Redis setup
-	return map[string]interface{}{
-		"status": "healthy",
-		"details": map[string]interface{}{
-			"memory": map[string]interface{}{
-				"used_memory":    0,
-				"used_memory_rss": 0,
-				"max_memory":     0,
-			},
-			"performance": map[string]interface{}{
-				"connected_clients": 0,
-				"total_commands_processed": 0,
-			},
-		},
-	}
+	return checkDetailedRedisHealthImpl()
 }
 
 // checkDetailedCacheHealth provides detailed cache health information
 func checkDetailedCacheHealth() map[string]interface{} {
-	// This would need to be implemented based on your cache setup
-	return map[string]interface{}{
-		"status": "healthy",
-		"details": map[string]interface{}{
-			"hit_rate": 0.0,
-			"size":     0,
-			"evictions": 0,
-		},
-	}
+	return checkDetailedCacheHealthImpl()
 }
 
 // checkDetailedAPIHealth provides detailed API health information
 func checkDetailedAPIHealth() map[string]interface{} {
-	// This would need to be implemented based on your API setup
-	return map[string]interface{}{
-		"status": "healthy",
-		"details": map[string]interface{}{
-			"endpoints": map[string]interface{}{
-				"total": 0,
-				"healthy": 0,
-				"degraded": 0,
-			},
-			"performance": map[string]interface{}{
-				"avg_response_time": "0ms",
-				"requests_per_second": 0,
-			},
-		},
-	}
+	return checkDetailedAPIHealthImpl()
 }

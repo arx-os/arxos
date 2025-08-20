@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/db"
+	"arxos/models"
 )
 
 type AdminDeviceRequest struct {

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
+	"arxos/arxobject"
 )
 
 // PropagationEngine handles confidence propagation across related objects
@@ -32,8 +32,8 @@ type PropagationRule struct {
 // PropagationEvent records a propagation occurrence
 type PropagationEvent struct {
 	ID               string    `json:"id"`
-	SourceObjectID   uint64    `json:"source_object_id"`
-	TargetObjectID   uint64    `json:"target_object_id"`
+	SourceObjectID   string    `json:"source_object_id"`
+	TargetObjectID   string    `json:"target_object_id"`
 	OldConfidence    float32   `json:"old_confidence"`
 	NewConfidence    float32   `json:"new_confidence"`
 	PropagationType  string    `json:"propagation_type"`
@@ -53,12 +53,12 @@ type PropagationResult struct {
 
 // PropagationImpact describes impact on a single object
 type PropagationImpact struct {
-	ObjectID          uint64  `json:"object_id"`
+	ObjectID          string  `json:"object_id"`
 	ObjectType        string  `json:"object_type"`
 	OldConfidence     float32 `json:"old_confidence"`
 	NewConfidence     float32 `json:"new_confidence"`
 	ImprovementAmount float32 `json:"improvement_amount"`
-	PropagationPath   []uint64 `json:"propagation_path"`
+	PropagationPath   []string `json:"propagation_path"`
 }
 
 // NewPropagationEngine creates a new propagation engine
@@ -91,21 +91,21 @@ func (pe *PropagationEngine) PropagateValidation(
 	}
 	
 	// Track visited objects to avoid cycles
-	visited := make(map[uint64]bool)
+	visited := make(map[string]bool)
 	visited[validatedObject.ID] = true
 	
 	// Queue for breadth-first propagation
 	type queueItem struct {
 		object   *arxobject.ArxObject
 		depth    int
-		path     []uint64
+		path     []string
 		confidence float32
 	}
 	
 	queue := []queueItem{{
 		object:     validatedObject,
 		depth:      0,
-		path:       []uint64{validatedObject.ID},
+		path:       []string{validatedObject.ID},
 		confidence: validationConfidence,
 	}}
 	
@@ -135,7 +135,7 @@ func (pe *PropagationEngine) PropagateValidation(
 			// Calculate propagation factors
 			distanceFactor := pe.calculateDistanceFactor(current.object, related)
 			similarityFactor := pe.calculateSimilarityFactor(current.object, related)
-			typeFactor := pe.calculateTypeFactor(current.object.Type, related.Type)
+			typeFactor := pe.calculateTypeFactor(arxobject.ArxObjectType(current.object.Type), arxobject.ArxObjectType(related.Type))
 			
 			// Calculate propagated confidence
 			propagatedConfidence := current.confidence * 
@@ -154,7 +154,7 @@ func (pe *PropagationEngine) PropagateValidation(
 				// Record impact
 				impact := PropagationImpact{
 					ObjectID:          related.ID,
-					ObjectType:        pe.getObjectTypeName(related.Type),
+					ObjectType:        pe.getObjectTypeName(arxobject.ArxObjectType(related.Type)),
 					OldConfidence:     oldConfidence,
 					NewConfidence:     related.Confidence.Overall,
 					ImprovementAmount: related.Confidence.Overall - oldConfidence,
@@ -210,8 +210,8 @@ func (pe *PropagationEngine) findRelatedObjects(obj *arxobject.ArxObject) []*arx
 			continue
 		}
 		
-		nearbyObj, exists := pe.arxEngine.GetObject(id)
-		if !exists {
+		nearbyObj, err := pe.arxEngine.GetObject(id)
+		if err != nil {
 			continue
 		}
 		
@@ -261,20 +261,20 @@ func (pe *PropagationEngine) calculateSimilarityFactor(obj1, obj2 *arxobject.Arx
 	// Type similarity
 	if obj1.Type == obj2.Type {
 		similarity += 0.4
-	} else if pe.areTypesRelated(obj1.Type, obj2.Type) {
+	} else if pe.areTypesRelated(arxobject.ArxObjectType(obj1.Type), arxobject.ArxObjectType(obj2.Type)) {
 		similarity += 0.2
 	}
 	
 	// Scale level similarity
-	if obj1.ScaleLevel == obj2.ScaleLevel {
+	if obj1.ScaleMin == obj2.ScaleMin && obj1.ScaleMax == obj2.ScaleMax {
 		similarity += 0.2
 	}
 	
-	// Dimensional similarity
-	if obj1.Length > 0 && obj2.Length > 0 {
-		lengthRatio := float32(math.Min(float64(obj1.Length), float64(obj2.Length))) / 
-			float32(math.Max(float64(obj1.Length), float64(obj2.Length)))
-		similarity += lengthRatio * 0.2
+	// Dimensional similarity (using width as proxy for length)
+	if obj1.Width > 0 && obj2.Width > 0 {
+		widthRatio := float32(math.Min(float64(obj1.Width), float64(obj2.Width))) / 
+			float32(math.Max(float64(obj1.Width), float64(obj2.Width)))
+		similarity += widthRatio * 0.2
 	}
 	
 	if obj1.Width > 0 && obj2.Width > 0 {

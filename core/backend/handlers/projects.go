@@ -2,8 +2,8 @@
 package handlers
 
 import (
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/db"
+	"arxos/models"
 	"encoding/json"
 	"net/http"
 	"strconv"

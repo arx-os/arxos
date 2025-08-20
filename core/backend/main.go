@@ -11,16 +11,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/handlers"
-	securityMiddleware "github.com/arxos/arxos/core/backend/middleware"
-	"github.com/arxos/arxos/core/backend/middleware/auth"
-	"github.com/arxos/arxos/core/backend/models"
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/arxobject"
+	"arxos/db"
+	"arxos/handlers"
+	securityMiddleware "arxos/middleware"
+	"arxos/middleware/auth"
+	"arxos/models"
+	"arxos/services"
 	// Temporarily comment out until module structure is fixed
-	// "github.com/arxos/arxos/core/backend/api"
-	// "github.com/arxos/arxos/core/backend/ingestion"
+	// "arxos/api"
+	// "arxos/ingestion"
 
 	"github.com/joho/godotenv"
 

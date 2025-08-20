@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
+	"arxos/arxobject"
 )
 
 // ConfidenceCache provides high-performance caching for confidence scores

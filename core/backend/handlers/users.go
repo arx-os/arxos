@@ -2,12 +2,17 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/db"
+	"arxos/middleware/auth"
+	"arxos/models"
+	"github.com/golang-jwt/jwt/v4"
 
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -24,20 +29,71 @@ type AuthResponse struct {
 	Token string `json:"token"`
 }
 
-func getUserIDFromToken(r *http.Request) (uint, error) {
-	token := r.Header.Get("Authorization")
-	if token == "" {
-		return 0, fmt.Errorf("no token provided")
+// getUserFromContext extracts user info from JWT claims in context
+func getUserFromContext(ctx context.Context) (*auth.Claims, error) {
+	claims, ok := ctx.Value("claims").(*auth.Claims)
+	if !ok {
+		return nil, fmt.Errorf("no claims in context")
 	}
-	// TODO: Implement proper JWT token validation
-	// For now, return a mock user ID
-	return 1, nil
+	return claims, nil
+}
+
+// getUserIDFromToken validates JWT and extracts user ID
+func getUserIDFromToken(r *http.Request) (uint, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return 0, fmt.Errorf("no authorization header")
+	}
+	
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenStr == authHeader {
+		return 0, fmt.Errorf("invalid authorization header format")
+	}
+	
+	// Parse and validate token
+	claims := &auth.Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+		// Validate signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		// Get JWT secret from environment
+		jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+		if len(jwtSecret) == 0 {
+			// Use a default for development, but log warning
+			jwtSecret = []byte("arxos-default-secret-change-in-production")
+		}
+		return jwtSecret, nil
+	})
+	
+	if err != nil {
+		return 0, fmt.Errorf("token validation failed: %w", err)
+	}
+	
+	if !token.Valid {
+		return 0, fmt.Errorf("invalid token")
+	}
+	
+	return claims.UserID, nil
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
 	var req AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		http.Error(w, "Username, email, and password are required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if user already exists
+	var existingUser models.User
+	if err := db.DB.Where("username = ? OR email = ?", req.Username, req.Email).First(&existingUser).Error; err == nil {
+		http.Error(w, "User with this username or email already exists", http.StatusConflict)
 		return
 	}
 
@@ -51,6 +107,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		Username: req.Username,
 		Email:    req.Email,
 		Password: string(hashedPassword),
+		Role:     "user", // Default role
 	}
 
 	if err := db.DB.Create(&user).Error; err != nil {
@@ -58,8 +115,24 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate JWT token for immediate login
+	token, err := auth.GenerateJWT(user.ID, user.Role)
+	if err != nil {
+		// User created but token generation failed - still return success
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"user": user,
+			"message": "User created successfully. Please login.",
+		})
+		return
+	}
+
+	// Return user info with token
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user": user,
+		"token": token,
+	})
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
@@ -80,8 +153,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Generate proper JWT token
-	token := "mock-jwt-token-" + fmt.Sprintf("%d", user.ID)
+	// Generate proper JWT token using the auth package
+	token, err := auth.GenerateJWT(user.ID, user.Role)
+	if err != nil {
+		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		return
+	}
 
 	resp := AuthResponse{Token: token}
 	w.Header().Set("Content-Type", "application/json")

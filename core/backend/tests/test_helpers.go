@@ -1,8 +1,8 @@
 package tests
 
 import (
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/db"
+	"arxos/models"
 	"encoding/json"
 	"fmt"
 	"os"

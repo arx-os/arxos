@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/models"
 	"fmt"
 	"log"
 	"time"

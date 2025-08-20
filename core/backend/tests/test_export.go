@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"github.com/arxos/arxos/core/backend/db"
-	"github.com/arxos/arxos/core/backend/handlers"
-	"github.com/arxos/arxos/core/backend/models"
+	"arxos/db"
+	"arxos/handlers"
+	"arxos/models"
 	"context"
 	"fmt"
 	"net/http"

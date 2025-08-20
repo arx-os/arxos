@@ -113,10 +113,14 @@ async def convert_pdf(
         # Process PDF with confidence scoring
         logger.info("Processing PDF", filename=file.filename, building_type=building_type)
         
-        result = await app.state.pdf_processor.process(
-            pdf_path=temp_path,
+        # Read PDF content
+        with open(temp_path, "rb") as f:
+            pdf_content = f.read()
+        
+        result = await app.state.pdf_processor.process_pdf(
+            pdf_content=pdf_content,
             building_type=building_type,
-            building_name=building_name
+            confidence_threshold=0.5
         )
         
         # Track metrics

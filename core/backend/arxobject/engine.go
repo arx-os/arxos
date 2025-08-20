@@ -250,6 +250,11 @@ func (e *Engine) ValidateObject(objectID, validatorID string) error {
 	return e.UpdateObject(obj)
 }
 
+// GetSimilarObjects finds objects similar to the given one for validation handlers
+func (e *Engine) GetSimilarObjects(obj *ArxObject, minSimilarity float32) ([]*ArxObject, error) {
+	return e.FindSimilarObjects(obj, float64(1.0-minSimilarity))
+}
+
 // FindSimilarObjects finds objects similar to the given one for pattern propagation
 func (e *Engine) FindSimilarObjects(obj *ArxObject, maxDistance float64) ([]*ArxObject, error) {
 	query := `
@@ -331,6 +336,27 @@ func (e *Engine) PropagateValidation(sourceID, validatorID string) (int, error) 
 	}
 
 	return count, nil
+}
+
+// QueryRegion returns object IDs within a spatial region
+func (e *Engine) QueryRegion(minX, minY, maxX, maxY float32) []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	
+	// Convert to nanometers for query
+	minXnm := int64(minX * 1e9)
+	minYnm := int64(minY * 1e9)
+	maxXnm := int64(maxX * 1e9)
+	maxYnm := int64(maxY * 1e9)
+	
+	objects := e.spatialIndex.Query(minXnm, minYnm, maxXnm, maxYnm)
+	
+	ids := make([]string, 0, len(objects))
+	for _, obj := range objects {
+		ids = append(ids, obj.ID)
+	}
+	
+	return ids
 }
 
 // GetObjectsByConfidence retrieves objects filtered by confidence level

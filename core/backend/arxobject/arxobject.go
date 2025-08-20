@@ -8,6 +8,41 @@ import (
 	"github.com/google/uuid"
 )
 
+// ArxObjectType represents the type of an ArxObject
+type ArxObjectType string
+
+// ArxObjectType constants for type-safe comparisons
+const (
+	// Structural types
+	StructuralWall       ArxObjectType = "wall"
+	StructuralColumn     ArxObjectType = "column"
+	StructuralBeam       ArxObjectType = "beam"
+	StructuralSlab       ArxObjectType = "slab"
+	StructuralFoundation ArxObjectType = "foundation"
+	
+	// Electrical types
+	ElectricalPanel   ArxObjectType = "electrical_panel"
+	ElectricalOutlet  ArxObjectType = "electrical_outlet"
+	ElectricalSwitch  ArxObjectType = "electrical_switch"
+	ElectricalConduit ArxObjectType = "electrical_conduit"
+	
+	// HVAC types
+	HVACUnit    ArxObjectType = "hvac_unit"
+	HVACDuct    ArxObjectType = "hvac_duct"
+	HVACVent    ArxObjectType = "hvac_vent"
+	HVACDiffuser ArxObjectType = "hvac_diffuser"
+	
+	// Plumbing types
+	PlumbingPipe    ArxObjectType = "plumbing_pipe"
+	PlumbingFixture ArxObjectType = "plumbing_fixture"
+	PlumbingValve   ArxObjectType = "plumbing_valve"
+	
+	// Fire/Safety types
+	FireSprinkler ArxObjectType = "fire_sprinkler"
+	SmokeDetector ArxObjectType = "smoke_detector"
+	FireAlarm     ArxObjectType = "fire_alarm"
+)
+
 // ArxObject represents an intelligent building component
 type ArxObject struct {
 	// Core Identity
@@ -193,6 +228,11 @@ func (a *ArxObject) Validate(validatorID string) {
 	a.UpdatedAt = now
 }
 
+// NeedsValidation checks if the object needs validation based on confidence
+func (a *ArxObject) NeedsValidation() bool {
+	return a.Confidence.Overall < 0.8 && a.ValidatedAt == nil
+}
+
 // GetHierarchyPath returns the full hierarchy path
 func (a *ArxObject) GetHierarchyPath() string {
 	path := fmt.Sprintf("arx:%s", a.Type)
@@ -210,6 +250,15 @@ func (a *ArxObject) GetHierarchyPath() string {
 	return path
 }
 
+// GetPositionMeters returns the position in meters (converted from nanometers)
+func (a *ArxObject) GetPositionMeters() (float64, float64, float64) {
+	// Convert from nanometers to meters (1m = 1e9 nm)
+	x := float64(a.X) / 1e9
+	y := float64(a.Y) / 1e9
+	z := float64(a.Z) / 1e9
+	return x, y, z
+}
+
 // Helper function
 func min(a, b float32) float32 {
 	if a < b {
@@ -218,7 +267,7 @@ func min(a, b float32) float32 {
 	return b
 }
 
-// Object Type Constants
+// Object Type Constants (strings)
 const (
 	// Structural Elements
 	TypeWall       = "wall"

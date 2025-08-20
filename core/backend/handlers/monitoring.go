@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/arxos/arxos/core/backend/services"
+	"arxos/services"
 
 	"github.com/go-chi/chi/v5"
 )

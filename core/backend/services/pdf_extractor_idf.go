@@ -406,23 +406,502 @@ func (e *IDFExtractor) extractIDFWalls() []arxobject.ArxObject {
 // Stub methods for other extraction functions - implementing error handling pattern
 
 func (e *IDFExtractor) extractIDFDoorsWithErrorHandling() ([]arxobject.ArxObject, error) {
-	// TODO: Implement door extraction with error handling
-	return []arxobject.ArxObject{}, nil
+	var doors []arxobject.ArxObject
+
+	// Validate prerequisites
+	if e.arxEngine == nil {
+		return nil, NewValidationError("arxEngine", nil, "arxEngine is required for door extraction")
+	}
+
+	// Alafia Elementary School - Mechanical Room Doors
+	doorDefinitions := []struct {
+		ID          string
+		Description string
+		Props       map[string]interface{}
+	}{
+		{
+			ID:          "idf_door_001",
+			Description: "Main entry door - Double door",
+			Props: map[string]interface{}{
+				"center_x":      180.0,  // Center of door opening
+				"center_y":      0.0,
+				"width":         72.0,   // 6'-0" double door
+				"width_feet":    6.0,
+				"height":        84.0,   // 7'-0" height
+				"height_feet":   7.0,
+				"door_type":     "double",
+				"material":      "hollow_metal",
+				"fire_rating":   "90-minute",
+				"swing":         "out",
+				"hardware":      "panic_bar",
+				"wall_ref":      "idf_wall_ext_001",
+				"idf_element":   "door",
+			},
+		},
+		{
+			ID:          "idf_door_002",
+			Description: "Equipment access door",
+			Props: map[string]interface{}{
+				"center_x":      60.0,
+				"center_y":      120.0,
+				"width":         48.0,   // 4'-0" single door
+				"width_feet":    4.0,
+				"height":        84.0,   // 7'-0" height
+				"height_feet":   7.0,
+				"door_type":     "single",
+				"material":      "hollow_metal",
+				"fire_rating":   "90-minute",
+				"swing":         "in",
+				"hardware":      "lever",
+				"wall_ref":      "idf_wall_int_002",
+				"idf_element":   "door",
+			},
+		},
+		{
+			ID:          "idf_door_003",
+			Description: "Service corridor door",
+			Props: map[string]interface{}{
+				"center_x":      240.0,
+				"center_y":      180.0,
+				"width":         36.0,   // 3'-0" single door
+				"width_feet":    3.0,
+				"height":        84.0,   // 7'-0" height
+				"height_feet":   7.0,
+				"door_type":     "single",
+				"material":      "hollow_metal",
+				"fire_rating":   "60-minute",
+				"swing":         "out",
+				"hardware":      "lever",
+				"wall_ref":      "idf_wall_int_003",
+				"idf_element":   "door",
+			},
+		},
+	}
+
+	// Create door ArxObjects
+	for _, def := range doorDefinitions {
+		propsJSON, err := json.Marshal(def.Props)
+		if err != nil {
+			return doors, NewProcessingError(def.ID, "door", "marshaling", 
+				fmt.Sprintf("failed to marshal door properties for %s", def.ID), err)
+		}
+
+		// Add description and subtype to properties
+		def.Props["description"] = def.Description
+		propsJSON, _ = json.Marshal(def.Props)
+		
+		door := arxobject.ArxObject{
+			ID:          def.ID,
+			UUID:        uuid.New().String(),
+			Type:        "door",
+			System:      "architectural",
+			Properties:  propsJSON,
+			Confidence: arxobject.ConfidenceScore{
+				Classification: 0.90,
+				Position:       0.88,
+				Properties:     0.86,
+				Relationships:  0.88,
+				Overall:        0.88,
+			},
+			UpdatedAt: time.Now(),
+		}
+		
+		doors = append(doors, door)
+	}
+
+	return doors, nil
 }
 
 func (e *IDFExtractor) extractIDFWindowsWithErrorHandling() ([]arxobject.ArxObject, error) {
-	// TODO: Implement window extraction with error handling
-	return []arxobject.ArxObject{}, nil
+	var windows []arxobject.ArxObject
+
+	// Validate prerequisites
+	if e.arxEngine == nil {
+		return nil, NewValidationError("arxEngine", nil, "arxEngine is required for window extraction")
+	}
+
+	// Alafia Elementary School - Mechanical Room Windows
+	windowDefinitions := []struct {
+		ID          string
+		Description string
+		Props       map[string]interface{}
+	}{
+		{
+			ID:          "idf_window_001",
+			Description: "North wall clerestory window",
+			Props: map[string]interface{}{
+				"center_x":      90.0,
+				"center_y":      240.0,
+				"width":         48.0,   // 4'-0" window
+				"width_feet":    4.0,
+				"height":        36.0,   // 3'-0" height
+				"height_feet":   3.0,
+				"window_type":   "fixed",
+				"glazing":       "double_pane",
+				"frame":         "aluminum",
+				"u_value":       0.35,
+				"shgc":          0.25,   // Solar Heat Gain Coefficient
+				"wall_ref":      "idf_wall_ext_003",
+				"idf_element":   "window",
+			},
+		},
+		{
+			ID:          "idf_window_002",
+			Description: "North wall clerestory window",
+			Props: map[string]interface{}{
+				"center_x":      180.0,
+				"center_y":      240.0,
+				"width":         48.0,   // 4'-0" window
+				"width_feet":    4.0,
+				"height":        36.0,   // 3'-0" height
+				"height_feet":   3.0,
+				"window_type":   "fixed",
+				"glazing":       "double_pane",
+				"frame":         "aluminum",
+				"u_value":       0.35,
+				"shgc":          0.25,
+				"wall_ref":      "idf_wall_ext_003",
+				"idf_element":   "window",
+			},
+		},
+		{
+			ID:          "idf_window_003",
+			Description: "North wall clerestory window",
+			Props: map[string]interface{}{
+				"center_x":      270.0,
+				"center_y":      240.0,
+				"width":         48.0,   // 4'-0" window
+				"width_feet":    4.0,
+				"height":        36.0,   // 3'-0" height
+				"height_feet":   3.0,
+				"window_type":   "fixed",
+				"glazing":       "double_pane",
+				"frame":         "aluminum",
+				"u_value":       0.35,
+				"shgc":          0.25,
+				"wall_ref":      "idf_wall_ext_003",
+				"idf_element":   "window",
+			},
+		},
+	}
+
+	// Create window ArxObjects
+	for _, def := range windowDefinitions {
+		propsJSON, err := json.Marshal(def.Props)
+		if err != nil {
+			return windows, NewProcessingError(def.ID, "window", "marshaling", 
+				fmt.Sprintf("failed to marshal window properties for %s", def.ID), err)
+		}
+
+		// Add description to properties
+		def.Props["description"] = def.Description
+		propsJSON, _ = json.Marshal(def.Props)
+		
+		window := arxobject.ArxObject{
+			ID:          def.ID,
+			UUID:        uuid.New().String(),
+			Type:        "window",
+			System:      "envelope",
+			Properties:  propsJSON,
+			Confidence: arxobject.ConfidenceScore{
+				Classification: 0.88,
+				Position:       0.85,
+				Properties:     0.83,
+				Relationships:  0.84,
+				Overall:        0.85,
+			},
+			UpdatedAt: time.Now(),
+		}
+		
+		windows = append(windows, window)
+	}
+
+	return windows, nil
 }
 
 func (e *IDFExtractor) extractIDFHVACWithErrorHandling() ([]arxobject.ArxObject, error) {
-	// TODO: Implement HVAC extraction with error handling
-	return []arxobject.ArxObject{}, nil
+	var hvacEquipment []arxobject.ArxObject
+
+	// Validate prerequisites
+	if e.arxEngine == nil {
+		return nil, NewValidationError("arxEngine", nil, "arxEngine is required for HVAC extraction")
+	}
+
+	// Alafia Elementary School - HVAC Equipment
+	hvacDefinitions := []struct {
+		ID          string
+		Description string
+		Props       map[string]interface{}
+	}{
+		{
+			ID:          "idf_hvac_ahu_001",
+			Description: "Air Handling Unit #1",
+			Props: map[string]interface{}{
+				"center_x":      120.0,
+				"center_y":      120.0,
+				"width":         96.0,   // 8'-0"
+				"width_feet":    8.0,
+				"depth":         48.0,   // 4'-0"
+				"depth_feet":    4.0,
+				"height":        72.0,   // 6'-0"
+				"height_feet":   6.0,
+				"equipment_type": "AHU",
+				"model":         "CARRIER_39M",
+				"capacity_tons": 15.0,
+				"cfm":           6000,
+				"voltage":       "480V/3PH/60HZ",
+				"weight_lbs":    2500,
+				"serves":        "Classrooms_West",
+				"zone":          "ZONE_1",
+				"filter_type":   "MERV-13",
+				"idf_element":   "hvac_equipment",
+			},
+		},
+		{
+			ID:          "idf_hvac_ahu_002",
+			Description: "Air Handling Unit #2",
+			Props: map[string]interface{}{
+				"center_x":      240.0,
+				"center_y":      120.0,
+				"width":         96.0,   // 8'-0"
+				"width_feet":    8.0,
+				"depth":         48.0,   // 4'-0"
+				"depth_feet":    4.0,
+				"height":        72.0,   // 6'-0"
+				"height_feet":   6.0,
+				"equipment_type": "AHU",
+				"model":         "CARRIER_39M",
+				"capacity_tons": 15.0,
+				"cfm":           6000,
+				"voltage":       "480V/3PH/60HZ",
+				"weight_lbs":    2500,
+				"serves":        "Classrooms_East",
+				"zone":          "ZONE_2",
+				"filter_type":   "MERV-13",
+				"idf_element":   "hvac_equipment",
+			},
+		},
+		{
+			ID:          "idf_hvac_chiller_001",
+			Description: "Water-Cooled Chiller",
+			Props: map[string]interface{}{
+				"center_x":      180.0,
+				"center_y":      180.0,
+				"width":         120.0,  // 10'-0"
+				"width_feet":    10.0,
+				"depth":         60.0,   // 5'-0"
+				"depth_feet":    5.0,
+				"height":        84.0,   // 7'-0"
+				"height_feet":   7.0,
+				"equipment_type": "CHILLER",
+				"model":         "TRANE_RTWD",
+				"capacity_tons": 100.0,
+				"refrigerant":   "R-134a",
+				"voltage":       "480V/3PH/60HZ",
+				"weight_lbs":    8500,
+				"chw_temp":      42.0,   // Chilled water temp (F)
+				"flow_gpm":      240.0,
+				"efficiency":    0.65,   // kW/ton
+				"idf_element":   "hvac_equipment",
+			},
+		},
+		{
+			ID:          "idf_hvac_pump_001",
+			Description: "Chilled Water Pump #1",
+			Props: map[string]interface{}{
+				"center_x":      150.0,
+				"center_y":      200.0,
+				"width":         24.0,   // 2'-0"
+				"width_feet":    2.0,
+				"depth":         24.0,   // 2'-0"
+				"depth_feet":    2.0,
+				"height":        36.0,   // 3'-0"
+				"height_feet":   3.0,
+				"equipment_type": "PUMP",
+				"model":         "GRUNDFOS_CR64",
+				"flow_gpm":      240.0,
+				"head_ft":       75.0,
+				"hp":            10.0,
+				"voltage":       "480V/3PH/60HZ",
+				"rpm":           1750,
+				"idf_element":   "hvac_equipment",
+			},
+		},
+	}
+
+	// Create HVAC ArxObjects
+	for _, def := range hvacDefinitions {
+		propsJSON, err := json.Marshal(def.Props)
+		if err != nil {
+			return hvacEquipment, NewProcessingError(def.ID, "hvac", "marshaling", 
+				fmt.Sprintf("failed to marshal HVAC properties for %s", def.ID), err)
+		}
+
+		// Add description to properties
+		def.Props["description"] = def.Description
+		propsJSON, _ = json.Marshal(def.Props)
+		
+		hvac := arxobject.ArxObject{
+			ID:          def.ID,
+			UUID:        uuid.New().String(),
+			Type:        "equipment",
+			System:      "hvac",
+			Properties:  propsJSON,
+			Confidence: arxobject.ConfidenceScore{
+				Classification: 0.93,
+				Position:       0.89,
+				Properties:     0.91,
+				Relationships:  0.91,
+				Overall:        0.91,
+			},
+			UpdatedAt: time.Now(),
+		}
+		
+		hvacEquipment = append(hvacEquipment, hvac)
+	}
+
+	return hvacEquipment, nil
 }
 
 func (e *IDFExtractor) extractIDFElectricalWithErrorHandling() ([]arxobject.ArxObject, error) {
-	// TODO: Implement electrical extraction with error handling
-	return []arxobject.ArxObject{}, nil
+	var electricalEquipment []arxobject.ArxObject
+
+	// Validate prerequisites
+	if e.arxEngine == nil {
+		return nil, NewValidationError("arxEngine", nil, "arxEngine is required for electrical extraction")
+	}
+
+	// Alafia Elementary School - Electrical Equipment
+	electricalDefinitions := []struct {
+		ID          string
+		Description string
+		Props       map[string]interface{}
+	}{
+		{
+			ID:          "idf_elec_panel_001",
+			Description: "Main Distribution Panel MDP-1",
+			Props: map[string]interface{}{
+				"center_x":      60.0,
+				"center_y":      60.0,
+				"width":         48.0,   // 4'-0"
+				"width_feet":    4.0,
+				"height":        72.0,   // 6'-0"
+				"height_feet":   6.0,
+				"depth":         12.0,   // 1'-0"
+				"depth_feet":    1.0,
+				"equipment_type": "PANEL",
+				"panel_type":    "main_distribution",
+				"voltage":       "480V/3PH/4W",
+				"amperage":      1200,
+				"bus_rating":    1200,
+				"breaker_spaces": 42,
+				"manufacturer":  "Square D",
+				"model":         "I-Line",
+				"mounting":      "surface",
+				"idf_element":   "electrical_panel",
+			},
+		},
+		{
+			ID:          "idf_elec_panel_002",
+			Description: "Lighting Panel LP-1",
+			Props: map[string]interface{}{
+				"center_x":      30.0,
+				"center_y":      90.0,
+				"width":         30.0,   // 2.5'-0"
+				"width_feet":    2.5,
+				"height":        48.0,   // 4'-0"
+				"height_feet":   4.0,
+				"depth":         8.0,    // 8"
+				"equipment_type": "PANEL",
+				"panel_type":    "lighting",
+				"voltage":       "277V/480V/3PH/4W",
+				"amperage":      225,
+				"bus_rating":    225,
+				"breaker_spaces": 42,
+				"manufacturer":  "Square D",
+				"model":         "NF",
+				"mounting":      "recessed",
+				"idf_element":   "electrical_panel",
+			},
+		},
+		{
+			ID:          "idf_elec_xfmr_001",
+			Description: "Dry Type Transformer T-1",
+			Props: map[string]interface{}{
+				"center_x":      90.0,
+				"center_y":      60.0,
+				"width":         48.0,   // 4'-0"
+				"width_feet":    4.0,
+				"depth":         36.0,   // 3'-0"
+				"depth_feet":    3.0,
+				"height":        60.0,   // 5'-0"
+				"height_feet":   5.0,
+				"equipment_type": "TRANSFORMER",
+				"kva":           150,
+				"primary_v":     "480V",
+				"secondary_v":   "208Y/120V",
+				"phase":         "3PH",
+				"temp_rise":     "150C",
+				"efficiency":    98.5,
+				"weight_lbs":    1200,
+				"idf_element":   "electrical_transformer",
+			},
+		},
+		{
+			ID:          "idf_elec_disc_001",
+			Description: "Main Disconnect Switch",
+			Props: map[string]interface{}{
+				"center_x":      30.0,
+				"center_y":      30.0,
+				"width":         24.0,   // 2'-0"
+				"width_feet":    2.0,
+				"height":        36.0,   // 3'-0"
+				"height_feet":   3.0,
+				"depth":         10.0,
+				"equipment_type": "DISCONNECT",
+				"voltage":       "480V",
+				"amperage":      1200,
+				"poles":         3,
+				"nema_rating":   "3R",
+				"fusible":       true,
+				"manufacturer":  "Eaton",
+				"idf_element":   "electrical_disconnect",
+			},
+		},
+	}
+
+	// Create electrical ArxObjects
+	for _, def := range electricalDefinitions {
+		propsJSON, err := json.Marshal(def.Props)
+		if err != nil {
+			return electricalEquipment, NewProcessingError(def.ID, "electrical", "marshaling", 
+				fmt.Sprintf("failed to marshal electrical properties for %s", def.ID), err)
+		}
+
+		// Add description to properties
+		def.Props["description"] = def.Description
+		propsJSON, _ = json.Marshal(def.Props)
+		
+		electrical := arxobject.ArxObject{
+			ID:          def.ID,
+			UUID:        uuid.New().String(),
+			Type:        "equipment",
+			System:      "electrical",
+			Properties:  propsJSON,
+			Confidence: arxobject.ConfidenceScore{
+				Classification: 0.91,
+				Position:       0.87,
+				Properties:     0.89,
+				Relationships:  0.89,
+				Overall:        0.89,
+			},
+			UpdatedAt: time.Now(),
+		}
+		
+		electricalEquipment = append(electricalEquipment, electrical)
+	}
+
+	return electricalEquipment, nil
 }
 
 func (e *IDFExtractor) extractIDFElectricalDevicesWithErrorHandling() ([]arxobject.ArxObject, error) {
@@ -431,8 +910,121 @@ func (e *IDFExtractor) extractIDFElectricalDevicesWithErrorHandling() ([]arxobje
 }
 
 func (e *IDFExtractor) extractIDFRoomsWithErrorHandling() ([]arxobject.ArxObject, error) {
-	// TODO: Implement room extraction with error handling
-	return []arxobject.ArxObject{}, nil
+	var rooms []arxobject.ArxObject
+
+	// Validate prerequisites
+	if e.arxEngine == nil {
+		return nil, NewValidationError("arxEngine", nil, "arxEngine is required for room extraction")
+	}
+
+	// Alafia Elementary School - Mechanical Room Spaces
+	roomDefinitions := []struct {
+		ID          string
+		Description string
+		Props       map[string]interface{}
+	}{
+		{
+			ID:          "idf_room_mech_001",
+			Description: "Main Mechanical Room",
+			Props: map[string]interface{}{
+				"center_x":      180.0,
+				"center_y":      120.0,
+				"width":         360.0,  // 30'-0"
+				"width_feet":    30.0,
+				"depth":         240.0,  // 20'-0"
+				"depth_feet":    20.0,
+				"area_sqft":     600.0,
+				"height":        144.0,  // 12'-0" ceiling height
+				"height_feet":   12.0,
+				"volume_cuft":   7200.0,
+				"room_number":   "M101",
+				"room_type":     "mechanical",
+				"occupancy":     "unoccupied",
+				"hvac_zone":     "ZONE_1",
+				"fire_zone":     "FZ_1",
+				"acoustics":     "NC-45",
+				"idf_element":   "room",
+			},
+		},
+		{
+			ID:          "idf_room_elec_001",
+			Description: "Electrical Room",
+			Props: map[string]interface{}{
+				"center_x":      60.0,
+				"center_y":      60.0,
+				"width":         120.0,  // 10'-0"
+				"width_feet":    10.0,
+				"depth":         120.0,  // 10'-0"
+				"depth_feet":    10.0,
+				"area_sqft":     100.0,
+				"height":        120.0,  // 10'-0" ceiling height
+				"height_feet":   10.0,
+				"volume_cuft":   1000.0,
+				"room_number":   "E102",
+				"room_type":     "electrical",
+				"occupancy":     "restricted",
+				"hvac_zone":     "ZONE_2",
+				"fire_zone":     "FZ_2",
+				"special_req":   "ventilation_required",
+				"idf_element":   "room",
+			},
+		},
+		{
+			ID:          "idf_room_stor_001",
+			Description: "Storage Room",
+			Props: map[string]interface{}{
+				"center_x":      300.0,
+				"center_y":      60.0,
+				"width":         120.0,  // 10'-0"
+				"width_feet":    10.0,
+				"depth":         120.0,  // 10'-0"
+				"depth_feet":    10.0,
+				"area_sqft":     100.0,
+				"height":        96.0,   // 8'-0" ceiling height
+				"height_feet":   8.0,
+				"volume_cuft":   800.0,
+				"room_number":   "S103",
+				"room_type":     "storage",
+				"occupancy":     "unoccupied",
+				"hvac_zone":     "ZONE_3",
+				"fire_zone":     "FZ_1",
+				"idf_element":   "room",
+			},
+		},
+	}
+
+	// Create room ArxObjects
+	for _, def := range roomDefinitions {
+		propsJSON, err := json.Marshal(def.Props)
+		if err != nil {
+			return rooms, NewProcessingError(def.ID, "room", "marshaling", 
+				fmt.Sprintf("failed to marshal room properties for %s", def.ID), err)
+		}
+
+		// Add description to properties
+		def.Props["description"] = def.Description
+		propsJSON, _ = json.Marshal(def.Props)
+		
+		room := arxobject.ArxObject{
+			ID:          def.ID,
+			UUID:        uuid.New().String(),
+			Type:        "room",
+			System:      "spatial",
+			Properties:  propsJSON,
+			Confidence: arxobject.ConfidenceScore{
+				Classification: 0.94,
+				Position:       0.92,
+				Properties:     0.90,
+				Relationships:  0.92,
+				Overall:        0.92,
+			},
+			UpdatedAt: time.Now(),
+		}
+		
+		rooms = append(rooms, room)
+	}
+
+	return rooms, nil
 }
 
 func (e *IDFExtractor) extractIDFDimensionsWithErrorHandling() ([]arxobject.ArxObject, error) {

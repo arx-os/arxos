@@ -699,14 +699,31 @@
             renderArxObject(obj) {
                 const ctx = this.ctx;
                 
-                if (obj.type === 'wall') {
-                    this.renderWall(obj);
-                } else if (obj.type === 'door') {
-                    this.renderDoor(obj);
-                } else if (obj.type === 'window') {
-                    this.renderWindow(obj);
-                } else {
-                    this.renderGenericObject(obj);
+                switch(obj.type) {
+                    case 'wall':
+                        this.renderWall(obj);
+                        break;
+                    case 'door':
+                        this.renderDoor(obj);
+                        break;
+                    case 'window':
+                        this.renderWindow(obj);
+                        break;
+                    case 'room':
+                        this.renderRoom(obj);
+                        break;
+                    case 'equipment':
+                        if (obj.system === 'hvac') {
+                            this.renderHVAC(obj);
+                        } else if (obj.system === 'electrical') {
+                            this.renderElectrical(obj);
+                        } else {
+                            this.renderGenericObject(obj);
+                        }
+                        break;
+                    default:
+                        this.renderGenericObject(obj);
+                        break;
                 }
             },
 
@@ -768,33 +785,214 @@
                 }
             },
 
-            // Render door (placeholder)
+            // Render door
             renderDoor(door) {
                 const ctx = this.ctx;
                 const props = door.properties;
                 
-                ctx.fillStyle = '#4a5568';
-                ctx.fillRect(props.x - 15, props.y - 2, 30, 4);
+                const cx = props.center_x || props.x || 0;
+                const cy = props.center_y || props.y || 0;
+                const width = props.width || 36;
+                const doorType = props.door_type || 'single';
+                
+                // Door frame
+                ctx.strokeStyle = '#654321';
+                ctx.lineWidth = 2 / this.scale;
+                ctx.strokeRect(cx - width/2, cy - 2, width, 4);
+                
+                // Door panel
+                ctx.fillStyle = doorType === 'double' ? '#8b4513' : '#a0522d';
+                ctx.fillRect(cx - width/2 + 2, cy - 1, width - 4, 2);
                 
                 // Draw door swing arc
-                ctx.beginPath();
-                ctx.arc(props.x, props.y, 25, 0, Math.PI / 2);
-                ctx.strokeStyle = '#2d3748';
-                ctx.lineWidth = 1 / this.scale;
-                ctx.stroke();
+                if (props.swing) {
+                    ctx.beginPath();
+                    const swingRadius = width * 0.8;
+                    const startAngle = props.swing === 'out' ? 0 : Math.PI;
+                    const endAngle = props.swing === 'out' ? Math.PI/2 : 3*Math.PI/2;
+                    ctx.arc(cx - width/2, cy, swingRadius, startAngle, endAngle);
+                    ctx.strokeStyle = '#888';
+                    ctx.lineWidth = 0.5 / this.scale;
+                    ctx.stroke();
+                }
+                
+                // Fire rating badge
+                if (props.fire_rating) {
+                    ctx.save();
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = `${8 / this.scale}px sans-serif`;
+                    ctx.fillText(props.fire_rating, cx, cy - 10);
+                    ctx.restore();
+                }
             },
 
-            // Render window (placeholder)
+            // Render window
             renderWindow(window) {
                 const ctx = this.ctx;
                 const props = window.properties;
                 
-                ctx.fillStyle = '#93c5fd';
-                ctx.strokeStyle = '#2563eb';
-                ctx.lineWidth = 1.5 / this.scale;
+                const cx = props.center_x || props.x || 0;
+                const cy = props.center_y || props.y || 0;
+                const width = props.width || 48;
+                const height = props.height || 36;
                 
-                ctx.fillRect(props.x - 20, props.y - 3, 40, 6);
-                ctx.strokeRect(props.x - 20, props.y - 3, 40, 6);
+                // Window frame
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2 / this.scale;
+                ctx.strokeRect(cx - width/2, cy - height/2, width, height);
+                
+                // Glass (semi-transparent blue)
+                ctx.fillStyle = 'rgba(147, 197, 253, 0.3)';
+                ctx.fillRect(cx - width/2 + 2, cy - height/2 + 2, width - 4, height - 4);
+                
+                // Mullions for divided light windows
+                if (props.window_type === 'divided_light') {
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 1 / this.scale;
+                    // Vertical mullion
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy - height/2);
+                    ctx.lineTo(cx, cy + height/2);
+                    ctx.stroke();
+                    // Horizontal mullion
+                    ctx.beginPath();
+                    ctx.moveTo(cx - width/2, cy);
+                    ctx.lineTo(cx + width/2, cy);
+                    ctx.stroke();
+                }
+            },
+
+            // Render room
+            renderRoom(room) {
+                const ctx = this.ctx;
+                const props = room.properties;
+                
+                const cx = props.center_x || 0;
+                const cy = props.center_y || 0;
+                const width = props.width || 120;
+                const depth = props.depth || 120;
+                
+                // Room boundary (dashed line)
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = '#999';
+                ctx.lineWidth = 1 / this.scale;
+                ctx.strokeRect(cx - width/2, cy - depth/2, width, depth);
+                ctx.setLineDash([]);
+                
+                // Room fill based on type
+                const roomColors = {
+                    'mechanical': 'rgba(255, 165, 0, 0.1)',
+                    'electrical': 'rgba(255, 255, 0, 0.1)',
+                    'storage': 'rgba(128, 128, 128, 0.1)',
+                    'classroom': 'rgba(0, 255, 0, 0.1)',
+                };
+                
+                ctx.fillStyle = roomColors[props.room_type] || 'rgba(200, 200, 200, 0.05)';
+                ctx.fillRect(cx - width/2, cy - depth/2, width, depth);
+                
+                // Room label
+                if (props.room_number) {
+                    ctx.save();
+                    ctx.fillStyle = '#333';
+                    ctx.font = `bold ${12 / this.scale}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(props.room_number, cx, cy);
+                    
+                    // Room type below number
+                    ctx.font = `${8 / this.scale}px sans-serif`;
+                    ctx.fillText(props.room_type?.toUpperCase() || '', cx, cy + 15);
+                    ctx.restore();
+                }
+            },
+
+            // Render HVAC equipment
+            renderHVAC(equipment) {
+                const ctx = this.ctx;
+                const props = equipment.properties;
+                
+                const cx = props.center_x || 0;
+                const cy = props.center_y || 0;
+                const width = props.width || 48;
+                const depth = props.depth || 48;
+                
+                // Equipment outline
+                ctx.strokeStyle = '#0066cc';
+                ctx.lineWidth = 2 / this.scale;
+                ctx.strokeRect(cx - width/2, cy - depth/2, width, depth);
+                
+                // Equipment fill
+                ctx.fillStyle = 'rgba(0, 102, 204, 0.2)';
+                ctx.fillRect(cx - width/2, cy - depth/2, width, depth);
+                
+                // Equipment type icon/symbol
+                ctx.save();
+                ctx.fillStyle = '#0066cc';
+                ctx.font = `bold ${10 / this.scale}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const symbols = {
+                    'AHU': 'AHU',
+                    'CHILLER': 'CH',
+                    'PUMP': 'P',
+                    'FAN': 'F',
+                };
+                
+                ctx.fillText(symbols[props.equipment_type] || 'HVAC', cx, cy);
+                
+                // Model/capacity info
+                if (props.model) {
+                    ctx.font = `${6 / this.scale}px sans-serif`;
+                    ctx.fillText(props.model, cx, cy + depth/2 + 10);
+                }
+                ctx.restore();
+            },
+
+            // Render electrical equipment
+            renderElectrical(equipment) {
+                const ctx = this.ctx;
+                const props = equipment.properties;
+                
+                const cx = props.center_x || 0;
+                const cy = props.center_y || 0;
+                const width = props.width || 48;
+                const height = props.height || 72;
+                
+                // Panel/equipment outline
+                ctx.strokeStyle = '#ff6600';
+                ctx.lineWidth = 2 / this.scale;
+                ctx.strokeRect(cx - width/2, cy - height/2, width, height);
+                
+                // Equipment fill
+                ctx.fillStyle = 'rgba(255, 102, 0, 0.15)';
+                ctx.fillRect(cx - width/2, cy - height/2, width, height);
+                
+                // Electrical symbol
+                ctx.save();
+                ctx.fillStyle = '#ff6600';
+                ctx.font = `bold ${10 / this.scale}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const symbols = {
+                    'PANEL': 'P',
+                    'TRANSFORMER': 'T',
+                    'DISCONNECT': 'D',
+                    'SWITCHGEAR': 'SG',
+                };
+                
+                ctx.fillText(symbols[props.equipment_type] || 'E', cx, cy);
+                
+                // Voltage/amperage info
+                if (props.voltage) {
+                    ctx.font = `${6 / this.scale}px sans-serif`;
+                    ctx.fillText(props.voltage, cx, cy - height/2 - 5);
+                }
+                if (props.amperage) {
+                    ctx.fillText(`${props.amperage}A`, cx, cy + height/2 + 10);
+                }
+                ctx.restore();
             },
 
             // Render generic object

@@ -1,256 +1,245 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
-	"arxos/arxobject"
 	"arxos/services"
-	"github.com/google/uuid"
 )
 
-// SimplePDFUpload handles basic PDF upload for testing
-// This is a placeholder until full PDF processing is implemented
+// PDFUploadHandler handles PDF file uploads and processing
+func PDFUploadHandler(pdfProcessor *services.PDFProcessor) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Set max file size to 50MB
+		r.ParseMultipartForm(50 << 20)
+
+		// Get the file from the request
+		file, header, err := r.FormFile("pdf")
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "Failed to get file from request")
+			return
+		}
+		defer file.Close()
+
+		// Create uploads directory if it doesn't exist
+		uploadsDir := "uploads"
+		if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to create uploads directory")
+			return
+		}
+
+		// Create unique filename
+		filename := fmt.Sprintf("%d_%s", time.Now().Unix(), header.Filename)
+		filepath := filepath.Join(uploadsDir, filename)
+
+		// Save the uploaded file
+		dst, err := os.Create(filepath)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to save file")
+			return
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, file); err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Failed to copy file content")
+			return
+		}
+
+		// Process the PDF using the PDF processor service
+		result, err := pdfProcessor.ProcessPDF(filepath)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to process PDF: %v", err))
+			return
+		}
+
+		// Clean up the uploaded file after processing
+		defer os.Remove(filepath)
+
+		// Convert result to response format
+		response := map[string]interface{}{
+			"success": true,
+			"data": map[string]interface{}{
+				"objects":    result.Objects,
+				"statistics": result.Statistics,
+				"processing_time": result.ProcessingTime.Seconds(),
+			},
+			"message": fmt.Sprintf("Successfully processed %d objects", len(result.Objects)),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
+// SimplePDFUpload handles PDF uploads and forwards to AI service for processing
 func SimplePDFUpload(w http.ResponseWriter, r *http.Request) {
-	// Parse multipart form (32 MB max memory)
-	err := r.ParseMultipartForm(32 << 20)
+	// Parse multipart form
+	err := r.ParseMultipartForm(50 << 20) // 50 MB max
 	if err != nil {
-		http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+		respondWithError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
 
-	// Get the file from form data
-	file, handler, err := r.FormFile("pdf")
+	// Get the file
+	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to get file from form", http.StatusBadRequest)
+		respondWithError(w, http.StatusBadRequest, "No file provided")
 		return
 	}
 	defer file.Close()
 
-	// Validate file extension
-	ext := filepath.Ext(handler.Filename)
-	if ext != ".pdf" {
-		http.Error(w, "Only PDF files are allowed", http.StatusBadRequest)
-		return
-	}
-
-	// Validate file size (50MB max)
-	if handler.Size > 50*1024*1024 {
-		http.Error(w, "File size exceeds 50MB limit", http.StatusRequestEntityTooLarge)
-		return
-	}
-
-	// Create uploads directory if it doesn't exist
-	uploadDir := "uploads"
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		http.Error(w, "Failed to create upload directory", http.StatusInternalServerError)
-		return
-	}
-
-	// Generate unique filename
-	uniqueID := uuid.New().String()
-	filename := fmt.Sprintf("%s_%s", uniqueID, handler.Filename)
-	filepath := filepath.Join(uploadDir, filename)
-
-	// Create destination file
-	dst, err := os.Create(filepath)
+	// Read file content
+	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to create destination file", http.StatusInternalServerError)
+		respondWithError(w, http.StatusInternalServerError, "Failed to read file")
 		return
 	}
-	defer dst.Close()
 
-	// Copy uploaded file to destination
-	written, err := io.Copy(dst, file)
+	// Forward to AI service
+	aiServiceURL := os.Getenv("AI_SERVICE_URL")
+	if aiServiceURL == "" {
+		aiServiceURL = "http://localhost:8000"
+	}
+
+	// Create multipart form for AI service
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	
+	// Add file to form
+	part, err := writer.CreateFormFile("file", header.Filename)
 	if err != nil {
-		http.Error(w, "Failed to save uploaded file", http.StatusInternalServerError)
+		respondWithError(w, http.StatusInternalServerError, "Failed to create form")
+		return
+	}
+	
+	_, err = part.Write(fileBytes)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to write file")
+		return
+	}
+	
+	// Add building type
+	writer.WriteField("building_type", "general")
+	writer.Close()
+
+	// Send to AI service
+	req, err := http.NewRequest("POST", aiServiceURL+"/api/v1/convert", body)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create request")
+		return
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		respondWithError(w, http.StatusServiceUnavailable, "AI service unavailable")
+		return
+	}
+	defer resp.Body.Close()
+
+	// Read AI service response
+	aiResponse, err := io.ReadAll(resp.Body)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to read AI response")
 		return
 	}
 
-	// Prepare response
+	// Parse and transform response
+	var aiResult map[string]interface{}
+	if err := json.Unmarshal(aiResponse, &aiResult); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Invalid AI response")
+		return
+	}
+
+	// Transform ArxObjects to frontend format
+	arxobjects, ok := aiResult["arxobjects"].([]interface{})
+	if !ok {
+		arxobjects = []interface{}{}
+	}
+
+	objects := make([]map[string]interface{}, 0)
+	for _, obj := range arxobjects {
+		if objMap, ok := obj.(map[string]interface{}); ok {
+			// Extract position and dimensions from data field (in mm)
+			x, y := 100.0, 100.0
+			width, height := 100.0, 10.0
+			
+			if data, ok := objMap["data"].(map[string]interface{}); ok {
+				// Get real-world coordinates in mm
+				if xMm, ok := data["x_mm"].(float64); ok {
+					x = xMm
+				}
+				if yMm, ok := data["y_mm"].(float64); ok {
+					y = yMm
+				}
+				if lengthMm, ok := data["length_mm"].(float64); ok {
+					width = lengthMm
+				}
+				if thicknessMm, ok := data["thickness_mm"].(float64); ok {
+					height = thicknessMm
+				}
+			}
+			
+			// Fallback to geometry if data not available
+			if x == 100.0 && y == 100.0 {
+				if geometry, ok := objMap["geometry"].(map[string]interface{}); ok {
+					if coords, ok := geometry["coordinates"].([]interface{}); ok && len(coords) > 0 {
+						if coord, ok := coords[0].([]interface{}); ok && len(coord) >= 2 {
+							if xVal, ok := coord[0].(float64); ok {
+								x = xVal
+							}
+							if yVal, ok := coord[1].(float64); ok {
+								y = yVal
+							}
+						}
+					}
+				}
+			}
+
+			// Get confidence
+			confidence := 0.5
+			if conf, ok := objMap["confidence"].(map[string]interface{}); ok {
+				if overall, ok := conf["overall"].(float64); ok {
+					confidence = overall
+				}
+			}
+
+			objects = append(objects, map[string]interface{}{
+				"id":         objMap["id"],
+				"type":       objMap["type"],
+				"x":          x,
+				"y":          y,
+				"width":      width,
+				"height":     height,
+				"confidence": confidence,
+				"data":       objMap["data"], // Include full data for debugging
+			})
+		}
+	}
+
+	// Create response
 	response := map[string]interface{}{
-		"success": true,
-		"message": "PDF uploaded successfully",
-		"data": map[string]interface{}{
-			"id":           uniqueID,
-			"filename":     handler.Filename,
-			"size":         written,
-			"upload_time":  time.Now().UTC(),
-			"status":       "uploaded",
-			"process_info": "PDF processing will be implemented in the next phase",
+		"success":  true,
+		"message":  fmt.Sprintf("Processed %s", header.Filename),
+		"filename": header.Filename,
+		"objects":  objects,
+		"statistics": map[string]interface{}{
+			"total_objects":      len(objects),
+			"overall_confidence": aiResult["overall_confidence"],
+			"processing_time":    aiResult["processing_time"],
 		},
 	}
 
-	// Process PDF to extract ArxObjects
-	arxEngine := arxobject.NewEngine(nil) // TODO: pass actual DB connection
-	
-	// Try AI processor first, fall back to basic processor if AI service is not available
-	var processingResult *services.ProcessingResult
-	var processingErr error
-	
-	// Check if AI service is enabled
-	useAI := os.Getenv("USE_AI_PDF_PROCESSOR") != "false"
-	
-	if useAI {
-		aiProcessor := services.NewAIPDFProcessor(arxEngine)
-		processingResult, processingErr = aiProcessor.ProcessPDF(filepath)
-		
-		if processingErr != nil {
-			// Log AI processing error
-			response["data"].(map[string]interface{})["ai_warning"] = processingErr.Error()
-			
-			// Fall back to basic processor
-			processor := services.NewPDFProcessor(arxEngine)
-			processingResult, processingErr = processor.ProcessPDF(filepath)
-		} else {
-			response["data"].(map[string]interface{})["processing_method"] = "ai"
-		}
-	} else {
-		// Use basic processor
-		processor := services.NewPDFProcessor(arxEngine)
-		processingResult, processingErr = processor.ProcessPDF(filepath)
-		response["data"].(map[string]interface{})["processing_method"] = "basic"
-	}
-	
-	if processingErr != nil {
-		// Log error but continue with partial results
-		response["data"].(map[string]interface{})["process_warning"] = processingErr.Error()
-	}
-	
-	// Convert extracted objects to response format
-	var extractedObjects []map[string]interface{}
-	var needingValidation int
-	
-	if processingResult != nil && len(processingResult.Objects) > 0 {
-		for _, obj := range processingResult.Objects {
-			extractedObj := map[string]interface{}{
-				"type":       obj.Type,
-				"uuid":       obj.ID,
-				"confidence": obj.Confidence.Overall,
-				"properties": obj.Properties,
-			}
-			extractedObjects = append(extractedObjects, extractedObj)
-			
-			if obj.Confidence.Overall < 0.7 {
-				needingValidation++
-			}
-		}
-		
-		response["data"].(map[string]interface{})["statistics"] = processingResult.Statistics
-	} else {
-		// Return empty result with error message instead of mock data
-		if processingErr != nil {
-			response["success"] = false
-			response["message"] = "PDF processing failed"
-			response["data"].(map[string]interface{})["error"] = processingErr.Error()
-			response["data"].(map[string]interface{})["status"] = "failed"
-			
-			// Still return the response but with empty objects
-			extractedObjects = []map[string]interface{}{}
-			response["data"].(map[string]interface{})["extracted_objects"] = extractedObjects
-			response["data"].(map[string]interface{})["objects_needing_validation"] = 0
-			
-			// Log the error for debugging
-			fmt.Printf("PDF processing error for %s: %v\n", handler.Filename, processingErr)
-		} else {
-			// Processing succeeded but no objects found
-			response["data"].(map[string]interface{})["status"] = "completed"
-			response["data"].(map[string]interface{})["message"] = "No objects detected in PDF"
-			extractedObjects = []map[string]interface{}{}
-		}
-	}
-
-	response["data"].(map[string]interface{})["extracted_objects"] = extractedObjects
-	response["data"].(map[string]interface{})["objects_needing_validation"] = needingValidation
-
-	// Send JSON response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
 
-// PDFProcessingStatus returns the processing status of an uploaded PDF
-func PDFProcessingStatus(w http.ResponseWriter, r *http.Request) {
-	// Get PDF ID from URL parameter
-	pdfID := r.URL.Query().Get("id")
-	if pdfID == "" {
-		http.Error(w, "PDF ID is required", http.StatusBadRequest)
-		return
-	}
-
-	// Since we process PDFs synchronously for now, always return completed
-	// In a production system, this would check a job queue or database
-	status := map[string]interface{}{
-		"id":     pdfID,
-		"status": "completed",
-		"message": "PDF processing is synchronous - check upload response for results",
-		"note": "Asynchronous processing not yet implemented",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
-}
-
-// ListUploadedPDFs returns a list of uploaded PDFs
-func ListUploadedPDFs(w http.ResponseWriter, r *http.Request) {
-	// List actual files from upload directory
-	uploadDir := "uploads"
-	pdfs := []map[string]interface{}{}
-	
-	files, err := os.ReadDir(uploadDir)
-	if err != nil {
-		// Upload directory doesn't exist or can't be read
-		response := map[string]interface{}{
-			"success": true,
-			"data":    pdfs,
-			"total":   0,
-			"message": "No PDFs uploaded yet",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-		return
-	}
-	
-	for _, file := range files {
-		if !file.IsDir() && filepath.Ext(file.Name()) == ".pdf" {
-			info, err := file.Info()
-			if err != nil {
-				continue
-			}
-			
-			// Extract UUID from filename (format: UUID_originalname.pdf)
-			parts := strings.SplitN(file.Name(), "_", 2)
-			id := parts[0]
-			originalName := file.Name()
-			if len(parts) > 1 {
-				originalName = parts[1]
-			}
-			
-			pdfs = append(pdfs, map[string]interface{}{
-				"id":          id,
-				"filename":    originalName,
-				"upload_date": info.ModTime().UTC(),
-				"status":      "completed", // All uploaded PDFs are processed synchronously
-				"size":        info.Size(),
-			})
-		}
-	}
-	
-	// Sort by upload date (newest first)
-	// Note: In production, this would be handled by database with proper indexing
-	
-	response := map[string]interface{}{
-		"success": true,
-		"data":    pdfs,
-		"total":   len(pdfs),
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}

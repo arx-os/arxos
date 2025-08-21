@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -129,11 +130,10 @@ type ProcessingResult struct {
 func (h *PDFUploadHandler) processPDF(filepath, buildingName, floorNumber string) (*ProcessingResult, error) {
 	startTime := time.Now()
 	
-	// Use ACTUAL PDF parser - NO DEMO FALLBACK
-	parser := NewActualPDFParser(filepath)
-	objects, stats, err := parser.ParsePDFForReal(buildingName, floorNumber)
+	// Process PDF using AI service
+	objects, stats, err := h.processWithAIService(filepath, buildingName, floorNumber)
 	if err != nil {
-		return nil, fmt.Errorf("PDF parsing failed (NO DEMO FALLBACK): %w", err)
+		return nil, fmt.Errorf("AI service processing failed: %v", err)
 	}
 	
 	// Store objects in database
@@ -147,7 +147,7 @@ func (h *PDFUploadHandler) processPDF(filepath, buildingName, floorNumber string
 	}
 
 	// Clear tile cache to reflect new data
-	h.tileService.clearCache()
+	h.tileService.ClearCache()
 
 	processTime := time.Since(startTime).Seconds()
 	
@@ -163,200 +163,135 @@ func (h *PDFUploadHandler) processPDF(filepath, buildingName, floorNumber string
 	}, nil
 }
 
-// generateDemoObjectsFromPDF generates demo ArxObjects from a PDF
-// In production, this would actually parse the PDF
-func (h *PDFUploadHandler) generateDemoObjectsFromPDF(buildingName, floorNumber string) ([]ArxObject, map[string]int) {
+// processWithAIService processes PDF through the AI service
+func (h *PDFUploadHandler) processWithAIService(pdfPath, buildingName, floorNumber string) ([]ArxObject, map[string]int, error) {
 	var objects []ArxObject
 	stats := make(map[string]int)
 	
-	// Random seed based on building name for consistency
-	rand.Seed(int64(len(buildingName)))
+	// Open PDF file
+	pdfFile, err := os.Open(pdfPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to open PDF: %v", err)
+	}
+	defer pdfFile.Close()
 	
-	// Base position for this building
-	baseX := rand.Float64() * 10000
-	baseY := rand.Float64() * 10000
+	// Create multipart form
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	
+	// Add file to form
+	part, err := writer.CreateFormFile("file", filepath.Base(pdfPath))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create form file: %v", err)
+	}
+	
+	if _, err := io.Copy(part, pdfFile); err != nil {
+		return nil, nil, fmt.Errorf("failed to copy file: %v", err)
+	}
+	
+	// Add building type
+	writer.WriteField("building_type", "general")
+	writer.Close()
+	
+	// Send to AI service
+	aiServiceURL := os.Getenv("AI_SERVICE_URL")
+	if aiServiceURL == "" {
+		aiServiceURL = "http://localhost:8000"
+	}
+	
+	req, err := http.NewRequest("POST", aiServiceURL+"/api/v1/convert", body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("AI service request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, nil, fmt.Errorf("AI service returned status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+	
+	// Parse AI service response
+	var aiResult struct {
+		ArxObjects []struct {
+			ID         string                 `json:"id"`
+			Type       string                 `json:"type"`
+			System     string                 `json:"system"`
+			Geometry   map[string]interface{} `json:"geometry"`
+			Properties map[string]interface{} `json:"properties"`
+			Confidence struct {
+				Overall float64 `json:"overall"`
+			} `json:"confidence"`
+		} `json:"arxobjects"`
+		OverallConfidence float64 `json:"overall_confidence"`
+	}
+	
+	if err := json.NewDecoder(resp.Body).Decode(&aiResult); err != nil {
+		return nil, nil, fmt.Errorf("failed to decode AI response: %v", err)
+	}
+	
+	// Convert AI objects to ArxObjects
 	floorZ := parseFloat(floorNumber) * 3000
 	
-	// Generate building outline (walls)
-	walls := []struct {
-		x, y, w, h float64
-		name       string
-	}{
-		{baseX, baseY, 8000, 100, "North Wall"},
-		{baseX, baseY + 5900, 8000, 100, "South Wall"},
-		{baseX, baseY, 100, 6000, "West Wall"},
-		{baseX + 7900, baseY, 100, 6000, "East Wall"},
-	}
-	
-	for _, wall := range walls {
-		objects = append(objects, ArxObject{
-			Type:     "wall",
-			System:   "structural",
-			X:        wall.x,
-			Y:        wall.y,
-			Z:        floorZ,
-			Width:    int(wall.w),
-			Height:   int(wall.h),
-			ScaleMin: 4,
-			ScaleMax: 9,
-			Properties: json.RawMessage(fmt.Sprintf(`{"name":"%s","building":"%s","floor":"%s","confidence":0.92}`, 
-				wall.name, buildingName, floorNumber)),
-		})
-		stats["wall"]++
-	}
-	
-	// Generate rooms (grid layout)
-	roomWidth := 2500.0
-	roomHeight := 2800.0
-	for i := 0; i < 3; i++ {
-		for j := 0; j < 2; j++ {
-			roomX := baseX + 500 + float64(i)*roomWidth
-			roomY := baseY + 500 + float64(j)*roomHeight
-			roomName := fmt.Sprintf("Room %d%d", i+1, j+1)
-			
-			// Room boundary
-			objects = append(objects, ArxObject{
-				Type:     "room",
-				System:   "structural",
-				X:        roomX,
-				Y:        roomY,
-				Z:        floorZ,
-				Width:    int(roomWidth - 100),
-				Height:   int(roomHeight - 100),
-				ScaleMin: 5,
-				ScaleMax: 9,
-				Properties: json.RawMessage(fmt.Sprintf(`{"name":"%s","building":"%s","floor":"%s","area_sqft":%d,"confidence":0.88}`,
-					roomName, buildingName, floorNumber, int((roomWidth-100)*(roomHeight-100)/1000000*10.764))),
-			})
-			stats["room"]++
-			
-			// Door
-			objects = append(objects, ArxObject{
-				Type:     "door",
-				System:   "structural",
-				X:        roomX + roomWidth/2 - 450,
-				Y:        roomY,
-				Z:        floorZ,
-				Width:    900,
-				Height:   100,
-				ScaleMin: 6,
-				ScaleMax: 9,
-				Properties: json.RawMessage(fmt.Sprintf(`{"room":"%s","type":"single","confidence":0.91}`, roomName)),
-			})
-			stats["door"]++
-			
-			// Windows (2 per room)
-			for w := 0; w < 2; w++ {
-				objects = append(objects, ArxObject{
-					Type:     "window",
-					System:   "structural",
-					X:        roomX + 500 + float64(w)*1500,
-					Y:        roomY + roomHeight - 100,
-					Z:        floorZ + 1000,
-					Width:    1200,
-					Height:   100,
-					ScaleMin: 6,
-					ScaleMax: 9,
-					Properties: json.RawMessage(`{"type":"double_hung","confidence":0.85}`),
-				})
-				stats["window"]++
-			}
-			
-			// Electrical outlets (4 per room)
-			for e := 0; e < 4; e++ {
-				var outletX, outletY float64
-				switch e {
-				case 0:
-					outletX, outletY = roomX+200, roomY+200
-				case 1:
-					outletX, outletY = roomX+roomWidth-300, roomY+200
-				case 2:
-					outletX, outletY = roomX+200, roomY+roomHeight-300
-				case 3:
-					outletX, outletY = roomX+roomWidth-300, roomY+roomHeight-300
+	for _, aiObj := range aiResult.ArxObjects {
+		// Extract position from geometry
+		x, y := 0.0, 0.0
+		width, height := 100, 100
+		
+		if geometry, ok := aiObj.Geometry["coordinates"].([]interface{}); ok && len(geometry) > 0 {
+			if coords, ok := geometry[0].([]interface{}); ok && len(coords) >= 2 {
+				if xVal, ok := coords[0].(float64); ok {
+					x = xVal * 1000 // Convert to mm
 				}
-				
-				objects = append(objects, ArxObject{
-					Type:     "outlet",
-					System:   "electrical",
-					X:        outletX,
-					Y:        outletY,
-					Z:        floorZ + 300,
-					Width:    100,
-					Height:   150,
-					ScaleMin: 7,
-					ScaleMax: 9,
-					Properties: json.RawMessage(`{"voltage":"120V","amperage":"15A","confidence":0.82}`),
-				})
-				stats["outlet"]++
+				if yVal, ok := coords[1].(float64); ok {
+					y = yVal * 1000 // Convert to mm
+				}
 			}
-			
-			// HVAC vent
-			objects = append(objects, ArxObject{
-				Type:     "vent",
-				System:   "hvac",
-				X:        roomX + roomWidth/2 - 200,
-				Y:        roomY + roomHeight/2 - 100,
-				Z:        floorZ + 2900,
-				Width:    400,
-				Height:   200,
-				ScaleMin: 7,
-				ScaleMax: 9,
-				Properties: json.RawMessage(`{"type":"supply","size":"12x6","confidence":0.79}`),
-			})
-			stats["vent"]++
-			
-			// Light fixture
-			objects = append(objects, ArxObject{
-				Type:     "light",
-				System:   "electrical",
-				X:        roomX + roomWidth/2 - 300,
-				Y:        roomY + roomHeight/2 - 300,
-				Z:        floorZ + 2900,
-				Width:    600,
-				Height:   600,
-				ScaleMin: 7,
-				ScaleMax: 9,
-				Properties: json.RawMessage(`{"type":"recessed_led","wattage":"40W","confidence":0.86}`),
-			})
-			stats["light"]++
+			// Calculate dimensions from bounding box if available
+			if len(geometry) > 1 {
+				if coords2, ok := geometry[1].([]interface{}); ok && len(coords2) >= 2 {
+					if xVal2, ok := coords2[0].(float64); ok {
+						width = int((xVal2 - x/1000) * 1000)
+					}
+					if yVal2, ok := coords2[1].(float64); ok {
+						height = int((yVal2 - y/1000) * 1000)
+					}
+				}
+			}
 		}
+		
+		// Add metadata
+		aiObj.Properties["building"] = buildingName
+		aiObj.Properties["floor"] = floorNumber
+		aiObj.Properties["confidence"] = aiObj.Confidence.Overall
+		
+		propsJSON, _ := json.Marshal(aiObj.Properties)
+		
+		objects = append(objects, ArxObject{
+			Type:       aiObj.Type,
+			System:     aiObj.System,
+			X:          x,
+			Y:          y,
+			Z:          floorZ,
+			Width:      width,
+			Height:     height,
+			ScaleMin:   5,
+			ScaleMax:   10,
+			Properties: json.RawMessage(propsJSON),
+		})
+		
+		stats[aiObj.Type]++
 	}
 	
-	// Add corridor
-	objects = append(objects, ArxObject{
-		Type:     "corridor",
-		System:   "structural",
-		X:        baseX + 500,
-		Y:        baseY + 2900,
-		Z:        floorZ,
-		Width:    7000,
-		Height:   200,
-		ScaleMin: 5,
-		ScaleMax: 10,
-		Properties: json.RawMessage(fmt.Sprintf(`{"name":"Main Corridor","building":"%s","floor":"%s","confidence":0.90}`,
-			buildingName, floorNumber)),
-	})
-	stats["corridor"]++
+	log.Printf("Processed %d objects from AI service: %v", len(objects), stats)
 	
-	// Add some plumbing (bathrooms)
-	objects = append(objects, ArxObject{
-		Type:     "pipe",
-		System:   "plumbing",
-		X:        baseX + 7500,
-		Y:        baseY + 1000,
-		Z:        floorZ,
-		Width:    50,
-		Height:   2000,
-		ScaleMin: 7,
-		ScaleMax: 10,
-		Properties: json.RawMessage(`{"type":"water_supply","diameter":"2inch","confidence":0.75}`),
-	})
-	stats["pipe"]++
-	
-	log.Printf("Generated %d objects from PDF: %v", len(objects), stats)
-	
-	return objects, stats
+	return objects, stats, nil
 }
 
 // storeObject stores an ArxObject in the database

@@ -1,6 +1,7 @@
 package converters
 
 import (
+	"encoding/json"
 	"math"
 	"arxos/arxobject"
 )
@@ -47,49 +48,48 @@ func (wc *WallConverter) ConvertWallToArxObject(wall WallSegment) *arxobject.Arx
 	// Calculate rotation angle (in degrees)
 	angle := math.Atan2(dy, dx) * 180.0 / math.Pi
 	
-	// Convert pixels to millimeters (using mm for architectural precision)
-	// 1 meter = 1000 mm, so pixels * (meters/pixel) * 1000 = mm
-	mmPerPixel := (1.0 / wc.PixelsPerMeter) * 1000.0
+	// Convert pixels to nanometers for maximum precision
+	// 1 meter = 1,000,000,000 nanometers
+	nmPerPixel := (1.0 / wc.PixelsPerMeter) * 1000000000.0
 	
-	centerXMM := int64(centerX * mmPerPixel * arxobject.Millimeter)
-	centerYMM := int64(centerY * mmPerPixel * arxobject.Millimeter)
-	lengthMM := int64(length * mmPerPixel * arxobject.Millimeter)
-	thicknessMM := int64(wall.Thickness * mmPerPixel * arxobject.Millimeter)
-	heightMM := int64(wc.FloorHeight * 1000 * arxobject.Millimeter)
+	centerXNM := int64(centerX * nmPerPixel)
+	centerYNM := int64(centerY * nmPerPixel)
+	lengthNM := int64(length * nmPerPixel)
+	thicknessNM := int64(wall.Thickness * nmPerPixel)
+	heightNM := int64(wc.FloorHeight * 1000000000.0)
 	
 	// Create ArxObject
-	obj := &arxobject.ArxObject{
-		Type:       arxobject.StructuralWall,
-		Precision:  arxobject.PrecisionStandard, // 1 inch precision is fine for walls
-		Priority:   1,                            // Structural elements are high priority
-		ScaleLevel: wc.DefaultScale,
-		
-		// Position (in nanometers, but we're using mm precision)
-		X: centerXMM,
-		Y: centerYMM,
-		Z: 0, // Ground floor
-		
-		// Dimensions (in nanometers)
-		Length: lengthMM,
-		Width:  thicknessMM,  
-		Height: heightMM,
-		
-		// Rotation in millidegrees
-		RotationZ: int32(angle * 1000),
-	}
+	obj := arxobject.NewArxObject(string(arxobject.StructuralWall), "structural")
+	obj.X = centerXNM
+	obj.Y = centerYNM
+	obj.Z = 0 // Ground floor
+	obj.Width = thicknessNM
+	obj.Height = heightNM
+	obj.Depth = lengthNM
+	obj.ScaleMin = 0
+	obj.ScaleMax = int(wc.DefaultScale)
 	
-	// Add metadata if confidence is low or type is user-drawn
-	if wall.Confidence < 0.8 || wall.Type == "user" {
-		obj.MetadataPtr = &arxobject.ArxMetadata{
-			Properties: map[string]interface{}{
-				"confidence":    wall.Confidence,
-				"source":        wall.Type,
-				"original_x1":   wall.X1,
-				"original_y1":   wall.Y1,
-				"original_x2":   wall.X2,
-				"original_y2":   wall.Y2,
-			},
-		}
+	// Set confidence based on detection confidence
+	obj.Confidence = arxobject.ConfidenceScore{
+		Classification: float32(wall.Confidence),
+		Position:       float32(wall.Confidence * 0.9), // Position slightly less certain
+		Properties:     0.7, // Properties are estimated
+		Relationships:  0.5, // Relationships not yet determined
+	}
+	obj.Confidence.CalculateOverall()
+	
+	// Add metadata as JSON properties
+	metadata := map[string]interface{}{
+		"confidence":    wall.Confidence,
+		"source":        wall.Type,
+		"original_x1":   wall.X1,
+		"original_y1":   wall.Y1,
+		"original_x2":   wall.X2,
+		"original_y2":   wall.Y2,
+		"angle_degrees": angle,
+	}
+	if props, err := json.Marshal(metadata); err == nil {
+		obj.Properties = props
 	}
 	
 	return obj

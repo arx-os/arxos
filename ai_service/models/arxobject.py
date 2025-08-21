@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field, validator
+from .coordinate_system import Point3D, BoundingBox, Transform, Dimensions
 
 
 class ConfidenceScore(BaseModel):
@@ -143,16 +144,32 @@ class ValidationState(str, Enum):
 
 
 class ArxObject(BaseModel):
-    """Core ArxObject with confidence-aware intelligence"""
+    """Core ArxObject with confidence-aware intelligence and nanometer precision"""
     id: str
     type: ArxObjectType
+    
+    # Spatial properties with nanometer precision
+    position: Optional[Point3D] = None  # Position in world space
+    dimensions: Optional[Dimensions] = None  # Real-world dimensions
+    bounds: Optional[BoundingBox] = None  # Axis-aligned bounding box
+    transform: Optional[Transform] = None  # Rotation/scale transform
+    
+    # Legacy/compatibility fields
     data: Dict[str, Any] = {}
+    geometry: Optional[Dict[str, Any]] = None  # GeoJSON format
+    
+    # Rendering and visualization
     render_hints: Optional[Dict[str, Any]] = None
+    
+    # Intelligence and relationships
     confidence: ConfidenceScore
     relationships: List[Relationship] = []
     metadata: Metadata
-    geometry: Optional[Dict[str, Any]] = None  # GeoJSON format
     validation_state: ValidationState = ValidationState.PENDING
+    
+    # Hierarchy
+    parent_id: Optional[str] = None
+    children_ids: List[str] = []
     
     class Config:
         json_encoders = {

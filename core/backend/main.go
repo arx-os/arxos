@@ -68,7 +68,11 @@ func main() {
 	services.SetCacheService(cacheService)
 
 	// Initialize tile service
-	tileService := NewTileService(db.DB)
+	sqlDB, err := db.DB.DB()
+	if err != nil {
+		log.Fatal("Failed to get underlying SQL database:", err)
+	}
+	tileService := NewTileService(sqlDB)
 	log.Println("✅ Tile service initialized")
 
 	// Initialize WebSocket hub
@@ -95,9 +99,12 @@ func main() {
 	dataVendorAdminHandler := handlers.NewDataVendorAdminHandler(db.DB, loggingService, monitoringService)
 
 	// Initialize Validation Service and Handler
-	validationService := services.NewValidationService(db.DB)
-	arxEngine := arxobject.NewEngine(10000) // Initialize with capacity for 10000 objects
+	validationService := services.NewValidationService(sqlDB)
+	arxEngine := arxobject.NewEngine(sqlDB) // Initialize with database
 	validationHandler := handlers.NewValidationHandler(validationService, arxEngine)
+
+	// Initialize PDF Processor
+	pdfProcessor := services.NewPDFProcessor(arxEngine)
 
 	// Initialize PDF Upload handler
 	// TODO: Uncomment when module structure is fixed
@@ -116,7 +123,6 @@ func main() {
 		uploadHandler = nil
 	}
 	*/
-	_ = logger // Use logger to avoid unused variable error
 	// var uploadHandler interface{} = nil // Placeholder (removed to fix compilation)
 
 	// Set up router
@@ -152,12 +158,29 @@ func main() {
 		})
 	})
 
+	// Serve static files (arxos.html and assets)
+	// Serve arxos.html at root
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "../../arxos.html")
+	})
+	
+	// Also serve at /arxos.html
+	r.Get("/arxos.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "../../arxos.html")
+	})
+	
+	// Public upload endpoint for testing (no auth, outside /api)
+	r.Post("/upload/pdf", handlers.SimplePDFUpload)
+
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/register", handlers.Register)
 		r.Post("/login", handlers.Login)
 
 		// Public health check endpoint
 		r.Get("/health", handlers.HealthCheck)
+		
+		// Public PDF upload endpoint for testing (no auth required)
+		r.Post("/pdf/upload", handlers.SimplePDFUpload)
 
 		// Tile service endpoints (public for now, add auth later if needed)
 		r.Get("/tiles/{zoom}/{x}/{y}", func(w http.ResponseWriter, r *http.Request) {
@@ -290,9 +313,8 @@ func main() {
 			r.Get("/labels", handlers.ListLabels)
 			r.Get("/zones", handlers.ListZones)
 
-			// PDF Upload and Building endpoints
-			// Simple upload endpoint for testing
-			r.Post("/buildings/upload", handlers.SimplePDFUpload)
+			// PDF Upload endpoint
+			r.Post("/pdf/upload", handlers.PDFUploadHandler(pdfProcessor))
 			
 			// TODO: Enable full upload handler when module structure is fixed
 			/*

@@ -573,11 +573,11 @@ func (s *ValidationService) applyPatternToObject(
 	}
 	
 	// Apply confidence boost based on pattern confidence
-	boost := pattern.Confidence * 0.3 // 30% of pattern confidence
+	boost := float32(pattern.Confidence * 0.3) // 30% of pattern confidence
 	
 	// Boost different dimensions
-	obj.Confidence.Classification = min(obj.Confidence.Classification+boost, 0.90)
-	obj.Confidence.Properties = min(obj.Confidence.Properties+boost*0.8, 0.90)
+	obj.Confidence.Classification = minFloat32(obj.Confidence.Classification+boost, 0.90)
+	obj.Confidence.Properties = minFloat32(obj.Confidence.Properties+float32(boost*0.8), 0.90)
 	
 	// Recalculate overall
 	obj.Confidence.CalculateOverall()
@@ -800,7 +800,7 @@ func (s *ValidationService) findSimilarObjectsForPattern(obj *arxobject.ArxObjec
 	return similar, nil
 }
 
-func min(a, b float32) float32 {
+func minFloat32(a, b float32) float32 {
 	if a < b {
 		return a
 	}

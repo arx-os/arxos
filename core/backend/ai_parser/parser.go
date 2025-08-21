@@ -240,9 +240,8 @@ func (p *AIParser) ParsePDF(pdfPath string) (*ParseResult, error) {
 
 // convertPDFToImages converts PDF pages to images for processing
 func (p *AIParser) convertPDFToImages(pdfPath string) ([]image.Image, error) {
-	// In production, this would use a PDF library like pdfcpu or call poppler
-	// For now, returning a placeholder
-	return []image.Image{}, nil
+	// Call AI service for PDF processing
+	return nil, fmt.Errorf("PDF processing should use AI service at %s/api/v1/convert", p.aiServiceURL)
 }
 
 // combineDetections combines detections from different sources

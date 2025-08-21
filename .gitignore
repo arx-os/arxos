@@ -138,9 +138,32 @@ services/*/*.db
 # Generated files
 alafia_es_data.json
 
-# Archive folder (for reference only)
-# Uncomment if you don't want to track archived files
-# archive/
+# Uploaded PDFs and files
+uploads/
+temp_uploads/
+core/backend/uploads/
+*.pdf
+
+# Test files in wrong places
+test_*.go
+test_*.js
+test_*.py
+test_*.html
+
+# Binary executables
+arxos_minimal
+NO_DEMO_server
+
+# Archive folder (should not be in main branch)
+archive/
+
+# Backup files
+*_backup/
+*.bak
+
+# Node modules in Go backend (shouldn't exist)
+core/backend/node_modules/
+core/backend/package*.json
 
 # ============================================
 # Testing

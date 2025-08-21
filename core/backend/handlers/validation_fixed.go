@@ -58,7 +58,7 @@ func (h *ValidationHandlerFixed) GetPendingValidations(w http.ResponseWriter, r 
 	}
 	
 	// Get pending validations from service with error handling
-	limitStr := fmt.Sprintf("%d", limit)
+	limitStr = fmt.Sprintf("%d", limit)
 	tasks, err := h.validationService.GetPendingValidationsFixed(priority, objectType, limitStr)
 	if err != nil {
 		log.Printf("Error getting pending validations: %v", err)

@@ -8,7 +8,9 @@ import time
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import numpy as np
-import fitz  # PyMuPDF
+import pdfplumber  # Using pdfplumber for PDF processing
+HAS_PDFPLUMBER = True
+# Note: We're using pdfplumber exclusively to avoid PyMuPDF build issues on Mac
 from PIL import Image
 import cv2
 
@@ -17,9 +19,20 @@ from models.arxobject import (
     ValidationState, Metadata, Relationship, RelationshipType,
     ConversionResult, Uncertainty
 )
+from models.coordinate_system import (
+    CoordinateSystem, Point3D, BoundingBox, 
+    Dimensions, Transform, Units
+)
 from utils.config import settings
 from .confidence_calculator import ConfidenceCalculator
 from .pattern_learner import PatternLearner
+
+# Import multi-strategy processor if available
+try:
+    from .extraction_strategies import MultiStrategyProcessor
+    HAS_MULTI_STRATEGY = True
+except ImportError:
+    HAS_MULTI_STRATEGY = False
 
 
 class PDFProcessor:
@@ -32,6 +45,7 @@ class PDFProcessor:
         self.confidence_calculator = ConfidenceCalculator()
         self.pattern_learner = PatternLearner()
         self.page_cache = {}
+        self.coordinate_system: Optional[CoordinateSystem] = None
         
     async def process_pdf(
         self,
@@ -53,14 +67,78 @@ class PDFProcessor:
         start_time = time.time()
         
         # Open PDF
-        pdf_doc = fitz.open(stream=pdf_content, filetype="pdf")
+        if HAS_PDFPLUMBER:
+            # Use pdfplumber
+            import io
+            pdf_doc = pdfplumber.open(io.BytesIO(pdf_content))
+        else:
+            # Use PyMuPDF
+            pdf_doc = fitz.open(stream=pdf_content, filetype="pdf")
+        
+        # Initialize coordinate system and detect scale
+        self.coordinate_system = await self._initialize_coordinate_system(pdf_doc)
         
         # Extract objects from all pages
         all_objects = []
         uncertainties = []
         
-        for page_num in range(pdf_doc.page_count):
-            page = pdf_doc[page_num]
+        # Use multi-strategy processor if available for better accuracy
+        if HAS_MULTI_STRATEGY:
+            # Save PDF to temporary file for multi-strategy processing
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
+                tmp_file.write(pdf_content)
+                tmp_path = tmp_file.name
+            
+            try:
+                # Use multi-strategy processor
+                multi_processor = MultiStrategyProcessor(self.coordinate_system)
+                all_objects = multi_processor.process(tmp_path)
+                
+                # Clean up temp file
+                import os
+                os.unlink(tmp_path)
+                
+            except Exception as e:
+                print(f"Multi-strategy processing failed: {e}, falling back to basic extraction")
+                # Fall back to basic extraction
+                all_objects = await self._basic_extraction(pdf_doc, confidence_threshold, building_type)
+        else:
+            # Use basic extraction
+            all_objects = await self._basic_extraction(pdf_doc, confidence_threshold, building_type)
+        
+        pdf_doc.close()
+        
+        # Calculate overall confidence
+        overall_confidence = self._calculate_overall_confidence(all_objects)
+        
+        # Record processing time
+        processing_time = time.time() - start_time
+        
+        return ConversionResult(
+            arxobjects=all_objects,
+            overall_confidence=overall_confidence,
+            uncertainties=uncertainties,
+            validation_strategy=None,  # TODO: Implement validation strategy
+            processing_time=processing_time
+        )
+    
+    async def _basic_extraction(self, pdf_doc, confidence_threshold: float, building_type: Optional[str]) -> List[ArxObject]:
+        """Basic extraction method using existing approach"""
+        all_objects = []
+        uncertainties = []
+        
+        # Get page count based on library
+        if HAS_PDFPLUMBER:
+            page_count = len(pdf_doc.pages)
+        else:
+            page_count = pdf_doc.page_count
+            
+        for page_num in range(page_count):
+            if HAS_PDFPLUMBER:
+                page = pdf_doc.pages[page_num]
+            else:
+                page = pdf_doc[page_num]
             
             # Extract vector graphics
             vector_objects = await self._extract_vector_objects(page, page_num)
@@ -89,37 +167,29 @@ class PDFProcessor:
                 else:
                     uncertainties.append(
                         Uncertainty(
-                            object_type=obj.type,
-                            location={"x": obj.geometry.get("coordinates", [[0,0]])[0][0],
-                                     "y": obj.geometry.get("coordinates", [[0,0]])[0][1]},
+                            object_id=obj.id,
                             confidence=obj.confidence.overall,
-                            reason=self._get_uncertainty_reason(obj)
+                            reason=self._get_uncertainty_reason(obj),
+                            validation_priority=1.0 - obj.confidence.overall,
+                            suggested_validation="field_measurement",
+                            impact_score=0.5
                         )
                     )
         
-        pdf_doc.close()
-        
-        # Calculate overall confidence
-        overall_confidence = self._calculate_overall_confidence(all_objects)
-        
-        # Record processing time
-        processing_time = time.time() - start_time
-        
-        return ConversionResult(
-            arxobjects=all_objects,
-            overall_confidence=overall_confidence,
-            uncertainties=uncertainties,
-            processing_time=processing_time
-        )
+        return all_objects
     
     async def _extract_vector_objects(
-        self, page: fitz.Page, page_num: int
+        self, page: Any, page_num: int
     ) -> List[ArxObject]:
         """Extract objects from vector graphics"""
         objects = []
         
-        # Get page drawings
-        drawings = page.get_drawings()
+        # Get page drawings - pdfplumber uses different API
+        # Extract lines and rectangles from the page
+        if hasattr(page, 'lines'):
+            drawings = page.lines + page.rects if hasattr(page, 'rects') else page.lines
+        else:
+            drawings = []
         
         for drawing in drawings:
             # Classify drawing type
@@ -135,13 +205,17 @@ class PDFProcessor:
         return objects
     
     async def _extract_text_objects(
-        self, page: fitz.Page, page_num: int
+        self, page: Any, page_num: int
     ) -> List[ArxObject]:
         """Extract objects from text annotations"""
         objects = []
         
-        # Get text blocks
-        text_blocks = page.get_text("dict")
+        # Get text blocks using pdfplumber
+        text_blocks = {"blocks": []}
+        if hasattr(page, 'extract_text'):
+            text = page.extract_text()
+            if text:
+                text_blocks["blocks"] = [{"type": 0, "lines": [{"spans": [{"text": text}]}]}]
         
         for block in text_blocks.get("blocks", []):
             if block.get("type") == 0:  # Text block
@@ -157,15 +231,18 @@ class PDFProcessor:
         return objects
     
     async def _extract_raster_objects(
-        self, page: fitz.Page, page_num: int
+        self, page: Any, page_num: int
     ) -> List[ArxObject]:
         """Extract objects from raster images using CV"""
         objects = []
         
-        # Get page as image
-        mat = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x scale
-        img_data = mat.pil_tobytes(format="PNG")
-        img = Image.open(io.BytesIO(img_data))
+        # Get page as image using pdfplumber
+        # Convert page to PIL image
+        img = page.to_image(resolution=150).original
+        
+        # Ensure it's in the right format
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
         
         # Convert to OpenCV format
         cv_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
@@ -201,8 +278,10 @@ class PDFProcessor:
             return ArxObjectType.WALL, 0.75
         elif has_rect:
             # Could be room, column, or equipment
-            rect = drawing.get("rect", fitz.Rect())
-            aspect_ratio = rect.width / rect.height if rect.height > 0 else 1
+            rect = drawing if isinstance(drawing, dict) else {}
+            width = rect.get('width', rect.get('x1', 0) - rect.get('x0', 0))
+            height = rect.get('height', rect.get('y1', 0) - rect.get('y0', 0))
+            aspect_ratio = width / height if height > 0 else 1
             
             if 0.8 < aspect_ratio < 1.2:
                 # Square-ish - likely column
@@ -222,7 +301,8 @@ class PDFProcessor:
     ) -> ArxObject:
         """Create ArxObject from drawing element"""
         
-        rect = drawing.get("rect", fitz.Rect())
+        # Get bounding rect from drawing
+        rect = drawing if isinstance(drawing, dict) else {}
         
         # Calculate confidence scores
         confidence = self.confidence_calculator.calculate_drawing_confidence(
@@ -233,7 +313,9 @@ class PDFProcessor:
         geometry = self._extract_geometry(drawing)
         
         # Create object ID
-        obj_id = f"pdf_p{page_num}_{obj_type.value}_{int(rect.x0)}_{int(rect.y0)}"
+        x0 = rect.get('x0', rect.get('x', 0))
+        y0 = rect.get('y0', rect.get('y', 0))
+        obj_id = f"pdf_p{page_num}_{obj_type.value}_{int(x0)}_{int(y0)}"
         
         return ArxObject(
             id=obj_id,
@@ -276,9 +358,9 @@ class PDFProcessor:
         elif "hvac" in text or "mechanical" in text:
             return ArxObjectType.HVAC_UNIT, {"label": text}
         elif "stair" in text:
-            return ArxObjectType.STAIR, {"label": text}
+            return ArxObjectType.STAIRWELL, {"label": text}
         elif "elevator" in text or "lift" in text:
-            return ArxObjectType.ELEVATOR, {"label": text}
+            return ArxObjectType.ELEVATOR_SHAFT, {"label": text}
         
         return None, {}
     
@@ -302,6 +384,9 @@ class PDFProcessor:
             for line in lines:
                 x1, y1, x2, y2 = line[0]
                 
+                # Convert numpy types to Python native types
+                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                
                 # Create wall object
                 wall = self._create_wall_from_line(
                     x1, y1, x2, y2, page_num
@@ -320,16 +405,89 @@ class PDFProcessor:
         
         return symbols
     
+    async def _initialize_coordinate_system(self, pdf_doc) -> CoordinateSystem:
+        """
+        Initialize coordinate system and detect scale from PDF
+        """
+        # Get first page dimensions
+        if HAS_PDFPLUMBER:
+            page = pdf_doc.pages[0]
+            width = float(page.width)
+            height = float(page.height)
+            # Extract text to find scale
+            text = page.extract_text() or ""
+        else:
+            page = pdf_doc[0]
+            rect = page.rect
+            width = rect.width
+            height = rect.height
+            text = page.get_text()
+        
+        # Initialize coordinate system with page dimensions
+        coord_sys = CoordinateSystem(
+            pdf_width_pixels=int(width),
+            pdf_height_pixels=int(height),
+            pdf_dpi=72.0,  # Standard PDF DPI
+            scale_numerator=1.0,
+            scale_denominator=48.0,  # Default 1/4" = 1'
+            units=Units.IMPERIAL
+        )
+        
+        # Try to extract scale from text
+        if text:
+            coord_sys.extract_scale_from_text(text)
+        
+        return coord_sys
+    
     def _create_wall_from_line(
         self, x1: int, y1: int, x2: int, y2: int, page_num: int
     ) -> ArxObject:
-        """Create wall ArxObject from detected line"""
+        """Create wall ArxObject from detected line with proper world coordinates"""
         
-        # Calculate length
-        length = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+        # Convert PDF coordinates to world space
+        world_p1 = self.coordinate_system.pdf_to_world_point(x1, y1)
+        world_p2 = self.coordinate_system.pdf_to_world_point(x2, y2)
         
-        # Calculate angle
-        angle = np.degrees(np.arctan2(y2-y1, x2-x1))
+        # Calculate real-world dimensions
+        width_nm = abs(world_p2.x - world_p1.x)
+        height_nm = abs(world_p2.y - world_p1.y)
+        length_nm = int(np.sqrt(float(width_nm)**2 + float(height_nm)**2))
+        
+        # Standard wall thickness (6 inches in nanometers)
+        thickness_nm = 152_400_000  # 6 inches
+        
+        # Create bounding box
+        min_x = min(world_p1.x, world_p2.x)
+        min_y = min(world_p1.y, world_p2.y)
+        max_x = max(world_p1.x, world_p2.x)
+        max_y = max(world_p1.y, world_p2.y)
+        
+        # Add thickness to bounding box based on orientation
+        if width_nm > height_nm:  # Horizontal wall
+            bounds = BoundingBox(
+                min_point=Point3D(x=min_x, y=min_y - thickness_nm//2, z=0),
+                max_point=Point3D(x=max_x, y=max_y + thickness_nm//2, z=0)
+            )
+            dimensions = Dimensions(width=length_nm, height=thickness_nm, depth=0)
+        else:  # Vertical wall
+            bounds = BoundingBox(
+                min_point=Point3D(x=min_x - thickness_nm//2, y=min_y, z=0),
+                max_point=Point3D(x=max_x + thickness_nm//2, y=max_y, z=0)
+            )
+            dimensions = Dimensions(width=thickness_nm, height=length_nm, depth=0)
+        
+        # Calculate center position
+        position = Point3D(
+            x=(world_p1.x + world_p2.x) // 2,
+            y=(world_p1.y + world_p2.y) // 2,
+            z=0
+        )
+        
+        # Calculate angle for transform
+        angle = float(np.degrees(np.arctan2(
+            world_p2.y - world_p1.y, 
+            world_p2.x - world_p1.x
+        )))
         
         # Create confidence score (lower for raster detection)
         confidence = ConfidenceScore(
@@ -339,22 +497,47 @@ class PDFProcessor:
             relationships=0.40,   # No relationships yet
             overall=0.0
         )
-        confidence.overall = confidence.calculate_weighted_average()
+        # Calculate weighted average
+        confidence.overall = (
+            confidence.classification * 0.4 +
+            confidence.position * 0.3 +
+            confidence.properties * 0.2 +
+            confidence.relationships * 0.1
+        )
         
         return ArxObject(
-            id=f"pdf_p{page_num}_wall_{x1}_{y1}",
+            id=f"pdf_p{page_num}_wall_{int(position.x/1_000_000)}_{int(position.y/1_000_000)}",
             type=ArxObjectType.WALL,
+            
+            # Spatial properties with nanometer precision
+            position=position,
+            dimensions=dimensions,
+            bounds=bounds,
+            transform=Transform.rotation_z(np.radians(angle)),
+            
+            # Legacy data for compatibility
             data={
                 "source": "raster",
                 "page": page_num,
-                "length_pixels": length,
-                "angle": angle
+                "angle_degrees": angle,
+                "thickness_inches": 6,
+                # Add millimeter values for frontend
+                "x_mm": position.x / 1_000_000,
+                "y_mm": position.y / 1_000_000,
+                "length_mm": length_nm / 1_000_000,
+                "thickness_mm": thickness_nm / 1_000_000
             },
-            confidence=confidence,
+            
+            # GeoJSON for compatibility
             geometry={
                 "type": "LineString",
-                "coordinates": [[x1, y1], [x2, y2]]
+                "coordinates": [
+                    [world_p1.x / 1_000_000, world_p1.y / 1_000_000],
+                    [world_p2.x / 1_000_000, world_p2.y / 1_000_000]
+                ]
             },
+            
+            confidence=confidence,
             relationships=[],
             metadata=Metadata(
                 source="pdf_raster",
@@ -443,7 +626,13 @@ class PDFProcessor:
         )
         
         # Recalculate overall
-        primary.confidence.overall = primary.confidence.calculate_weighted_average()
+        # Calculate weighted average
+        primary.confidence.overall = (
+            primary.confidence.classification * 0.4 +
+            primary.confidence.position * 0.3 +
+            primary.confidence.properties * 0.2 +
+            primary.confidence.relationships * 0.1
+        )
         
         # Merge properties
         for dup in duplicates:
@@ -455,7 +644,7 @@ class PDFProcessor:
         """Extract geometry from drawing element"""
         
         items = drawing.get("items", [])
-        rect = drawing.get("rect", fitz.Rect())
+        rect = drawing if isinstance(drawing, dict) else {}
         
         # Build coordinate list
         coords = []
@@ -487,9 +676,11 @@ class PDFProcessor:
             }
         else:
             # Point
+            x0 = rect.get('x0', rect.get('x', 0))
+            y0 = rect.get('y0', rect.get('y', 0))
             return {
                 "type": "Point",
-                "coordinates": [rect.x0, rect.y0]
+                "coordinates": [x0, y0]
             }
     
     def _calculate_overall_confidence(

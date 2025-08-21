@@ -251,3 +251,10 @@ func (t *TileService) latLonToTile(lat, lon float64, zoom int) (int, int) {
 	y := int((1.0 - math.Log(math.Tan(lat*math.Pi/180.0)+1.0/math.Cos(lat*math.Pi/180.0))/math.Pi) / 2.0 * n)
 	return x, y
 }
+
+// ClearCache clears all cached tiles (for use after data updates)
+func (t *TileService) ClearCache() {
+	t.mu.Lock()
+	t.cache = make(map[string]*TileCache)
+	t.mu.Unlock()
+}

@@ -8,7 +8,7 @@ pydantic==2.5.0
 python-multipart==0.0.6
 
 # PDF Processing
-PyMuPDF==1.23.8
+# PyMuPDF==1.23.8  # Commented out - complex build on Mac, using pdfplumber instead
 pdf2image==1.16.3
 pdfplumber==0.10.3
 

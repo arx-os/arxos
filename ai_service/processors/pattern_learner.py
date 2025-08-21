@@ -138,7 +138,13 @@ class PatternLearner:
                     )
                     
                     # Recalculate overall
-                    obj.confidence.overall = obj.confidence.calculate_weighted_average()
+                    # Calculate weighted average
+                    obj.confidence.overall = (
+                        obj.confidence.classification * 0.4 +
+                        obj.confidence.position * 0.3 +
+                        obj.confidence.properties * 0.2 +
+                        obj.confidence.relationships * 0.1
+                    )
                     
                     # Mark as pattern-enhanced
                     if not obj.data:

@@ -35,8 +35,8 @@ class ConfidenceCalculator:
             ArxObjectType.ELECTRICAL_PANEL: 0.65,  # Requires context
             ArxObjectType.HVAC_UNIT: 0.60,      # Variable representation
             ArxObjectType.PLUMBING_FIXTURE: 0.65,  # Standard symbols
-            ArxObjectType.STAIR: 0.75,          # Distinctive pattern
-            ArxObjectType.ELEVATOR: 0.80        # Usually labeled
+            ArxObjectType.STAIRWELL: 0.75,          # Distinctive pattern
+            ArxObjectType.ELEVATOR_SHAFT: 0.80        # Usually labeled
         }
     
     def calculate_drawing_confidence(

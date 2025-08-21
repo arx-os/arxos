@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	
 	"github.com/gorilla/websocket"
@@ -29,16 +28,14 @@ func NewBIMHandler() *BIMHandler {
 
 // GetFloorSVG returns SVG representation of a floor
 func (h *BIMHandler) GetFloorSVG(w http.ResponseWriter, r *http.Request) {
-	// Placeholder implementation
-	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte("<svg><!-- Floor SVG placeholder --></svg>"))
+	// Implementation pending - requires ArxObject query and SVG generation
+	http.Error(w, "Floor SVG generation not yet implemented", http.StatusNotImplemented)
 }
 
 // CreateWall handles wall creation
 func (h *BIMHandler) CreateWall(w http.ResponseWriter, r *http.Request) {
-	// Placeholder implementation
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+	// Implementation pending - requires ArxObject creation logic
+	http.Error(w, "Wall creation not yet implemented", http.StatusNotImplemented)
 }
 
 // WebSocketHandler handles WebSocket connections

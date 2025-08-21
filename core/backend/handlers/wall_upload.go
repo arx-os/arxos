@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 	
-	// "arxos/arxobject"
-	// "arxos/converters"
+	"arxos/arxobject"
+	"arxos/converters"
 )
 
 // WallUploadRequest represents the incoming wall data from the frontend
@@ -53,11 +53,6 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 	
 	// Parse request
 	var req WallUploadRequest
-	if err := json.NewDecoder(r.Body).Err; err != nil {
-		sendWallError(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendWallError(w, "Failed to parse request: "+err.Error(), http.StatusBadRequest)
 		return

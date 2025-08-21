@@ -5,7 +5,7 @@ Determines extraction difficulty and expected accuracy
 
 import io
 from typing import Dict, Any, List, Optional
-import fitz  # PyMuPDF
+import pdfplumber
 import numpy as np
 from PIL import Image
 import cv2
@@ -41,7 +41,8 @@ class QualityAssessor:
             Quality assessment with metrics and recommendations
         """
         
-        pdf_doc = fitz.open(stream=pdf_content, filetype="pdf")
+        # Open PDF with pdfplumber
+        pdf_doc = pdfplumber.open(io.BytesIO(pdf_content))
         
         # Assess vector content
         vector_score = self._assess_vector_content(pdf_doc)
@@ -84,7 +85,7 @@ class QualityAssessor:
             )
         }
     
-    def _assess_vector_content(self, pdf_doc: fitz.Document) -> float:
+    def _assess_vector_content(self, pdf_doc: Any) -> float:
         """Assess quality and quantity of vector graphics"""
         
         total_drawings = 0
@@ -129,7 +130,7 @@ class QualityAssessor:
         
         return avg_quality * (0.7 + 0.3 * quantity_factor)
     
-    def _assess_text_quality(self, pdf_doc: fitz.Document) -> float:
+    def _assess_text_quality(self, pdf_doc: Any) -> float:
         """Assess quality of text content"""
         
         text_scores = []
@@ -164,14 +165,15 @@ class QualityAssessor:
         
         return np.mean(text_scores) if text_scores else 0.0
     
-    async def _assess_image_quality(self, pdf_doc: fitz.Document) -> float:
+    async def _assess_image_quality(self, pdf_doc: Any) -> float:
         """Assess quality of raster images"""
         
         image_scores = []
         
         for page_num, page in enumerate(pdf_doc):
             # Get page as image
-            mat = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            # Convert page to image with pdfplumber
+            img = page.to_image(resolution=150).original
             img_data = mat.pil_tobytes(format="PNG")
             img = Image.open(io.BytesIO(img_data))
             
@@ -200,7 +202,7 @@ class QualityAssessor:
         
         return np.mean(image_scores) if image_scores else 0.0
     
-    def _detect_scale_information(self, pdf_doc: fitz.Document) -> bool:
+    def _detect_scale_information(self, pdf_doc: Any) -> bool:
         """Detect if PDF contains scale information"""
         
         scale_keywords = [
@@ -227,7 +229,7 @@ class QualityAssessor:
         
         return False
     
-    def _assess_complexity(self, pdf_doc: fitz.Document) -> str:
+    def _assess_complexity(self, pdf_doc: Any) -> str:
         """Assess drawing complexity"""
         
         total_elements = 0

@@ -1,261 +1,215 @@
-# Arxos System Architecture Overview
+# ARXOS Architecture Overview
 
-## 🎯 **Executive Summary**
+## 🎯 **System Vision**
 
-Arxos is a comprehensive infrastructure platform that treats each building as a version-controlled repository containing SVG-BIM files, ASCII-BIM representations, structured object metadata, and audit logs. The system integrates mobile AR, CLI tools, and a logic engine to simulate infrastructure behavior.
+ARXOS is **"Google Maps for Buildings"** - a building information model (BIM) system that enables infinite zoom from campus-level down to individual circuit traces. The system transforms various building data formats (PDF, IFC, DWG, HEIC, LiDAR) into intelligent, self-aware building components called **ArxObjects**.
 
-## 🏗️ **System Architecture**
-
-### **High-Level Architecture**
+## 🏗️ **High-Level Architecture**
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Arxos Platform                          │
-├─────────────────────────────────────────────────────────────────┤
-│  Frontend Applications  │  Core Services  │  Infrastructure   │
-│  ┌─────────────────┐   │  ┌─────────────┐ │  ┌─────────────┐  │
-│  │   ArxIDE        │   │  │ SVGX Engine │ │  │  Database   │  │
-│  │   Web App       │   │  │ AI Services │ │  │  Monitoring │  │
-│  │   Mobile Apps   │   │  │ IoT Platform│ │  │  Deployment │  │
-│  │   CLI Tools     │   │  │ CMMS Int.   │ │  │  Security   │  │
-│  └─────────────────┘   │  └─────────────┘ │  └─────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    ARXOS System                            │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend Layer (Vanilla JS + Three.js + 8th Wall)        │
+│  ├── HTML5 + CSS3 + Vanilla JavaScript                    │
+│  ├── HTMX for dynamic updates                             │
+│  ├── Three.js for 3D visualization                        │
+│  └── 8th Wall for web-based AR                            │
+├─────────────────────────────────────────────────────────────┤
+│  Backend Layer (Go + Chi Router)                          │
+│  ├── REST API endpoints                                   │
+│  ├── WebSocket server for real-time updates               │
+│  ├── JWT authentication                                   │
+│  ├── Database operations (PostgreSQL + Redis)             │
+│  └── ArxObject management                                 │
+├─────────────────────────────────────────────────────────────┤
+│  AI Service Layer (Python)                                │
+│  ├── PDF/IFC/DWG/HEIC/LiDAR processing                    │
+│  ├── Symbol recognition and classification                 │
+│  ├── Coordinate system transformation                      │
+│  └── ArxObject generation                                 │
+├─────────────────────────────────────────────────────────────┤
+│  Data Layer                                               │
+│  ├── PostgreSQL + PostGIS (spatial data)                  │
+│  ├── Redis (sessions + cache)                             │
+│  └── SQLite (local/offline storage)                       │
+└─────────────────────────────────────────────────────────────┘
 ```
-
-### **Core Components**
-
-#### **1. Frontend Applications**
-- **ArxIDE**: Professional desktop CAD IDE for building information modeling
-- **Web Application**: HTMX-based web interface for viewing and markup
-- **Mobile Applications**: iOS and Android apps with AR capabilities
-- **CLI Tools**: Command-line interface for automation and scripting
-
-#### **2. Core Services**
-- **SVGX Engine**: Core SVG/BIM processing engine with CAD capabilities
-- **AI Services**: Machine learning and natural language processing
-- **IoT Platform**: Building automation and IoT device management
-- **CMMS Integration**: Computerized maintenance management system
-- **Data Vendor API**: Third-party data integrations
-
-#### **3. Infrastructure**
-- **Database**: PostgreSQL with PostGIS for spatial data
-- **API Gateway**: RESTful API management and routing
-- **Monitoring**: Real-time monitoring and observability
-- **Security**: Enterprise-grade security and compliance
 
 ## 🔧 **Technology Stack**
 
-### **Frontend Technologies**
-- **Desktop**: Electron + React + TypeScript
-- **Web**: HTMX + Python (FastAPI)
-- **Mobile**: React Native / Native iOS/Android
-- **CLI**: Python + Go
+### **Backend (Go)**
+- **Language**: Go 1.21+
+- **Router**: Chi (github.com/go-chi/chi/v5)
+- **Database**: PostgreSQL 13+ with PostGIS extension
+- **Cache**: Redis 6+
+- **ORM**: GORM for database operations
+- **Authentication**: JWT with golang.org/x/crypto
 
-### **Backend Technologies**
-- **Core Services**: Python (FastAPI) + Go (Gin)
-- **Database**: PostgreSQL + Redis
-- **Message Queue**: Redis / RabbitMQ
-- **Search**: Elasticsearch
+### **Frontend (Vanilla JavaScript)**
+- **Framework**: No frameworks - pure vanilla JS
+- **3D Graphics**: Three.js for 3D visualization
+- **AR Framework**: 8th Wall for web-based AR
+- **Dynamic Updates**: HTMX for server-side rendering
+- **Styling**: Pure CSS3, no preprocessors
+- **Graphics**: SVG for vector graphics, Canvas API for 2D
 
-### **Infrastructure**
-- **Containerization**: Docker + Kubernetes
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Prometheus + Grafana
-- **Security**: JWT + OAuth 2.0 + MFA
+### **AI Service (Python)**
+- **Language**: Python 3.9+
+- **AI Integration**: OpenAI API
+- **Image Processing**: OpenCV, PIL
+- **PDF Processing**: PyPDF2, pdf2image
+- **OCR**: Tesseract integration
+- **Communication**: REST API with Go backend
 
-## 📊 **Data Architecture**
+## 🏛️ **Core Components**
 
-### **Building Information Model**
+### **1. ArxObject Engine**
+The heart of ARXOS - intelligent, self-aware building components that:
+- Understand their context and relationships
+- Maintain confidence scores for data quality
+- Support fractal scaling (10^7 to 10^-4 scale levels)
+- Enable real-time collaboration and validation
+
+### **2. PDF Ingestion Pipeline**
+AI-powered conversion of building plans:
+- Symbol recognition and classification
+- Coordinate system transformation
+- ArxObject generation with confidence scoring
+- Real-time processing feedback
+
+### **3. 3D/AR Visualization**
+Interactive building exploration:
+- Three.js-based 3D rendering
+- 8th Wall AR integration
+- Lazy loading for performance
+- Multi-scale navigation
+
+### **4. Real-time Collaboration**
+Live building data updates:
+- WebSocket connections
+- Real-time ArxObject updates
+- Field validation integration
+- Multi-user collaboration
+
+## 📊 **Data Flow**
+
+### **PDF Ingestion Flow**
 ```
-Building
-├── Floors
-│   ├── Rooms
-│   │   ├── Equipment
-│   │   ├── Systems
-│   │   └── Assets
-│   └── Common Areas
-├── Systems
-│   ├── Electrical
-│   ├── HVAC
-│   ├── Plumbing
-│   ├── Security
-│   └── AV
-└── Metadata
-    ├── Specifications
-    ├── Maintenance History
-    └── Performance Data
-```
-
-### **Data Flow**
-1. **Input**: SVG files, building plans, sensor data
-2. **Processing**: SVGX Engine converts to structured data
-3. **Storage**: PostgreSQL with spatial extensions
-4. **Analysis**: AI services provide insights
-5. **Output**: Reports, visualizations, API responses
-
-## 🔄 **Integration Patterns**
-
-### **API-First Architecture**
-- All functionality exposed through RESTful APIs
-- GraphQL for complex queries
-- WebSocket for real-time updates
-- Standardized error handling and responses
-
-### **Event-Driven Architecture**
-- Asynchronous processing for heavy operations
-- Event sourcing for audit trails
-- Message queues for reliability
-- Real-time notifications and updates
-
-### **Microservices Pattern**
-- Independent service deployment
-- Service-specific databases where appropriate
-- API gateway for routing and security
-- Service discovery and health checks
-
-## 🛡️ **Security Architecture**
-
-### **Authentication & Authorization**
-- **Multi-Factor Authentication (MFA)**: Required for all user accounts
-- **Role-Based Access Control (RBAC)**: Granular permissions
-- **Single Sign-On (SSO)**: Enterprise integration
-- **API Key Management**: For service-to-service communication
-
-### **Data Protection**
-- **Encryption at Rest**: AES-256 for sensitive data
-- **Encryption in Transit**: TLS 1.3 for all communications
-- **Key Management**: Centralized key management system
-- **Data Classification**: Automatic classification and handling
-
-### **Compliance**
-- **GDPR**: Data privacy and user rights
-- **SOC 2 Type II**: Security controls and monitoring
-- **ISO 27001**: Information security management
-- **Industry Standards**: Building codes and regulations
-
-## 📈 **Scalability Architecture**
-
-### **Horizontal Scaling**
-- **Load Balancing**: Multiple application instances
-- **Database Sharding**: Geographic and functional distribution
-- **CDN**: Global content delivery
-- **Caching**: Multi-layer caching strategy
-
-### **Performance Optimization**
-- **Database Optimization**: Indexing and query optimization
-- **Caching Strategy**: Redis for session and data caching
-- **CDN**: Static asset delivery
-- **Compression**: Data and response compression
-
-### **Monitoring & Observability**
-- **Application Monitoring**: Performance metrics and error tracking
-- **Infrastructure Monitoring**: Resource utilization and health
-- **Business Metrics**: User activity and system usage
-- **Alerting**: Automated alerting and escalation
-
-## 🔧 **Development Architecture**
-
-### **Development Environment**
-- **Local Development**: Docker Compose for all services
-- **Testing**: Comprehensive test suite with CI/CD
-- **Code Quality**: Automated linting and formatting
-- **Documentation**: Comprehensive API and code documentation
-
-### **Deployment Strategy**
-- **Blue-Green Deployment**: Zero-downtime deployments
-- **Canary Releases**: Gradual feature rollouts
-- **Rollback Strategy**: Quick rollback capabilities
-- **Environment Management**: Dev, staging, production
-
-## 🎯 **Component Interactions**
-
-### **SVGX Engine Integration**
-```
-Frontend → API Gateway → SVGX Engine → Database
-                ↓
-            AI Services
-                ↓
-            IoT Platform
+PDF Upload → AI Service → Symbol Recognition → Coordinate Transform → ArxObject Creation → Database Storage → Frontend Update
 ```
 
-### **Real-time Collaboration**
+### **Real-time Updates**
 ```
-User A → WebSocket → Collaboration Service → User B
-                ↓
-            Conflict Resolution
-                ↓
-            Version Control
+Field Changes → AR App → Backend API → Database Update → WebSocket Broadcast → Frontend Update → 3D/AR Refresh
 ```
 
-### **Data Processing Pipeline**
+### **User Interaction**
 ```
-Input Data → Validation → Processing → Storage → Analysis → Output
-                ↓
-            Error Handling
-                ↓
-            Monitoring
+User Action → Frontend → Backend API → ArxObject Engine → Database → Response → Frontend Update
 ```
 
-## 📋 **Architecture Decisions**
+## 🎯 **Key Design Principles**
 
-### **Technology Choices**
-- **Python**: Rapid development and AI/ML capabilities
-- **Go**: High-performance backend services
-- **PostgreSQL**: ACID compliance and spatial data support
-- **Redis**: Fast caching and session management
-- **Docker**: Consistent deployment across environments
+### **1. Simplicity First**
+- **Single binary deployment** for Go backend
+- **No containerization complexity** (no Kubernetes, Docker Compose)
+- **Minimal dependencies** - prefer standard library
+- **Direct deployment** with minimal moving parts
 
-### **Design Patterns**
-- **Clean Architecture**: Separation of concerns
-- **Domain-Driven Design**: Business logic organization
-- **Event Sourcing**: Audit trails and data history
-- **CQRS**: Command and query responsibility separation
+### **2. Performance Focus**
+- **Lazy loading** for large building models
+- **Spatial indexing** with PostGIS
+- **Redis caching** for hot data
+- **WebSocket optimization** for real-time updates
 
-### **Security Patterns**
-- **Defense in Depth**: Multiple security layers
-- **Principle of Least Privilege**: Minimal access requirements
-- **Zero Trust**: Continuous verification
-- **Secure by Default**: Security-first design
+### **3. Scalability Strategy**
+- **Horizontal scaling** via multiple Go instances
+- **Database read replicas** for heavy queries
+- **CDN integration** for static assets
+- **Load balancing** for high availability
 
-## 🚀 **Future Architecture**
+### **4. Security & Compliance**
+- **JWT authentication** with dual account types
+- **Environment-based configuration** (no hardcoded secrets)
+- **CORS configuration** for API access
+- **Secure WebSocket connections**
 
-### **Planned Enhancements**
-- **Advanced AI Integration**: Machine learning for building optimization
-- **IoT Expansion**: Comprehensive device management
-- **Mobile AR**: Augmented reality for field work
-- **Blockchain Integration**: Secure data verification
+## 🗺️ **Fractal Scaling System**
 
-### **Scalability Improvements**
-- **Microservices Migration**: Gradual service decomposition
-- **Cloud-Native**: Kubernetes orchestration
-- **Global Distribution**: Multi-region deployment
-- **Edge Computing**: Local processing capabilities
+ARXOS supports 10 levels of zoom, from continental infrastructure to nanometer precision:
+
+```
+Scale Level    Range           Example Objects
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10^7          GLOBAL          Power grids, pipelines
+10^6          REGIONAL        State infrastructure  
+10^5          MUNICIPAL       City utilities
+10^4          CAMPUS          Multi-building sites
+10^3          BUILDING        Individual structures
+10^2          FLOOR           Floor plates
+10^1          ROOM            Individual spaces
+10^0          COMPONENT       Equipment, fixtures
+10^-3         CIRCUIT         PCB boards
+10^-4         TRACE           Copper paths
+```
+
+## 🔄 **System Integration Points**
+
+### **External Services**
+- **OpenAI API** - AI-powered symbol recognition
+- **8th Wall** - AR framework integration
+- **CMMS Systems** - Maintenance management integration
+- **Email Services** - Notification delivery
+
+### **Data Formats**
+- **Input**: PDF, IFC, DWG, HEIC, LiDAR point clouds
+- **Output**: ArxObjects, 3D models, AR overlays, reports
+- **Exchange**: JSON APIs, WebSocket events, file exports
+
+## 🚀 **Deployment Architecture**
+
+### **Production Setup**
+```
+┌─────────────────┐
+│   Web Client    │
+│  (Browser/AR)   │
+└────────┬────────┘
+         │ HTTPS
+┌────────▼────────┐
+│   Go Backend    │
+│ (Single Binary) │
+└────┬──────┬─────┘
+     │      │
+┌────▼──┐ ┌▼──────┐
+│ Redis │ │ PostgreSQL │
+└───────┘ └────────┘
+```
+
+### **Development Setup**
+- **Local Go binary** with hot reload
+- **Local PostgreSQL + PostGIS**
+- **Local Redis instance**
+- **Python AI service** with auto-restart
+- **Frontend hot reload** for rapid development
+
+## 📈 **Performance Characteristics**
+
+### **Target Metrics**
+- **PDF Processing**: < 30 seconds for typical floor plans
+- **3D Rendering**: 60 FPS with 1000+ ArxObjects
+- **API Response**: < 100ms for 95% of requests
+- **Real-time Updates**: < 50ms latency for WebSocket events
+
+### **Optimization Strategies**
+- **Spatial indexing** for building queries
+- **Lazy loading** for large models
+- **Connection pooling** for database access
+- **Asset compression** for frontend delivery
 
 ---
 
-## 📊 **Architecture Status**
-
-### **✅ Implemented**
-- Core SVGX Engine architecture
-- Basic API gateway and routing
-- Database schema and migrations
-- Authentication and authorization
-- Basic monitoring and logging
-
-### **🔄 In Progress**
-- Frontend applications architecture
-- Infrastructure and DevOps architecture
-- Core services architecture
-- Real-time collaboration system
-
-### **📋 Planned**
-- Advanced AI services architecture
-- IoT platform architecture
-- Mobile applications architecture
-- Advanced security features
-
----
-
-**Last Updated**: December 2024
-**Version**: 1.0.0
-**Status**: Active Development
+**Next Steps**: 
+- **Understand ArxObjects**: Read [ArxObject System](arxobjects.md)
+- **Explore Components**: See [System Components](components.md)
+- **Start Developing**: Follow [Development Setup](../development/setup.md)

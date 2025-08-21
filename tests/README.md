@@ -1,48 +1,46 @@
-# Arxos Test Suite
+# Test Suite
 
-This directory contains test files and utilities for the Arxos system.
+Comprehensive testing framework for the ARXOS platform.
 
-## Test Files
+## Purpose
 
-### HTML Test Pages
-- `test_pdf_simple.html` - Simple PDF processing test
-- `test_pdf_batch.html` - Batch PDF processing test
+This directory contains integration tests, load tests, and test utilities for validating ARXOS functionality across all components.
 
-### Test Server
-- `test_server.go` - Simple Go HTTP server for testing
-  - Serves static files
-  - Provides health check endpoint
-  - Lists available demos
+## Structure
 
-### Shell Scripts
-- `test_integration.sh` - Integration test runner
-- `test_local_server.sh` - Local server test script
+```
+tests/
+├── load/                 # Load testing and performance tests
+├── test_integration.sh   # Integration test runner
+├── test_local_server.sh  # Local server test script
+└── test_server.go        # Test HTTP server
+```
+
+## Test Types
+
+- **Integration Tests**: End-to-end system validation
+- **Load Tests**: Performance and scalability testing
+- **Local Tests**: Development environment validation
 
 ## Running Tests
 
-### Start Test Server
 ```bash
-go run test_server.go
-# Server runs on http://localhost:8080
-```
-
-### Run Integration Tests
-```bash
+# Run integration tests
 ./test_integration.sh
-```
 
-### Run Local Server Tests
-```bash
+# Run local server tests
 ./test_local_server.sh
+
+# Start test server
+go run test_server.go
 ```
 
-## Test Coverage
+## Documentation
 
-The test suite covers:
-- PDF wall extraction accuracy
-- Batch processing capabilities
-- Server endpoints
-- File upload functionality
-- BIM conversion pipeline
+For testing details, see [Development Guide](../../docs/development/guide.md#testing-strategy).
 
-For unit tests, see `core/backend/tests/` directory.
+## Unit Tests
+
+Unit tests are located within their respective component directories:
+- Backend tests: `core/backend/tests/`
+- AI service tests: `ai_service/tests/`

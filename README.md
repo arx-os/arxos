@@ -1,4 +1,4 @@
-# Arxos - Google Maps for Buildings
+# Arxos - Digital Twins Built By Trades
 
 > **The entire vision with just Go, vanilla JS, HTML/CSS, and PostgreSQL/PostGIS.**
 

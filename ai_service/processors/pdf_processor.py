@@ -154,6 +154,9 @@ class PDFProcessor:
                 vector_objects + text_objects + raster_objects
             )
             
+            # Skip room grouping - let users organize as needed
+            # page_objects = self._group_walls_into_rooms(page_objects)
+            
             # Apply pattern learning
             if self.pattern_learner.has_patterns():
                 page_objects = self.pattern_learner.apply_patterns(
@@ -186,10 +189,65 @@ class PDFProcessor:
         
         # Get page drawings - pdfplumber uses different API
         # Extract lines and rectangles from the page
-        if hasattr(page, 'lines'):
-            drawings = page.lines + page.rects if hasattr(page, 'rects') else page.lines
-        else:
-            drawings = []
+        drawings = []
+        
+        # Handle pdfplumber's lines (each line is a dict with x0, y0, x1, y1)
+        if hasattr(page, 'lines') and page.lines:
+            for line in page.lines:
+                try:
+                    # Try to handle as dict
+                    if isinstance(line, dict):
+                        drawings.append({
+                            'type': 'line',
+                            'x0': line.get('x0', 0),
+                            'y0': line.get('y0', 0),
+                            'x1': line.get('x1', 0),
+                            'y1': line.get('y1', 0),
+                            'width': line.get('width', 1),
+                        })
+                    elif isinstance(line, (tuple, list)) and len(line) >= 4:
+                        # Handle as tuple/list with coordinates
+                        drawings.append({
+                            'type': 'line',
+                            'x0': float(line[0]),
+                            'y0': float(line[1]),
+                            'x1': float(line[2]),
+                            'y1': float(line[3]),
+                            'width': 1,
+                        })
+                except Exception as e:
+                    print(f"Error processing line: {e}")
+                    continue
+        
+        # Handle pdfplumber's rects (each rect is a dict with x0, y0, x1, y1)
+        if hasattr(page, 'rects') and page.rects:
+            for rect in page.rects:
+                try:
+                    if isinstance(rect, dict):
+                        drawings.append({
+                            'type': 'rect',
+                            'x0': rect.get('x0', 0),
+                            'y0': rect.get('y0', 0),
+                            'x1': rect.get('x1', 0),
+                            'y1': rect.get('y1', 0),
+                            'width': rect.get('width', abs(rect.get('x1', 0) - rect.get('x0', 0))),
+                            'height': rect.get('height', abs(rect.get('y1', 0) - rect.get('y0', 0))),
+                        })
+                    elif isinstance(rect, (tuple, list)) and len(rect) >= 4:
+                        # Handle as tuple/list with coordinates
+                        x0, y0, x1, y1 = float(rect[0]), float(rect[1]), float(rect[2]), float(rect[3])
+                        drawings.append({
+                            'type': 'rect',
+                            'x0': x0,
+                            'y0': y0,
+                            'x1': x1,
+                            'y1': y1,
+                            'width': abs(x1 - x0),
+                            'height': abs(y1 - y0),
+                        })
+                except Exception as e:
+                    print(f"Error processing rect: {e}")
+                    continue
         
         for drawing in drawings:
             # Classify drawing type
@@ -207,26 +265,43 @@ class PDFProcessor:
     async def _extract_text_objects(
         self, page: Any, page_num: int
     ) -> List[ArxObject]:
-        """Extract objects from text annotations"""
+        """Extract ALL text as ArxObjects for user management"""
         objects = []
         
-        # Get text blocks using pdfplumber
-        text_blocks = {"blocks": []}
-        if hasattr(page, 'extract_text'):
-            text = page.extract_text()
-            if text:
-                text_blocks["blocks"] = [{"type": 0, "lines": [{"spans": [{"text": text}]}]}]
-        
-        for block in text_blocks.get("blocks", []):
-            if block.get("type") == 0:  # Text block
-                # Analyze text for object identification
-                obj_type, properties = self._analyze_text_block(block)
-                
-                if obj_type:
-                    obj = self._create_arxobject_from_text(
-                        block, obj_type, properties, page_num
-                    )
-                    objects.append(obj)
+        # Extract text with positions using pdfplumber
+        if hasattr(page, 'extract_words'):
+            words = page.extract_words()
+            for word in words:
+                # Create text object for each word/label
+                text_obj = ArxObject(
+                    id=f"text_p{page_num}_{int(word.get('x0', 0))}_{int(word.get('top', 0))}",
+                    type=ArxObjectType.TEXT,  # Add TEXT type for labels
+                    data={
+                        "text": word.get('text', ''),
+                        "font_size": word.get('height', 10),
+                        "source": "pdf_text",
+                        "page": page_num
+                    },
+                    confidence=ConfidenceScore(
+                        classification=0.95,  # High confidence - we know it's text
+                        position=0.90,
+                        properties=0.95,
+                        relationships=0.30,
+                        overall=0.80
+                    ),
+                    geometry={
+                        "type": "Point",
+                        "coordinates": [word.get('x0', 0), word.get('top', 0)]
+                    },
+                    relationships=[],
+                    metadata=Metadata(
+                        source="pdf_text",
+                        created=time.strftime("%Y-%m-%dT%H:%M:%S"),
+                        validated=False
+                    ),
+                    validation_state=ValidationState.PENDING
+                )
+                objects.append(text_obj)
         
         return objects
     
@@ -260,40 +335,55 @@ class PDFProcessor:
     def _classify_drawing(
         self, drawing: Dict
     ) -> Tuple[Optional[ArxObjectType], float]:
-        """Classify a drawing element into ArxObject type"""
+        """Classify a drawing element - EXTRACT EVERYTHING for user cleanup"""
         
-        # Get drawing properties
-        items = drawing.get("items", [])
-        if not items:
-            return None, 0.0
+        draw_type = drawing.get('type', '')
         
-        # Analyze geometry
-        has_lines = any(item[0] == "l" for item in items)
-        has_rect = any(item[0] == "re" for item in items)
-        has_curve = any(item[0] == "c" for item in items)
-        
-        # Pattern matching for common elements
-        if has_lines and not has_curve:
-            # Likely a wall
-            return ArxObjectType.WALL, 0.75
-        elif has_rect:
-            # Could be room, column, or equipment
-            rect = drawing if isinstance(drawing, dict) else {}
-            width = rect.get('width', rect.get('x1', 0) - rect.get('x0', 0))
-            height = rect.get('height', rect.get('y1', 0) - rect.get('y0', 0))
-            aspect_ratio = width / height if height > 0 else 1
+        # Extract ALL lines as potential walls/elements
+        if draw_type == 'line':
+            x0 = drawing.get('x0', 0)
+            y0 = drawing.get('y0', 0)
+            x1 = drawing.get('x1', 0)
+            y1 = drawing.get('y1', 0)
+            line_width = drawing.get('width', 1)
             
-            if 0.8 < aspect_ratio < 1.2:
-                # Square-ish - likely column
-                return ArxObjectType.COLUMN, 0.70
+            # Calculate line properties for confidence scoring
+            length = ((x1 - x0)**2 + (y1 - y0)**2)**0.5
+            
+            # Don't filter anything - let users decide what to keep
+            # Just adjust confidence based on likelihood
+            if length < 5:
+                # Very short - might be text or noise, low confidence
+                return ArxObjectType.WALL, 0.30
+            elif line_width < 0.5:
+                # Thin line - might be dimension line, medium-low confidence
+                return ArxObjectType.WALL, 0.40
+            elif line_width >= 1.0:
+                # Thicker line - likely actual wall, higher confidence
+                return ArxObjectType.WALL, 0.75
             else:
-                # Rectangle - likely room or equipment
-                return ArxObjectType.ROOM, 0.65
-        elif has_curve:
-            # Could be plumbing or HVAC
-            return ArxObjectType.PLUMBING_PIPE, 0.60
+                # Everything else gets medium confidence
+                return ArxObjectType.WALL, 0.50
+                
+        elif draw_type == 'rect':
+            # Extract ALL rectangles
+            width = abs(drawing.get('width', drawing.get('x1', 0) - drawing.get('x0', 0)))
+            height = abs(drawing.get('height', drawing.get('y1', 0) - drawing.get('y0', 0)))
+            
+            if width > 0 and height > 0:
+                aspect_ratio = width / height
+                area = width * height
+                
+                # Classify but don't filter
+                if 0.8 < aspect_ratio < 1.2 and area < 400:
+                    # Square-ish - might be column
+                    return ArxObjectType.COLUMN, 0.60
+                else:
+                    # Rectangle - could be room, equipment, or annotation box
+                    return ArxObjectType.ROOM, 0.50
         
-        return None, 0.0
+        # Even if we can't classify it, still extract it as generic object
+        return ArxObjectType.WALL, 0.30
     
     def _create_arxobject_from_drawing(
         self, drawing: Dict, obj_type: ArxObjectType, 
@@ -374,10 +464,12 @@ class PDFProcessor:
         # Edge detection
         edges = cv2.Canny(gray, 50, 150, apertureSize=3)
         
-        # Line detection
+        # Line detection with more conservative parameters
+        # Increase threshold to reduce false positives
+        # Increase minLineLength to filter out small segments
         lines = cv2.HoughLinesP(
-            edges, 1, np.pi/180, threshold=100,
-            minLineLength=50, maxLineGap=10
+            edges, 1, np.pi/180, threshold=150,  # Increased from 100
+            minLineLength=100, maxLineGap=20     # Increased from 50 and 10
         )
         
         if lines is not None:
@@ -485,8 +577,8 @@ class PDFProcessor:
         
         # Calculate angle for transform
         angle = float(np.degrees(np.arctan2(
-            world_p2.y - world_p1.y, 
-            world_p2.x - world_p1.x
+            float(world_p2.y - world_p1.y), 
+            float(world_p2.x - world_p1.x)
         )))
         
         # Create confidence score (lower for raster detection)
@@ -513,7 +605,7 @@ class PDFProcessor:
             position=position,
             dimensions=dimensions,
             bounds=bounds,
-            transform=Transform.rotation_z(np.radians(angle)),
+            transform=Transform.rotation_z(float(np.radians(angle))),
             
             # Legacy data for compatibility
             data={
@@ -590,13 +682,138 @@ class PDFProcessor:
             
             # Simple distance check (would be more sophisticated in production)
             if coords1 and coords2:
-                dist = np.sqrt(
+                dist = float(np.sqrt(
                     (coords1[0][0] - coords2[0][0])**2 +
                     (coords1[0][1] - coords2[0][1])**2
-                )
+                ))
                 return dist < 10  # 10 pixel threshold
         
         return False
+    
+    def _group_walls_into_rooms(self, objects: List[ArxObject]) -> List[ArxObject]:
+        """Group connected walls to identify rooms"""
+        import math
+        
+        # Separate walls from other objects
+        walls = [obj for obj in objects if obj.type == ArxObjectType.WALL]
+        other_objects = [obj for obj in objects if obj.type != ArxObjectType.WALL]
+        
+        # If no walls, return as is
+        if not walls:
+            return objects
+        
+        # Group walls by proximity
+        wall_groups = []
+        used_walls = set()
+        
+        for i, wall in enumerate(walls):
+            if i in used_walls:
+                continue
+                
+            # Start a new group
+            group = [wall]
+            used_walls.add(i)
+            
+            # Find connected walls
+            if wall.geometry and wall.geometry.get('type') == 'LineString':
+                coords = wall.geometry.get('coordinates', [])
+                if len(coords) >= 2:
+                    # Get wall endpoints
+                    wall_start = coords[0]
+                    wall_end = coords[1]
+                    
+                    # Look for walls that connect to this one
+                    for j, other_wall in enumerate(walls):
+                        if j in used_walls or j == i:
+                            continue
+                            
+                        if other_wall.geometry and other_wall.geometry.get('type') == 'LineString':
+                            other_coords = other_wall.geometry.get('coordinates', [])
+                            if len(other_coords) >= 2:
+                                other_start = other_coords[0]
+                                other_end = other_coords[1]
+                                
+                                # Check if walls connect (within tolerance)
+                                tolerance = 5  # pixels
+                                
+                                # Check all connection possibilities
+                                connections = [
+                                    (wall_start, other_start),
+                                    (wall_start, other_end),
+                                    (wall_end, other_start),
+                                    (wall_end, other_end)
+                                ]
+                                
+                                for p1, p2 in connections:
+                                    dist = math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+                                    if dist < tolerance:
+                                        group.append(other_wall)
+                                        used_walls.add(j)
+                                        break
+            
+            wall_groups.append(group)
+        
+        # Create room objects from wall groups that form enclosures
+        room_objects = []
+        for group in wall_groups:
+            if len(group) >= 3:  # Need at least 3 walls for a room
+                # Calculate bounding box of wall group
+                all_coords = []
+                for wall in group:
+                    if wall.geometry and wall.geometry.get('coordinates'):
+                        all_coords.extend(wall.geometry['coordinates'])
+                
+                if all_coords:
+                    xs = [c[0] for c in all_coords]
+                    ys = [c[1] for c in all_coords]
+                    
+                    # Create room object
+                    room = ArxObject(
+                        id=f"room_{min(xs)}_{min(ys)}",
+                        type=ArxObjectType.ROOM,
+                        data={
+                            "wall_count": len(group),
+                            "source": "wall_grouping"
+                        },
+                        confidence=ConfidenceScore(
+                            classification=0.60,  # Moderate confidence from grouping
+                            position=0.80,
+                            properties=0.50,
+                            relationships=0.70,
+                            overall=0.65
+                        ),
+                        geometry={
+                            "type": "Polygon",
+                            "coordinates": [[
+                                [min(xs), min(ys)],
+                                [max(xs), min(ys)],
+                                [max(xs), max(ys)],
+                                [min(xs), max(ys)],
+                                [min(xs), min(ys)]
+                            ]]
+                        },
+                        relationships=[],
+                        metadata=Metadata(
+                            source="wall_grouping",
+                            created=time.strftime("%Y-%m-%dT%H:%M:%S"),
+                            validated=False
+                        ),
+                        validation_state=ValidationState.PENDING
+                    )
+                    room_objects.append(room)
+                    
+                    # Add relationships between room and walls
+                    for wall in group:
+                        wall.relationships.append(
+                            Relationship(
+                                type="contained_by",
+                                target_id=room.id,
+                                confidence=0.70
+                            )
+                        )
+        
+        # Return all objects including new rooms
+        return walls + other_objects + room_objects
     
     def _merge_duplicate_objects(
         self, primary: ArxObject, duplicates: List[ArxObject]
@@ -606,18 +823,18 @@ class PDFProcessor:
         # Average confidence scores
         all_objects = [primary] + duplicates
         
-        primary.confidence.classification = np.mean(
+        primary.confidence.classification = float(np.mean(
             [obj.confidence.classification for obj in all_objects]
-        )
-        primary.confidence.position = np.mean(
+        ))
+        primary.confidence.position = float(np.mean(
             [obj.confidence.position for obj in all_objects]
-        )
-        primary.confidence.properties = np.mean(
+        ))
+        primary.confidence.properties = float(np.mean(
             [obj.confidence.properties for obj in all_objects]
-        )
-        primary.confidence.relationships = np.mean(
+        ))
+        primary.confidence.relationships = float(np.mean(
             [obj.confidence.relationships for obj in all_objects]
-        )
+        ))
         
         # Boost confidence for multiple detections
         boost = min(0.1 * len(duplicates), 0.3)
@@ -643,41 +860,37 @@ class PDFProcessor:
     def _extract_geometry(self, drawing: Dict) -> Dict:
         """Extract geometry from drawing element"""
         
-        items = drawing.get("items", [])
-        rect = drawing if isinstance(drawing, dict) else {}
+        draw_type = drawing.get('type', '')
         
-        # Build coordinate list
-        coords = []
-        for item in items:
-            if item[0] == "l":  # Line
-                coords.append([item[1].x, item[1].y])
-                coords.append([item[2].x, item[2].y])
-            elif item[0] == "re":  # Rectangle
-                r = item[1]
-                coords = [
-                    [r.x0, r.y0],
-                    [r.x1, r.y0],
-                    [r.x1, r.y1],
-                    [r.x0, r.y1],
-                    [r.x0, r.y0]
-                ]
-        
-        if len(coords) == 2:
-            # Line
+        if draw_type == 'line':
+            # Line geometry
             return {
                 "type": "LineString",
-                "coordinates": coords
+                "coordinates": [
+                    [drawing.get('x0', 0), drawing.get('y0', 0)],
+                    [drawing.get('x1', 0), drawing.get('y1', 0)]
+                ]
             }
-        elif len(coords) > 2:
-            # Polygon
+        elif draw_type == 'rect':
+            # Rectangle as polygon
+            x0 = drawing.get('x0', 0)
+            y0 = drawing.get('y0', 0)
+            x1 = drawing.get('x1', 0)
+            y1 = drawing.get('y1', 0)
             return {
                 "type": "Polygon",
-                "coordinates": [coords]
+                "coordinates": [[
+                    [x0, y0],
+                    [x1, y0],
+                    [x1, y1],
+                    [x0, y1],
+                    [x0, y0]
+                ]]
             }
         else:
-            # Point
-            x0 = rect.get('x0', rect.get('x', 0))
-            y0 = rect.get('y0', rect.get('y', 0))
+            # Default to point at origin
+            x0 = drawing.get('x0', drawing.get('x', 0))
+            y0 = drawing.get('y0', drawing.get('y', 0))
             return {
                 "type": "Point",
                 "coordinates": [x0, y0]

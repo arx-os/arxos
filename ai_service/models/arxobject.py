@@ -105,6 +105,11 @@ class ArxObjectType(str, Enum):
     ROOM = "room"
     ZONE = "zone"
     AREA = "area"
+    
+    # Annotations
+    TEXT = "text"
+    DIMENSION = "dimension"
+    SYMBOL = "symbol"
     CORRIDOR = "corridor"
     STAIRWELL = "stairwell"
     ELEVATOR_SHAFT = "elevator_shaft"

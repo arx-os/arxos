@@ -144,7 +144,8 @@ func SimplePDFUpload(w http.ResponseWriter, r *http.Request) {
 					storedCount++
 
 					// Add to frontend response format
-					storedObjects = append(storedObjects, map[string]interface{}{
+					// Include geometry field for proper rendering
+					frontendObj := map[string]interface{}{
 						"id":         arxObj.ID,
 						"type":       arxObj.Type,
 						"system":     arxObj.System,
@@ -154,7 +155,14 @@ func SimplePDFUpload(w http.ResponseWriter, r *http.Request) {
 						"height":     float64(arxObj.Height) / 1e6,
 						"confidence": arxObj.Confidence,
 						"data":       objMap["data"], // Include full data for debugging
-					})
+					}
+					
+					// Pass through geometry if present
+					if geometry, ok := objMap["geometry"]; ok {
+						frontendObj["geometry"] = geometry
+					}
+					
+					storedObjects = append(storedObjects, frontendObj)
 				}
 			}
 		}

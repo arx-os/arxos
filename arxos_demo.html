@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos - Building DNA Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 320px;
+            background: #2a2a2a;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .main-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: #2a2a2a;
+            padding: 15px 20px;
+            border-bottom: 1px solid #444;
+        }
+        
+        .viewer-container {
+            flex: 1;
+            position: relative;
+            background: #0a0a0a;
+            overflow: hidden;
+        }
+        
+        #viewer {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        #viewer:active { cursor: grabbing; }
+        
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #4a9eff;
+        }
+        
+        .upload-section {
+            background: #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-button {
+            width: 100%;
+            padding: 12px;
+            background: #4a9eff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .upload-button:hover { background: #3a8eef; }
+        .upload-button:disabled { background: #666; cursor: not-allowed; }
+        
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            background: #222;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .status.success { background: #1a3a1a; color: #4ade80; }
+        .status.error { background: #3a1a1a; color: #f87171; }
+        .status.processing { background: #3a3a1a; color: #fbbf24; }
+        
+        .stats {
+            background: #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .stat-value {
+            color: #4a9eff;
+            font-weight: 600;
+        }
+        
+        .controls {
+            background: #333;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .control-button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .control-button:hover { background: #555; }
+        
+        .confidence-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .confidence-high { background: #4ade80; }
+        .confidence-medium { background: #fbbf24; }
+        .confidence-low { background: #f87171; }
+        
+        /* SVG Styles */
+        .wall {
+            stroke: #fff;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .wall.confidence-high { stroke: #4ade80; }
+        .wall.confidence-medium { stroke: #fbbf24; }
+        .wall.confidence-low { stroke: #f87171; }
+        
+        .room {
+            fill: rgba(74, 158, 255, 0.1);
+            stroke: #4a9eff;
+            stroke-width: 1;
+        }
+        
+        .door {
+            stroke: #ff6b6b;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .window {
+            stroke: #51cf66;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #4a9eff;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .zoom-button {
+            width: 40px;
+            height: 40px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        
+        .zoom-button:hover { background: #444; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1 class="title">🏗️ Arxos Demo</h1>
+        
+        <div class="upload-section">
+            <button class="upload-button" onclick="uploadPDF()">Upload Building PDF</button>
+            <input type="file" id="fileInput" accept=".pdf" style="display: none;" onchange="handleFileSelect(event)">
+            <div class="status" id="status">Ready to process building plans</div>
+        </div>
+        
+        <div class="stats">
+            <h3 style="margin-bottom: 15px;">ArxObject Statistics</h3>
+            <div class="stat-item">
+                <span>Total Objects:</span>
+                <span class="stat-value" id="totalObjects">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Walls:</span>
+                <span class="stat-value" id="wallCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Rooms:</span>
+                <span class="stat-value" id="roomCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Overall Confidence:</span>
+                <span class="stat-value" id="confidence">-</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <h3 style="margin-bottom: 15px;">View Controls</h3>
+            <button class="control-button" onclick="fitToView()">Fit to View</button>
+            <button class="control-button" onclick="clearView()">Clear</button>
+            <button class="control-button" onclick="showTestData()">Load Test Data</button>
+        </div>
+    </div>
+    
+    <div class="main-view">
+        <div class="header">
+            <h2>Building Information Model - ArxObject Visualization</h2>
+        </div>
+        
+        <div class="viewer-container">
+            <svg id="viewer" viewBox="0 0 1000 1000">
+                <g id="building-group" transform="translate(0,0)">
+                    <g id="rooms-layer"></g>
+                    <g id="walls-layer"></g>
+                    <g id="doors-layer"></g>
+                    <g id="windows-layer"></g>
+                    <g id="objects-layer"></g>
+                </g>
+            </svg>
+            
+            <div class="zoom-controls">
+                <button class="zoom-button" onclick="zoomIn()">+</button>
+                <button class="zoom-button" onclick="zoomOut()">-</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScale = 1;
+        let currentTranslateX = 0;
+        let currentTranslateY = 0;
+        let isDragging = false;
+        let startX, startY;
+        let arxObjects = [];
+
+        // Initialize viewer interactions
+        const viewer = document.getElementById('viewer');
+        const buildingGroup = document.getElementById('building-group');
+
+        viewer.addEventListener('mousedown', startDrag);
+        viewer.addEventListener('mousemove', drag);
+        viewer.addEventListener('mouseup', endDrag);
+        viewer.addEventListener('wheel', handleWheel);
+
+        function startDrag(e) {
+            isDragging = true;
+            startX = e.clientX - currentTranslateX;
+            startY = e.clientY - currentTranslateY;
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            currentTranslateX = e.clientX - startX;
+            currentTranslateY = e.clientY - startY;
+            updateTransform();
+        }
+
+        function endDrag() {
+            isDragging = false;
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            currentScale *= delta;
+            currentScale = Math.max(0.1, Math.min(10, currentScale));
+            updateTransform();
+        }
+
+        function updateTransform() {
+            buildingGroup.setAttribute('transform', 
+                `translate(${currentTranslateX},${currentTranslateY}) scale(${currentScale})`);
+        }
+
+        function zoomIn() {
+            currentScale *= 1.2;
+            currentScale = Math.min(10, currentScale);
+            updateTransform();
+        }
+
+        function zoomOut() {
+            currentScale *= 0.8;
+            currentScale = Math.max(0.1, currentScale);
+            updateTransform();
+        }
+
+        function fitToView() {
+            if (arxObjects.length === 0) return;
+
+            // Calculate bounds
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            arxObjects.forEach(obj => {
+                // Handle both line-based and rectangle-based objects
+                if (obj.geometry && obj.geometry.coordinates) {
+                    const coords = obj.geometry.coordinates;
+                    if (obj.geometry.type === 'LineString') {
+                        coords.forEach(point => {
+                            minX = Math.min(minX, point[0]);
+                            minY = Math.min(minY, point[1]);
+                            maxX = Math.max(maxX, point[0]);
+                            maxY = Math.max(maxY, point[1]);
+                        });
+                    }
+                } else if (obj.x !== undefined && obj.y !== undefined) {
+                    minX = Math.min(minX, obj.x);
+                    minY = Math.min(minY, obj.y);
+                    maxX = Math.max(maxX, obj.x + (obj.width || 0));
+                    maxY = Math.max(maxY, obj.y + (obj.height || 0));
+                }
+            });
+
+            const padding = 50;
+            const viewWidth = 1000;
+            const viewHeight = 1000;
+            const contentWidth = maxX - minX + 2 * padding;
+            const contentHeight = maxY - minY + 2 * padding;
+
+            viewer.setAttribute('viewBox', 
+                `${minX - padding} ${minY - padding} ${contentWidth} ${contentHeight}`);
+
+            currentScale = 1;
+            currentTranslateX = 0;
+            currentTranslateY = 0;
+            updateTransform();
+        }
+
+        function clearView() {
+            document.getElementById('walls-layer').innerHTML = '';
+            document.getElementById('rooms-layer').innerHTML = '';
+            document.getElementById('doors-layer').innerHTML = '';
+            document.getElementById('windows-layer').innerHTML = '';
+            document.getElementById('objects-layer').innerHTML = '';
+            arxObjects = [];
+            updateStats();
+        }
+
+        function updateStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        function uploadPDF() {
+            document.getElementById('fileInput').click();
+        }
+
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            updateStatus('Processing PDF...', 'processing');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('http://localhost:8080/upload/pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('Processing result:', result);
+
+                if (result.success && result.objects) {
+                    arxObjects = result.objects;
+                    renderArxObjects(result.objects);
+                    updateStatus(`Successfully processed ${result.objects.length} ArxObjects`, 'success');
+                    
+                    // Update statistics
+                    if (result.statistics) {
+                        updateStats(result.statistics);
+                    }
+                } else {
+                    updateStatus('No objects found in PDF', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                updateStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function renderArxObjects(objects) {
+            clearView();
+            
+            // First pass: render rooms as background
+            objects.forEach(obj => {
+                if (obj.type === 'room') {
+                    const confidenceClass = getConfidenceClass(obj.confidence);
+                    renderRoom(obj, confidenceClass);
+                }
+            });
+            
+            // Second pass: render other objects on top
+            objects.forEach(obj => {
+                const confidenceClass = getConfidenceClass(obj.confidence);
+                
+                switch(obj.type) {
+                    case 'wall':
+                        renderWall(obj, confidenceClass);
+                        break;
+                    case 'door':
+                        renderDoor(obj, confidenceClass);
+                        break;
+                    case 'window':
+                        renderWindow(obj, confidenceClass);
+                        break;
+                    case 'text':
+                        renderText(obj, confidenceClass);
+                        break;
+                    case 'column':
+                        renderColumn(obj, confidenceClass);
+                        break;
+                    case 'room':
+                        // Already rendered in first pass
+                        break;
+                    default:
+                        renderGenericObject(obj, confidenceClass);
+                }
+            });
+
+            fitToView();
+            updateStats();
+        }
+
+        function renderWall(obj, confidenceClass) {
+            const wallsLayer = document.getElementById('walls-layer');
+            
+            // Handle both line-based and rectangle-based walls
+            if (obj.geometry && obj.geometry.type === 'LineString') {
+                // Line-based wall from PDF processor
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                const coords = obj.geometry.coordinates;
+                line.setAttribute('x1', coords[0][0]);
+                line.setAttribute('y1', coords[0][1]);
+                line.setAttribute('x2', coords[1][0]);
+                line.setAttribute('y2', coords[1][1]);
+                line.setAttribute('class', `wall ${confidenceClass}`);
+                line.setAttribute('stroke-width', obj.data?.thickness_mm || 10);
+                line.setAttribute('opacity', Math.max(0.3, obj.confidence || 0.8));
+                wallsLayer.appendChild(line);
+            } else if (obj.x !== undefined && obj.y !== undefined) {
+                // Rectangle-based wall (legacy format)
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', obj.x);
+                rect.setAttribute('y', obj.y);
+                rect.setAttribute('width', obj.width || 100);
+                rect.setAttribute('height', obj.height || 10);
+                rect.setAttribute('class', `wall ${confidenceClass}`);
+                rect.setAttribute('fill', '#fff');
+                rect.setAttribute('opacity', Math.max(0.3, obj.confidence || 0.8));
+                wallsLayer.appendChild(rect);
+            }
+        }
+
+        function renderRoom(obj, confidenceClass) {
+            const roomsLayer = document.getElementById('rooms-layer');
+            
+            // Handle polygon geometry from wall grouping
+            if (obj.geometry && obj.geometry.type === 'Polygon') {
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                const coords = obj.geometry.coordinates[0]; // First ring of polygon
+                const points = coords.map(c => `${c[0]},${c[1]}`).join(' ');
+                polygon.setAttribute('points', points);
+                polygon.setAttribute('class', `room ${confidenceClass}`);
+                polygon.setAttribute('fill', 'rgba(100, 200, 100, 0.1)');
+                polygon.setAttribute('stroke', 'rgba(100, 200, 100, 0.5)');
+                polygon.setAttribute('stroke-width', '2');
+                roomsLayer.appendChild(polygon);
+            } else if (obj.x !== undefined && obj.y !== undefined) {
+                // Rectangle-based room (legacy format)
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', obj.x);
+                rect.setAttribute('y', obj.y);
+                rect.setAttribute('width', obj.width || 200);
+                rect.setAttribute('height', obj.height || 200);
+                rect.setAttribute('class', `room ${confidenceClass}`);
+                roomsLayer.appendChild(rect);
+            }
+        }
+
+        function renderDoor(obj, confidenceClass) {
+            const doorsLayer = document.getElementById('doors-layer');
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', obj.x);
+            line.setAttribute('y1', obj.y);
+            line.setAttribute('x2', obj.x + (obj.width || 30));
+            line.setAttribute('y2', obj.y);
+            line.setAttribute('class', `door ${confidenceClass}`);
+            doorsLayer.appendChild(line);
+        }
+
+        function renderWindow(obj, confidenceClass) {
+            const windowsLayer = document.getElementById('windows-layer');
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', obj.x);
+            rect.setAttribute('y', obj.y);
+            rect.setAttribute('width', obj.width || 40);
+            rect.setAttribute('height', obj.height || 5);
+            rect.setAttribute('class', `window ${confidenceClass}`);
+            windowsLayer.appendChild(rect);
+        }
+
+        function renderText(obj, confidenceClass) {
+            const objectsLayer = document.getElementById('objects-layer');
+            
+            if (obj.geometry && obj.geometry.type === 'Point') {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                const coords = obj.geometry.coordinates;
+                text.setAttribute('x', coords[0]);
+                text.setAttribute('y', coords[1]);
+                text.setAttribute('font-size', obj.data?.font_size || 10);
+                text.setAttribute('fill', 'rgba(100, 100, 100, 0.7)');
+                text.setAttribute('class', `text-label ${confidenceClass}`);
+                text.textContent = obj.data?.text || '';
+                objectsLayer.appendChild(text);
+            }
+        }
+        
+        function renderColumn(obj, confidenceClass) {
+            const objectsLayer = document.getElementById('objects-layer');
+            
+            if (obj.geometry && obj.geometry.type === 'LineString') {
+                // Column as rectangle from line coordinates
+                const coords = obj.geometry.coordinates;
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', Math.min(coords[0][0], coords[1][0]));
+                rect.setAttribute('y', Math.min(coords[0][1], coords[1][1]));
+                rect.setAttribute('width', Math.abs(coords[1][0] - coords[0][0]) || 20);
+                rect.setAttribute('height', Math.abs(coords[1][1] - coords[0][1]) || 20);
+                rect.setAttribute('fill', 'rgba(50, 50, 50, 0.8)');
+                rect.setAttribute('class', `column ${confidenceClass}`);
+                objectsLayer.appendChild(rect);
+            } else if (obj.x !== undefined && obj.y !== undefined) {
+                // Legacy format
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', obj.x);
+                rect.setAttribute('y', obj.y);
+                rect.setAttribute('width', obj.width || 20);
+                rect.setAttribute('height', obj.height || 20);
+                rect.setAttribute('fill', 'rgba(50, 50, 50, 0.8)');
+                rect.setAttribute('class', `column ${confidenceClass}`);
+                objectsLayer.appendChild(rect);
+            }
+        }
+        
+        function renderGenericObject(obj, confidenceClass) {
+            // Skip objects without valid coordinates
+            if (obj.x === undefined || obj.y === undefined) {
+                return;
+            }
+            const objectsLayer = document.getElementById('objects-layer');
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', obj.x);
+            circle.setAttribute('cy', obj.y);
+            circle.setAttribute('r', 5);
+            circle.setAttribute('fill', '#4a9eff');
+            circle.setAttribute('class', confidenceClass);
+            objectsLayer.appendChild(circle);
+        }
+
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.8) return 'confidence-high';
+            if (confidence >= 0.5) return 'confidence-medium';
+            return 'confidence-low';
+        }
+
+        function updateStats(statistics) {
+            const wallCount = arxObjects.filter(obj => obj.type === 'wall').length;
+            const roomCount = arxObjects.filter(obj => obj.type === 'room').length;
+            
+            document.getElementById('totalObjects').textContent = arxObjects.length;
+            document.getElementById('wallCount').textContent = wallCount;
+            document.getElementById('roomCount').textContent = roomCount;
+            
+            if (statistics && statistics.overall_confidence) {
+                const confidence = (statistics.overall_confidence * 100).toFixed(1);
+                document.getElementById('confidence').textContent = `${confidence}%`;
+            }
+        }
+
+        function showTestData() {
+            // Create test ArxObjects that form a simple floor plan
+            const testObjects = [
+                // Outer walls
+                { type: 'wall', geometry: { type: 'LineString', coordinates: [[100, 100], [500, 100]] }, confidence: 0.9 },
+                { type: 'wall', geometry: { type: 'LineString', coordinates: [[500, 100], [500, 400]] }, confidence: 0.85 },
+                { type: 'wall', geometry: { type: 'LineString', coordinates: [[500, 400], [100, 400]] }, confidence: 0.88 },
+                { type: 'wall', geometry: { type: 'LineString', coordinates: [[100, 400], [100, 100]] }, confidence: 0.92 },
+                
+                // Interior wall
+                { type: 'wall', geometry: { type: 'LineString', coordinates: [[300, 100], [300, 400]] }, confidence: 0.75 },
+                
+                // Doors
+                { type: 'door', x: 280, y: 100, width: 40, height: 5, confidence: 0.7 },
+                { type: 'door', x: 200, y: 400, width: 40, height: 5, confidence: 0.7 },
+                
+                // Windows
+                { type: 'window', x: 150, y: 100, width: 60, height: 5, confidence: 0.6 },
+                { type: 'window', x: 350, y: 100, width: 60, height: 5, confidence: 0.6 },
+                
+                // Rooms
+                { type: 'room', x: 105, y: 105, width: 190, height: 290, confidence: 0.5 },
+                { type: 'room', x: 305, y: 105, width: 190, height: 290, confidence: 0.5 }
+            ];
+            
+            arxObjects = testObjects;
+            renderArxObjects(testObjects);
+            updateStatus('Loaded test floor plan', 'success');
+        }
+    </script>
+</body>
+</html>

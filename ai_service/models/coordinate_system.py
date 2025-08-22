@@ -145,8 +145,8 @@ class Transform(BaseModel):
     @classmethod
     def rotation_z(cls, angle_radians: float) -> "Transform":
         """Create rotation around Z axis"""
-        cos_a = np.cos(angle_radians)
-        sin_a = np.sin(angle_radians)
+        cos_a = float(np.cos(angle_radians))
+        sin_a = float(np.sin(angle_radians))
         return cls(matrix=[
             [cos_a, -sin_a, 0, 0],
             [sin_a, cos_a, 0, 0],

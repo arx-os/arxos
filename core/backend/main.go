@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	// "github.com/arxos/arxos/core/backend/handlers"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
@@ -109,6 +110,7 @@ func handlePDFUpload(w http.ResponseWriter, r *http.Request) {
 		if objMap, ok := obj.(map[string]interface{}); ok {
 			// Create frontend-friendly object
 			frontendObj := map[string]interface{}{
+				"id":   objMap["id"],
 				"type": objMap["type"],
 			}
 			
@@ -157,7 +159,7 @@ func handlePDFUpload(w http.ResponseWriter, r *http.Request) {
 		"success":     true,
 		"message":     fmt.Sprintf("Processed %s", header.Filename),
 		"filename":    header.Filename,
-		"objects":     frontendObjects,
+		"arxobjects":  frontendObjects,  // Frontend expects 'arxobjects' not 'objects'
 		"statistics": map[string]interface{}{
 			"total_objects":      len(frontendObjects),
 			"overall_confidence": aiResult["overall_confidence"],
@@ -202,8 +204,9 @@ func main() {
 	// Note: In production, this would be properly imported
 	// For now, we'll create a simple inline handler
 	
-	// PDF upload endpoint
-	r.Post("/upload/pdf", handlePDFUpload)
+	// PDF upload endpoints
+	r.Post("/upload/pdf", handlePDFUpload) // Original endpoint
+	// r.Post("/api/v1/upload/pdf", handlers.EnhancedPDFUpload) // Enhanced with BIM processing (temporarily disabled)
 	
 	r.Route("/api", func(r chi.Router) {
 		// Public health check endpoint

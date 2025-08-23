@@ -5,6 +5,7 @@ Following the strategic validation approach with multi-dimensional confidence
 
 import io
 import time
+import uuid
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import numpy as np
@@ -26,6 +27,10 @@ from models.coordinate_system import (
 from utils.config import settings
 from .confidence_calculator import ConfidenceCalculator
 from .pattern_learner import PatternLearner
+from .wall_merger import WallMerger
+from .advanced_wall_merger import AdvancedWallMerger
+from .text_extractor import TextExtractor
+from .enhanced_pdf_extractor import EnhancedPDFExtractor
 
 # Import multi-strategy processor if available
 try:
@@ -44,6 +49,10 @@ class PDFProcessor:
     def __init__(self):
         self.confidence_calculator = ConfidenceCalculator()
         self.pattern_learner = PatternLearner()
+        self.wall_merger = WallMerger()
+        self.advanced_merger = AdvancedWallMerger(snap_distance=15.0)
+        self.text_extractor = TextExtractor()
+        self.enhanced_extractor = EnhancedPDFExtractor()
         self.page_cache = {}
         self.coordinate_system: Optional[CoordinateSystem] = None
         
@@ -83,7 +92,8 @@ class PDFProcessor:
         uncertainties = []
         
         # Use multi-strategy processor if available for better accuracy
-        if HAS_MULTI_STRATEGY:
+        # Temporarily disabled to test enhanced extractor
+        if False and HAS_MULTI_STRATEGY:
             # Save PDF to temporary file for multi-strategy processing
             import tempfile
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
@@ -109,14 +119,106 @@ class PDFProcessor:
         
         pdf_doc.close()
         
+        # Apply wall merging to connect fragments
+        print(f"Before merging: {len(all_objects)} objects")
+        
+        # Convert ArxObjects to dict format for merging
+        object_dicts = []
+        for obj in all_objects:
+            try:
+                # Try to use to_dict if it exists
+                if hasattr(obj, 'to_dict'):
+                    obj_dict = obj.to_dict()
+                else:
+                    # Manual conversion if to_dict doesn't exist
+                    obj_dict = {
+                        'id': obj.id if hasattr(obj, 'id') else str(uuid.uuid4()),
+                        'type': obj.type if hasattr(obj, 'type') else 'unknown',
+                        'confidence': {
+                            'overall': obj.confidence.overall if hasattr(obj, 'confidence') else 0.5
+                        },
+                        'geometry': obj.geometry if hasattr(obj, 'geometry') else None,
+                        'data': obj.data if hasattr(obj, 'data') else {},
+                        'metadata': {
+                            'source': obj.metadata.source if hasattr(obj, 'metadata') else 'extraction'
+                        }
+                    }
+                    # Add position if available
+                    if hasattr(obj, 'position') and obj.position:
+                        obj_dict['position'] = {
+                            'x': obj.position.x if hasattr(obj.position, 'x') else 0,
+                            'y': obj.position.y if hasattr(obj.position, 'y') else 0
+                        }
+                object_dicts.append(obj_dict)
+            except Exception as e:
+                print(f"Error converting object to dict: {e}")
+                continue
+        
+        # Separate walls from other objects
+        walls = [obj for obj in object_dicts if obj.get('type') == 'wall']
+        other_objects = [obj for obj in object_dicts if obj.get('type') != 'wall']
+        
+        # Use advanced merger for better wall connection and room detection
+        merged_walls, detected_rooms = self.advanced_merger.merge_walls(walls)
+        
+        # Combine all objects
+        merged_objects = merged_walls + other_objects
+        
+        # Associate text labels with rooms
+        text_objects = [obj for obj in other_objects if obj.get('type') in ['text', 'room_label']]
+        self.text_extractor.associate_labels_with_rooms(detected_rooms, text_objects)
+        
+        merged_objects.extend(detected_rooms)
+        
+        print(f"After merging: {len(merged_objects)} objects ({len(detected_rooms)} rooms detected)")
+        
+        # Convert back to ArxObject instances
+        final_objects = []
+        for obj_dict in merged_objects:
+            try:
+                # Get confidence data
+                confidence_data = obj_dict.get('confidence', {})
+                if isinstance(confidence_data, dict):
+                    overall_conf = confidence_data.get('overall', 0.5)
+                else:
+                    overall_conf = float(confidence_data) if confidence_data else 0.5
+                
+                # Get metadata or create default
+                metadata_dict = obj_dict.get('metadata', {})
+                
+                # Create ArxObject with proper structure
+                arxobj = ArxObject(
+                    id=obj_dict.get('id', str(uuid.uuid4())),
+                    type=obj_dict.get('type', 'wall'),  # Default to wall type
+                    confidence=ConfidenceScore(
+                        overall=overall_conf,
+                        classification=confidence_data.get('classification', overall_conf) if isinstance(confidence_data, dict) else overall_conf,
+                        position=confidence_data.get('position', overall_conf) if isinstance(confidence_data, dict) else overall_conf,
+                        properties=confidence_data.get('properties', overall_conf) if isinstance(confidence_data, dict) else overall_conf,
+                        relationships=confidence_data.get('relationships', overall_conf) if isinstance(confidence_data, dict) else overall_conf
+                    ),
+                    geometry=obj_dict.get('geometry'),
+                    data=obj_dict.get('data', {}),
+                    metadata=Metadata(
+                        source=metadata_dict.get('source', 'wall_merger'),
+                        source_detail=metadata_dict.get('source_detail', ''),
+                        validated=metadata_dict.get('validated', False)
+                    )
+                )
+                final_objects.append(arxobj)
+            except Exception as e:
+                print(f"Error converting object {obj_dict.get('id', 'unknown')}: {e}")
+                # Skip objects that fail to convert
+                continue
+        
         # Calculate overall confidence
-        overall_confidence = self._calculate_overall_confidence(all_objects)
+        overall_confidence = self._calculate_overall_confidence(final_objects)
         
         # Record processing time
         processing_time = time.time() - start_time
         
         return ConversionResult(
-            arxobjects=all_objects,
+            arxobjects=final_objects,
             overall_confidence=overall_confidence,
             uncertainties=uncertainties,
             validation_strategy=None,  # TODO: Implement validation strategy
@@ -140,18 +242,98 @@ class PDFProcessor:
             else:
                 page = pdf_doc[page_num]
             
-            # Extract vector graphics
+            # Extract vector graphics (original method)
             vector_objects = await self._extract_vector_objects(page, page_num)
             
-            # Extract text annotations
-            text_objects = await self._extract_text_objects(page, page_num)
+            # Use enhanced extractor for comprehensive line extraction
+            print(f"Calling enhanced extractor on page {page_num}")
+            enhanced_objects = self.enhanced_extractor.extract_all_lines(page)
+            print(f"Enhanced extractor returned {len(enhanced_objects)} objects")
+            
+            # Convert enhanced objects to ArxObjects
+            for i, obj_dict in enumerate(enhanced_objects):
+                try:
+                    conf_dict = obj_dict.get('confidence', {})
+                    print(f"Enhanced object {i}: confidence = {conf_dict}")
+                    
+                    # Create ConfidenceScore with all required fields
+                    confidence_score = ConfidenceScore(
+                        overall=conf_dict.get('overall', 0.7),
+                        classification=conf_dict.get('classification', 0.8),
+                        position=conf_dict.get('position', 0.8),
+                        properties=conf_dict.get('properties', 0.7),
+                        relationships=conf_dict.get('relationships', 0.5)
+                    )
+                    
+                    # Create Metadata
+                    metadata_dict = obj_dict.get('metadata', {})
+                    metadata = Metadata(
+                        source=metadata_dict.get('source', 'enhanced_extractor'),
+                        source_detail=metadata_dict.get('extraction_method', ''),
+                        validated=False
+                    )
+                    
+                    # Create ArxObject
+                    arxobj = ArxObject(
+                        id=obj_dict.get('id'),
+                        type=ArxObjectType.WALL,
+                        geometry=obj_dict.get('geometry'),
+                        data=obj_dict.get('data', {}),
+                        confidence=confidence_score,
+                        relationships=[],
+                        metadata=metadata,
+                        validation_state=ValidationState.PENDING
+                    )
+                    vector_objects.append(arxobj)
+                    print(f"Successfully converted enhanced object {i}")
+                except Exception as e:
+                    print(f"Error converting enhanced object {i}: {e}")
+                    print(f"Object dict: {obj_dict}")
+            
+            # Extract text annotations with improved extraction
+            text_objects = self.text_extractor.extract_text_objects(page, page_num)
+            
+            # Convert text objects to ArxObjects
+            text_arxobjects = []
+            for text_obj in text_objects:
+                text_conf = text_obj.get('confidence', {})
+                # Map room_label to TEXT type
+                obj_type = text_obj.get('type', 'text')
+                if obj_type == 'room_label':
+                    obj_type = ArxObjectType.TEXT
+                elif obj_type == 'text':
+                    obj_type = ArxObjectType.TEXT
+                else:
+                    obj_type = ArxObjectType.TEXT  # Default to TEXT for any unknown type
+                
+                arxobj = ArxObject(
+                    id=text_obj.get('id'),
+                    type=obj_type,
+                    confidence=ConfidenceScore(
+                        overall=text_conf.get('overall', 0.7),
+                        classification=text_conf.get('classification', 0.95),  # High - we know it's text
+                        position=text_conf.get('position', 0.9),
+                        properties=text_conf.get('properties', 0.8),
+                        relationships=text_conf.get('relationships', 0.3)
+                    ),
+                    geometry=text_obj.get('geometry'),
+                    data=text_obj.get('data', {}),
+                    relationships=[],
+                    metadata=Metadata(
+                        source=text_obj.get('metadata', {}).get('source', 'text_extraction'),
+                        source_detail='',
+                        validated=False
+                    ),
+                    validation_state=ValidationState.PENDING
+                )
+                text_arxobjects.append(arxobj)
             
             # Extract raster elements if present
             raster_objects = await self._extract_raster_objects(page, page_num)
             
             # Combine and deduplicate
             page_objects = self._merge_objects(
-                vector_objects + text_objects + raster_objects
+                vector_objects + text_arxobjects + raster_objects
             )
             
             # Skip room grouping - let users organize as needed

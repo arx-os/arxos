@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"arxos/db"
-	"arxos/logic_engine"
-	"arxos/models"
 	"encoding/json"
 	"net/http"
 	"os"
 
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/logic_engine"
+	"github.com/arxos/arxos/core/backend/models"
 	"github.com/golang-jwt/jwt/v4"
 )
 

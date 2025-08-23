@@ -6,13 +6,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"strings"
 	"time"
 
-	"arxos/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	_ "github.com/lib/pq"
-	"github.com/jmoiron/sqlx"
-	"log"
 )
 
 // ArxObjectStore manages ArxObject persistence
@@ -25,36 +27,36 @@ type ArxObjectStore struct {
 
 // StoreConfig configures the database store
 type StoreConfig struct {
-	DSN               string        `json:"dsn"`
-	MaxConnections    int           `json:"max_connections"`
-	MaxIdleConns      int           `json:"max_idle_conns"`
-	ConnMaxLifetime   time.Duration `json:"conn_max_lifetime"`
-	EnablePostGIS     bool          `json:"enable_postgis"`
-	BatchSize         int           `json:"batch_size"`
-	TransactionRetries int          `json:"transaction_retries"`
+	DSN                string        `json:"dsn"`
+	MaxConnections     int           `json:"max_connections"`
+	MaxIdleConns       int           `json:"max_idle_conns"`
+	ConnMaxLifetime    time.Duration `json:"conn_max_lifetime"`
+	EnablePostGIS      bool          `json:"enable_postgis"`
+	BatchSize          int           `json:"batch_size"`
+	TransactionRetries int           `json:"transaction_retries"`
 }
 
 // BuildingInfo represents building metadata
 type BuildingInfo struct {
-	ID           string    `db:"id" json:"id"`
-	Name         string    `db:"name" json:"name"`
-	Address      string    `db:"address" json:"address"`
-	TotalFloors  int       `db:"total_floors" json:"total_floors"`
-	TotalObjects int       `db:"total_objects" json:"total_objects"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+	ID           string          `db:"id" json:"id"`
+	Name         string          `db:"name" json:"name"`
+	Address      string          `db:"address" json:"address"`
+	TotalFloors  int             `db:"total_floors" json:"total_floors"`
+	TotalObjects int             `db:"total_objects" json:"total_objects"`
+	CreatedAt    time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time       `db:"updated_at" json:"updated_at"`
 	Metadata     json.RawMessage `db:"metadata" json:"metadata"`
 }
 
 // NewArxObjectStore creates a new database store
 func NewArxObjectStore(backend string) (*ArxObjectStore, error) {
 	config := StoreConfig{
-		DSN:             getEnvOrDefault("DATABASE_URL", "postgres://localhost/arxos"),
-		MaxConnections:  20,
-		MaxIdleConns:    5,
-		ConnMaxLifetime: 5 * time.Minute,
-		EnablePostGIS:   true,
-		BatchSize:       1000,
+		DSN:                getEnvOrDefault("DATABASE_URL", "postgres://localhost/arxos"),
+		MaxConnections:     20,
+		MaxIdleConns:       5,
+		ConnMaxLifetime:    5 * time.Minute,
+		EnablePostGIS:      true,
+		BatchSize:          1000,
 		TransactionRetries: 3,
 	}
 
@@ -111,16 +113,16 @@ func (s *ArxObjectStore) StoreBatch(ctx context.Context, buildingID string, obje
 		if err == nil {
 			return nil
 		}
-		
+
 		// Check if error is retryable
 		if !isRetryableError(err) {
 			break
 		}
-		
+
 		// Exponential backoff
 		time.Sleep(time.Duration(1<<uint(retry)) * 100 * time.Millisecond)
 	}
-	
+
 	return fmt.Errorf("failed to store batch after %d retries: %w", s.config.TransactionRetries, err)
 }
 
@@ -142,7 +144,7 @@ func (s *ArxObjectStore) storeBatchTx(ctx context.Context, buildingID string, ob
 	for i := 0; i < len(objects); i += batchSize {
 		end := min(i+batchSize, len(objects))
 		batch := objects[i:end]
-		
+
 		if err := s.insertObjectBatch(ctx, tx, buildingID, batch); err != nil {
 			return fmt.Errorf("failed to insert batch %d-%d: %w", i, end, err)
 		}
@@ -203,7 +205,7 @@ func (s *ArxObjectStore) insertWithPostGIS(ctx context.Context, tx *sqlx.Tx, bui
 	for _, obj := range objects {
 		properties := s.extractProperties(obj)
 		propsJSON, _ := json.Marshal(properties)
-		
+
 		_, err := stmt.ExecContext(ctx,
 			obj.ID,
 			buildingID,
@@ -236,17 +238,17 @@ func (s *ArxObjectStore) insertStandard(ctx context.Context, tx *sqlx.Tx, buildi
 	// Build bulk insert values
 	valueStrings := make([]string, 0, len(objects))
 	valueArgs := make([]interface{}, 0, len(objects)*16)
-	
+
 	for i, obj := range objects {
 		properties := s.extractProperties(obj)
 		propsJSON, _ := json.Marshal(properties)
-		
+
 		valueStrings = append(valueStrings, fmt.Sprintf(
 			"($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
 			i*16+1, i*16+2, i*16+3, i*16+4, i*16+5, i*16+6, i*16+7, i*16+8,
 			i*16+9, i*16+10, i*16+11, i*16+12, i*16+13, i*16+14, i*16+15, i*16+16,
 		))
-		
+
 		valueArgs = append(valueArgs,
 			obj.ID,
 			buildingID,
@@ -266,7 +268,7 @@ func (s *ArxObjectStore) insertStandard(ctx context.Context, tx *sqlx.Tx, buildi
 			propsJSON,
 		)
 	}
-	
+
 	query := fmt.Sprintf(`
 		INSERT INTO arx_objects (
 			id, building_id, object_type, system_type, scale_level,
@@ -279,7 +281,7 @@ func (s *ArxObjectStore) insertStandard(ctx context.Context, tx *sqlx.Tx, buildi
 			z_nano = EXCLUDED.z_nano,
 			updated_at = NOW()
 	`, strings.Join(valueStrings, ","))
-	
+
 	_, err := tx.ExecContext(ctx, query, valueArgs...)
 	return err
 }
@@ -287,20 +289,20 @@ func (s *ArxObjectStore) insertStandard(ctx context.Context, tx *sqlx.Tx, buildi
 // GetBuilding retrieves building information
 func (s *ArxObjectStore) GetBuilding(ctx context.Context, buildingID string) (*BuildingInfo, error) {
 	var building BuildingInfo
-	
+
 	err := s.db.GetContext(ctx, &building, `
 		SELECT id, name, address, total_floors, total_objects, created_at, updated_at, metadata
 		FROM buildings
 		WHERE id = $1
 	`, buildingID)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("building not found: %s", buildingID)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get building: %w", err)
 	}
-	
+
 	return &building, nil
 }
 
@@ -315,40 +317,40 @@ func (s *ArxObjectStore) GetBuildingObjects(ctx context.Context, buildingID, obj
 	`
 	args := []interface{}{buildingID}
 	argCount := 1
-	
+
 	// Add optional filters
 	if objType != "" {
 		argCount++
 		query += fmt.Sprintf(" AND object_type = $%d", argCount)
 		args = append(args, objType)
 	}
-	
+
 	if floor != "" {
 		// Calculate Z range for floor (assuming 3m per floor)
 		floorNum := 0
 		fmt.Sscanf(floor, "%d", &floorNum)
 		zMin := int64(floorNum-1) * 3 * arxobject.Meter
 		zMax := int64(floorNum) * 3 * arxobject.Meter
-		
+
 		argCount += 2
 		query += fmt.Sprintf(" AND z_nano >= $%d AND z_nano < $%d", argCount-1, argCount)
 		args = append(args, zMin, zMax)
 	}
-	
+
 	query += " ORDER BY id"
-	
+
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query objects: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var objects []*arxobject.ArxObjectOptimized
 	for rows.Next() {
 		obj := &arxobject.ArxObjectOptimized{}
 		err := rows.Scan(
 			&obj.ID,
-			&objType, // Temporary variable
+			&objType,       // Temporary variable
 			&obj.TypeFlags, // Will reconstruct from components
 			&obj.X,
 			&obj.Y,
@@ -366,7 +368,7 @@ func (s *ArxObjectStore) GetBuildingObjects(ctx context.Context, buildingID, obj
 		}
 		objects = append(objects, obj)
 	}
-	
+
 	return objects, nil
 }
 
@@ -377,7 +379,7 @@ func (s *ArxObjectStore) ensureBuilding(ctx context.Context, tx *sqlx.Tx, buildi
 		VALUES ($1, $2, NOW(), NOW())
 		ON CONFLICT (id) DO NOTHING
 	`, buildingID, "Unnamed Building")
-	
+
 	return err
 }
 
@@ -396,32 +398,32 @@ func (s *ArxObjectStore) updateBuildingStats(ctx context.Context, tx *sqlx.Tx, b
 		updated_at = NOW()
 		WHERE id = $1
 	`, buildingID, 3*arxobject.Meter)
-	
+
 	return err
 }
 
 // extractProperties extracts properties from ArxObject for JSON storage
 func (s *ArxObjectStore) extractProperties(obj *arxobject.ArxObjectOptimized) map[string]interface{} {
 	props := make(map[string]interface{})
-	
+
 	// Extract basic properties
 	props["type"] = obj.GetType()
 	props["system"] = obj.GetSystem()
 	props["scale"] = obj.GetScale()
 	props["active"] = obj.IsActive()
-	
+
 	// Extract rotation if present
 	if obj.RotationPack != 0 {
 		props["rotation"] = float64(obj.RotationPack>>32) / 1000.0 // Convert from milliradians
 	}
-	
+
 	// Add dimension info
 	props["dimensions"] = map[string]float64{
 		"length_m": float64(obj.Length) / float64(arxobject.Meter),
 		"width_m":  float64(obj.Width) / float64(arxobject.Meter),
 		"height_m": float64(obj.Height) / float64(arxobject.Meter),
 	}
-	
+
 	return props
 }
 
@@ -518,7 +520,7 @@ func (s *ArxObjectStore) Close() error {
 	for _, stmt := range s.prepared {
 		stmt.Close()
 	}
-	
+
 	// Close database connection
 	return s.db.Close()
 }
@@ -534,22 +536,22 @@ func isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check for PostgreSQL specific errors
 	if pqErr, ok := err.(*pq.Error); ok {
 		switch pqErr.Code {
 		case "40001", // serialization_failure
-		     "40P01", // deadlock_detected
-		     "55P03": // lock_not_available
+			"40P01", // deadlock_detected
+			"55P03": // lock_not_available
 			return true
 		}
 	}
-	
+
 	// Check for connection errors
 	if err == sql.ErrConnDone {
 		return true
 	}
-	
+
 	return false
 }
 

@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"arxos/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 	"github.com/google/uuid"
 )
 
@@ -20,18 +20,18 @@ type ProcessingResult struct {
 	Filename       string                 `json:"filename"`
 	Status         string                 `json:"status"`
 	StartTime      time.Time              `json:"start_time"`
-	ProcessingTime time.Duration         `json:"processing_time"`
+	ProcessingTime time.Duration          `json:"processing_time"`
 	Objects        []*ExtractedObject     `json:"objects"`
 	Statistics     map[string]interface{} `json:"statistics"`
 }
 
 // ExtractedObject represents an object extracted from PDF
 type ExtractedObject struct {
-	ID          string                 `json:"id"`
-	Type        string                 `json:"type"`
+	ID          string                    `json:"id"`
+	Type        string                    `json:"type"`
 	Confidence  arxobject.ConfidenceScore `json:"confidence"`
-	Properties  map[string]interface{} `json:"properties"`
-	BoundingBox BoundingBox           `json:"bounding_box"`
+	Properties  map[string]interface{}    `json:"properties"`
+	BoundingBox BoundingBox               `json:"bounding_box"`
 }
 
 // BoundingBox represents a 2D bounding box
@@ -204,10 +204,10 @@ func (p *PDFProcessor) ProcessPDF(filepath string) (*ProcessingResult, error) {
 
 // AIServiceResponse represents the response from the Python AI service
 type AIServiceResponse struct {
-	ArxObjects        []AIArxObject    `json:"arxobjects"`
-	OverallConfidence float64          `json:"overall_confidence"`
-	Uncertainties     []AIUncertainty  `json:"uncertainties"`
-	ProcessingTime    float64          `json:"processing_time"`
+	ArxObjects        []AIArxObject          `json:"arxobjects"`
+	OverallConfidence float64                `json:"overall_confidence"`
+	Uncertainties     []AIUncertainty        `json:"uncertainties"`
+	ProcessingTime    float64                `json:"processing_time"`
 	Metadata          map[string]interface{} `json:"metadata"`
 }
 
@@ -280,7 +280,7 @@ func convertToArxObject(extracted *ExtractedObject) *arxobject.ArxObject {
 	// Generate coordinates from bounding box center
 	centerX := int64((extracted.BoundingBox.MinX + extracted.BoundingBox.MaxX) / 2 * 1000000) // Convert to nanometers
 	centerY := int64((extracted.BoundingBox.MinY + extracted.BoundingBox.MaxY) / 2 * 1000000)
-	
+
 	width := int64((extracted.BoundingBox.MaxX - extracted.BoundingBox.MinX) * 1000000)
 	height := int64((extracted.BoundingBox.MaxY - extracted.BoundingBox.MinY) * 1000000)
 
@@ -288,24 +288,24 @@ func convertToArxObject(extracted *ExtractedObject) *arxobject.ArxObject {
 	propertiesJSON, _ := json.Marshal(extracted.Properties)
 
 	return &arxobject.ArxObject{
-		ID:     extracted.ID,
-		UUID:   uuid.New().String(),
-		Type:   extracted.Type,
-		System: determineSystem(extracted.Type),
-		X:      centerX,
-		Y:      centerY,
-		Z:      0, // Default to ground level
-		Width:  width,
-		Height: height,
-		Depth:  100000000, // Default 100mm depth in nanometers
-		ScaleMin: 0,
-		ScaleMax: 9,
-		Properties: propertiesJSON,
-		Confidence: extracted.Confidence,
+		ID:               extracted.ID,
+		UUID:             uuid.New().String(),
+		Type:             extracted.Type,
+		System:           determineSystem(extracted.Type),
+		X:                centerX,
+		Y:                centerY,
+		Z:                0, // Default to ground level
+		Width:            width,
+		Height:           height,
+		Depth:            100000000, // Default 100mm depth in nanometers
+		ScaleMin:         0,
+		ScaleMax:         9,
+		Properties:       propertiesJSON,
+		Confidence:       extracted.Confidence,
 		ExtractionMethod: "ai_pdf_extraction",
-		Source: "pdf",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Source:           "pdf",
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 }
 

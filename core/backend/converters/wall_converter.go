@@ -1,9 +1,9 @@
 package converters
 
 import (
-	"encoding/json"
 	"math"
-	"arxos/arxobject"
+
+	"github.com/arxos/arxos/core/arxobject"
 )
 
 // WallSegment represents a detected wall from the PDF parser
@@ -28,9 +28,9 @@ type WallConverter struct {
 // NewWallConverter creates a converter with sensible defaults
 func NewWallConverter() *WallConverter {
 	return &WallConverter{
-		PixelsPerMeter: 100.0,  // Assume 100 pixels = 1 meter (adjustable)
-		FloorHeight:    3.0,    // 3 meters floor height
-		DefaultScale:   1,      // Floor-level scale
+		PixelsPerMeter: 100.0, // Assume 100 pixels = 1 meter (adjustable)
+		FloorHeight:    3.0,   // 3 meters floor height
+		DefaultScale:   1,     // Floor-level scale
 	}
 }
 
@@ -39,71 +39,57 @@ func (wc *WallConverter) ConvertWallToArxObject(wall WallSegment) *arxobject.Arx
 	// Calculate wall center point
 	centerX := (wall.X1 + wall.X2) / 2.0
 	centerY := (wall.Y1 + wall.Y2) / 2.0
-	
+
 	// Calculate wall length
 	dx := wall.X2 - wall.X1
 	dy := wall.Y2 - wall.Y1
 	length := math.Sqrt(dx*dx + dy*dy)
-	
+
 	// Calculate rotation angle (in degrees)
 	angle := math.Atan2(dy, dx) * 180.0 / math.Pi
-	
+
 	// Convert pixels to nanometers for maximum precision
 	// 1 meter = 1,000,000,000 nanometers
 	nmPerPixel := (1.0 / wc.PixelsPerMeter) * 1000000000.0
-	
+
 	centerXNM := int64(centerX * nmPerPixel)
 	centerYNM := int64(centerY * nmPerPixel)
 	lengthNM := int64(length * nmPerPixel)
 	thicknessNM := int64(wall.Thickness * nmPerPixel)
 	heightNM := int64(wc.FloorHeight * 1000000000.0)
-	
-	// Create ArxObject
-	obj := arxobject.NewArxObject(string(arxobject.StructuralWall), "structural")
-	obj.X = centerXNM
-	obj.Y = centerYNM
-	obj.Z = 0 // Ground floor
-	obj.Width = thicknessNM
-	obj.Height = heightNM
-	obj.Depth = lengthNM
-	obj.ScaleMin = 0
-	obj.ScaleMax = int(wc.DefaultScale)
-	
-	// Set confidence based on detection confidence
-	obj.Confidence = arxobject.ConfidenceScore{
-		Classification: float32(wall.Confidence),
-		Position:       float32(wall.Confidence * 0.9), // Position slightly less certain
-		Properties:     0.7, // Properties are estimated
-		Relationships:  0.5, // Relationships not yet determined
+
+	// Create ArxObject with correct fields
+	obj := &arxobject.ArxObject{
+		ID:        1, // TODO: Generate unique ID
+		Type:      arxobject.StructuralWall,
+		X:         centerXNM,
+		Y:         centerYNM,
+		Z:         0, // Ground floor
+		Length:    lengthNM,
+		Width:     thicknessNM,
+		Height:    heightNM,
+		RotationZ: int32(angle * 1000), // Convert to millidegrees
+		Confidence: arxobject.ConfidenceScore{
+			Classification: float32(wall.Confidence),
+			Position:       float32(wall.Confidence * 0.9), // Position slightly less certain
+			Properties:     0.7,                            // Properties are estimated
+			Relationships:  0.5,                            // Relationships not yet determined
+			Overall:        float32(wall.Confidence * 0.8), // Overall confidence
+		},
 	}
-	obj.Confidence.CalculateOverall()
-	
-	// Add metadata as JSON properties
-	metadata := map[string]interface{}{
-		"confidence":    wall.Confidence,
-		"source":        wall.Type,
-		"original_x1":   wall.X1,
-		"original_y1":   wall.Y1,
-		"original_x2":   wall.X2,
-		"original_y2":   wall.Y2,
-		"angle_degrees": angle,
-	}
-	if props, err := json.Marshal(metadata); err == nil {
-		obj.Properties = props
-	}
-	
+
 	return obj
 }
 
 // ConvertBatch converts multiple walls at once
 func (wc *WallConverter) ConvertBatch(walls []WallSegment) []*arxobject.ArxObject {
 	objects := make([]*arxobject.ArxObject, 0, len(walls))
-	
+
 	for _, wall := range walls {
 		obj := wc.ConvertWallToArxObject(wall)
 		objects = append(objects, obj)
 	}
-	
+
 	return objects
 }
 
@@ -112,7 +98,7 @@ func (wc *WallConverter) SetScaleFromPDF(pdfWidth, pdfHeight int, buildingWidthM
 	// Calculate pixels per meter from the PDF dimensions
 	pixelsPerMeterX := float64(pdfWidth) / buildingWidthMeters
 	pixelsPerMeterY := float64(pdfHeight) / buildingHeightMeters
-	
+
 	// Use average for consistency
 	wc.PixelsPerMeter = (pixelsPerMeterX + pixelsPerMeterY) / 2.0
 }
@@ -131,20 +117,20 @@ func FindIntersection(w1, w2 WallSegment) (*WallIntersection, bool) {
 	// Line segment intersection algorithm
 	x1, y1, x2, y2 := w1.X1, w1.Y1, w1.X2, w1.Y2
 	x3, y3, x4, y4 := w2.X1, w2.Y1, w2.X2, w2.Y2
-	
+
 	denom := (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4)
 	if math.Abs(denom) < 0.0001 {
 		return nil, false // Lines are parallel
 	}
-	
+
 	t := ((x1-x3)*(y3-y4) - (y1-y3)*(x3-x4)) / denom
 	s := ((x1-x3)*(y1-y2) - (y1-y3)*(x1-x2)) / denom
-	
+
 	// Check if intersection is within both segments
 	if t >= 0 && t <= 1 && s >= 0 && s <= 1 {
 		intersectX := x1 + t*(x2-x1)
 		intersectY := y1 + t*(y2-y1)
-		
+
 		return &WallIntersection{
 			X:          intersectX,
 			Y:          intersectY,
@@ -152,7 +138,7 @@ func FindIntersection(w1, w2 WallSegment) (*WallIntersection, bool) {
 			IntersectS: s,
 		}, true
 	}
-	
+
 	return nil, false
 }
 
@@ -167,7 +153,7 @@ func SplitWallAtPoint(wall WallSegment, splitX, splitY float64) (WallSegment, Wa
 		Confidence: wall.Confidence,
 		Type:       wall.Type,
 	}
-	
+
 	wall2 := WallSegment{
 		X1:         splitX,
 		Y1:         splitY,
@@ -177,7 +163,7 @@ func SplitWallAtPoint(wall WallSegment, splitX, splitY float64) (WallSegment, Wa
 		Confidence: wall.Confidence,
 		Type:       wall.Type,
 	}
-	
+
 	return wall1, wall2
 }
 
@@ -186,26 +172,26 @@ func MergeCollinearWalls(w1, w2 WallSegment, tolerance float64) (*WallSegment, b
 	// Calculate angles
 	angle1 := math.Atan2(w1.Y2-w1.Y1, w1.X2-w1.X1)
 	angle2 := math.Atan2(w2.Y2-w2.Y1, w2.X2-w2.X1)
-	
+
 	// Check if angles are similar (allowing for 180 degree difference)
 	angleDiff := math.Abs(angle1 - angle2)
 	if angleDiff > math.Pi {
 		angleDiff = 2*math.Pi - angleDiff
 	}
-	
+
 	if angleDiff > 0.1 && math.Abs(angleDiff-math.Pi) > 0.1 {
 		return nil, false // Not collinear
 	}
-	
+
 	// Check if walls are close enough
 	// Calculate distance from end of w1 to start of w2 (or vice versa)
 	dist1 := math.Sqrt(math.Pow(w1.X2-w2.X1, 2) + math.Pow(w1.Y2-w2.Y1, 2))
 	dist2 := math.Sqrt(math.Pow(w2.X2-w1.X1, 2) + math.Pow(w2.Y2-w1.Y1, 2))
-	
+
 	if dist1 > tolerance && dist2 > tolerance {
 		return nil, false // Too far apart
 	}
-	
+
 	// Merge the walls - find the extreme points
 	points := []struct{ x, y float64 }{
 		{w1.X1, w1.Y1},
@@ -213,11 +199,11 @@ func MergeCollinearWalls(w1, w2 WallSegment, tolerance float64) (*WallSegment, b
 		{w2.X1, w2.Y1},
 		{w2.X2, w2.Y2},
 	}
-	
+
 	// Find the two points that are farthest apart
 	maxDist := 0.0
 	var p1, p2 struct{ x, y float64 }
-	
+
 	for i := 0; i < len(points); i++ {
 		for j := i + 1; j < len(points); j++ {
 			dist := math.Sqrt(math.Pow(points[i].x-points[j].x, 2) + math.Pow(points[i].y-points[j].y, 2))
@@ -228,7 +214,7 @@ func MergeCollinearWalls(w1, w2 WallSegment, tolerance float64) (*WallSegment, b
 			}
 		}
 	}
-	
+
 	merged := &WallSegment{
 		X1:         p1.x,
 		Y1:         p1.y,
@@ -238,6 +224,6 @@ func MergeCollinearWalls(w1, w2 WallSegment, tolerance float64) (*WallSegment, b
 		Confidence: math.Max(w1.Confidence, w2.Confidence),
 		Type:       w1.Type,
 	}
-	
+
 	return merged, true
 }

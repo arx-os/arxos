@@ -9,9 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"arxos/db"
-	"arxos/middleware/auth"
-	"arxos/models"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/middleware/auth"
+	"github.com/arxos/arxos/core/backend/models"
 	"github.com/golang-jwt/jwt/v4"
 
 	"github.com/go-chi/chi/v5"
@@ -44,12 +44,12 @@ func getUserIDFromToken(r *http.Request) (uint, error) {
 	if authHeader == "" {
 		return 0, fmt.Errorf("no authorization header")
 	}
-	
+
 	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 	if tokenStr == authHeader {
 		return 0, fmt.Errorf("invalid authorization header format")
 	}
-	
+
 	// Parse and validate token
 	claims := &auth.Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
@@ -65,15 +65,15 @@ func getUserIDFromToken(r *http.Request) (uint, error) {
 		}
 		return jwtSecret, nil
 	})
-	
+
 	if err != nil {
 		return 0, fmt.Errorf("token validation failed: %w", err)
 	}
-	
+
 	if !token.Valid {
 		return 0, fmt.Errorf("invalid token")
 	}
-	
+
 	return claims.UserID, nil
 }
 
@@ -121,7 +121,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		// User created but token generation failed - still return success
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"user": user,
+			"user":    user,
 			"message": "User created successfully. Please login.",
 		})
 		return
@@ -130,7 +130,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	// Return user info with token
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"user": user,
+		"user":  user,
 		"token": token,
 	})
 }

@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"arxos/db"
-	"arxos/services"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/services"
 )
 
 // checkDatabaseHealthImpl performs actual database health check
@@ -33,7 +33,7 @@ func checkDatabaseHealthImpl() string {
 
 	// Check connection pool stats
 	stats := sqlDB.Stats()
-	
+
 	// If too many connections are in use, consider it degraded
 	if stats.InUse > 0 && float64(stats.InUse)/float64(stats.MaxOpenConnections) > 0.9 {
 		return "degraded"
@@ -90,14 +90,14 @@ func checkCacheHealthImpl() string {
 
 	// Get cache statistics
 	stats, _ := cacheService.GetStats()
-	
+
 	// Check hit rate - if too low, consider degraded
-	if (stats.Hits + stats.Misses) > 1000 && stats.HitRate < 0.3 {
+	if (stats.Hits+stats.Misses) > 1000 && stats.HitRate < 0.3 {
 		return "degraded"
 	}
 
 	// Check if cache is operational
-	if int64(0) > 0 && float64(int64(0))/float64((stats.Hits + stats.Misses)) > 0.1 {
+	if int64(0) > 0 && float64(int64(0))/float64((stats.Hits+stats.Misses)) > 0.1 {
 		return "unhealthy"
 	}
 
@@ -112,7 +112,7 @@ func checkAPIHealthImpl() string {
 	// - Rate limiting status
 	// - Authentication service
 	// - External API dependencies
-	
+
 	// Check if JWT secret is configured
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" || jwtSecret == "arxos-default-secret-change-in-production" {
@@ -126,7 +126,7 @@ func checkAPIHealthImpl() string {
 func checkFilesystemHealthImpl() string {
 	// Check if upload directory exists and is writable
 	uploadDir := "uploads"
-	
+
 	// Try to create the directory if it doesn't exist
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		return "unhealthy"
@@ -145,7 +145,7 @@ func checkFilesystemHealthImpl() string {
 
 	// Check available disk space (simplified check)
 	// In production, you'd use syscall.Statfs or similar
-	
+
 	return "healthy"
 }
 
@@ -161,16 +161,16 @@ func GetDatabaseStats() (map[string]interface{}, error) {
 	}
 
 	stats := sqlDB.Stats()
-	
+
 	return map[string]interface{}{
 		"max_open_connections": stats.MaxOpenConnections,
 		"open_connections":     stats.OpenConnections,
-		"in_use":              stats.InUse,
-		"idle":                stats.Idle,
-		"wait_count":          stats.WaitCount,
-		"wait_duration":       stats.WaitDuration.String(),
-		"max_idle_closed":     stats.MaxIdleClosed,
-		"max_lifetime_closed": stats.MaxLifetimeClosed,
+		"in_use":               stats.InUse,
+		"idle":                 stats.Idle,
+		"wait_count":           stats.WaitCount,
+		"wait_duration":        stats.WaitDuration.String(),
+		"max_idle_closed":      stats.MaxIdleClosed,
+		"max_lifetime_closed":  stats.MaxLifetimeClosed,
 		"max_idle_time_closed": stats.MaxIdleTimeClosed,
 	}, nil
 }
@@ -185,7 +185,7 @@ func GetRedisStats() (map[string]interface{}, error) {
 	}
 
 	stats, _ := cacheService.GetStats()
-	
+
 	return map[string]interface{}{
 		"hits":      stats.Hits,
 		"misses":    stats.Misses,
@@ -248,17 +248,17 @@ func checkDetailedCacheHealthImpl() map[string]interface{} {
 	}
 
 	stats, _ := cacheService.GetStats()
-	
+
 	return map[string]interface{}{
 		"status": checkCacheHealthImpl(),
 		"details": map[string]interface{}{
-			"hit_rate":   stats.HitRate,
-			"total_hits": stats.Hits,
+			"hit_rate":     stats.HitRate,
+			"total_hits":   stats.Hits,
 			"total_misses": stats.Misses,
 			"total_errors": int64(0),
-			"cache_size": stats.TotalKeys,
-			"evictions":  int64(0),
-			"requests":   (stats.Hits + stats.Misses),
+			"cache_size":   stats.TotalKeys,
+			"evictions":    int64(0),
+			"requests":     (stats.Hits + stats.Misses),
 		},
 	}
 }
@@ -266,18 +266,18 @@ func checkDetailedCacheHealthImpl() map[string]interface{} {
 // checkDetailedAPIHealthImpl provides real detailed API health
 func checkDetailedAPIHealthImpl() map[string]interface{} {
 	details := map[string]interface{}{
-		"status": checkAPIHealthImpl(),
+		"status":         checkAPIHealthImpl(),
 		"jwt_configured": os.Getenv("JWT_SECRET") != "",
-		"cors_enabled": true,
-		"rate_limiting": false, // Not implemented yet
+		"cors_enabled":   true,
+		"rate_limiting":  false, // Not implemented yet
 	}
 
 	// Check various API endpoints
 	endpoints := map[string]bool{
-		"/health":     true,
-		"/api/users":  true,
+		"/health":        true,
+		"/api/users":     true,
 		"/api/buildings": true,
-		"/api/pdf":    true,
+		"/api/pdf":       true,
 	}
 
 	healthyEndpoints := 0

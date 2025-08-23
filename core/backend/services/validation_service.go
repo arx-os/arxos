@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"arxos/arxobject"
-	"arxos/models"
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/backend/models"
 )
 
 // ValidationService handles validation business logic
@@ -70,7 +70,7 @@ func (s *ValidationService) GetPendingValidations(priority, objectType, limit st
 	if tasks := s.cache.GetPendingTasks(); tasks != nil && time.Since(s.cache.lastUpdate) < 5*time.Minute {
 		return s.filterTasks(tasks, priority, objectType, limit), nil
 	}
-	
+
 	// Build query
 	query := `
 		SELECT 
@@ -83,39 +83,39 @@ func (s *ValidationService) GetPendingValidations(priority, objectType, limit st
 			AND s.confidence < 0.6
 		WHERE v.status = 'pending'
 	`
-	
+
 	args := []interface{}{}
 	argCount := 1
-	
+
 	if priority != "" {
 		query += fmt.Sprintf(" AND v.priority >= $%d", argCount)
 		args = append(args, priority)
 		argCount++
 	}
-	
+
 	if objectType != "" {
 		query += fmt.Sprintf(" AND v.object_type = $%d", argCount)
 		args = append(args, objectType)
 		argCount++
 	}
-	
+
 	query += `
 		GROUP BY v.id, v.object_id, v.object_type, v.confidence,
 			v.priority, v.potential_impact, v.created_at
 		ORDER BY v.priority DESC, v.potential_impact DESC
 	`
-	
+
 	if limit != "" {
 		query += fmt.Sprintf(" LIMIT $%d", argCount)
 		args = append(args, limit)
 	}
-	
+
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var tasks []*models.ValidationTask
 	for rows.Next() {
 		task := &models.ValidationTask{}
@@ -129,10 +129,10 @@ func (s *ValidationService) GetPendingValidations(priority, objectType, limit st
 		}
 		tasks = append(tasks, task)
 	}
-	
+
 	// Update cache
 	s.cache.UpdatePendingTasks(tasks)
-	
+
 	return tasks, nil
 }
 
@@ -145,20 +145,20 @@ func (s *ValidationService) CreateValidationTask(task *models.ValidationTask) er
 		) VALUES ($1, $2, $3, $4, $5, 'pending', $6)
 		RETURNING id
 	`
-	
+
 	err := s.db.QueryRow(
 		query,
 		task.ObjectID, task.ObjectType, task.Confidence,
 		task.Priority, task.PotentialImpact, task.CreatedAt,
 	).Scan(&task.ID)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	// Invalidate cache
 	s.cache.InvalidatePendingTasks()
-	
+
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (s *ValidationService) SaveValidation(
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	// Save validation record
 	validationQuery := `
 		INSERT INTO arx_validations (
@@ -181,10 +181,10 @@ func (s *ValidationService) SaveValidation(
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
 	`
-	
+
 	dataJSON, _ := json.Marshal(submission.Data)
 	var validationID int64
-	
+
 	err = tx.QueryRow(
 		validationQuery,
 		submission.ObjectID, submission.ValidationType,
@@ -192,11 +192,11 @@ func (s *ValidationService) SaveValidation(
 		dataJSON, submission.PhotoURL, submission.Notes,
 		submission.Timestamp,
 	).Scan(&validationID)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	// Save impact record
 	impactQuery := `
 		INSERT INTO validation_impacts (
@@ -206,9 +206,9 @@ func (s *ValidationService) SaveValidation(
 			created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
-	
+
 	cascadedJSON, _ := json.Marshal(impact.CascadedObjects)
-	
+
 	_, err = tx.Exec(
 		impactQuery,
 		validationID, impact.ObjectID, impact.OldConfidence,
@@ -217,11 +217,11 @@ func (s *ValidationService) SaveValidation(
 		impact.TotalConfidenceGain, impact.TimeSaved,
 		time.Now(),
 	)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	// Update object confidence in database
 	updateQuery := `
 		UPDATE arx_objects 
@@ -231,7 +231,7 @@ func (s *ValidationService) SaveValidation(
 			validated_at = $3
 		WHERE id = $4
 	`
-	
+
 	confidenceJSON, _ := json.Marshal(map[string]float32{
 		"overall":        impact.NewConfidence,
 		"classification": submission.Confidence,
@@ -239,17 +239,17 @@ func (s *ValidationService) SaveValidation(
 		"properties":     submission.Confidence * 0.85,
 		"relationships":  submission.Confidence * 0.7,
 	})
-	
+
 	_, err = tx.Exec(
 		updateQuery,
 		confidenceJSON, submission.Validator,
 		submission.Timestamp, submission.ObjectID,
 	)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	// Update validation task status
 	taskUpdateQuery := `
 		UPDATE validation_tasks
@@ -258,12 +258,12 @@ func (s *ValidationService) SaveValidation(
 			completed_by = $2
 		WHERE object_id = $3 AND status = 'pending'
 	`
-	
+
 	_, err = tx.Exec(taskUpdateQuery, time.Now(), submission.Validator, submission.ObjectID)
 	if err != nil {
 		return err
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -308,24 +308,24 @@ func (s *ValidationService) LearnPattern(
 	similar []*arxobject.ArxObject,
 	submission models.ValidationSubmission,
 ) bool {
-	
+
 	if len(similar) < 3 {
 		return false // Not enough similar objects for pattern
 	}
-	
+
 	// Extract pattern features
 	pattern := s.extractPattern(validated, submission)
 	patternKey := fmt.Sprintf("%s_%v", getObjectTypeName(arxobject.ArxObjectType(validated.Type)), pattern["key"])
-	
+
 	// Check if pattern exists
 	existingPattern, exists := s.patternEngine.patterns[patternKey]
 	if exists {
 		// Update existing pattern
 		existingPattern.OccurrenceCount++
-		existingPattern.Confidence = (existingPattern.Confidence*float32(existingPattern.OccurrenceCount-1) + 
+		existingPattern.Confidence = (existingPattern.Confidence*float32(existingPattern.OccurrenceCount-1) +
 			submission.Confidence) / float32(existingPattern.OccurrenceCount)
 		existingPattern.LastUpdated = time.Now()
-		
+
 		// Save to database
 		s.updatePatternInDB(existingPattern)
 	} else {
@@ -339,21 +339,21 @@ func (s *ValidationService) LearnPattern(
 			LastUpdated:      time.Now(),
 			ValidationSource: submission.Validator,
 		}
-		
+
 		s.patternEngine.patterns[patternKey] = newPattern
-		
+
 		// Save to database
 		s.savePatternToDB(newPattern)
 	}
-	
+
 	// Apply pattern to similar objects
 	for _, obj := range similar {
 		if s.matchesPattern(obj, pattern) {
 			oldConfidence := obj.Confidence.Overall
-			
+
 			// Apply pattern boost
 			s.applyPatternToObject(obj, existingPattern)
-			
+
 			// Record application
 			s.patternEngine.patternHistory = append(s.patternEngine.patternHistory, PatternApplication{
 				PatternID:       patternKey,
@@ -364,7 +364,7 @@ func (s *ValidationService) LearnPattern(
 			})
 		}
 	}
-	
+
 	return true
 }
 
@@ -372,7 +372,7 @@ func (s *ValidationService) LearnPattern(
 func (s *ValidationService) GetValidationHistory(
 	objectID, validator, startDate, endDate string,
 ) ([]models.ValidationRecord, error) {
-	
+
 	query := `
 		SELECT 
 			v.id, v.object_id, v.validation_type, v.validator,
@@ -383,42 +383,42 @@ func (s *ValidationService) GetValidationHistory(
 		LEFT JOIN validation_impacts i ON i.validation_id = v.id
 		WHERE 1=1
 	`
-	
+
 	args := []interface{}{}
 	argCount := 1
-	
+
 	if objectID != "" {
 		query += fmt.Sprintf(" AND v.object_id = $%d", argCount)
 		args = append(args, objectID)
 		argCount++
 	}
-	
+
 	if validator != "" {
 		query += fmt.Sprintf(" AND v.validator = $%d", argCount)
 		args = append(args, validator)
 		argCount++
 	}
-	
+
 	if startDate != "" {
 		query += fmt.Sprintf(" AND v.validated_at >= $%d", argCount)
 		args = append(args, startDate)
 		argCount++
 	}
-	
+
 	if endDate != "" {
 		query += fmt.Sprintf(" AND v.validated_at <= $%d", argCount)
 		args = append(args, endDate)
 		argCount++
 	}
-	
+
 	query += " ORDER BY v.validated_at DESC"
-	
+
 	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var records []models.ValidationRecord
 	for rows.Next() {
 		var record models.ValidationRecord
@@ -434,14 +434,14 @@ func (s *ValidationService) GetValidationHistory(
 		}
 		records = append(records, record)
 	}
-	
+
 	return records, nil
 }
 
 // GetLeaderboard retrieves validation leaderboard
 func (s *ValidationService) GetLeaderboard(period string) ([]models.ValidatorStats, error) {
 	var timeFilter string
-	
+
 	switch period {
 	case "daily":
 		timeFilter = "AND v.validated_at >= CURRENT_DATE"
@@ -452,7 +452,7 @@ func (s *ValidationService) GetLeaderboard(period string) ([]models.ValidatorSta
 	default:
 		timeFilter = ""
 	}
-	
+
 	query := fmt.Sprintf(`
 		SELECT 
 			v.validator,
@@ -469,19 +469,19 @@ func (s *ValidationService) GetLeaderboard(period string) ([]models.ValidatorSta
 		ORDER BY total_validations DESC, avg_improvement DESC
 		LIMIT 20
 	`, timeFilter)
-	
+
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var stats []models.ValidatorStats
 	rank := 1
 	for rows.Next() {
 		var stat models.ValidatorStats
 		stat.Rank = rank
-		
+
 		err := rows.Scan(
 			&stat.Validator, &stat.TotalValidations,
 			&stat.AvgImprovement, &stat.TotalCascaded,
@@ -491,17 +491,17 @@ func (s *ValidationService) GetLeaderboard(period string) ([]models.ValidatorSta
 		if err != nil {
 			continue
 		}
-		
+
 		// Calculate points (simple scoring system)
-		stat.Points = stat.TotalValidations*10 + 
-			int(stat.AvgImprovement*100) + 
-			stat.TotalCascaded*2 + 
+		stat.Points = stat.TotalValidations*10 +
+			int(stat.AvgImprovement*100) +
+			stat.TotalCascaded*2 +
 			stat.PatternsLearned*50
-		
+
 		stats = append(stats, stat)
 		rank++
 	}
-	
+
 	return stats, nil
 }
 
@@ -511,25 +511,25 @@ func (s *ValidationService) extractPattern(
 	obj *arxobject.ArxObject,
 	submission models.ValidationSubmission,
 ) map[string]interface{} {
-	
+
 	pattern := make(map[string]interface{})
-	
+
 	// Extract key features
 	pattern["type"] = obj.Type
 	pattern["has_dimensions"] = obj.Width > 0 && obj.Height > 0
 	pattern["scale_level"] = obj.ScaleMin
-	
+
 	// Extract validation-specific features
 	if submission.Data != nil {
 		for key, value := range submission.Data {
 			pattern["val_"+key] = value
 		}
 	}
-	
+
 	// Create pattern key
-	pattern["key"] = fmt.Sprintf("%s_%d_%v", 
+	pattern["key"] = fmt.Sprintf("%s_%d_%v",
 		obj.Type, obj.ScaleMin, pattern["has_dimensions"])
-	
+
 	return pattern
 }
 
@@ -537,21 +537,21 @@ func (s *ValidationService) matchesPattern(
 	obj *arxobject.ArxObject,
 	pattern map[string]interface{},
 ) bool {
-	
+
 	// Check type match
 	if patternType, ok := pattern["type"].(string); ok {
 		if obj.Type != patternType {
 			return false
 		}
 	}
-	
+
 	// Check scale level
 	if scaleLevel, ok := pattern["scale_level"].(int); ok {
 		if obj.ScaleMin != scaleLevel {
 			return false
 		}
 	}
-	
+
 	// Check dimensions
 	if hasDims, ok := pattern["has_dimensions"].(bool); ok {
 		objHasDims := obj.Width > 0 && obj.Height > 0
@@ -559,7 +559,7 @@ func (s *ValidationService) matchesPattern(
 			return false
 		}
 	}
-	
+
 	// If all checks pass, consider it a match
 	return true
 }
@@ -571,14 +571,14 @@ func (s *ValidationService) applyPatternToObject(
 	if pattern == nil {
 		return
 	}
-	
+
 	// Apply confidence boost based on pattern confidence
 	boost := float32(pattern.Confidence * 0.3) // 30% of pattern confidence
-	
+
 	// Boost different dimensions
 	obj.Confidence.Classification = minFloat32(obj.Confidence.Classification+boost, 0.90)
 	obj.Confidence.Properties = minFloat32(obj.Confidence.Properties+float32(boost*0.8), 0.90)
-	
+
 	// Recalculate overall
 	obj.Confidence.CalculateOverall()
 }
@@ -590,16 +590,16 @@ func (s *ValidationService) savePatternToDB(pattern *ValidationPattern) error {
 			occurrence_count, validation_source, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	
+
 	patternJSON, _ := json.Marshal(pattern.Pattern)
-	
+
 	_, err := s.db.Exec(
 		query,
 		pattern.ID, pattern.ObjectType, patternJSON,
 		pattern.Confidence, pattern.OccurrenceCount,
 		pattern.ValidationSource, time.Now(), pattern.LastUpdated,
 	)
-	
+
 	return err
 }
 
@@ -611,13 +611,13 @@ func (s *ValidationService) updatePatternInDB(pattern *ValidationPattern) error 
 			updated_at = $3
 		WHERE pattern_id = $4
 	`
-	
+
 	_, err := s.db.Exec(
 		query,
 		pattern.Confidence, pattern.OccurrenceCount,
 		pattern.LastUpdated, pattern.ID,
 	)
-	
+
 	return err
 }
 
@@ -625,9 +625,9 @@ func (s *ValidationService) filterTasks(
 	tasks []*models.ValidationTask,
 	priority, objectType, limit string,
 ) []*models.ValidationTask {
-	
+
 	var filtered []*models.ValidationTask
-	
+
 	for _, task := range tasks {
 		// Filter by priority
 		if priority != "" {
@@ -637,14 +637,14 @@ func (s *ValidationService) filterTasks(
 				continue
 			}
 		}
-		
+
 		// Filter by type
 		if objectType != "" && task.ObjectType != objectType {
 			continue
 		}
-		
+
 		filtered = append(filtered, task)
-		
+
 		// Apply limit
 		if limit != "" {
 			var maxCount int
@@ -654,7 +654,7 @@ func (s *ValidationService) filterTasks(
 			}
 		}
 	}
-	
+
 	return filtered
 }
 
@@ -672,7 +672,7 @@ func (c *ValidationCache) GetPendingTasks() []*models.ValidationTask {
 	if time.Since(c.lastUpdate) > 5*time.Minute {
 		return nil // Cache expired
 	}
-	
+
 	tasks := make([]*models.ValidationTask, 0, len(c.pendingTasks))
 	for _, task := range c.pendingTasks {
 		tasks = append(tasks, task)
@@ -712,7 +712,7 @@ func getObjectTypeName(t arxobject.ArxObjectType) string {
 		arxobject.StructuralBeam:   "beam",
 		// Add more as needed
 	}
-	
+
 	if name, ok := typeNames[t]; ok {
 		return name
 	}
@@ -733,7 +733,7 @@ func (s *ValidationService) getObjectFromDB(objectID string) (*arxobject.ArxObje
 
 	var obj arxobject.ArxObject
 	var confidenceJSON []byte
-	
+
 	err := s.db.QueryRow(query, objectID).Scan(
 		&obj.ID, &obj.UUID, &obj.Type, &obj.System, &obj.X, &obj.Y, &obj.Z,
 		&obj.Width, &obj.Height, &obj.Depth, &obj.ScaleMin, &obj.ScaleMax,
@@ -781,7 +781,7 @@ func (s *ValidationService) findSimilarObjectsForPattern(obj *arxobject.ArxObjec
 	for rows.Next() {
 		var simObj arxobject.ArxObject
 		var confidenceJSON []byte
-		
+
 		err := rows.Scan(
 			&simObj.ID, &simObj.UUID, &simObj.Type, &simObj.System,
 			&simObj.X, &simObj.Y, &simObj.Z,

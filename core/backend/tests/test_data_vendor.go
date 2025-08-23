@@ -2,15 +2,16 @@ package tests
 
 import (
 	"context"
-	"arxos/db"
-	"arxos/handlers"
-	"arxos/models"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"testing"
 	"time"
 
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/handlers"
+	"github.com/arxos/arxos/core/backend/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )

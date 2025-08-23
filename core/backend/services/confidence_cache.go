@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"arxos/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 )
 
 // ConfidenceCache provides high-performance caching for confidence scores
@@ -14,27 +14,27 @@ type ConfidenceCache struct {
 	// In-memory cache for hot data
 	memCache      map[uint64]*CachedConfidence
 	memCacheMutex sync.RWMutex
-	
+
 	// Redis connection for distributed cache
 	redisService *RedisService
-	
+
 	// Cache statistics
 	stats ConfidenceCacheStats
-	
+
 	// Configuration
 	config ConfidenceCacheConfig
 }
 
 // CachedConfidence represents cached confidence data
 type CachedConfidence struct {
-	ObjectID         uint64                   `json:"object_id"`
+	ObjectID         uint64                    `json:"object_id"`
 	Confidence       arxobject.ConfidenceScore `json:"confidence"`
-	LastValidated    time.Time                `json:"last_validated"`
-	ValidationCount  int                      `json:"validation_count"`
-	CachedAt         time.Time                `json:"cached_at"`
-	ExpiresAt        time.Time                `json:"expires_at"`
-	AccessCount      int64                    `json:"access_count"`
-	PropagationDepth int                      `json:"propagation_depth"`
+	LastValidated    time.Time                 `json:"last_validated"`
+	ValidationCount  int                       `json:"validation_count"`
+	CachedAt         time.Time                 `json:"cached_at"`
+	ExpiresAt        time.Time                 `json:"expires_at"`
+	AccessCount      int64                     `json:"access_count"`
+	PropagationDepth int                       `json:"propagation_depth"`
 }
 
 // ConfidenceCacheStats tracks cache performance
@@ -51,14 +51,14 @@ type ConfidenceCacheStats struct {
 
 // ConfidenceCacheConfig defines cache configuration
 type ConfidenceCacheConfig struct {
-	MaxMemoryObjects   int           `json:"max_memory_objects"`
-	DefaultTTL         time.Duration `json:"default_ttl"`
-	HighConfidenceTTL  time.Duration `json:"high_confidence_ttl"`
-	LowConfidenceTTL   time.Duration `json:"low_confidence_ttl"`
-	EvictionPolicy     string        `json:"eviction_policy"` // LRU, LFU, FIFO
-	EnableRedis        bool          `json:"enable_redis"`
-	RedisKeyPrefix     string        `json:"redis_key_prefix"`
-	WarmupOnStart      bool          `json:"warmup_on_start"`
+	MaxMemoryObjects  int           `json:"max_memory_objects"`
+	DefaultTTL        time.Duration `json:"default_ttl"`
+	HighConfidenceTTL time.Duration `json:"high_confidence_ttl"`
+	LowConfidenceTTL  time.Duration `json:"low_confidence_ttl"`
+	EvictionPolicy    string        `json:"eviction_policy"` // LRU, LFU, FIFO
+	EnableRedis       bool          `json:"enable_redis"`
+	RedisKeyPrefix    string        `json:"redis_key_prefix"`
+	WarmupOnStart     bool          `json:"warmup_on_start"`
 }
 
 // NewConfidenceCache creates a new confidence cache
@@ -75,17 +75,17 @@ func NewConfidenceCache(redisService *RedisService, config *ConfidenceCacheConfi
 			WarmupOnStart:     true,
 		}
 	}
-	
+
 	cache := &ConfidenceCache{
 		memCache:     make(map[uint64]*CachedConfidence),
 		redisService: redisService,
 		config:       *config,
 		stats:        ConfidenceCacheStats{},
 	}
-	
+
 	// Start background maintenance
 	go cache.maintenanceLoop()
-	
+
 	return cache
 }
 
@@ -93,19 +93,19 @@ func NewConfidenceCache(redisService *RedisService, config *ConfidenceCacheConfi
 func (cc *ConfidenceCache) Get(objectID uint64) (*arxobject.ConfidenceScore, bool) {
 	startTime := time.Now()
 	defer cc.updateAccessTime(time.Since(startTime))
-	
+
 	// Check memory cache first
 	cc.memCacheMutex.RLock()
 	if cached, exists := cc.memCache[objectID]; exists {
 		cc.memCacheMutex.RUnlock()
-		
+
 		// Check if expired
 		if time.Now().Before(cached.ExpiresAt) {
 			cached.AccessCount++
 			cc.recordHit()
 			return &cached.Confidence, true
 		}
-		
+
 		// Expired - remove from cache
 		cc.memCacheMutex.Lock()
 		delete(cc.memCache, objectID)
@@ -113,7 +113,7 @@ func (cc *ConfidenceCache) Get(objectID uint64) (*arxobject.ConfidenceScore, boo
 	} else {
 		cc.memCacheMutex.RUnlock()
 	}
-	
+
 	// Check Redis if enabled
 	if cc.config.EnableRedis && cc.redisService != nil {
 		confidence, found := cc.getFromRedis(objectID)
@@ -124,7 +124,7 @@ func (cc *ConfidenceCache) Get(objectID uint64) (*arxobject.ConfidenceScore, boo
 			return confidence, true
 		}
 	}
-	
+
 	cc.recordMiss()
 	return nil, false
 }
@@ -132,7 +132,7 @@ func (cc *ConfidenceCache) Get(objectID uint64) (*arxobject.ConfidenceScore, boo
 // Set stores confidence in cache
 func (cc *ConfidenceCache) Set(objectID uint64, confidence *arxobject.ConfidenceScore, validated bool) {
 	ttl := cc.calculateTTL(confidence)
-	
+
 	cached := &CachedConfidence{
 		ObjectID:        objectID,
 		Confidence:      *confidence,
@@ -142,27 +142,27 @@ func (cc *ConfidenceCache) Set(objectID uint64, confidence *arxobject.Confidence
 		ExpiresAt:       time.Now().Add(ttl),
 		AccessCount:     0,
 	}
-	
+
 	if validated {
 		cached.ValidationCount = 1
 	}
-	
+
 	// Store in memory cache
 	cc.memCacheMutex.Lock()
-	
+
 	// Check if we need to evict
 	if len(cc.memCache) >= cc.config.MaxMemoryObjects {
 		cc.evictOne()
 	}
-	
+
 	cc.memCache[objectID] = cached
 	cc.memCacheMutex.Unlock()
-	
+
 	// Store in Redis if enabled
 	if cc.config.EnableRedis && cc.redisService != nil {
 		cc.setInRedis(objectID, cached)
 	}
-	
+
 	cc.updateStats()
 }
 
@@ -170,29 +170,29 @@ func (cc *ConfidenceCache) Set(objectID uint64, confidence *arxobject.Confidence
 func (cc *ConfidenceCache) BatchSet(confidences map[uint64]*arxobject.ConfidenceScore) {
 	cc.memCacheMutex.Lock()
 	defer cc.memCacheMutex.Unlock()
-	
+
 	for objectID, confidence := range confidences {
 		// Check if we need to evict
 		if len(cc.memCache) >= cc.config.MaxMemoryObjects {
 			cc.evictOne()
 		}
-		
+
 		ttl := cc.calculateTTL(confidence)
-		
+
 		cc.memCache[objectID] = &CachedConfidence{
-			ObjectID:      objectID,
-			Confidence:    *confidence,
-			CachedAt:      time.Now(),
-			ExpiresAt:     time.Now().Add(ttl),
-			AccessCount:   0,
+			ObjectID:    objectID,
+			Confidence:  *confidence,
+			CachedAt:    time.Now(),
+			ExpiresAt:   time.Now().Add(ttl),
+			AccessCount: 0,
 		}
 	}
-	
+
 	// Batch store in Redis if enabled
 	if cc.config.EnableRedis && cc.redisService != nil {
 		cc.batchSetInRedis(confidences)
 	}
-	
+
 	cc.updateStats()
 }
 
@@ -201,7 +201,7 @@ func (cc *ConfidenceCache) Invalidate(objectID uint64) {
 	cc.memCacheMutex.Lock()
 	delete(cc.memCache, objectID)
 	cc.memCacheMutex.Unlock()
-	
+
 	// Remove from Redis if enabled
 	if cc.config.EnableRedis && cc.redisService != nil {
 		cc.removeFromRedis(objectID)
@@ -212,21 +212,21 @@ func (cc *ConfidenceCache) Invalidate(objectID uint64) {
 func (cc *ConfidenceCache) InvalidatePattern(objectType arxobject.ArxObjectType) {
 	cc.memCacheMutex.Lock()
 	defer cc.memCacheMutex.Unlock()
-	
+
 	toRemove := []uint64{}
-	
+
 	// Find matching objects
 	// In production, would need object type stored in cache
 	for id := range cc.memCache {
 		// This is simplified - would need actual type checking
 		toRemove = append(toRemove, id)
 	}
-	
+
 	// Remove matching objects
 	for _, id := range toRemove {
 		delete(cc.memCache, id)
 	}
-	
+
 	// Clear Redis pattern if enabled
 	if cc.config.EnableRedis && cc.redisService != nil {
 		// Pattern-based deletion in Redis
@@ -263,7 +263,7 @@ func (cc *ConfidenceCache) UpdateAfterValidation(
 		}
 	}
 	cc.memCacheMutex.Unlock()
-	
+
 	// Mark cascaded objects with shorter TTL
 	for _, cascadedID := range cascadedObjects {
 		cc.memCacheMutex.Lock()
@@ -274,7 +274,7 @@ func (cc *ConfidenceCache) UpdateAfterValidation(
 		}
 		cc.memCacheMutex.Unlock()
 	}
-	
+
 	// Update Redis if enabled
 	if cc.config.EnableRedis && cc.redisService != nil {
 		cc.updateRedisAfterValidation(objectID, newConfidence, cascadedObjects)
@@ -285,16 +285,16 @@ func (cc *ConfidenceCache) UpdateAfterValidation(
 func (cc *ConfidenceCache) WarmUp(objectIDs []uint64, loader func(uint64) *arxobject.ConfidenceScore) {
 	cc.memCacheMutex.Lock()
 	defer cc.memCacheMutex.Unlock()
-	
+
 	for _, id := range objectIDs {
 		if len(cc.memCache) >= cc.config.MaxMemoryObjects {
 			break
 		}
-		
+
 		confidence := loader(id)
 		if confidence != nil {
 			ttl := cc.calculateTTL(confidence)
-			
+
 			cc.memCache[id] = &CachedConfidence{
 				ObjectID:    id,
 				Confidence:  *confidence,
@@ -310,17 +310,17 @@ func (cc *ConfidenceCache) WarmUp(objectIDs []uint64, loader func(uint64) *arxob
 func (cc *ConfidenceCache) GetStats() CacheStats {
 	cc.stats.mu.RLock()
 	defer cc.stats.mu.RUnlock()
-	
+
 	cc.memCacheMutex.RLock()
 	cc.stats.TotalObjects = int64(len(cc.memCache))
 	cc.stats.MemoryUsage = cc.estimateMemoryUsage()
 	cc.memCacheMutex.RUnlock()
-	
+
 	hitRate := float64(0)
 	if cc.stats.Hits+cc.stats.Misses > 0 {
 		hitRate = float64(cc.stats.Hits) / float64(cc.stats.Hits+cc.stats.Misses) * 100
 	}
-	
+
 	return CacheStats{
 		Hits:    cc.stats.Hits,
 		Misses:  cc.stats.Misses,
@@ -347,7 +347,7 @@ func (cc *ConfidenceCache) evictOne() {
 	} else {
 		cc.evictFIFO()
 	}
-	
+
 	cc.stats.mu.Lock()
 	cc.stats.Evictions++
 	cc.stats.LastEviction = time.Now()
@@ -357,7 +357,7 @@ func (cc *ConfidenceCache) evictOne() {
 func (cc *ConfidenceCache) evictLRU() {
 	var oldestID uint64
 	var oldestTime time.Time
-	
+
 	for id, cached := range cc.memCache {
 		accessTime := cached.CachedAt.Add(time.Duration(cached.AccessCount) * time.Second)
 		if oldestTime.IsZero() || accessTime.Before(oldestTime) {
@@ -365,7 +365,7 @@ func (cc *ConfidenceCache) evictLRU() {
 			oldestID = id
 		}
 	}
-	
+
 	if oldestID != 0 {
 		delete(cc.memCache, oldestID)
 	}
@@ -374,14 +374,14 @@ func (cc *ConfidenceCache) evictLRU() {
 func (cc *ConfidenceCache) evictLFU() {
 	var leastID uint64
 	var leastCount int64 = -1
-	
+
 	for id, cached := range cc.memCache {
 		if leastCount == -1 || cached.AccessCount < leastCount {
 			leastCount = cached.AccessCount
 			leastID = id
 		}
 	}
-	
+
 	if leastID != 0 {
 		delete(cc.memCache, leastID)
 	}
@@ -390,14 +390,14 @@ func (cc *ConfidenceCache) evictLFU() {
 func (cc *ConfidenceCache) evictFIFO() {
 	var oldestID uint64
 	var oldestTime time.Time
-	
+
 	for id, cached := range cc.memCache {
 		if oldestTime.IsZero() || cached.CachedAt.Before(oldestTime) {
 			oldestTime = cached.CachedAt
 			oldestID = id
 		}
 	}
-	
+
 	if oldestID != 0 {
 		delete(cc.memCache, oldestID)
 	}
@@ -406,7 +406,7 @@ func (cc *ConfidenceCache) evictFIFO() {
 func (cc *ConfidenceCache) maintenanceLoop() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		cc.cleanupExpired()
 		cc.updateStats()
@@ -416,16 +416,16 @@ func (cc *ConfidenceCache) maintenanceLoop() {
 func (cc *ConfidenceCache) cleanupExpired() {
 	cc.memCacheMutex.Lock()
 	defer cc.memCacheMutex.Unlock()
-	
+
 	now := time.Now()
 	toRemove := []uint64{}
-	
+
 	for id, cached := range cc.memCache {
 		if now.After(cached.ExpiresAt) {
 			toRemove = append(toRemove, id)
 		}
 	}
-	
+
 	for _, id := range toRemove {
 		delete(cc.memCache, id)
 	}
@@ -452,7 +452,7 @@ func (cc *ConfidenceCache) updateAccessTime(duration time.Duration) {
 	cc.stats.mu.Lock()
 	// Running average
 	alpha := 0.1
-	cc.stats.AverageAccessTime = cc.stats.AverageAccessTime*(1-alpha) + 
+	cc.stats.AverageAccessTime = cc.stats.AverageAccessTime*(1-alpha) +
 		float64(duration.Microseconds())/1000*alpha
 	cc.stats.mu.Unlock()
 }
@@ -472,24 +472,24 @@ func (cc *ConfidenceCache) getFromRedis(objectID uint64) (*arxobject.ConfidenceS
 	if cc.redisService == nil {
 		return nil, false
 	}
-	
+
 	key := fmt.Sprintf("%s%d", cc.config.RedisKeyPrefix, objectID)
 	data, err := cc.redisService.Get(key)
 	if err != nil || data == "" {
 		return nil, false
 	}
-	
+
 	var cached CachedConfidence
 	if err := json.Unmarshal([]byte(data), &cached); err != nil {
 		return nil, false
 	}
-	
+
 	// Check if expired
 	if time.Now().After(cached.ExpiresAt) {
 		cc.redisService.Delete(key)
 		return nil, false
 	}
-	
+
 	return &cached.Confidence, true
 }
 
@@ -497,13 +497,13 @@ func (cc *ConfidenceCache) setInRedis(objectID uint64, cached *CachedConfidence)
 	if cc.redisService == nil {
 		return
 	}
-	
+
 	key := fmt.Sprintf("%s%d", cc.config.RedisKeyPrefix, objectID)
 	data, err := json.Marshal(cached)
 	if err != nil {
 		return
 	}
-	
+
 	ttl := cached.ExpiresAt.Sub(time.Now())
 	cc.redisService.Set(key, string(data), ttl)
 }
@@ -512,25 +512,25 @@ func (cc *ConfidenceCache) batchSetInRedis(confidences map[uint64]*arxobject.Con
 	if cc.redisService == nil {
 		return
 	}
-	
+
 	// Use pipeline for batch operations
 	pipeline := make(map[string]string)
-	
+
 	for objectID, confidence := range confidences {
 		key := fmt.Sprintf("%s%d", cc.config.RedisKeyPrefix, objectID)
-		
+
 		cached := CachedConfidence{
 			ObjectID:   objectID,
 			Confidence: *confidence,
 			CachedAt:   time.Now(),
 			ExpiresAt:  time.Now().Add(cc.calculateTTL(confidence)),
 		}
-		
+
 		if data, err := json.Marshal(cached); err == nil {
 			pipeline[key] = string(data)
 		}
 	}
-	
+
 	// Execute pipeline
 	for key, value := range pipeline {
 		cc.redisService.Set(key, value, cc.config.DefaultTTL)
@@ -541,7 +541,7 @@ func (cc *ConfidenceCache) removeFromRedis(objectID uint64) {
 	if cc.redisService == nil {
 		return
 	}
-	
+
 	key := fmt.Sprintf("%s%d", cc.config.RedisKeyPrefix, objectID)
 	cc.redisService.Delete(key)
 }
@@ -554,7 +554,7 @@ func (cc *ConfidenceCache) updateRedisAfterValidation(
 	if cc.redisService == nil {
 		return
 	}
-	
+
 	// Update validated object
 	key := fmt.Sprintf("%s%d", cc.config.RedisKeyPrefix, objectID)
 	cached := CachedConfidence{
@@ -565,11 +565,11 @@ func (cc *ConfidenceCache) updateRedisAfterValidation(
 		CachedAt:        time.Now(),
 		ExpiresAt:       time.Now().Add(cc.config.HighConfidenceTTL),
 	}
-	
+
 	if data, err := json.Marshal(cached); err == nil {
 		cc.redisService.Set(key, string(data), cc.config.HighConfidenceTTL)
 	}
-	
+
 	// Mark cascaded objects
 	for _, cascadedID := range cascadedObjects {
 		cascadeKey := fmt.Sprintf("%s%d:cascaded", cc.config.RedisKeyPrefix, cascadedID)
@@ -580,13 +580,13 @@ func (cc *ConfidenceCache) updateRedisAfterValidation(
 func (cc *ConfidenceCache) populateMemCache(objectID uint64, confidence *arxobject.ConfidenceScore) {
 	cc.memCacheMutex.Lock()
 	defer cc.memCacheMutex.Unlock()
-	
+
 	if len(cc.memCache) >= cc.config.MaxMemoryObjects {
 		cc.evictOne()
 	}
-	
+
 	ttl := cc.calculateTTL(confidence)
-	
+
 	cc.memCache[objectID] = &CachedConfidence{
 		ObjectID:    objectID,
 		Confidence:  *confidence,

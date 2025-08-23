@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/arxos/arxos/core/arxobject"
-	"github.com/arxos/arxos/core/backend/db"
 	"gorm.io/gorm"
 )
 
@@ -287,14 +286,15 @@ func (e *Executor) executeValidate(ctx context.Context, query *Query) (*Result, 
 	}
 	
 	// Update validation status
-	obj.Metadata.Validated = true
-	obj.Metadata.ValidatedAt = time.Now()
+	// TODO: Implement metadata validation when ArxMetadata is available
+	// obj.Metadata.Validated = true
+	// obj.Metadata.ValidatedAt = time.Now()
 	// ValidatedBy would come from context/auth
 	
 	// Improve confidence scores
 	obj.Confidence.Classification = min(obj.Confidence.Classification*1.2, 1.0)
 	obj.Confidence.Position = min(obj.Confidence.Position*1.2, 1.0)
-	obj.Confidence.Properties = min(obj.Confidence.Properties*1.2, 1.0)
+	obj.Confidence.Properties = min(obj.Confidence.Position*1.2, 1.0)
 	obj.Confidence.CalculateOverall()
 	
 	// Save updated object
@@ -313,7 +313,7 @@ func (e *Executor) executeValidate(ctx context.Context, query *Query) (*Result, 
 		ExecutedAt: time.Now(),
 		Metadata: map[string]interface{}{
 			"new_confidence": obj.Confidence.Overall,
-			"propagated_to":  len(obj.Relationships),
+			"propagated_to":  0, // TODO: Implement relationship counting when available
 		},
 	}, nil
 }
@@ -396,10 +396,10 @@ func (e *Executor) executeDiff(ctx context.Context, query *Query) (*Result, erro
 
 func (e *Executor) createVersion(tx *gorm.DB, obj *arxobject.ArxObject) error {
 	version := ArxObjectVersion{
-		ObjectID:  obj.ID,
+		ObjectID:  fmt.Sprintf("%d", obj.ID), // Convert uint64 to string
 		Object:    *obj,
 		CreatedAt: time.Now(),
-		Version:   e.getNextVersion(tx, obj.ID),
+		Version:   e.getNextVersion(tx, fmt.Sprintf("%d", obj.ID)),
 	}
 	return tx.Create(&version).Error
 }
@@ -411,16 +411,12 @@ func (e *Executor) getNextVersion(tx *gorm.DB, objectID string) int {
 }
 
 func (e *Executor) propagateConfidence(ctx context.Context, obj *arxobject.ArxObject) {
-	// Propagate improved confidence to related objects
-	for _, rel := range obj.Relationships {
-		var related arxobject.ArxObject
-		if err := e.db.WithContext(ctx).Where("id = ?", rel.TargetID).First(&related).Error; err == nil {
-			// Slightly improve confidence of related objects
-			related.Confidence.Relationships = min(related.Confidence.Relationships*1.1, 1.0)
-			related.Confidence.CalculateOverall()
-			e.db.WithContext(ctx).Save(&related)
-		}
-	}
+	// TODO: Implement relationship propagation when relationship system is available
+	// For now, this is a placeholder that does nothing
+	// When relationships are implemented, this would:
+	// 1. Find related objects using obj.RelationshipStart and obj.RelationshipCount
+	// 2. Update their confidence scores
+	// 3. Save the changes
 }
 
 func (e *Executor) calculateDiff(obj1, obj2 *arxobject.ArxObject) map[string]interface{} {
@@ -431,12 +427,20 @@ func (e *Executor) calculateDiff(obj1, obj2 *arxobject.ArxObject) map[string]int
 		diff["confidence_change"] = obj2.Confidence.Overall - obj1.Confidence.Overall
 	}
 	
-	// Compare validation status
-	if obj1.Metadata.Validated != obj2.Metadata.Validated {
-		diff["validation_changed"] = obj2.Metadata.Validated
+	// TODO: Compare validation status when metadata system is available
+	// For now, only compare basic fields that are available
+	if obj1.ValidationState != obj2.ValidationState {
+		diff["validation_state_changed"] = obj2.ValidationState
 	}
 	
-	// More sophisticated diff would compare all fields
+	// Compare geometric properties
+	if obj1.X != obj2.X || obj1.Y != obj2.Y || obj1.Z != obj2.Z {
+		diff["position_changed"] = true
+	}
+	
+	if obj1.Length != obj2.Length || obj1.Width != obj2.Width || obj1.Height != obj2.Height {
+		diff["dimensions_changed"] = true
+	}
 	
 	return diff
 }

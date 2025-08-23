@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"arxos/models"
-	"arxos/services"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -11,6 +9,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/arxos/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/backend/services"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"

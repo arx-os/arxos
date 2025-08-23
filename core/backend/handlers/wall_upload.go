@@ -6,17 +6,17 @@ import (
 	"math"
 	"net/http"
 	"time"
-	
-	"arxos/arxobject"
-	"arxos/converters"
+
+	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/backend/converters"
 )
 
 // WallUploadRequest represents the incoming wall data from the frontend
 type WallUploadRequest struct {
-	BuildingName string                     `json:"building_name"`
-	Floor        int                        `json:"floor"`
-	Objects      []WallObject               `json:"objects"`
-	Metadata     WallUploadMetadata         `json:"metadata"`
+	BuildingName string             `json:"building_name"`
+	Floor        int                `json:"floor"`
+	Objects      []WallObject       `json:"objects"`
+	Metadata     WallUploadMetadata `json:"metadata"`
 }
 
 // WallObject represents a wall from the frontend
@@ -50,23 +50,23 @@ type WallUploadResponse struct {
 // HandleWallUpload processes wall data from the PDF extractor
 func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-	
+
 	// Parse request
 	var req WallUploadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendWallError(w, "Failed to parse request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	// Validate request
 	if len(req.Objects) == 0 {
 		sendWallError(w, "No walls provided", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Convert walls to ArxObjects
 	converter := converters.NewWallConverter()
-	
+
 	// Set scale based on building dimensions (assume 50m x 30m building for now)
 	// In production, this would come from the request or be calculated
 	converter.SetScaleFromPDF(
@@ -75,24 +75,24 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 		50.0, // Building width in meters
 		30.0, // Building height in meters
 	)
-	
+
 	// Convert each wall object
 	arxObjects := make([]*arxobject.ArxObject, 0, len(req.Objects))
 	wallCount := 0
 	userWallCount := 0
 	totalConfidence := 0.0
-	
+
 	for _, obj := range req.Objects {
 		if obj.Type != "wall" {
 			continue
 		}
-		
+
 		// Convert frontend wall format to WallSegment
 		// The frontend sends center + length + rotation, we need to convert to endpoints
 		halfLength := obj.Length / 2.0
 		cos := math.Cos(obj.Rotation * math.Pi / 180.0)
 		sin := math.Sin(obj.Rotation * math.Pi / 180.0)
-		
+
 		wallSegment := converters.WallSegment{
 			X1:         obj.X - halfLength*cos,
 			Y1:         obj.Y - halfLength*sin,
@@ -102,43 +102,43 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 			Confidence: obj.Confidence,
 			Type:       obj.Source,
 		}
-		
+
 		arxObj := converter.ConvertWallToArxObject(wallSegment)
 		arxObjects = append(arxObjects, arxObj)
-		
+
 		wallCount++
 		totalConfidence += obj.Confidence
-		
+
 		if obj.Source == "user" {
 			userWallCount++
 		}
 	}
-	
+
 	// In a real implementation, we would:
 	// 1. Generate a building ID
 	// 2. Store in database
 	// 3. Process relationships between walls
 	// For now, we'll just return success
-	
+
 	buildingID := generateBuildingID()
-	
+
 	// Calculate statistics
 	avgConfidence := 0.0
 	if wallCount > 0 {
 		avgConfidence = totalConfidence / float64(wallCount)
 	}
-	
+
 	stats := map[string]interface{}{
-		"total_walls":     wallCount,
-		"detected_walls":  wallCount - userWallCount,
-		"user_walls":      userWallCount,
-		"avg_confidence":  avgConfidence,
-		"floor":           req.Floor,
+		"total_walls":    wallCount,
+		"detected_walls": wallCount - userWallCount,
+		"user_walls":     userWallCount,
+		"avg_confidence": avgConfidence,
+		"floor":          req.Floor,
 	}
-	
+
 	// Send response
 	processingTime := time.Since(startTime).Milliseconds()
-	
+
 	response := WallUploadResponse{
 		Success:      true,
 		BuildingID:   buildingID,
@@ -146,7 +146,7 @@ func HandleWallUpload(w http.ResponseWriter, r *http.Request) {
 		Statistics:   stats,
 		ProcessingMS: processingTime,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
@@ -156,7 +156,7 @@ func sendWallError(w http.ResponseWriter, message string, status int) {
 		Success: false,
 		Message: message,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(response)

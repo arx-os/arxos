@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"arxos/db"
-	"arxos/models"
 	"os"
+
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"html/template"
 

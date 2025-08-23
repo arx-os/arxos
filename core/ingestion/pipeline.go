@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"arxos/arxobject"
+	"github.com/arxos/arxos/core/arxobject"
 )
 
 // IngestionPipeline orchestrates the complete building data ingestion process

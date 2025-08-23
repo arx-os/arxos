@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"arxos/db"
-	"arxos/models"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -10,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"github.com/go-chi/chi/v5"
 )

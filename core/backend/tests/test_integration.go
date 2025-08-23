@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"arxos/db"
-	"arxos/handlers"
-	"arxos/middleware/auth"
-	"arxos/models"
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/handlers"
+	"github.com/arxos/arxos/core/backend/middleware/auth"
+	"github.com/arxos/arxos/core/backend/models"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"

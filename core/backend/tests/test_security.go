@@ -1,10 +1,6 @@
 package tests
 
 import (
-	"arxos/db"
-	"arxos/handlers"
-	"arxos/middleware"
-	"arxos/models"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -15,6 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/handlers"
+	"github.com/arxos/arxos/core/backend/middleware"
+	"github.com/arxos/arxos/core/backend/models"
 	"github.com/stretchr/testify/assert"
 )
 

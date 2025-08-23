@@ -1,15 +1,16 @@
 package handlers
 
 import (
-	"arxos/db"
-	"arxos/models"
-	"arxos/services"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/arxos/arxos/core/backend/db"
+	"github.com/arxos/arxos/core/backend/models"
+	"github.com/arxos/arxos/core/backend/services"
 
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"

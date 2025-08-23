@@ -1,10 +1,10 @@
 package cmms
 
 import (
-	"arxos/models"
 	"context"
 	"time"
 
+	"github.com/arxos/arxos/core/backend/models"
 	"gorm.io/gorm"
 )
 

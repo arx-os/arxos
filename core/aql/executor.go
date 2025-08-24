@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/internal/arxobject"
 	"gorm.io/gorm"
 )
 

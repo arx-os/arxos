@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/internal/arxobject"
 	"github.com/arxos/arxos/core/wall_composition/engine"
 	"github.com/arxos/arxos/core/wall_composition/integration"
 	"github.com/arxos/arxos/core/wall_composition/renderer"

@@ -3,7 +3,7 @@ package integration
 import (
 	"testing"
 
-	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/internal/arxobject"
 	"github.com/arxos/arxos/core/wall_composition/engine"
 	"github.com/arxos/arxos/core/wall_composition/renderer"
 	"github.com/arxos/arxos/core/wall_composition/types"

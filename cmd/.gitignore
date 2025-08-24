@@ -1,0 +1,3 @@
+# Ignore compiled binaries
+arxos-cli
+*.exe

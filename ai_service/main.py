@@ -1,339 +1,297 @@
 """
-Arxos AI Service - Confidence-Aware Building Intelligence
-Following best practices: async, type hints, error handling, monitoring
+Arxos AI Service - Real Computer Vision & LiDAR Processing
+Two jobs: Detect architectural symbols & Process iPhone 3D scans
 """
 
-import os
-from contextlib import asynccontextmanager
-from typing import Optional
+import asyncio
+import logging
+from pathlib import Path
+from typing import Dict, List, Any
 
-import structlog
-import uvicorn
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+import numpy as np
+from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import make_asgi_app
+import uvicorn
 
-from models.arxobject import ArxObject, ConversionResult, ValidationData
-from processors.pdf_processor import PDFProcessor
-from processors.confidence_calculator import ConfidenceCalculator
-from processors.validation_engine import ValidationEngine
-from utils.config import settings
-from utils.monitoring import setup_monitoring, track_conversion
-from utils.numpy_converter import convert_numpy_to_native, clean_arxobject_dict
+from vision.symbol_detector import SymbolDetector
+from lidar.iphone_processor import iPhoneLiDARProcessor
 
-# Configure structured logging
-logger = structlog.get_logger()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage application lifecycle with proper startup/shutdown"""
-    # Startup
-    logger.info("Starting Arxos AI Service", version=settings.VERSION)
-    setup_monitoring()
-    
-    # Initialize processors
-    app.state.pdf_processor = PDFProcessor()
-    app.state.confidence_calculator = ConfidenceCalculator()
-    app.state.validation_engine = ValidationEngine()
-    
-    yield
-    
-    # Shutdown
-    logger.info("Shutting down Arxos AI Service")
-    # Cleanup resources if needed
-
-
-# Create FastAPI app with best practices
+# Initialize FastAPI
 app = FastAPI(
     title="Arxos AI Service",
-    description="AI-powered building plan conversion with confidence scoring",
-    version="1.0.0",
-    lifespan=lifespan,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    description="Real AI for architectural intelligence",
+    version="2.0.0"
 )
 
-# Add CORS middleware for frontend communication
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Add Prometheus metrics endpoint
-metrics_app = make_asgi_app()
-app.mount("/metrics", metrics_app)
+# Initialize AI components
+symbol_detector = SymbolDetector()
+lidar_processor = iPhoneLiDARProcessor()
 
+@app.on_event("startup")
+async def startup():
+    """Load ML models on startup"""
+    logger.info("Loading ML models...")
+    await symbol_detector.load_model()
+    logger.info("AI Service ready!")
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for monitoring"""
+@app.get("/")
+async def health():
+    """Health check"""
     return {
-        "status": "healthy",
-        "service": "arxos-ai",
-        "version": settings.VERSION,
+        "service": "Arxos AI Service",
+        "status": "operational",
+        "capabilities": [
+            "symbol_detection",
+            "lidar_processing"
+        ],
+        "models_loaded": symbol_detector.is_loaded()
     }
 
+# ============================================
+# SYMBOL DETECTION - Computer Vision
+# ============================================
 
-from fastapi.responses import JSONResponse
-import json
-import numpy as np
-
-class NumpyEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles numpy types"""
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        return super().default(obj)
-
-@app.post("/api/v1/convert", response_class=JSONResponse)
-async def convert_pdf(
-    background_tasks: BackgroundTasks,
+@app.post("/detect/symbols")
+async def detect_symbols(
     file: UploadFile = File(...),
-    building_type: Optional[str] = None,
-    building_name: Optional[str] = None,
-) -> ConversionResult:
+    confidence_threshold: float = 0.5
+):
     """
-    Convert PDF floor plan to ArxObjects with confidence scoring
-    
-    Args:
-        file: PDF file to convert
-        building_type: Type of building (office, residential, hospital, etc.)
-        building_name: Name of the building
-        
-    Returns:
-        ConversionResult with ArxObjects and confidence scores
+    Detect architectural symbols in floor plan images
+    Returns: doors, windows, stairs, fixtures, etc.
     """
-    # Validate file type
-    if not file.filename.lower().endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="File must be a PDF")
-    
-    # Check file size (max 100MB)
-    if file.size > 100 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File size must be less than 100MB")
-    
     try:
-        # Save uploaded file temporarily
-        temp_path = f"/tmp/{file.filename}"
+        # Read image
         contents = await file.read()
-        with open(temp_path, "wb") as f:
-            f.write(contents)
         
-        # Process PDF with confidence scoring
-        logger.info("Processing PDF", filename=file.filename, building_type=building_type)
-        
-        # Read PDF content
-        with open(temp_path, "rb") as f:
-            pdf_content = f.read()
-        
-        result = await app.state.pdf_processor.process_pdf(
-            pdf_content=pdf_content,
-            building_type=building_type,
-            confidence_threshold=0.5
+        # Run YOLO detection
+        detections = await symbol_detector.detect(
+            contents, 
+            threshold=confidence_threshold
         )
         
-        # Track metrics
-        background_tasks.add_task(
-            track_conversion,
-            building_type=building_type,
-            object_count=len(result.arxobjects),
-            confidence=result.overall_confidence,
-            processing_time=result.processing_time
-        )
+        # Convert to Arxos format
+        arxobjects = []
+        for det in detections:
+            arxobjects.append({
+                "id": f"{det['class']}_{det['id']}",
+                "type": det['class'],  # door, window, stair, etc.
+                "bbox": det['bbox'],  # [x, y, width, height]
+                "confidence": det['confidence'],
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        det['bbox'][0] + det['bbox'][2]/2,
+                        det['bbox'][1] + det['bbox'][3]/2
+                    ]
+                },
+                "properties": {
+                    "symbol_type": det['class'],
+                    "subtype": det.get('subtype', ''),  # single door, double door, etc.
+                }
+            })
         
-        # Clean up temp file
-        background_tasks.add_task(os.remove, temp_path)
-        
-        logger.info(
-            "PDF conversion completed",
-            objects_created=len(result.arxobjects),
-            confidence=result.overall_confidence,
-            duration=result.processing_time
-        )
-        
-        # Convert result to a simple dictionary for JSON response
-        # This avoids all the Pydantic validation issues
-        response_data = {
-            "arxobjects": [],
-            "overall_confidence": float(result.overall_confidence) if result.overall_confidence else 0.5,
-            "processing_time": float(result.processing_time) if result.processing_time else 0.0,
-            "uncertainties": []
+        return {
+            "success": True,
+            "detections": len(arxobjects),
+            "arxobjects": arxobjects,
+            "metadata": {
+                "model": "YOLOv8-Architecture",
+                "confidence_threshold": confidence_threshold,
+                "image_size": detections[0].get('image_size', []) if detections else []
+            }
         }
         
-        # Convert each ArxObject to a simple dict
-        for i, obj in enumerate(result.arxobjects):
-            try:
-                # Ensure all numeric fields are Python native types
-                confidence_dict = {}
-                if obj.confidence:
-                    confidence_dict = {
-                        "overall": float(obj.confidence.overall) if hasattr(obj.confidence, 'overall') else 0.5,
-                        "classification": float(obj.confidence.classification) if hasattr(obj.confidence, 'classification') else 0.5,
-                        "position": float(obj.confidence.position) if hasattr(obj.confidence, 'position') else 0.5,
-                        "properties": float(obj.confidence.properties) if hasattr(obj.confidence, 'properties') else 0.5,
-                        "relationships": float(obj.confidence.relationships) if hasattr(obj.confidence, 'relationships') else 0.5,
-                    }
-                
-                # Clean data field - convert any numpy types
-                clean_data = {}
-                if obj.data:
-                    for key, value in obj.data.items():
-                        if isinstance(value, (np.integer, np.floating)):
-                            clean_data[key] = float(value)
-                        elif isinstance(value, np.ndarray):
-                            clean_data[key] = value.tolist()
-                        else:
-                            clean_data[key] = value
-                
-                obj_dict = {
-                    "id": str(obj.id),
-                    "type": str(obj.type.value) if hasattr(obj.type, 'value') else str(obj.type),
-                    "confidence": confidence_dict,
-                    "data": clean_data,
-                    "geometry": obj.geometry if obj.geometry else None,
-                    "relationships": []
-                }
-                
-                # Add position if available
-                if hasattr(obj, 'position') and obj.position:
-                    obj_dict["position"] = {
-                        "x": int(obj.position.x),
-                        "y": int(obj.position.y),
-                        "z": int(obj.position.z)
-                    }
-                
-                # Add dimensions if available
-                if hasattr(obj, 'dimensions') and obj.dimensions:
-                    obj_dict["dimensions"] = {
-                        "width": int(obj.dimensions.width),
-                        "height": int(obj.dimensions.height),
-                        "depth": int(obj.dimensions.depth) if hasattr(obj.dimensions, 'depth') else 0
-                    }
-            
-                response_data["arxobjects"].append(obj_dict)
-            except Exception as e:
-                logger.warning(f"Failed to convert ArxObject {i}: {e}")
-                continue
-        
-        # Use custom encoder to handle any remaining numpy types
-        json_str = json.dumps(response_data, cls=NumpyEncoder)
-        return JSONResponse(content=json.loads(json_str))
-        
     except Exception as e:
-        logger.error("PDF conversion failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+        logger.error(f"Symbol detection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/v1/validate")
-async def submit_validation(validation: ValidationData):
+@app.post("/detect/rooms")
+async def detect_rooms(file: UploadFile = File(...)):
     """
-    Submit field validation and propagate confidence improvements
-    
-    Args:
-        validation: Field validation data
-        
-    Returns:
-        Validation impact including cascaded updates
+    Detect and classify rooms in floor plans
+    Uses semantic segmentation to identify room boundaries and types
     """
     try:
-        impact = await app.state.validation_engine.process_validation(validation)
+        contents = await file.read()
         
-        logger.info(
-            "Validation processed",
-            object_id=validation.object_id,
-            confidence_improvement=impact.confidence_improvement,
-            cascaded_objects=impact.cascaded_count
+        # Run room segmentation
+        rooms = await symbol_detector.segment_rooms(contents)
+        
+        # Convert to Arxos format
+        arxobjects = []
+        for room in rooms:
+            arxobjects.append({
+                "id": f"room_{room['id']}",
+                "type": "room",
+                "subtype": room['room_type'],  # bedroom, kitchen, bathroom, etc.
+                "geometry": room['polygon'],  # Actual room boundary
+                "confidence": room['confidence'],
+                "properties": {
+                    "room_type": room['room_type'],
+                    "area": room.get('area_sqft'),
+                    "features": room.get('features', [])  # detected fixtures
+                }
+            })
+        
+        return {
+            "success": True,
+            "rooms": len(arxobjects),
+            "arxobjects": arxobjects
+        }
+        
+    except Exception as e:
+        logger.error(f"Room detection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================
+# iPHONE LiDAR - 3D Scanning
+# ============================================
+
+@app.post("/lidar/process")
+async def process_lidar(file: UploadFile = File(...)):
+    """
+    Process iPhone LiDAR scan data (PLY/USDZ format)
+    Extracts walls, floors, and room geometry
+    """
+    try:
+        contents = await file.read()
+        file_ext = Path(file.filename).suffix.lower()
+        
+        # Process point cloud
+        result = await lidar_processor.process_scan(
+            contents,
+            format=file_ext
         )
         
-        return impact
+        # Extract architectural elements
+        arxobjects = []
+        
+        # Add detected walls
+        for wall in result['walls']:
+            arxobjects.append({
+                "id": f"wall_{wall['id']}",
+                "type": "wall",
+                "geometry": wall['line_3d'],  # 3D line segment
+                "properties": {
+                    "height": wall['height'],
+                    "thickness": wall.get('thickness', 0.15),  # meters
+                    "confidence": wall['confidence']
+                }
+            })
+        
+        # Add floor plane
+        if result.get('floor'):
+            arxobjects.append({
+                "id": "floor_0",
+                "type": "floor",
+                "geometry": result['floor']['plane'],
+                "properties": {
+                    "elevation": result['floor']['elevation'],
+                    "area": result['floor']['area']
+                }
+            })
+        
+        # Add detected rooms
+        for room in result.get('rooms', []):
+            arxobjects.append({
+                "id": f"room_{room['id']}",
+                "type": "room",
+                "geometry": room['boundary_3d'],
+                "properties": {
+                    "height": room['height'],
+                    "volume": room['volume'],
+                    "floor_area": room['floor_area']
+                }
+            })
+        
+        return {
+            "success": True,
+            "arxobjects": arxobjects,
+            "metadata": {
+                "point_count": result['point_count'],
+                "scan_quality": result['quality_score'],
+                "processing_time": result['processing_time']
+            }
+        }
         
     except Exception as e:
-        logger.error("Validation processing failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+        logger.error(f"LiDAR processing failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/v1/analyze/quality")
-async def analyze_pdf_quality(file: UploadFile = File(...)):
+@app.websocket("/lidar/stream")
+async def lidar_stream(websocket: WebSocket):
     """
-    Analyze PDF quality and extractability before processing
+    Real-time LiDAR streaming from iPhone
+    Processes point cloud data as it arrives
+    """
+    await websocket.accept()
+    logger.info("LiDAR stream connected")
     
-    Args:
-        file: PDF file to analyze
-        
-    Returns:
-        Quality assessment with recommendations
-    """
     try:
-        # Save file temporarily
-        temp_path = f"/tmp/quality_{file.filename}"
-        contents = await file.read()
-        with open(temp_path, "wb") as f:
-            f.write(contents)
-        
-        # Analyze quality
-        quality = await app.state.pdf_processor.assess_quality(temp_path)
-        
-        # Clean up
-        os.remove(temp_path)
-        
-        return quality
-        
+        while True:
+            # Receive point cloud chunk
+            data = await websocket.receive_bytes()
+            
+            # Process incrementally
+            result = await lidar_processor.process_stream_chunk(data)
+            
+            # Send back detected elements
+            if result['new_elements']:
+                await websocket.send_json({
+                    "type": "update",
+                    "elements": result['new_elements'],
+                    "scan_progress": result['progress']
+                })
+            
     except Exception as e:
-        logger.error("Quality analysis failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        logger.error(f"Stream error: {e}")
+    finally:
+        await websocket.close()
 
+# ============================================
+# TRAINING ENDPOINTS (Development only)
+# ============================================
 
-@app.get("/api/v1/patterns/{building_type}")
-async def get_building_patterns(building_type: str):
+@app.post("/train/symbols")
+async def train_symbol_detector(
+    dataset: UploadFile = File(...),
+    epochs: int = 100
+):
     """
-    Get learned patterns for a specific building type
-    
-    Args:
-        building_type: Type of building
-        
-    Returns:
-        Pattern library for the building type
+    Train/fine-tune symbol detection model
+    Upload annotated dataset in YOLO format
     """
-    patterns = app.state.validation_engine.get_patterns(building_type)
-    if not patterns:
-        raise HTTPException(status_code=404, detail=f"No patterns found for {building_type}")
+    if not app.debug:
+        raise HTTPException(403, "Training only available in development")
     
-    return patterns
-
+    # This would trigger model training
+    # In production, training happens offline
+    return {
+        "message": "Training pipeline would start here",
+        "epochs": epochs
+    }
 
 if __name__ == "__main__":
-    # Run with production-ready settings
+    import os
+    port = int(os.getenv("PORT", "8000"))
+    debug = os.getenv("DEBUG", "false").lower() == "true"
+    
     uvicorn.run(
-        "main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-        log_config={
-            "version": 1,
-            "disable_existing_loggers": False,
-            "formatters": {
-                "default": {
-                    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                },
-            },
-            "handlers": {
-                "default": {
-                    "formatter": "default",
-                    "class": "logging.StreamHandler",
-                },
-            },
-            "root": {
-                "level": "INFO",
-                "handlers": ["default"],
-            },
-        }
+        app, 
+        host="0.0.0.0", 
+        port=port,
+        reload=debug
     )

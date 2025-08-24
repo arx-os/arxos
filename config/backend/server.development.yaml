@@ -1,0 +1,76 @@
+# Arxos Backend Development Configuration
+# Overrides for development environment
+
+server:
+  mode: "development"
+  port: 8080
+  
+  cors:
+    origins:
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+      - "http://127.0.0.1:3000"
+      - "http://127.0.0.1:8080"
+    
+  tls:
+    enabled: false
+    
+  rate_limit:
+    enabled: false
+
+database:
+  postgres:
+    host: "localhost"
+    ssl_mode: "disable"
+    
+storage:
+  type: "local"
+  
+auth:
+  jwt:
+    expiry: 7d
+    
+  session:
+    secure: false
+    
+  admin:
+    password: "dev123"  # Simple password for development
+    
+monitoring:
+  logging:
+    level: "debug"
+    output: "stdout"
+    
+  metrics:
+    enabled: false
+    
+  tracing:
+    enabled: false
+    
+  alerts:
+    enabled: false
+    
+backup:
+  enabled: false
+  
+features:
+  # All features enabled for testing
+  collaboration: true
+  public_sharing: true
+  api_v2: true
+  
+ai_service:
+  openai:
+    enabled: false  # Use mock AI in development by default
+    
+performance:
+  cache:
+    enabled: false  # Disable caching for development
+    
+development:
+  debug: true
+  hot_reload: true
+  mock_ai: true
+  verbose_errors: true
+  bypass_auth: true  # Skip auth for easier testing
+  seed_data: true    # Load sample data on startup

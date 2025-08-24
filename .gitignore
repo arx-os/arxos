@@ -132,7 +132,6 @@ arxos_dev.db
 test.db
 
 # Cache directories
-svgx_engine/cache/
 services/*/*.db
 
 # Generated files
@@ -151,8 +150,11 @@ test_*.py
 test_*.html
 
 # Binary executables
-arxos_minimal
-NO_DEMO_server
+arxos
+arxos_*
+NO_DEMO_*
+/arxos_backend
+*.exe
 
 # Archive folder (should not be in main branch)
 archive/

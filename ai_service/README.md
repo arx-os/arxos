@@ -1,40 +1,44 @@
-# AI Service
-
-Python-based AI service for ARXOS building information processing and extraction.
+# Arxos AI Service
 
 ## Purpose
+Real AI/ML for architectural intelligence:
+1. **Symbol Detection** - Detect doors, windows, fixtures, stairs in floor plans
+2. **iPhone LiDAR** - Real-time 3D scanning to BIM conversion
 
-This service handles the ingestion and processing of building data formats (PDF, IFC, DWG, HEIC, LiDAR) and converts them into ArxObjects using AI-powered symbol recognition and classification.
+## What This Service Does
+- **Computer Vision**: YOLO-based detection of architectural elements
+- **3D Processing**: iPhone LiDAR point clouds → walls and rooms
+- **Real Intelligence**: Trained ML models, not just geometry math
 
-## Structure
+## What Go Backend Does
+- PDF parsing and line extraction
+- Geometric calculations and wall merging  
+- Database and business logic
+- API and authentication
 
+## Architecture
 ```
 ai_service/
-├── main.py              # FastAPI application entry point
-├── models/              # Data models and schemas
-├── processors/          # PDF/IFC processing logic
-├── tests/               # Test files
-├── utils/               # Utility functions
-└── requirements.txt     # Python dependencies
+├── models/          # Trained ML models
+├── vision/          # Computer vision for symbols
+├── lidar/           # iPhone 3D scanning
+├── training/        # Model training pipelines
+└── api/             # FastAPI endpoints
 ```
 
 ## Quick Start
-
 ```bash
 # Install dependencies
 pip install -r requirements.txt
+
+# Download pre-trained models
+python download_models.py
 
 # Start service
 python main.py
 ```
 
-## Documentation
-
-For detailed information, see [AI Service Documentation](../../docs/development/guide.md#python-ai-service-development).
-
-## Testing
-
-```bash
-# Run tests
-python -m pytest tests/
-```
+## Endpoints
+- `POST /detect/symbols` - Detect architectural symbols in image
+- `POST /lidar/process` - Process iPhone LiDAR scan
+- `WS /lidar/stream` - Real-time LiDAR streaming

@@ -1,0 +1,270 @@
+name: Test Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Unit Tests - Run in parallel
+  unit-tests-backend:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          
+      - name: Run Unit Tests
+        run: |
+          cd core
+          go test -short -race -coverprofile=coverage.out ./...
+          
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./core/coverage.out
+          flags: backend-unit
+          
+  # Frontend testing removed - vanilla JS with manual testing
+  # Only 400 lines of simple JS code
+
+  unit-tests-ai:
+    name: AI Service Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          
+      - name: Install Dependencies
+        run: |
+          cd ai_service
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+          
+      - name: Run Unit Tests
+        run: |
+          cd ai_service
+          pytest --cov=. --cov-report=xml
+          
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./ai_service/coverage.xml
+          flags: ai-unit
+
+  # Integration Tests - Requires database
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests-backend, unit-tests-ai]
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3-alpine
+        env:
+          POSTGRES_USER: arxos_test
+          POSTGRES_PASSWORD: arxos_test
+          POSTGRES_DB: arxos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+          
+      - name: Run Migrations
+        run: |
+          cd core
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          migrate -path migrations -database "postgresql://arxos_test:arxos_test@localhost:5432/arxos_test?sslmode=disable" up
+          
+      - name: Run Integration Tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: arxos_test
+          DB_USER: arxos_test
+          DB_PASSWORD: arxos_test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: |
+          cd core
+          go test -race ./tests/...
+          
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          flags: integration
+
+  # E2E Smoke Tests
+  e2e-smoke:
+    name: E2E Smoke Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Start Services
+        run: |
+          docker-compose up -d
+          sleep 10
+          
+      - name: Health Check
+        run: |
+          curl -f http://localhost:8080/health || exit 1
+          
+      - name: Run Smoke Tests
+        run: |
+          cd tests
+          make smoke
+          
+      - name: Stop Services
+        if: always()
+        run: docker-compose down
+
+  # Security Scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-fmt sarif -out gosec-results.sarif ./core/...'
+          
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: gosec-results.sarif
+          
+      - name: Run Trivy Security Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: trivy-results.sarif
+
+  # Code Quality
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          working-directory: core
+          
+      - name: Run gofmt
+        run: |
+          cd core
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go code is not formatted"
+            gofmt -d .
+            exit 1
+          fi
+
+  # Performance Tests - Only on main branch
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [integration-tests]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up K6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+          
+      - name: Start Services
+        run: |
+          docker-compose up -d
+          sleep 10
+          
+      - name: Run Load Tests
+        run: |
+          cd tests
+          k6 run performance/load/confidence_api_load.js
+          
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: tests/reports/performance/
+
+  # All Tests Passed
+  all-tests-passed:
+    name: All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [
+      unit-tests-backend,
+      unit-tests-ai,
+      integration-tests,
+      security-scan,
+      code-quality
+    ]
+    steps:
+      - name: Success
+        run: echo "All tests passed successfully!"

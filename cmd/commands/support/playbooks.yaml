@@ -1,0 +1,148 @@
+# Arxos Support Playbooks
+# Automated runbooks for common support scenarios
+
+playbooks:
+  # Diagnosis playbooks
+  diagnose-slow-upload:
+    description: "Diagnose why PDF upload is slow"
+    steps:
+      - name: "Check file size"
+        command: "inspect-raw {{.file}}"
+        expect:
+          size_mb: "<100"
+      - name: "Check user's recent jobs"
+        command: "jobs --user={{.user}} --last=1h"
+      - name: "Profile upload operation"
+        command: "profile {{.user}} --operation=pdf_upload"
+      - name: "Check memory usage"
+        command: "resources --user={{.user}}"
+      - name: "Check network latency"
+        command: "network-test {{.user}}"
+    suggestions:
+      - if: "size_mb > 100"
+        suggest: "File is large. Consider chunking: retry-job --chunk-size=10MB"
+      - if: "memory_usage > 80%"
+        suggest: "Memory pressure detected. Scale resources: scale --memory=16G"
+      - if: "network_latency > 500ms"
+        suggest: "High latency. Check user's connection or suggest local processing"
+
+  fix-confidence-propagation:
+    description: "Fix stuck confidence propagation"
+    steps:
+      - name: "Identify propagation loops"
+        command: "analyze-confidence {{.building}}"
+      - name: "Find circular dependencies"
+        command: "validate-data {{.building}} --check=circular"
+      - name: "Reset propagation state"
+        command: "repair --reset-propagation {{.building}}"
+        require_confirmation: true
+      - name: "Recalculate confidence"
+        command: "recalc-confidence {{.building}}"
+      - name: "Verify fix"
+        command: "validate-data {{.building}} --deep"
+
+  recover-failed-ingestion:
+    description: "Recover from failed PDF ingestion"
+    steps:
+      - name: "Inspect job failure"
+        command: "job-inspect {{.job_id}} --verbose"
+      - name: "Check intermediate states"
+        command: "show-pipeline {{.job_id}}"
+      - name: "Identify failure point"
+        command: "suggest {{.job_id}}"
+      - name: "Apply suggested fix"
+        command: "retry-job {{.job_id}} --from-step={{.failed_step}}"
+      - name: "Monitor retry"
+        command: "job-inspect {{.new_job_id}} --watch"
+
+  emergency-rollback:
+    description: "Emergency rollback procedure"
+    require_approval: true
+    steps:
+      - name: "Create backup"
+        command: "backup {{.target}} --priority=immediate"
+      - name: "Identify rollback point"
+        command: "history {{.target}} --last=24h"
+      - name: "Perform rollback"
+        command: "rollback {{.target}} --to={{.timestamp}}"
+        require_confirmation: true
+      - name: "Verify rollback"
+        command: "validate-data {{.target}}"
+      - name: "Notify affected users"
+        command: "notify-users {{.affected_users}}"
+
+  handle-oom-error:
+    description: "Handle out-of-memory errors"
+    steps:
+      - name: "Get memory profile"
+        command: "profile {{.job_id}} --type=memory"
+      - name: "Identify memory spike"
+        command: "resources {{.job_id}} --graph"
+      - name: "Check object complexity"
+        command: "analyze-complexity {{.input_file}}"
+      - name: "Retry with higher memory"
+        command: "retry-job {{.job_id}} --memory=16G"
+      - name: "If still failing, chunk processing"
+        command: "retry-job {{.job_id}} --chunk-size=5MB --parallel=false"
+
+  onboard-large-building:
+    description: "Special handling for large building ingestion"
+    steps:
+      - name: "Pre-check file"
+        command: "analyze-file {{.file}} --estimate-resources"
+      - name: "Reserve resources"
+        command: "reserve-resources --cpu=8 --memory=32G --duration=2h"
+      - name: "Start ingestion with monitoring"
+        command: "ingest {{.file}} --monitor --chunk-size=10MB"
+      - name: "Watch progress"
+        command: "job-inspect {{.job_id}} --watch --alert-on-failure"
+      - name: "Validate results"
+        command: "validate-data {{.building}} --comprehensive"
+
+# Automated triggers
+triggers:
+  - condition: "job.status == 'failed' && job.error contains 'OOM'"
+    playbook: "handle-oom-error"
+    auto_run: false
+    notify: ["support-team@arxos.io"]
+    
+  - condition: "job.duration > 30m && job.type == 'pdf_ingestion'"
+    playbook: "diagnose-slow-upload"
+    auto_run: true
+    
+  - condition: "confidence.propagation_time > 5m"
+    playbook: "fix-confidence-propagation"
+    auto_run: false
+    notify: ["engineering@arxos.io"]
+
+# Common fixes database
+fixes:
+  oom_error:
+    symptoms:
+      - "java.lang.OutOfMemoryError"
+      - "Cannot allocate memory"
+      - "memory limit exceeded"
+    solutions:
+      - "Increase memory: retry-job --memory=16G"
+      - "Enable chunking: retry-job --chunk-size=10MB"
+      - "Reduce parallel processing: retry-job --parallel=false"
+      
+  slow_upload:
+    symptoms:
+      - "Upload taking > 10 minutes"
+      - "Connection timeout"
+      - "Progress stuck at X%"
+    solutions:
+      - "Check file size and chunk if > 100MB"
+      - "Verify network connectivity"
+      - "Try direct upload bypass: upload --direct"
+      
+  validation_loop:
+    symptoms:
+      - "Confidence propagation running forever"
+      - "Stack overflow in validation"
+      - "Circular dependency detected"
+    solutions:
+      - "Reset propagation state: repair --reset-propagation"
+      - "Disable auto-propagation: set-flag auto_propagate=false"
+      - "Manually set confidence: update-confidence --manual"

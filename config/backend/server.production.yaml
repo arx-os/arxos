@@ -1,0 +1,79 @@
+# Arxos Backend Production Configuration
+# Overrides for production environment
+
+server:
+  mode: "production"
+  port: 443
+  
+  cors:
+    origins:
+      - "https://arxos.io"
+      - "https://www.arxos.io"
+      - "https://app.arxos.io"
+      
+  tls:
+    enabled: true
+    auto_cert: true
+    
+  rate_limit:
+    requests_per_minute: 100
+    burst: 200
+
+database:
+  postgres:
+    ssl_mode: "require"
+    pool:
+      max_open: 50
+      max_idle: 10
+      
+storage:
+  type: "s3"
+  s3:
+    bucket: "arxos-production"
+    
+auth:
+  jwt:
+    expiry: 12h
+    refresh_expiry: 30d
+    
+  session:
+    secure: true
+    
+monitoring:
+  logging:
+    level: "warn"
+    output: "file"
+    
+  metrics:
+    enabled: true
+    
+  tracing:
+    enabled: true
+    sample_rate: 0.01
+    
+  alerts:
+    enabled: true
+    
+backup:
+  enabled: true
+  schedule: "0 2 * * *"
+  
+features:
+  collaboration: true
+  public_sharing: true
+  api_v2: true
+  
+performance:
+  cache:
+    ttl: 7200
+    
+  resources:
+    max_cpu: 8
+    max_memory: "16GB"
+    
+development:
+  debug: false
+  hot_reload: false
+  verbose_errors: false
+  bypass_auth: false
+  seed_data: false

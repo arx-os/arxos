@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arxos/arxos/core/arxobject"
+	"github.com/arxos/arxos/core/internal/arxobject"
 )
 
 // DWGProcessor handles DWG/DXF files

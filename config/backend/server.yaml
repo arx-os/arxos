@@ -1,0 +1,343 @@
+# Arxos Backend Server Configuration
+# This is the main configuration file for the Arxos backend server
+
+# Server Settings
+server:
+  host: "0.0.0.0"
+  port: 8080
+  mode: "development"  # development, staging, production
+  
+  # CORS settings
+  cors:
+    enabled: true
+    origins:
+      - "http://localhost:3000"
+      - "http://localhost:8080"
+      - "https://arxos.io"
+      - "https://*.arxos.io"
+    credentials: true
+    max_age: 86400
+
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_minute: 60
+    burst: 100
+
+  # Request settings
+  max_request_size: "100MB"
+  request_timeout: 30s
+  idle_timeout: 120s
+  
+  # TLS/SSL (for production)
+  tls:
+    enabled: false
+    cert_file: "/etc/arxos/certs/server.crt"
+    key_file: "/etc/arxos/certs/server.key"
+    auto_cert: true  # Use Let's Encrypt
+    domains:
+      - "api.arxos.io"
+      - "api.arxos.dev"
+
+# Database Configuration
+database:
+  type: "postgresql"  # postgresql, mysql, sqlite
+  
+  # PostgreSQL settings
+  postgres:
+    host: "${DB_HOST:-localhost}"
+    port: 5432
+    database: "arxos"
+    username: "${DB_USER:-arxos}"
+    password: "${DB_PASSWORD:-arxos_dev}"
+    ssl_mode: "prefer"  # disable, prefer, require
+    
+    # Connection pool
+    pool:
+      max_open: 25
+      max_idle: 5
+      max_lifetime: 5m
+      
+    # Migration settings
+    migrations:
+      auto_migrate: true
+      migrations_path: "./migrations"
+
+  # TimescaleDB for time-series data
+  timescale:
+    enabled: true
+    retention_days: 90
+    chunk_time_interval: "1 day"
+    
+  # Redis for caching/sessions
+  redis:
+    host: "${REDIS_HOST:-localhost}"
+    port: 6379
+    password: "${REDIS_PASSWORD:-}"
+    database: 0
+    pool_size: 10
+    session_ttl: 24h
+    cache_ttl: 1h
+
+# Storage Configuration
+storage:
+  # Primary storage backend
+  type: "s3"  # local, s3, gcs, azure
+  
+  # Local storage (development)
+  local:
+    base_path: "./storage"
+    public_path: "./storage/public"
+    temp_path: "./storage/temp"
+    
+  # S3 storage (production)
+  s3:
+    bucket: "${S3_BUCKET:-arxos-storage}"
+    region: "${AWS_REGION:-us-west-2}"
+    access_key: "${AWS_ACCESS_KEY_ID}"
+    secret_key: "${AWS_SECRET_ACCESS_KEY}"
+    endpoint: ""  # Custom endpoint for S3-compatible storage
+    use_ssl: true
+    
+    # S3 paths
+    paths:
+      uploads: "uploads/"
+      processed: "processed/"
+      exports: "exports/"
+      backups: "backups/"
+  
+  # File handling
+  limits:
+    max_file_size: "500MB"
+    allowed_extensions:
+      pdf: [".pdf"]
+      images: [".jpg", ".jpeg", ".png", ".heic", ".heif"]
+      ifc: [".ifc", ".ifczip"]
+      cad: [".dwg", ".dxf"]
+      lidar: [".ply", ".las", ".laz", ".e57", ".usdz"]
+      
+  # Temporary file cleanup
+  cleanup:
+    enabled: true
+    interval: 1h
+    max_age: 24h
+
+# Authentication & Authorization
+auth:
+  # JWT settings
+  jwt:
+    secret: "${JWT_SECRET:-change-me-in-production}"
+    issuer: "arxos.io"
+    expiry: 24h
+    refresh_expiry: 7d
+    
+  # Session settings
+  session:
+    name: "arxos_session"
+    secure: true  # HTTPS only
+    http_only: true
+    same_site: "lax"
+    
+  # OAuth providers (future)
+  oauth:
+    enabled: false
+    providers:
+      google:
+        client_id: "${GOOGLE_CLIENT_ID}"
+        client_secret: "${GOOGLE_CLIENT_SECRET}"
+      azure:
+        tenant_id: "${AZURE_TENANT_ID}"
+        client_id: "${AZURE_CLIENT_ID}"
+        client_secret: "${AZURE_CLIENT_SECRET}"
+        
+  # API keys for service accounts
+  api_keys:
+    enabled: true
+    header_name: "X-API-Key"
+    
+  # Admin settings
+  admin:
+    username: "${ADMIN_USERNAME:-admin}"
+    password: "${ADMIN_PASSWORD:-change-me}"  # Will be hashed
+    email: "${ADMIN_EMAIL:-admin@arxos.io}"
+
+# AI Service Configuration
+ai_service:
+  enabled: true
+  url: "http://localhost:8000"
+  timeout: 60s
+  
+  # Model settings
+  models:
+    symbol_detection:
+      provider: "yolov8"
+      model_path: "./models/symbols_v1.pt"
+      confidence_threshold: 0.7
+      
+    ocr:
+      provider: "tesseract"
+      languages: ["eng"]
+      
+    lidar_processing:
+      provider: "open3d"
+      voxel_size: 0.05
+      outlier_removal: true
+      
+  # OpenAI integration
+  openai:
+    enabled: true
+    api_key: "${OPENAI_API_KEY}"
+    model: "gpt-4-vision-preview"
+    max_tokens: 4096
+    temperature: 0.3
+
+# Processing Pipeline
+pipeline:
+  # Worker configuration
+  workers:
+    pdf_processors: 4
+    ifc_processors: 2
+    lidar_processors: 2
+    ai_processors: 4
+    
+  # Queue settings
+  queue:
+    type: "redis"  # redis, rabbitmq, sqs
+    max_retries: 3
+    retry_delay: 5s
+    dead_letter_queue: true
+    
+  # Processing limits
+  limits:
+    max_concurrent_jobs: 10
+    max_job_duration: 30m
+    memory_limit: "2GB"
+    
+  # Confidence thresholds
+  confidence:
+    minimum: 0.5
+    auto_approve: 0.9
+    manual_review: 0.7
+
+# Monitoring & Observability
+monitoring:
+  # Metrics
+  metrics:
+    enabled: true
+    provider: "prometheus"
+    port: 9090
+    path: "/metrics"
+    
+  # Logging
+  logging:
+    level: "info"  # debug, info, warn, error
+    format: "json"  # json, text
+    output: "stdout"  # stdout, file
+    file:
+      path: "./logs/arxos.log"
+      max_size: "100MB"
+      max_backups: 10
+      max_age: 30
+    
+    # Structured logging fields
+    fields:
+      service: "arxos-backend"
+      environment: "${ENV:-development}"
+      
+  # Tracing
+  tracing:
+    enabled: false
+    provider: "jaeger"
+    endpoint: "http://localhost:14268/api/traces"
+    sample_rate: 0.1
+    
+  # Health checks
+  health:
+    enabled: true
+    path: "/health"
+    include_details: true
+    checks:
+      - database
+      - redis
+      - storage
+      - ai_service
+      
+  # Alerts
+  alerts:
+    enabled: false
+    webhook_url: "${ALERT_WEBHOOK_URL}"
+    channels:
+      - email
+      - slack
+
+# Backup & Recovery
+backup:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  
+  # Database backup
+  database:
+    enabled: true
+    retention_days: 30
+    compression: true
+    
+  # File backup
+  files:
+    enabled: true
+    retention_days: 90
+    include_processed: false
+    
+  # Backup destination
+  destination:
+    type: "s3"
+    s3:
+      bucket: "arxos-backups"
+      prefix: "backups/"
+
+# Feature Flags
+features:
+  pdf_ingestion: true
+  ifc_ingestion: true
+  photo_ingestion: true
+  lidar_ingestion: true
+  ai_processing: true
+  collaboration: false
+  public_sharing: false
+  api_v2: false
+  websocket_streaming: true
+  batch_processing: true
+
+# Performance Tuning
+performance:
+  # Caching
+  cache:
+    enabled: true
+    provider: "redis"
+    ttl: 3600
+    max_size: "1GB"
+    
+  # Connection pooling
+  connection_pool:
+    size: 100
+    timeout: 30s
+    idle_timeout: 900s
+    
+  # Resource limits
+  resources:
+    max_cpu: 4
+    max_memory: "8GB"
+    max_goroutines: 10000
+
+# Development Settings
+development:
+  debug: true
+  hot_reload: true
+  mock_ai: false
+  seed_data: true
+  verbose_errors: true
+  bypass_auth: false
+  
+# Environment Variables Override
+# Any setting can be overridden using environment variables
+# Format: ARXOS_<SECTION>_<KEY>
+# Example: ARXOS_SERVER_PORT=8080

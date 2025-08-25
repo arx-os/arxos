@@ -43,6 +43,9 @@ type User struct {
 	LockedUntil          *time.Time            `json:"locked_until"`
 	Metadata             map[string]interface{} `gorm:"type:jsonb" json:"metadata"`
 	Preferences          map[string]interface{} `gorm:"type:jsonb" json:"preferences"`
+	SubscriptionTier     string                 `gorm:"default:'free'" json:"subscription_tier"`
+	IsAdmin              bool                   `gorm:"default:false" json:"is_admin"`
+	Requires2FA          bool                   `gorm:"default:false" json:"requires_2fa"`
 	Projects             []Project              `gorm:"constraint:OnDelete:CASCADE;" json:"projects"`
 }
 
@@ -1040,4 +1043,39 @@ type APIKeyUsage struct {
 func (al *AuditLog) AfterFind(tx *gorm.DB) error {
 	// This ensures the archived field is always available
 	return nil
+}
+
+// TwoFactorAuth stores 2FA configuration for users
+type TwoFactorAuth struct {
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	UserID      uint           `gorm:"uniqueIndex;not null" json:"user_id"`
+	Secret      string         `gorm:"not null" json:"-"` // Encrypted TOTP secret
+	BackupCodes []byte         `json:"-"`                  // Encrypted backup codes
+	IsEnabled   bool           `gorm:"default:false" json:"is_enabled"`
+	EnabledAt   *time.Time     `json:"enabled_at,omitempty"`
+	LastUsedAt  *time.Time     `json:"last_used_at,omitempty"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+// SecurityLog tracks security events  
+type SecurityLog struct {
+	ID        uint                   `gorm:"primaryKey" json:"id"`
+	UserID    uint                   `gorm:"index;not null" json:"user_id"`
+	EventType string                 `gorm:"index;not null" json:"event_type"`
+	Details   map[string]interface{} `gorm:"type:jsonb" json:"details"`
+	Timestamp time.Time              `json:"timestamp"`
+}
+
+// APIUsage tracks API usage for analytics and billing
+type APIUsage struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	Identifier string    `gorm:"index;not null" json:"identifier"`
+	Tier       string    `gorm:"index;not null" json:"tier"`
+	Endpoint   string    `gorm:"index;not null" json:"endpoint"`
+	Method     string    `json:"method"`
+	Timestamp  time.Time `gorm:"index" json:"timestamp"`
+	IP         string    `json:"ip"`
+	UserAgent  string    `json:"user_agent"`
 }

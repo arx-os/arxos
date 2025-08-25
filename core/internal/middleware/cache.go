@@ -138,7 +138,7 @@ func CacheMiddleware(config *CacheConfig) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Get cache service
+			// Get cache service (now using PostgreSQL)
 			cacheService := services.GetCacheService()
 			if cacheService == nil {
 				// Cache service not available, proceed without caching

@@ -47,38 +47,11 @@ func checkDatabaseHealthImpl() string {
 	return "healthy"
 }
 
-// checkRedisHealthImpl performs actual Redis health check
+// checkRedisHealthImpl performs actual cache health check (now using PostgreSQL)
 func checkRedisHealthImpl() string {
-	// Get the global cache service
-	cacheService := services.GetCacheService()
-	if cacheService == nil {
-		// Redis is optional, so if not configured, return disabled
-		return "disabled"
-	}
-
-	// Try to ping Redis with timeout
-	_, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// Perform a simple operation to test connectivity
-	testKey := "health_check_" + fmt.Sprintf("%d", time.Now().Unix())
-	testValue := "ok"
-
-	// Try to set a value
-	if err := cacheService.Set(testKey, testValue, 5*time.Second); err != nil {
-		return "unhealthy"
-	}
-
-	// Try to get the value back
-	val, err := cacheService.Get(testKey)
-	if err != nil || val != testValue {
-		return "degraded"
-	}
-
-	// Clean up test key
-	cacheService.Delete(testKey)
-
-	return "healthy"
+	// This function name is kept for backward compatibility
+	// but now checks PostgreSQL-based cache instead of Redis
+	return checkCacheHealthImpl()
 }
 
 // checkCacheHealthImpl performs actual cache health check
@@ -88,17 +61,20 @@ func checkCacheHealthImpl() string {
 		return "disabled"
 	}
 
+	// Try to perform cache health check
+	if err := cacheService.HealthCheck(); err != nil {
+		return "unhealthy"
+	}
+
 	// Get cache statistics
-	stats, _ := cacheService.GetStats()
+	stats, err := cacheService.GetStats()
+	if err != nil {
+		return "degraded"
+	}
 
 	// Check hit rate - if too low, consider degraded
 	if (stats.Hits+stats.Misses) > 1000 && stats.HitRate < 0.3 {
 		return "degraded"
-	}
-
-	// Check if cache is operational
-	if int64(0) > 0 && float64(int64(0))/float64((stats.Hits+stats.Misses)) > 0.1 {
-		return "unhealthy"
 	}
 
 	return "healthy"
@@ -175,21 +151,35 @@ func GetDatabaseStats() (map[string]interface{}, error) {
 	}, nil
 }
 
-// GetRedisStats returns detailed Redis statistics
+// GetRedisStats returns detailed cache statistics (PostgreSQL-based)
 func GetRedisStats() (map[string]interface{}, error) {
+	// Function name kept for backward compatibility
+	return GetCacheStats()
+}
+
+// GetCacheStats returns detailed cache statistics
+func GetCacheStats() (map[string]interface{}, error) {
 	cacheService := services.GetCacheService()
 	if cacheService == nil {
 		return map[string]interface{}{
 			"status": "disabled",
+			"backend": "none",
 		}, nil
 	}
 
-	stats, _ := cacheService.GetStats()
+	stats, err := cacheService.GetStats()
+	if err != nil {
+		return map[string]interface{}{
+			"status": "error",
+			"error": err.Error(),
+		}, nil
+	}
 
 	return map[string]interface{}{
+		"status":    "healthy",
+		"backend":   "postgresql",
 		"hits":      stats.Hits,
 		"misses":    stats.Misses,
-		"errors":    int64(0),
 		"requests":  (stats.Hits + stats.Misses),
 		"hit_rate":  stats.HitRate,
 		"size":      stats.TotalKeys,
@@ -222,9 +212,23 @@ func checkDetailedDatabaseHealthImpl() map[string]interface{} {
 	}
 }
 
-// checkDetailedRedisHealthImpl provides real detailed Redis health
+// checkDetailedRedisHealthImpl provides detailed cache health (PostgreSQL-based)
 func checkDetailedRedisHealthImpl() map[string]interface{} {
-	redisStats, err := GetRedisStats()
+	// Function name kept for backward compatibility
+	return checkDetailedCacheHealthImpl()
+}
+
+// checkDetailedCacheHealthImpl provides real detailed cache health
+func checkDetailedCacheHealthImpl() map[string]interface{} {
+	cacheService := services.GetCacheService()
+	if cacheService == nil {
+		return map[string]interface{}{
+			"status":  "disabled",
+			"backend": "none",
+		}
+	}
+
+	stats, err := cacheService.GetStats()
 	if err != nil {
 		return map[string]interface{}{
 			"status": "error",
@@ -233,24 +237,8 @@ func checkDetailedRedisHealthImpl() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"status":  checkRedisHealthImpl(),
-		"details": redisStats,
-	}
-}
-
-// checkDetailedCacheHealthImpl provides real detailed cache health
-func checkDetailedCacheHealthImpl() map[string]interface{} {
-	cacheService := services.GetCacheService()
-	if cacheService == nil {
-		return map[string]interface{}{
-			"status": "disabled",
-		}
-	}
-
-	stats, _ := cacheService.GetStats()
-
-	return map[string]interface{}{
-		"status": checkCacheHealthImpl(),
+		"status":  checkCacheHealthImpl(),
+		"backend": "postgresql",
 		"details": map[string]interface{}{
 			"hit_rate":     stats.HitRate,
 			"total_hits":   stats.Hits,

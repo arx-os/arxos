@@ -1,0 +1,38 @@
+# ARXOS Security Information
+# This file follows RFC 9116 (https://www.rfc-editor.org/rfc/rfc9116.html)
+
+# Security Contact Information
+Contact: mailto:security@arxos.io
+Contact: https://github.com/arxos/arxos/security/advisories
+
+# Security Policy
+Policy: https://github.com/arxos/arxos/blob/main/SECURITY.md
+
+# Vulnerability Disclosure Policy
+Disclosure: Full
+
+# Preferred Languages
+Preferred-Languages: en
+
+# PGP Key for Encrypted Communications
+# Encryption: https://arxos.io/.well-known/pgp-key.txt
+
+# Acknowledgments Page
+Acknowledgments: https://arxos.io/security/thanks
+
+# Bug Bounty Program
+# Bounty: https://arxos.io/security/bounty
+
+# Hiring Information
+Hiring: https://arxos.io/careers
+
+# Security.txt Expiration
+Expires: 2025-12-31T23:59:59Z
+
+# Canonical URL for this file
+Canonical: https://arxos.io/.well-known/security.txt
+
+# Digital Signature
+# -----BEGIN PGP SIGNATURE-----
+# [Signature would go here in production]
+# -----END PGP SIGNATURE-----

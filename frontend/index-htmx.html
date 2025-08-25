@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARXOS - Building Intelligence Platform</title>
+    
+    <!-- HTMX Core -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- HTMX Extensions -->
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/loading-states.js"></script>
+    
+    <!-- Hyperscript for minimal client-side logic -->
+    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/github-theme.css">
+    <link rel="stylesheet" href="css/htmx-optimized.css">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body hx-boost="true" hx-ext="loading-states">
+    <!-- 
+        hx-boost="true" makes ALL links and forms use AJAX automatically
+        This eliminates need for individual hx-get attributes
+    -->
+    
+    <!-- Main Layout Container -->
+    <div id="app" hx-get="/api/app/shell" hx-trigger="load" hx-swap="outerHTML">
+        <!-- Initial loading state -->
+        <div class="loading-shell">
+            <div class="spinner"></div>
+            <p>Loading ARXOS...</p>
+        </div>
+    </div>
+
+    <!-- Global notification area (out-of-band updates) -->
+    <div id="notifications" class="notifications-container"></div>
+
+    <!-- Minimal JavaScript - only for HTMX configuration -->
+    <script>
+        // Configure HTMX
+        document.body.addEventListener('htmx:configRequest', function(evt) {
+            // Add auth token to all requests
+            const token = localStorage.getItem('arxos_token');
+            if (token) {
+                evt.detail.headers['Authorization'] = 'Bearer ' + token;
+            }
+            // Add CSRF token if needed
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrf) {
+                evt.detail.headers['X-CSRF-Token'] = csrf;
+            }
+        });
+
+        // Handle auth failures globally
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            if (evt.detail.xhr.status === 401) {
+                // Server will send login form via hx-retarget
+                evt.detail.shouldSwap = true;
+                evt.detail.target = document.getElementById('app');
+            }
+        });
+
+        // Handle successful login via event from server
+        document.body.addEventListener('auth:login', function(evt) {
+            localStorage.setItem('arxos_token', evt.detail.token);
+            localStorage.setItem('arxos_user', JSON.stringify(evt.detail.user));
+        });
+
+        // Handle logout
+        document.body.addEventListener('auth:logout', function(evt) {
+            localStorage.removeItem('arxos_token');
+            localStorage.removeItem('arxos_user');
+        });
+    </script>
+</body>
+</html>

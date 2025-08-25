@@ -140,9 +140,9 @@ FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
 ```
 
 ### API Rate Limiting
-- Add Redis for request queuing
+- Use PostgreSQL cache for request queuing (already implemented in core)
 - Limit concurrent model inference
-- Cache repeated detections
+- Cache repeated detections in PostgreSQL
 
 ### Monitoring
 - Track inference times

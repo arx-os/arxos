@@ -69,15 +69,13 @@ database:
     retention_days: 90
     chunk_time_interval: "1 day"
     
-  # Redis for caching/sessions
-  redis:
-    host: "${REDIS_HOST:-localhost}"
-    port: 6379
-    password: "${REDIS_PASSWORD:-}"
-    database: 0
-    pool_size: 10
-    session_ttl: 24h
-    cache_ttl: 1h
+  # Cache configuration (now using PostgreSQL)
+  cache:
+    enabled: true
+    default_ttl: 15m
+    max_ttl: 24h
+    cleanup_interval: 1h
+    table_prefix: "cache_"
 
 # Storage Configuration
 storage:
@@ -258,7 +256,7 @@ monitoring:
     include_details: true
     checks:
       - database
-      - redis
+      - cache
       - storage
       - ai_service
       
@@ -312,9 +310,9 @@ performance:
   # Caching
   cache:
     enabled: true
-    provider: "redis"
+    provider: "postgresql"
     ttl: 3600
-    max_size: "1GB"
+    max_entries: 100000
     
   # Connection pooling
   connection_pool:

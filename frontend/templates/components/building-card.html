@@ -1,0 +1,69 @@
+<!-- Building Card Component - Reusable fragment -->
+<div class="building-card" 
+     id="building-{{.ID}}"
+     hx-get="/buildings/{{.ID}}"
+     hx-push-url="true"
+     hx-target="#main-content"
+     _="on click halt the event's default then trigger click on me">
+    
+    <div class="building-card-header">
+        <div class="building-info">
+            <h3 class="building-name">
+                <!-- Star button with optimistic UI update -->
+                <button class="star-btn {{if .Starred}}starred{{end}}"
+                        hx-post="/api/buildings/{{.ID}}/star"
+                        hx-trigger="click consume"
+                        hx-swap="outerHTML"
+                        hx-indicator="#star-spinner-{{.ID}}"
+                        _="on click 
+                           halt the event's bubbling
+                           toggle .starred on me">
+                    <i class="fas fa-star"></i>
+                    <span id="star-spinner-{{.ID}}" class="htmx-indicator spinner-tiny"></span>
+                </button>
+                {{.Name}}
+            </h3>
+            <p class="building-type">{{.Type}}</p>
+        </div>
+        <span class="status-badge status-{{.Status}}">
+            {{.StatusLabel}}
+        </span>
+    </div>
+    
+    <p class="building-address">
+        <i class="fas fa-map-pin"></i>
+        {{.Address}}
+    </p>
+    
+    <div class="building-meta">
+        <span class="building-updated">
+            <i class="fas fa-clock"></i>
+            <!-- Time will auto-update via SSE -->
+            <span hx-sse-swap="building-{{.ID}}-time">
+                Updated {{.LastModifiedRelative}}
+            </span>
+        </span>
+    </div>
+    
+    <!-- Quick actions on hover -->
+    <div class="building-actions"
+         _="on mouseenter from parent show me
+            on mouseleave from parent hide me">
+        <button class="btn btn-sm btn-icon"
+                hx-get="/buildings/{{.ID}}/edit"
+                hx-target="#modal"
+                hx-trigger="click consume"
+                title="Edit">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-sm btn-icon"
+                hx-delete="/api/buildings/{{.ID}}"
+                hx-confirm="Are you sure you want to delete this building?"
+                hx-target="closest .building-card"
+                hx-swap="outerHTML swap:1s"
+                hx-trigger="click consume"
+                title="Delete">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+</div>

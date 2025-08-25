@@ -13,6 +13,9 @@ import (
 	// "github.com/arxos/arxos/cmd/commands/serve"     // TODO: Implement
 	"github.com/arxos/arxos/cmd/commands/ai"
 	"github.com/arxos/arxos/cmd/commands/support"
+	"github.com/arxos/arxos/cmd/commands/state"
+	"github.com/arxos/arxos/cmd/commands/deploy"
+	"github.com/arxos/arxos/cmd/commands/gitops"
 	"github.com/arxos/arxos/cmd/config"
 	"github.com/arxos/arxos/cmd/display"
 )
@@ -63,6 +66,9 @@ func init() {
 		// serve.ServeCmd,        // TODO: Implement
 		ai.AICmd,
 		support.SupportCmd,  // Support operations (admin only)
+		state.StateCmd,      // Building state management (BIaC)
+		deploy.DeployCmd,    // Deployment engine (BIaC)
+		gitops.GitOpsCmd,    // GitOps features (BIaC)
 		interactiveCmd,
 		versionCmd,
 	)

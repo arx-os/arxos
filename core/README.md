@@ -31,8 +31,7 @@ core/
 ### Prerequisites
 
 - Go 1.21 or higher
-- PostgreSQL 14+
-- Redis (for caching)
+- PostgreSQL 14+ with PostGIS
 - Python 3.9+ (for AI processing scripts)
 
 ### Development Setup
@@ -139,9 +138,10 @@ DB_NAME=arxos
 DB_USER=arxos
 DB_PASSWORD=secret
 
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
+# Cache Configuration
+# Cache is implemented using PostgreSQL (no Redis required)
+CACHE_DEFAULT_TTL=5m
+CACHE_CLEANUP_INTERVAL=1h
 
 # AI Service
 AI_SERVICE_URL=http://localhost:8000

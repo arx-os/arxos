@@ -1,0 +1,201 @@
+<!-- New Building Page - Full HTMX implementation -->
+<div class="new-building-page">
+    <div class="container">
+        <h1>Create New Building</h1>
+        
+        <!-- Multi-step form with HTMX -->
+        <form id="new-building-form"
+              hx-encoding="multipart/form-data"
+              hx-post="/api/buildings"
+              hx-target="#form-result"
+              hx-indicator="#form-spinner"
+              hx-ext="json-enc"
+              _="on htmx:afterRequest if event.detail.successful call window.location.assign('/buildings/' + event.detail.xhr.responseJSON.id)">
+            
+            <!-- Step 1: Basic Information -->
+            <div class="form-step" id="step-1">
+                <h2>Basic Information</h2>
+                
+                <div class="form-group">
+                    <label for="name">Building Name *</label>
+                    <input type="text" 
+                           id="name" 
+                           name="name" 
+                           class="form-control" 
+                           required
+                           hx-post="/api/validate/building-name"
+                           hx-trigger="blur, change delay:500ms"
+                           hx-target="#name-error"
+                           hx-indicator="#name-spinner">
+                    <span id="name-spinner" class="htmx-indicator spinner-tiny"></span>
+                    <div id="name-error" class="form-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="address">Address *</label>
+                    <input type="text" 
+                           id="address" 
+                           name="address" 
+                           class="form-control" 
+                           required
+                           hx-get="/api/geocode"
+                           hx-trigger="change delay:1s"
+                           hx-target="#address-suggestions"
+                           hx-indicator="#address-spinner">
+                    <span id="address-spinner" class="htmx-indicator spinner-tiny"></span>
+                    <div id="address-suggestions" class="suggestions-dropdown"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="type">Building Type *</label>
+                    <select id="type" name="type" class="form-control" required>
+                        <option value="">Select type...</option>
+                        <option value="office">Office</option>
+                        <option value="retail">Retail</option>
+                        <option value="industrial">Industrial</option>
+                        <option value="residential">Residential</option>
+                        <option value="mixed">Mixed Use</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="education">Education</option>
+                    </select>
+                </div>
+                
+                <button type="button" 
+                        class="btn btn-primary"
+                        _="on click 
+                           if #name.value is not empty and #address.value is not empty and #type.value is not empty
+                             hide #step-1 then show #step-2
+                           else
+                             alert('Please fill in all required fields')
+                           end">
+                    Next: Upload Floor Plans
+                </button>
+            </div>
+            
+            <!-- Step 2: File Upload -->
+            <div class="form-step" id="step-2" style="display: none;">
+                <h2>Upload Floor Plans</h2>
+                
+                <!-- Advanced file upload with drag and drop -->
+                <div class="file-upload-area"
+                     id="pdf-drop-zone"
+                     hx-encoding="multipart/form-data"
+                     hx-post="/api/upload/pdf/preview"
+                     hx-trigger="drop, change from:input[type='file']"
+                     hx-target="#upload-preview"
+                     hx-indicator="#upload-spinner"
+                     _="on dragover or dragenter halt the event
+                        then add .drag-over
+                        on dragleave or drop remove .drag-over
+                        on drop get event.dataTransfer.files 
+                        then set #pdf-file.files to it">
+                    
+                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                    <h3>Drag & Drop PDF Files</h3>
+                    <p>or click to browse</p>
+                    
+                    <input type="file" 
+                           id="pdf-file" 
+                           name="files[]" 
+                           accept=".pdf"
+                           multiple
+                           style="display: none;"
+                           _="on click from parent me.click()">
+                    
+                    <div id="upload-spinner" class="htmx-indicator">
+                        <div class="spinner"></div>
+                        <p>Processing PDFs...</p>
+                    </div>
+                </div>
+                
+                <!-- Upload preview and results -->
+                <div id="upload-preview" class="upload-preview"></div>
+                
+                <div class="form-actions">
+                    <button type="button" 
+                            class="btn btn-default"
+                            _="on click hide #step-2 then show #step-1">
+                        Back
+                    </button>
+                    <button type="button" 
+                            class="btn btn-primary"
+                            _="on click 
+                               if #upload-preview.children.length > 0
+                                 hide #step-2 then show #step-3
+                               else
+                                 alert('Please upload at least one floor plan')
+                               end">
+                        Next: Configure Settings
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Configuration -->
+            <div class="form-step" id="step-3" style="display: none;">
+                <h2>Configuration</h2>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="auto_analyze" checked>
+                        Automatically analyze uploaded plans
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="enable_3d" checked>
+                        Generate 3D visualization
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="public" 
+                               hx-get="/api/sharing/options"
+                               hx-trigger="change"
+                               hx-target="#sharing-options">
+                        Make this building public
+                    </label>
+                    <div id="sharing-options"></div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" 
+                            class="btn btn-default"
+                            _="on click hide #step-3 then show #step-2">
+                        Back
+                    </button>
+                    <button type="submit" 
+                            class="btn btn-primary btn-lg">
+                        <span id="form-spinner" class="htmx-indicator">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                        Create Building
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Results/Errors -->
+            <div id="form-result"></div>
+        </form>
+        
+        <!-- Progress indicator -->
+        <div class="form-progress">
+            <div class="progress-step" 
+                 _="on show from #step-1 add .active to me
+                    on hide from #step-1 remove .active from me">
+                1. Basic Info
+            </div>
+            <div class="progress-step"
+                 _="on show from #step-2 add .active to me
+                    on hide from #step-2 remove .active from me">
+                2. Floor Plans
+            </div>
+            <div class="progress-step"
+                 _="on show from #step-3 add .active to me
+                    on hide from #step-3 remove .active from me">
+                3. Configure
+            </div>
+        </div>
+    </div>
+</div>

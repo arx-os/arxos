@@ -15,6 +15,7 @@ import uvicorn
 
 from vision.symbol_detector import SymbolDetector
 from lidar.iphone_processor import iPhoneLiDARProcessor
+from cache_client import get_cache, close_cache
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +45,18 @@ async def startup():
     """Load ML models on startup"""
     logger.info("Loading ML models...")
     await symbol_detector.load_model()
+    
+    # Initialize cache connection
+    cache = await get_cache()
+    logger.info("Cache initialized")
+    
     logger.info("AI Service ready!")
+
+@app.on_event("shutdown")
+async def shutdown():
+    """Cleanup on shutdown"""
+    await close_cache()
+    logger.info("AI Service shutdown complete")
 
 @app.get("/")
 async def health():
@@ -76,6 +88,18 @@ async def detect_symbols(
         # Read image
         contents = await file.read()
         
+        # Check cache first
+        cache = await get_cache()
+        cached = await cache.get_detection(
+            contents, 
+            model="yolo",
+            threshold=confidence_threshold
+        )
+        
+        if cached:
+            logger.info("Returning cached detection results")
+            return cached
+        
         # Run YOLO detection
         detections = await symbol_detector.detect(
             contents, 
@@ -103,7 +127,7 @@ async def detect_symbols(
                 }
             })
         
-        return {
+        result = {
             "success": True,
             "detections": len(arxobjects),
             "arxobjects": arxobjects,
@@ -113,6 +137,16 @@ async def detect_symbols(
                 "image_size": detections[0].get('image_size', []) if detections else []
             }
         }
+        
+        # Cache the results
+        await cache.set_detection(
+            contents,
+            result,
+            model="yolo",
+            threshold=confidence_threshold
+        )
+        
+        return result
         
     except Exception as e:
         logger.error(f"Symbol detection failed: {e}")

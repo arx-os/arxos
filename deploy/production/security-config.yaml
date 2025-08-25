@@ -1,0 +1,467 @@
+# ARXOS Production Security Configuration
+# This configuration should be used for production deployments
+
+# General Security Settings
+security:
+  # Environment
+  environment: production
+  debug_mode: false
+  
+  # HTTPS Configuration
+  https:
+    enabled: true
+    force_redirect: true
+    hsts_max_age: 31536000
+    hsts_include_subdomains: true
+    hsts_preload: true
+    min_tls_version: "1.3"
+    
+  # Certificate Configuration
+  certificates:
+    provider: "letsencrypt" # or "custom"
+    auto_renew: true
+    email: "security@arxos.io"
+    
+# Authentication Settings
+authentication:
+  # JWT Configuration
+  jwt:
+    algorithm: "RS256"
+    access_token_expiry: "15m"
+    refresh_token_expiry: "7d"
+    issuer: "https://arxos.io"
+    audience: "https://api.arxos.io"
+    
+  # Password Policy
+  password:
+    min_length: 12
+    require_uppercase: true
+    require_lowercase: true
+    require_numbers: true
+    require_special: true
+    max_age_days: 90
+    history_count: 5
+    
+  # Two-Factor Authentication
+  two_factor:
+    enabled: true
+    required_for_admins: true
+    issuer: "ARXOS"
+    backup_codes: 8
+    encryption_key: "${TWO_FACTOR_ENCRYPTION_KEY}"
+    
+  # Session Management
+  sessions:
+    timeout_minutes: 30
+    max_concurrent: 5
+    cookie_secure: true
+    cookie_httponly: true
+    cookie_samesite: "strict"
+    
+# Rate Limiting Configuration
+rate_limiting:
+  enabled: true
+  
+  # Tier Configurations
+  tiers:
+    anonymous:
+      requests_per_minute: 10
+      burst: 5
+      upload_mb: 0
+      api_calls_per_day: 100
+      websocket_conns: 0
+      
+    free:
+      requests_per_minute: 60
+      burst: 20
+      upload_mb: 50
+      api_calls_per_day: 1000
+      websocket_conns: 2
+      building_quota: 3
+      storage_gb: 5
+      
+    pro:
+      requests_per_minute: 300
+      burst: 100
+      upload_mb: 500
+      api_calls_per_day: 10000
+      websocket_conns: 10
+      building_quota: 50
+      storage_gb: 100
+      
+    enterprise:
+      requests_per_minute: 1000
+      burst: 500
+      upload_mb: 2000
+      api_calls_per_day: 100000
+      websocket_conns: 100
+      building_quota: -1
+      storage_gb: 1000
+      
+  # Endpoint-Specific Limits
+  endpoints:
+    - path: "/api/auth/login"
+      anonymous: 5
+      free: 10
+      pro: 20
+      enterprise: 50
+      
+    - path: "/api/auth/register"
+      anonymous: 2
+      free: 5
+      pro: 10
+      enterprise: 50
+      
+    - path: "/api/buildings/upload"
+      anonymous: 0
+      free: 5
+      pro: 20
+      enterprise: 100
+      
+    - path: "/api/ai/detect"
+      anonymous: 0
+      free: 10
+      pro: 100
+      enterprise: 1000
+      
+# Security Headers
+headers:
+  # Content Security Policy
+  csp:
+    default_src: ["'self'"]
+    script_src: ["'self'", "'nonce-{nonce}'", "https://unpkg.com"]
+    style_src: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"]
+    font_src: ["'self'", "https://cdnjs.cloudflare.com"]
+    img_src: ["'self'", "data:", "https:"]
+    connect_src: ["'self'", "wss://{host}", "https://{host}"]
+    frame_ancestors: ["'none'"]
+    base_uri: ["'self'"]
+    form_action: ["'self'"]
+    upgrade_insecure_requests: true
+    
+  # Additional Security Headers
+  x_content_type_options: "nosniff"
+  x_frame_options: "DENY"
+  x_xss_protection: "1; mode=block"
+  referrer_policy: "strict-origin-when-cross-origin"
+  permissions_policy:
+    geolocation: []
+    microphone: []
+    camera: []
+    
+# CORS Configuration
+cors:
+  enabled: true
+  allowed_origins:
+    - "https://arxos.io"
+    - "https://app.arxos.io"
+    - "https://api.arxos.io"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:
+    - "Content-Type"
+    - "Authorization"
+    - "X-CSRF-Token"
+    - "X-Request-ID"
+  expose_headers:
+    - "X-RateLimit-Limit"
+    - "X-RateLimit-Remaining"
+    - "X-RateLimit-Reset"
+  max_age: 86400
+  credentials: true
+  
+# CSRF Protection
+csrf:
+  enabled: true
+  token_length: 32
+  token_expiry: "4h"
+  cookie_name: "arxos_csrf"
+  header_name: "X-CSRF-Token"
+  
+# Input Validation
+validation:
+  # File Upload
+  upload:
+    max_size_mb: 100
+    allowed_types:
+      - "application/pdf"
+      - "image/jpeg"
+      - "image/png"
+      - "image/svg+xml"
+      - "application/json"
+    scan_for_malware: true
+    
+  # Request Limits
+  request:
+    max_body_size: "10MB"
+    max_header_size: "1MB"
+    timeout_seconds: 30
+    
+# Database Security
+database:
+  # Connection Security
+  ssl_mode: "require"
+  ssl_cert: "/etc/ssl/certs/db-cert.pem"
+  ssl_key: "/etc/ssl/private/db-key.pem"
+  ssl_root_cert: "/etc/ssl/certs/db-ca.pem"
+  
+  # Connection Pooling
+  max_connections: 100
+  max_idle_connections: 10
+  connection_max_lifetime: "1h"
+  
+  # Query Protection
+  prepared_statements: true
+  sql_injection_protection: true
+  
+# Audit Logging
+audit:
+  enabled: true
+  
+  # What to Log
+  log_authentication: true
+  log_authorization: true
+  log_data_access: true
+  log_data_modification: true
+  log_exports: true
+  log_api_usage: true
+  
+  # Log Retention
+  retention_days: 90
+  archive_after_days: 30
+  
+  # Log Shipping
+  ship_to_siem: true
+  siem_endpoint: "${SIEM_ENDPOINT}"
+  
+# Security Monitoring
+monitoring:
+  enabled: true
+  
+  # Alert Thresholds
+  thresholds:
+    - type: "authentication_failure"
+      max_count: 5
+      time_window: "5m"
+      severity: "high"
+      auto_block: true
+      notify_admins: true
+      
+    - type: "rate_limit_exceeded"
+      max_count: 10
+      time_window: "1m"
+      severity: "medium"
+      auto_block: false
+      notify_admins: false
+      
+    - type: "sql_injection_attempt"
+      max_count: 1
+      time_window: "1h"
+      severity: "critical"
+      auto_block: true
+      notify_admins: true
+      
+    - type: "xss_attempt"
+      max_count: 1
+      time_window: "1h"
+      severity: "critical"
+      auto_block: true
+      notify_admins: true
+      
+  # Notification Channels
+  notifications:
+    email:
+      enabled: true
+      smtp_host: "${SMTP_HOST}"
+      smtp_port: 587
+      smtp_user: "${SMTP_USER}"
+      smtp_password: "${SMTP_PASSWORD}"
+      from_address: "security@arxos.io"
+      admin_emails:
+        - "admin@arxos.io"
+        - "security@arxos.io"
+        
+    slack:
+      enabled: true
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+      channel: "#security-alerts"
+      
+    pagerduty:
+      enabled: false
+      integration_key: "${PAGERDUTY_KEY}"
+      
+# GDPR Compliance
+gdpr:
+  enabled: true
+  
+  # Data Retention
+  retention:
+    audit_logs: 90
+    api_usage: 30
+    export_activities: 60
+    security_alerts: 180
+    
+  # User Rights
+  user_rights:
+    data_export: true
+    data_deletion: true
+    data_portability: true
+    consent_management: true
+    
+  # Deletion Grace Period
+  deletion_grace_days: 30
+  
+  # Anonymization
+  anonymize_inactive_days: 365
+  
+# WAF Configuration
+waf:
+  enabled: true
+  provider: "cloudflare" # or "aws-waf", "custom"
+  
+  # Rule Sets
+  rules:
+    - "OWASP Core Rule Set"
+    - "Known Exploits"
+    - "SQL Injection"
+    - "XSS"
+    - "CSRF"
+    
+  # Custom Rules
+  custom_rules:
+    - name: "Block Suspicious User Agents"
+      condition: "user_agent CONTAINS 'bot' AND path NOT CONTAINS '/robots.txt'"
+      action: "block"
+      
+    - name: "Rate Limit API"
+      condition: "path STARTS_WITH '/api/' AND rate > 1000/min"
+      action: "rate_limit"
+      
+# Secrets Management
+secrets:
+  provider: "vault" # or "aws-secrets-manager", "env"
+  vault_address: "${VAULT_ADDR}"
+  vault_token: "${VAULT_TOKEN}"
+  rotation_enabled: true
+  rotation_days: 30
+  
+# Backup & Recovery
+backup:
+  enabled: true
+  
+  # Backup Schedule
+  schedule:
+    full_backup: "0 2 * * 0" # Weekly at 2 AM Sunday
+    incremental: "0 2 * * 1-6" # Daily at 2 AM Mon-Sat
+    
+  # Backup Storage
+  storage:
+    provider: "s3" # or "gcs", "azure"
+    bucket: "arxos-backups"
+    encryption: true
+    retention_days: 30
+    
+  # Disaster Recovery
+  disaster_recovery:
+    rpo_hours: 4 # Recovery Point Objective
+    rto_hours: 8 # Recovery Time Objective
+    test_frequency: "monthly"
+    
+# Network Security
+network:
+  # Firewall Rules
+  firewall:
+    default_action: "deny"
+    rules:
+      - source: "0.0.0.0/0"
+        port: 443
+        protocol: "tcp"
+        action: "allow"
+        
+      - source: "10.0.0.0/8"
+        port: 5432
+        protocol: "tcp"
+        action: "allow"
+        description: "Database access from internal network"
+        
+  # DDoS Protection
+  ddos:
+    enabled: true
+    provider: "cloudflare"
+    sensitivity: "high"
+    
+  # VPN Configuration
+  vpn:
+    required_for_admin: true
+    provider: "wireguard"
+    
+# Compliance
+compliance:
+  frameworks:
+    - "SOC2"
+    - "GDPR"
+    - "CCPA"
+    - "ISO27001"
+    
+  # Compliance Reporting
+  reporting:
+    enabled: true
+    frequency: "quarterly"
+    recipients:
+      - "compliance@arxos.io"
+      
+# Development Security
+development:
+  # Code Security
+  sast_enabled: true
+  dependency_scanning: true
+  secret_scanning: true
+  
+  # CI/CD Security
+  require_signed_commits: true
+  branch_protection:
+    - "main"
+    - "production"
+    
+  # Security Testing
+  penetration_testing: "quarterly"
+  vulnerability_scanning: "weekly"
+  
+# Emergency Response
+emergency:
+  # Incident Response
+  incident_response:
+    team_email: "security@arxos.io"
+    escalation_phone: "${SECURITY_PHONE}"
+    runbook_url: "https://docs.arxos.io/security/incident-response"
+    
+  # Kill Switch
+  kill_switch:
+    enabled: true
+    triggers:
+      - "critical_security_breach"
+      - "data_exfiltration_detected"
+      - "ransomware_detected"
+      
+  # Maintenance Mode
+  maintenance_mode:
+    enabled: false
+    message: "ARXOS is currently under maintenance. Please check back later."
+    allowed_ips:
+      - "10.0.0.0/8"
+      
+# Environment Variables (to be set separately)
+# TWO_FACTOR_ENCRYPTION_KEY
+# SIEM_ENDPOINT
+# SMTP_HOST
+# SMTP_USER
+# SMTP_PASSWORD
+# SLACK_WEBHOOK_URL
+# PAGERDUTY_KEY
+# VAULT_ADDR
+# VAULT_TOKEN
+# SECURITY_PHONE

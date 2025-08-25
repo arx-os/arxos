@@ -20,21 +20,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis for caching
-  redis:
-    image: redis:7-alpine
-    container_name: arxos-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 volumes:
   postgres-data:
   postgres-test-data:
-  redis-data:

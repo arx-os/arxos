@@ -94,9 +94,9 @@ func getConfigFromEnv() Config {
 		Driver:   getEnv("DB_DRIVER", "postgres"),
 		Host:     getEnv("DB_HOST", "localhost"),
 		Port:     getEnvAsInt("DB_PORT", 5432),
-		Database: getEnv("DB_NAME", "arxos"),
-		Username: getEnv("DB_USER", "arxos"),
-		Password: getEnv("DB_PASSWORD", "arxos_dev"),
+		Database: getEnv("DB_NAME", "arxos_db_pg17"),
+		Username: getEnv("DB_USER", "joelpate"),
+		Password: getEnv("DB_PASSWORD", ""),
 		SSLMode:  getEnv("DB_SSL_MODE", "disable"),
 	}
 	

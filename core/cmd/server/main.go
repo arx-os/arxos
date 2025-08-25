@@ -9,12 +9,15 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	// "github.com/arxos/arxos/core/internal/handlers"
 	"github.com/arxos/arxos/core/internal/auth"
+	"github.com/arxos/arxos/core/internal/services"
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
@@ -318,6 +321,16 @@ func main() {
 	// Validate environment variables
 	validateEnvironment()
 
+	// Initialize all services (database, cache, sessions, etc.)
+	serviceConfig := services.DefaultServiceConfig()
+	if err := services.InitializeServices(serviceConfig); err != nil {
+		log.Fatalf("Failed to initialize services: %v", err)
+	}
+	defer services.ShutdownServices()
+
+	// Setup graceful shutdown
+	setupGracefulShutdown()
+
 	// Initialize auth manager
 	authManager := auth.NewAuthManager()
 
@@ -409,10 +422,19 @@ func main() {
 		
 		r.Route("/api", func(r chi.Router) {
 			// Protected API endpoints
+			// Health endpoints
 			r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"status":"ok","message":"ARXOS backend is running","authenticated":true}`))
+			})
+			r.Get("/health/services", handleServicesHealth)
+
+			// Cache management endpoints
+			r.Route("/cache", func(r chi.Router) {
+				r.Get("/stats", handleCacheStats)
+				r.Post("/clear", handleCacheClear)
+				r.Get("/entry", handleCacheGet) // Debug endpoint
 			})
 
 			// SQLite test endpoints (for testing without PostgreSQL)

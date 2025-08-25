@@ -1,5 +1,5 @@
-// Package handlers provides REST API endpoints for building topology processing
-package handlers
+// Package bim provides REST API endpoints for building topology processing
+package bim
 
 import (
 	"database/sql"

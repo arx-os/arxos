@@ -1,5 +1,5 @@
-// handlers/drawings.go
-package handlers
+// handlers/projects/drawings.go
+package projects
 
 import (
 	"encoding/json"

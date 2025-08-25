@@ -1,331 +1,254 @@
 """
-Arxos AI Service - Real Computer Vision & LiDAR Processing
-Two jobs: Detect architectural symbols & Process iPhone 3D scans
+Arxos AI Service - Field Worker Assistance
+Main service for lightweight AI help during building mapping
 """
 
-import asyncio
 import logging
-from pathlib import Path
-from typing import Dict, List, Any
-
-import numpy as np
-from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict, Any, Optional
+import json
 
-from vision.symbol_detector import SymbolDetector
-from lidar.iphone_processor import iPhoneLiDARProcessor
-from cache_client import get_cache, close_cache
+# Import our modules
+from field_assistance import ComponentValidator, SuggestionEngine, QualityScorer
+from ingestion import IngestionManager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI
+# Initialize FastAPI app
 app = FastAPI(
     title="Arxos AI Service",
-    description="Real AI for architectural intelligence",
-    version="2.0.0"
+    description="Lightweight AI assistance for field workers mapping buildings",
+    version="1.0.0"
 )
 
-# CORS
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize AI components
-symbol_detector = SymbolDetector()
-lidar_processor = iPhoneLiDARProcessor()
+# Initialize services
+component_validator = ComponentValidator()
+suggestion_engine = SuggestionEngine()
+quality_scorer = QualityScorer()
+ingestion_manager = IngestionManager()
 
 @app.on_event("startup")
-async def startup():
-    """Load ML models on startup"""
-    logger.info("Loading ML models...")
-    await symbol_detector.load_model()
-    
-    # Initialize cache connection
-    cache = await get_cache()
-    logger.info("Cache initialized")
-    
-    logger.info("AI Service ready!")
+async def startup_event():
+    """Initialize services on startup"""
+    logger.info("Starting Arxos AI Service...")
+    logger.info(f"Available parsers: {ingestion_manager.get_available_parsers()}")
+    logger.info(f"Supported formats: {ingestion_manager.get_supported_formats()}")
 
-@app.on_event("shutdown")
-async def shutdown():
-    """Cleanup on shutdown"""
-    await close_cache()
-    logger.info("AI Service shutdown complete")
-
-@app.get("/")
-async def health():
-    """Health check"""
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
     return {
+        "status": "healthy",
         "service": "Arxos AI Service",
-        "status": "operational",
-        "capabilities": [
-            "symbol_detection",
-            "lidar_processing"
-        ],
-        "models_loaded": symbol_detector.is_loaded()
+        "version": "1.0.0",
+        "parsers": ingestion_manager.get_available_parsers()
     }
 
-# ============================================
-# SYMBOL DETECTION - Computer Vision
-# ============================================
+# Field Assistance Endpoints
 
-@app.post("/detect/symbols")
-async def detect_symbols(
-    file: UploadFile = File(...),
-    confidence_threshold: float = 0.5
+@app.post("/validate/component")
+async def validate_component(component_data: Dict[str, Any]):
+    """
+    Validate field worker component input
+    
+    Args:
+        component_data: Component data from field worker
+        
+    Returns:
+        Validation result with status and suggestions
+    """
+    try:
+        validation_result = await component_validator.validate_component(component_data)
+        
+        # Convert dataclass to dict for JSON serialization
+        return {
+            "is_valid": validation_result.is_valid,
+            "confidence": validation_result.confidence,
+            "suggestions": validation_result.suggestions,
+            "warnings": validation_result.warnings,
+            "errors": validation_result.errors
+        }
+        
+    except Exception as e:
+        logger.error(f"Component validation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/suggest/component")
+async def suggest_component(
+    input_data: Dict[str, Any],
+    photo: Optional[UploadFile] = File(None)
 ):
     """
-    Detect architectural symbols in floor plan images
-    Returns: doors, windows, stairs, fixtures, etc.
-    """
-    try:
-        # Read image
-        contents = await file.read()
-        
-        # Check cache first
-        cache = await get_cache()
-        cached = await cache.get_detection(
-            contents, 
-            model="yolo",
-            threshold=confidence_threshold
-        )
-        
-        if cached:
-            logger.info("Returning cached detection results")
-            return cached
-        
-        # Run YOLO detection
-        detections = await symbol_detector.detect(
-            contents, 
-            threshold=confidence_threshold
-        )
-        
-        # Convert to Arxos format
-        arxobjects = []
-        for det in detections:
-            arxobjects.append({
-                "id": f"{det['class']}_{det['id']}",
-                "type": det['class'],  # door, window, stair, etc.
-                "bbox": det['bbox'],  # [x, y, width, height]
-                "confidence": det['confidence'],
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [
-                        det['bbox'][0] + det['bbox'][2]/2,
-                        det['bbox'][1] + det['bbox'][3]/2
-                    ]
-                },
-                "properties": {
-                    "symbol_type": det['class'],
-                    "subtype": det.get('subtype', ''),  # single door, double door, etc.
-                }
-            })
-        
-        result = {
-            "success": True,
-            "detections": len(arxobjects),
-            "arxobjects": arxobjects,
-            "metadata": {
-                "model": "YOLOv8-Architecture",
-                "confidence_threshold": confidence_threshold,
-                "image_size": detections[0].get('image_size', []) if detections else []
-            }
-        }
-        
-        # Cache the results
-        await cache.set_detection(
-            contents,
-            result,
-            model="yolo",
-            threshold=confidence_threshold
-        )
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"Symbol detection failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/detect/rooms")
-async def detect_rooms(file: UploadFile = File(...)):
-    """
-    Detect and classify rooms in floor plans
-    Uses semantic segmentation to identify room boundaries and types
-    """
-    try:
-        contents = await file.read()
-        
-        # Run room segmentation
-        rooms = await symbol_detector.segment_rooms(contents)
-        
-        # Convert to Arxos format
-        arxobjects = []
-        for room in rooms:
-            arxobjects.append({
-                "id": f"room_{room['id']}",
-                "type": "room",
-                "subtype": room['room_type'],  # bedroom, kitchen, bathroom, etc.
-                "geometry": room['polygon'],  # Actual room boundary
-                "confidence": room['confidence'],
-                "properties": {
-                    "room_type": room['room_type'],
-                    "area": room.get('area_sqft'),
-                    "features": room.get('features', [])  # detected fixtures
-                }
-            })
-        
-        return {
-            "success": True,
-            "rooms": len(arxobjects),
-            "arxobjects": arxobjects
-        }
-        
-    except Exception as e:
-        logger.error(f"Room detection failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ============================================
-# iPHONE LiDAR - 3D Scanning
-# ============================================
-
-@app.post("/lidar/process")
-async def process_lidar(file: UploadFile = File(...)):
-    """
-    Process iPhone LiDAR scan data (PLY/USDZ format)
-    Extracts walls, floors, and room geometry
-    """
-    try:
-        contents = await file.read()
-        file_ext = Path(file.filename).suffix.lower()
-        
-        # Process point cloud
-        result = await lidar_processor.process_scan(
-            contents,
-            format=file_ext
-        )
-        
-        # Extract architectural elements
-        arxobjects = []
-        
-        # Add detected walls
-        for wall in result['walls']:
-            arxobjects.append({
-                "id": f"wall_{wall['id']}",
-                "type": "wall",
-                "geometry": wall['line_3d'],  # 3D line segment
-                "properties": {
-                    "height": wall['height'],
-                    "thickness": wall.get('thickness', 0.15),  # meters
-                    "confidence": wall['confidence']
-                }
-            })
-        
-        # Add floor plane
-        if result.get('floor'):
-            arxobjects.append({
-                "id": "floor_0",
-                "type": "floor",
-                "geometry": result['floor']['plane'],
-                "properties": {
-                    "elevation": result['floor']['elevation'],
-                    "area": result['floor']['area']
-                }
-            })
-        
-        # Add detected rooms
-        for room in result.get('rooms', []):
-            arxobjects.append({
-                "id": f"room_{room['id']}",
-                "type": "room",
-                "geometry": room['boundary_3d'],
-                "properties": {
-                    "height": room['height'],
-                    "volume": room['volume'],
-                    "floor_area": room['floor_area']
-                }
-            })
-        
-        return {
-            "success": True,
-            "arxobjects": arxobjects,
-            "metadata": {
-                "point_count": result['point_count'],
-                "scan_quality": result['quality_score'],
-                "processing_time": result['processing_time']
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"LiDAR processing failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.websocket("/lidar/stream")
-async def lidar_stream(websocket: WebSocket):
-    """
-    Real-time LiDAR streaming from iPhone
-    Processes point cloud data as it arrives
-    """
-    await websocket.accept()
-    logger.info("LiDAR stream connected")
+    Suggest component types based on field worker input
     
+    Args:
+        input_data: Field worker input (text, properties, etc.)
+        photo: Optional photo for visual analysis
+        
+    Returns:
+        List of component suggestions with confidence scores
+    """
     try:
-        while True:
-            # Receive point cloud chunk
-            data = await websocket.receive_bytes()
-            
-            # Process incrementally
-            result = await lidar_processor.process_stream_chunk(data)
-            
-            # Send back detected elements
-            if result['new_elements']:
-                await websocket.send_json({
-                    "type": "update",
-                    "elements": result['new_elements'],
-                    "scan_progress": result['progress']
-                })
-            
+        # Convert photo to bytes if provided
+        photo_data = None
+        if photo:
+            photo_data = await photo.read()
+        
+        suggestions = await suggestion_engine.suggest_component(input_data, photo_data)
+        
+        # Convert dataclasses to dicts for JSON serialization
+        return [
+            {
+                "component_type": s.component_type,
+                "confidence": s.confidence,
+                "properties": s.properties,
+                "reasoning": s.reasoning,
+                "alternatives": s.alternatives
+            }
+            for s in suggestions
+        ]
+        
     except Exception as e:
-        logger.error(f"Stream error: {e}")
-    finally:
-        await websocket.close()
+        logger.error(f"Component suggestion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# ============================================
-# TRAINING ENDPOINTS (Development only)
-# ============================================
-
-@app.post("/train/symbols")
-async def train_symbol_detector(
-    dataset: UploadFile = File(...),
-    epochs: int = 100
+@app.post("/score/quality")
+async def score_quality(
+    contribution_data: Dict[str, Any],
+    validation_result: Optional[Dict[str, Any]] = None
 ):
     """
-    Train/fine-tune symbol detection model
-    Upload annotated dataset in YOLO format
-    """
-    if not app.debug:
-        raise HTTPException(403, "Training only available in development")
+    Score field worker contribution for quality
     
-    # This would trigger model training
-    # In production, training happens offline
+    Args:
+        contribution_data: The contribution data from field worker
+        validation_result: Optional validation result from component validator
+        
+    Returns:
+        Quality score with token reward and feedback
+    """
+    try:
+        quality_score = await quality_scorer.score_contribution(
+            contribution_data, validation_result
+        )
+        
+        # Convert dataclass to dict for JSON serialization
+        return {
+            "overall_score": quality_score.overall_score,
+            "token_reward": quality_score.token_reward,
+            "breakdown": quality_score.breakdown,
+            "feedback": quality_score.feedback,
+            "timestamp": quality_score.timestamp.isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Quality scoring error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Ingestion Endpoints
+
+@app.post("/ingest/building-plan")
+async def ingest_building_plan(file: UploadFile = File(...)):
+    """
+    Ingest a building plan file (PDF, IFC, DWG, etc.)
+    
+    Args:
+        file: Building plan file to process
+        
+    Returns:
+        Parsed building plan data
+    """
+    try:
+        # Save uploaded file temporarily
+        temp_path = f"/tmp/{file.filename}"
+        with open(temp_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Check if file can be parsed
+        if not await ingestion_manager.can_parse_file(temp_path):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File format not supported. Supported formats: {ingestion_manager.get_supported_formats()}"
+            )
+        
+        # Parse the building plan
+        building_plan = await ingestion_manager.parse_building_plan(temp_path)
+        
+        # Convert to JSON-serializable format
+        return {
+            "building_name": building_plan.building_name,
+            "floors": building_plan.floors,
+            "rooms": building_plan.rooms,
+            "elements_count": len(building_plan.elements),
+            "dimensions": building_plan.dimensions,
+            "scale_factor": building_plan.scale_factor,
+            "source_format": building_plan.source_format,
+            "metadata": building_plan.metadata
+        }
+        
+    except Exception as e:
+        logger.error(f"Building plan ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ingest/supported-formats")
+async def get_supported_formats():
+    """Get list of supported file formats"""
     return {
-        "message": "Training pipeline would start here",
-        "epochs": epochs
+        "supported_formats": ingestion_manager.get_supported_formats(),
+        "available_parsers": ingestion_manager.get_available_parsers()
     }
+
+@app.post("/ingest/validate-file")
+async def validate_file(file: UploadFile = File(...)):
+    """
+    Validate a building plan file without parsing
+    
+    Args:
+        file: Building plan file to validate
+        
+    Returns:
+        Validation result
+    """
+    try:
+        # Save uploaded file temporarily
+        temp_path = f"/tmp/{file.filename}"
+        with open(temp_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Validate the file
+        validation_result = await ingestion_manager.validate_file(temp_path)
+        
+        return validation_result
+        
+    except Exception as e:
+        logger.error(f"File validation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ingest/parser-status")
+async def get_parser_status():
+    """Get status of all registered parsers"""
+    return await ingestion_manager.get_parser_status()
 
 if __name__ == "__main__":
-    import os
-    port = int(os.getenv("PORT", "8000"))
-    debug = os.getenv("DEBUG", "false").lower() == "true"
-    
     uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=port,
-        reload=debug
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
     )

@@ -1,4 +1,4 @@
-package main
+package ingestion
 
 import (
 	"bytes"
@@ -116,26 +116,26 @@ func (h *PDFUploadHandler) HandleUpload(w http.ResponseWriter, r *http.Request) 
 
 // ProcessingResult represents the result of PDF processing
 type ProcessingResult struct {
-	Success      bool                   `json:"success"`
-	Message      string                 `json:"message"`
-	BuildingName string                 `json:"building_name"`
-	FloorNumber  string                 `json:"floor_number"`
-	ObjectCount  int                    `json:"object_count"`
-	Objects      []ArxObject            `json:"objects"`
-	Statistics   map[string]int         `json:"statistics"`
-	ProcessTime  float64                `json:"process_time_seconds"`
+	Success      bool           `json:"success"`
+	Message      string         `json:"message"`
+	BuildingName string         `json:"building_name"`
+	FloorNumber  string         `json:"floor_number"`
+	ObjectCount  int            `json:"object_count"`
+	Objects      []ArxObject    `json:"objects"`
+	Statistics   map[string]int `json:"statistics"`
+	ProcessTime  float64        `json:"process_time_seconds"`
 }
 
 // processPDF processes the uploaded PDF and creates ArxObjects
 func (h *PDFUploadHandler) processPDF(filepath, buildingName, floorNumber string) (*ProcessingResult, error) {
 	startTime := time.Now()
-	
+
 	// Process PDF using AI service
 	objects, stats, err := h.processWithAIService(filepath, buildingName, floorNumber)
 	if err != nil {
 		return nil, fmt.Errorf("AI service processing failed: %v", err)
 	}
-	
+
 	// Store objects in database
 	storedCount := 0
 	for _, obj := range objects {
@@ -150,7 +150,7 @@ func (h *PDFUploadHandler) processPDF(filepath, buildingName, floorNumber string
 	h.tileService.ClearCache()
 
 	processTime := time.Since(startTime).Seconds()
-	
+
 	return &ProcessingResult{
 		Success:      true,
 		Message:      fmt.Sprintf("Successfully processed PDF and created %d objects", storedCount),
@@ -167,56 +167,56 @@ func (h *PDFUploadHandler) processPDF(filepath, buildingName, floorNumber string
 func (h *PDFUploadHandler) processWithAIService(pdfPath, buildingName, floorNumber string) ([]ArxObject, map[string]int, error) {
 	var objects []ArxObject
 	stats := make(map[string]int)
-	
+
 	// Open PDF file
 	pdfFile, err := os.Open(pdfPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to open PDF: %v", err)
 	}
 	defer pdfFile.Close()
-	
+
 	// Create multipart form
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	
+
 	// Add file to form
 	part, err := writer.CreateFormFile("file", filepath.Base(pdfPath))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create form file: %v", err)
 	}
-	
+
 	if _, err := io.Copy(part, pdfFile); err != nil {
 		return nil, nil, fmt.Errorf("failed to copy file: %v", err)
 	}
-	
+
 	// Add building type
 	writer.WriteField("building_type", "general")
 	writer.Close()
-	
+
 	// Send to AI service
 	aiServiceURL := os.Getenv("AI_SERVICE_URL")
 	if aiServiceURL == "" {
 		aiServiceURL = "http://localhost:8000"
 	}
-	
+
 	req, err := http.NewRequest("POST", aiServiceURL+"/api/v1/convert", body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	
+
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("AI service request failed: %v", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
 		return nil, nil, fmt.Errorf("AI service returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
-	
+
 	// Parse AI service response
 	var aiResult struct {
 		ArxObjects []struct {
@@ -231,19 +231,19 @@ func (h *PDFUploadHandler) processWithAIService(pdfPath, buildingName, floorNumb
 		} `json:"arxobjects"`
 		OverallConfidence float64 `json:"overall_confidence"`
 	}
-	
+
 	if err := json.NewDecoder(resp.Body).Decode(&aiResult); err != nil {
 		return nil, nil, fmt.Errorf("failed to decode AI response: %v", err)
 	}
-	
+
 	// Convert AI objects to ArxObjects
 	floorZ := parseFloat(floorNumber) * 3000
-	
+
 	for _, aiObj := range aiResult.ArxObjects {
 		// Extract position from geometry
 		x, y := 0.0, 0.0
 		width, height := 100, 100
-		
+
 		if geometry, ok := aiObj.Geometry["coordinates"].([]interface{}); ok && len(geometry) > 0 {
 			if coords, ok := geometry[0].([]interface{}); ok && len(coords) >= 2 {
 				if xVal, ok := coords[0].(float64); ok {
@@ -265,14 +265,14 @@ func (h *PDFUploadHandler) processWithAIService(pdfPath, buildingName, floorNumb
 				}
 			}
 		}
-		
+
 		// Add metadata
 		aiObj.Properties["building"] = buildingName
 		aiObj.Properties["floor"] = floorNumber
 		aiObj.Properties["confidence"] = aiObj.Confidence.Overall
-		
+
 		propsJSON, _ := json.Marshal(aiObj.Properties)
-		
+
 		objects = append(objects, ArxObject{
 			Type:       aiObj.Type,
 			System:     aiObj.System,
@@ -285,12 +285,12 @@ func (h *PDFUploadHandler) processWithAIService(pdfPath, buildingName, floorNumb
 			ScaleMax:   10,
 			Properties: json.RawMessage(propsJSON),
 		})
-		
+
 		stats[aiObj.Type]++
 	}
-	
+
 	log.Printf("Processed %d objects from AI service: %v", len(objects), stats)
-	
+
 	return objects, stats, nil
 }
 
@@ -299,7 +299,7 @@ func (h *PDFUploadHandler) storeObject(obj *ArxObject) error {
 	if h.db == nil {
 		return fmt.Errorf("database not available")
 	}
-	
+
 	query := `
 	INSERT INTO arx_objects (
 		type, system, x, y, z, width, height, 
@@ -307,7 +307,7 @@ func (h *PDFUploadHandler) storeObject(obj *ArxObject) error {
 	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	RETURNING id, uuid
 	`
-	
+
 	// Extract confidence from properties if available
 	confidence := 0.85 // default confidence
 	if obj.Properties != nil {
@@ -318,13 +318,13 @@ func (h *PDFUploadHandler) storeObject(obj *ArxObject) error {
 			}
 		}
 	}
-	
+
 	err := h.db.QueryRow(query,
 		obj.Type, obj.System, obj.X, obj.Y, obj.Z,
 		obj.Width, obj.Height, obj.ScaleMin, obj.ScaleMax,
 		obj.Properties, confidence, "pdf",
 	).Scan(&obj.ID, &obj.UUID)
-	
+
 	return err
 }
 

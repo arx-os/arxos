@@ -1,4 +1,4 @@
-package main
+package bim
 
 import (
 	"database/sql"
@@ -61,7 +61,7 @@ func NewTileService(db *sql.DB) *TileService {
 func (t *TileService) GetTile(zoom, x, y int) ([]ArxObject, error) {
 	// Check cache first
 	cacheKey := fmt.Sprintf("%d/%d/%d", zoom, x, y)
-	
+
 	t.mu.RLock()
 	if cached, exists := t.cache[cacheKey]; exists {
 		if time.Since(cached.Generated) < cached.TTL {
@@ -99,13 +99,13 @@ func (t *TileService) GetTile(zoom, x, y int) ([]ArxObject, error) {
 // tileToBounds converts tile coordinates to geographic bounds
 func (t *TileService) tileToBounds(zoom, x, y int) TileBounds {
 	n := math.Pow(2, float64(zoom))
-	
+
 	minLon := float64(x)/n*360.0 - 180.0
 	maxLon := float64(x+1)/n*360.0 - 180.0
-	
+
 	minLat := math.Atan(math.Sinh(math.Pi*(1-2*float64(y+1)/n))) * 180.0 / math.Pi
 	maxLat := math.Atan(math.Sinh(math.Pi*(1-2*float64(y)/n))) * 180.0 / math.Pi
-	
+
 	return TileBounds{
 		MinLon: minLon,
 		MinLat: minLat,
@@ -120,7 +120,7 @@ func (t *TileService) zoomToScale(zoom int) int {
 	scales := []int{
 		10000000, // 0 - Continental
 		1000000,  // 1 - Regional
-		100000,   // 2 - Municipal  
+		100000,   // 2 - Municipal
 		10000,    // 3 - Campus
 		1000,     // 4 - Building
 		100,      // 5 - Floor
@@ -129,14 +129,14 @@ func (t *TileService) zoomToScale(zoom int) int {
 		1,        // 8 - Circuit
 		1,        // 9 - Trace
 	}
-	
+
 	if zoom < 0 {
 		zoom = 0
 	}
 	if zoom >= len(scales) {
 		zoom = len(scales) - 1
 	}
-	
+
 	return scales[zoom]
 }
 
@@ -156,20 +156,20 @@ func (t *TileService) queryObjects(bounds TileBounds, scale int) ([]ArxObject, e
 		ORDER BY z_order, id
 		LIMIT 1000
 	`
-	
+
 	rows, err := t.db.Query(query,
 		bounds.MinLon, bounds.MinLat, bounds.MaxLon, bounds.MaxLat, scale)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var objects []ArxObject
 	for rows.Next() {
 		var obj ArxObject
 		var manufacturer, model sql.NullString
 		var properties sql.NullString
-		
+
 		err := rows.Scan(
 			&obj.ID, &obj.UUID, &obj.Type, &obj.System,
 			&obj.X, &obj.Y, &obj.Z,
@@ -180,7 +180,7 @@ func (t *TileService) queryObjects(bounds TileBounds, scale int) ([]ArxObject, e
 		if err != nil {
 			continue
 		}
-		
+
 		if manufacturer.Valid {
 			obj.Manufacturer = manufacturer.String
 		}
@@ -190,10 +190,10 @@ func (t *TileService) queryObjects(bounds TileBounds, scale int) ([]ArxObject, e
 		if properties.Valid {
 			obj.Properties = json.RawMessage(properties.String)
 		}
-		
+
 		objects = append(objects, obj)
 	}
-	
+
 	return objects, nil
 }
 
@@ -203,7 +203,7 @@ func (t *TileService) storeTileCache(zoom, x, y int, objects []ArxObject) {
 	if err != nil {
 		return
 	}
-	
+
 	query := `
 		INSERT INTO arx_tiles (zoom, x, y, data, object_count, generated_at, expires_at)
 		VALUES ($1, $2, $3, $4, $5, NOW(), NOW() + INTERVAL '1 hour')
@@ -214,7 +214,7 @@ func (t *TileService) storeTileCache(zoom, x, y int, objects []ArxObject) {
 			generated_at = NOW(),
 			expires_at = NOW() + INTERVAL '1 hour'
 	`
-	
+
 	t.db.Exec(query, zoom, x, y, data, len(objects))
 }
 
@@ -228,7 +228,7 @@ func (t *TileService) CleanCache() {
 		}
 	}
 	t.mu.Unlock()
-	
+
 	// Clean database cache
 	t.db.Exec("DELETE FROM arx_tiles WHERE expires_at < NOW()")
 }
@@ -236,7 +236,7 @@ func (t *TileService) CleanCache() {
 // PreloadArea preloads tiles for an area (predictive caching)
 func (t *TileService) PreloadArea(centerLat, centerLon float64, zoom int, radius int) {
 	centerX, centerY := t.latLonToTile(centerLat, centerLon, zoom)
-	
+
 	for dx := -radius; dx <= radius; dx++ {
 		for dy := -radius; dy <= radius; dy++ {
 			go t.GetTile(zoom, centerX+dx, centerY+dy)

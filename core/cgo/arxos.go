@@ -1363,7 +1363,7 @@ func convertGoDatabaseConfigToC(config *ArxDatabaseConfig) unsafe.Pointer {
 	}
 
 	// Convert primitive fields
-	cConfigPtr.type = C.int(config.Type)
+	cConfigPtr.db_type = C.int(config.Type)
 	cConfigPtr.port = C.int(config.Port)
 	cConfigPtr.max_connections = C.int(config.MaxConnections)
 	cConfigPtr.max_idle_connections = C.int(config.MaxIdleConnections)
@@ -1436,11 +1436,18 @@ func convertCDatabaseQueryResultToGo(cResult unsafe.Pointer) *ArxQueryResult {
 	if result.rows != nil {
 		for i := 0; i < int(result.row_count); i++ {
 			var row []string
-			rowPtr := *(***C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(result.rows)) + uintptr(i)*unsafe.Sizeof((*C.char)(nil)))))
+			// Get pointer to row i
+			rowPtr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(result.rows)) + uintptr(i)*unsafe.Sizeof(uintptr(0))))
 			if rowPtr != nil {
 				for j := 0; j < int(result.column_count); j++ {
-					cellValue := C.GoString(*(**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(rowPtr)) + uintptr(j)*unsafe.Sizeof((*C.char)(nil)))))
-					row = append(row, cellValue)
+					// Get pointer to cell j in row i
+					cellPtr := (**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(rowPtr)) + uintptr(j)*unsafe.Sizeof(uintptr(0))))
+					if cellPtr != nil && *cellPtr != nil {
+						cellValue := C.GoString(*cellPtr)
+						row = append(row, cellValue)
+					} else {
+						row = append(row, "")
+					}
 				}
 			}
 			rows = append(rows, row)

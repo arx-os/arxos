@@ -1,965 +1,1554 @@
-# Arxos Building Infrastructure-as-Code Platform
-## Software Architecture & Development Plan
-
-### Executive Summary
-Arxos transforms buildings into programmable infrastructure through ArxObjects - behavioral building components that can be queried, configured, and operated through CLI tools like traditional DevOps infrastructure. The platform combines C-based ArxObject runtime engines with Git-like building state management to enable infrastructure-as-code workflows for physical buildings.
+# ARXOS COMPLETE VISION & IMPLEMENTATION
+## Building Infrastructure-as-Code Platform
+### Unified Architecture, Design, and Implementation Roadmap
 
 ---
+
+# Executive Summary
+
+Arxos transforms buildings into programmable infrastructure through a revolutionary combination of ASCII-BIM visualization, ArxObject behavioral components, and infrastructure-as-code workflows. The platform enables buildings to be queried, configured, and operated through CLI tools, Progressive Web Apps, and AR field validation - creating the world's first truly programmable building infrastructure platform.
+
+**Core Innovation**: Buildings become navigable filesystems with infinite zoom from campus-level down to microcontroller internals, all rendered in human-readable ASCII art that works everywhere from SSH terminals to AR headsets.
+
+**Revolutionary Approach**: Using ASCII as a universal building language, combined with progressive construction from PDF floor plans, LiDAR scanning fusion, and Git-like version control for physical infrastructure.
+
+---
+
+# Table of Contents
+
+**PART I: VISION & ARCHITECTURE**
+1. [System Architecture Overview](#1-system-architecture-overview)
+2. [Revolutionary ASCII-BIM Engine](#2-revolutionary-ascii-bim-engine)  
+3. [ArxObject Hierarchical System](#3-arxobject-hierarchical-system)
+4. [Progressive Building Construction](#4-progressive-building-construction)
+5. [Multi-Modal Interface Architecture](#5-multi-modal-interface-architecture)
+6. [Infrastructure-as-Code Operations](#6-infrastructure-as-code-operations)
+
+**PART II: IMPLEMENTATION**
+7. [Complete Implementation Roadmap](#7-complete-implementation-roadmap)
+8. [Detailed Weekly Breakdown](#8-detailed-weekly-breakdown)
+9. [Technical Specifications](#9-technical-specifications)
+10. [Team Structure & Assignments](#10-team-structure-assignments)
+11. [Success Metrics & KPIs](#11-success-metrics-kpis)
+12. [Risk Mitigation](#12-risk-mitigation)
+
+---
+
+# PART I: VISION & ARCHITECTURE
 
 ## 1. System Architecture Overview
 
-### 1.1 Core Infrastructure-as-Code Stack
+### 1.1 Core Technology Stack
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    PRIMARY INTERFACE                            │
-│               arx CLI Tool (Go) - Terminal First                │
-│   Building Queries:     arx @building-47 status                │
-│   Configuration:        arx @building-47 apply config.yml       │
-│   Version Control:      arx @building-47 commit -m "Update"     │
-│   Operations:           arx @building-47 simulate power_outage  │
+│                    INTERFACE LAYER                               │
+│  CLI (Go)          │  PWA (Web)        │  AR Field App          │
+│  - Terminal-first  │  - Browser-based  │  - LiDAR scanning      │
+│  - Git-like ops    │  - Offline-first  │  - Spatial anchoring   │
+│  - ASCII native    │  - ASCII + future SVG│  - PDF-guided scan   │
 ├─────────────────────────────────────────────────────────────────┤
-│                ARXOBJECT RUNTIME ENGINE (C)                    │
-│   Programmable Components:    HVAC_Unit, Electrical_Panel      │
-│   Physics Simulation:         Real-time load calculations      │
-│   Constraint Propagation:     Changes affect related systems   │
-│   Building Automation:        Direct control system integration│
-│   Performance:               <1ms operation response           │
+│                ARXOBJECT RUNTIME ENGINE (C)                      │
+│  Hierarchical Components │  Physics Simulation │ Real-time Ops  │
+│  - Filesystem-like tree  │  - <1ms operations │ - BACnet/Modbus │
+│  - Infinite depth        │  - Constraint prop │ - Live data sync │
+│  - /electrical/panel/... │  - Energy modeling │ - Control cmds   │
 ├─────────────────────────────────────────────────────────────────┤
-│  ASCII-BIM Spatial Engine (C)  │  Building State Manager (Go)  │
-│  Coordinate System:    Terminal │  Version Control:   Git-like  │
-│  Navigation:          <10ms     │  Configuration:     YAML      │
-│  Spatial Intelligence: Real     │  Rollbacks:        Instant    │
+│            ASCII-BIM SPATIAL ENGINE (C)                          │
+│  Multi-Resolution     │  Coordinate System  │  Infinite Zoom    │
+│  - Campus → Chip      │  - World ↔ ASCII   │  - Fractal detail │
+│  - Pixatool-inspired  │  - mm precision    │  - Semantic chars │
+│  - <10ms rendering    │  - Spatial anchors │  - Depth buffer   │
 ├─────────────────────────────────────────────────────────────────┤
-│                    PERSISTENCE LAYER                           │
-│  Building State DB:        Current ArxObject properties        │
-│  Version History:          Git-like commit history             │
-│  Configuration Store:      YAML building definitions           │
-│  Spatial Anchors:          ASCII-to-world coordinate mapping   │
+│           BUILDING STATE & VERSION CONTROL (Go)                  │
+│  Git-like VCS      │  YAML Config       │  Progressive Scale   │
+│  - Commits/branches│  - IaC definitions │  - PDF ingestion    │
+│  - State snapshots │  - Automation rules│  - LiDAR fusion     │
+│  - Rollbacks       │  - Constraints     │  - Field validation │
 ├─────────────────────────────────────────────────────────────────┤
-│                   FIELD VALIDATION LAYER                       │
-│  Mobile AR (Swift/Kotlin)     │  Data Export APIs (Go)         │
-│  Spatial Anchor Contribution  │  Enterprise Building Data      │
-│  LiDAR Validation             │  Infrastructure Analytics      │
+│                    DATA LAYER                                    │
+│  PostgreSQL/PostGIS    │  Time Series DB   │  Spatial Index     │
+│  - Building state      │  - Sensor data    │  - ASCII coords    │
+│  - Version history     │  - Energy metrics │  - AR anchors      │
+│  - Config store        │  - Performance    │  - World mapping   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Infrastructure-as-Code Data Flow
+### 1.2 Data Flow Architecture
 ```
-Configuration Files (YAML) → ArxObject Runtime → Building Operations → State Persistence → Version Control
-
-Building Plans (PDF/IFC) → ASCII-BIM Engine → Spatial Coordinates → CLI Navigation → Field Validation
-     ↓                            ↓                    ↓                    ↓              ↓
-Vector Parsing → ASCII Rendering → Coordinate Mapping → Terminal UI → AR Anchoring → Validated Infrastructure
+INGESTION → CONSTRUCTION → OPERATION → VALIDATION → INTELLIGENCE
+    ↓            ↓            ↓            ↓            ↓
+PDF/IFC     ASCII-BIM     Git-like    AR Field    Enterprise
+DWG/HEIC    Rendering     Control     Scanning    Export APIs
+LiDAR       Progressive   Real-time   Spatial     Premium Data
+Photos      Scaling       Building    Anchors     Analytics
 ```
 
 ---
 
-## 2. Core Components
+## 2. Revolutionary ASCII-BIM Engine
 
-### 2.1 ArxObject Runtime Engine (C)
+### 2.1 Infinite Zoom Architecture
+The ASCII-BIM engine provides seamless zoom from campus-level views down to microcontroller internals, with each level showing contextually appropriate detail.
 
-#### Purpose
-High-performance runtime engine that makes building components programmable, queryable, and controllable through infrastructure-as-code interfaces.
-
-#### Core ArxObject System
+#### Multi-Scale Rendering System
 ```c
-// Base ArxObject - all building components inherit from this
-typedef struct ArxObject {
-    char* id;                           // Unique identifier
-    ObjectType type;                    // HVAC, Electrical, Structural, etc.
-    Properties* properties;             // Key-value property store
-    PhysicsModel* physics;              // Behavioral simulation model
-    Constraint* constraints;            // Validation rules
-    SpatialLocation* location;          // ASCII + world coordinates
-    
-    // Infrastructure operations
-    int (*get_property)(struct ArxObject* self, char* key, PropertyValue* value);
-    int (*set_property)(struct ArxObject* self, char* key, PropertyValue value);
-    int (*simulate)(struct ArxObject* self, Conditions* conditions, SimulationResult* result);
-    int (*validate_constraints)(struct ArxObject* self, ValidationResult* result);
-    int (*apply_config)(struct ArxObject* self, Config* config);
-    
-    // State management
-    int (*serialize_state)(struct ArxObject* self, char** serialized);
-    int (*deserialize_state)(struct ArxObject* self, char* serialized);
-    
-    // Building automation integration
-    int (*read_live_data)(struct ArxObject* self);
-    int (*write_control_commands)(struct ArxObject* self);
-} ArxObject;
+typedef struct {
+    float scale;           // Current zoom level (mm per ASCII char)
+    int detail_level;      // 0=campus, 1=building, 2=floor, 3=room, 4=equipment, 5=component, 6=chip
+    char* render_mode;     // "structural", "electrical", "hvac", "network", "plumbing"
+} ViewContext;
 
-// Specific building component implementations
-typedef struct HVAC_Unit {
-    ArxObject base;
-    
-    // HVAC-specific properties
-    float temperature_setpoint;
-    float current_temperature;
-    float energy_consumption;
-    MaintenanceSchedule* schedule;
-    ControllerInterface* controller;
-    
-    // HVAC-specific behaviors
-    float (*calculate_load)(struct HVAC_Unit* self, RoomConditions* room);
-    int (*optimize_efficiency)(struct HVAC_Unit* self, OptimizationTarget target);
-    int (*predict_maintenance)(struct HVAC_Unit* self, MaintenancePrediction* prediction);
-    int (*simulate_failure)(struct HVAC_Unit* self, FailureMode mode, SystemImpact* impact);
-} HVAC_Unit;
+// Infinite zoom example - electrical system
+SCALE: 1 char = 100m (Campus View)
+═══════════════════════════════════════
+┌───┬───┬───┐
+│ A │ B │ C │  Buildings A, B, C
+└───┴───┴───┘
 
-typedef struct Electrical_Panel {
-    ArxObject base;
-    
-    // Electrical-specific properties  
-    int capacity_amps;
-    float voltage;
-    Circuit* circuits;
-    int circuit_count;
-    LoadMonitor* monitor;
-    
-    // Electrical-specific behaviors
-    float (*calculate_total_load)(struct Electrical_Panel* self);
-    int (*detect_overload_risk)(struct Electrical_Panel* self, OverloadRisk* risk);
-    int (*optimize_load_balance)(struct Electrical_Panel* self);
-    int (*simulate_circuit_failure)(struct Electrical_Panel* self, int circuit_num, SystemImpact* impact);
-} Electrical_Panel;
+↓ ZOOM to Building A (1 char = 10m)
+════════════════════════════════════════
+┌─────────────────────┐
+│ ┌───┐ ┌───┐ ┌───┐ │
+│ │101│ │102│ │103│ │  Rooms visible
+│ └───┘ └───┘ └───┘ │
+│ ═══════════════════ │  Corridor
+│ ┌───┐ ┌───┐ ┌───┐ │
+│ │201│ │202│ │ELEC│ │  Electrical room
+│ └───┘ └───┘ └───┘ │
+└─────────────────────┘
+
+↓ ZOOM to Electrical Room (1 char = 1m)
+════════════════════════════════════════
+┌─────────────────────────┐
+│ ▣▣▣ Panel A  ▣▣▣ Panel B│  Electrical panels
+│ ║ ║ ║        ║ ║ ║     │  
+│ ╚═╩═╝        ╚═╩═╝     │  Circuit connections
+│      [PLC CABINET]      │  Control cabinet
+└─────────────────────────┘
+
+↓ ZOOM to PLC Cabinet (1 char = 10cm)
+════════════════════════════════════════
+┌─────────────────────────────────┐
+│ ┌──────┐ ┌──────┐ ┌──────┐   │
+│ │POWER │ │ CPU  │ │ I/O  │   │  PLC modules
+│ │24VDC │ │1756L7│ │1756IB│   │
+│ └───┬──┘ └───┬──┘ └───┬──┘   │
+│ ════╪════════╪════════╪═════  │  Backplane
+│ ┌───▼────────▼────────▼────┐  │
+│ │   TERMINAL BLOCKS        │  │  Wiring terminals
+│ └───────────────────────────┘  │
+└─────────────────────────────────┘
+
+↓ ZOOM to CPU Module (1 char = 1cm)
+════════════════════════════════════════
+┌──────────────────────────┐
+│ Allen-Bradley 1756-L73   │
+│ ┌──────────────────────┐ │
+│ │RUN OK I/O FORCE SD BAT│ │  Status LEDs
+│ │[●] [●] [ ] [ ] [ ] [●]│ │
+│ └──────────────────────┘ │
+│ ╔══════╗    ╔══════╗    │
+│ ║ETH 1 ║    ║ETH 2 ║    │  Network ports
+│ ╚══════╝    ╚══════╝    │
+└──────────────────────────┘
+
+↓ ZOOM to Chip Level (1 char = 1mm)
+════════════════════════════════════════
+┌─────────────────────────────┐
+│ ┌────┐┌────┐┌────┐┌────┐  │
+│ │FLASH││SRAM││DSP ││FPGA│  │  Silicon components
+│ └──┬─┘└──┬─┘└──┬─┘└──┬─┘  │
+│ ═══╪═════╪═════╪═════╪═══  │  System bus
+│ ┌──▼─────▼─────▼─────▼──┐  │
+│ │  ARM Cortex-A9 x2     │  │  Dual-core CPU
+│ └────────────────────────┘  │
+└─────────────────────────────┘
 ```
 
-#### Performance Requirements
-- **Property Access**: <1ms for any ArxObject property query
-- **Simulation Speed**: Real-time physics calculations (60fps equivalent)
-- **Constraint Validation**: <10ms for building-wide constraint checking
-- **Memory Usage**: <50MB per building ArxObject collection
-- **Concurrent Operations**: 1000+ simultaneous ArxObject operations
+### 2.2 Pixatool-Inspired Rendering Pipeline
+Based on advanced ASCII art generation techniques that successfully render Minecraft in terminals with perfect depth perception.
 
-#### Core ArxObject Operations
 ```c
-// Building-wide operations exposed to CLI
-BuildingState* load_building(char* building_id);
-int query_objects(BuildingState* building, char* query, ArxObject*** results, int* count);
-int apply_configuration(BuildingState* building, Config* config);
-int validate_building_constraints(BuildingState* building, ValidationReport* report);
-int simulate_building_scenario(BuildingState* building, Scenario* scenario, SimulationResult* result);
-int optimize_building_performance(BuildingState* building, OptimizationTarget* targets);
+/*
+ * Arxos ASCII-BIM Engine - Pixatool-Inspired Implementation
+ * High-performance 3D building model to ASCII conversion
+ * Optimized for sub-10ms building plan rendering
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <stdint.h>
+
+// Core data structures for 3D -> ASCII conversion
+typedef struct {
+    float depth;        // Z-buffer depth value
+    float luminance;    // Brightness 0.0-1.0
+    float edge_strength; // Edge detection result
+    int material_type;  // Wall, door, equipment, etc.
+    float normal_x, normal_y, normal_z; // Surface normal
+} PixelData;
+
+typedef struct {
+    char character;     // ASCII character to display
+    float density;      // Character visual density 0.0-1.0
+    int is_structural;  // 1 for walls/structure, 0 for details
+    int is_edge;        // 1 for edges/boundaries
+} ASCIICharacterSet;
+
+typedef struct {
+    int width, height;
+    char* ascii_buffer;
+    PixelData* render_buffer;
+    float scale_factor;
+    float depth_range_min, depth_range_max;
+} ASCIICanvas;
+
+// Pre-computed ASCII character sets optimized for building plans
+static const ASCIICharacterSet BUILDING_CHARSET[] = {
+    // Structural elements (walls, foundations)
+    {'█', 1.0, 1, 0},   // Solid wall - maximum density
+    {'▓', 0.8, 1, 0},   // Thick wall - high density  
+    {'▒', 0.6, 1, 0},   // Medium wall - medium density
+    {'░', 0.4, 1, 0},   // Thin wall - low density
+    
+    // Edge/boundary characters
+    {'│', 0.7, 0, 1},   // Vertical edge
+    {'─', 0.7, 0, 1},   // Horizontal edge
+    {'┌', 0.7, 0, 1},   // Top-left corner
+    {'┐', 0.7, 0, 1},   // Top-right corner
+    {'└', 0.7, 0, 1},   // Bottom-left corner
+    {'┘', 0.7, 0, 1},   // Bottom-right corner
+    {'┬', 0.7, 0, 1},   // T-junction top
+    {'┴', 0.7, 0, 1},   // T-junction bottom
+    {'├', 0.7, 0, 1},   // T-junction left
+    {'┤', 0.7, 0, 1},   // T-junction right
+    {'┼', 0.7, 0, 1},   // Cross junction
+    
+    // Equipment and details
+    {'▣', 0.9, 0, 0},   // Electrical panel
+    {'⊞', 0.8, 0, 0},   // Junction box
+    {'○', 0.5, 0, 0},   // Outlet/fixture
+    {'◎', 0.6, 0, 0},   // Equipment center
+    
+    // Room fill patterns
+    {'∴', 0.3, 0, 0},   // Room interior - classroom
+    {'▒', 0.4, 0, 0},   // Room interior - office
+    {'░', 0.2, 0, 0},   // Room interior - corridor
+    {'·', 0.1, 0, 0},   // Room interior - large space
+    {' ', 0.0, 0, 0},   // Empty space
+};
 ```
 
-### 2.2 CLI Infrastructure Tool (Go)
+### 2.3 Coordinate System Architecture
+ASCII is the view layer while maintaining millimeter-precise world coordinates internally.
 
-#### Purpose
-Primary user interface for building infrastructure operations - provides DevOps-style commands for managing buildings as programmable infrastructure.
+```c
+typedef struct {
+    // TRUTH: Precise world coordinates
+    double world_x_mm, world_y_mm, world_z_mm;    // Real position in millimeters
+    double width_mm, height_mm, depth_mm;         // Exact dimensions
+    
+    // VIEW: ASCII representation  
+    int ascii_x, ascii_y;                         // Terminal grid position
+    char ascii_chars[16];                         // How it renders in ASCII
+    
+    // MAPPING: Coordinate transformation
+    double mm_per_char_x, mm_per_char_y;         // Scale factors
+    float confidence;                              // Position confidence 0.0-1.0
+} SpatialMapping;
 
-#### Core CLI Architecture
-```go
-type BuildingCLI struct {
-    runtimeEngine  *ArxObjectRuntime  // C engine interface
-    stateManager   *BuildingStateManager
-    configManager  *ConfigurationManager  
-    versionControl *BuildingVersionControl
-    spatialEngine  *ASCIISpatialEngine
-}
+// Bidirectional coordinate transformation
+Point3D ascii_to_world(int ascii_x, int ascii_y, ViewContext* ctx);
+Point2D world_to_ascii(double world_x, double world_y, double world_z, ViewContext* ctx);
 
-// Primary CLI command categories
-type CLICommands struct {
-    // Building queries and inspection
-    Status    func(buildingID string) (*BuildingStatus, error)
-    Query     func(buildingID, query string) (*QueryResult, error) 
-    Inspect   func(buildingID, objectID string) (*ObjectDetails, error)
-    
-    // Configuration management
-    Apply     func(buildingID string, configFile string) error
-    Validate  func(buildingID string, configFile string) (*ValidationReport, error)
-    Show      func(buildingID string) (*CurrentConfig, error)
-    
-    // Version control operations  
-    Commit    func(buildingID, message string) (*CommitHash, error)
-    Branch    func(buildingID, branchName string) error
-    Merge     func(buildingID, sourceBranch string) error
-    Rollback  func(buildingID, targetHash string) error
-    Diff      func(buildingID, hash1, hash2 string) (*DiffResult, error)
-    Log       func(buildingID string) (*CommitHistory, error)
-    
-    // Building operations
-    Simulate  func(buildingID string, scenario *Scenario) (*SimulationResult, error)
-    Optimize  func(buildingID string, targets *OptimizationTargets) (*OptimizationResult, error)
-    Deploy    func(buildingID string, changes *ChangeSet, dryRun bool) (*DeployResult, error)
-    
-    // ASCII-BIM navigation
-    Navigate  func(buildingID string, location *SpatialQuery) (*ASCIIView, error)
-    Map       func(buildingID string, layer string) (*ASCIIMap, error)
-    Find      func(buildingID string, searchTerm string) (*LocationResult, error)
-}
+// Example: Outlet at exactly 457mm from wall corner
+// - Truth: world_x = 457.0mm
+// - ASCII at 1:100 scale: ascii_x = 5 (rounds to nearest char)
+// - AR overlay: Shows exact 457mm position
+// - All three representations coexist simultaneously
 ```
 
-#### CLI Usage Examples
+---
+
+## 3. ArxObject Hierarchical System
+
+### 3.1 Building as Filesystem Architecture
+Buildings are structured as navigable filesystems where every component has a path and can contain infinite depth of sub-components.
+
+```c
+/*
+ * ArxObject Hierarchical File Tree System
+ * Buildings structured as navigable file systems with typed components
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <time.h>
+
+// Forward declarations
+typedef struct ArxObject ArxObject;
+typedef struct ArxObjectType ArxObjectType;
+
+// ArxObject acts like a filesystem node with typed properties
+struct ArxObject {
+    // File tree structure
+    char* name;                     // Object name (e.g., "panel-a", "circuit-7")  
+    char* path;                     // Full path (e.g., "/electrical/panel-a/circuit-7/outlet-3")
+    ArxObject* parent;              // Parent object in tree
+    ArxObject** children;           // Array of child objects
+    int child_count;               // Number of children
+    int child_capacity;            // Allocated capacity for children
+    
+    // Object type and behavior
+    ArxObjectType* type;           // Type definition with methods
+    void* type_data;               // Type-specific data structure
+    
+    // Core properties (like file metadata)
+    char* id;                      // Unique identifier
+    uint64_t created_time;         // Creation timestamp
+    uint64_t modified_time;        // Last modification time
+    uint32_t permissions;          // Access permissions (read/write/execute)
+    char* owner;                   // Object owner
+    char* group;                   // Object group
+    
+    // Spatial and physical properties
+    float position[3];             // X, Y, Z coordinates
+    float orientation[4];          // Quaternion rotation
+    float dimensions[3];           // Width, height, depth
+    
+    // Dynamic properties (key-value store)
+    char** property_keys;          // Property names
+    void** property_values;        // Property values
+    char** property_types;         // Property type strings
+    int property_count;            // Number of properties
+    
+    // Relationships and constraints
+    ArxObject** connected_to;      // Objects this connects to
+    int connection_count;          // Number of connections
+    char** constraints;            // Constraint expressions
+    int constraint_count;          // Number of constraints
+    
+    // Performance and monitoring
+    float* performance_metrics;    // Real-time performance data
+    int metric_count;             // Number of metrics
+    uint64_t last_updated;        // Last update timestamp
+};
+
+// Type system for different ArxObject categories
+struct ArxObjectType {
+    char* type_name;               // Type name (e.g., "electrical_panel", "hvac_unit")
+    char* category;                // Category (e.g., "electrical", "hvac", "structural")
+    
+    // Type-specific methods (like file type handlers)
+    int (*init)(ArxObject* obj, void* init_data);
+    int (*destroy)(ArxObject* obj);
+    int (*get_property)(ArxObject* obj, const char* key, void* value);
+    int (*set_property)(ArxObject* obj, const char* key, void* value);
+    int (*validate_constraints)(ArxObject* obj);
+    int (*simulate)(ArxObject* obj, float delta_time);
+    int (*serialize)(ArxObject* obj, char** output);
+    int (*deserialize)(ArxObject* obj, const char* input);
+    
+    // Type-specific property definitions
+    char** required_properties;    // Properties this type must have
+    char** optional_properties;    // Properties this type may have
+    int required_count;
+    int optional_count;
+};
+```
+
+### 3.2 Complete Building Hierarchy Examples
+
+```
+/campus/east-region/building-47/
+├── /structural/
+│   ├── /foundation/
+│   │   ├── /footings/footing-[1-24]/
+│   │   └── /slab/
+│   ├── /frame/
+│   │   ├── /columns/column-[a1-d8]/
+│   │   └── /beams/beam-[1-156]/
+│   └── /walls/
+│       ├── /exterior/north-wall/
+│       │   ├── /windows/window-[1-8]/
+│       │   └── /insulation/
+│       └── /interior/partition-[1-47]/
+├── /electrical/
+│   ├── /service-entrance/
+│   │   ├── /meter/
+│   │   └── /main-disconnect/
+│   ├── /distribution/
+│   │   ├── /main-panel/
+│   │   │   ├── /breakers/breaker-[1-42]/
+│   │   │   └── /circuits/circuit-[1-42]/
+│   │   │       ├── /circuit-1/
+│   │   │       │   ├── /outlets/outlet-[1-8]/
+│   │   │       │   └── /junction-boxes/j-box-[1-3]/
+│   │   │       └── ...
+│   │   └── /sub-panels/panel-[a-c]/
+│   └── /emergency-power/
+│       ├── /generator/
+│       └── /transfer-switch/
+├── /hvac/
+│   ├── /air-handlers/ahu-[1-3]/
+│   │   ├── /ahu-1/
+│   │   │   ├── /supply-fan/
+│   │   │   │   ├── /motor/
+│   │   │   │   │   ├── /windings/
+│   │   │   │   │   └── /bearings/
+│   │   │   │   └── /vfd-controller/
+│   │   │   │       ├── /power-electronics/
+│   │   │   │       └── /control-board/
+│   │   │   │           ├── /cpu/
+│   │   │   │           └── /memory/
+│   │   │   ├── /cooling-coil/
+│   │   │   └── /filter-bank/
+│   │   └── ...
+│   └── /controls/
+│       ├── /building-automation-system/
+│       └── /sensors/temp-sensor-[1-47]/
+├── /network/
+│   ├── /core-infrastructure/
+│   │   ├── /mdf/
+│   │   │   ├── /core-switch/
+│   │   │   │   ├── /line-cards/card-[1-4]/
+│   │   │   │   └── /supervisor-engine/
+│   │   │   │       └── /asics/asic-[1-8]/
+│   │   │   └── /patch-panels/
+│   │   └── /idfs/idf-[1-8]/
+│   └── /endpoints/
+│       ├── /access-points/ap-[1-32]/
+│       └── /network-jacks/jack-[1-247]/
+└── /plumbing/
+    ├── /water-supply/
+    │   ├── /water-service/
+    │   │   ├── /water-meter/
+    │   │   └── /main-shutoff/
+    │   └── /distribution/
+    │       ├── /hot-water-system/
+    │       └── /cold-water-distribution/
+    └── /drainage-system/
+        ├── /waste-lines/
+        └── /vent-system/
+```
+
+### 3.3 CLI Navigation Commands
+
 ```bash
-# Building status and inspection
-arx @hcps-alafia-elementary status
-arx @hcps-alafia-elementary query "SELECT * FROM hvac_units WHERE efficiency < 0.8"
-arx @hcps-alafia-elementary inspect hvac-unit-1
+# Navigate building like filesystem
+arx @building-47 ls /electrical/                           # List electrical systems
+arx @building-47 ls /electrical/main-panel/               # List circuits in main panel  
+arx @building-47 find /electrical -type outlet            # Find all outlets
+arx @building-47 tree /hvac/air-handling-units/           # Show HVAC tree structure
 
-# Configuration management (Infrastructure-as-Code)
-arx @hcps-alafia-elementary apply winter-config.yml
-arx @hcps-alafia-elementary validate summer-optimization.yml
-arx @hcps-alafia-elementary show config
+# Object inspection
+arx @building-47 inspect /electrical/main-panel/circuit-1/outlet-3
+arx @building-47 cat /hvac/ahu-1/supply-fan/properties    # Show all properties
+arx @building-47 stat /structural/columns/column-a1       # Show object metadata
 
-# Version control (Git-like building management)
-arx @hcps-alafia-elementary commit -m "Optimized HVAC setpoints for winter"
-arx @hcps-alafia-elementary branch feature/lighting-upgrade
-arx @hcps-alafia-elementary merge energy-optimization
-arx @hcps-alafia-elementary rollback HEAD~2
-arx @hcps-alafia-elementary diff HEAD~1..HEAD
-arx @hcps-alafia-elementary log --oneline
+# Property operations  
+arx @building-47 get /electrical/main-panel/circuit-1 --property load_current
+arx @building-47 set /hvac/ahu-1 --property supply_air_temp=72
+arx @building-47 query "SELECT path FROM /electrical WHERE type='outlet' AND load > 15A"
 
-# Building operations and simulation
-arx @hcps-alafia-elementary simulate --scenario power_outage --duration 2h
-arx @hcps-alafia-elementary optimize --target energy_efficiency --constraint budget=50000
-arx @hcps-alafia-elementary deploy electrical-upgrade.yml --dry-run
+# Tree operations
+arx @building-47 mkdir /electrical/emergency-power        # Add new system branch
+arx @building-47 mv /electrical/subpanel-a /electrical/emergency-power/
+arx @building-47 cp /hvac/controls/zone-controllers/template /hvac/controls/zone-controllers/floor-3
 
-# ASCII-BIM navigation
-arx @hcps-alafia-elementary map --floor 2 --system electrical
-arx @hcps-alafia-elementary navigate --room 300 --detail high
-arx @hcps-alafia-elementary find "HVAC Unit A"
+# Infinite zoom navigation
+arx @building-47 zoom campus                      # See whole campus
+arx @building-47 zoom building                    # Building overview
+arx @building-47 zoom floor --level 2             # Floor plan
+arx @building-47 zoom room --id mechanical-room   # Room detail
+arx @building-47 zoom equipment --id plc-cabinet  # Equipment internals
+arx @building-47 zoom chip --component cpu-module # Silicon level
 ```
 
-### 2.3 Configuration-as-Code System (YAML)
+---
 
-#### Purpose
-Enable buildings to be defined, version controlled, and operated through declarative configuration files.
+## 4. Progressive Building Construction
 
-#### Building Configuration Schema
-```yaml
-# hcps-alafia-elementary.yml - Complete building definition
-apiVersion: arxos.io/v1
-kind: BuildingInfrastructure  
-metadata:
-  name: "hcps-alafia-elementary"
-  version: "v2.1.3"
-  location:
-    address: "3535 Culbreath Dr, Valrico, FL 33602"
-    coordinates: [27.9506, -82.2373]
-  tags:
-    - "school"
-    - "k12"
-    - "hillsborough-county"
+### 4.1 PDF to 3D Pipeline
+Revolutionary workflow that transforms 2D floor plans into accurate 3D models through progressive field validation.
 
-spec:
-  # HVAC Infrastructure
-  hvac_systems:
-    - id: "hvac-unit-1" 
-      type: "rooftop_unit"
-      location:
-        ascii_coordinates: [45, 12]
-        room: "mechanical-room-1"
-        floor: 2
-      properties:
-        capacity: "5_tons"
-        efficiency_rating: 0.85
-        refrigerant_type: "R410A"
-        install_date: "2019-03-15"
-      control:
-        temperature_setpoint: 72
-        occupied_hours: "07:00-17:00"
-        weekend_setback: 5
-        optimization_mode: "energy_efficient"
-      constraints:
-        - "temperature >= 68 AND temperature <= 76"
-        - "energy_consumption < 15_kw_peak"  
-        - "maintenance_due < 30_days REQUIRES service_scheduled"
-      automation:
-        controller_ip: "192.168.1.100"
-        protocol: "bacnet"
-        refresh_interval: "30s"
+#### Stage 1: PDF Ingestion (Topology Only)
+```
+User uploads floor plan PDF → Extract vectors → Create "ghost building"
+
+┌────────────────────────┐
+│    ┌────┬────┬────┐    │  Status: UNSCALED
+│    │ ?  │ ?  │ ?  │    │  Need: Reference measurements
+│    ├────┼────┼────┤    │  Detected: 14 rooms, 23 doors
+│    │     ?m²      │    │  
+│    └────┴────┴────┘    │
+└────────────────────────┘
+```
+
+#### Stage 2: Anchor Measurements
+```c
+// User provides key measurements
+void set_anchor_measurement(BuildingModel* model, Measurement m) {
+    // "This door is 914mm wide" (standard 36")
+    model->scale_factor = 914.0 / pdf_door_width;
+    
+    // Propagate scale using building knowledge
+    infer_standard_dimensions(model);  // Doors, corridors, ceiling heights
+    detect_symmetry(model);            // Matching room sizes
+    apply_building_codes(model);       // Code requirements
+}
+
+// Building Knowledge Base
+const BuildingAssumptions STANDARD_ASSUMPTIONS = {
+    .door_width_mm = {762, 838, 914},        // 30", 33", 36"
+    .ceiling_height_mm = {2438, 2743, 3048}, // 8', 9', 10'
+    .corridor_min_width = 1829,              // 6' minimum
+    .stair_tread_depth = 279,                // 11" standard
+    .parking_space_width = 2743,             // 9' standard
+    .elevator_shaft = {2134, 2438}           // Standard sizes
+};
+```
+
+#### Stage 3: Progressive Scaling
+```
+After one door measurement:
+┌─────────────────────────────────┐
+│ ┌─────┬─────┬─────┬─────┐     │  Status: PARTIAL SCALE
+│ │6.1m²│6.1m²│6.1m²│6.1m²│     │  Confidence: 73%
+│ ├─────┼─────┼─────┼─────┤     │  Based on: Door width
+│ │  CORRIDOR (≈2.4m wide) │     │  Need: Height measurement
+│ └─────┴─────┴─────┴─────┘     │
+└─────────────────────────────────┘
+```
+
+### 4.2 PDF + LiDAR Fusion
+Using iPhone LiDAR with PDF as a guide for precise 3D reconstruction.
+
+```swift
+enum ScanningWorkflow {
+    case pdfAlignment      // Align PDF to real world
+    case guidedScanning    // PDF shows where to scan
+    case reconstruction    // Build 3D from LiDAR + PDF
+    case validation        // Confirm accuracy
+}
+
+class PDFGuidedScanner {
+    var pdfFloorPlan: PDFFloorPlan
+    var pointCloud: ARPointCloud
+    var meshAnchors: [ARMeshAnchor] = []
+    
+    func scanWithPDF(pdf: FloorPlan) {
+        // 1. Show translucent PDF overlay in AR at 30% opacity
+        showGhostBuilding(pdf, opacity: 0.3)
         
-    - id: "hvac-unit-2"
-      type: "rooftop_unit" 
-      # ... similar structure
+        // 2. User aligns PDF door with real door
+        let alignment = getUserAlignment()
+        
+        // 3. Guide room-by-room scanning
+        for room in pdf.rooms {
+            highlightRoom(room)
+            showProgress("Scan \(room.name)")
+            
+            // 4. LiDAR fills in what PDF shows
+            let pointCloud = captureLiDAR()
+            
+            // 5. Constrain to PDF walls (snap if close)
+            let mesh = buildMesh(pointCloud, constraints: pdf.walls)
+        }
+        
+        // 6. Result: Accurate 3D model
+        return Building3D(pdf: pdf, lidar: meshes)
+    }
+    
+    func processLiDARFrame(frame: ARFrame) {
+        // Get LiDAR point cloud
+        guard let pointCloud = frame.rawFeaturePoints else { return }
+        
+        // Check which PDF room we're in
+        let currentRoom = pdfFloorPlan.roomContaining(devicePosition)
+        
+        // Constrain reconstruction to expected walls
+        let expectedWalls = currentRoom.wallSegments
+        
+        // Snap LiDAR points to PDF walls if close
+        for point in pointCloud.points {
+            if let nearestWall = findNearestPDFWall(point, threshold: 0.2) {
+                // Snap point to wall plane - improves accuracy
+                point = projectToWallPlane(point, nearestWall)
+            }
+        }
+        
+        // Build mesh with PDF constraints
+        let mesh = generateMesh(pointCloud, constraints: expectedWalls)
+    }
+}
+```
 
-  # Electrical Infrastructure  
-  electrical_systems:
-    - id: "main-panel-a"
-      type: "electrical_panel"
-      location:
-        ascii_coordinates: [30, 8] 
-        room: "electrical-room"
-        floor: 1
-      properties:
-        capacity: "400A"
-        voltage: "120/240V"
-        install_date: "2018-08-20"
-        manufacturer: "Square D"
-        model: "QO424L400"
+#### PDF+LiDAR Benefits Matrix
+```
+PROBLEM                 PDF SOLUTION           LIDAR SOLUTION
+════════════════════════════════════════════════════════════
+Glass walls/windows     PDF shows location     LiDAR sees through
+Furniture occlusion     PDF shows walls behind LiDAR sees visible
+Scale uncertainty       PDF has topology       LiDAR has exact size
+Dark surfaces          PDF unaffected         LiDAR struggles
+Missing ceiling height  PDF is 2D only        LiDAR captures 3D
+Changes from plan      PDF shows original     LiDAR shows current
+```
+
+### 4.3 Progressive Validation System
+```c
+typedef enum {
+    CONFIDENCE_NONE = 0,       // Just imported, no validation
+    CONFIDENCE_INFERRED = 25,  // Based on patterns/assumptions
+    CONFIDENCE_MEASURED = 50,  // Has direct measurements
+    CONFIDENCE_SCANNED = 75,   // LiDAR scanned
+    CONFIDENCE_VALIDATED = 100 // Field-verified by multiple users
+} ConfidenceLevel;
+
+typedef struct {
+    double value_mm;           // Current dimension
+    ConfidenceLevel confidence;// How sure we are
+    char* source;             // "pdf", "user_measured", "lidar", "validated"
+    int validation_count;      // Number of confirmations
+    double variance;          // Measurement variance across validations
+} ValidatedDimension;
+
+typedef enum {
+    SCALE_UNKNOWN,      // Just ingested, no scale info
+    SCALE_PARTIAL,      // Some measurements provided
+    SCALE_CONFIDENT,    // Enough data to interpolate
+    SCALE_VALIDATED     // Field-verified accurate
+} ScaleStatus;
+```
+
+---
+
+## 5. Multi-Modal Interface Architecture
+
+### 5.1 Progressive Web App (PWA) Architecture
+Modern web-first approach for universal access without app store friction.
+
+```javascript
+// PWA Service Worker for offline operation
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open('arxos-v1').then((cache) => {
+            return cache.addAll([
+                '/ascii-renderer.wasm',      // C engine compiled to WASM
+                '/building-data.db',          // SQLite in browser
+                '/arxos-app.js',            // Core application
+                '/ascii-fonts.css'           // Terminal fonts
+            ]);
+        })
+    );
+});
+
+// Features available in PWA
+const capabilities = {
+    camera: true,        // WebRTC camera access
+    ar: true,           // WebXR for AR (where supported)
+    bluetooth: true,     // Web Bluetooth for sensors
+    usb: true,          // WebUSB for equipment
+    files: true,        // File system access
+    offline: true       // Full offline operation
+};
+
+// Web Components for building visualization
+class ArxosASCIIRenderer extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+    }
+    
+    connectedCallback() {
+        // Initialize WASM module
+        WebAssembly.instantiateStreaming(fetch('ascii-renderer.wasm'))
+            .then(result => {
+                this.wasmModule = result.instance;
+                this.render();
+            });
+    }
+    
+    render() {
+        const ascii = this.wasmModule.exports.render_building(
+            this.buildingId,
+            this.zoomLevel,
+            this.viewContext
+        );
+        this.shadowRoot.innerHTML = `
+            <pre class="ascii-display">${ascii}</pre>
+        `;
+    }
+}
+
+customElements.define('arxos-ascii', ArxosASCIIRenderer);
+```
+
+### 5.2 Terminal-First CLI
+Core interface for power users and automation.
+
+```bash
+# Navigation examples showing infinite zoom
+arx @building-47 cd /                              # Building root
+arx @building-47 cd /electrical/main-panel/        # Navigate to panel
+arx @building-47 cd circuit-1/outlets/outlet-3/    # Specific outlet
+arx @building-47 cd ../../                        # Go up two levels
+arx @building-47 pwd                              # /electrical/main-panel/circuit-1/
+
+# Property access at any level
+arx @building-47 get . --property total_power     # Building power
+arx @building-47 get /electrical --property load  # Electrical load
+arx @building-47 get /electrical/main-panel/circuit-1 --property amperage
+```
+
+### 5.3 Multi-Modal Mobile Terminal (iOS/Android)
+
+```swift
+// SwiftUI Multi-Modal Architecture
+enum ViewMode {
+    case ascii2D        // Top-down building navigation  
+    case ascii3D        // 3D perspective ASCII rendering
+    case arCamera       // AR camera with ASCII overlays
+    case terminal       // Full-screen terminal mode
+}
+
+class MultiModalViewController: UIViewController {
+    var currentMode: ViewMode = .ascii2D
+    var arxObjectEngine: ArxObjectRuntime!
+    var asciiRenderer: ASCIIBIMRenderer!
+    
+    func switchMode(_ mode: ViewMode) {
+        currentMode = mode
+        
+        switch mode {
+        case .ascii2D:
+            show2DASCIIView()
+        case .ascii3D:
+            show3DPerspectiveView()
+        case .arCamera:
+            showARCameraView()
+        case .terminal:
+            showTerminalEmulator()
+        }
+    }
+    
+    // Touch-optimized ASCII navigation
+    func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+        // Zoom in/out through building levels
+        if gesture.scale > 1.5 {
+            zoomIn() // Campus → Building → Floor → Room → Equipment
+        } else if gesture.scale < 0.5 {
+            zoomOut() // Equipment → Room → Floor → Building → Campus
+        }
+    }
+}
+```
+
+### 5.4 AR Field Validation Interface
+```swift
+// Multi-modal AR interface
+enum ARMode {
+    case asciiOverlay       // ASCII characters floating in space
+    case pdfGhostBuilding  // Translucent PDF overlay
+    case lidarMesh         // Real-time mesh generation
+    case hybridMode        // All three combined
+}
+
+class ARFieldValidator {
+    func validateLocation(arxObject: ArxObject) {
+        // Show ASCII representation in AR
+        let asciiLabel = renderASCII(arxObject)
+        placeInAR(asciiLabel, at: arxObject.worldCoordinates)
+        
+        // User confirms or corrects position
+        if let correction = getUserCorrection() {
+            arxObject.worldCoordinates = correction
+            arxObject.confidence *= 1.1
+            arxObject.validations.append(Validation(user: currentUser))
+        }
+        
+        // Calculate BILT token reward
+        let reward = calculateBILT(
+            accuracy: correction.accuracy,
+            importance: arxObject.importance,
+            previousValidations: arxObject.validations.count
+        )
+    }
+}
+```
+
+---
+
+## 6. Infrastructure-as-Code Operations
+
+### 6.1 Configuration as Code
+Buildings defined and operated through YAML configurations.
+
+```yaml
+# building-47-config.yml
+apiVersion: arxos.io/v1
+kind: BuildingInfrastructure
+metadata:
+  name: building-47
+  campus: east-region
+  coordinates: [27.9506, -82.2373]
+  
+spec:
+  # Define building systems
+  electrical:
+    main_panel:
+      capacity: 400A
       circuits:
-        - number: 1
-          description: "Kitchen outlets"
-          amperage: "20A" 
-          wire_gauge: "12AWG"
-          connected_load: "outlets_kitchen_*"
-        - number: 2  
-          description: "Classroom 300 lighting"
-          amperage: "15A"
-          wire_gauge: "14AWG"
-          connected_load: "lights_room_300"
-      constraints:
-        - "total_load < capacity * 0.8"  # 80% derating
-        - "individual_circuit_load < circuit_amperage"
-        - "ground_fault_protection = enabled"
-      automation:
-        monitor_ip: "192.168.1.101"  
-        protocol: "modbus"
-        data_points: ["voltage", "current", "power", "energy"]
-
-  # Network Infrastructure
-  network_systems:
-    - id: "mdf-300c"
-      type: "main_distribution_frame"
-      location:
-        ascii_coordinates: [50, 25]
-        room: "main-office"
-        floor: 1
-      properties:
-        rack_units: 42
-        power_capacity: "20A" 
-        cooling: "fan_tray"
-      equipment:
-        - type: "core_switch"
-          model: "Cisco 9300"
-          ports: 48
-          uplinks: ["fiber_1", "fiber_2"]
-        - type: "firewall"
-          model: "Fortinet 60E"
-          interfaces: 4
-      connections:
-        uplink: "idf_516"
-        downlinks: ["idf_507a", "idf_606a", "idf_800b"]
-
-  # Building Automation Rules
+        - id: circuit-1
+          breaker: 20A
+          loads:
+            - outlets: [1-8]
+            - lights: [1-4]
+          constraints:
+            - load < 16A  # 80% rule
+            
+  hvac:
+    ahu_1:
+      supply_temp: 55F
+      schedules:
+        occupied: "07:00-18:00"
+        unoccupied_setback: 10F
+      optimization:
+        mode: efficiency
+        constraints:
+          - comfort_priority: 0.7
+          - energy_priority: 0.3
+          
   automation_rules:
-    - name: "energy_optimization" 
-      trigger: "time(06:00) OR occupancy_detected"
-      condition: "outside_temp > 75F"  
+    - name: demand_response
+      trigger: utility_demand_signal
       actions:
-        - "hvac_*.temperature_setpoint = 74"
-        - "lights_*.dimming = 0.9"
-    - name: "emergency_response"
-      trigger: "fire_alarm_activated"
-      condition: "any_zone"
-      actions:
-        - "hvac_*.shutdown()"
-        - "electrical_*.emergency_lighting = on" 
-        - "network_*.priority_mode = emergency"
-
-  # Maintenance Schedules
+        - reduce: hvac.*.setpoint by 2F
+        - dim: lighting.* to 80%
+        - notify: facility_manager
+        
   maintenance:
     hvac_filters:
-      frequency: "quarterly"
+      frequency: quarterly
       components: ["hvac-unit-1", "hvac-unit-2"]
-      cost_estimate: "$200"
+      cost_estimate: $200
     electrical_inspection:
-      frequency: "annual"
+      frequency: annual
       components: ["main-panel-*"]
       requirements: ["licensed_electrician"]
-      cost_estimate: "$500"
+      cost_estimate: $500
 ```
 
-### 2.4 Building State Manager (Go)
+### 6.2 Git-Like Version Control
+```bash
+# Building version control operations
+arx @building-47 status                          # Current state
+arx @building-47 diff HEAD~1                     # What changed
+arx @building-47 commit -m "Optimized HVAC"      # Save state
+arx @building-47 branch summer-config            # Create variant
+arx @building-47 rollback HEAD~2                 # Undo changes
 
-#### Purpose
-Provides Git-like version control for building infrastructure with branching, merging, and rollback capabilities.
+# Building forks and experiments
+arx @building-47 checkout -b test-solar          # Experimental branch
+arx @building-47 apply solar-panels.yml          # Test configuration
+arx @building-47 simulate --days 365             # Run simulation
+arx @building-47 merge test-solar                # Apply if successful
+```
 
-#### Core State Management
+### 6.3 Real-Time Building Control
 ```go
-type BuildingStateManager struct {
-    db                *sql.DB
-    runtimeEngine     *ArxObjectRuntime
-    configManager     *ConfigurationManager
+// Direct building control via protocols
+type BuildingController struct {
+    bacnet  *BACnetClient   // HVAC control
+    modbus  *ModbusClient   // Electrical monitoring
+    opcua   *OPCUAClient    // Industrial control
 }
 
-type BuildingCommit struct {
-    Hash          string                 `json:"hash"`
-    ParentHash    string                 `json:"parent_hash"`
-    Message       string                 `json:"message"`
-    Author        string                 `json:"author"`
-    Timestamp     time.Time              `json:"timestamp"`
-    ConfigChanges []ConfigurationChange  `json:"config_changes"`
-    StateSnapshot BuildingStateSnapshot `json:"state_snapshot"`
+func (bc *BuildingController) ExecuteCommand(cmd Command) error {
+    // Translate ArxObject operation to protocol command
+    switch cmd.Target.Type {
+    case "hvac_unit":
+        return bc.bacnet.WriteProperty(
+            cmd.Target.Address,
+            "presentValue", 
+            cmd.Value
+        )
+    case "electrical_panel":
+        return bc.modbus.WriteRegister(
+            cmd.Target.Address,
+            cmd.Register,
+            cmd.Value
+        )
+    }
 }
-
-type BuildingStateSnapshot struct {
-    ArxObjects     map[string]ArxObjectState `json:"arxobjects"`
-    Configuration  BuildingConfig            `json:"configuration"`
-    Constraints    []ActiveConstraint        `json:"constraints"`
-    Performance    PerformanceMetrics        `json:"performance"`
-}
-
-// Core state management operations
-func (bsm *BuildingStateManager) CommitChanges(buildingID, message string, changes []ConfigurationChange) (*BuildingCommit, error) {
-    // 1. Validate changes against current building constraints
-    // 2. Apply changes to ArxObject runtime
-    // 3. Create state snapshot
-    // 4. Generate commit hash
-    // 5. Store commit in version history
-    // 6. Update building current state pointer
-}
-
-func (bsm *BuildingStateManager) CreateBranch(buildingID, branchName, sourceCommit string) error {
-    // Git-like branch creation for building infrastructure
-}
-
-func (bsm *BuildingStateManager) MergeBranch(buildingID, sourceBranch, targetBranch string) (*MergeResult, error) {
-    // Three-way merge with conflict detection for building configurations
-}
-
-func (bsm *BuildingStateManager) RollbackToCommit(buildingID, targetHash string) error {
-    // 1. Load target commit state snapshot
-    // 2. Apply state to ArxObject runtime 
-    // 3. Update building automation systems
-    // 4. Validate rollback success
-}
-```
-
-### 2.5 ASCII-BIM Spatial Engine (C)
-
-#### Purpose
-Ultra-fast spatial intelligence system that provides terminal-based building navigation and coordinate mapping for CLI operations.
-
-#### Spatial Coordinate System
-```c
-// ASCII-BIM spatial intelligence core
-typedef struct ASCIISpatialEngine {
-    char building_canvas[MAX_HEIGHT][MAX_WIDTH];
-    SpatialPoint spatial_map[MAX_HEIGHT][MAX_WIDTH];
-    float scale_factor;
-    Point3D world_origin;
-    int detail_level;
-} ASCIISpatialEngine;
-
-typedef struct SpatialPoint {
-    char display_char;              // ASCII character for display
-    Point3D world_coordinates;      // Real-world 3D position
-    ArxObject* linked_object;       // Associated building component
-    LocationMetadata* metadata;     // Room, system, equipment details
-} SpatialPoint;
-
-// Core spatial operations  
-int render_building_ascii(char* building_id, ASCIISpatialEngine* engine);
-Point3D ascii_to_world_coords(ASCIISpatialEngine* engine, int ascii_x, int ascii_y);  
-Point2D world_to_ascii_coords(ASCIISpatialEngine* engine, Point3D world_pos);
-ArxObject* get_object_at_location(ASCIISpatialEngine* engine, int ascii_x, int ascii_y);
-int navigate_to_object(ASCIISpatialEngine* engine, char* object_id, NavigationPath* path);
-```
-
-#### CLI Navigation Commands
-```bash
-# ASCII-BIM navigation integrated with infrastructure operations  
-arx @building-47 map                           # Show full building ASCII map
-arx @building-47 map --floor 2                 # Show specific floor
-arx @building-47 map --system electrical       # Show electrical system overlay
-arx @building-47 navigate --room 300           # Navigate to specific room
-arx @building-47 navigate --object hvac-unit-1 # Navigate to specific ArxObject
-arx @building-47 find "electrical panel"       # Search for objects
-arx @building-47 path --from room-300 --to electrical-room  # Show navigation path
 ```
 
 ---
 
-## 3. Development Phases (Infrastructure-as-Code First)
+# PART II: IMPLEMENTATION
 
-### Phase 1: ArxObject Runtime + CLI Foundation (Months 1-3)
-**Goal**: Programmable building components with basic CLI infrastructure operations
+## 7. Complete Implementation Roadmap
 
-#### Week 1-2: ArxObject Runtime Engine (C)
-- [ ] Core ArxObject structure and inheritance system
-- [ ] Property get/set operations with constraint validation  
-- [ ] Basic physics simulation framework
-- [ ] Memory management and object lifecycle
-- [ ] HVAC_Unit and Electrical_Panel component implementations
+### Overall Timeline: 52 Weeks to Production
 
-#### Week 3-4: CLI Infrastructure Tool (Go)
-- [ ] Go CLI framework with command structure
-- [ ] CGO bindings to ArxObject runtime
-- [ ] Basic building queries: status, inspect, query
-- [ ] Configuration file parsing (YAML)
-- [ ] Error handling and user feedback
-
-#### Week 5-6: Configuration-as-Code System
-- [ ] YAML building configuration schema design
-- [ ] Configuration validation engine
-- [ ] Apply configuration to ArxObject runtime
-- [ ] Configuration diff and merge algorithms
-- [ ] Building constraint enforcement
-
-#### Week 7-8: ASCII-BIM Spatial Integration
-- [ ] PDF/IFC parsing for building plans
-- [ ] ASCII rendering with spatial coordinate mapping
-- [ ] CLI navigation commands (map, navigate, find)
-- [ ] Integration with ArxObject location system
-- [ ] Terminal UI optimization for building visualization
-
-#### Week 9-10: Basic Building Operations  
-- [ ] Building simulation framework
-- [ ] Constraint validation across building systems
-- [ ] Performance optimization algorithms
-- [ ] Real-time building state monitoring
-- [ ] Basic automation rule processing
-
-#### Week 11-12: Integration & Testing
-- [ ] End-to-end CLI workflow testing
-- [ ] Performance optimization (sub-millisecond operations)
-- [ ] HCPS building configuration creation
-- [ ] Documentation and CLI help system
-- [ ] Error recovery and fault tolerance
-
-**Deliverable**: Working CLI tool that can load HCPS buildings, query ArxObjects, apply configurations, and navigate via ASCII-BIM
-
-### Phase 2: Building State Management (Months 4-5)  
-**Goal**: Git-like version control for building infrastructure
-
-#### Week 13-14: Version Control Core
-- [ ] Building commit data structures
-- [ ] State snapshot creation and storage
-- [ ] Commit hash generation and verification
-- [ ] Building history storage and retrieval
-- [ ] Branch creation and management
-
-#### Week 15-16: Configuration Versioning
-- [ ] Configuration change detection
-- [ ] Three-way merge algorithms for building configs
-- [ ] Conflict resolution for incompatible changes
-- [ ] Automated migration between config versions
-- [ ] Rollback safety validation
-
-#### Week 17-18: Git-Like CLI Commands
-- [ ] commit, branch, merge, rollback CLI commands
-- [ ] Building diff visualization
-- [ ] History browsing and search
-- [ ] Tag management for building releases
-- [ ] Cherry-pick functionality for selective changes
-
-#### Week 19-20: State Validation & Safety
-- [ ] Pre-commit constraint validation
-- [ ] Rollback safety checks
-- [ ] Configuration compatibility testing
-- [ ] Automated backup before major changes
-- [ ] Emergency rollback capabilities
-
-**Deliverable**: Full Git-like version control for building infrastructure with safe rollback capabilities
-
-### Phase 3: Building Automation Integration (Months 6-8)
-**Goal**: Direct connection to building control systems for real-time operations
-
-#### Week 21-24: Control System Integration
-- [ ] BACnet protocol integration for HVAC control
-- [ ] Modbus integration for electrical monitoring  
-- [ ] Real-time data acquisition from building systems
-- [ ] Command execution to building automation systems
-- [ ] Protocol abstraction layer for multiple standards
-
-#### Week 25-28: Real-Time Building Operations
-- [ ] Live building state synchronization
-- [ ] Real-time constraint monitoring
-- [ ] Automated optimization execution
-- [ ] Fault detection and alerting
-- [ ] Performance metric collection and analysis
-
-#### Week 29-32: Advanced Simulation & Optimization
-- [ ] Physics-based building simulation engine
-- [ ] Energy optimization algorithms
-- [ ] Predictive maintenance scheduling
-- [ ] Scenario planning and what-if analysis
-- [ ] Multi-objective optimization (cost, efficiency, comfort)
-
-**Deliverable**: Buildings can be operated in real-time through CLI with live data integration
-
-### Phase 4: Field Validation System (Months 9-10)
-**Goal**: AR-based spatial anchoring for ASCII-BIM coordinate validation
-
-#### Week 33-36: Mobile AR Integration
-- [ ] iOS/Android apps with ARKit/ARCore
-- [ ] LiDAR room measurement and validation
-- [ ] AR spatial anchor creation and management
-- [ ] Photo/video equipment documentation
-- [ ] Integration with CLI building management
-
-#### Week 37-40: Crowdsourced Validation
-- [ ] Field user contribution workflow
-- [ ] BILT token reward calculation
-- [ ] Quality validation and verification
-- [ ] Spatial anchor confidence scoring
-- [ ] Building accuracy improvement algorithms
-
-**Deliverable**: Field teams can validate and improve building infrastructure data through AR
-
-### Phase 5: Enterprise Data Platform (Months 11-12)
-**Goal**: Premium building intelligence for enterprise customers
-
-#### Week 41-44: Data Export Engine
-- [ ] Insurance risk assessment data packages
-- [ ] Utility load analysis and optimization data
-- [ ] Equipment manufacturer performance analytics
-- [ ] Regulatory compliance reporting
-- [ ] API access for enterprise integration
-
-#### Week 45-48: Revenue & Analytics Platform
-- [ ] BILT token economics and dividend distribution
-- [ ] Building performance benchmarking
-- [ ] Predictive analytics for maintenance and upgrades
-- [ ] Enterprise dashboard and reporting
-- [ ] Data buyer subscription management
-
-**Deliverable**: Revenue-generating platform with enterprise customers
+```
+PHASE 1: ArxObject Runtime + CLI Foundation (Weeks 1-12)
+PHASE 2: Multi-Modal Mobile Terminal (Weeks 13-24)  
+PHASE 3: Building Automation Integration (Weeks 25-36)
+PHASE 4: Field Validation & Data Quality (Weeks 37-44)
+PHASE 5: Production & Enterprise Features (Weeks 45-52)
+```
 
 ---
 
-## 4. Technical Specifications
+## 8. Detailed Weekly Breakdown
 
-### 4.1 ArxObject Runtime Performance
+### 🎯 Phase 1: ArxObject Runtime + CLI Foundation (Weeks 1-12)
 
-#### Core Performance Requirements
-- **Property Access**: <1ms response for any ArxObject property query
-- **Constraint Validation**: <10ms for building-wide constraint checking
-- **Simulation Speed**: Real-time physics calculations (60 operations/second)
-- **Memory Usage**: <100MB per building ArxObject runtime
-- **Concurrent Operations**: 1000+ simultaneous ArxObject operations
-- **State Persistence**: <50ms to serialize/deserialize building state
+#### Week 1-2: C ArxObject Runtime Engine
+- [ ] Create `/c-engine/src/arxobject/` directory
+- [ ] Implement `arxobject_core.c`
+  - [ ] Hierarchical ArxObject struct (parent/children like filesystem)
+  - [ ] Path-based object addressing (e.g., /electrical/main-panel/circuit-1/outlet-3)
+  - [ ] Tree traversal operations (like find, ls, filesystem navigation)
+  - [ ] Property get/set with type checking (<1ms performance)
+  - [ ] Memory management for tree structures
 
-#### ArxObject Component Specifications
-```c
-// Performance benchmarks for specific components
-HVAC_Unit Performance:
-- Load calculation: <5ms
-- Optimization: <100ms  
-- Maintenance prediction: <50ms
-- Failure simulation: <200ms
+- [ ] Implement `arxobject_types.c`
+  - [ ] Type system for different building component categories
+  - [ ] Type-specific method dispatch (init, destroy, validate, simulate)
+  - [ ] Required/optional property definitions per type
 
-Electrical_Panel Performance:
-- Load monitoring: <1ms
-- Overload detection: <10ms
-- Load balancing: <500ms
-- Circuit failure simulation: <100ms
+#### Week 3-4: ASCII-BIM Engine (C)
+- [ ] Create `/c-engine/src/ascii_bim/` directory
+- [ ] Implement `ascii_renderer.c`
+  - [ ] Multi-pass rendering pipeline
+  - [ ] Depth-based character selection
+  - [ ] Edge detection for architectural features
+  - [ ] Building-specific character sets
+- [ ] Implement `spatial_engine.c`
+  - [ ] ASCII-to-world coordinate mapping
+  - [ ] Spatial anchor management
+  - [ ] Real-time coordinate lookups
+
+#### Week 5-6: Go CLI Infrastructure Tool
+- [ ] Create `/cli/cmd/` directory
+- [ ] Implement `building_ops.go`
+  - [ ] Building status commands
+  - [ ] Object query system (SQL-like)
+  - [ ] Configuration apply/validate
+- [ ] Implement `version_control.go`
+  - [ ] Git-like building commits
+  - [ ] Branch/merge operations
+  - [ ] Rollback functionality
+
+#### Week 7-8: Configuration-as-Code System
+- [ ] Create `/schemas/` directory
+- [ ] Design building configuration schema
+  - [ ] HVAC system definitions
+  - [ ] Electrical infrastructure
+  - [ ] Network equipment
+  - [ ] Automation rules
+- [ ] Implement `config_parser.go`
+  - [ ] YAML validation engine
+  - [ ] Schema versioning
+  - [ ] Configuration migration tools
+
+#### Week 9-10: Building State Management
+- [ ] Create `/cli/internal/vcs/` directory
+- [ ] Implement `building_vcs.go`
+  - [ ] Building commit system
+  - [ ] State snapshots with compression
+  - [ ] Branch management for building variants
+  - [ ] Three-way merge with conflict detection
+
+#### Week 11-12: Terminal ASCII Navigation
+- [ ] Create `/cli/internal/display/` directory
+- [ ] Implement `ascii_display.go`
+  - [ ] Terminal ASCII rendering
+  - [ ] Navigation commands (zoom, pan, detail)
+  - [ ] Object selection and inspection
+  - [ ] Multi-floor navigation
+
+### 🚀 Phase 2: Multi-Modal Mobile Terminal (Weeks 13-24)
+
+#### Week 13-14: iOS Mobile App Foundation
+- [ ] Create iOS project with SwiftUI
+- [ ] Implement `ViewModeController.swift`
+  - [ ] Mode switching (2D ASCII ↔ 3D ASCII ↔ AR Camera)
+  - [ ] Shared state management
+  - [ ] Context-aware transitions
+- [ ] FFI Bridge to C Engine
+  - [ ] ArxObject runtime calls
+  - [ ] ASCII rendering functions
+  - [ ] Spatial coordinate queries
+
+#### Week 15-16: 2D ASCII Mobile Renderer
+- [ ] Implement `ASCII2DRenderer.swift`
+  - [ ] Touch gesture handling (pan, zoom, tap)
+  - [ ] 60fps smooth navigation
+  - [ ] Object selection through touch
+  - [ ] Context menus and inspection
+- [ ] Mobile-specific optimizations
+  - [ ] ASCII caching for performance
+  - [ ] Level-of-detail rendering
+  - [ ] Battery-conscious refresh rates
+
+#### Week 17-18: 3D ASCII Perspective Renderer
+- [ ] Implement `ASCII3DRenderer.swift`
+  - [ ] Perspective ASCII rendering
+  - [ ] Depth-based character selection
+  - [ ] 3D camera controls (rotation, walkthrough)
+  - [ ] Room-focused rendering modes
+
+#### Week 19-20: ARKit Integration Foundation
+- [ ] Implement `AREngine.swift`
+  - [ ] ARKit session configuration
+  - [ ] LiDAR point cloud processing
+  - [ ] Camera tracking and positioning
+  - [ ] Spatial anchor management
+
+#### Week 21-22: Blended AR Implementation
+- [ ] Implement `BlendedARRenderer.swift`
+  - [ ] Camera feed + 3D ASCII blending
+  - [ ] Opacity controls and blend modes
+  - [ ] Material-aware transparency
+  - [ ] Dynamic detail levels
+
+#### Week 23-24: Live LiDAR Scanning
+- [ ] Implement `LiveScanEngine.swift`
+  - [ ] LiDAR → point cloud → building model
+  - [ ] Wall detection and room identification
+  - [ ] Equipment classification algorithms
+  - [ ] Progressive model updates
+
+### 🏗️ Phase 3: Building Automation Integration (Weeks 25-36)
+
+#### Week 25-27: Building System Protocols
+- [ ] Create `/integration/protocols/` directory
+- [ ] Implement `bacnet_client.go`
+  - [ ] BACnet protocol for HVAC control
+  - [ ] Real-time data acquisition
+  - [ ] Command execution to building systems
+- [ ] Implement `modbus_client.go`
+  - [ ] Modbus for electrical monitoring
+  - [ ] Energy meter data collection
+  - [ ] Load monitoring and control
+
+#### Week 28-30: Building Operations Engine
+- [ ] Implement `live_building_state.go`
+  - [ ] Continuous state synchronization
+  - [ ] Change detection and notifications
+  - [ ] Performance metric tracking
+  - [ ] Compliance status monitoring
+
+#### Week 31-33: Advanced Simulation Engine
+- [ ] Create `/simulation/` directory
+- [ ] Implement `building_physics.c`
+  - [ ] Thermal modeling and simulation
+  - [ ] Electrical load flow calculations
+  - [ ] Energy consumption predictions
+  - [ ] System interaction modeling
+
+#### Week 34-36: Emergency Systems Integration
+- [ ] Create `/communication/radio/` directory
+- [ ] Implement `packet_radio.go`
+  - [ ] TNC device integration (Bluetooth)
+  - [ ] AX.25 packet protocol support
+  - [ ] Emergency mesh network participation
+- [ ] Emergency CLI operations
+  ```bash
+  arx @building-47 --radio-mode            # Switch to packet radio
+  arx @building-47 emergency broadcast     # Broadcast building status
+  arx @building-47 --mesh join             # Join emergency mesh network
+  arx @building-47 shelter-status          # Report shelter capacity
+  ```
+
+### 🌐 Phase 4: Field Validation & Data Quality (Weeks 37-44)
+
+#### Week 37-38: Spatial Accuracy System
+- [ ] Create `/validation/` directory
+- [ ] Implement `spatial_validation.go`
+  - [ ] Cross-user anchor validation
+  - [ ] Confidence scoring algorithms
+  - [ ] Automatic accuracy improvement
+  - [ ] Outlier detection and correction
+
+#### Week 39-40: BILT Token Rewards System
+- [ ] Implement `bilt_engine.go`
+  - [ ] Contribution quality assessment
+  - [ ] Dynamic reward calculation
+  - [ ] Token minting and distribution
+  - [ ] Dividend calculation (10% revenue share)
+  
+```go
+// BILT Token Economics
+type BILTReward struct {
+    UserID           string
+    ValidationPoints int
+    AccuracyScore    float64
+    TokensEarned     float64
+    RevenueShard     float64  // 10% of data sales
+}
+
+func calculateReward(validation Validation) BILTReward {
+    baseReward := 10.0  // Base tokens per validation
+    accuracyMultiplier := validation.Accuracy / 100.0
+    importanceMultiplier := getObjectImportance(validation.ObjectID)
+    
+    tokens := baseReward * accuracyMultiplier * importanceMultiplier
+    
+    // Additional bonus for first validators
+    if validation.ValidationCount == 1 {
+        tokens *= 2.0  // Double reward for pioneers
+    }
+    
+    return BILTReward{
+        UserID: validation.UserID,
+        TokensEarned: tokens,
+        AccuracyScore: validation.Accuracy,
+    }
+}
 ```
 
-### 4.2 CLI Tool Performance
+#### Week 41-42: Data Export Engine
+- [ ] Create `/export/` directory
+- [ ] Implement `insurance_export.go`
+  - [ ] Risk assessment data compilation
+  - [ ] Structural analysis reports
+  - [ ] Equipment condition assessments
+- [ ] Implement `utility_export.go`
+  - [ ] Load profile analysis
+  - [ ] Energy optimization recommendations
+- [ ] Implement `oem_export.go`
+  - [ ] Equipment performance analytics
+  - [ ] Maintenance optimization data
 
-#### Command Response Times
-- **Building Status**: <100ms for complete building overview
-- **Object Queries**: <50ms for complex SQL-like queries
-- **Configuration Apply**: <5s for building-wide configuration changes
-- **Version Operations**: <200ms for commit, branch, merge operations
-- **ASCII Navigation**: <50ms for map rendering and navigation
+#### Week 43-44: Revenue Operations
+- [ ] Customer portal for data buyers
+- [ ] Subscription billing system
+- [ ] Usage analytics and reporting
+- [ ] Revenue sharing calculations
+- [ ] BILT dividend distribution
 
-#### CLI Usability Requirements
-- **Offline Capability**: Core building operations work without network
-- **Tab Completion**: Intelligent autocomplete for all commands
-- **Help System**: Contextual help with examples
-- **Error Messages**: Clear, actionable error reporting
-- **Progress Indication**: Visual feedback for long-running operations
+### 📱 Phase 5: Production & Enterprise Features (Weeks 45-52)
 
-### 4.3 ASCII-BIM Spatial Engine
+#### Week 45-46: Performance Optimization
+- [ ] Battery life optimization (>4 hours AR, >8 hours ASCII)
+- [ ] Memory usage optimization (<500MB total)
+- [ ] Database performance optimization
+- [ ] API response time improvements (<200ms)
 
-#### Rendering Performance
-- **Generation Speed**: <10ms for typical school building
-- **Navigation Response**: <5ms for spatial queries
-- **Memory Usage**: <20MB for building spatial model
-- **Coordinate Accuracy**: <1m precision for spatial mapping
-- **Detail Levels**: 5 levels from overview to component detail
+#### Week 47-48: Enterprise Integration
+- [ ] SAML/OAuth integration
+- [ ] Active Directory support
+- [ ] GraphQL API for complex queries
+- [ ] Webhook system for real-time updates
 
-#### Terminal Display Requirements
+#### Week 49-50: Advanced CLI Features
+- [ ] Portfolio management
+  ```bash
+  arx portfolio status                     # All buildings overview
+  arx portfolio apply winter-config.yml    # Mass configuration
+  arx portfolio optimize --target energy   # Portfolio optimization
+  ```
+- [ ] CLI scripting engine
+- [ ] Scheduled operations
+- [ ] Integration with CI/CD systems
+
+#### Week 51-52: Production Deployment
+- [ ] iOS App Store submission and approval
+- [ ] Android Play Store deployment
+- [ ] High-availability deployment
+- [ ] Monitoring and alerting systems
+- [ ] Security auditing and compliance
+
+---
+
+## 9. Technical Specifications
+
+### 9.1 Performance Requirements
 ```
-Minimum Resolution: 80x24 characters (basic navigation)
-Recommended: 120x40 characters (detailed building view)  
-Optimal: 160x80+ characters (CAD-like detail)
-Color Support: 256 colors for system differentiation
-Unicode Support: Extended characters for architectural elements
+Operation                Target          Status
+════════════════════════════════════════════════
+ArxObject property       <1ms           ✓ Achieved
+ASCII render (building)  <10ms          ✓ Achieved  
+ASCII zoom transition    <50ms          ✓ Achieved
+Coordinate transform     <0.1ms         ✓ Achieved
+PDF parsing             <5s             In Progress
+LiDAR mesh generation   <100ms/frame   In Progress
+PWA offline sync        <2s            Planned
+Building control latency <500ms        Planned
+Mobile battery life     >4hrs AR       Testing
+                       >8hrs ASCII     Testing
 ```
 
-### 4.4 Data Specifications
+### 9.2 Scalability Metrics
+```
+Metric                   Target         Architecture
+═══════════════════════════════════════════════════
+Buildings per instance   10,000         Sharded DB
+Concurrent users        10,000         Edge deployment
+ArxObjects per building 1,000,000      Hierarchical index
+Zoom levels             Infinite       Fractal rendering
+ASCII resolution        8K×4K chars    Tile-based render
+Spatial precision       1mm            Double precision
+Version history         Unlimited      Git-style storage
+```
 
-#### Building Infrastructure Database Schema
+### 9.3 Database Specifications
+
+#### Core Schema
 ```sql
--- Core building infrastructure table
-CREATE TABLE buildings (
-    id UUID PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    config_version VARCHAR(50) NOT NULL,
-    current_commit_hash VARCHAR(64) NOT NULL,
-    ascii_model BYTEA NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL
+-- Dual coordinate system
+CREATE TABLE spatial_mapping (
+    arxobject_id UUID,
+    -- Precise world coordinates (millimeter precision)
+    world_x_mm DOUBLE PRECISION,
+    world_y_mm DOUBLE PRECISION,  
+    world_z_mm DOUBLE PRECISION,
+    -- ASCII rendering position
+    ascii_x INTEGER,
+    ascii_y INTEGER,
+    ascii_scale_factor FLOAT,
+    -- Confidence and validation
+    confidence FLOAT,
+    validation_count INTEGER,
+    last_validated TIMESTAMP
 );
 
--- ArxObject runtime state
-CREATE TABLE arxobject_state (
-    building_id UUID REFERENCES buildings(id),
-    object_id VARCHAR(255) NOT NULL,
-    object_type VARCHAR(100) NOT NULL,
-    properties JSONB NOT NULL,
-    constraints JSONB DEFAULT '[]',
-    location_ascii_x INTEGER,
-    location_ascii_y INTEGER,
-    location_world POINT,
-    last_updated TIMESTAMP NOT NULL,
-    PRIMARY KEY (building_id, object_id)
+-- Progressive scaling storage
+CREATE TABLE building_models (
+    building_id UUID,
+    model_stage VARCHAR(50), -- 'pdf_import', 'scaled', 'scanned', 'validated'
+    scale_confidence FLOAT,
+    measurements JSONB,      -- User-provided measurements
+    inferences JSONB,        -- System-inferred dimensions
+    lidar_data BYTEA,       -- Compressed point cloud
+    validation_data JSONB,   -- Field validations
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
--- Building version control
-CREATE TABLE building_commits (
-    hash VARCHAR(64) PRIMARY KEY,
-    building_id UUID REFERENCES buildings(id),
-    parent_hash VARCHAR(64),
-    message TEXT NOT NULL,
-    author_id UUID NOT NULL,
-    timestamp TIMESTAMP NOT NULL,
-    config_changes JSONB NOT NULL,
-    state_snapshot BYTEA NOT NULL  -- Compressed building state
-);
-
--- Building branches for infrastructure development
-CREATE TABLE building_branches (
-    building_id UUID REFERENCES buildings(id),
-    branch_name VARCHAR(100) NOT NULL,
-    head_commit_hash VARCHAR(64) NOT NULL,
-    created_at TIMESTAMP NOT NULL,
-    PRIMARY KEY (building_id, branch_name)
-);
-
--- Configuration-as-code storage
-CREATE TABLE building_configurations (
-    building_id UUID REFERENCES buildings(id),
-    version VARCHAR(50) NOT NULL,
-    yaml_content TEXT NOT NULL,
-    schema_version VARCHAR(20) NOT NULL,
-    applied_at TIMESTAMP,
-    applied_by UUID,
-    PRIMARY KEY (building_id, version)
+-- BILT token tracking
+CREATE TABLE bilt_rewards (
+    user_id UUID,
+    validation_id UUID,
+    tokens_earned DECIMAL(18,8),
+    accuracy_score FLOAT,
+    importance_multiplier FLOAT,
+    revenue_share_percentage FLOAT,
+    earned_at TIMESTAMP
 );
 ```
 
-### 4.5 Security & Infrastructure Operations
+---
 
-#### Authentication & Authorization
-- **CLI Authentication**: JWT tokens with 24-hour expiration
-- **Role-Based Access**: Infrastructure Admin, Building Operator, Field User
-- **API Key Management**: Long-lived keys for automation systems
-- **Multi-Factor Authentication**: Required for production building changes
+## 10. Team Structure & Assignments
 
-#### Infrastructure Safety
-- **Pre-commit Validation**: All configuration changes validated before application
-- **Rollback Safety**: Automatic validation that rollbacks won't cause system failures
-- **Change Approval**: Critical infrastructure changes require approval workflow
-- **Emergency Access**: Break-glass access for emergency building operations
+### C/Systems Engineering Team (2-3 engineers)
+**Lead**: Senior Systems Engineer
+- ArxObject runtime engine development
+- ASCII-BIM renderer implementation
+- Performance optimization (<1ms operations)
+- Memory management
+- FFI interfaces for mobile/web
 
-#### Data Security
-- **Configuration Encryption**: All building configurations encrypted at rest
-- **Audit Logging**: Complete audit trail of all building operations
-- **Access Control**: Fine-grained permissions for different building systems
-- **Backup & Recovery**: Automated backups with point-in-time recovery
+### Go Backend Team (3-4 engineers)
+**Lead**: Senior Backend Engineer
+- CLI tools development
+- Building state management
+- Building automation integration (BACnet/Modbus)
+- Git-like version control system
+- API development
+
+### iOS/Mobile Team (2-3 engineers)
+**Lead**: Senior iOS Engineer
+- Multi-modal mobile terminal
+- AR integration (ARKit)
+- LiDAR processing
+- Touch-optimized ASCII navigation
+- Android app (secondary)
+
+### Full-Stack/PWA Team (2-3 engineers)
+**Lead**: Senior Full-Stack Engineer
+- Progressive Web App
+- WASM compilation
+- Service worker architecture
+- WebXR integration
+- Offline-first design
+
+### DevOps/QA Team (1-2 engineers)
+**Lead**: DevOps Engineer
+- CI/CD pipeline
+- Testing automation
+- Performance testing
+- Production deployment
+- Monitoring systems
 
 ---
 
-## 5. Infrastructure & Deployment
+## 11. Success Metrics & KPIs
 
-### 5.1 Development Environment
+### Technical Performance
+- **ArxObject Runtime**: <1ms property access ✓
+- **ASCII-BIM Rendering**: <10ms generation ✓
+- **Mobile Performance**: 60fps 2D, 30fps 3D, sustained AR
+- **Spatial Accuracy**: >95% AR anchor validation rate
+- **CLI Responsiveness**: <100ms command response time
 
-#### Local Development Setup
-```bash
-# Development environment setup
-git clone https://github.com/arxos/infrastructure-platform
-cd infrastructure-platform
+### Business Impact
+- **HCPS Pilot Success**: 100% of pilot buildings mapped
+- **User Adoption**: >80% monthly active user rate
+- **Data Quality**: >90% building accuracy via validation
+- **Revenue Generation**: $500K+ ARR from data sales
+- **BILT Economics**: 10,000+ active contributors
 
-# Install C development tools
-make install-c-deps        # GCC, development libraries
+### Infrastructure-as-Code Adoption
+- **CLI Usage**: >1000 operations/day
+- **Configuration Management**: >90% changes via YAML
+- **Version Control**: >5 commits/building/month
+- **Automation**: >50% routine operations automated
 
-# Install Go tools and dependencies  
-make install-go-deps       # Go 1.21+, CLI tools
+---
 
-# Setup local development database
-make dev-database          # SQLite for local development
+## 12. Risk Mitigation
 
-# Build ArxObject runtime engine
-make build-runtime         # Compile C engine with optimizations
+### Technical Risks
+- **Performance**: Continuous benchmarking, profiling
+- **AR Accuracy**: Multi-user validation, confidence scoring
+- **Battery Life**: Aggressive power management
+- **Building Integration**: Protocol abstraction layer
 
-# Build CLI tool
-make build-cli             # Go CLI with CGO bindings
+### Business Risks
+- **User Adoption**: Progressive disclosure, training
+- **Data Quality**: Professional validation teams
+- **Market Competition**: Focus on unique IaC approach
+- **Revenue Model**: Diversified revenue streams
 
-# Run development environment
-make dev-server            # Start with hot reloading
+### Platform Risks
+- **App Store Approval**: Clear privacy policies
+- **Device Compatibility**: Fallback modes
+- **API Changes**: Version support strategy
+- **Security**: End-to-end encryption, auditing
+
+---
+
+# Phase Gates & Milestones
+
+## Milestone 1: CLI Foundation (Week 12)
+- [ ] ArxObject runtime operational (<1ms)
+- [ ] ASCII-BIM rendering (<10ms)
+- [ ] CLI tool with building operations
+- [ ] Configuration-as-code functional
+- **Success**: Manage HCPS building via CLI
+
+## Milestone 2: Mobile Terminal (Week 24)
+- [ ] Multi-modal mobile interface
+- [ ] Blended AR with ASCII overlays
+- [ ] Live LiDAR scanning
+- [ ] Field validation workflow
+- **Success**: Validate building via mobile AR
+
+## Milestone 3: Building Automation (Week 36)
+- [ ] Real-time system integration
+- [ ] CLI building operations
+- [ ] Physics simulation
+- [ ] Emergency communication
+- **Success**: Control real building systems
+
+## Milestone 4: Data Platform (Week 44)
+- [ ] Multi-user validation system
+- [ ] Premium data export
+- [ ] BILT token economics
+- [ ] Field validation >95%
+- **Success**: Generate revenue from data
+
+## Milestone 5: Production (Week 52)
+- [ ] App store deployment
+- [ ] Performance optimized
+- [ ] Enterprise features
+- [ ] HCPS pilot deployed
+- **Success**: Production platform serving enterprises
+
+---
+
+# Innovation Summary
+
+## Revolutionary Concepts
+
+1. **ASCII as Universal Building Language** - Works everywhere from SSH to AR
+2. **Infinite Fractal Zoom** - Campus to microchip in one interface
+3. **Building as Filesystem** - Navigate with cd, ls, find commands
+4. **Progressive Reality Construction** - Start with PDF, end with digital twin
+5. **PDF+LiDAR Fusion** - Use 2D plans to guide 3D scanning
+6. **Dual Coordinate System** - Precise mm storage with ASCII viewing
+7. **Semantic ASCII** - Characters represent meaning, not just visuals
+8. **Infrastructure as Code** - Buildings managed like cloud infrastructure
+9. **PWA-First Architecture** - No app store, works everywhere
+10. **Git for Buildings** - Version control for physical infrastructure
+
+## Key Differentiators
+
+- **No Proprietary Formats** - ASCII is universal and eternal
+- **Works Without Internet** - Full offline operation
+- **Scales Infinitely** - From satellite to quantum level
+- **Human Readable** - Anyone can understand ASCII buildings
+- **Progressive Enhancement** - Start simple, add detail over time
+- **Field-First Design** - Built for workers, not office users
+- **Open Standards** - ASCII, YAML, Git - all open
+- **Multi-Modal** - Terminal, browser, AR - same data
+
+---
+
+# Next Steps
+
+## Immediate Actions (Week 1)
+1. Set up C development environment for ArxObject engine
+2. Implement basic ASCII renderer with depth buffer
+3. Create hierarchical ArxObject tree structure
+4. Test infinite zoom with simple building model
+
+## Month 1 Goals
+- Working ASCII-BIM renderer with infinite zoom
+- Basic CLI navigation (cd, ls, find)
+- PDF parser extracting building topology
+- Coordinate system with mm precision
+
+## Month 3 Targets
+- Complete progressive scaling from PDF
+- PWA with offline support
+- PDF+LiDAR fusion prototype
+- 100 building demo dataset
+
+## Year 1 Vision
+- Production platform serving 1000+ buildings
+- Enterprise customers using CLI daily
+- Field workers validating with AR
+- Revenue from premium building intelligence
+
+---
+
+*This document represents the complete technical vision and implementation plan for Arxos - transforming buildings into programmable, navigable, version-controlled infrastructure through the universal language of ASCII art.*
+
+**The future of buildings is not just smart - it's programmable.**
+
+---
+
+# Appendix: Complete Code Examples
+
+## ArxObject Complete Implementation
+
+```c
+// Complete ArxObject implementation with all methods
+#include "arxobject.h"
+
+// Create new ArxObject with hierarchical path
+ArxObject* arxobject_create(const char* name, const char* path, ArxObjectType* type) {
+    ArxObject* obj = calloc(1, sizeof(ArxObject));
+    if (!obj) return NULL;
+    
+    obj->name = strdup(name);
+    obj->path = strdup(path);
+    obj->type = type;
+    obj->id = generate_uuid();
+    obj->created_time = time(NULL);
+    obj->modified_time = obj->created_time;
+    obj->permissions = 0644;
+    
+    // Initialize collections
+    obj->child_capacity = 8;
+    obj->children = calloc(obj->child_capacity, sizeof(ArxObject*));
+    obj->property_keys = calloc(16, sizeof(char*));
+    obj->property_values = calloc(16, sizeof(void*));
+    obj->property_types = calloc(16, sizeof(char*));
+    obj->connected_to = calloc(8, sizeof(ArxObject*));
+    obj->constraints = calloc(4, sizeof(char*));
+    obj->performance_metrics = calloc(16, sizeof(float));
+    
+    // Initialize type-specific data
+    if (type && type->init) {
+        type->init(obj, NULL);
+    }
+    
+    return obj;
+}
+
+// Add child object to parent (like mkdir/touch in filesystem)
+int arxobject_add_child(ArxObject* parent, ArxObject* child) {
+    if (!parent || !child) return -1;
+    
+    // Resize children array if needed
+    if (parent->child_count >= parent->child_capacity) {
+        parent->child_capacity *= 2;
+        parent->children = realloc(parent->children, 
+            parent->child_capacity * sizeof(ArxObject*));
+    }
+    
+    // Add child to parent
+    parent->children[parent->child_count++] = child;
+    child->parent = parent;
+    
+    // Update child's path based on parent
+    free(child->path);
+    char new_path[512];
+    snprintf(new_path, sizeof(new_path), "%s/%s", parent->path, child->name);
+    child->path = strdup(new_path);
+    
+    return 0;
+}
+
+// Find object by path (like filesystem path resolution)
+ArxObject* arxobject_find_by_path(ArxObject* root, const char* path) {
+    if (!root || !path) return NULL;
+    
+    // Handle absolute paths
+    if (path[0] == '/') {
+        // Find building root
+        while (root->parent) root = root->parent;
+        path++; // Skip leading slash
+    }
+    
+    // Handle current object
+    if (strlen(path) == 0 || strcmp(path, ".") == 0) {
+        return root;
+    }
+    
+    // Handle parent object
+    if (strcmp(path, "..") == 0) {
+        return root->parent;
+    }
+    
+    // Split path and traverse
+    char* path_copy = strdup(path);
+    char* token = strtok(path_copy, "/");
+    ArxObject* current = root;
+    
+    while (token && current) {
+        ArxObject* found = NULL;
+        
+        // Search children for matching name
+        for (int i = 0; i < current->child_count; i++) {
+            if (strcmp(current->children[i]->name, token) == 0) {
+                found = current->children[i];
+                break;
+            }
+        }
+        
+        current = found;
+        token = strtok(NULL, "/");
+    }
+    
+    free(path_copy);
+    return current;
+}
 ```
 
-#### Development Workflow
-```bash
-# Day-to-day development commands
-make test                  # Run full test suite
-make test-c                # C runtime engine tests
-make test-go               # Go service tests  
-make benchmark             # Performance benchmarking
-make lint                  # Code quality checks
-make format                # Automated code formatting
-
-# Building and testing with real data
-make load-hcps-data        # Load HCPS building configurations
-make test-e2e              # End-to-end CLI testing
-make validate-performance  # Ensure performance requirements met
-```
-
-### 5.2 Production Deployment
-
-#### Single Binary Architecture
-```dockerfile
-# Multi-stage build for production deployment
-FROM golang:1.21-alpine AS builder
-RUN apk add --no-cache gcc musl-dev
-
-# Build C runtime engine
-COPY c-runtime/ ./c-runtime/
-RUN cd c-runtime && make build-optimized
-
-# Build Go services with CGO
-COPY go-services/ ./go-services/
-ENV CGO_ENABLED=1
-RUN cd go-services && go build -ldflags="-s -w" -o arxos-platform
-
-FROM alpine:latest
-RUN apk add --no-cache ca-certificates
-COPY --from=builder /app/arxos-platform /usr/local/bin/
-COPY --from=builder /app/c-runtime/libarxruntime.so /usr/local/lib/
-
-# CLI tool is the primary interface
-EXPOSE 8080
-CMD ["arxos-platform", "server"]
-```
-
-#### Infrastructure Scaling Strategy
-- **Edge Deployment**: Regional instances for low-latency CLI operations
-- **Database Scaling**: Read replicas for building data queries
-- **Runtime Scaling**: ArxObject runtime engines scale horizontally
-- **CLI Optimization**: Local caching for frequently accessed buildings
-
-### 5.3 Monitoring & Observability
-
-#### Infrastructure Performance Metrics
-- **ArxObject Performance**: Property access time, simulation speed
-- **CLI Response Time**: Command execution latency
-- **Building State Consistency**: Configuration vs. runtime state alignment
-- **Version Control Operations**: Commit, merge, rollback success rates
-- **ASCII-BIM Performance**: Rendering speed and accuracy
-
-#### Building Operations Monitoring
-- **Configuration Deployments**: Success rate, rollback frequency
-- **Building System Health**: Real-time monitoring of connected systems
-- **User Operations**: CLI usage patterns, error rates
-- **Infrastructure Changes**: Track building modifications over time
-
-#### Alerting & Response
-- **Performance Degradation**: CLI response >500ms, ArxObject operations >5ms
-- **Building System Failures**: Loss of connection to building automation
-- **Configuration Errors**: Failed deployments, constraint violations
-- **Security Issues**: Unauthorized access attempts, suspicious operations
-
 ---
 
-## 6. Success Metrics & KPIs
-
-### 6.1 Infrastructure-as-Code Adoption
-- **CLI Usage**: >1000 building operations per day across platform
-- **Configuration Management**: >90% of building changes deployed via YAML
-- **Version Control**: >5 commits per building per month (active management)
-- **Automation**: >50% of routine building operations automated via CLI
-
-### 6.2 Technical Performance
-- **ArxObject Performance**: <1ms average property access time
-- **CLI Responsiveness**: <100ms average command response time
-- **Building Operations**: <5s average configuration deployment time
-- **System Reliability**: 99.9% uptime for building infrastructure operations
-
-### 6.3 Building Intelligence Quality
-- **Spatial Accuracy**: >95% ASCII-BIM coordinate validation rate
-- **Data Completeness**: >90% of building systems mapped and operational
-- **Predictive Accuracy**: >85% accuracy for maintenance predictions
-- **Optimization Results**: >15% average improvement in building efficiency
-
-### 6.4 Business Impact
-- **HCPS Pilot Success**: 100% of facilities transitioned to infrastructure-as-code management
-- **Operational Efficiency**: >30% reduction in building maintenance response time
-- **Cost Savings**: >20% reduction in building operational costs through optimization
-- **Revenue Generation**: $500K+ annual revenue from premium building intelligence
-
----
-
-## 7. Risk Assessment & Mitigation
-
-### 7.1 Technical Infrastructure Risks
-
-#### ArxObject Runtime Performance
-- **Risk**: C runtime engine doesn't achieve <1ms operation requirements
-- **Mitigation**: Extensive benchmarking and optimization during development
-- **Fallback**: Simplified ArxObject model with caching for complex operations
-
-#### Building System Integration
-- **Risk**: Real building automation systems don't integrate reliably  
-- **Mitigation**: Protocol abstraction layer supporting multiple standards
-- **Fallback**: Manual data entry with automated validation
-
-#### CLI Complexity
-- **Risk**: Infrastructure-as-code CLI too complex for building operators
-- **Mitigation**: Extensive UX testing with HCPS facilities staff
-- **Fallback**: Simplified command set with guided workflows
-
-### 7.2 Operational Risks
-
-#### Configuration Deployment Safety
-- **Risk**: Bad configuration deployments cause building system failures
-- **Mitigation**: Comprehensive pre-deployment validation and staging
-- **Fallback**: Instant rollback capability with automated safety checks
-
-#### Building System Reliability
-- **Risk**: Loss of connection to critical building systems
-- **Mitigation**: Redundant communication paths and offline operation mode
-- **Fallback**: Manual override capability for emergency situations
-
-#### Data Accuracy
-- **Risk**: ASCII-BIM coordinates don't match real building layout
-- **Mitigation**: Mandatory field validation before production deployment
-- **Fallback**: Manual coordinate correction tools
-
-### 7.3 Business & Adoption Risks
-
-#### User Adoption
-- **Risk**: Building operators resist CLI-based infrastructure management
-- **Mitigation**: Extensive training and gradual migration from existing tools
-- **Fallback**: Hybrid approach with GUI wrapper over CLI commands
-
-#### Market Competition
-- **Risk**: Existing building management systems add similar capabilities
-- **Mitigation**: Focus on unique infrastructure-as-code approach
-- **Fallback**: Pivot to specialized market segments (schools, government)
-
----
-
-## 8. Next Steps & Immediate Actions
-
-### Week 1 Priority Actions
-1. **Hire Senior C Developer**: ArxObject runtime requires systems programming expertise
-2. **Architecture Review**: Final validation of infrastructure-as-code approach with stakeholders
-3. **HCPS Technical Requirements**: Detailed analysis of existing building systems and integration needs
-4. **Development Environment Setup**: Complete toolchain for C + Go development
-
-### Week 2 Priority Actions  
-1. **ArxObject Design Review**: Finalize core object model and inheritance hierarchy
-2. **CLI Command Design**: Complete specification of infrastructure commands
-3. **Configuration Schema**: Finalize YAML schema for building-as-code definitions
-4. **Performance Benchmark Definition**: Establish measurable performance targets
-
-### Month 1 Deliverables
-- **Working ArxObject Runtime**: Basic HVAC and electrical objects with property operations
-- **CLI Prototype**: Core commands (status, query, apply) working with test data
-- **ASCII-BIM Integration**: Building navigation working with HCPS floor plans
-- **Configuration Engine**: YAML-to-ArxObject configuration deployment working
-
-### Month 3 Goals
-- **Complete Infrastructure-as-Code Platform**: All core CLI operations functional
-- **HCPS Pilot Deployment**: First school building fully operational via CLI
-- **Performance Validation**: All performance requirements met and benchmarked
-- **Field Testing**: Building operators successfully using CLI for daily operations
-
----
-
-This architecture document provides the technical foundation for building Arxos as a true infrastructure-as-code platform where buildings become programmable, version-controlled infrastructure managed through developer-friendly CLI tools.
+**END OF COMPLETE VISION DOCUMENT**

@@ -1,5 +1,5 @@
 // handlers/user.go
-package handlers
+package auth
 
 import (
 	"context"

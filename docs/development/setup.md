@@ -1,330 +1,150 @@
-# Development Setup Guide
+# Arxos Development Setup
 
-## 🚀 **Local Development Environment**
+This guide covers setting up the Arxos development environment for the new C/Go/AR/CLI architecture.
 
-This guide will get your local ARXOS development environment up and running for both Go backend and Python AI service development.
+## Prerequisites
 
----
+### System Requirements
+- **Operating System**: Windows 10/11, macOS 10.15+, or Linux (Ubuntu 20.04+)
+- **Memory**: 8GB RAM minimum, 16GB recommended
+- **Storage**: 10GB free space for development environment
+- **Terminal**: PowerShell (Windows), Terminal.app (macOS), or GNOME Terminal (Linux)
 
-## 📋 **Prerequisites**
+### Required Software
+- **Go**: Version 1.21+ ([Download](https://golang.org/dl/))
+- **GCC/Clang**: C compiler for the core engines
+  - **Windows**: MinGW-w64 or Visual Studio Build Tools
+  - **macOS**: Xcode Command Line Tools
+  - **Linux**: `build-essential` package
+- **Git**: Version 2.30+ ([Download](https://git-scm.com/))
+- **PostgreSQL**: Version 14+ with PostGIS extension
+- **Node.js**: Version 18+ (for CLI development tools)
 
-### **Required Software**
-- **Go 1.21+** - [Download from golang.org](https://golang.org/dl/)
-- **Python 3.9+** - [Download from python.org](https://python.org/downloads/)
-- **PostgreSQL 13+** with PostGIS extension
-- **Redis 6+** server
-- **Git** - [Download from git-scm.com](https://git-scm.com/downloads)
+## Environment Setup
 
-### **System Requirements**
-- **RAM**: Minimum 8GB, recommended 16GB+
-- **Storage**: 10GB+ free space
-- **OS**: Windows 10+, macOS 10.15+, or Linux (Ubuntu 20.04+)
-
----
-
-## 🔧 **Environment Setup**
-
-### **1. Clone Repository**
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-org/arxos.git
+git clone https://github.com/arxos/arxos.git
 cd arxos
 ```
 
-### **2. Go Environment Setup**
+### 2. Install Go Dependencies
 ```bash
-# Navigate to Go backend
-cd core/backend
-
-# Install Go dependencies
+cd core
 go mod download
-
-# Verify Go installation
-go version
-# Should show: go version go1.21.x
-
-# Check Go environment
-go env GOPATH
-go env GOROOT
+go mod tidy
 ```
 
-### **3. Python Environment Setup**
+### 3. Build C Core Engines
 ```bash
-# Navigate to AI service
-cd ../../ai_service
-
-# Create virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Verify Python installation
-python --version
-# Should show: Python 3.9.x or higher
+cd c
+make clean
+make all
 ```
 
----
+**Note**: If you encounter build issues, ensure your C compiler is properly configured and accessible from your PATH.
 
-## 🗄️ **Database Setup**
+### 4. Set Environment Variables
+Create a `.env` file in the `core/` directory:
 
-### **PostgreSQL Installation**
-
-#### **Windows**
-1. Download from [postgresql.org](https://postgresql.org/download/windows/)
-2. Install with PostGIS extension enabled
-3. Set password for `postgres` user
-4. Add PostgreSQL bin directory to PATH
-
-#### **macOS**
 ```bash
-# Using Homebrew
-brew install postgresql postgis
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=arxos_dev
+DB_USER=arxos_user
+DB_PASSWORD=your_password
 
-# Start PostgreSQL service
-brew services start postgresql
+# Development Settings
+ENV=development
+LOG_LEVEL=debug
+CORE_PATH=./c
 ```
 
-#### **Linux (Ubuntu)**
-```bash
-# Install PostgreSQL and PostGIS
-sudo apt update
-sudo apt install postgresql postgresql-contrib postgis
-
-# Start PostgreSQL service
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
-
-### **Create Database**
-```bash
-# Connect to PostgreSQL as postgres user
-sudo -u postgres psql
-
-# Create database with PostGIS extension
+### 5. Database Setup
+```sql
+-- Create database and user
 CREATE DATABASE arxos_dev;
-\c arxos_dev
-CREATE EXTENSION postgis;
-CREATE EXTENSION postgis_topology;
-
-# Create application user (optional)
 CREATE USER arxos_user WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE arxos_dev TO arxos_user;
 
-# Exit PostgreSQL
-\q
+-- Enable PostGIS extension
+\c arxos_dev
+CREATE EXTENSION postgis;
 ```
 
-### **Redis Installation**
+## Development Workflow
 
-#### **Windows**
-1. Download from [redis.io](https://redis.io/download)
-2. Install Redis server
-3. Start Redis service
+### 1. Core Development (C)
+- **Location**: `core/c/`
+- **Build**: `make all` or `make debug`
+- **Test**: `make test`
+- **Clean**: `make clean`
 
-#### **macOS**
+### 2. CLI Development (Go)
+- **Location**: `core/cmd/`
+- **Build**: `go build ./...`
+- **Test**: `go test ./...`
+- **Run**: `go run main.go`
+
+### 3. Testing
 ```bash
-# Using Homebrew
-brew install redis
+# Run all tests
+go test ./...
 
-# Start Redis service
-brew services start redis
+# Run specific test suite
+go test ./internal/arxobject
+
+# Run with coverage
+go test -cover ./...
+
+# Run C tests
+cd c && make test
 ```
 
-#### **Linux (Ubuntu)**
+### 4. Performance Testing
 ```bash
-# Install Redis
-sudo apt install redis-server
+# Run performance benchmarks
+go test -bench=. ./...
 
-# Start Redis service
-sudo systemctl start redis-server
-sudo systemctl enable redis-server
+# Run specific benchmark
+go test -bench=BenchmarkArxObjectCreation ./internal/arxobject
 ```
 
----
+## IDE Configuration
 
-## ⚙️ **Configuration Setup**
+### VS Code / Cursor
+Install these extensions:
+- **Go**: Official Go extension
+- **C/C++**: Microsoft C/C++ extension
+- **PostgreSQL**: PostgreSQL extension
+- **GitLens**: Git integration
 
-### **1. Environment Variables**
+### GoLand / IntelliJ
+- Enable Go module support
+- Configure C/C++ toolchain
+- Set up database connections
 
-Create `.env` files in both backend and AI service directories:
+## Troubleshooting
 
-#### **Backend (.env)**
+### Common Issues
+
+#### C Build Failures
 ```bash
-# core/backend/.env
-DB_URL=postgres://postgres:your_password@localhost:5432/arxos_dev?sslmode=disable
-REDIS_URL=redis://localhost:6379
-AI_SERVICE_URL=http://localhost:5000
-PORT=8080
-LOG_LEVEL=debug
-CORS_ORIGINS=http://localhost:3000,http://localhost:8080
-JWT_SECRET=your_jwt_secret_key_here
+# Check compiler version
+gcc --version
+clang --version
+
+# Verify PATH includes compiler
+echo $PATH
+
+# On Windows, ensure MinGW is in PATH
+where gcc
 ```
 
-#### **AI Service (.env)**
+#### Go Module Issues
 ```bash
-# ai_service/.env
-OPENAI_API_KEY=your_openai_api_key_here
-BACKEND_URL=http://localhost:8080
-PORT=5000
-LOG_LEVEL=debug
-```
-
-### **2. Database Migrations**
-```bash
-# Navigate to backend directory
-cd core/backend
-
-# Run database migrations
-go run main.go migrate
-
-# Verify tables created
-psql -U postgres -d arxos_dev -c "\dt"
-```
-
----
-
-## 🚀 **Starting Development Services**
-
-### **1. Start Go Backend**
-```bash
-# Terminal 1 - Backend
-cd core/backend
-
-# Run with hot reload (using air for development)
-go install github.com/cosmtrek/air@latest
-air
-
-# Or run directly
-go run main.go
-```
-
-**Expected Output:**
-```
-[INFO] Starting ARXOS backend server...
-[INFO] Database connected successfully
-[INFO] Redis connected successfully
-[INFO] Server listening on :8080
-[INFO] Health check endpoint: /api/health
-```
-
-### **2. Start Python AI Service**
-```bash
-# Terminal 2 - AI Service
-cd ai_service
-
-# Activate virtual environment
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-
-# Start AI service
-python main.py
-```
-
-**Expected Output:**
-```
-[INFO] Starting ARXOS AI service...
-[INFO] OpenAI API connected successfully
-[INFO] Server listening on :5000
-[INFO] Health check endpoint: /health
-```
-
-### **3. Verify Services**
-```bash
-# Test backend health
-curl http://localhost:8080/api/health
-# Expected: {"status":"healthy","timestamp":"..."}
-
-# Test AI service health
-curl http://localhost:5000/health
-# Expected: {"status":"healthy","timestamp":"..."}
-```
-
----
-
-## 🧪 **Testing Your Setup**
-
-### **1. Upload Test PDF**
-1. Open browser to `http://localhost:8080`
-2. Navigate to upload interface
-3. Select a PDF building plan
-4. Watch processing in AI service logs
-5. View extracted ArxObjects in database
-
-### **2. Database Verification**
-```bash
-# Connect to database
-psql -U postgres -d arxos_dev
-
-# Check ArxObjects table
-SELECT COUNT(*) FROM arxobjects;
-
-# View sample data
-SELECT id, type, system, confidence FROM arxobjects LIMIT 5;
-
-# Exit
-\q
-```
-
-### **3. API Testing**
-```bash
-# Test ArxObjects endpoint
-curl http://localhost:8080/api/v1/arxobjects
-
-# Test with authentication (if implemented)
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-     http://localhost:8080/api/v1/arxobjects
-```
-
----
-
-## 🔧 **Development Tools**
-
-### **Recommended IDEs**
-- **VS Code** with Go and Python extensions
-- **GoLand** for Go development
-- **PyCharm** for Python development
-
-### **VS Code Extensions**
-```json
-// .vscode/extensions.json
-{
-  "recommendations": [
-    "golang.go",
-    "ms-python.python",
-    "ms-python.vscode-pylance",
-    "bradlc.vscode-tailwindcss",
-    "ms-vscode.vscode-json"
-  ]
-}
-```
-
-### **VS Code Settings**
-```json
-// .vscode/settings.json
-{
-  "go.useLanguageServer": true,
-  "go.gopath": "/path/to/your/gopath",
-  "python.defaultInterpreter": "./ai_service/venv/bin/python",
-  "python.linting.enabled": true,
-  "python.linting.pylintEnabled": true,
-  "python.formatting.provider": "black"
-}
-```
-
----
-
-## 🐛 **Troubleshooting**
-
-### **Common Issues**
-
-#### **Go Module Issues**
-```bash
-# Clear Go module cache
+# Clear module cache
 go clean -modcache
 
 # Verify module dependencies
@@ -334,54 +154,31 @@ go mod verify
 go get -u ./...
 ```
 
-#### **Python Virtual Environment Issues**
+#### Database Connection Issues
 ```bash
-# Recreate virtual environment
-rm -rf venv
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-#### **Database Connection Issues**
-```bash
-# Check PostgreSQL status
-sudo systemctl status postgresql
-
-# Verify database exists
-psql -U postgres -l | grep arxos
+# Test PostgreSQL connection
+psql -h localhost -U arxos_user -d arxos_dev
 
 # Check PostGIS extension
-psql -U postgres -d arxos_dev -c "SELECT PostGIS_Version();"
+\dx postgis
 ```
 
-#### **Redis Connection Issues**
-```bash
-# Check Redis status
-redis-cli ping
-# Should return: PONG
+### Performance Issues
+- Ensure CGO is enabled: `export CGO_ENABLED=1`
+- Check C compiler optimization flags in Makefile
+- Verify Go build tags are correct
 
-# Check Redis configuration
-redis-cli config get bind
-redis-cli config get port
-```
+## Next Steps
 
----
+After setup, proceed to:
+1. [Development Guide](guide.md) - Core development concepts
+2. [ArxObject Development](arxobject-dev.md) - ArxObject system development
+3. [CLI Development](cli-dev.md) - Command-line interface development
+4. [Testing Guide](../testing/README.md) - Testing strategies and examples
 
-## 📚 **Next Steps**
+## Support
 
-1. **Explore the Codebase**: Read [Architecture Overview](../architecture/overview.md)
-2. **Understand ArxObjects**: Review [ArxObject System](../architecture/arxobjects.md)
-3. **Learn Development**: Follow [Development Guide](guide.md)
-4. **API Reference**: Check [API Documentation](../api/README.md)
-
----
-
-## 🆘 **Need Help?**
-
-- **Development issues**: Check [Development Guide](guide.md)
-- **Architecture questions**: Review [Architecture Overview](../architecture/overview.md)
-- **API problems**: See [API Reference](../api/README.md)
-- **Setup issues**: Verify prerequisites and configuration
-
-**Happy coding! 🚀**
+For setup issues:
+1. Check the [troubleshooting section](#troubleshooting)
+2. Review [GitHub Issues](https://github.com/arxos/arxos/issues)
+3. Consult the [Architecture Documentation](../architecture/README.md)

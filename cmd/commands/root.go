@@ -5,26 +5,26 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/arxos/arxos/cmd/commands/query"
-	"github.com/arxos/arxos/cmd/commands/ingest"
+	// "github.com/arxos/arxos/cmd/commands/query"
+	// "github.com/arxos/arxos/cmd/commands/ingest"
 	// "github.com/arxos/arxos/cmd/commands/export"    // TODO: Implement
 	// "github.com/arxos/arxos/cmd/commands/validate"  // TODO: Implement
 	// "github.com/arxos/arxos/cmd/commands/analyze"   // TODO: Implement
 	// "github.com/arxos/arxos/cmd/commands/serve"     // TODO: Implement
-	"github.com/arxos/arxos/cmd/commands/ai"
-	"github.com/arxos/arxos/cmd/commands/support"
-	"github.com/arxos/arxos/cmd/commands/state"
-	"github.com/arxos/arxos/cmd/commands/deploy"
-	"github.com/arxos/arxos/cmd/commands/gitops"
-	"github.com/arxos/arxos/cmd/config"
-	"github.com/arxos/arxos/cmd/display"
+	// "github.com/arxos/arxos/cmd/commands/ai"
+	// "github.com/arxos/arxos/cmd/commands/support"
+	// "github.com/arxos/arxos/cmd/commands/state"
+	// "github.com/arxos/arxos/cmd/commands/deploy"
+	// "github.com/arxos/arxos/cmd/commands/gitops"
+	// "github.com/arxos/arxos/cmd/config"
+	// "github.com/arxos/arxos/cmd/display"
 )
 
 var (
 	cfgFile string
 	verbose bool
 	format  string
-	
+
 	// Version info
 	Version   string
 	BuildDate string
@@ -39,7 +39,7 @@ var RootCmd = &cobra.Command{
 querying architectural data, and bridging digital twins with physical reality.
 
 Use 'arxos [command] --help' for more information about a command.`,
-	PersistentPreRunE: initializeConfig,
+	// PersistentPreRunE: initializeConfig, // Temporarily disabled
 }
 
 // Execute adds all child commands and executes the root command
@@ -56,28 +56,38 @@ func init() {
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	RootCmd.PersistentFlags().StringVarP(&format, "format", "f", "table", "output format (table|json|yaml)")
 
-	// Add command categories
+	// Add command categories - temporarily only init command
 	RootCmd.AddCommand(
-		query.QueryCmd,
-		ingest.IngestCmd,
+		InitCmd, // Building initialization
+		// query.QueryCmd,        // Temporarily disabled
+		// ingest.IngestCmd,      // Temporarily disabled
 		// export.ExportCmd,      // TODO: Implement
 		// validate.ValidateCmd,  // TODO: Implement
 		// analyze.AnalyzeCmd,    // TODO: Implement
 		// serve.ServeCmd,        // TODO: Implement
-		ai.AICmd,
-		support.SupportCmd,  // Support operations (admin only)
-		state.StateCmd,      // Building state management (BIaC)
-		deploy.DeployCmd,    // Deployment engine (BIaC)
-		gitops.GitOpsCmd,    // GitOps features (BIaC)
+		// ai.AICmd,              // Temporarily disabled
+		// support.SupportCmd,    // Temporarily disabled
+		// state.StateCmd,        // Temporarily disabled
+		// deploy.DeployCmd,      // Temporarily disabled
+		// gitops.GitOpsCmd,      // Temporarily disabled
 		interactiveCmd,
 		versionCmd,
+		PwdCmd,
+		CdCmd,
+		LsCmd,
+		TreeCmd,
+		FindCmd,
+		WatchCmd,     // Added for Phase 7
+		ArxObjectCmd, // Added for Phase 10 Sprint 2 - Advanced ArxObject Management
+		DashboardCmd, // Added for Phase 10 Sprint 3 - Real-time Intelligence
+		AlertsCmd,    // Added for Phase 10 Sprint 3 - Alert Management
 	)
 }
 
 // Interactive mode command
 var interactiveCmd = &cobra.Command{
-	Use:   "interactive",
-	Short: "Start interactive AQL shell",
+	Use:     "interactive",
+	Short:   "Start interactive AQL shell",
 	Aliases: []string{"shell", "repl"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runInteractiveMode()
@@ -102,6 +112,8 @@ func SetVersion(version, buildDate, gitCommit string) {
 	GitCommit = gitCommit
 }
 
+// Temporarily disabled until we fix import issues
+/*
 func initializeConfig(cmd *cobra.Command, args []string) error {
 	// Load configuration
 	if err := config.Load(cfgFile); err != nil {
@@ -114,6 +126,7 @@ func initializeConfig(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
+*/
 
 func runInteractiveMode() error {
 	// This will be implemented in interactive.go

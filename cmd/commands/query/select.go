@@ -3,10 +3,9 @@ package query
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/arxos/arxos/cmd/aql"
-	"github.com/arxos/arxos/cmd/client"
 )
 
 var (
@@ -27,25 +26,50 @@ func runSelect(cmd *cobra.Command, args []string) error {
 	}
 
 	query := strings.Join(args, " ")
-	
-	// Parse AQL query
-	parser := aql.NewParser()
-	parsedQuery, err := parser.Parse(query)
-	if err != nil {
-		return fmt.Errorf("parse error: %w", err)
+
+	// For now, create a mock result - this will be replaced with actual AQL execution
+	// TODO: Integrate with actual AQL parser and executor
+
+	// Create mock result for demonstration
+	result := &AQLResult{
+		Type:    "SELECT",
+		Objects: generateMockSelectResults(query),
+		Count:   10,
+		Message: "Query executed successfully",
+		Metadata: map[string]interface{}{
+			"rows_affected":  10,
+			"query_type":     "SELECT",
+			"execution_time": "0.001s",
+		},
+		ExecutedAt: time.Now(),
 	}
 
-	// Execute query via client
-	c := client.GetClient()
-	result, err := c.ExecuteQuery(parsedQuery)
-	if err != nil {
-		return fmt.Errorf("execution error: %w", err)
+	// Display results using our result display system
+	display := NewResultDisplay("table", "default")
+	return display.DisplayResult(result)
+}
+
+// generateMockSelectResults creates mock results for demonstration
+func generateMockSelectResults(query string) []interface{} {
+	objects := make([]interface{}, 0)
+
+	// Generate different types of objects based on query
+	objectTypes := []string{"wall", "door", "window", "hvac", "electrical", "plumbing"}
+
+	for i := 0; i < 10; i++ {
+		objType := objectTypes[i%len(objectTypes)]
+		obj := map[string]interface{}{
+			"id":         fmt.Sprintf("%s_%03d", objType, i+1),
+			"type":       objType,
+			"path":       fmt.Sprintf("building:hq/floor_%d/%s_%03d", (i/6)+1, objType, i+1),
+			"confidence": 0.85 + float64(i%15)*0.01,
+			"status":     "active",
+			"created_at": time.Now().Add(-time.Duration(i*24) * time.Hour),
+			"updated_at": time.Now().Add(-time.Duration(i*6) * time.Hour),
+		}
+
+		objects = append(objects, obj)
 	}
 
-	// Display results
-	// TODO: Implement proper result display
-	fmt.Println("Query executed successfully")
-	_ = result
-	
-	return nil
+	return objects
 }

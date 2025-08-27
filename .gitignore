@@ -48,6 +48,12 @@ $RECYCLE.BIN/
 *.exe
 *.exe~
 *.dll
+# Go compiled binaries
+/building-integration
+/arxos
+/cmd/building-integration/building-integration
+/cmd/*/build/
+vendor/
 *.so
 *.dylib
 *.test

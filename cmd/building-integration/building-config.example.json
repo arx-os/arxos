@@ -1,0 +1,50 @@
+{
+  "building_id": "your-building-id",
+  "name": "Your Building Name",
+  "location": "Your Building Location",
+  
+  "bacnet_config": {
+    "interface": "eth0",
+    "port": 47808,
+    "device_id": 1234,
+    "network_number": 1,
+    "timeout": "5s",
+    "simulation": true
+  },
+  
+  "modbus_config": {
+    "mode": "tcp",
+    "address": "YOUR_MODBUS_IP:502",
+    "slave_id": 1,
+    "timeout": "5s",
+    "simulation": true
+  },
+  
+  "sensors": [
+    {
+      "id": "example-sensor",
+      "name": "Example Temperature Sensor",
+      "type": "temperature",
+      "protocol": "bacnet",
+      "address": "1:analog-input:1",
+      "unit": "celsius",
+      "floor": 1,
+      "room": "room-101",
+      "position": {"x": 10.5, "y": 8.2, "z": 2.5},
+      "limits": {"min": 18, "max": 26, "critical": true},
+      "scan_rate": "10s",
+      "enabled": true
+    }
+  ],
+  
+  "ascii_config": {
+    "width": 120,
+    "height": 40,
+    "update_rate": "1s",
+    "show_sensors": true,
+    "show_values": true,
+    "show_alarms": true,
+    "color_mode": true,
+    "websocket_url": "ws://YOUR_ARXOS_SERVER:8080/ws"
+  }
+}

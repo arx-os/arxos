@@ -37,7 +37,8 @@ func runAsk(cmd *cobra.Command, args []string) error {
 	context, _ := cmd.Flags().GetString("context")
 	format, _ := cmd.Flags().GetString("format")
 	explain, _ := cmd.Flags().GetBool("explain")
-	_ = cmd.Flags().GetBool("interactive") // TODO: Implement interactive mode
+	interactive, _ := cmd.Flags().GetBool("interactive")
+	_ = interactive // TODO: Implement interactive mode
 
 	// Generate AQL query from natural language
 	aqlQuery, confidence := generateAQLFromQuestion(question, context)

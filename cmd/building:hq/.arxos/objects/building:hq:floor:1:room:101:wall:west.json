@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:1:room:101:wall:west",
+  "name": "Wall-west-101",
+  "type": "wall",
+  "description": "west wall of room 101",
+  "properties": {
+    "fireRated": true,
+    "height": 2.4,
+    "material": "drywall",
+    "thickness": 0.2
+  },
+  "parent": "building:hq:floor:1:room:101",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.266521-04:00",
+  "updated": "2025-08-26T22:06:27.266526Z",
+  "confidence": 0.9634404773324847
+}

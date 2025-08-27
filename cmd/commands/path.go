@@ -27,7 +27,7 @@ func (pr *PathResolver) ResolvePath(currentPath, targetPath string) (string, err
 	case ".", "":
 		return currentPath, nil
 	case "..":
-		return pr.resolveParent(currentPath)
+		return pr.resolveParent(currentPath), nil
 	case "~":
 		return "/", nil
 	case "-":

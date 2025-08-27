@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:2:room:201:door:main",
+  "name": "Door-201",
+  "type": "door",
+  "description": "Main door for room 201",
+  "properties": {
+    "height": 2.1,
+    "lockType": "electronic",
+    "material": "wood",
+    "width": 0.9
+  },
+  "parent": "building:hq:floor:2:room:201",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.273691-04:00",
+  "updated": "2025-08-26T22:06:27.273692Z",
+  "confidence": 0.85
+}

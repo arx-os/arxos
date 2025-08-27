@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/arxos/core/internal/state"
-	"github.com/arxos/cmd/config"
+	// "github.com/arxos/core/internal/state"
+	"github.com/arxos/arxos/cmd/config"
 	"github.com/jmoiron/sqlx"
 )
 

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arxos/arxos/core/internal/gitops"
-	"github.com/arxos/arxos/core/internal/state"
+	// "github.com/arxos/arxos/core/internal/gitops"
+	// "github.com/arxos/arxos/core/internal/state"
 	"github.com/spf13/cobra"
 )
 

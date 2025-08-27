@@ -54,8 +54,10 @@ func runNavigate(cmd *cobra.Command, args []string) error {
 	connected, _ := cmd.Flags().GetString("connected")
 	spatial, _ := cmd.Flags().GetString("spatial")
 	view, _ := cmd.Flags().GetString("view")
-	_ = cmd.Flags().GetBool("breadcrumbs")   // TODO: Implement breadcrumb display
-	_ = cmd.Flags().GetBool("relationships") // TODO: Implement relationship display
+	breadcrumbs, _ := cmd.Flags().GetBool("breadcrumbs")
+	relationships, _ := cmd.Flags().GetBool("relationships")
+	_ = breadcrumbs   // TODO: Implement breadcrumb display
+	_ = relationships // TODO: Implement relationship display
 
 	// Create navigation context
 	nav := NewNavigationContext(path, near, radius, connected, spatial, view)

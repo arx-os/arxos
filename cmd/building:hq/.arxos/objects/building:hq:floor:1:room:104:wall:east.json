@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:1:room:104:wall:east",
+  "name": "Wall-east-104",
+  "type": "wall",
+  "description": "east wall of room 104",
+  "properties": {
+    "fireRated": true,
+    "height": 2.4,
+    "material": "drywall",
+    "thickness": 0.2
+  },
+  "parent": "building:hq:floor:1:room:104",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.270331-04:00",
+  "updated": "2025-08-26T22:06:27.270333Z",
+  "confidence": 0.9086839964790235
+}

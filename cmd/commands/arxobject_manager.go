@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	
+	"github.com/arxos/arxos/cmd/models"
 )
 
 // ArxObjectManager provides advanced ArxObject management capabilities
@@ -26,58 +28,17 @@ func NewArxObjectManager(buildingID string) *ArxObjectManager {
 	}
 }
 
-// ArxObjectMetadata represents enhanced metadata for ArxObjects
-type ArxObjectMetadata struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type"`
-	Description string                 `json:"description,omitempty"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
-	Location    *Location              `json:"location,omitempty"`
-	Parent      string                 `json:"parent,omitempty"`
-	Children    []string               `json:"children,omitempty"`
-	Status      string                 `json:"status"`
-	Created     time.Time              `json:"created"`
-	Updated     time.Time              `json:"updated"`
+// ArxObjectMetadata is re-exported from models package
+type ArxObjectMetadata = models.ArxObjectMetadata
 
-	// Advanced metadata
-	ValidationStatus string                 `json:"validation_status,omitempty"`
-	Confidence       float64                `json:"confidence,omitempty"`
-	Tags             []string               `json:"tags,omitempty"`
-	Flags            uint32                 `json:"flags,omitempty"`
-	Hash             string                 `json:"hash,omitempty"`
-	Version          int                    `json:"version,omitempty"`
-	SourceType       string                 `json:"source_type,omitempty"`
-	SourceFile       string                 `json:"source_file,omitempty"`
-	SourcePage       int                    `json:"source_page,omitempty"`
-	ValidatedAt      *time.Time             `json:"validated_at,omitempty"`
-	Relationships    []RelationshipMetadata `json:"relationships,omitempty"`
-	Validations      []ValidationMetadata   `json:"validations,omitempty"`
-}
+// Location is re-exported from models package  
+type Location = models.Location
 
-// RelationshipMetadata represents relationships between ArxObjects
-type RelationshipMetadata struct {
-	ID         string                 `json:"id"`
-	Type       string                 `json:"type"`
-	TargetID   string                 `json:"target_id"`
-	SourceID   string                 `json:"source_id"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
-	Confidence float64                `json:"confidence"`
-	CreatedAt  time.Time              `json:"created_at"`
-	Direction  string                 `json:"direction,omitempty"` // "incoming", "outgoing", "bidirectional"
-}
+// RelationshipMetadata is re-exported from models package
+type RelationshipMetadata = models.RelationshipMetadata
 
-// ValidationMetadata represents validation records for ArxObjects
-type ValidationMetadata struct {
-	ID          string                 `json:"id"`
-	Timestamp   time.Time              `json:"timestamp"`
-	ValidatedBy string                 `json:"validated_by"`
-	Method      string                 `json:"method"`
-	Evidence    map[string]interface{} `json:"evidence,omitempty"`
-	Confidence  float64                `json:"confidence"`
-	Notes       string                 `json:"notes,omitempty"`
-	Status      string                 `json:"status"` // "pending", "approved", "rejected"
-}
+// ValidationMetadata is re-exported from models package
+type ValidationMetadata = models.ValidationMetadata
 
 // ArxObjectLifecycle represents the lifecycle state of an ArxObject
 type ArxObjectLifecycle struct {
@@ -93,11 +54,11 @@ type ArxObjectLifecycle struct {
 }
 
 // LoadArxObject loads an ArxObject from the filesystem
-func (m *ArxObjectManager) LoadArxObject(objectID string) (*ArxObjectMetadata, error) {
+func (m *ArxObjectManager) LoadArxObject(objectID string) (*models.ArxObjectMetadata, error) {
 	// Try to load from individual object file first
 	objectPath := filepath.Join(m.ObjectsDir, fmt.Sprintf("%s.json", objectID))
 	if data, err := os.ReadFile(objectPath); err == nil {
-		var obj ArxObjectMetadata
+		var obj models.ArxObjectMetadata
 		if err := json.Unmarshal(data, &obj); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal ArxObject %s: %w", objectID, err)
 		}
@@ -124,7 +85,7 @@ func (m *ArxObjectManager) LoadArxObject(objectID string) (*ArxObjectMetadata, e
 }
 
 // loadArxObjectByType loads an ArxObject based on its type
-func (m *ArxObjectManager) loadArxObjectByType(objectID string, index *ArxObjectIndex) (*ArxObjectMetadata, error) {
+func (m *ArxObjectManager) loadArxObjectByType(objectID string, index *ArxObjectIndex) (*models.ArxObjectMetadata, error) {
 	// Determine object type from ID
 	var objType string
 	if strings.Contains(objectID, ":floor:") {
@@ -155,7 +116,7 @@ func (m *ArxObjectManager) loadArxObjectByType(objectID string, index *ArxObject
 	if data, err := os.ReadFile(filePath); err != nil {
 		return nil, fmt.Errorf("failed to read ArxObject file %s: %w", filePath, err)
 	} else {
-		var obj ArxObjectMetadata
+		var obj models.ArxObjectMetadata
 		if err := json.Unmarshal(data, &obj); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal ArxObject from %s: %w", filePath, err)
 		}
@@ -164,7 +125,7 @@ func (m *ArxObjectManager) loadArxObjectByType(objectID string, index *ArxObject
 }
 
 // SaveArxObject saves an ArxObject to the filesystem
-func (m *ArxObjectManager) SaveArxObject(obj *ArxObjectMetadata) error {
+func (m *ArxObjectManager) SaveArxObject(obj *models.ArxObjectMetadata) error {
 	// Ensure objects directory exists
 	if err := os.MkdirAll(m.ObjectsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create objects directory: %w", err)
@@ -188,7 +149,7 @@ func (m *ArxObjectManager) SaveArxObject(obj *ArxObjectMetadata) error {
 }
 
 // updateIndex updates the ArxObject index with a new/modified object
-func (m *ArxObjectManager) updateIndex(obj *ArxObjectMetadata) error {
+func (m *ArxObjectManager) updateIndex(obj *models.ArxObjectMetadata) error {
 	index, err := m.LoadIndex()
 	if err != nil {
 		// Create new index if it doesn't exist

@@ -1,0 +1,25 @@
+{
+  "id": "building:hq:floor:2:room:202",
+  "name": "Room 202",
+  "type": "room",
+  "description": "Office room on floor 2",
+  "properties": {
+    "area": "200 sqm",
+    "capacity": 4,
+    "type": "office"
+  },
+  "location": {
+    "x": 5,
+    "y": 0,
+    "z": 6,
+    "floor": 2,
+    "room": "202",
+    "building": ""
+  },
+  "parent": "building:hq:floor:2",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.273897-04:00",
+  "updated": "2025-08-26T22:06:27.273898Z",
+  "validation_status": "pending",
+  "confidence": 0.85
+}

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arxos/arxos/cmd/models"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -334,7 +335,7 @@ type ArxObject struct {
 	Type        string                 `json:"type"`
 	Description string                 `json:"description,omitempty"`
 	Properties  map[string]interface{} `json:"properties,omitempty"`
-	Location    *Location              `json:"location,omitempty"`
+	Location    *models.Location              `json:"location,omitempty"`
 	Children    []*ArxObject           `json:"children,omitempty"`
 	Parent      string                 `json:"parent,omitempty"`
 	Status      string                 `json:"status"`
@@ -342,15 +343,6 @@ type ArxObject struct {
 	Updated     time.Time              `json:"updated"`
 }
 
-// Location represents the spatial location of an ArxObject
-type Location struct {
-	X        float64 `json:"x"`              // X coordinate in millimeters
-	Y        float64 `json:"y"`              // Y coordinate in millimeters
-	Z        float64 `json:"z"`              // Z coordinate in millimeters
-	Floor    int     `json:"floor"`          // Floor number
-	Room     string  `json:"room,omitempty"` // Room identifier
-	Building string  `json:"building"`       // Building identifier
-}
 
 // initializeArxObjectHierarchy creates the core building hierarchy
 func initializeArxObjectHierarchy(buildingID string, options *InitOptions) error {
@@ -395,7 +387,7 @@ func initializeArxObjectHierarchy(buildingID string, options *InitOptions) error
 				"height":       3000, // 3 meters in millimeters
 				"area":         options.Area,
 			},
-			Location: &Location{
+			Location: &models.Location{
 				Z:        float64((i - 1) * 3000), // Stack floors vertically
 				Floor:    i,
 				Building: buildingID,

@@ -1,0 +1,299 @@
+{
+  "building_id": "building:hq",
+  "total_count": 9,
+  "by_type": {
+    "building": [
+      "building:hq"
+    ],
+    "door": [
+      "building:hq:floor:1:room:101:door:main",
+      "building:hq:floor:1:room:102:door:main",
+      "building:hq:floor:1:room:103:door:main",
+      "building:hq:floor:1:room:104:door:main",
+      "building:hq:floor:2:room:201:door:main",
+      "building:hq:floor:2:room:202:door:main",
+      "building:hq:floor:2:room:203:door:main",
+      "building:hq:floor:2:room:204:door:main",
+      "building:hq:floor:3:room:301:door:main",
+      "building:hq:floor:3:room:302:door:main",
+      "building:hq:floor:3:room:303:door:main",
+      "building:hq:floor:3:room:304:door:main"
+    ],
+    "equipment": [
+      "building:hq:floor:1:equipment:hvac-unit-1",
+      "building:hq:floor:1:equipment:electrical-panel-1",
+      "building:hq:floor:1:equipment:plumbing-valve-1",
+      "building:hq:floor:2:equipment:hvac-unit-2",
+      "building:hq:floor:2:equipment:electrical-panel-2",
+      "building:hq:floor:2:equipment:plumbing-valve-2",
+      "building:hq:floor:3:equipment:hvac-unit-3",
+      "building:hq:floor:3:equipment:electrical-panel-3",
+      "building:hq:floor:3:equipment:plumbing-valve-3"
+    ],
+    "floor": [
+      "building:hq:floor:1",
+      "building:hq:floor:2",
+      "building:hq:floor:3"
+    ],
+    "room": [
+      "building:hq:floor:1:room:101",
+      "building:hq:floor:1:room:102",
+      "building:hq:floor:1:room:103",
+      "building:hq:floor:1:room:104",
+      "building:hq:floor:2:room:201",
+      "building:hq:floor:2:room:202",
+      "building:hq:floor:2:room:203",
+      "building:hq:floor:2:room:204",
+      "building:hq:floor:3:room:301",
+      "building:hq:floor:3:room:302",
+      "building:hq:floor:3:room:303",
+      "building:hq:floor:3:room:304"
+    ],
+    "sensor": [
+      "building:hq:floor:1:sensor:temp-1-1",
+      "building:hq:floor:1:sensor:temp-1-2",
+      "building:hq:floor:1:sensor:temp-1-3",
+      "building:hq:floor:2:sensor:temp-2-1",
+      "building:hq:floor:2:sensor:temp-2-2",
+      "building:hq:floor:2:sensor:temp-2-3",
+      "building:hq:floor:3:sensor:temp-3-1",
+      "building:hq:floor:3:sensor:temp-3-2",
+      "building:hq:floor:3:sensor:temp-3-3"
+    ],
+    "system": [
+      "building:hq:system:electrical",
+      "building:hq:system:hvac",
+      "building:hq:system:automation",
+      "building:hq:system:plumbing",
+      "building:hq:system:fire_protection",
+      "building:hq:system:security",
+      "building:hq:system:fire"
+    ],
+    "wall": [
+      "building:hq:floor:1:room:101:wall:north",
+      "building:hq:floor:1:room:101:wall:south",
+      "building:hq:floor:1:room:101:wall:east",
+      "building:hq:floor:1:room:101:wall:west",
+      "building:hq:floor:1:room:102:wall:north",
+      "building:hq:floor:1:room:102:wall:south",
+      "building:hq:floor:1:room:102:wall:east",
+      "building:hq:floor:1:room:102:wall:west",
+      "building:hq:floor:1:room:103:wall:north",
+      "building:hq:floor:1:room:103:wall:south",
+      "building:hq:floor:1:room:103:wall:east",
+      "building:hq:floor:1:room:103:wall:west",
+      "building:hq:floor:1:room:104:wall:north",
+      "building:hq:floor:1:room:104:wall:south",
+      "building:hq:floor:1:room:104:wall:east",
+      "building:hq:floor:1:room:104:wall:west",
+      "building:hq:floor:2:room:201:wall:north",
+      "building:hq:floor:2:room:201:wall:south",
+      "building:hq:floor:2:room:201:wall:east",
+      "building:hq:floor:2:room:201:wall:west",
+      "building:hq:floor:2:room:202:wall:north",
+      "building:hq:floor:2:room:202:wall:south",
+      "building:hq:floor:2:room:202:wall:east",
+      "building:hq:floor:2:room:202:wall:west",
+      "building:hq:floor:2:room:203:wall:north",
+      "building:hq:floor:2:room:203:wall:south",
+      "building:hq:floor:2:room:203:wall:east",
+      "building:hq:floor:2:room:203:wall:west",
+      "building:hq:floor:2:room:204:wall:north",
+      "building:hq:floor:2:room:204:wall:south",
+      "building:hq:floor:2:room:204:wall:east",
+      "building:hq:floor:2:room:204:wall:west",
+      "building:hq:floor:3:room:301:wall:north",
+      "building:hq:floor:3:room:301:wall:south",
+      "building:hq:floor:3:room:301:wall:east",
+      "building:hq:floor:3:room:301:wall:west",
+      "building:hq:floor:3:room:302:wall:north",
+      "building:hq:floor:3:room:302:wall:south",
+      "building:hq:floor:3:room:302:wall:east",
+      "building:hq:floor:3:room:302:wall:west",
+      "building:hq:floor:3:room:303:wall:north",
+      "building:hq:floor:3:room:303:wall:south",
+      "building:hq:floor:3:room:303:wall:east",
+      "building:hq:floor:3:room:303:wall:west",
+      "building:hq:floor:3:room:304:wall:north",
+      "building:hq:floor:3:room:304:wall:south",
+      "building:hq:floor:3:room:304:wall:east",
+      "building:hq:floor:3:room:304:wall:west"
+    ],
+    "window": [
+      "building:hq:floor:1:room:102:window:main",
+      "building:hq:floor:1:room:104:window:main",
+      "building:hq:floor:2:room:202:window:main",
+      "building:hq:floor:2:room:204:window:main",
+      "building:hq:floor:3:room:302:window:main",
+      "building:hq:floor:3:room:304:window:main"
+    ]
+  },
+  "by_location": {
+    "floor_1": [
+      "building:hq:floor:1",
+      "building:hq:floor:1:room:101",
+      "building:hq:floor:1:room:102",
+      "building:hq:floor:1:room:103",
+      "building:hq:floor:1:room:104"
+    ],
+    "floor_2": [
+      "building:hq:floor:2",
+      "building:hq:floor:2:room:201",
+      "building:hq:floor:2:room:202",
+      "building:hq:floor:2:room:203",
+      "building:hq:floor:2:room:204"
+    ],
+    "floor_3": [
+      "building:hq:floor:3",
+      "building:hq:floor:3:room:301",
+      "building:hq:floor:3:room:302",
+      "building:hq:floor:3:room:303",
+      "building:hq:floor:3:room:304"
+    ],
+    "ground": [
+      "building:hq"
+    ]
+  },
+  "hierarchy": {
+    "building:hq": [
+      "building:hq:floor:1",
+      "building:hq:floor:2",
+      "building:hq:floor:3",
+      "building:hq:system:electrical",
+      "building:hq:system:hvac",
+      "building:hq:system:automation",
+      "building:hq:system:plumbing",
+      "building:hq:system:fire_protection",
+      "building:hq:system:security",
+      "building:hq:system:fire"
+    ],
+    "building:hq:floor:1": [
+      "building:hq:floor:1:room:101",
+      "building:hq:floor:1:room:102",
+      "building:hq:floor:1:room:103",
+      "building:hq:floor:1:room:104",
+      "building:hq:floor:1:equipment:hvac-unit-1",
+      "building:hq:floor:1:equipment:electrical-panel-1",
+      "building:hq:floor:1:equipment:plumbing-valve-1",
+      "building:hq:floor:1:sensor:temp-1-1",
+      "building:hq:floor:1:sensor:temp-1-2",
+      "building:hq:floor:1:sensor:temp-1-3"
+    ],
+    "building:hq:floor:1:room:101": [
+      "building:hq:floor:1:room:101:wall:north",
+      "building:hq:floor:1:room:101:wall:south",
+      "building:hq:floor:1:room:101:wall:east",
+      "building:hq:floor:1:room:101:wall:west",
+      "building:hq:floor:1:room:101:door:main"
+    ],
+    "building:hq:floor:1:room:102": [
+      "building:hq:floor:1:room:102:wall:north",
+      "building:hq:floor:1:room:102:wall:south",
+      "building:hq:floor:1:room:102:wall:east",
+      "building:hq:floor:1:room:102:wall:west",
+      "building:hq:floor:1:room:102:door:main",
+      "building:hq:floor:1:room:102:window:main"
+    ],
+    "building:hq:floor:1:room:103": [
+      "building:hq:floor:1:room:103:wall:north",
+      "building:hq:floor:1:room:103:wall:south",
+      "building:hq:floor:1:room:103:wall:east",
+      "building:hq:floor:1:room:103:wall:west",
+      "building:hq:floor:1:room:103:door:main"
+    ],
+    "building:hq:floor:1:room:104": [
+      "building:hq:floor:1:room:104:wall:north",
+      "building:hq:floor:1:room:104:wall:south",
+      "building:hq:floor:1:room:104:wall:east",
+      "building:hq:floor:1:room:104:wall:west",
+      "building:hq:floor:1:room:104:door:main",
+      "building:hq:floor:1:room:104:window:main"
+    ],
+    "building:hq:floor:2": [
+      "building:hq:floor:2:room:201",
+      "building:hq:floor:2:room:202",
+      "building:hq:floor:2:room:203",
+      "building:hq:floor:2:room:204",
+      "building:hq:floor:2:equipment:hvac-unit-2",
+      "building:hq:floor:2:equipment:electrical-panel-2",
+      "building:hq:floor:2:equipment:plumbing-valve-2",
+      "building:hq:floor:2:sensor:temp-2-1",
+      "building:hq:floor:2:sensor:temp-2-2",
+      "building:hq:floor:2:sensor:temp-2-3"
+    ],
+    "building:hq:floor:2:room:201": [
+      "building:hq:floor:2:room:201:wall:north",
+      "building:hq:floor:2:room:201:wall:south",
+      "building:hq:floor:2:room:201:wall:east",
+      "building:hq:floor:2:room:201:wall:west",
+      "building:hq:floor:2:room:201:door:main"
+    ],
+    "building:hq:floor:2:room:202": [
+      "building:hq:floor:2:room:202:wall:north",
+      "building:hq:floor:2:room:202:wall:south",
+      "building:hq:floor:2:room:202:wall:east",
+      "building:hq:floor:2:room:202:wall:west",
+      "building:hq:floor:2:room:202:door:main",
+      "building:hq:floor:2:room:202:window:main"
+    ],
+    "building:hq:floor:2:room:203": [
+      "building:hq:floor:2:room:203:wall:north",
+      "building:hq:floor:2:room:203:wall:south",
+      "building:hq:floor:2:room:203:wall:east",
+      "building:hq:floor:2:room:203:wall:west",
+      "building:hq:floor:2:room:203:door:main"
+    ],
+    "building:hq:floor:2:room:204": [
+      "building:hq:floor:2:room:204:wall:north",
+      "building:hq:floor:2:room:204:wall:south",
+      "building:hq:floor:2:room:204:wall:east",
+      "building:hq:floor:2:room:204:wall:west",
+      "building:hq:floor:2:room:204:door:main",
+      "building:hq:floor:2:room:204:window:main"
+    ],
+    "building:hq:floor:3": [
+      "building:hq:floor:3:room:301",
+      "building:hq:floor:3:room:302",
+      "building:hq:floor:3:room:303",
+      "building:hq:floor:3:room:304",
+      "building:hq:floor:3:equipment:hvac-unit-3",
+      "building:hq:floor:3:equipment:electrical-panel-3",
+      "building:hq:floor:3:equipment:plumbing-valve-3",
+      "building:hq:floor:3:sensor:temp-3-1",
+      "building:hq:floor:3:sensor:temp-3-2",
+      "building:hq:floor:3:sensor:temp-3-3"
+    ],
+    "building:hq:floor:3:room:301": [
+      "building:hq:floor:3:room:301:wall:north",
+      "building:hq:floor:3:room:301:wall:south",
+      "building:hq:floor:3:room:301:wall:east",
+      "building:hq:floor:3:room:301:wall:west",
+      "building:hq:floor:3:room:301:door:main"
+    ],
+    "building:hq:floor:3:room:302": [
+      "building:hq:floor:3:room:302:wall:north",
+      "building:hq:floor:3:room:302:wall:south",
+      "building:hq:floor:3:room:302:wall:east",
+      "building:hq:floor:3:room:302:wall:west",
+      "building:hq:floor:3:room:302:door:main",
+      "building:hq:floor:3:room:302:window:main"
+    ],
+    "building:hq:floor:3:room:303": [
+      "building:hq:floor:3:room:303:wall:north",
+      "building:hq:floor:3:room:303:wall:south",
+      "building:hq:floor:3:room:303:wall:east",
+      "building:hq:floor:3:room:303:wall:west",
+      "building:hq:floor:3:room:303:door:main"
+    ],
+    "building:hq:floor:3:room:304": [
+      "building:hq:floor:3:room:304:wall:north",
+      "building:hq:floor:3:room:304:wall:south",
+      "building:hq:floor:3:room:304:wall:east",
+      "building:hq:floor:3:room:304:wall:west",
+      "building:hq:floor:3:room:304:door:main",
+      "building:hq:floor:3:room:304:window:main"
+    ]
+  },
+  "created": "2025-08-26T22:04:01.648758Z",
+  "updated": "2025-08-26T22:06:27.286399Z"
+}

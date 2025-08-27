@@ -19,7 +19,7 @@ Supports SELECT, UPDATE, DELETE operations with spatial and relationship queries
 func init() {
 	// Add subcommands
 	QueryCmd.AddCommand(
-		selectCmd,
+		enhancedSelectCmd,  // Use enhanced version with ArxObject support
 		updateCmd,
 		validateCmd,
 		historyCmd,

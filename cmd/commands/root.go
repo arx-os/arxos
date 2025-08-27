@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	// "github.com/arxos/arxos/cmd/commands/query"
+	"github.com/arxos/arxos/cmd/commands/query"
 	// "github.com/arxos/arxos/cmd/commands/ingest"
 	// "github.com/arxos/arxos/cmd/commands/export"    // TODO: Implement
 	// "github.com/arxos/arxos/cmd/commands/validate"  // TODO: Implement
@@ -59,7 +59,7 @@ func init() {
 	// Add command categories - temporarily only init command
 	RootCmd.AddCommand(
 		InitCmd, // Building initialization
-		// query.QueryCmd,        // Temporarily disabled
+		query.QueryCmd,        // AQL query system
 		// ingest.IngestCmd,      // Temporarily disabled
 		// export.ExportCmd,      // TODO: Implement
 		// validate.ValidateCmd,  // TODO: Implement
@@ -81,6 +81,22 @@ func init() {
 		ArxObjectCmd, // Added for Phase 10 Sprint 2 - Advanced ArxObject Management
 		DashboardCmd, // Added for Phase 10 Sprint 3 - Real-time Intelligence
 		AlertsCmd,    // Added for Phase 10 Sprint 3 - Alert Management
+		
+		// New V2 commands
+		cdV2Cmd,      // New navigation with underscore naming
+		lsV2Cmd,      // New listing with underscore naming  
+		pwdV2Cmd,     // New pwd with context
+		ViewCmd,      // ASCII-BIM visualization
+		MinecraftCmd, // Minecraft-style commands
+		PokemonGoCmd, // AR field technician commands
+		TeleportCmd,  // Minecraft-style teleport
+		WhereAmICmd,  // Show current location
+		HardwareCmd,  // Hardware/DfM commands
+		ConnectionsCmd, // Cross-system connections
+		DependsCmd,   // System dependencies
+		ImportCmd,    // Import from PDF/CSV
+		TestSiteCmd,  // Quick test site import
+		DemoCmd,      // Demo visualizations
 	)
 }
 

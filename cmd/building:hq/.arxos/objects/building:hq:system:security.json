@@ -1,0 +1,18 @@
+{
+  "id": "building:hq:system:security",
+  "name": "Security System",
+  "type": "system",
+  "description": "Access control and surveillance",
+  "properties": {
+    "lastChecked": "2024-08-01",
+    "maintenance": "scheduled",
+    "operational": true,
+    "redundancy": "N+1",
+    "systemType": "security"
+  },
+  "parent": "building:hq",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.286094-04:00",
+  "updated": "2025-08-26T22:06:27.286099Z",
+  "confidence": 0.85
+}

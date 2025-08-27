@@ -47,15 +47,15 @@ func runTemplates(cmd *cobra.Command, args []string) error {
 		category = args[0]
 	}
 
-	useTemplate, _ := cmd.Flags().GetString("use")
-	params, _ := cmd.Flags().GetString("params")
+	templateName, _ := cmd.Flags().GetString("use")
+	templateParams, _ := cmd.Flags().GetString("params")
 	listMode, _ := cmd.Flags().GetBool("list")
 	filterCategory, _ := cmd.Flags().GetString("category")
-	format, _ := cmd.Flags().GetString("format")
+	outputFormat, _ := cmd.Flags().GetString("format")
 
 	// Handle different modes
-	if useTemplate != "" {
-		return useTemplate(useTemplate, params, format)
+	if templateName != "" {
+		return useQueryTemplate(templateName, templateParams, outputFormat)
 	} else if listMode {
 		return listTemplates(category, filterCategory)
 	} else {
@@ -311,6 +311,12 @@ func listTemplates(category, filterCategory string) error {
 
 	display := NewResultDisplay("table", "default")
 	return display.DisplayResult(result)
+}
+
+func useQueryTemplate(templateName string, params string, format string) error {
+	// TODO: Implement template usage
+	fmt.Printf("Using template: %s with params: %s and format: %s\n", templateName, params, format)
+	return nil
 }
 
 func showTemplates(category string) error {

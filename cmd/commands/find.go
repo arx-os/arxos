@@ -19,6 +19,9 @@ Examples:
   arx find status:active                   # Find active objects
   arx find path:/systems/*                 # Find objects in systems directory
   arx find "hvac" type:system             # Combined text and type filter
+  arx find type:hardware                   # Find hardware components
+  arx find type:pcb                        # Find PCB designs
+  arx find system:hardware                 # Find all hardware objects
 
 Query Syntax:
   Text: "search term"                      # Search in names and descriptions
@@ -26,6 +29,7 @@ Query Syntax:
   Status: status:active                    # Filter by status
   Path: path:/systems/*                    # Filter by path pattern
   Properties: area>1000                   # Filter by property values
+  System: system:hardware                  # Filter by system (hardware, electrical, hvac)
 
 Flags:
   --limit: Maximum number of results (default: 50)

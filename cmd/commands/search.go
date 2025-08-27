@@ -11,6 +11,27 @@ import (
 // SEARCH ENGINE CORE
 // ============================================================================
 
+// ArxObjectIndexer placeholder - will be integrated with C core
+type ArxObjectIndexer struct {
+	// TODO: Integrate with actual ArxObject indexing from C core
+}
+
+// GetAllObjects placeholder method
+func (idx *ArxObjectIndexer) GetAllObjects() ([]map[string]interface{}, error) {
+	// TODO: Implement actual object retrieval from C core
+	return []map[string]interface{}{}, nil
+}
+
+// Helper function to get string from map
+func getStringFromMap(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
 // SearchEngine provides advanced search capabilities for building data
 type SearchEngine struct {
 	indexer *ArxObjectIndexer
@@ -144,7 +165,13 @@ func (se *SearchEngine) executeSearch(query *Query) ([]SearchHit, error) {
 	}
 	
 	// Apply filters
-	for _, obj := range objects {
+	for _, objMap := range objects {
+		// Convert map to ArxObjectMetadata (temporary)
+		obj := &ArxObjectMetadata{
+			ID:   getStringFromMap(objMap, "id"),
+			Type: getStringFromMap(objMap, "type"),
+			Name: getStringFromMap(objMap, "name"),
+		}
 		hit := se.objectToSearchHit(obj)
 		
 		// Apply text filter

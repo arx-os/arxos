@@ -1,0 +1,19 @@
+{
+  "id": "building:hq:floor:2:sensor:temp-2-1",
+  "name": "Temperature Sensor 2-1",
+  "type": "sensor",
+  "description": "Temperature sensor 1 on floor 2",
+  "properties": {
+    "accuracy": 0.1,
+    "lastUpdate": "2025-08-26T18:06:27-04:00",
+    "reading": 20.549037949183884,
+    "sensorType": "temperature",
+    "unit": "celsius"
+  },
+  "parent": "building:hq:floor:2",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.278834-04:00",
+  "updated": "2025-08-26T22:06:27.278836Z",
+  "validation_status": "validated",
+  "confidence": 0.95
+}

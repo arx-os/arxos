@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:1:equipment:hvac-unit-1",
+  "name": "hvac-unit-1",
+  "type": "equipment",
+  "description": "hvac equipment on floor 1",
+  "properties": {
+    "equipmentType": "hvac",
+    "maintenance": "scheduled",
+    "powerUsage": 4812,
+    "system": "HVAC"
+  },
+  "parent": "building:hq:floor:1",
+  "status": "operational",
+  "created": "2025-08-26T18:06:27.271137-04:00",
+  "updated": "2025-08-26T22:06:27.271139Z",
+  "confidence": 0.75
+}

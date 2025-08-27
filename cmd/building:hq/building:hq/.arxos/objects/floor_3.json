@@ -1,0 +1,20 @@
+{
+  "id": "building:hq:floor:3",
+  "name": "Floor 3",
+  "type": "floor",
+  "description": "Floor 3 of building building:hq",
+  "properties": {
+    "area": "50,000 sq ft",
+    "floor_number": 3,
+    "height": 3000
+  },
+  "location": {
+    "floor": 3,
+    "building": "building:hq",
+    "z": 6000
+  },
+  "parent": "building:hq",
+  "status": "active",
+  "created": "2025-08-26T22:27:20.003162Z",
+  "updated": "2025-08-26T22:27:20.003162Z"
+}

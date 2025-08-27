@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:1:room:103:wall:north",
+  "name": "Wall-north-103",
+  "type": "wall",
+  "description": "north wall of room 103",
+  "properties": {
+    "fireRated": true,
+    "height": 2.4,
+    "material": "drywall",
+    "thickness": 0.2
+  },
+  "parent": "building:hq:floor:1:room:103",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.268678-04:00",
+  "updated": "2025-08-26T22:06:27.26868Z",
+  "confidence": 0.9402659605492224
+}

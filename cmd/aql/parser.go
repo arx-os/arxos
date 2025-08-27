@@ -80,6 +80,7 @@ func (p *Parser) parseSelect() (*Query, error) {
 	token := p.scanner.Scan()
 	if token.Type == TOKEN_ASTERISK {
 		query.Fields = append(query.Fields, "*")
+		token = p.scanner.Scan() // Get next token after *
 	} else {
 		// Parse field list
 		for {
@@ -104,8 +105,14 @@ func (p *Parser) parseSelect() (*Query, error) {
 	token = p.scanner.Scan()
 	query.Target = token.Value
 	
-	// Parse WHERE (optional)
+	// Check if target ends with : and next token is * (for patterns like building:*)
 	token = p.scanner.Scan()
+	if strings.HasSuffix(query.Target, ":") && token.Type == TOKEN_ASTERISK {
+		query.Target += "*"
+		token = p.scanner.Scan() // Get token after asterisk
+	}
+	
+	// Parse WHERE (optional)
 	if token.Type != TOKEN_EOF && strings.ToUpper(token.Value) == "WHERE" {
 		conditions, err := p.parseConditions()
 		if err != nil {

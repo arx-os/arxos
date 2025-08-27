@@ -1,0 +1,51 @@
+{
+  "building_id": "building:demo",
+  "total_count": 10,
+  "by_type": {
+    "building": [
+      "building:demo"
+    ],
+    "floor": [
+      "building:demo:floor:1",
+      "building:demo:floor:2",
+      "building:demo:floor:3"
+    ],
+    "system": [
+      "building:demo:system:security",
+      "building:demo:system:electrical",
+      "building:demo:system:hvac",
+      "building:demo:system:automation",
+      "building:demo:system:plumbing",
+      "building:demo:system:fire_protection"
+    ]
+  },
+  "by_location": {
+    "floor_1": [
+      "building:demo:floor:1"
+    ],
+    "floor_2": [
+      "building:demo:floor:2"
+    ],
+    "floor_3": [
+      "building:demo:floor:3"
+    ],
+    "ground": [
+      "building:demo"
+    ]
+  },
+  "hierarchy": {
+    "building:demo": [
+      "building:demo:floor:1",
+      "building:demo:floor:2",
+      "building:demo:floor:3",
+      "building:demo:system:security",
+      "building:demo:system:electrical",
+      "building:demo:system:hvac",
+      "building:demo:system:automation",
+      "building:demo:system:plumbing",
+      "building:demo:system:fire_protection"
+    ]
+  },
+  "created": "2025-08-26T21:06:00.261226Z",
+  "updated": "2025-08-26T21:06:00.261226Z"
+}

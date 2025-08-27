@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/arxos/core/internal/deployment"
+	// "github.com/arxos/core/internal/deployment"
 )
 
 var statusCmd = &cobra.Command{

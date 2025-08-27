@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:3:equipment:plumbing-valve-3",
+  "name": "plumbing-valve-3",
+  "type": "equipment",
+  "description": "plumbing equipment on floor 3",
+  "properties": {
+    "equipmentType": "plumbing",
+    "maintenance": "scheduled",
+    "powerUsage": 3492,
+    "system": "Plumbing"
+  },
+  "parent": "building:hq:floor:3",
+  "status": "operational",
+  "created": "2025-08-26T18:06:27.284963-04:00",
+  "updated": "2025-08-26T22:06:27.284965Z",
+  "confidence": 0.75
+}

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/arxos/core/internal/state"
+	// "github.com/arxos/core/internal/state"
 )
 
 var listCmd = &cobra.Command{

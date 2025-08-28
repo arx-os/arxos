@@ -1,46 +1,47 @@
-# Test Suite
+# ArxOS Test Suite
 
-Comprehensive testing framework for the ARXOS platform.
-
-## Purpose
-
-This directory contains integration tests, load tests, and test utilities for validating ARXOS functionality across all components.
+Clean test structure for the ArxOS codebase.
 
 ## Structure
 
 ```
 tests/
-├── load/                 # Load testing and performance tests
-├── test_integration.sh   # Integration test runner
-├── test_local_server.sh  # Local server test script
-└── test_server.go        # Test HTTP server
+├── unit/           # Unit tests for individual components
+├── integration/    # Integration tests for service interactions
+├── e2e/           # End-to-end tests for complete workflows
+└── scripts/       # Test helper scripts
 ```
-
-## Test Types
-
-- **Integration Tests**: End-to-end system validation
-- **Load Tests**: Performance and scalability testing
-- **Local Tests**: Development environment validation
 
 ## Running Tests
 
+### All Tests
 ```bash
-# Run integration tests
-./test_integration.sh
-
-# Run local server tests
-./test_local_server.sh
-
-# Start test server
-go run test_server.go
+make test
 ```
 
-## Documentation
+### Unit Tests Only
+```bash
+make test-unit
+```
 
-For testing details, see [Development Guide](../../docs/development/guide.md#testing-strategy).
+### Integration Tests
+```bash
+make test-integration
+```
 
-## Unit Tests
+### E2E Tests
+```bash
+make test-e2e
+```
 
-Unit tests are located within their respective component directories:
-- Backend tests: `core/backend/tests/`
-- AI service tests: `ai_service/tests/`
+## Test Coverage
+
+```bash
+make test-coverage
+```
+
+## Adding New Tests
+
+1. Unit tests go next to the code they test with `_test.go` suffix
+2. Integration tests go in `tests/integration/`
+3. E2E tests simulate real user workflows in `tests/e2e/`

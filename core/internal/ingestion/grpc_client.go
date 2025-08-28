@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arxos/arxos/proto/ingestion"
+	"github.com/arxos/arxos/core/proto/ingestion"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"

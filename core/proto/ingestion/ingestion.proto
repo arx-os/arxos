@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package arxos.ingestion;
 
-option go_package = "github.com/arxos/arxos/proto/ingestion";
+option go_package = "github.com/arxos/arxos/core/proto/ingestion";
 
 // Service definition for AI-powered ingestion pipeline
 service IngestionService {

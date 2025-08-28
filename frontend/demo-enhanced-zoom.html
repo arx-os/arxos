@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arxos Enhanced Zoom Demo - Smooth Infinite Zoom from Campus to Submicron</title>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Arxos Correct Architecture Scripts -->
+    <script src="js/svg-arxobject-integration.js"></script>
+    <script src="js/arxos-three-renderer.js"></script>
+    <script src="js/arxos-correct-integration.js"></script>
+    <script src="js/arxos-test-suite.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            overflow: hidden;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .controls-panel {
+            position: fixed;
+            left: 20px;
+            top: 120px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .controls-panel h3 {
+            margin-bottom: 15px;
+            color: #1e3c72;
+            font-size: 1.1rem;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .zoom-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .zoom-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .zoom-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .zoom-button.active {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            transform: scale(1.05);
+        }
+
+        .zoom-info {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .zoom-info h4 {
+            margin-bottom: 10px;
+            color: #1e3c72;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .info-value {
+            color: #333;
+        }
+
+        .test-panel {
+            position: fixed;
+            right: 20px;
+            top: 120px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .test-panel h3 {
+            margin-bottom: 15px;
+            color: #1e3c72;
+            font-size: 1.1rem;
+        }
+
+        .test-button {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .test-results {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+        }
+
+        .status-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .status-text {
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+
+        .status-details {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .three-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            z-index: 2000;
+            font-size: 1.2rem;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏗️ Arxos Enhanced Zoom Demo</h1>
+        <p>Smooth Infinite Zoom from Campus to Submicron Levels</p>
+    </div>
+
+    <div class="controls-panel">
+        <h3>🎯 Zoom Controls</h3>
+        
+        <div class="control-group">
+            <label>Quick Zoom Levels:</label>
+            <div class="zoom-buttons">
+                <button class="zoom-button" data-zoom="campus">Campus</button>
+                <button class="zoom-button" data-zoom="building">Building</button>
+                <button class="zoom-button" data-zoom="floor">Floor</button>
+                <button class="zoom-button" data-zoom="room">Room</button>
+                <button class="zoom-button" data-zoom="equipment">Equipment</button>
+                <button class="zoom-button" data-zoom="component">Component</button>
+                <button class="zoom-button" data-zoom="detail">Detail</button>
+                <button class="zoom-button" data-zoom="submicron">Submicron</button>
+            </div>
+        </div>
+
+        <div class="zoom-info">
+            <h4>Current Zoom Info</h4>
+            <div class="info-row">
+                <span class="info-label">Level:</span>
+                <span class="info-value" id="current-level">Room</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Scale:</span>
+                <span class="info-value" id="current-scale">1.0</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Precision:</span>
+                <span class="info-value" id="current-precision">Decimeter</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Units:</span>
+                <span class="info-value" id="current-units">dm</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Camera Controls:</label>
+            <button class="zoom-button" id="reset-camera">Reset Camera</button>
+            <button class="zoom-button" id="toggle-grid">Toggle Grid</button>
+        </div>
+    </div>
+
+    <div class="test-panel">
+        <h3>🧪 Test Suite</h3>
+        <button class="test-button" id="run-tests">Run All Tests</button>
+        <button class="test-button" id="test-zoom">Test Zoom System</button>
+        <button class="test-button" id="test-performance">Test Performance</button>
+        
+        <div class="test-results" id="test-results">
+            <div>Click "Run All Tests" to start testing...</div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div class="status-text" id="status-text">Initializing Arxos...</div>
+        <div class="status-details" id="status-details">Loading SVG + ArxObject integration...</div>
+    </div>
+
+    <div class="three-container" id="three-container"></div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Initializing Arxos Architecture...</div>
+    </div>
+
+    <script>
+        let arxos = null;
+        let testSuite = null;
+        let currentZoomLevel = 'room';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initializeArxos();
+                setupEventHandlers();
+                loadDemoSVGBIM();
+                hideLoading();
+            } catch (error) {
+                console.error('Failed to initialize:', error);
+                updateStatus('Initialization failed', error.message, 'error');
+            }
+        });
+
+        async function initializeArxos() {
+            updateStatus('Initializing Arxos Architecture...', 'Setting up SVG + ArxObject + Three.js integration...');
+            
+            // Initialize Arxos integration
+            arxos = new ArxosCorrectIntegration({
+                enableRealtimeUpdates: true,
+                enablePerformanceMonitoring: true
+            });
+            
+            await arxos.init();
+            
+            // Initialize test suite
+            testSuite = new ArxosTestSuite();
+            
+            updateStatus('Arxos initialized successfully', 'Ready for smooth infinite zoom from campus to submicron');
+        }
+
+        function setupEventHandlers() {
+            // Zoom level buttons
+            document.querySelectorAll('.zoom-button[data-zoom]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const zoomLevel = button.dataset.zoom;
+                    setZoomLevel(zoomLevel);
+                    updateZoomButtonStates(zoomLevel);
+                });
+            });
+
+            // Camera controls
+            document.getElementById('reset-camera').addEventListener('click', () => {
+                if (arxos && arxos.threeRenderer) {
+                    arxos.threeRenderer.resetCamera();
+                    updateStatus('Camera reset', 'Camera position restored to default');
+                }
+            });
+
+            document.getElementById('toggle-grid').addEventListener('click', () => {
+                if (arxos && arxos.threeRenderer) {
+                    arxos.threeRenderer.toggleGrid();
+                    updateStatus('Grid toggled', 'Grid visibility changed');
+                }
+            });
+
+            // Test buttons
+            document.getElementById('run-tests').addEventListener('click', runAllTests);
+            document.getElementById('test-zoom').addEventListener('click', testZoomSystem);
+            document.getElementById('test-performance').addEventListener('click', testPerformance);
+
+            // Listen for zoom changes
+            document.addEventListener('arxos:zoomLevelChanged', (event) => {
+                updateZoomInfo(event.detail);
+            });
+
+            // Listen for zoom transitions
+            document.addEventListener('arxos:zoomTransitionCompleted', (event) => {
+                updateStatus(`Zoomed to ${event.detail.level}`, 
+                           `${event.detail.config.description} - ${event.detail.config.precision} precision`);
+            });
+        }
+
+        async function setZoomLevel(level) {
+            if (!arxos || !arxos.threeRenderer) return;
+            
+            try {
+                updateStatus(`Zooming to ${level}...`, 'Applying smooth zoom transition...');
+                await arxos.setZoomLevel(level, true);
+                currentZoomLevel = level;
+                updateZoomInfo({ level: level });
+            } catch (error) {
+                console.error('Zoom failed:', error);
+                updateStatus('Zoom failed', error.message, 'error');
+            }
+        }
+
+        function updateZoomButtonStates(activeLevel) {
+            document.querySelectorAll('.zoom-button[data-zoom]').forEach(button => {
+                button.classList.toggle('active', button.dataset.zoom === activeLevel);
+            });
+        }
+
+        function updateZoomInfo(zoomData) {
+            if (!arxos || !arxos.threeRenderer) return;
+            
+            const zoomInfo = arxos.threeRenderer.getZoomInfo();
+            
+            document.getElementById('current-level').textContent = zoomInfo.level;
+            document.getElementById('current-scale').textContent = zoomInfo.scale.toFixed(6);
+            document.getElementById('current-precision').textContent = zoomInfo.precision;
+            document.getElementById('current-units').textContent = zoomInfo.units;
+            
+            updateZoomButtonStates(zoomInfo.level);
+        }
+
+        async function loadDemoSVGBIM() {
+            if (!arxos) return;
+            
+            try {
+                updateStatus('Loading demo SVG BIM...', 'Creating sample building model...');
+                
+                const demoSVG = createDemoSVG();
+                const demoArxObjects = createDemoArxObjects();
+                
+                await arxos.loadSVGBIMModel(demoSVG, demoArxObjects);
+                
+                updateStatus('Demo model loaded', 'Ready for smooth infinite zoom exploration');
+            } catch (error) {
+                console.error('Failed to load demo model:', error);
+                updateStatus('Demo loading failed', error.message, 'error');
+            }
+        }
+
+        function createDemoSVG() {
+            return `
+                <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Building outline -->
+                    <rect id="building-outline" x="100" y="100" width="600" height="400" 
+                          data-arxobject='{"id":"building-outline","type":"building","properties":{"name":"Demo Building","floors":3},"coordinates":{"x":100,"y":100,"width":600,"height":400}}' />
+                    
+                    <!-- Floors -->
+                    <rect id="floor-1" x="120" y="120" width="560" height="120" 
+                          data-arxobject='{"id":"floor-1","type":"floor","properties":{"level":1,"height":3.0},"coordinates":{"x":120,"y":120,"width":560,"height":120}}' />
+                    
+                    <rect id="floor-2" x="120" y="260" width="560" height="120" 
+                          data-arxobject='{"id":"floor-2","type":"floor","properties":{"level":2,"height":3.0},"coordinates":{"x":120,"y":260,"width":560,"height":120}}' />
+                    
+                    <rect id="floor-3" x="120" y="400" width="560" height="80" 
+                          data-arxobject='{"id":"floor-3","type":"floor","properties":{"level":3,"height":2.5},"coordinates":{"x":120,"y":400,"width":560,"height":80}}' />
+                    
+                    <!-- Rooms on floor 1 -->
+                    <rect id="room-1-1" x="140" y="140" width="200" height="80" 
+                          data-arxobject='{"id":"room-1-1","type":"room","properties":{"name":"Conference Room","area":16.0},"coordinates":{"x":140,"y":140,"width":200,"height":80}}' />
+                    
+                    <rect id="room-1-2" x="360" y="140" width="200" height="80" 
+                          data-arxobject='{"id":"room-1-2","type":"room","properties":{"name":"Office Space","area":16.0},"coordinates":{"x":360,"y":140,"width":200,"height":80}}' />
+                    
+                    <!-- Equipment -->
+                    <rect id="equipment-1" x="160" y="160" width="40" height="40" 
+                          data-arxobject='{"id":"equipment-1","type":"equipment","properties":{"name":"Projector","type":"AV"},"coordinates":{"x":160,"y":160,"width":40,"height":40}}' />
+                    
+                    <rect id="equipment-2" x="380" y="160" width="40" height="40" 
+                          data-arxobject='{"id":"equipment-2","type":"equipment","properties":{"name":"Workstation","type":"Computer"},"coordinates":{"x":380,"y":160,"width":40,"height":40}}' />
+                    
+                    <!-- Components -->
+                    <rect id="component-1" x="170" y="170" width="20" height="20" 
+                          data-arxobject='{"id":"component-1","type":"component","properties":{"name":"Lens","material":"Glass"},"coordinates":{"x":170,"y":170,"width":20,"height":20}}' />
+                    
+                    <rect id="component-2" x="390" y="170" width="20" height="20" 
+                          data-arxobject='{"id":"component-2","type":"component","properties":{"name":"CPU","material":"Silicon"},"coordinates":{"x":390,"y":170,"width":20,"height":20}}' />
+                </svg>
+            `;
+        }
+
+        function createDemoArxObjects() {
+            return [
+                {
+                    id: 'building-outline',
+                    type: 'building',
+                    properties: {
+                        name: 'Demo Building',
+                        floors: 3,
+                        totalHeight: 8.5,
+                        constructionYear: 2024
+                    },
+                    coordinates: { x: 100, y: 100, width: 600, height: 400, z: 0 }
+                },
+                {
+                    id: 'floor-1',
+                    type: 'floor',
+                    properties: {
+                        level: 1,
+                        height: 3.0,
+                        material: 'Concrete',
+                        loadCapacity: '500 kg/m²'
+                    },
+                    coordinates: { x: 120, y: 120, width: 560, height: 120, z: 0 }
+                },
+                {
+                    id: 'floor-2',
+                    type: 'floor',
+                    properties: {
+                        level: 2,
+                        height: 3.0,
+                        material: 'Concrete',
+                        loadCapacity: '500 kg/m²'
+                    },
+                    coordinates: { x: 120, y: 260, width: 560, height: 120, z: 3.0 }
+                },
+                {
+                    id: 'floor-3',
+                    type: 'floor',
+                    properties: {
+                        level: 3,
+                        height: 2.5,
+                        material: 'Concrete',
+                        loadCapacity: '300 kg/m²'
+                    },
+                    coordinates: { x: 120, y: 400, width: 560, height: 80, z: 6.0 }
+                },
+                {
+                    id: 'room-1-1',
+                    type: 'room',
+                    properties: {
+                        name: 'Conference Room',
+                        area: 16.0,
+                        capacity: 12,
+                        lighting: 'LED',
+                        hvac: 'VAV'
+                    },
+                    coordinates: { x: 140, y: 140, width: 200, height: 80, z: 0 }
+                },
+                {
+                    id: 'room-1-2',
+                    type: 'room',
+                    properties: {
+                        name: 'Office Space',
+                        area: 16.0,
+                        capacity: 8,
+                        lighting: 'LED',
+                        hvac: 'VAV'
+                    },
+                    coordinates: { x: 360, y: 140, width: 200, height: 80, z: 0 }
+                },
+                {
+                    id: 'equipment-1',
+                    type: 'equipment',
+                    properties: {
+                        name: 'Projector',
+                        type: 'AV',
+                        power: '300W',
+                        manufacturer: 'Demo Corp'
+                    },
+                    coordinates: { x: 160, y: 160, width: 40, height: 40, z: 0.5 }
+                },
+                {
+                    id: 'equipment-2',
+                    type: 'equipment',
+                    properties: {
+                        name: 'Workstation',
+                        type: 'Computer',
+                        power: '150W',
+                        manufacturer: 'Demo Corp'
+                    },
+                    coordinates: { x: 380, y: 160, width: 40, height: 40, z: 0.8 }
+                },
+                {
+                    id: 'component-1',
+                    type: 'component',
+                    properties: {
+                        name: 'Lens',
+                        material: 'Glass',
+                        diameter: '50mm',
+                        focalLength: '100mm'
+                    },
+                    coordinates: { x: 170, y: 170, width: 20, height: 20, z: 0.6 }
+                },
+                {
+                    id: 'component-2',
+                    type: 'component',
+                    properties: {
+                        name: 'CPU',
+                        material: 'Silicon',
+                        cores: 8,
+                        frequency: '3.2GHz'
+                    },
+                    coordinates: { x: 390, y: 170, width: 20, height: 20, z: 0.9 }
+                }
+            ];
+        }
+
+        async function runAllTests() {
+            if (!testSuite) return;
+            
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div>Running comprehensive test suite...</div>';
+            
+            try {
+                await testSuite.runAllTests();
+                resultsDiv.innerHTML = '<div style="color: green;">✅ All tests completed! Check console for detailed results.</div>';
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="color: red;">❌ Test suite failed: ${error.message}</div>`;
+            }
+        }
+
+        async function testZoomSystem() {
+            if (!arxos || !arxos.threeRenderer) return;
+            
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div>Testing zoom system...</div>';
+            
+            try {
+                // Test zoom to campus
+                await arxos.threeRenderer.zoomToCampus(true);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Test zoom to submicron
+                await arxos.threeRenderer.zoomToSubmicron(true);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Test zoom to room
+                await arxos.threeRenderer.zoomToRoom(true);
+                
+                resultsDiv.innerHTML = '<div style="color: green;">✅ Zoom system test completed!</div>';
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="color: red;">❌ Zoom test failed: ${error.message}</div>`;
+            }
+        }
+
+        async function testPerformance() {
+            if (!arxos || !arxos.threeRenderer) return;
+            
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div>Testing performance...</div>';
+            
+            try {
+                const startTime = performance.now();
+                
+                // Test multiple zoom operations
+                for (let i = 0; i < 5; i++) {
+                    await arxos.threeRenderer.zoomToCampus(false);
+                    await arxos.threeRenderer.zoomToRoom(false);
+                    await arxos.threeRenderer.zoomToSubmicron(false);
+                }
+                
+                const endTime = performance.now();
+                const totalTime = endTime - startTime;
+                
+                resultsDiv.innerHTML = `<div style="color: green;">✅ Performance test completed!</div>
+                                      <div>Total time: ${totalTime.toFixed(2)}ms</div>
+                                      <div>Average per zoom: ${(totalTime / 15).toFixed(2)}ms</div>`;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div style="color: red;">❌ Performance test failed: ${error.message}</div>`;
+            }
+        }
+
+        function updateStatus(text, details, type = 'info') {
+            document.getElementById('status-text').textContent = text;
+            document.getElementById('status-details').textContent = details;
+            
+            const statusPanel = document.getElementById('status-text').parentElement;
+            statusPanel.style.background = type === 'error' ? 'rgba(220, 53, 69, 0.9)' : 
+                                         type === 'success' ? 'rgba(40, 167, 69, 0.9)' : 
+                                         'rgba(0, 0, 0, 0.8)';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (arxos && arxos.threeRenderer) {
+                arxos.threeRenderer.handleResize();
+            }
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (arxos && arxos.threeRenderer) {
+                arxos.threeRenderer.destroy();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,494 +1,641 @@
-# ArxObject System
+# 🔧 ArxObject Hierarchical System
 
-## 🎯 **Overview**
+## 🎯 **ArxObject System Overview**
 
-ArxObjects are the fundamental building blocks of the Arxos system - intelligent, self-aware data entities that represent every element in a building from entire campuses down to individual circuit traces. Unlike traditional geometric models, ArxObjects are **data-first entities** that understand their context, relationships, and confidence levels.
+The **ArxObject Hierarchical System** is the revolutionary core of Arxos that transforms buildings into navigable filesystems. Every building component becomes an intelligent, self-aware ArxObject that understands its context, relationships, confidence levels, and real-time status.
 
-## 🏗️ **Core Philosophy**
+**Core Innovation**: Buildings become navigable filesystems where every component has a path and can contain infinite depth of sub-components, all accessible through Git-like CLI operations.
 
-### **Intelligence Over Geometry**
-ArxObjects prioritize semantic understanding and relationships over geometric precision. They are self-aware entities that:
-- **Know what they represent** in the building context
-- **Understand their relationships** to other objects
-- **Communicate their confidence levels** for data quality
-- **Improve through validation** and learning from field data
+## 🏗️ **Building as Filesystem Architecture**
 
-### **Fractal Hierarchy**
-ArxObjects operate across 10 scale levels, from continental infrastructure to nanometer-precision circuit traces:
+### **Hierarchical File Tree System**
 
-```
-Scale Level    Range           Example Objects
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-10^7          GLOBAL          Power grids, pipelines
-10^6          REGIONAL        State infrastructure
-10^5          MUNICIPAL       City utilities
-10^4          CAMPUS          Multi-building sites
-10^3          BUILDING        Individual structures
-10^2          FLOOR           Floor plates
-10^1          ROOM            Individual spaces
-10^0          COMPONENT       Equipment, fixtures
-10^-3         CIRCUIT         PCB boards
-10^-4         TRACE           Copper paths
-```
-
-## 📊 **Data Structure**
-
-### **Core ArxObject Model (C Implementation)**
+Buildings are structured as navigable filesystems where every component has a path and can contain infinite depth of sub-components.
 
 ```c
-typedef struct ArxObject {
-    // Identity and Path
-    char* name;                     // Object name (e.g., "panel-a", "circuit-7")
+/*
+ * ArxObject Hierarchical File Tree System
+ * Buildings structured as navigable file systems with typed components
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <time.h>
+
+// Forward declarations
+typedef struct ArxObject ArxObject;
+typedef struct ArxObjectType ArxObjectType;
+
+// ArxObject acts like a filesystem node with typed properties
+struct ArxObject {
+    // File tree structure
+    char* name;                     // Object name (e.g., "panel-a", "circuit-7")  
     char* path;                     // Full path (e.g., "/electrical/panel-a/circuit-7/outlet-3")
-    char* id;                       // Unique identifier
-    
-    // File Tree Structure
     ArxObject* parent;              // Parent object in tree
     ArxObject** children;           // Array of child objects
-    int child_count;                // Number of children
-    int child_capacity;             // Allocated capacity for children
+    int child_count;               // Number of children
+    int child_capacity;            // Allocated capacity for children
     
-    // Object Type and Behavior
-    ArxObjectType type;             // Type definition with methods
-    void* type_data;                // Type-specific data structure
+    // Object type and behavior
+    ArxObjectType* type;           // Type definition with methods
+    void* type_data;               // Type-specific data structure
     
-    // Core Properties (like file metadata)
-    uint64_t created_time;          // Creation timestamp
-    uint64_t modified_time;         // Last modification time
-    uint32_t permissions;           // Access permissions (read/write/execute)
-    char* owner;                    // Object owner
-    char* group;                    // Object group
+    // Core properties (like file metadata)
+    char* id;                      // Unique identifier
+    uint64_t created_time;         // Creation timestamp
+    uint64_t modified_time;        // Last modification time
+    uint32_t permissions;          // Access permissions (read/write/execute)
+    char* owner;                   // Object owner
+    char* group;                   // Object group
     
-    // Spatial and Physical Properties
-    ArxPoint3D position;            // X, Y, Z coordinates (millimeter precision)
-    ArxQuaternion orientation;      // Quaternion rotation
-    ArxVector3D dimensions;         // Width, height, depth
+    // Spatial and physical properties
+    float position[3];             // X, Y, Z coordinates
+    float orientation[4];          // Quaternion rotation
+    float dimensions[3];           // Width, height, depth
     
-    // Dynamic Properties (key-value store)
-    char** property_keys;           // Property names
-    void** property_values;         // Property values
-    char** property_types;          // Property type strings
-    int property_count;             // Number of properties
+    // Dynamic properties (key-value store)
+    char** property_keys;          // Property names
+    void** property_values;        // Property values
+    char** property_types;         // Property type strings
+    int property_count;            // Number of properties
     
-    // Relationships and Constraints
-    ArxObject** connected_to;       // Objects this connects to
-    int connection_count;           // Number of connections
-    char** constraints;             // Constraint expressions
-    int constraint_count;           // Number of constraints
+    // Relationships and constraints
+    ArxObject** connected_to;      // Objects this connects to
+    int connection_count;          // Number of connections
+    char** constraints;            // Constraint expressions
+    int constraint_count;          // Number of constraints
     
-    // Performance and Monitoring
-    float* performance_metrics;     // Real-time performance data
-    int metric_count;               // Number of metrics
-    uint64_t last_updated;          // Last update timestamp
+    // Performance and monitoring
+    float* performance_metrics;    // Real-time performance data
+    int metric_count;             // Number of metrics
+    uint64_t last_updated;        // Last update timestamp
+};
+
+// Type system for different ArxObject categories
+struct ArxObjectType {
+    char* type_name;               // Type name (e.g., "electrical_panel", "hvac_unit")
+    char* category;                // Category (e.g., "electrical", "hvac", "structural")
     
-    // Validation and Confidence
-    float confidence;               // Overall confidence score (0.0-1.0)
-    ArxValidationStatus validation_status; // Validation state
-    ArxObject** validators;         // Users who validated this object
-    int validator_count;            // Number of validators
-} ArxObject;
+    // Type-specific methods (like file type handlers)
+    int (*init)(ArxObject* obj, void* init_data);
+    int (*destroy)(ArxObject* obj);
+    int (*get_property)(ArxObject* obj, const char* key, void* value);
+    int (*set_property)(ArxObject* obj, const char* key, void* value);
+    int (*validate_constraints)(ArxObject* obj);
+    int (*simulate)(ArxObject* obj, float delta_time);
+    int (*serialize)(ArxObject* obj, char** output);
+    int (*deserialize)(ArxObject* obj, const char* input);
+    
+    // Type-specific property definitions
+    char** required_properties;    // Properties this type must have
+    char** optional_properties;    // Properties this type may have
+    int required_count;
+    int optional_count;
+};
 ```
 
-### **ArxObject Types (C Enum)**
+## 🌳 **Complete Building Hierarchy Examples**
 
-```c
-typedef enum {
-    // Structural System (Priority 1)
-    ARX_TYPE_WALL = 1,
-    ARX_TYPE_COLUMN,
-    ARX_TYPE_BEAM,
-    ARX_TYPE_SLAB,
-    ARX_TYPE_FOUNDATION,
-    ARX_TYPE_ROOF,
-    ARX_TYPE_STAIR,
-    
-    // Openings
-    ARX_TYPE_DOOR,
-    ARX_TYPE_WINDOW,
-    ARX_TYPE_OPENING,
-    
-    // Spaces
-    ARX_TYPE_ROOM,
-    ARX_TYPE_FLOOR,
-    ARX_TYPE_ZONE,
-    ARX_TYPE_BUILDING,
-    
-    // MEP Systems
-    ARX_TYPE_ELECTRICAL_PANEL,
-    ARX_TYPE_ELECTRICAL_OUTLET,
-    ARX_TYPE_ELECTRICAL_SWITCH,
-    ARX_TYPE_ELECTRICAL_CONDUIT,
-    ARX_TYPE_LIGHT_FIXTURE,
-    
-    ARX_TYPE_HVAC_UNIT,
-    ARX_TYPE_HVAC_DUCT,
-    ARX_TYPE_HVAC_VENT,
-    ARX_TYPE_THERMOSTAT,
-    
-    ARX_TYPE_PLUMBING_PIPE,
-    ARX_TYPE_PLUMBING_FIXTURE,
-    ARX_TYPE_PLUMBING_VALVE,
-    ARX_TYPE_DRAIN,
-    
-    // Life Safety
-    ARX_TYPE_FIRE_SPRINKLER,
-    ARX_TYPE_FIRE_ALARM,
-    ARX_TYPE_SMOKE_DETECTOR,
-    ARX_TYPE_EMERGENCY_EXIT,
-    ARX_TYPE_FIRE_EXTINGUISHER,
-    
-    // Furniture & Equipment
-    ARX_TYPE_FURNITURE,
-    ARX_TYPE_EQUIPMENT,
-    ARX_TYPE_APPLIANCE,
-    
-    // IoT/Smart Systems
-    ARX_TYPE_SENSOR,
-    ARX_TYPE_ACTUATOR,
-    ARX_TYPE_CONTROLLER,
-    ARX_TYPE_NETWORK_DEVICE,
-    
-    // Generic
-    ARX_TYPE_UNKNOWN,
-    ARX_TYPE_CUSTOM,
-    
-    // Total count for bounds checking
-    ARX_TYPE_COUNT
-} ArxObjectType;
+### **Full Building File Tree Structure**
+
+```
+/campus/east-region/building-47/
+├── /structural/
+│   ├── /foundation/
+│   │   ├── /footings/footing-[1-24]/
+│   │   └── /slab/
+│   ├── /frame/
+│   │   ├── /columns/column-[a1-d8]/
+│   │   └── /beams/beam-[1-156]/
+│   └── /walls/
+│       ├── /exterior/north-wall/
+│       │   ├── /windows/window-[1-8]/
+│       │   └── /insulation/
+│       └── /interior/partition-[1-47]/
+├── /electrical/
+│   ├── /service-entrance/
+│   │   ├── /meter/
+│   │   └── /main-disconnect/
+│   ├── /distribution/
+│   │   ├── /main-panel/
+│   │   │   ├── /breakers/breaker-[1-42]/
+│   │   │   └── /circuits/circuit-[1-42]/
+│   │   │       ├── /circuit-1/
+│   │   │       │   ├── /outlets/outlet-[1-8]/
+│   │   │       │   └── /junction-boxes/j-box-[1-3]/
+│   │   │       └── ...
+│   │   └── /sub-panels/panel-[a-c]/
+│   └── /emergency-power/
+│       ├── /generator/
+│       └── /transfer-switch/
+├── /hvac/
+│   ├── /air-handlers/ahu-[1-3]/
+│   │   ├── /ahu-1/
+│   │   │   ├── /supply-fan/
+│   │   │   │   ├── /motor/
+│   │   │   │   │   ├── /windings/
+│   │   │   │   │   └── /bearings/
+│   │   │   │   └── /vfd-controller/
+│   │   │   │       ├── /power-electronics/
+│   │   │   │       └── /control-board/
+│   │   │   │           ├── /cpu/
+│   │   │   │           └── /memory/
+│   │   │   ├── /cooling-coil/
+│   │   │   └── /filter-bank/
+│   │   └── ...
+│   └── /controls/
+│       ├── /building-automation-system/
+│       └── /sensors/temp-sensor-[1-47]/
+├── /network/
+│   ├── /core-infrastructure/
+│   │   ├── /mdf/
+│   │   │   ├── /core-switch/
+│   │   │   │   ├── /line-cards/card-[1-4]/
+│   │   │   │   └── /supervisor-engine/
+│   │   │   │       └── /asics/asic-[1-8]/
+│   │   │   └── /patch-panels/
+│   │   └── /idfs/idf-[1-8]/
+│   └── /endpoints/
+│       ├── /access-points/ap-[1-32]/
+│       └── /network-jacks/jack-[1-247]/
+└── /plumbing/
+    ├── /water-supply/
+    │   ├── /water-service/
+    │   │   ├── /water-meter/
+    │   │   └── /main-shutoff/
+    │   └── /distribution/
+    │       ├── /hot-water-system/
+    │       └── /cold-water-distribution/
+    └── /drainage-system/
+        ├── /waste-lines/
+        └── /vent-system/
 ```
 
-### **Validation Status**
+## 🖥️ **CLI Navigation Commands**
 
-```c
-typedef enum {
-    ARX_VALIDATION_PENDING = 0,     // Just imported, no validation
-    ARX_VALIDATION_INFERRED = 25,   // Based on patterns/assumptions
-    ARX_VALIDATION_MEASURED = 50,   // Has direct measurements
-    ARX_VALIDATION_SCANNED = 75,    // LiDAR scanned
-    ARX_VALIDATION_VALIDATED = 100  // Field-verified by multiple users
-} ArxValidationStatus;
+### **Filesystem-Style Building Navigation**
+
+```bash
+# Navigate building like filesystem
+arx @building-47 ls /electrical/                           # List electrical systems
+arx @building-47 ls /electrical/main-panel/               # List circuits in main panel  
+arx @building-47 find /electrical -type outlet            # Find all outlets
+arx @building-47 tree /hvac/air-handling-units/           # Show HVAC tree structure
+
+# Object inspection
+arx @building-47 inspect /electrical/main-panel/circuit-1/outlet-3
+arx @building-47 cat /hvac/ahu-1/supply-fan/properties    # Show all properties
+arx @building-47 stat /structural/columns/column-a1       # Show object metadata
+
+# Property operations  
+arx @building-47 get /electrical/main-panel/circuit-1 --property load_current
+arx @building-47 set /hvac/ahu-1 --property supply_air_temp=72
+arx @building-47 query "SELECT path FROM /electrical WHERE type='outlet' AND load > 15A"
+
+# Tree operations
+arx @building-47 mkdir /electrical/emergency-power        # Add new system branch
+arx @building-47 mv /electrical/subpanel-a /electrical/emergency-power/
+arx @building-47 cp /hvac/controls/zone-controllers/template /hvac/controls/zone-controllers/floor-3
+
+# Infinite zoom navigation
+arx @building-47 zoom campus                      # See whole campus
+arx @building-47 zoom building                    # Building overview
+arx @building-47 zoom floor --level 2             # Floor plan
+arx @building-47 zoom room --id mechanical-room   # Room detail
+arx @building-47 zoom equipment --id plc-cabinet  # Equipment internals
+arx @building-47 zoom chip --component cpu-module # Silicon level
 ```
 
-### **Spatial Data Types**
+## 🔧 **Type System Implementation**
+
+### **Dynamic Type Registration**
 
 ```c
+// Type registration system
 typedef struct {
-    int64_t x, y, z;                // Coordinates in millimeters
-} ArxPoint3D;
+    ArxObjectType** types;
+    int type_count;
+    int type_capacity;
+} TypeRegistry;
 
-typedef struct {
-    int64_t width, height, depth;   // Dimensions in millimeters
-} ArxVector3D;
-
-typedef struct {
-    float x, y, z, w;               // Quaternion rotation
-} ArxQuaternion;
-
-typedef struct {
-    ArxPoint3D min, max;            // Bounding box
-} ArxBoundingBox;
+// Register a new ArxObject type
+int register_arxobject_type(TypeRegistry* registry, ArxObjectType* type) {
+    // Validate type definition
+    if (!validate_type_definition(type)) {
+        return -1;
+    }
+    
+    // Check if type already exists
+    for (int i = 0; i < registry->type_count; i++) {
+        if (strcmp(registry->types[i]->type_name, type->type_name) == 0) {
+            return -2; // Type already exists
+        }
+    }
+    
+    // Add type to registry
+    if (registry->type_count >= registry->type_capacity) {
+        // Expand capacity
+        registry->type_capacity *= 2;
+        registry->types = realloc(registry->types, 
+                                 registry->type_capacity * sizeof(ArxObjectType*));
+    }
+    
+    registry->types[registry->type_count++] = type;
+    return 0;
+}
 ```
 
-## 🚀 **Performance Characteristics**
-
-### **Achieved Performance (Exceeds All Targets)**
-
-| Operation | Target | Actual | Performance Ratio |
-|-----------|--------|--------|-------------------|
-| ArxObject Creation | <1ms | **83ns** | 12,048x faster |
-| Property Operations | <100μs | **167ns** | 598x faster |
-| ASCII Rendering (100 objects) | <10ms | **2.75μs** | 3,636x faster |
-| Spatial Query (1000 objects) | <5ms | **2.25μs** | 2,222x faster |
-
-### **Memory Efficiency**
-
-| Operation | Memory/Op | Allocations/Op | Efficiency Rating |
-|-----------|-----------|----------------|-------------------|
-| Map Creation | 616 B | 3 | Good |
-| Slice Creation | 96 B | 1 | Excellent |
-| Grid Creation | 3200 B | 40 | Good |
-| Spatial Query | **0 B** | **0** | **Perfect** |
-
-### **Scalability Validation**
-- Linear performance scaling with object count
-- No performance degradation at 1000+ objects
-- Consistent sub-millisecond response times
-- Zero-allocation spatial queries
-
-## 🔧 **Core Operations**
-
-### **Object Creation and Management**
+### **Type-Specific Method Implementation**
 
 ```c
-// Create new ArxObject with hierarchical path
-ArxObject* arxobject_create(const char* name, const char* path, ArxObjectType type);
+// Electrical panel type implementation
+static int electrical_panel_init(ArxObject* obj, void* init_data) {
+    ElectricalPanelData* data = (ElectricalPanelData*)init_data;
+    
+    // Set required properties
+    set_object_property(obj, "voltage", &data->voltage, "float");
+    set_object_property(obj, "amperage", &data->amperage, "float");
+    set_object_property(obj, "phase_count", &data->phase_count, "int");
+    set_object_property(obj, "breaker_count", &data->breaker_count, "int");
+    
+    // Initialize child objects (circuits)
+    for (int i = 0; i < data->circuit_count; i++) {
+        ArxObject* circuit = create_arxobject("circuit", obj);
+        circuit->name = malloc(32);
+        sprintf(circuit->name, "circuit-%d", i + 1);
+        
+        // Set circuit properties
+        set_object_property(circuit, "load_current", &data->circuits[i].load_current, "float");
+        set_object_property(circuit, "voltage", &data->circuits[i].voltage, "float");
+        
+        add_child_object(obj, circuit);
+    }
+    
+    return 0;
+}
 
-// Add child object to parent (like mkdir/touch in filesystem)
-int arxobject_add_child(ArxObject* parent, ArxObject* child);
-
-// Find object by path (like filesystem path resolution)
-ArxObject* arxobject_find_by_path(ArxObject* root, const char* path);
-
-// Remove object from tree
-int arxobject_remove_child(ArxObject* parent, ArxObject* child);
-
-// Destroy object and free memory
-void arxobject_destroy(ArxObject* obj);
+static int electrical_panel_simulate(ArxObject* obj, float delta_time) {
+    // Simulate electrical panel behavior
+    float total_load = 0.0f;
+    
+    // Calculate total load from all circuits
+    for (int i = 0; i < obj->child_count; i++) {
+        ArxObject* circuit = obj->children[i];
+        float load_current;
+        if (get_object_property(circuit, "load_current", &load_current) == 0) {
+            total_load += load_current;
+        }
+    }
+    
+    // Update panel properties
+    set_object_property(obj, "total_load", &total_load, "float");
+    
+    // Check for overload conditions
+    float max_amperage;
+    if (get_object_property(obj, "amperage", &max_amperage) == 0) {
+        if (total_load > max_amperage * 0.8) {
+            // Trigger warning
+            trigger_warning(obj, "Panel load at 80% capacity");
+        }
+    }
+    
+    return 0;
+}
 ```
 
-### **Property Management**
+## 🌐 **Real-Time Property System**
+
+### **Dynamic Property Management**
 
 ```c
+// Property system implementation
+typedef struct {
+    char* key;
+    void* value;
+    char* type;
+    uint64_t last_updated;
+    float confidence;
+    ArxObject* source;
+} DynamicProperty;
+
 // Set object property
-int arxobject_set_property(ArxObject* obj, const char* key, const void* value, const char* type);
+int set_object_property(ArxObject* obj, const char* key, void* value, const char* type) {
+    // Check if property already exists
+    for (int i = 0; i < obj->property_count; i++) {
+        if (strcmp(obj->property_keys[i], key) == 0) {
+            // Update existing property
+            obj->property_values[i] = value;
+            obj->property_types[i] = strdup(type);
+            return 0;
+        }
+    }
+    
+    // Add new property
+    if (obj->property_count >= obj->property_capacity) {
+        obj->property_capacity *= 2;
+        obj->property_keys = realloc(obj->property_keys, 
+                                    obj->property_capacity * sizeof(char*));
+        obj->property_values = realloc(obj->property_values, 
+                                      obj->property_capacity * sizeof(void*));
+        obj->property_types = realloc(obj->property_types, 
+                                     obj->property_capacity * sizeof(char*));
+    }
+    
+    obj->property_keys[obj->property_count] = strdup(key);
+    obj->property_values[obj->property_count] = value;
+    obj->property_types[obj->property_count] = strdup(type);
+    obj->property_count++;
+    
+    // Update modification time
+    obj->modified_time = get_current_timestamp();
+    
+    return 0;
+}
 
 // Get object property
-int arxobject_get_property(ArxObject* obj, const char* key, void* value);
-
-// Remove property
-int arxobject_remove_property(ArxObject* obj, const char* key);
-
-// List all properties
-char** arxobject_list_properties(ArxObject* obj, int* count);
+int get_object_property(ArxObject* obj, const char* key, void* value) {
+    for (int i = 0; i < obj->property_count; i++) {
+        if (strcmp(obj->property_keys[i], key) == 0) {
+            // Copy value based on type
+            if (strcmp(obj->property_types[i], "float") == 0) {
+                *(float*)value = *(float*)obj->property_values[i];
+            } else if (strcmp(obj->property_types[i], "int") == 0) {
+                *(int*)value = *(int*)obj->property_values[i];
+            } else if (strcmp(obj->property_types[i], "string") == 0) {
+                strcpy((char*)value, (char*)obj->property_values[i]);
+            }
+            return 0;
+        }
+    }
+    return -1; // Property not found
+}
 ```
 
-### **Relationship Management**
+## 🔗 **Relationship and Constraint System**
+
+### **Object Connections**
 
 ```c
-// Connect objects
-int arxobject_connect(ArxObject* obj1, ArxObject* obj2, const char* relationship_type);
+// Connection system
+typedef struct {
+    ArxObject* target;
+    char* connection_type;
+    float strength;
+    ArxObject* connection_point;
+} ObjectConnection;
 
-// Disconnect objects
-int arxobject_disconnect(ArxObject* obj1, ArxObject* obj2);
+// Connect two objects
+int connect_objects(ArxObject* obj1, ArxObject* obj2, const char* connection_type) {
+    // Add connection to obj1
+    if (obj1->connection_count >= obj1->connection_capacity) {
+        obj1->connection_capacity *= 2;
+        obj1->connected_to = realloc(obj1->connected_to, 
+                                    obj1->connection_capacity * sizeof(ArxObject*));
+    }
+    
+    obj1->connected_to[obj1->connection_count++] = obj2;
+    
+    // Add reverse connection to obj2
+    if (obj2->connection_count >= obj2->connection_capacity) {
+        obj2->connection_capacity *= 2;
+        obj2->connected_to = realloc(obj2->connected_to, 
+                                    obj2->connection_capacity * sizeof(ArxObject*));
+    }
+    
+    obj2->connected_to[obj2->connection_count++] = obj1;
+    
+    return 0;
+}
 
-// Get connected objects
-ArxObject** arxobject_get_connected(ArxObject* obj, const char* relationship_type, int* count);
-
-// Check if objects are connected
-bool arxobject_is_connected(ArxObject* obj1, ArxObject* obj2);
+// Find connected objects
+ArxObject** find_connected_objects(ArxObject* obj, const char* type_filter) {
+    ArxObject** connected = malloc(obj->connection_count * sizeof(ArxObject*));
+    int connected_count = 0;
+    
+    for (int i = 0; i < obj->connection_count; i++) {
+        ArxObject* connected_obj = obj->connected_to[i];
+        
+        if (type_filter == NULL || 
+            strcmp(connected_obj->type->type_name, type_filter) == 0) {
+            connected[connected_count++] = connected_obj;
+        }
+    }
+    
+    // Resize array to actual count
+    connected = realloc(connected, connected_count * sizeof(ArxObject*));
+    return connected;
+}
 ```
 
-### **Spatial Operations**
+### **Constraint System**
 
 ```c
-// Set object position
-void arxobject_set_position(ArxObject* obj, ArxPoint3D position);
+// Constraint system
+typedef struct {
+    char* expression;
+    char* constraint_type;
+    float threshold;
+    ArxObject* target;
+} Constraint;
 
-// Get object position
-ArxPoint3D arxobject_get_position(ArxObject* obj);
+// Add constraint to object
+int add_constraint(ArxObject* obj, const char* expression, const char* type, float threshold) {
+    if (obj->constraint_count >= obj->constraint_capacity) {
+        obj->constraint_capacity *= 2;
+        obj->constraints = realloc(obj->constraints, 
+                                  obj->constraint_capacity * sizeof(char*));
+    }
+    
+    obj->constraints[obj->constraint_count++] = strdup(expression);
+    
+    return 0;
+}
 
-// Calculate distance between objects
-double arxobject_distance(ArxObject* obj1, ArxObject* obj2);
-
-// Check if objects intersect
-bool arxobject_intersects(ArxObject* obj1, ArxObject* obj2);
-
-// Get bounding box
-ArxBoundingBox arxobject_get_bounding_box(ArxObject* obj);
+// Validate object constraints
+int validate_object_constraints(ArxObject* obj) {
+    for (int i = 0; i < obj->constraint_count; i++) {
+        if (!evaluate_constraint(obj, obj->constraints[i])) {
+            return -1; // Constraint violation
+        }
+    }
+    return 0; // All constraints satisfied
+}
 ```
 
-## 📁 **Filesystem Integration**
+## 📊 **Performance Monitoring System**
 
-### **Path Resolution**
+### **Real-Time Metrics**
 
 ```c
-// Resolve relative path from current location
-char* arxobject_resolve_path(ArxObject* current, const char* path);
+// Performance monitoring
+typedef struct {
+    char* metric_name;
+    float value;
+    uint64_t timestamp;
+    float min_value;
+    float max_value;
+    float average_value;
+    int sample_count;
+} PerformanceMetric;
 
-// Split path into components
-char** arxobject_split_path(const char* path, int* component_count);
-
-// Join path components
-char* arxobject_join_path(char** components, int count);
-
-// Get parent path
-char* arxobject_get_parent_path(const char* path);
-
-// Get object name from path
-char* arxobject_get_name_from_path(const char* path);
+// Add performance metric
+int add_performance_metric(ArxObject* obj, const char* metric_name, float value) {
+    // Find existing metric
+    for (int i = 0; i < obj->metric_count; i++) {
+        if (strcmp(obj->performance_metrics[i].metric_name, metric_name) == 0) {
+            // Update existing metric
+            PerformanceMetric* metric = &obj->performance_metrics[i];
+            metric->value = value;
+            metric->timestamp = get_current_timestamp();
+            
+            // Update statistics
+            if (value < metric->min_value) metric->min_value = value;
+            if (value > metric->max_value) metric->max_value = value;
+            
+            metric->average_value = (metric->average_value * metric->sample_count + value) / 
+                                   (metric->sample_count + 1);
+            metric->sample_count++;
+            
+            return 0;
+        }
+    }
+    
+    // Add new metric
+    if (obj->metric_count >= obj->metric_capacity) {
+        obj->metric_capacity *= 2;
+        obj->performance_metrics = realloc(obj->performance_metrics, 
+                                         obj->metric_capacity * sizeof(PerformanceMetric));
+    }
+    
+    PerformanceMetric* new_metric = &obj->performance_metrics[obj->metric_count++];
+    new_metric->metric_name = strdup(metric_name);
+    new_metric->value = value;
+    new_metric->timestamp = get_current_timestamp();
+    new_metric->min_value = value;
+    new_metric->max_value = value;
+    new_metric->average_value = value;
+    new_metric->sample_count = 1;
+    
+    return 0;
+}
 ```
 
-### **Tree Navigation**
+## 🚀 **Advanced Features**
+
+### **Infinite Depth Navigation**
 
 ```c
-// Navigate to child
-ArxObject* arxobject_navigate_to_child(ArxObject* current, const char* child_name);
+// Navigate to any depth in the object tree
+ArxObject* navigate_to_path(ArxObject* root, const char* path) {
+    char* path_copy = strdup(path);
+    char* token = strtok(path_copy, "/");
+    
+    ArxObject* current = root;
+    
+    while (token != NULL) {
+        // Find child with matching name
+        ArxObject* child = find_child_by_name(current, token);
+        if (child == NULL) {
+            free(path_copy);
+            return NULL; // Path not found
+        }
+        
+        current = child;
+        token = strtok(NULL, "/");
+    }
+    
+    free(path_copy);
+    return current;
+}
 
-// Navigate to parent
-ArxObject* arxobject_navigate_to_parent(ArxObject* current);
-
-// Navigate to sibling
-ArxObject* arxobject_navigate_to_sibling(ArxObject* current, const char* sibling_name);
-
-// Navigate by path
-ArxObject* arxobject_navigate_by_path(ArxObject* root, const char* path);
+// Find child by name
+ArxObject* find_child_by_name(ArxObject* parent, const char* name) {
+    for (int i = 0; i < parent->child_count; i++) {
+        if (strcmp(parent->children[i]->name, name) == 0) {
+            return parent->children[i];
+        }
+    }
+    return NULL;
+}
 ```
 
-## 🔍 **Search and Query**
-
-### **Type-Based Search**
+### **Pattern Matching and Search**
 
 ```c
-// Find objects by type
-ArxObject** arxobject_find_by_type(ArxObject* root, ArxObjectType type, int* count);
+// Search for objects matching patterns
+ArxObject** search_objects(ArxObject* root, const char* pattern, int* result_count) {
+    ArxObject** results = malloc(1000 * sizeof(ArxObject*)); // Initial capacity
+    *result_count = 0;
+    
+    search_objects_recursive(root, pattern, results, result_count);
+    
+    // Resize to actual count
+    results = realloc(results, *result_count * sizeof(ArxObject*));
+    return results;
+}
 
-// Find objects by type in subtree
-ArxObject** arxobject_find_by_type_in_subtree(ArxObject* root, ArxObjectType type, int* count);
+// Recursive search implementation
+void search_objects_recursive(ArxObject* obj, const char* pattern, 
+                             ArxObject** results, int* result_count) {
+    // Check if this object matches the pattern
+    if (matches_pattern(obj, pattern)) {
+        results[*result_count] = obj;
+        (*result_count)++;
+    }
+    
+    // Recursively search children
+    for (int i = 0; i < obj->child_count; i++) {
+        search_objects_recursive(obj->children[i], pattern, results, result_count);
+    }
+}
 
-// Count objects by type
-int arxobject_count_by_type(ArxObject* root, ArxObjectType type);
+// Pattern matching
+int matches_pattern(ArxObject* obj, const char* pattern) {
+    // Simple pattern matching - can be enhanced with regex
+    if (strstr(obj->name, pattern) != NULL) {
+        return 1;
+    }
+    
+    if (strstr(obj->path, pattern) != NULL) {
+        return 1;
+    }
+    
+    // Check properties
+    for (int i = 0; i < obj->property_count; i++) {
+        if (strstr(obj->property_keys[i], pattern) != NULL) {
+            return 1;
+        }
+    }
+    
+    return 0;
+}
 ```
 
-### **Property-Based Search**
+## 🏆 **Key Benefits**
 
-```c
-// Find objects by property value
-ArxObject** arxobject_find_by_property(ArxObject* root, const char* key, const void* value, int* count);
+### **Universal Accessibility**
 
-// Find objects by property range
-ArxObject** arxobject_find_by_property_range(ArxObject* root, const char* key, const void* min, const void* max, int* count);
+- **Filesystem Navigation** - Navigate buildings like file systems
+- **CLI Integration** - Terminal-first design for power users
+- **Infinite Depth** - No limit to component nesting
+- **Type Safety** - Strong typing for building components
 
-// Find objects by confidence level
-ArxObject** arxobject_find_by_confidence(ArxObject* root, float min_confidence, int* count);
-```
+### **Real-Time Intelligence**
 
-### **Spatial Search**
+- **Live Properties** - Real-time updates and monitoring
+- **Performance Metrics** - Continuous performance tracking
+- **Constraint Validation** - Automatic constraint checking
+- **Relationship Tracking** - Complete connection mapping
 
-```c
-// Find objects within radius
-ArxObject** arxobject_find_within_radius(ArxObject* root, ArxPoint3D center, double radius, int* count);
+### **Developer Experience**
 
-// Find objects in bounding box
-ArxObject** arxobject_find_in_bounding_box(ArxObject* root, ArxBoundingBox bbox, int* count);
-
-// Find nearest object
-ArxObject* arxobject_find_nearest(ArxObject* root, ArxPoint3D point, ArxObjectType type);
-```
-
-## 📊 **Validation System**
-
-### **Confidence Scoring**
-
-```c
-// Calculate overall confidence
-float arxobject_calculate_confidence(ArxObject* obj);
-
-// Update confidence based on validation
-void arxobject_update_confidence(ArxObject* obj, float new_confidence, const char* source);
-
-// Get confidence breakdown
-ArxConfidenceBreakdown arxobject_get_confidence_breakdown(ArxObject* obj);
-
-// Validate object
-int arxobject_validate(ArxObject* obj, const char* validator, ArxValidationMethod method);
-```
-
-### **Validation Methods**
-
-```c
-typedef enum {
-    ARX_VALIDATION_METHOD_FIELD_MEASUREMENT,  // Direct field measurement
-    ARX_VALIDATION_METHOD_LIDAR_SCAN,         // LiDAR point cloud
-    ARX_VALIDATION_METHOD_PHOTO_ANALYSIS,     // Photo analysis
-    ARX_VALIDATION_METHOD_INFERENCE,          // AI inference
-    ARX_VALIDATION_METHOD_CROSS_REFERENCE      // Cross-reference with other data
-} ArxValidationMethod;
-```
-
-## 🔄 **Serialization and Persistence**
-
-### **Object Serialization**
-
-```c
-// Serialize object to JSON
-char* arxobject_serialize_json(ArxObject* obj);
-
-// Deserialize object from JSON
-int arxobject_deserialize_json(ArxObject* obj, const char* json);
-
-// Serialize object to binary
-void* arxobject_serialize_binary(ArxObject* obj, size_t* size);
-
-// Deserialize object from binary
-int arxobject_deserialize_binary(ArxObject* obj, const void* data, size_t size);
-```
-
-### **Tree Serialization**
-
-```c
-// Serialize entire tree
-char* arxobject_serialize_tree(ArxObject* root);
-
-// Deserialize entire tree
-ArxObject* arxobject_deserialize_tree(const char* json);
-
-// Export tree to file
-int arxobject_export_to_file(ArxObject* root, const char* filename);
-
-// Import tree from file
-ArxObject* arxobject_import_from_file(const char* filename);
-```
-
-## 🎯 **Integration with CLI**
-
-### **CLI Command Mapping**
-
-```c
-// cd command
-ArxObject* arxobject_cd(ArxObject* current, const char* path);
-
-// ls command
-ArxObject** arxobject_ls(ArxObject* location, int* count);
-
-// pwd command
-char* arxobject_pwd(ArxObject* current);
-
-// tree command
-char* arxobject_tree(ArxObject* root, int max_depth);
-
-// find command
-ArxObject** arxobject_find(ArxObject* root, const char* query, int* count);
-```
-
-### **Performance Integration**
-
-```c
-// Get performance metrics
-ArxPerformanceMetrics arxobject_get_performance_metrics(ArxObject* obj);
-
-// Monitor operation performance
-void arxobject_monitor_operation(ArxObject* obj, const char* operation, uint64_t start_time);
-
-// Get memory usage
-size_t arxobject_get_memory_usage(ArxObject* obj);
-
-// Optimize object
-int arxobject_optimize(ArxObject* obj);
-```
-
-## 📚 **Best Practices**
-
-### **Object Creation**
-1. **Use descriptive names** for objects
-2. **Set appropriate types** for proper behavior
-3. **Initialize all properties** at creation
-4. **Set proper permissions** for security
-5. **Establish relationships** early
-
-### **Performance Optimization**
-1. **Batch operations** when possible
-2. **Use spatial indexing** for large datasets
-3. **Minimize property lookups** in hot paths
-4. **Cache frequently accessed** objects
-5. **Monitor memory usage** regularly
-
-### **Validation Strategy**
-1. **Set confidence thresholds** appropriately
-2. **Use multiple validation methods** for accuracy
-3. **Track validation sources** for audit trails
-4. **Propagate confidence** to related objects
-5. **Regular validation reviews** for data quality
+- **Simple API** - Easy to create and manage objects
+- **Type System** - Extensible type definitions
+- **Property System** - Dynamic key-value storage
+- **Search Capabilities** - Powerful pattern matching
 
 ---
 
-**ArxObjects provide the foundation for building infrastructure as code with enterprise-grade performance.** 🏗️⚡
+**The ArxObject system transforms buildings into intelligent, navigable, programmable infrastructure that can be managed like software.** 🔧✨

@@ -1,881 +1,691 @@
-# CLI Architecture
+# 🖥️ CLI Architecture - Terminal-First Design
 
-## 🎯 **Overview**
+## 🎯 **CLI Architecture Overview**
 
-The Arxos CLI is designed as a powerful, intuitive interface for managing buildings as programmable infrastructure. It provides familiar Unix-like commands while adding building-specific functionality, enabling users to navigate, inspect, and operate buildings through the command line.
+The **Arxos CLI** is built on the revolutionary principle of **terminal-first design**, where buildings become navigable filesystems accessible through powerful command-line tools. This architecture enables engineers, technicians, and developers to interact with building infrastructure using the same tools and workflows they use for software development.
 
-## 🏗️ **Design Philosophy**
+**Core Innovation**: Buildings become navigable filesystems with Git-like version control, infinite zoom capabilities, and terminal-native operations that work everywhere from SSH terminals to embedded systems.
 
-### **Building as Filesystem**
-- **Familiar Commands**: `cd`, `ls`, `pwd`, `tree`, `find` work just like Unix filesystems
-- **Hierarchical Navigation**: Navigate from campus to microchip level seamlessly
-- **Path-Based Addressing**: Every building component has a unique path
-- **Infinite Depth**: No limit to how deep you can navigate
+## 🚀 **Terminal-First Design Philosophy**
 
-### **Infrastructure as Code**
-- **YAML Configuration**: Buildings defined through declarative YAML files
-- **Git-Like Version Control**: Commit, branch, merge, and rollback building changes
-- **Automated Operations**: Script building management tasks
-- **CI/CD Integration**: Integrate building operations into deployment pipelines
+### **Why Terminal-First?**
 
-### **Field-First Design**
-- **Mobile Optimized**: Touch-friendly interface for field workers
-- **AR Integration**: Seamless transition between CLI and AR views
-- **Offline Capable**: Full functionality without internet connection
-- **Real-Time Updates**: Live building state synchronization
+The terminal-first approach provides several revolutionary advantages:
 
-## 🏛️ **Architecture Overview**
+- **Universal Accessibility** - Works everywhere from SSH terminals to embedded systems
+- **Power User Efficiency** - Engineers can navigate buildings faster than with GUI tools
+- **Automation Friendly** - Scripts and CI/CD pipelines can manage building infrastructure
+- **Resource Efficient** - Minimal resource requirements, works on any device
+- **Version Control** - Git-like operations for building changes and rollbacks
+- **Real-time Updates** - Live building data in terminal format
 
-### **Component Architecture**
+### **Design Principles**
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CLI INTERFACE LAYER                          │
-│  Command Parser │  Interactive Shell │  Auto-completion        │
-│  - Cobra CLI    │  - REPL interface  │  - Path completion      │
-│  - Flag parsing │  - History support │  - Command suggestions   │
-├─────────────────────────────────────────────────────────────────┤
-│                COMMAND EXECUTION LAYER                          │
-│  Navigation     │  Building Ops     │  Version Control         │
-│  - cd, ls, pwd  │  - inspect, status│  - commit, branch, merge│
-│  - tree, find   │  - validate, sim  │  - rollback, diff        │
-├─────────────────────────────────────────────────────────────────┤
-│                ARXOBJECT INTEGRATION LAYER                      │
-│  CGO Bridge     │  ArxObject Engine │  ASCII-BIM Renderer      │
-│  - Go ↔ C calls │  - Tree traversal │  - ASCII generation      │
-│  - Type safety  │  - Property ops   │  - Multi-resolution      │
-├─────────────────────────────────────────────────────────────────┤
-│                BUILDING STATE LAYER                             │
-│  Database       │  Cache Layer      │  Real-time Sync          │
-│  - PostgreSQL   │  - In-memory      │  - WebSocket updates     │
-│  - Spatial index│  - LRU eviction   │  - Change notifications  │
-└─────────────────────────────────────────────────────────────────┘
+```bash
+# 1. Filesystem Navigation - Navigate buildings like file systems
+arx @building-47 cd /electrical/main-panel
+arx @building-47 ls -la
+arx @building-47 pwd
+
+# 2. Git-like Operations - Version control for buildings
+arx @building-47 status
+arx @building-47 diff
+arx @building-47 commit -m "Updated circuit breaker settings"
+arx @building-47 log --oneline
+
+# 3. Infinite Zoom - From campus to chip level
+arx @building-47 zoom campus
+arx @building-47 zoom building
+arx @building-47 zoom floor --level 2
+arx @building-47 zoom room --id mechanical-room
+
+# 4. Real-time Monitoring - Live building data
+arx @building-47 watch --type electrical
+arx @building-47 monitor --dashboard
+arx @building-47 alerts --live
 ```
 
-### **Data Flow**
+## 🏗️ **Core Architecture Components**
 
-```
-User Input → Command Parser → Command Executor → ArxObject Engine → ASCII Renderer → Output
-     ↓              ↓              ↓              ↓              ↓
-  Interactive   Flag/Arg      Business      C Runtime      ASCII String
-     Shell      Parsing        Logic        Operations     Generation
-```
-
-## 🔧 **Command Structure**
-
-### **Command Hierarchy**
+### **Command Structure**
 
 ```go
-// Root command structure
-type RootCmd struct {
-    Use   string
-    Short string
-    Long  string
-    
-    // Subcommands
-    Commands []*cobra.Command
-    
-    // Global flags
-    Building string
-    Format   string
-    Verbose  bool
+// Main command structure
+type ArxosCommand struct {
+    Use     string
+    Short   string
+    Long    string
+    Example string
+    RunE    func(cmd *cobra.Command, args []string) error
+}
+
+// Building context management
+type BuildingContext struct {
+    CurrentBuilding *Building
+    CurrentPath     string
+    ZoomLevel       ZoomLevel
+    ViewMode        ViewMode
+    OutputFormat    OutputFormat
 }
 
 // Command categories
 var commandCategories = map[string][]*cobra.Command{
-    "Navigation": {
-        cdCmd, lsCmd, pwdCmd, treeCmd,
+    "navigation": {
+        cdCmd, lsCmd, pwdCmd, treeCmd, findCmd,
     },
-    "Inspection": {
-        inspectCmd, statusCmd, propertiesCmd,
+    "building": {
+        initCmd, statusCmd, diffCmd, commitCmd, logCmd,
     },
-    "Search": {
-        findCmd, grepCmd, locateCmd,
+    "visualization": {
+        renderCmd, zoomCmd, viewCmd, asciiCmd,
     },
-    "Management": {
-        createCmd, updateCmd, deleteCmd,
+    "monitoring": {
+        watchCmd, monitorCmd, alertsCmd, metricsCmd,
     },
-    "Version Control": {
-        commitCmd, branchCmd, mergeCmd, rollbackCmd,
-    },
-    "Operations": {
-        validateCmd, simulateCmd, controlCmd,
-    },
-    "Export": {
-        exportCmd, backupCmd, syncCmd,
+    "operations": {
+        setCmd, getCmd, queryCmd, validateCmd,
     },
 }
 ```
 
-### **Command Pattern**
+### **Building Context Management**
 
 ```go
-// Standard command structure
-var cdCmd = &cobra.Command{
-    Use:     "cd [path]",
-    Short:   "Change directory in building filesystem",
-    Long:    `Navigate through the building hierarchy using familiar cd commands.`,
-    Example: `  arx @building-47 cd /electrical/
-  arx @building-47 cd /hvac/ahu-1/
-  arx @building-47 cd ../../`,
-    
-    Args: cobra.MaximumNArgs(1),
-    RunE: func(cmd *cobra.Command, args []string) error {
-        return executeCD(cmd, args)
-    },
+// Building context management
+type BuildingContext struct {
+    CurrentBuilding *Building
+    CurrentPath     string
+    ZoomLevel       ZoomLevel
+    ViewMode        ViewMode
+    OutputFormat    OutputFormat
 }
 
-// Command execution function
-func executeCD(cmd *cobra.Command, args []string) error {
-    // Get building context
-    building := getBuildingFromContext(cmd)
-    
-    // Parse path argument
-    var path string
-    if len(args) > 0 {
-        path = args[0]
-    } else {
-        path = "~" // Default to home
-    }
-    
-    // Execute navigation
-    return building.NavigateTo(path)
-}
-```
-
-## 🧭 **Navigation System**
-
-### **Path Resolution**
-
-```go
-// Path resolution engine
-type PathResolver struct {
-    current *ArxObject
-    root    *ArxObject
-    cache   map[string]*ArxObject
-}
-
-// Resolve path from current location
-func (pr *PathResolver) ResolvePath(path string) (*ArxObject, error) {
-    // Handle special paths
-    if path == "/" {
-        return pr.root, nil
-    }
-    if path == "." {
-        return pr.current, nil
-    }
-    if path == ".." {
-        if pr.current.Parent != nil {
-            return pr.current.Parent, nil
-        }
-        return nil, fmt.Errorf("no parent directory")
-    }
-    if path == "~" {
-        return pr.getHomeDirectory()
-    }
-    
-    // Handle absolute paths
-    if strings.HasPrefix(path, "/") {
-        return pr.resolveAbsolutePath(path)
-    }
-    
-    // Handle relative paths
-    return pr.resolveRelativePath(path)
-}
-
-// Resolve absolute path
-func (pr *PathResolver) resolveAbsolutePath(path string) (*ArxObject, error) {
-    components := strings.Split(strings.Trim(path, "/"), "/")
-    current := pr.root
-    
-    for _, component := range components {
-        if component == "" {
-            continue
-        }
-        
-        child := current.GetChild(component)
-        if child == nil {
-            return nil, fmt.Errorf("path not found: %s", path)
-        }
-        current = child
-    }
-    
-    return current, nil
-}
-```
-
-### **Working Directory Management**
-
-```go
-// Working directory state
-type WorkingDirectory struct {
-    building *Building
-    current  *ArxObject
-    history  []*ArxObject
-    maxHistory int
-}
-
-// Change directory
-func (wd *WorkingDirectory) ChangeDirectory(path string) error {
-    // Resolve path
-    target, err := wd.building.ResolvePath(path)
+// Context switching
+func (ctx *BuildingContext) SwitchBuilding(buildingID string) error {
+    building, err := loadBuilding(buildingID)
     if err != nil {
-        return err
+        return fmt.Errorf("failed to load building: %w", err)
     }
     
-    // Add to history
-    wd.addToHistory(wd.current)
-    
-    // Update current directory
-    wd.current = target
+    ctx.CurrentBuilding = building
+    ctx.CurrentPath = "/"
+    ctx.ZoomLevel = ZoomLevelBuilding
     
     return nil
 }
 
-// Get current path
-func (wd *WorkingDirectory) GetCurrentPath() string {
-    if wd.current == nil {
-        return "/"
+// Path navigation
+func (ctx *BuildingContext) NavigateTo(path string) error {
+    if !ctx.CurrentBuilding.PathExists(path) {
+        return fmt.Errorf("path does not exist: %s", path)
     }
     
-    path := wd.current.Name
-    parent := wd.current.Parent
-    
-    for parent != nil && parent != wd.building.Root {
-        path = parent.Name + "/" + path
-        parent = parent.Parent
-    }
-    
-    return "/" + path
+    ctx.CurrentPath = path
+    return nil
 }
 ```
 
-## 🔍 **Search and Query System**
+## 🗂️ **Filesystem Navigation Commands**
 
-### **Find Command Engine**
+### **Core Navigation Commands**
 
-```go
-// Find command engine
-type FindEngine struct {
-    building *Building
-    index    *SpatialIndex
-}
+```bash
+# Building selection and context
+arx @building-47                    # Switch to building-47
+arx @campus-east                    # Switch to campus context
+arx @site-main                      # Switch to site context
 
-// Find objects by criteria
-func (fe *FindEngine) Find(criteria *FindCriteria) ([]*ArxObject, error) {
-    var results []*ArxObject
-    
-    // Start search from root or specified path
-    startPath := criteria.StartPath
-    if startPath == "" {
-        startPath = "/"
-    }
-    
-    startObject, err := fe.building.ResolvePath(startPath)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Execute search based on criteria
-    if criteria.TypeFilter != "" {
-        results = fe.findByType(startObject, criteria.TypeFilter, criteria.MaxDepth)
-    } else if len(criteria.PropertyFilters) > 0 {
-        results = fe.findByProperties(startObject, criteria.PropertyFilters, criteria.MaxDepth)
-    } else if criteria.SpatialFilter != nil {
-        results = fe.findBySpatialCriteria(startObject, criteria.SpatialFilter)
-    } else {
-        // Default: find all objects
-        results = fe.findAllObjects(startObject, criteria.MaxDepth)
-    }
-    
-    // Apply result limits
-    if criteria.MaxResults > 0 && len(results) > criteria.MaxResults {
-        results = results[:criteria.MaxResults]
-    }
-    
-    return results, nil
-}
+# Path navigation
+arx cd /electrical/main-panel       # Navigate to electrical panel
+arx cd ..                           # Go up one level
+arx cd /                            # Go to root
+arx cd -                            # Go to previous location
 
-// Find criteria structure
-type FindCriteria struct {
-    StartPath       string
-    TypeFilter      string
-    PropertyFilters []PropertyFilter
-    SpatialFilter   *SpatialFilter
-    MaxDepth        int
-    MaxResults      int
-    Format          string
-}
+# Directory listing
+arx ls                              # List current directory
+arx ls -la                          # List with details
+arx ls --type outlet               # List only outlets
+arx ls --filter "load > 15A"       # List with filter
 
-type PropertyFilter struct {
-    Key      string
-    Operator string
-    Value    interface{}
-}
+# Path information
+arx pwd                             # Show current path
+arx tree                            # Show directory tree
+arx tree --depth 3                 # Limit tree depth
+arx tree --type electrical         # Show only electrical systems
 ```
 
-### **Query Language (AQL)**
+### **Advanced Navigation Features**
 
-```go
-// Arxos Query Language parser
-type AQLParser struct {
-    scanner *Scanner
-    parser  *Parser
-}
+```bash
+# Pattern-based navigation
+arx cd /electrical/panel-*         # Navigate to any panel
+arx cd /hvac/ahu-[1-3]            # Navigate to AHUs 1-3
+arx cd /structural/column-[a1-d8] # Navigate to columns
 
-// Parse AQL query
-func (aql *AQLParser) ParseQuery(query string) (*Query, error) {
-    // Tokenize query
-    tokens, err := aql.scanner.Scan(query)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Parse tokens into AST
-    ast, err := aql.parser.Parse(tokens)
-    if err != nil {
-        return nil, err
-    }
-    
-    return ast, nil
-}
+# Search and find
+arx find --type outlet             # Find all outlets
+arx find --query "load > 15A"     # Find with query
+arx find --path "/electrical/*"    # Find in path pattern
+arx find --confidence > 0.8       # Find high-confidence objects
 
-// Example AQL queries
-var exampleQueries = []string{
-    "SELECT * FROM building:hq:floor:3 WHERE type = 'wall'",
-    "SELECT * FROM building:* WHERE confidence < 0.7",
-    "SELECT path, type, confidence FROM /electrical WHERE type = 'outlet'",
-    "FIND /hvac WHERE temperature > 75F AND status = 'active'",
-}
+# Quick navigation
+arx cd @electrical                 # Quick jump to electrical
+arx cd @hvac                      # Quick jump to HVAC
+arx cd @structural                # Quick jump to structural
+arx cd @network                   # Quick jump to network
 ```
 
-## 🛠️ **Building Operations**
+## 🔄 **Git-like Version Control**
 
-### **Inspection Engine**
+### **Building State Management**
 
-```go
-// Inspection engine for examining objects
-type InspectionEngine struct {
-    building *Building
-    formatter *OutputFormatter
-}
+```bash
+# Status and changes
+arx status                         # Show building status
+arx status --short                 # Compact status
+arx status --type electrical       # Status for electrical systems
 
-// Inspect object
-func (ie *InspectionEngine) Inspect(path string, options *InspectOptions) (*InspectionResult, error) {
-    // Resolve object
-    obj, err := ie.building.ResolvePath(path)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Build inspection result
-    result := &InspectionResult{
-        Object: obj,
-        Properties: ie.getObjectProperties(obj, options),
-        Relationships: ie.getObjectRelationships(obj, options),
-        History: ie.getObjectHistory(obj, options),
-        Validation: ie.getObjectValidation(obj, options),
-    }
-    
-    return result, nil
-}
+# Diff and changes
+arx diff                           # Show all changes
+arx diff /electrical/main-panel    # Show changes in specific area
+arx diff --type outlet            # Show changes by type
+arx diff --since "2 hours ago"    # Show recent changes
 
-// Inspection options
-type InspectOptions struct {
-    Format      string
-    ShowProperties bool
-    ShowRelationships bool
-    ShowHistory bool
-    ShowValidation bool
-    MaxDepth    int
-}
+# Commit and history
+arx commit -m "Updated circuit settings"
+arx commit --all -m "Bulk update of electrical systems"
+arx log                            # Show commit history
+arx log --oneline                  # Compact history
+arx log --since "1 day ago"       # Recent history
 
-// Inspection result
-type InspectionResult struct {
-    Object        *ArxObject
-    Properties   map[string]interface{}
-    Relationships []Relationship
-    History      []HistoryEntry
-    Validation   ValidationInfo
-}
+# Branching and merging
+arx branch maintenance-mode        # Create maintenance branch
+arx checkout maintenance-mode      # Switch to maintenance mode
+arx merge main                     # Merge changes back to main
 ```
 
-### **Status Engine**
+### **Version Control Implementation**
 
 ```go
-// Status engine for building health
-type StatusEngine struct {
-    building *Building
-    monitor  *BuildingMonitor
-}
-
-// Get building status
-func (se *StatusEngine) GetStatus(path string, options *StatusOptions) (*StatusResult, error) {
-    // Resolve target object
-    target, err := se.building.ResolvePath(path)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Collect status information
-    status := &StatusResult{
-        Object: target,
-        Health: se.getHealthStatus(target),
-        Alerts: se.getActiveAlerts(target),
-        Metrics: se.getPerformanceMetrics(target),
-        LastUpdated: time.Now(),
-    }
-    
-    return status, nil
-}
-
-// Status result
-type StatusResult struct {
-    Object       *ArxObject
-    Health       HealthStatus
-    Alerts       []Alert
-    Metrics      map[string]float64
-    LastUpdated  time.Time
-}
-
-type HealthStatus struct {
-    Overall      string  // "healthy", "warning", "critical"
-    Score        float64 // 0.0 - 1.0
-    Issues       []Issue
-    Recommendations []string
-}
-```
-
-## 📚 **Version Control System**
-
-### **Building Version Control**
-
-```go
-// Building version control system
-type BuildingVCS struct {
-    building *Building
-    storage  *VersionStorage
-    config   *VCSConfig
-}
-
-// Commit changes
-func (vcs *BuildingVCS) Commit(message string, options *CommitOptions) (*Commit, error) {
-    // Get current working state
-    workingState, err := vcs.building.GetWorkingState()
-    if err != nil {
-        return nil, err
-    }
-    
-    // Get last commit for comparison
-    lastCommit, err := vcs.storage.GetLastCommit()
-    if err != nil {
-        return nil, err
-    }
-    
-    // Calculate changes
-    changes, err := vcs.calculateChanges(lastCommit.State, workingState)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Create commit
-    commit := &Commit{
-        ID:          generateCommitID(),
-        Message:     message,
-        Author:      options.Author,
-        Timestamp:   time.Now(),
-        Parent:      lastCommit.ID,
-        Changes:     changes,
-        State:       workingState,
-        Tags:        options.Tags,
-    }
-    
-    // Store commit
-    err = vcs.storage.StoreCommit(commit)
-    if err != nil {
-        return nil, err
-    }
-    
-    return commit, nil
+// Building version control
+type BuildingVersionControl struct {
+    CurrentBranch string
+    Branches      map[string]*Branch
+    Commits       []*Commit
+    StagedChanges map[string]*Change
 }
 
 // Commit structure
 type Commit struct {
-    ID        string
-    Message   string
-    Author    string
-    Timestamp time.Time
-    Parent    string
-    Changes   []Change
-    State     *BuildingState
-    Tags      []string
+    ID          string
+    Message     string
+    Timestamp   time.Time
+    Author      string
+    Changes     []*Change
+    Parent      *Commit
+    Branch      string
 }
 
+// Change tracking
 type Change struct {
-    Type      ChangeType // "create", "update", "delete"
-    Path      string
-    OldValue  interface{}
-    NewValue  interface{}
-    ObjectID  string
+    Path        string
+    Type        ChangeType
+    OldValue    interface{}
+    NewValue    interface{}
+    Timestamp   time.Time
+    Author      string
+}
+
+// Commit changes
+func (bvc *BuildingVersionControl) Commit(message string, author string) error {
+    if len(bvc.StagedChanges) == 0 {
+        return fmt.Errorf("no changes to commit")
+    }
+    
+    commit := &Commit{
+        ID:        generateCommitID(),
+        Message:   message,
+        Timestamp: time.Now(),
+        Author:    author,
+        Changes:   make([]*Change, 0),
+        Parent:    bvc.getCurrentCommit(),
+        Branch:    bvc.CurrentBranch,
+    }
+    
+    // Convert staged changes to commit
+    for _, change := range bvc.StagedChanges {
+        commit.Changes = append(commit.Changes, change)
+    }
+    
+    // Add to commit history
+    bvc.Commits = append(bvc.Commits, commit)
+    
+    // Clear staged changes
+    bvc.StagedChanges = make(map[string]*Change)
+    
+    return nil
 }
 ```
 
-### **Branch Management**
+## 🎯 **Infinite Zoom System**
+
+### **Zoom Level Management**
+
+```bash
+# Zoom level commands
+arx zoom campus                     # Campus overview (100m per char)
+arx zoom site                       # Site plan (10m per char)
+arx zoom building                   # Building outline (1m per char)
+arx zoom floor --level 2            # Floor plan (10cm per char)
+arx zoom room --id mechanical-room  # Room detail (1cm per char)
+arx zoom equipment --id plc-cabinet # Equipment (1mm per char)
+arx zoom component --id cpu-module  # Component (0.1mm per char)
+arx zoom chip                       # Chip level (0.01mm per char)
+
+# Zoom with specific coordinates
+arx zoom --x 100 --y 200 --scale 0.1
+arx zoom --center "electrical/main-panel"
+arx zoom --fit "hvac/ahu-1"
+
+# Zoom history
+arx zoom --back                     # Go back to previous zoom
+arx zoom --forward                  # Go forward in zoom history
+arx zoom --reset                    # Reset to default zoom
+```
+
+### **Zoom Implementation**
 
 ```go
-// Branch management
-func (vcs *BuildingVCS) CreateBranch(name string, options *BranchOptions) (*Branch, error) {
-    // Check if branch already exists
-    if vcs.storage.BranchExists(name) {
-        return nil, fmt.Errorf("branch %s already exists", name)
-    }
-    
-    // Get current commit
-    currentCommit, err := vcs.storage.GetCurrentCommit()
-    if err != nil {
-        return nil, err
-    }
-    
-    // Create branch
-    branch := &Branch{
-        Name:       name,
-        CommitID:   currentCommit.ID,
-        Created:    time.Now(),
-        Creator:    options.Creator,
-        Description: options.Description,
-    }
-    
-    // Store branch
-    err = vcs.storage.StoreBranch(branch)
-    if err != nil {
-        return nil, err
-    }
-    
-    return branch, nil
-}
-
-// Branch structure
-type Branch struct {
-    Name        string
-    CommitID    string
-    Created     time.Time
-    Creator     string
+// Zoom level management
+type ZoomLevel struct {
+    Scale       float64
     Description string
-    IsActive    bool
+    Units       string
+    Precision   string
+}
+
+var zoomLevels = map[string]ZoomLevel{
+    "campus": {
+        Scale:       0.0001,
+        Description: "Campus overview",
+        Units:       "km",
+        Precision:   "kilometer",
+    },
+    "site": {
+        Scale:       0.001,
+        Description: "Site plan",
+        Units:       "hm",
+        Precision:   "hectometer",
+    },
+    "building": {
+        Scale:       0.01,
+        Description: "Building outline",
+        Units:       "dam",
+        Precision:   "decameter",
+    },
+    "floor": {
+        Scale:       0.1,
+        Description: "Floor plan",
+        Units:       "m",
+        Precision:   "meter",
+    },
+    "room": {
+        Scale:       1.0,
+        Description: "Room detail",
+        Units:       "dm",
+        Precision:   "decimeter",
+    },
+    "equipment": {
+        Scale:       10.0,
+        Description: "Equipment detail",
+        Units:       "cm",
+        Precision:   "centimeter",
+    },
+    "component": {
+        Scale:       100.0,
+        Description: "Component detail",
+        Units:       "mm",
+        Precision:   "millimeter",
+    },
+    "chip": {
+        Scale:       1000.0,
+        Description: "Chip level",
+        Units:       "μm",
+        Precision:   "micrometer",
+    },
+}
+
+// Zoom to specific level
+func (ctx *BuildingContext) ZoomToLevel(level string) error {
+    zoomLevel, exists := zoomLevels[level]
+    if !exists {
+        return fmt.Errorf("invalid zoom level: %s", level)
+    }
+    
+    ctx.ZoomLevel = zoomLevel
+    return ctx.updateView()
 }
 ```
 
-## 🔄 **Real-Time Operations**
+## 📊 **Real-time Monitoring Commands**
 
-### **Live Building State**
+### **Live Building Data**
 
-```go
-// Live building state manager
-type LiveStateManager struct {
-    building *Building
-    cache    *StateCache
-    notifier *ChangeNotifier
-}
+```bash
+# Real-time monitoring
+arx watch                          # Watch all changes
+arx watch --type electrical        # Watch electrical systems
+arx watch --path /hvac/ahu-1      # Watch specific equipment
+arx watch --filter "temp > 80"    # Watch with filter
 
-// Get real-time state
-func (lsm *LiveStateManager) GetLiveState(path string) (*LiveState, error) {
-    // Check cache first
-    if cached := lsm.cache.Get(path); cached != nil {
-        return cached, nil
-    }
-    
-    // Get from building
-    obj, err := lsm.building.ResolvePath(path)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Build live state
-    liveState := &LiveState{
-        Object:      obj,
-        Properties:  lsm.getLiveProperties(obj),
-        Performance: lsm.getPerformanceMetrics(obj),
-        Alerts:      lsm.getActiveAlerts(obj),
-        LastUpdate:  time.Now(),
-    }
-    
-    // Cache result
-    lsm.cache.Set(path, liveState)
-    
-    return liveState, nil
-}
+# Dashboard views
+arx monitor --dashboard            # Show monitoring dashboard
+arx monitor --type energy          # Energy monitoring dashboard
+arx monitor --type security        # Security monitoring dashboard
+arx monitor --type hvac            # HVAC monitoring dashboard
 
-// Live state structure
-type LiveState struct {
-    Object      *ArxObject
-    Properties  map[string]interface{}
-    Performance map[string]float64
-    Alerts      []Alert
-    LastUpdate  time.Time
-}
+# Alerts and notifications
+arx alerts                         # Show active alerts
+arx alerts --live                  # Live alert stream
+arx alerts --type critical         # Critical alerts only
+arx alerts --since "1 hour ago"    # Recent alerts
+
+# Performance metrics
+arx metrics                        # Show performance metrics
+arx metrics --type electrical      # Electrical metrics
+arx metrics --type hvac            # HVAC metrics
+arx metrics --history "24h"        # 24-hour history
 ```
 
-### **Change Notifications**
+### **Monitoring Implementation**
 
 ```go
-// Change notification system
-type ChangeNotifier struct {
-    subscribers map[string][]Subscriber
-    websocket   *WebSocketManager
+// Real-time monitoring
+type MonitoringSystem struct {
+    Watchers    map[string]*Watcher
+    Alerts      []*Alert
+    Metrics     map[string]*Metric
+    Dashboard   *Dashboard
 }
 
-// Subscribe to changes
-func (cn *ChangeNotifier) Subscribe(path string, subscriber Subscriber) error {
-    if cn.subscribers[path] == nil {
-        cn.subscribers[path] = make([]Subscriber, 0)
+// Watcher for real-time updates
+type Watcher struct {
+    ID       string
+    Type     string
+    Path     string
+    Filter   string
+    Callback func(*Change)
+    Active   bool
+}
+
+// Start watching
+func (ms *MonitoringSystem) StartWatching(watcher *Watcher) error {
+    if watcher.Active {
+        return fmt.Errorf("watcher already active")
     }
     
-    cn.subscribers[path] = append(cn.subscribers[path], subscriber)
+    watcher.Active = true
+    ms.Watchers[watcher.ID] = watcher
+    
+    // Start background monitoring
+    go ms.monitorWatcher(watcher)
+    
     return nil
 }
 
-// Notify subscribers of changes
-func (cn *ChangeNotifier) NotifyChange(change *Change) error {
-    // Notify local subscribers
-    if subscribers, exists := cn.subscribers[change.Path]; exists {
-        for _, subscriber := range subscribers {
-            subscriber.OnChange(change)
+// Monitor watcher in background
+func (ms *MonitoringSystem) monitorWatcher(watcher *Watcher) {
+    ticker := time.NewTicker(100 * time.Millisecond)
+    defer ticker.Stop()
+    
+    for watcher.Active {
+        select {
+        case <-ticker.C:
+            // Check for changes
+            changes := ms.checkForChanges(watcher)
+            for _, change := range changes {
+                watcher.Callback(change)
+            }
         }
     }
-    
-    // Notify WebSocket clients
-    if cn.websocket != nil {
-        cn.websocket.BroadcastChange(change)
-    }
-    
-    return nil
 }
 ```
 
-## 📱 **Mobile Integration**
+## 🔧 **Property and Query Operations**
 
-### **Touch-Optimized Interface**
+### **Object Property Management**
 
-```go
-// Touch-optimized CLI interface
-type TouchCLI struct {
-    cli        *CLI
-    touchOpts  *TouchOptions
-    gestureHandler *GestureHandler
-}
+```bash
+# Property operations
+arx get /electrical/main-panel/circuit-1 --property load_current
+arx get /hvac/ahu-1 --property supply_air_temp
+arx get /structural/column-a1 --property load_capacity
 
-// Handle touch gestures
-func (tcli *TouchCLI) HandleGesture(gesture *TouchGesture) error {
-    switch gesture.Type {
-    case "tap":
-        return tcli.handleTap(gesture)
-    case "double_tap":
-        return tcli.handleDoubleTap(gesture)
-    case "long_press":
-        return tcli.handleLongPress(gesture)
-    case "swipe":
-        return tcli.handleSwipe(gesture)
-    case "pinch":
-        return tcli.handlePinch(gesture)
-    default:
-        return fmt.Errorf("unknown gesture type: %s", gesture.Type)
-    }
-}
+# Set properties
+arx set /electrical/main-panel/circuit-1 --property load_current=15.5
+arx set /hvac/ahu-1 --property supply_air_temp=72
+arx set /structural/column-a1 --property load_capacity=5000
 
-// Touch gesture structure
-type TouchGesture struct {
-    Type      string
-    Position  Point2D
-    Delta     Vector2D
-    Scale     float64
-    Duration  time.Duration
-}
+# Query operations
+arx query "SELECT path FROM /electrical WHERE type='outlet' AND load > 15A"
+arx query "SELECT * FROM /hvac WHERE temp > 80 ORDER BY temp DESC"
+arx query "SELECT COUNT(*) FROM /structural WHERE type='column'"
+
+# Bulk operations
+arx set --bulk /electrical/panel-* --property voltage=480
+arx set --bulk /hvac/ahu-* --property mode="auto"
+arx set --bulk /structural/column-* --property inspection_due="2024-06-01"
 ```
 
-### **AR Mode Integration**
+### **Query Language Implementation**
 
 ```go
-// AR mode integration
-type ARModeManager struct {
-    cli        *CLI
-    arEngine   *AREngine
-    mode       ARMode
+// Query language parser
+type QueryParser struct {
+    Tokens []Token
+    Pos    int
 }
 
-// Switch to AR mode
-func (arm *ARModeManager) SwitchToARMode(mode ARMode) error {
-    // Update mode
-    arm.mode = mode
-    
-    // Notify AR engine
-    err := arm.arEngine.SetMode(mode)
+// Query execution
+type QueryExecutor struct {
+    Building *Building
+    Context  *BuildingContext
+}
+
+// Execute query
+func (qe *QueryExecutor) ExecuteQuery(query string) ([]*ArxObject, error) {
+    parser := NewQueryParser(query)
+    ast, err := parser.Parse()
     if err != nil {
-        return err
+        return nil, fmt.Errorf("parse error: %w", err)
     }
     
-    // Update CLI display
-    arm.cli.SetDisplayMode("ar")
-    
-    return nil
+    return qe.executeAST(ast)
 }
 
-// AR modes
-type ARMode string
+// Query AST execution
+func (qe *QueryExecutor) executeAST(ast *QueryAST) ([]*ArxObject, error) {
+    switch ast.Type {
+    case ASTSelect:
+        return qe.executeSelect(ast)
+    case ASTUpdate:
+        return qe.executeUpdate(ast)
+    case ASTDelete:
+        return qe.executeDelete(ast)
+    default:
+        return nil, fmt.Errorf("unsupported query type")
+    }
+}
 
-const (
-    ARModeASCIIOverlay    ARMode = "ascii_overlay"
-    ARModePDFGhost        ARMode = "pdf_ghost"
-    ARModeLiDARMesh       ARMode = "lidar_mesh"
-    ARModeHybrid          ARMode = "hybrid"
-)
+// Execute SELECT query
+func (qe *QueryExecutor) executeSelect(ast *SelectAST) ([]*ArxObject, error) {
+    // Parse FROM clause
+    objects, err := qe.resolvePath(ast.From)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Apply WHERE clause
+    if ast.Where != nil {
+        objects = qe.applyWhereClause(objects, ast.Where)
+    }
+    
+    // Apply ORDER BY
+    if ast.OrderBy != nil {
+        objects = qe.applyOrderBy(objects, ast.OrderBy)
+    }
+    
+    // Apply LIMIT
+    if ast.Limit > 0 {
+        objects = qe.applyLimit(objects, ast.Limit)
+    }
+    
+    return objects, nil
+}
 ```
 
-## 🔧 **Configuration Management**
+## 🎨 **Visualization Commands**
 
-### **CLI Configuration**
+### **ASCII Rendering**
 
-```yaml
-# CLI configuration file
-cli:
-  # Default settings
-  default_building: "building-47"
-  default_format: "table"
-  max_history: 1000
-  
-  # Display settings
-  display:
-    colors: true
-    unicode: true
-    max_width: 120
-    show_progress: true
-    
-  # Navigation settings
-  navigation:
-    auto_complete: true
-    fuzzy_search: true
-    case_sensitive: false
-    
-  # Output settings
-  output:
-    default_format: "table"
-    show_timestamps: true
-    show_confidence: true
-    
-  # Performance settings
-  performance:
-    cache_size: 1000
-    cache_ttl: "5m"
-    max_concurrent: 10
+```bash
+# ASCII rendering
+arx render                         # Render current view
+arx render --type 2d              # 2D floor plan
+arx render --type 3d              # 3D building view
+arx render --type electrical      # Electrical system view
+arx render --type hvac            # HVAC system view
+
+# View modes
+arx view --mode structural        # Structural view
+arx view --mode electrical        # Electrical view
+arx view --mode hvac              # HVAC view
+arx view --mode network           # Network view
+arx view --mode plumbing          # Plumbing view
+
+# Output formats
+arx render --format ascii         # ASCII output
+arx render --format json          # JSON output
+arx render --format yaml          # YAML output
+arx render --format csv           # CSV output
+arx render --format table         # Table output
 ```
 
-### **Building Configuration**
-
-```yaml
-# Building configuration
-building:
-  id: "building-47"
-  name: "HCPS Administration Building"
-  campus: "east-region"
-  coordinates: [27.9506, -82.2373]
-  
-  # System definitions
-  systems:
-    electrical:
-      main_panel:
-        capacity: 400A
-        circuits:
-          - id: "circuit-1"
-            breaker: 20A
-            loads:
-              - outlets: [1-8]
-              - lights: [1-4]
-            constraints:
-              - "load < 16A"  # 80% rule
-              
-    hvac:
-      ahu_1:
-        supply_temp: 55F
-        schedules:
-          occupied: "07:00-18:00"
-          unoccupied_setback: 10F
-        optimization:
-          mode: "efficiency"
-          constraints:
-            - comfort_priority: 0.7
-            - energy_priority: 0.3
-```
-
-## 📊 **Performance and Scalability**
-
-### **Performance Targets**
-
-| Operation | Target | Architecture |
-|-----------|--------|--------------|
-| Command Response | <100ms | Optimized execution |
-| Path Resolution | <10ms | Spatial indexing |
-| Object Inspection | <50ms | Cached results |
-| Search Operations | <200ms | Indexed queries |
-| Real-time Updates | <100ms | WebSocket streaming |
-
-### **Caching Strategy**
+### **Rendering Implementation**
 
 ```go
-// Multi-level caching system
-type CacheManager struct {
-    l1Cache *LRUCache      // In-memory cache
-    l2Cache *RedisCache    // Redis cache
-    l3Cache *DatabaseCache // Database cache
+// Rendering system
+type RenderingSystem struct {
+    Renderers map[string]Renderer
+    Context   *BuildingContext
 }
 
-// Get cached value
-func (cm *CacheManager) Get(key string) (interface{}, error) {
-    // Try L1 cache first
-    if value := cm.l1Cache.Get(key); value != nil {
-        return value, nil
+// Renderer interface
+type Renderer interface {
+    Render(building *Building, context *BuildingContext) (string, error)
+    SupportsFormat(format string) bool
+    GetSupportedFormats() []string
+}
+
+// ASCII renderer
+type ASCIIRenderer struct {
+    CharacterSet map[string]string
+    ZoomLevel    ZoomLevel
+    ViewMode     ViewMode
+}
+
+// Render building in ASCII
+func (ar *ASCIIRenderer) Render(building *Building, context *BuildingContext) (string, error) {
+    // Get objects in current view
+    objects := building.GetObjectsInPath(context.CurrentPath)
+    
+    // Apply zoom level
+    objects = ar.applyZoomLevel(objects, context.ZoomLevel)
+    
+    // Apply view mode
+    objects = ar.applyViewMode(objects, context.ViewMode)
+    
+    // Generate ASCII representation
+    return ar.generateASCII(objects, context)
+}
+
+// Generate ASCII output
+func (ar *ASCIIRenderer) generateASCII(objects []*ArxObject, context *BuildingContext) (string, error) {
+    var output strings.Builder
+    
+    // Calculate canvas dimensions
+    width, height := ar.calculateCanvasSize(objects, context.ZoomLevel)
+    
+    // Create canvas
+    canvas := ar.createCanvas(width, height)
+    
+    // Render objects
+    for _, obj := range objects {
+        ar.renderObject(canvas, obj, context)
     }
     
-    // Try L2 cache
-    if value := cm.l2Cache.Get(key); value != nil {
-        // Populate L1 cache
-        cm.l1Cache.Set(key, value)
-        return value, nil
-    }
-    
-    // Try L3 cache
-    if value := cm.l3Cache.Get(key); value != nil {
-        // Populate L1 and L2 caches
-        cm.l1Cache.Set(key, value)
-        cm.l2Cache.Set(key, value)
-        return value, nil
-    }
-    
-    return nil, fmt.Errorf("key not found: %s", key)
+    // Convert canvas to string
+    return ar.canvasToString(canvas), nil
 }
 ```
 
-## 📚 **Best Practices**
+## 🔌 **Integration and Automation**
 
-### **Command Design**
-1. **Follow Unix conventions** for familiar user experience
-2. **Use consistent naming** across related commands
-3. **Provide helpful examples** in command help
-4. **Implement proper error handling** with user-friendly messages
-5. **Support both interactive and scripted** usage
+### **Scripting and Automation**
 
-### **Performance Optimization**
-1. **Use efficient data structures** for large buildings
-2. **Implement intelligent caching** for frequently accessed data
-3. **Optimize path resolution** with spatial indexing
-4. **Batch operations** when possible
-5. **Use async operations** for long-running tasks
+```bash
+# Script execution
+arx exec --file update_electrical.sh
+arx exec --script "cd /electrical && ls -la"
+arx exec --inline "set /hvac/ahu-1 --property mode=auto"
 
-### **User Experience**
-1. **Provide clear feedback** for all operations
-2. **Support auto-completion** for paths and commands
-3. **Show progress indicators** for long operations
-4. **Implement undo/redo** where appropriate
-5. **Support multiple output formats** (table, JSON, YAML)
+# Batch operations
+arx batch --file operations.yaml
+arx batch --script "update_all_panels.sh"
+arx batch --inline "set --bulk /electrical/* --property voltage=480"
+
+# Scheduled operations
+arx schedule --cron "0 6 * * *" --command "set /hvac/ahu-1 --property mode=auto"
+arx schedule --daily "06:00" --command "set /hvac/ahu-1 --property mode=auto"
+arx schedule --weekly "monday 06:00" --command "maintenance_check.sh"
+```
+
+### **API Integration**
+
+```bash
+# REST API integration
+arx api --endpoint "https://api.arxos.com" --token "your-token"
+arx api --method GET --path "/buildings/building-47/electrical"
+arx api --method POST --path "/buildings/building-47/electrical" --data '{"voltage": 480}'
+
+# WebSocket integration
+arx ws --connect "wss://ws.arxos.com" --subscribe "building-47"
+arx ws --send '{"type": "command", "action": "set_property", "path": "/hvac/ahu-1", "property": "mode", "value": "auto"}'
+```
+
+## 🏆 **Key Benefits**
+
+### **Universal Accessibility**
+
+- **Works Everywhere** - From SSH terminals to embedded systems
+- **No Dependencies** - Pure terminal, no graphics libraries needed
+- **Cross-Platform** - Same experience on any operating system
+- **Resource Efficient** - Minimal memory and CPU requirements
+
+### **Power User Efficiency**
+
+- **Fast Navigation** - Navigate buildings faster than with GUI tools
+- **Keyboard Driven** - No mouse required, pure keyboard operation
+- **Scriptable** - Automate building operations with scripts
+- **Batch Operations** - Perform operations on multiple objects
+
+### **Developer Experience**
+
+- **Familiar Interface** - Git-like operations for building management
+- **Version Control** - Track changes and rollback when needed
+- **Query Language** - SQL-like queries for building data
+- **API Integration** - REST and WebSocket APIs for external tools
 
 ---
 
-**The Arxos CLI transforms building management into a powerful, intuitive command-line experience.** 🏗️💻
+**The Arxos CLI represents a fundamental shift in building management - making complex building infrastructure accessible through the universal language of the terminal.** 🖥️✨

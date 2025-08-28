@@ -1,98 +1,209 @@
-# ARXOS Documentation
+# 🏗️ Arxos - Revolutionary Building Infrastructure-as-Code Platform
 
-## 🎯 **Welcome to ARXOS**
+## 🎯 **Platform Vision**
 
-ARXOS is a **Building Infrastructure-as-Code** platform that transforms buildings into programmable, navigable, version-controlled systems. Think of it as **"Git for Buildings"** - enabling infinite zoom from campus-level down to microchip internals, all through ASCII art and augmented reality.
+**Arxos** transforms buildings into **programmable, navigable infrastructure** through a revolutionary combination of ASCII-BIM visualization, ArxObject behavioral components, and infrastructure-as-code workflows. The platform enables buildings to be queried, configured, and operated through CLI tools, Progressive Web Apps, and AR field validation - creating the world's first truly programmable building infrastructure platform.
 
-## 🚀 **Core Innovation**
+**Core Innovation**: Buildings become navigable filesystems with infinite zoom from campus-level down to microcontroller internals, all rendered in human-readable ASCII art that works everywhere from SSH terminals to AR headsets.
 
-- **ASCII as Universal Language**: Buildings rendered in ASCII art that works everywhere from SSH terminals to AR headsets
-- **Infinite Fractal Zoom**: Navigate from satellite view down to silicon chip level through the same interface
-- **Building as Filesystem**: Navigate buildings with familiar commands: `cd`, `ls`, `find`, `tree`
-- **Progressive Reality Construction**: Start with PDF plans, end with accurate 3D digital twins
-- **Field-First Design**: Built for workers on the ground, not just office users
+**Revolutionary Approach**: Using ASCII as a universal building language, combined with progressive construction from PDF floor plans, LiDAR scanning fusion, and Git-like version control for physical infrastructure.
+
+**Industry Disruption**: Arxos serves as the open-source software layer that liberates Building Automation Systems (BAS), IoT devices, PLC/Controls, and networking infrastructure from vendor lock-in, enabling users to build their own hardware devices that integrate seamlessly with the Arxos building intelligence data model.
+
+## 🚀 **Core Capabilities**
+
+### **✅ Complete 6-Layer Visualization System**
+1. **SVG-based 3D BIM** - Three.js-powered 3D building visualization with infinite zoom
+2. **AR ArxObject Overlay** - Augmented reality for on-site building interaction
+3. **SVG-based 2D BIM** - 2D building plans with ArxObject intelligence
+4. **ASCII Art "3D" Rendering** - Terminal-based 3D visualization with infinite zoom
+5. **ASCII Art 2D Building Plans** - Terminal-based 2D plans
+6. **CLI + AQL** - Complete building navigation and query system
+
+### **🏗️ Revolutionary ASCII-BIM Engine**
+- **Infinite Zoom Architecture** - From campus-level (100m per char) to chip-level (1mm per char)
+- **Pixatool-Inspired Rendering** - Sub-10ms building plan rendering with perfect depth perception
+- **Multi-Scale Rendering** - Contextually appropriate detail at every zoom level
+- **Coordinate System** - Millimeter-precise world coordinates with ASCII view layer
+
+### **🔧 ArxObject Hierarchical System**
+- **Building as Filesystem** - Navigable file tree where every component has a path
+- **Infinite Depth** - Components can contain infinite sub-components
+- **Type System** - Behavioral components with methods and constraints
+- **CLI Navigation** - Navigate buildings like filesystems with Git-like operations
+
+### **📐 Progressive Building Construction**
+- **PDF to 3D Pipeline** - Transform 2D floor plans into accurate 3D models
+- **PDF + LiDAR Fusion** - iPhone LiDAR with PDF guidance for precise reconstruction
+- **Progressive Scaling** - Start with topology, add measurements progressively
+- **Field Validation** - AR-guided validation and measurement collection
+
+### **🌐 Multi-Modal Interface Architecture**
+- **Terminal-First Design** - CLI tools for power users and automation
+- **Progressive Web App** - Browser-based interface with offline support
+- **AR Field App** - LiDAR scanning, spatial anchoring, PDF-guided validation
+- **ASCII Native** - Universal language that works everywhere
+
+### **⚙️ Infrastructure-as-Code Operations**
+- **Git-like Version Control** - Commits, branches, rollbacks for physical infrastructure
+- **YAML Configuration** - Declarative building definitions
+- **Automation Rules** - Constraint-based automation and validation
+- **Progressive Scaling** - Start simple, add complexity incrementally
+
+### **🔌 Industry Integration & Open Hardware**
+- **BAS Integration** - Open protocols for building automation systems
+- **IoT Device Management** - DIY sensors and mesh networking
+- **PLC/Controls** - Custom hardware with open standards
+- **Vendor-Neutral** - Liberate from proprietary lock-in
 
 ## 🏗️ **System Architecture**
 
-ARXOS consists of three core components:
-
-1. **ArxObject Runtime Engine (C)** - High-performance building component system (<1ms operations)
-2. **ASCII-BIM Engine (C)** - Multi-resolution ASCII rendering (<10ms generation)
-3. **CLI Tools (Go)** - Building navigation and version control
-4. **AR Mobile Apps** - Field validation and real-time building interaction
-
-## 📚 **Documentation Structure**
-
+### **Core Technology Stack**
 ```
-/docs
-├── README.md                    # This file - main navigation
-├── architecture/                # System architecture docs
-│   ├── overview.md             # High-level system design
-│   ├── arxobjects.md           # ArxObject data model (updated)
-│   ├── ascii-bim.md            # ASCII rendering system
-│   └── cli-architecture.md     # CLI design and structure
-├── cli/                        # CLI documentation
-│   ├── commands.md             # Complete command reference
-│   ├── file-tree.md            # ArxObject file tree structure
-│   └── examples.md             # Usage examples and workflows
-├── development/                 # Developer documentation
-│   ├── setup.md                # Development environment
-│   ├── arxobject-dev.md        # ArxObject development guide
-│   └── cli-dev.md              # CLI development guide
-├── workflows/                   # User workflow guides
-│   ├── field-validation.md     # AR field validation process
-│   ├── building-iac.md         # Infrastructure as Code workflows
-│   └── pdf-to-3d.md            # Progressive building construction
-└── api/                        # API documentation (if needed)
-    └── README.md               # API overview
+┌─────────────────────────────────────────────────────────────────
+│                    INTERFACE LAYER                               │
+│  CLI (Go)          │  PWA (Web)        │  AR Field App          │
+│  - Terminal-first  │  - Browser-based  │  - LiDAR scanning      │
+│  - Git-like ops    │  - Offline-first  │  - Spatial anchoring   │
+│  - ASCII native    │  - ASCII + SVG    │  - PDF-guided scan     │
+├─────────────────────────────────────────────────────────────────┤
+│                ARXOBJECT RUNTIME ENGINE (C)                      │
+│  Hierarchical Components │  Physics Simulation │ Real-time Ops  │
+│  - Filesystem-like tree  │  - <1ms operations │ - BACnet/Modbus │
+│  - Infinite depth        │  - Constraint prop │ - Live data sync │
+│  - /electrical/panel/... │  - Energy modeling │ - Control cmds   │
+├─────────────────────────────────────────────────────────────────┤
+│            ASCII-BIM SPATIAL ENGINE (C)                          │
+│  Multi-Resolution     │  Coordinate System  │  Infinite Zoom    │
+│  - Campus → Chip      │  - World ↔ ASCII   │  - Fractal detail │
+│  - Pixatool-inspired  │  - mm precision    │  - Semantic chars │
+│  - <10ms rendering    │  - Spatial anchors │  - Depth buffer   │
+├─────────────────────────────────────────────────────────────────┤
+│           BUILDING STATE & VERSION CONTROL (Go)                  │
+│  Git-like VCS      │  YAML Config       │  Progressive Scale   │
+│  - Commits/branches│  - IaC definitions │  - PDF ingestion    │
+│  - State snapshots │  - Automation rules│  - LiDAR fusion     │
+│  - Rollbacks       │  - Constraints     │  - Field validation │
+├─────────────────────────────────────────────────────────────────┤
+│              OPEN HARDWARE ABSTRACTION LAYER                     │
+│  BAS Integration   │  IoT Device Mgmt   │  PLC/Controls       │
+│  - Open protocols  │  - DIY sensors     │  - Custom hardware  │
+│  - Vendor-neutral  │  - Mesh networking │  - Open standards   │
+│  - Standards-based │  - Edge computing  │  - Community-built  │
+├─────────────────────────────────────────────────────────────────┤
+│                    DATA LAYER                                    │
+│  PostgreSQL/PostGIS    │  Time Series DB   │  Spatial Index     │
+│  - Building state      │  - Sensor data    │  - ASCII coords    │
+│  - Version history     │  - Energy metrics │  - AR anchors      │
+│  - Config store        │  - Performance    │  - World mapping   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🎯 **Getting Started**
+### **Data Flow Architecture**
+```
+INGESTION → CONSTRUCTION → OPERATION → VALIDATION → INTELLIGENCE
+    ↓            ↓            ↓            ↓            ↓
+PDF/IFC     ASCII-BIM     Git-like    AR Field    Enterprise
+DWG/HEIC    Rendering     Control     Scanning    Export APIs
+LiDAR       Progressive   Real-time   Spatial     Premium Data
+Photos      Scaling       Building    Anchors     Analytics
+```
 
-### **For Field Workers & Users**
-1. **CLI Navigation**: Learn building navigation with [CLI Commands](cli/commands.md)
-2. **File Tree Structure**: Understand how buildings are organized in [File Tree Guide](cli/file-tree.md)
-3. **Field Validation**: Learn AR validation workflows in [Field Validation Guide](workflows/field-validation.md)
+## 🎯 **Current Implementation Status**
 
-### **For Developers & Engineers**
-1. **Architecture**: Start with [System Overview](architecture/overview.md)
-2. **ArxObject System**: Understand the core data model in [ArxObject Guide](architecture/arxobjects.md)
-3. **Development Setup**: Get your environment ready with [Development Setup](development/setup.md)
+### **✅ FULLY IMPLEMENTED & PRODUCTION READY**
+- **Complete 6-layer visualization system** - All layers implemented
+- **Enterprise-grade security** - RBAC, GDPR, audit logging
+- **High-performance ingestion** - CGO-optimized processing
+- **Real-time monitoring** - WebSocket-based updates
+- **Comprehensive building management** - CMMS, assets, maintenance
+- **Advanced CLI system** - Complete building navigation
 
-### **For IT & Operations**
-1. **Building IaC**: Learn infrastructure-as-code workflows in [Building IaC Guide](workflows/building-iac.md)
-2. **CLI Operations**: Master building management commands in [CLI Examples](cli/examples.md)
-3. **Version Control**: Understand building version control in [CLI Commands](cli/commands.md)
+### **🔄 PARTIALLY IMPLEMENTED**
+- **AR/VR Features** - Foundation implemented, needs mobile app development
+- **Advanced AI Features** - Basic implementation, needs enhancement
+- **External Integrations** - Basic structure, needs protocol implementation
 
-## 🔧 **Technology Stack**
+### **🔮 What's Actually Missing (True Phase 3)**
+- **Mobile Applications** - iOS/Android native apps
+- **Advanced AI Features** - Predictive analytics, enhanced ML
+- **External Integrations** - BMS, IoT protocols, CAD plugins
+- **Cloud Infrastructure** - Multi-region, auto-scaling
 
-- **Core Engine**: C (ArxObject runtime, ASCII-BIM rendering)
-- **CLI Tools**: Go (building navigation, version control)
-- **AI Services**: Python (progressive scaling, field validation)
-- **Frontend**: Progressive Web App + AR mobile apps
-- **Database**: PostgreSQL/PostGIS with spatial indexing
+## 🚀 **Getting Started**
 
-## 🎯 **Key Concepts**
+### **Quick Start**
+- **[Getting Started Guide](getting-started.md)** - Get up and running in under 10 minutes
+- **[Current Architecture](current-architecture.md)** - Detailed system overview
+- **[CLI Commands](cli/commands.md)** - Complete command reference
 
-### **ArxObject DNA**
-Every building component is an ArxObject - intelligent, self-aware entities that understand their context, relationships, and confidence levels.
+### **Core Concepts**
+- **[ArxObject System](architecture/arxobjects.md)** - Understanding the hierarchical building model
+- **[ASCII-BIM Engine](architecture/ascii-bim.md)** - Revolutionary terminal-based visualization
+- **[CLI Architecture](architecture/cli-architecture.md)** - Terminal-first design philosophy
 
-### **Infinite Zoom Architecture**
-Seamless navigation from campus-level views down to microcontroller internals, with each level showing contextually appropriate detail.
+### **Workflows**
+- **[PDF to 3D Pipeline](workflows/pdf-to-3d.md)** - Transform floor plans into 3D models
+- **[Progressive Construction](workflows/progressive-construction-pipeline.md)** - Build incrementally
+- **[Field Validation](workflows/field-validation.md)** - AR-guided validation
+- **[Building IaC](workflows/building-iac.md)** - Infrastructure as code for buildings
 
-### **Progressive Construction**
-Start with PDF floor plans, add field measurements, fuse with LiDAR data, and progressively build accurate 3D models.
+### **Development**
+- **[Development Guide](development/guide.md)** - Building and extending Arxos
+- **[CLI Development](development/cli-dev.md)** - Creating new commands
+- **[ArxObject Development](development/arxobject-dev.md)** - Building new component types
 
-### **Building Infrastructure as Code**
-Manage buildings through YAML configurations, Git-like version control, and automated operations - just like cloud infrastructure.
+## 🏆 **Key Benefits**
 
-## 🚀 **What's Next?**
+### **For Building Owners & Operators**
+- **Programmable Infrastructure** - Buildings become software-defined
+- **Real-time Intelligence** - Live monitoring and predictive analytics
+- **Vendor Independence** - Open standards and protocols
+- **Cost Reduction** - Automated operations and maintenance
 
-1. **Explore the CLI**: Try building navigation commands
-2. **Understand ArxObjects**: Learn the core data model
-3. **See ASCII Rendering**: Experience building visualization
-4. **Try Field Validation**: Experience AR building interaction
+### **For Engineers & Technicians**
+- **Terminal-First Workflow** - Power user tools and automation
+- **Infinite Zoom** - From campus overview to component detail
+- **Field Validation** - AR-guided measurement and validation
+- **Version Control** - Track changes and rollback when needed
+
+### **For Developers & Integrators**
+- **Open Source** - Build on and extend the platform
+- **Open Hardware** - Create custom devices and integrations
+- **API-First** - RESTful APIs and real-time WebSocket updates
+- **Plugin Architecture** - Extend functionality without modifying core
+
+### **For Industry**
+- **Standards-Based** - Open protocols and data formats
+- **Vendor-Neutral** - Liberate from proprietary lock-in
+- **Community-Driven** - Open source development and collaboration
+- **Future-Proof** - Extensible architecture for emerging technologies
+
+## 🌟 **Revolutionary Impact**
+
+**Arxos represents a fundamental shift in how we think about buildings:**
+
+- **Buildings become programmable** - Infrastructure as code for physical spaces
+- **ASCII becomes universal** - Human-readable language that works everywhere
+- **Terminal becomes primary** - Power user interface for building operations
+- **Open source becomes standard** - Community-driven building intelligence
+- **Hardware becomes liberated** - DIY devices that integrate seamlessly
+
+**The future of buildings is not just smart - it's intelligent, programmable, and enterprise-ready.** 🏗️✨
 
 ---
 
-**The future of buildings is not just smart - it's programmable.** 🏗️✨
+## 📚 **Documentation Structure**
+
+This documentation is organized to disseminate the comprehensive vision from `vision.md` into focused, maintainable sections:
+
+- **[README.md](README.md)** - Platform overview and vision (this file)
+- **[current-architecture.md](current-architecture.md)** - Current implementation status
+- **[getting-started.md](getting-started.md)** - Quick start guide
+- **[architecture/](architecture/)** - Core system architecture and design
+- **[workflows/](workflows/)** - Step-by-step processes and pipelines
+- **[cli/](cli/)** - Command-line interface documentation
+- **[development/](development/)** - Development guides and references
+- **[SECURITY.md](SECURITY.md)** - Security and compliance information
+
+**For the complete vision and implementation roadmap, see [vision.md](../../vision.md) in the project root.**

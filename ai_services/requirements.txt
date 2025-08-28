@@ -1,59 +1,97 @@
-# Core dependencies
+# Arxos AI Services Requirements
+# Core AI and Computer Vision libraries
+
+# OpenCV for image processing and computer vision
+opencv-python==4.8.1.78
+opencv-contrib-python==4.8.1.78
+
+# NumPy for numerical computing
 numpy==1.24.3
-pandas==2.0.3
+
+# PIL/Pillow for image handling
+Pillow==10.0.1
+
+# PDF processing
+pdf2image==1.16.3
+PyPDF2==3.0.1
+
+# OCR for text extraction
+pytesseract==0.3.10
+
+# Machine Learning frameworks
+torch==2.0.1
+torchvision==0.15.2
+tensorflow==2.13.0
+
+# Computer Vision and Image Processing
+scikit-image==0.21.0
 scipy==1.11.1
 
-# PDF Processing
-PyPDF2==3.0.1
-pdfplumber==0.10.2
-pdf2image==1.16.3
-pypdfium2==4.23.1
+# Data handling and validation
+pandas==2.0.3
+pydantic==2.1.1
 
-# Image Processing
-opencv-python==4.8.1.78
-Pillow==10.1.0
-scikit-image==0.21.0
+# Web framework for API
+fastapi==0.103.1
+uvicorn==0.23.2
 
-# OCR
-pytesseract==0.3.10
-easyocr==1.7.0
-
-# Machine Learning
-torch==2.1.0
-torchvision==0.16.0
-transformers==4.35.0
-ultralytics==8.0.200  # YOLO for object detection
-
-# Computer Vision
-detectron2==0.6
-mmdet==3.2.0
-albumentations==1.3.1
-
-# BIM/IFC
-ifcopenshell==0.7.0
-trimesh==4.0.5
-pywavefront==1.3.3
-
-# gRPC and Protocol Buffers
-grpcio==1.59.0
-grpcio-tools==1.59.0
-grpcio-reflection==1.59.0
-protobuf==4.24.4
+# gRPC for microservices communication
+grpcio==1.57.0
+grpcio-tools==1.57.0
 
 # Async support
 asyncio==3.4.3
 aiofiles==23.2.1
 
-# Utilities
+# Logging and monitoring
+loguru==0.7.2
+
+# Configuration management
 python-dotenv==1.0.0
-pydantic==2.4.2
-tqdm==4.66.1
-colorlog==6.7.0
+pyyaml==6.0.1
 
 # Testing
-pytest==7.4.3
+pytest==7.4.2
 pytest-asyncio==0.21.1
-pytest-cov==4.1.0
 
-# Monitoring
-prometheus-client==0.18.0
+# Development tools
+black==23.7.0
+flake8==6.0.0
+mypy==1.5.1
+
+# Performance monitoring
+psutil==5.9.5
+memory-profiler==0.61.0
+
+# Image format support
+imageio==2.31.1
+imageio-ffmpeg==0.4.8
+
+# Geometric calculations
+shapely==2.0.1
+geopandas==0.13.2
+
+# JSON handling
+orjson==3.9.10
+
+# HTTP client
+httpx==0.24.1
+
+# Background task processing
+celery==5.3.1
+redis==4.6.0
+
+# Database support
+sqlalchemy==2.0.20
+alembic==1.12.0
+
+# Caching
+redis==4.6.0
+
+# Security
+cryptography==41.0.3
+
+# Utilities
+click==8.1.7
+rich==13.4.2
+tqdm==4.65.0

@@ -1,99 +1,125 @@
 # Arxos CLI Development Guide
 
-This guide covers developing the Arxos command-line interface, emphasizing the "Building as Filesystem" and "Infrastructure as Code" principles.
+This guide covers developing the Arxos command-line interface, emphasizing the **"Building as Filesystem"** and **"Infrastructure as Code"** principles that make Arxos revolutionary.
 
-## Table of Contents
+## 🎯 **Overview**
 
-1. [Design Philosophy](#design-philosophy)
-2. [Command Structure](#command-structure)
-3. [Initialization Patterns](#initialization-patterns)
-4. [Navigation System](#navigation-system)
-5. [Infinite Zoom](#infinite-zoom)
-6. [Search and Query](#search-and-query)
-7. [Building Operations](#building-operations)
-8. [Version Control](#version-control)
-9. [Real-time Operations](#real-time-operations)
-10. [Mobile Integration](#mobile-integration)
-11. [Testing](#testing)
-12. [Performance Considerations](#performance-considerations)
+The Arxos CLI is the **terminal-first interface** for the revolutionary Arxos platform. It transforms buildings into navigable filesystems with infinite fractal zoom capabilities, from campus level down to submicron precision. Every building component becomes an ArxObject with a path, properties, and real-time intelligence.
 
-## Design Philosophy
+---
 
-The Arxos CLI follows these core principles:
+## 🏗️ **Core Design Philosophy**
 
-- **Building as Filesystem**: Every building is a navigable filesystem with familiar Unix-like commands
-- **Infrastructure as Code**: Buildings are defined through declarative YAML configurations
-- **Progressive Reality**: Start simple and build complexity through field validation
-- **Terminal First**: CLI is the primary interface for power users and automation
-- **AR Integration**: Seamless connection between terminal operations and field reality
+### **Revolutionary Principles**
+- **Building as Filesystem** - Every building component has a path and properties
+- **Infinite Zoom Architecture** - Seamless navigation from campus to nanoscopic levels
+- **ASCII as Universal Language** - Buildings represented in ASCII art for universal access
+- **SVG-Based BIM Foundation** - Precise coordinate system for 1:1 accurate rendering
+- **ArxObject Intelligence** - Hierarchical system providing real-time data and control
 
-## Command Structure
+### **6-Layer Visualization System**
+```
+1. SVG-based 3D Building Information Model (CAD-like, browser/mobile)
+2. AR ArxObject Overlay (on-site system visualization)
+3. SVG-based 2D Building Plan View
+4. ASCII art "3D" rendering (terminal, web, mobile)
+5. ASCII art 2D building plan (terminal, web, mobile)
+6. CLI tools and AQL (terminal-first data interaction)
+```
 
-### Root Command Structure
+### **Terminal-First Design**
+- **Primary Interface** - CLI is the main way to interact with buildings
+- **Filesystem Navigation** - Navigate buildings like file systems with familiar commands
+- **Git-like Operations** - Version control for buildings with commits, branches, merges
+- **Real-time Monitoring** - Live updates and status monitoring
+- **Infinite Zoom Commands** - Zoom from campus to submicron levels
+
+---
+
+## 🔧 **Command Structure**
+
+### **Root Command Structure**
 
 ```go
 // Root command with building context
 var RootCmd = &cobra.Command{
     Use:   "arx",
-    Short: "Arxos - Building Infrastructure as Code",
-    Long: `Arxos transforms buildings into navigable filesystems with Git-like version control.
+    Short: "Arxos - Revolutionary Building Infrastructure as Code",
+    Long: `Arxos transforms buildings into navigable filesystems with infinite fractal zoom.
     
     Think of buildings as code - every wall, room, and system is an ArxObject
-    that can be navigated, modified, and version controlled through the terminal.`,
+    that can be navigated, modified, and version controlled through the terminal.
+    
+    The CLI provides access to all 6 visualization layers:
+    - 3D SVG-based BIM (CAD-like precision)
+    - AR ArxObject overlay (on-site visualization)
+    - 2D SVG building plans
+    - ASCII art 3D rendering
+    - ASCII art 2D plans
+    - Raw data and AQL queries`,
     PersistentPreRun: func(cmd *cobra.Command, args []string) {
-        // Initialize building context
+        // Initialize building context and ArxObject runtime
         initBuildingContext(cmd)
     },
 }
 ```
 
-### Command Categories
+### **Command Categories**
 
 ```go
 // Command organization by functionality
 func init() {
-    // Initialization commands
-    RootCmd.AddCommand(initCmd)
+    // Building filesystem commands
+    RootCmd.AddCommand(initCmd, cdCmd, lsCmd, pwdCmd, treeCmd)
     
-    // Navigation commands
-    RootCmd.AddCommand(cdCmd, lsCmd, pwdCmd, treeCmd, zoomCmd)
+    // Infinite zoom commands
+    RootCmd.AddCommand(zoomCmd, viewCmd, levelCmd)
     
-    // Inspection commands
-    RootCmd.AddCommand(inspectCmd, statusCmd, propertiesCmd)
+    // ArxObject operations
+    RootCmd.AddCommand(inspectCmd, propertiesCmd, modifyCmd)
     
-    // Search commands
-    RootCmd.AddCommand(findCmd, grepCmd, locateCmd)
-    
-    // Management commands
-    RootCmd.AddCommand(createCmd, modifyCmd, deleteCmd)
+    // Search and query commands
+    RootCmd.AddCommand(findCmd, grepCmd, locateCmd, aqlCmd)
     
     // Version control commands
-    RootCmd.AddCommand(commitCmd, branchCmd, mergeCmd)
+    RootCmd.AddCommand(commitCmd, branchCmd, mergeCmd, statusCmd, diffCmd)
     
-    // Operations commands
-    RootCmd.AddCommand(startCmd, stopCmd, restartCmd)
+    // Real-time monitoring
+    RootCmd.AddCommand(monitorCmd, watchCmd, liveCmd)
     
-    // Export commands
-    RootCmd.AddCommand(exportCmd, backupCmd, reportCmd)
+    // Export and visualization
+    RootCmd.AddCommand(exportCmd, asciiCmd, svgCmd, threeCmd)
+    
+    // AR and field operations
+    RootCmd.AddCommand(arCmd, scanCmd, validateCmd)
 }
 ```
 
-## Initialization Patterns
+---
 
-### The `arx init` Command
+## 🚀 **Initialization Patterns**
+
+### **The `arx init` Command**
 
 The `arx init` command is the **entry point** for working with Arxos - it creates the building filesystem foundation that all other commands depend on.
 
-#### Command Implementation
+#### **Command Implementation**
 
 ```go
 var initCmd = &cobra.Command{
     Use:   "init [building-id]",
-    Short: "Initialize a new building filesystem",
+    Short: "Initialize a new building filesystem with ArxObject hierarchy",
     Long: `Initialize creates a new building filesystem and ArxObject hierarchy.
     
     This command sets up the foundational structure that enables all other
-    Arxos operations. Think of it as 'git init' for buildings.`,
+    Arxos operations. Think of it as 'git init' for buildings.
+    
+    The building will support:
+    - Infinite zoom from campus to submicron levels
+    - SVG-based BIM with 1:1 accuracy
+    - ASCII art rendering for universal access
+    - Real-time ArxObject intelligence
+    - Git-like version control`,
     Args: cobra.ExactArgs(1),
     RunE: func(cmd *cobra.Command, args []string) error {
         buildingID := args[0]
@@ -108,13 +134,17 @@ func init() {
     initCmd.Flags().String("location", "", "Building location/address")
     initCmd.Flags().String("from-pdf", "", "Initialize from PDF floor plan")
     initCmd.Flags().String("from-ifc", "", "Initialize from IFC file")
+    initCmd.Flags().String("from-svg", "", "Initialize from SVG BIM file")
     initCmd.Flags().String("config", "", "Use custom configuration file")
     initCmd.Flags().String("template", "", "Use predefined building template")
     initCmd.Flags().Bool("force", false, "Overwrite existing building if it exists")
+    initCmd.Flags().Bool("ascii-render", true, "Enable ASCII art rendering")
+    initCmd.Flags().Bool("svg-bim", true, "Enable SVG-based BIM")
+    initCmd.Flags().Bool("ar-overlay", true, "Enable AR ArxObject overlay")
 }
 ```
 
-#### Initialization Process
+#### **Initialization Process**
 
 ```go
 func initializeBuilding(buildingID string, cmd *cobra.Command) error {
@@ -133,35 +163,43 @@ func initializeBuilding(buildingID string, cmd *cobra.Command) error {
         return fmt.Errorf("failed to create filesystem: %w", err)
     }
     
-    // 4. Initialize ArxObject hierarchy
+    // 4. Initialize ArxObject hierarchy with C core
     if err := initializeArxObjectHierarchy(buildingID, cmd); err != nil {
         return fmt.Errorf("failed to initialize ArxObjects: %w", err)
     }
     
-    // 5. Set up version control
+    // 5. Set up ASCII-BIM engine
+    if err := initializeASCIIBIMEngine(buildingID, cmd); err != nil {
+        return fmt.Errorf("failed to initialize ASCII-BIM engine: %w", err)
+    }
+    
+    // 6. Set up version control
     if err := initializeVersionControl(buildingID); err != nil {
         return fmt.Errorf("failed to initialize version control: %w", err)
     }
     
-    // 6. Create initial configuration
+    // 7. Create initial configuration
     if err := createInitialConfiguration(buildingID, cmd); err != nil {
         return fmt.Errorf("failed to create configuration: %w", err)
     }
     
-    // 7. Process input files if provided
+    // 8. Process input files if provided
     if err := processInputFiles(buildingID, cmd); err != nil {
         return fmt.Errorf("failed to process input files: %w", err)
     }
     
     fmt.Printf("✅ Building %s initialized successfully!\n", buildingID)
+    fmt.Printf("🏗️  ArxObject hierarchy created with C core engine\n")
+    fmt.Printf("📊 ASCII-BIM engine ready for infinite zoom\n")
     fmt.Printf("📁 Navigate to building: arx cd %s\n", buildingID)
-    fmt.Printf("📋 View structure: arx ls --tree\n")
+    fmt.Printf("🔍 View structure: arx ls --tree\n")
+    fmt.Printf("🔬 Test zoom: arx zoom campus\n")
     
     return nil
 }
 ```
 
-#### Building Filesystem Structure
+#### **Building Filesystem Structure**
 
 ```go
 func createBuildingFilesystem(buildingID string) error {
@@ -174,15 +212,23 @@ func createBuildingFilesystem(buildingID string) error {
     
     // Create metadata directory structure
     metadataDirs := []string{
-        ".arxos/config",
-        ".arxos/objects", 
-        ".arxos/vcs/snapshots",
-        ".arxos/vcs/branches",
-        ".arxos/cache",
-        "systems/electrical",
-        "systems/hvac",
-        "systems/automation",
-        "schemas",
+        ".arxos/config",           // Building configuration
+        ".arxos/objects",          // ArxObject database
+        ".arxos/ascii-bim",        # ASCII-BIM engine data
+        ".arxos/svg-bim",          # SVG-based BIM data
+        ".arxos/ar-overlay",       # AR ArxObject overlay data
+        ".arxos/vcs/snapshots",    # Version control snapshots
+        ".arxos/vcs/branches",     # Version branches
+        ".arxos/cache",            # Performance cache
+        ".arxos/coordinate-systems", # Coordinate transformations
+        "systems/electrical",      # Electrical system
+        "systems/hvac",            # HVAC system
+        "systems/automation",      # Building automation
+        "systems/structural",      # Structural system
+        "systems/plumbing",        # Plumbing system
+        "schemas",                 # Building schemas
+        "ascii-renders",           # ASCII art renders
+        "svg-models",              # SVG BIM models
     }
     
     for _, dir := range metadataDirs {
@@ -196,57 +242,65 @@ func createBuildingFilesystem(buildingID string) error {
 }
 ```
 
-#### ArxObject Hierarchy Initialization
+#### **ArxObject Hierarchy Initialization**
 
 ```go
 func initializeArxObjectHierarchy(buildingID string, cmd *cobra.Command) error {
-    // Create root building ArxObject
-    buildingObj := &ArxObject{
-        ID:       buildingID,
-        Type:     ArxObjectTypeBuilding,
-        Name:     getStringFlag(cmd, "name"),
-        Position: Point3D{X: 0, Y: 0, Z: 0},
-        Properties: map[string]interface{}{
-            "type":     getStringFlag(cmd, "type"),
-            "floors":   getIntFlag(cmd, "floors"),
-            "area":     getStringFlag(cmd, "area"),
-            "location": getStringFlag(cmd, "location"),
-        },
-        Children: make([]*ArxObject, 0),
+    // Use C core ArxObject runtime for maximum performance
+    cRuntime := C.arxobject_runtime_create()
+    if cRuntime == nil {
+        return fmt.Errorf("failed to create ArxObject runtime")
     }
+    defer C.arxobject_runtime_destroy(cRuntime)
+    
+    // Create root building ArxObject
+    buildingObj := C.arxobject_create(
+        C.CString(buildingID),
+        C.CString("building"),
+        C.ARX_STRUCTURAL,
+    )
+    if buildingObj == nil {
+        return fmt.Errorf("failed to create building ArxObject")
+    }
+    
+    // Set building properties
+    C.arxobject_set_property(buildingObj, C.CString("type"), C.CString(getStringFlag(cmd, "type")))
+    C.arxobject_set_property(buildingObj, C.CString("floors"), C.CString(fmt.Sprintf("%d", getIntFlag(cmd, "floors"))))
+    C.arxobject_set_property(buildingObj, C.CString("area"), C.CString(getStringFlag(cmd, "area")))
+    C.arxobject_set_property(buildingObj, C.CString("location"), C.CString(getStringFlag(cmd, "location")))
     
     // Create floor ArxObjects
     floors := getIntFlag(cmd, "floors")
     for i := 1; i <= floors; i++ {
-        floorObj := &ArxObject{
-            ID:       fmt.Sprintf("floor:%d", i),
-            Type:     ArxObjectTypeFloor,
-            Name:     fmt.Sprintf("Floor %d", i),
-            Position: Point3D{X: 0, Y: 0, Z: int64(i-1) * 3000}, // 3m floor height
-            Properties: map[string]interface{}{
-                "floor_number": i,
-                "height":       3000, // mm
-            },
-            Children: make([]*ArxObject, 0),
-        }
-        buildingObj.Children = append(buildingObj.Children, floorObj)
+        floorObj := C.arxobject_create(
+            C.CString(fmt.Sprintf("floor:%d", i)),
+            C.CString(fmt.Sprintf("Floor %d", i)),
+            C.ARX_SPACE,
+        )
+        
+        // Set floor properties
+        C.arxobject_set_property(floorObj, C.CString("floor_number"), C.CString(fmt.Sprintf("%d", i)))
+        C.arxobject_set_property(floorObj, C.CString("height"), C.CString("3000")) // 3m floor height
+        
+        // Add to building
+        C.arxobject_add_child(buildingObj, floorObj)
     }
     
     // Create system ArxObjects
-    systems := []string{"electrical", "hvac", "automation"}
+    systems := []string{"electrical", "hvac", "automation", "structural", "plumbing"}
     for _, system := range systems {
-        systemObj := &ArxObject{
-            ID:       fmt.Sprintf("systems:%s", system),
-            Type:     ArxObjectTypeSystem,
-            Name:     fmt.Sprintf("%s System", strings.Title(system)),
-            Position: Point3D{X: 0, Y: 0, Z: 0},
-            Properties: map[string]interface{}{
-                "system_type": system,
-                "status":      "inactive",
-            },
-            Children: make([]*ArxObject, 0),
-        }
-        buildingObj.Children = append(buildingObj.Children, systemObj)
+        systemObj := C.arxobject_create(
+            C.CString(fmt.Sprintf("systems:%s", system)),
+            C.CString(fmt.Sprintf("%s System", strings.Title(system))),
+            C.ARX_SYSTEM,
+        )
+        
+        // Set system properties
+        C.arxobject_set_property(systemObj, C.CString("system_type"), C.CString(system))
+        C.arxobject_set_property(systemObj, C.CString("status"), C.CString("inactive"))
+        
+        // Add to building
+        C.arxobject_add_child(buildingObj, systemObj)
     }
     
     // Save to ArxObject database
@@ -254,740 +308,434 @@ func initializeArxObjectHierarchy(buildingID string, cmd *cobra.Command) error {
 }
 ```
 
-#### Configuration File Creation
+#### **ASCII-BIM Engine Initialization**
 
 ```go
-func createInitialConfiguration(buildingID string, cmd *cobra.Command) error {
-    basePath := getBuildingPath(buildingID)
-    
-    // Main building configuration
-    mainConfig := BuildingConfig{
-        BuildingID: buildingID,
-        Type:       getStringFlag(cmd, "type"),
-        Floors:     getIntFlag(cmd, "floors"),
-        Area:       getStringFlag(cmd, "area"),
-        Location:   getStringFlag(cmd, "location"),
-        Created:    time.Now().UTC(),
-        Version:    "1.0.0",
-        Systems: map[string]SystemConfig{
-            "electrical": {
-                Type:    "electrical",
-                Status:  "inactive",
-                Voltage: "480V",
-            },
-            "hvac": {
-                Type:   "hvac",
-                Status: "inactive",
-            },
-            "automation": {
-                Type:   "automation",
-                Status: "inactive",
-            },
-        },
+func initializeASCIIBIMEngine(buildingID string, cmd *cobra.Command) error {
+    if !getBoolFlag(cmd, "ascii-render") {
+        return nil // Skip if ASCII rendering disabled
     }
     
-    // Write main configuration
-    mainConfigPath := filepath.Join(basePath, "arxos.yml")
-    if err := writeYAML(mainConfigPath, mainConfig); err != nil {
-        return err
+    // Initialize C core ASCII-BIM engine
+    asciiEngine := C.ascii_bim_engine_create()
+    if asciiEngine == nil {
+        return fmt.Errorf("failed to create ASCII-BIM engine")
+    }
+    defer C.ascii_bim_engine_destroy(asciiEngine)
+    
+    // Configure infinite zoom levels
+    zoomLevels := []C.ZoomLevel{
+        C.ZOOM_CAMPUS,      // 1 char = 100m
+        C.ZOOM_SITE,        // 1 char = 10m
+        C.ZOOM_BUILDING,    // 1 char = 1m
+        C.ZOOM_FLOOR,       // 1 char = 0.1m
+        C.ZOOM_ROOM,        // 1 char = 0.01m
+        C.ZOOM_FURNITURE,   // 1 char = 0.001m
+        C.ZOOM_EQUIPMENT,   // 1 char = 0.0001m
+        C.ZOOM_COMPONENT,   // 1 char = 0.00001m
+        C.ZOOM_DETAIL,      // 1 char = 0.000001m
+        C.ZOOM_SUBMICRON,   // 1 char = 0.0000001m
+        C.ZOOM_NANOSCOPIC,  // 1 char = 0.00000001m
     }
     
-    // Write floor configurations
-    floors := getIntFlag(cmd, "floors")
-    for i := 1; i <= floors; i++ {
-        floorConfig := FloorConfig{
-            FloorNumber: i,
-            Height:      3000, // mm
-            Status:      "inactive",
+    for _, level := range zoomLevels {
+        C.ascii_bim_engine_add_zoom_level(asciiEngine, level)
+    }
+    
+    // Configure Pixatool-inspired rendering
+    C.ascii_bim_engine_set_renderer(asciiEngine, C.ASCII_RENDERER_PIXATOOL)
+    
+    // Save engine configuration
+    return saveASCIIBIMEngine(buildingID, asciiEngine)
+}
+```
+
+---
+
+## 🔍 **Infinite Zoom System**
+
+### **Zoom Command Implementation**
+
+```go
+var zoomCmd = &cobra.Command{
+    Use:   "zoom [level]",
+    Short: "Zoom to specific level (campus to nanoscopic)",
+    Long: `Zoom to a specific level in the infinite zoom system.
+    
+    Available levels:
+    - campus: Campus overview (1 char = 100m)
+    - site: Site plan (1 char = 10m)
+    - building: Building outline (1 char = 1m)
+    - floor: Floor plan (1 char = 0.1m)
+    - room: Room detail (1 char = 0.01m)
+    - furniture: Furniture layout (1 char = 0.001m)
+    - equipment: Equipment detail (1 char = 0.0001m)
+    - component: Component detail (1 char = 0.00001m)
+    - detail: Micro detail (1 char = 0.000001m)
+    - submicron: Submicron detail (1 char = 0.0000001m)
+    - nanoscopic: Nanoscopic detail (1 char = 0.00000001m)`,
+    Args: cobra.ExactArgs(1),
+    RunE: func(cmd *cobra.Command, args []string) error {
+        level := args[0]
+        smooth := getBoolFlag(cmd, "smooth")
+        return zoomToLevel(level, smooth)
+    },
+}
+
+func init() {
+    zoomCmd.Flags().BoolP("smooth", "s", true, "Smooth transition")
+    zoomCmd.Flags().Bool("ascii", false, "Show ASCII art render")
+    zoomCmd.Flags().Bool("svg", false, "Show SVG BIM view")
+    zoomCmd.Flags().Bool("3d", false, "Show 3D view")
+}
+```
+
+### **Zoom Implementation**
+
+```go
+func zoomToLevel(level string, smooth bool) error {
+    // Get current building context
+    buildingID, err := getCurrentBuilding()
+    if err != nil {
+        return fmt.Errorf("no building context: %w", err)
+    }
+    
+    // Validate zoom level
+    validLevels := map[string]bool{
+        "campus": true, "site": true, "building": true, "floor": true,
+        "room": true, "furniture": true, "equipment": true, "component": true,
+        "detail": true, "submicron": true, "nanoscopic": true,
+    }
+    
+    if !validLevels[level] {
+        return fmt.Errorf("invalid zoom level: %s", level)
+    }
+    
+    // Use C core ASCII-BIM engine for zoom
+    asciiEngine := getASCIIBIMEngine(buildingID)
+    if asciiEngine == nil {
+        return fmt.Errorf("ASCII-BIM engine not available")
+    }
+    
+    // Convert level to C enum
+    var cLevel C.ZoomLevel
+    switch level {
+    case "campus":
+        cLevel = C.ZOOM_CAMPUS
+    case "site":
+        cLevel = C.ZOOM_SITE
+    case "building":
+        cLevel = C.ZOOM_BUILDING
+    case "floor":
+        cLevel = C.ZOOM_FLOOR
+    case "room":
+        cLevel = C.ZOOM_ROOM
+    case "furniture":
+        cLevel = C.ZOOM_FURNITURE
+    case "equipment":
+        cLevel = C.ZOOM_EQUIPMENT
+    case "component":
+        cLevel = C.ZOOM_COMPONENT
+    case "detail":
+        cLevel = C.ZOOM_DETAIL
+    case "submicron":
+        cLevel = C.ZOOM_SUBMICRON
+    case "nanoscopic":
+        cLevel = C.ZOOM_NANOSCOPIC
+    }
+    
+    // Execute zoom
+    if smooth {
+        C.ascii_bim_engine_zoom_smooth(asciiEngine, cLevel)
+    } else {
+        C.ascii_bim_engine_zoom_instant(asciiEngine, cLevel)
+    }
+    
+    // Get zoom information
+    info := C.ascii_bim_engine_get_zoom_info(asciiEngine)
+    defer C.free(unsafe.Pointer(info))
+    
+    fmt.Printf("🔬 Zoomed to %s level\n", level)
+    fmt.Printf("📏 Scale: 1 char = %s %s\n", C.GoString(info.scale), C.GoString(info.units))
+    fmt.Printf("🎯 Precision: %s\n", C.GoString(info.precision))
+    fmt.Printf("📝 Description: %s\n", C.GoString(info.description))
+    
+    return nil
+}
+```
+
+---
+
+## 🗂️ **Filesystem Navigation**
+
+### **Navigation Commands**
+
+```go
+// Change directory command
+var cdCmd = &cobra.Command{
+    Use:   "cd [path]",
+    Short: "Change directory in building filesystem",
+    Long: `Navigate the building filesystem like a Unix filesystem.
+    
+    Examples:
+      arx cd /electrical/main-panel
+      arx cd floor:1/room:101
+      arx cd systems/hvac/unit:1
+      arx cd ..                    # Go up one level
+      arx cd /                     # Go to building root
+      arx cd ~                     # Go to home building`,
+    Args: cobra.ExactArgs(1),
+    RunE: func(cmd *cobra.Command, args []string) error {
+        path := args[0]
+        return changeDirectory(path)
+    },
+}
+
+// List directory command
+var lsCmd = &cobra.Command{
+    Use:   "ls [path]",
+    Short: "List directory contents",
+    Long: `List contents of a directory in the building filesystem.
+    
+    Examples:
+      arx ls                       # List current directory
+      arx ls /electrical          # List electrical systems
+      arx ls --tree               # Show tree structure
+      arx ls --ascii              # Show ASCII art render
+      arx ls --svg                # Show SVG BIM view
+      arx ls --properties         # Show object properties`,
+    Args: cobra.MaximumNArgs(1),
+    RunE: func(cmd *cobra.Command, args []string) error {
+        path := "."
+        if len(args) > 0 {
+            path = args[0]
         }
         
-        floorConfigPath := filepath.Join(basePath, fmt.Sprintf("floor:%d", i), "arxos.yml")
-        if err := writeYAML(floorConfigPath, floorConfig); err != nil {
-            return err
-        }
-    }
-    
-    // Write system configurations
-    for systemName, systemConfig := range mainConfig.Systems {
-        systemConfigPath := filepath.Join(basePath, "systems", systemName, "arxos.yml")
-        if err := writeYAML(systemConfigPath, systemConfig); err != nil {
-            return err
-        }
-    }
-    
-    return nil
+        tree := getBoolFlag(cmd, "tree")
+        ascii := getBoolFlag(cmd, "ascii")
+        svg := getBoolFlag(cmd, "svg")
+        properties := getBoolFlag(cmd, "properties")
+        
+        return listDirectory(path, tree, ascii, svg, properties)
+    },
+}
+
+func init() {
+    lsCmd.Flags().BoolP("tree", "t", false, "Show tree structure")
+    lsCmd.Flags().Bool("ascii", false, "Show ASCII art render")
+    lsCmd.Flags().Bool("svg", false, "Show SVG BIM view")
+    lsCmd.Flags().BoolP("properties", "p", false, "Show object properties")
+    lsCmd.Flags().BoolP("long", "l", false, "Use long listing format")
 }
 ```
 
-#### Input File Processing
+### **Navigation Implementation**
 
 ```go
-func processInputFiles(buildingID string, cmd *cobra.Command) error {
-    // Process PDF floor plan if provided
-    if pdfPath := getStringFlag(cmd, "from-pdf"); pdfPath != "" {
-        if err := processPDFFloorPlan(buildingID, pdfPath); err != nil {
-            return fmt.Errorf("PDF processing failed: %w", err)
-        }
-    }
-    
-    // Process IFC file if provided
-    if ifcPath := getStringFlag(cmd, "from-ifc"); ifcPath != "" {
-        if err := processIFCFile(buildingID, ifcPath); err != nil {
-            return fmt.Errorf("IFC processing failed: %w", err)
-        }
-    }
-    
-    // Process custom configuration if provided
-    if configPath := getStringFlag(cmd, "config"); configPath != "" {
-        if err := processCustomConfig(buildingID, configPath); err != nil {
-            return fmt.Errorf("custom config processing failed: %w", err)
-        }
-    }
-    
-    // Apply template if provided
-    if template := getStringFlag(cmd, "template"); template != "" {
-        if err := applyBuildingTemplate(buildingID, template); err != nil {
-            return fmt.Errorf("template application failed: %w", err)
-        }
-    }
-    
-    return nil
-}
-```
-
-#### Metadata Directory Structure
-
-The `.arxos` directory contains all the metadata needed to operate the building filesystem:
-
-```
-.arxos/
-├── config/                    # Building configuration files
-│   ├── arxos.yml            # Main building configuration
-│   ├── environments/         # Environment-specific configs
-│   │   ├── development.yml
-│   │   ├── staging.yml
-│   │   └── production.yml
-│   └── templates/            # Building templates
-│       ├── office.yml
-│       ├── residential.yml
-│       └── industrial.yml
-├── objects/                   # ArxObject database
-│   ├── index.db             # Spatial and property indexes
-│   ├── objects.db           # ArxObject storage
-│   └── relationships.db      # Object relationship graph
-├── vcs/                      # Version control data
-│   ├── snapshots/            # Building state snapshots
-│   │   ├── HEAD             # Current state
-│   │   ├── main             # Main branch
-│   │   └── commits/         # Individual commits
-│   ├── branches/             # Version branches
-│   │   ├── main             # Main branch
-│   │   └── feature/         # Feature branches
-│   └── metadata/             # VCS metadata
-│       ├── config           # VCS configuration
-│       └── hooks/           # Pre/post commit hooks
-├── cache/                     # Temporary data and cache
-│   ├── ascii/               # ASCII rendering cache
-│   ├── spatial/             # Spatial query cache
-│   └── validation/          # Validation result cache
-└── logs/                      # Building operation logs
-    ├── access.log            # Command access logs
-    ├── error.log             # Error logs
-    └── audit.log             # Change audit logs
-```
-
-#### Configuration Schema
-
-```yaml
-# arxos.schema.yml - Building configuration schema
-BuildingConfig:
-  type: object
-  required: [building_id, type, floors]
-  properties:
-    building_id:
-      type: string
-      pattern: '^building:[a-zA-Z0-9_-]+$'
-    type:
-      type: string
-      enum: [office, residential, industrial, retail, mixed_use]
-    floors:
-      type: integer
-      minimum: 1
-      maximum: 200
-    area:
-      type: string
-      description: "Total building area (e.g., '25,000 sq ft')"
-    location:
-      type: string
-      description: "Building address or coordinates"
-    created:
-      type: string
-      format: date-time
-    version:
-      type: string
-      pattern: '^\\d+\\.\\d+\\.\\d+$'
-    systems:
-      type: object
-      additionalProperties:
-        $ref: '#/definitions/SystemConfig'
-
-SystemConfig:
-  type: object
-  required: [type, status]
-  properties:
-    type:
-      type: string
-      enum: [electrical, hvac, automation, structural, plumbing]
-    status:
-      type: string
-      enum: [inactive, active, maintenance, error]
-    voltage:
-      type: string
-      description: "System voltage (for electrical systems)"
-    capacity:
-      type: string
-      description: "System capacity"
-```
-
-### Initialization Workflow
-
-The complete initialization workflow follows this sequence:
-
-1. **Validation**: Check building ID format and existence
-2. **Filesystem Creation**: Create directory structure and metadata
-3. **ArxObject Initialization**: Create core building hierarchy
-4. **Configuration Setup**: Generate initial configuration files
-5. **Version Control**: Initialize Git-like version control
-6. **Input Processing**: Handle PDF/IFC files and templates
-7. **Validation**: Verify the created structure
-8. **Success Feedback**: Provide user guidance for next steps
-
-This initialization pattern ensures that every building has a consistent, navigable structure that supports all subsequent CLI operations.
-
-## Navigation System
-
-### Path Resolution Engine
-
-The path resolution engine is the core of the navigation system, translating human-readable paths into ArxObject references.
-
-```go
-type PathResolver struct {
-    currentPath string
-    buildingID  string
-    cache       map[string]*ArxObject
-}
-
-func (pr *PathResolver) ResolvePath(path string) (*ArxObject, error) {
-    // Handle special paths
-    switch path {
-    case "/", "":
-        return pr.getBuildingRoot()
-    case "~":
-        return pr.getHomeBuilding()
-    case ".", "":
-        return pr.getCurrentObject()
-    case "..":
-        return pr.getParentObject()
-    }
-    
-    // Resolve relative or absolute paths
-    if strings.HasPrefix(path, "/") {
-        return pr.resolveAbsolutePath(path)
-    }
-    return pr.resolveRelativePath(path)
-}
-```
-
-### Working Directory Management
-
-```go
-type WorkingDirectory struct {
-    currentPath string
-    buildingID  string
-    history     []string
-    maxHistory  int
-}
-
-func (wd *WorkingDirectory) ChangeDirectory(path string) error {
-    // Resolve the target path
-    target, err := wd.resolvePath(path)
+func changeDirectory(path string) error {
+    // Get current building context
+    buildingID, err := getCurrentBuilding()
     if err != nil {
-        return err
+        return fmt.Errorf("no building context: %w", err)
     }
     
-    // Validate that it's navigable
-    if !target.IsNavigable() {
+    // Resolve path using ArxObject system
+    targetObj, err := resolvePath(buildingID, path)
+    if err != nil {
+        return fmt.Errorf("failed to resolve path %s: %w", path, err)
+    }
+    
+    // Check if object is navigable
+    if !targetObj.IsNavigable() {
         return fmt.Errorf("cannot navigate to %s: not a navigable object", path)
     }
     
-    // Add to history
-    wd.addToHistory(wd.currentPath)
+    // Update working directory
+    if err := updateWorkingDirectory(buildingID, targetObj.GetPath()); err != nil {
+        return fmt.Errorf("failed to update working directory: %w", err)
+    }
     
-    // Update current path
-    wd.currentPath = target.GetPath()
+    fmt.Printf("📁 Changed directory to: %s\n", targetObj.GetPath())
+    
+    // Show current location info
+    if err := showLocationInfo(targetObj); err != nil {
+        return fmt.Errorf("failed to show location info: %w", err)
+    }
     
     return nil
 }
 
-func (wd *WorkingDirectory) GetCurrentPath() string {
-    return wd.currentPath
-}
-
-func (wd *WorkingDirectory) GetHistory() []string {
-    return wd.history
-}
-```
-
-### Infinite Zoom Navigation
-
-```go
-type ZoomLevel struct {
-    Level     string  // campus, building, floor, room, component
-    Scale     float64 // zoom factor
-    Detail    string  // detail level
-    Context   string  // context information
-}
-
-type ZoomNavigator struct {
-    currentLevel ZoomLevel
-    levels       []ZoomLevel
-    cache        map[string]*ArxObject
-}
-
-func (zn *ZoomNavigator) ZoomIn() error {
-    currentIndex := zn.getCurrentLevelIndex()
-    if currentIndex >= len(zn.levels)-1 {
-        return fmt.Errorf("already at maximum zoom level")
-    }
-    
-    zn.currentLevel = zn.levels[currentIndex+1]
-    return zn.updateView()
-}
-
-func (zn *ZoomNavigator) ZoomOut() error {
-    currentIndex := zn.getCurrentLevelIndex()
-    if currentIndex <= 0 {
-        return fmt.Errorf("already at minimum zoom level")
-    }
-    
-    zn.currentLevel = zn.levels[currentIndex-1]
-    return zn.updateView()
-}
-
-func (zn *ZoomNavigator) ZoomTo(level string) error {
-    for _, l := range zn.levels {
-        if l.Level == level {
-            zn.currentLevel = l
-            return zn.updateView()
-        }
-    }
-    return fmt.Errorf("invalid zoom level: %s", level)
-}
-```
-
-## Search and Query
-
-### Find Engine
-
-```go
-type FindEngine struct {
-    indexer    *SpatialIndexer
-    validator  *ValidationEngine
-    cache      *QueryCache
-}
-
-type FindQuery struct {
-    Type       string            `json:"type"`
-    Properties map[string]string `json:"properties"`
-    Location   *LocationQuery    `json:"location"`
-    System     string            `json:"system"`
-    Status     string            `json:"status"`
-    Confidence float64           `json:"confidence"`
-    Limit      int               `json:"limit"`
-}
-
-func (fe *FindEngine) Find(query *FindQuery) ([]*ArxObject, error) {
-    // Build spatial query
-    spatialQuery := fe.buildSpatialQuery(query)
-    
-    // Execute spatial search
-    candidates, err := fe.indexer.Search(spatialQuery)
+func listDirectory(path string, tree, ascii, svg, properties bool) error {
+    // Get current building context
+    buildingID, err := getCurrentBuilding()
     if err != nil {
-        return nil, err
+        return fmt.Errorf("no building context: %w", err)
     }
     
-    // Apply property filters
-    filtered := fe.applyPropertyFilters(candidates, query.Properties)
-    
-    // Apply system filters
-    if query.System != "" {
-        filtered = fe.applySystemFilters(filtered, query.System)
-    }
-    
-    // Apply status filters
-    if query.Status != "" {
-        filtered = fe.applyStatusFilters(filtered, query.Status)
-    }
-    
-    // Apply confidence threshold
-    if query.Confidence > 0 {
-        filtered = fe.applyConfidenceFilter(filtered, query.Confidence)
-    }
-    
-    // Apply limit
-    if query.Limit > 0 && len(filtered) > query.Limit {
-        filtered = filtered[:query.Limit]
-    }
-    
-    return filtered, nil
-}
-```
-
-### AQL Parser
-
-```go
-type AQLParser struct {
-    lexer  *SQLLexer
-    parser *SQLParser
-}
-
-type AQLQuery struct {
-    Select   []string          `json:"select"`
-    From     string            `json:"from"`
-    Where    []*WhereClause    `json:"where"`
-    OrderBy  []string          `json:"order_by"`
-    Limit    int               `json:"limit"`
-    Offset   int               `json:"offset"`
-}
-
-func (ap *AQLParser) Parse(query string) (*AQLQuery, error) {
-    tokens, err := ap.lexer.Tokenize(query)
+    // Resolve path
+    targetObj, err := resolvePath(buildingID, path)
     if err != nil {
-        return nil, err
+        return fmt.Errorf("failed to resolve path %s: %w", path, err)
     }
     
-    return ap.parser.Parse(tokens)
-}
-
-func (ap *AQLParser) Execute(query *AQLQuery) ([]*ArxObject, error) {
-    // Parse the FROM clause to get building context
-    buildingID, err := ap.parseBuildingContext(query.From)
-    if err != nil {
-        return nil, err
-    }
+    // List children
+    children := targetObj.GetChildren()
     
-    // Build spatial query from WHERE clauses
-    spatialQuery := ap.buildSpatialQuery(query.Where)
-    
-    // Execute search
-    results, err := ap.findEngine.Find(spatialQuery)
-    if err != nil {
-        return nil, err
-    }
-    
-    // Apply property filters
-    results = ap.applyPropertyFilters(results, query.Where)
-    
-    // Apply ordering
-    if len(query.OrderBy) > 0 {
-        results = ap.applyOrdering(results, query.OrderBy)
-    }
-    
-    // Apply limit and offset
-    if query.Limit > 0 {
-        if query.Offset > 0 {
-            if query.Offset < len(results) {
-                results = results[query.Offset:]
-            } else {
-                results = []*ArxObject{}
-            }
-        }
-        if len(results) > query.Limit {
-            results = results[:query.Limit]
+    if tree {
+        // Show tree structure
+        showTreeStructure(targetObj, "", true)
+    } else {
+        // Show simple list
+        for _, child := range children {
+            fmt.Printf("%s/  %s\n", child.GetType(), child.GetName())
         }
     }
     
-    return results, nil
-}
-```
-
-## Building Operations
-
-### State Management
-
-```go
-type BuildingState struct {
-    BuildingID    string                 `json:"building_id"`
-    CurrentPath   string                 `json:"current_path"`
-    ArxObjects    map[string]*ArxObject  `json:"arx_objects"`
-    Properties    map[string]interface{} `json:"properties"`
-    Relationships map[string][]string     `json:"relationships"`
-    Metadata      map[string]interface{} `json:"metadata"`
-    LastModified  time.Time              `json:"last_modified"`
-}
-
-type StateManager struct {
-    buildingID string
-    state      *BuildingState
-    mutex      sync.RWMutex
-    watchers   []StateWatcher
-}
-
-func (sm *StateManager) GetState() *BuildingState {
-    sm.mutex.RLock()
-    defer sm.mutex.RUnlock()
-    return sm.state
-}
-
-func (sm *StateManager) UpdateState(updates map[string]interface{}) error {
-    sm.mutex.Lock()
-    defer sm.mutex.Unlock()
-    
-    // Apply updates
-    for key, value := range updates {
-        if err := sm.applyUpdate(key, value); err != nil {
-            return err
+    // Show ASCII render if requested
+    if ascii {
+        if err := showASCIIRender(buildingID, targetObj); err != nil {
+            return fmt.Errorf("failed to show ASCII render: %w", err)
         }
     }
     
-    // Update timestamp
-    sm.state.LastModified = time.Now().UTC()
+    // Show SVG BIM if requested
+    if svg {
+        if err := showSVGBIM(buildingID, targetObj); err != nil {
+            return fmt.Errorf("failed to show SVG BIM: %w", err)
+        }
+    }
     
-    // Notify watchers
-    sm.notifyWatchers()
+    // Show properties if requested
+    if properties {
+        showObjectProperties(targetObj)
+    }
     
     return nil
 }
 ```
 
-### Version Control
+---
+
+## 🔍 **Search and Query**
+
+### **Find Command**
 
 ```go
-type BuildingVCS struct {
-    buildingID string
-    snapshots  *SnapshotManager
-    branches   *BranchManager
-    commits    *CommitManager
+var findCmd = &cobra.Command{
+    Use:   "find [query]",
+    Short: "Find ArxObjects by properties, type, or location",
+    Long: `Find ArxObjects in the building using various criteria.
+    
+    Examples:
+      arx find "electrical outlet"           # Find by name/type
+      arx find --type "hvac"                 # Find by object type
+      arx find --property "status=active"    # Find by property
+      arx find --location "floor:1"          # Find in specific location
+      arx find --system "electrical"         # Find in specific system
+      arx find --confidence 0.8              # Minimum confidence threshold`,
+    Args: cobra.ExactArgs(1),
+    RunE: func(cmd *cobra.Command, args []string) error {
+        query := args[0]
+        objectType := getStringFlag(cmd, "type")
+        property := getStringFlag(cmd, "property")
+        location := getStringFlag(cmd, "location")
+        system := getStringFlag(cmd, "system")
+        confidence := getFloatFlag(cmd, "confidence")
+        
+        return findArxObjects(query, objectType, property, location, system, confidence)
+    },
 }
 
-type Snapshot struct {
-    ID          string                 `json:"id"`
-    Message     string                 `json:"message"`
-    Author      string                 `json:"author"`
-    Timestamp   time.Time              `json:"timestamp"`
-    State       *BuildingState         `json:"state"`
-    Parent      string                 `json:"parent"`
-    Children    []string               `json:"children"`
-    Metadata    map[string]interface{} `json:"metadata"`
-}
-
-func (vcs *BuildingVCS) CreateSnapshot(message string, author string) (*Snapshot, error) {
-    // Get current state
-    currentState := vcs.getCurrentState()
-    
-    // Create snapshot
-    snapshot := &Snapshot{
-        ID:        generateSnapshotID(),
-        Message:   message,
-        Author:    author,
-        Timestamp: time.Now().UTC(),
-        State:     currentState,
-        Parent:    vcs.getCurrentSnapshotID(),
-        Children:  []string{},
-        Metadata:  make(map[string]interface{}),
-    }
-    
-    // Save snapshot
-    if err := vcs.snapshots.Save(snapshot); err != nil {
-        return nil, err
-    }
-    
-    // Update current pointer
-    vcs.setCurrentSnapshot(snapshot.ID)
-    
-    return snapshot, nil
+func init() {
+    findCmd.Flags().String("type", "", "Filter by object type")
+    findCmd.Flags().String("property", "", "Filter by property (key=value)")
+    findCmd.Flags().String("location", "", "Filter by location")
+    findCmd.Flags().String("system", "", "Filter by system")
+    findCmd.Flags().Float64("confidence", 0.0, "Minimum confidence threshold")
+    findCmd.Flags().BoolP("verbose", "v", false, "Verbose output")
 }
 ```
 
-## Real-time Operations
-
-### Live State Manager
+### **AQL Command**
 
 ```go
-type LiveStateManager struct {
-    buildingID string
-    state      *BuildingState
-    watchers   map[string]StateWatcher
-    mutex      sync.RWMutex
-    ticker     *time.Ticker
-    done       chan bool
-}
-
-type StateWatcher interface {
-    OnStateChange(oldState, newState *BuildingState)
-    OnPropertyChange(objectID, property string, oldValue, newValue interface{})
-    OnObjectAdded(object *ArxObject)
-    OnObjectRemoved(objectID string)
-}
-
-func (lsm *LiveStateManager) Start() {
-    lsm.ticker = time.NewTicker(100 * time.Millisecond) // 10 FPS
-    lsm.done = make(chan bool)
+var aqlCmd = &cobra.Command{
+    Use:   "aql [query]",
+    Short: "Execute Arxos Query Language (AQL) queries",
+    Long: `Execute complex queries using the Arxos Query Language.
     
-    go func() {
-        for {
-            select {
-            case <-lsm.ticker.C:
-                lsm.checkForUpdates()
-            case <-lsm.done:
-                return
-            }
+    AQL provides SQL-like syntax for querying building data:
+    
+    Examples:
+      arx aql "SELECT * FROM /electrical WHERE type='outlet'"
+      arx aql "SELECT name, status FROM /hvac WHERE status='active'"
+      arx aql "SELECT * FROM /floor:1 WHERE confidence > 0.8"
+      arx aql "SELECT * FROM /systems WHERE system_type IN ('electrical', 'hvac')"
+      arx aql "SELECT * FROM / WHERE position.x BETWEEN 0 AND 100"`,
+    Args: cobra.ExactArgs(1),
+    RunE: func(cmd *cobra.Command, args []string) error {
+        query := args[0]
+        format := getStringFlag(cmd, "format")
+        return executeAQLQuery(query, format)
+    },
+}
+
+func init() {
+    aqlCmd.Flags().String("format", "table", "Output format (table, json, csv)")
+    aqlCmd.Flags().Bool("explain", false, "Show query execution plan")
+}
+```
+
+---
+
+## 📊 **Real-time Monitoring**
+
+### **Monitor Command**
+
+```go
+var monitorCmd = &cobra.Command{
+    Use:   "monitor [path]",
+    Short: "Monitor ArxObjects in real-time",
+    Long: `Monitor ArxObjects for real-time updates and changes.
+    
+    Examples:
+      arx monitor /electrical/main-panel     # Monitor specific object
+      arx monitor /systems                   # Monitor all systems
+      arx monitor --watch                    # Watch for changes
+      arx monitor --interval 1s              # Update interval
+      arx monitor --format table             # Output format`,
+    Args: cobra.MaximumNArgs(1),
+    RunE: func(cmd *cobra.Command, args []string) error {
+        path := "."
+        if len(args) > 0 {
+            path = args[0]
         }
-    }()
+        
+        watch := getBoolFlag(cmd, "watch")
+        interval := getStringFlag(cmd, "interval")
+        format := getStringFlag(cmd, "format")
+        
+        return monitorArxObjects(path, watch, interval, format)
+    },
 }
 
-func (lsm *LiveStateManager) Stop() {
-    if lsm.ticker != nil {
-        lsm.ticker.Stop()
-    }
-    if lsm.done != nil {
-        close(lsm.done)
-    }
-}
-```
-
-## Mobile Integration
-
-### Touch CLI
-
-```go
-type TouchCLI struct {
-    buildingID string
-    session    *ARSession
-    commands   map[string]TouchCommand
-}
-
-type TouchCommand struct {
-    Name        string                 `json:"name"`
-    Description string                 `json:"description"`
-    Gesture     string                 `json:"gesture"`
-    Parameters  map[string]interface{} `json:"parameters"`
-    Handler     func(*TouchContext)    `json:"-"`
-}
-
-type TouchContext struct {
-    UserID      string                 `json:"user_id"`
-    Location    Point3D                `json:"location"`
-    Gesture     string                 `json:"gesture"`
-    Parameters  map[string]interface{} `json:"parameters"`
-    BuildingID  string                 `json:"building_id"`
-    ObjectID    string                 `json:"object_id"`
-}
-
-func (tcli *TouchCLI) HandleTouchCommand(ctx *TouchContext) error {
-    command, exists := tcli.commands[ctx.Gesture]
-    if !exists {
-        return fmt.Errorf("unknown touch command: %s", ctx.Gesture)
-    }
-    
-    // Validate parameters
-    if err := tcli.validateParameters(command, ctx.Parameters); err != nil {
-        return err
-    }
-    
-    // Execute command
-    return command.Handler(ctx)
-}
-
-func (tcli *TouchCLI) RegisterCommand(cmd TouchCommand) {
-    tcli.commands[cmd.Gesture] = cmd
+func init() {
+    monitorCmd.Flags().BoolP("watch", "w", false, "Watch for changes")
+    monitorCmd.Flags().String("interval", "1s", "Update interval")
+    monitorCmd.Flags().String("format", "table", "Output format")
+    monitorCmd.Flags().Bool("ascii", false, "Show ASCII art updates")
+    monitorCmd.Flags().Bool("svg", false, "Show SVG BIM updates")
 }
 ```
 
-### AR Field App Integration
+---
+
+## 🧪 **Testing**
+
+### **Command Testing**
 
 ```go
-type ARFieldApp struct {
-    buildingID string
-    session    *ARSession
-    cli        *TouchCLI
-    scanner    *QRScanner
-    validator  *FieldValidator
-}
-
-type ARSession struct {
-    SessionID  string                 `json:"session_id"`
-    UserID     string                 `json:"user_id"`
-    BuildingID string                 `json:"building_id"`
-    Location   Point3D                `json:"location"`
-    Objects    []*ARObject            `json:"objects"`
-    Status     string                 `json:"status"`
-    StartTime  time.Time              `json:"start_time"`
-}
-
-type ARObject struct {
-    ObjectID   string                 `json:"object_id"`
-    Type       string                 `json:"type"`
-    Position   Point3D                `json:"position"`
-    Properties map[string]interface{} `json:"properties"`
-    Status     string                 `json:"status"`
-    Confidence float64                `json:"confidence"`
-}
-
-func (arfa *ARFieldApp) StartSession(userID string) (*ARSession, error) {
-    session := &ARSession{
-        SessionID:  generateSessionID(),
-        UserID:     userID,
-        BuildingID: arfa.buildingID,
-        Location:   arfa.getCurrentLocation(),
-        Objects:    []*ARObject{},
-        Status:     "active",
-        StartTime:  time.Now().UTC(),
-    }
-    
-    arfa.session = session
-    
-    // Start AR tracking
-    if err := arfa.startARTracking(); err != nil {
-        return nil, err
-    }
-    
-    return session, nil
-}
-
-func (arfa *ARFieldApp) ScanQRCode(qrData string) error {
-    // Parse QR code data
-    objectID, err := arfa.parseQRCode(qrData)
-    if err != nil {
-        return err
-    }
-    
-    // Get object from building
-    object, err := arfa.getObject(objectID)
-    if err != nil {
-        return err
-    }
-    
-    // Add to AR session
-    arfa.session.Objects = append(arfa.session.Objects, &ARObject{
-        ObjectID:   object.ID,
-        Type:       object.Type,
-        Position:   object.Position,
-        Properties: object.Properties,
-        Status:     object.Status,
-        Confidence: object.Confidence,
-    })
-    
-    return nil
-}
-```
-
-## Testing
-
-### Command Testing
-
-```go
-func TestInitCommand(t *testing.T) {
+func TestZoomCommand(t *testing.T) {
     // Create temporary test directory
     testDir, err := os.MkdirTemp("", "arxos-test-*")
     if err != nil {
@@ -1006,224 +754,110 @@ func TestInitCommand(t *testing.T) {
         t.Fatal(err)
     }
     
-    // Test basic initialization
+    // Test building initialization
     cmd := exec.Command("arx", "init", "building:test", "--type", "office", "--floors", "2")
+    if err := cmd.Run(); err != nil {
+        t.Fatalf("init command failed: %v", err)
+    }
+    
+    // Test zoom to campus level
+    cmd = exec.Command("arx", "zoom", "campus")
     output, err := cmd.CombinedOutput()
     if err != nil {
-        t.Fatalf("init command failed: %v\nOutput: %s", err, output)
+        t.Fatalf("zoom command failed: %v\nOutput: %s", err, output)
     }
     
-    // Verify filesystem structure
-    if !fileExists("building:test/.arxos/config/arxos.yml") {
-        t.Error("building configuration file not created")
+    // Verify zoom output contains expected information
+    if !strings.Contains(string(output), "Zoomed to campus level") {
+        t.Error("zoom output missing expected text")
     }
     
-    if !fileExists("building:test/floor:1/arxos.yml") {
-        t.Error("floor configuration file not created")
+    if !strings.Contains(string(output), "1 char = 100m") {
+        t.Error("zoom output missing scale information")
     }
     
-    if !fileExists("building:test/systems/electrical/arxos.yml") {
-        t.Error("electrical system configuration not created")
-    }
-    
-    // Test navigation
-    cmd = exec.Command("arx", "cd", "building:test")
-    if err := cmd.Run(); err != nil {
-        t.Errorf("cd command failed: %v", err)
-    }
-    
-    // Test listing
-    cmd = exec.Command("arx", "ls", "--tree")
+    // Test zoom to submicron level
+    cmd = exec.Command("arx", "zoom", "submicron")
     output, err = cmd.CombinedOutput()
     if err != nil {
-        t.Errorf("ls command failed: %v", err)
+        t.Fatalf("zoom to submicron failed: %v\nOutput: %s", err, output)
     }
     
-    // Verify output contains expected structure
-    if !strings.Contains(string(output), "floor:1") {
-        t.Error("tree output missing floor:1")
+    if !strings.Contains(string(output), "Zoomed to submicron level") {
+        t.Error("submicron zoom output missing expected text")
     }
     
-    if !strings.Contains(string(output), "systems:electrical") {
-        t.Error("tree output missing electrical system")
-    }
-}
-```
-
-### Integration Testing
-
-```go
-func TestCompleteWorkflow(t *testing.T) {
-    // Setup test environment
-    testDir := setupTestEnvironment(t)
-    defer cleanupTestEnvironment(t, testDir)
-    
-    // 1. Initialize building
-    t.Run("Initialize", func(t *testing.T) {
-        testBuildingInitialization(t)
-    })
-    
-    // 2. Navigate and create structure
-    t.Run("Navigation", func(t *testing.T) {
-        testNavigationAndCreation(t)
-    })
-    
-    // 3. Version control operations
-    t.Run("VersionControl", func(t *testing.T) {
-        testVersionControl(t)
-    })
-    
-    // 4. Search and query
-    t.Run("Search", func(t *testing.T) {
-        testSearchAndQuery(t)
-    })
-    
-    // 5. Export and backup
-    t.Run("Export", func(t *testing.T) {
-        testExportAndBackup(t)
-    })
-}
-
-func testBuildingInitialization(t *testing.T) {
-    // Test various initialization scenarios
-    testCases := []struct {
-        name     string
-        args     []string
-        expected []string
-    }{
-        {
-            name: "Basic Office",
-            args: []string{"building:office", "--type", "office", "--floors", "3"},
-            expected: []string{
-                "building:office/.arxos/config/arxos.yml",
-                "building:office/floor:1/arxos.yml",
-                "building:office/floor:2/arxos.yml",
-                "building:office/floor:3/arxos.yml",
-                "building:office/systems/electrical/arxos.yml",
-                "building:office/systems/hvac/arxos.yml",
-                "building:office/systems/automation/arxos.yml",
-            },
-        },
-        {
-            name: "Industrial Warehouse",
-            args: []string{"building:warehouse", "--type", "industrial", "--floors", "1", "--area", "50,000 sq ft"},
-            expected: []string{
-                "building:warehouse/.arxos/config/arxos.yml",
-                "building:warehouse/floor:1/arxos.yml",
-                "building:warehouse/systems/electrical/arxos.yml",
-            },
-        },
-    }
-    
-    for _, tc := range testCases {
-        t.Run(tc.name, func(t *testing.T) {
-            cmd := exec.Command("arx", append([]string{"init"}, tc.args...)...)
-            if err := cmd.Run(); err != nil {
-                t.Errorf("init command failed: %v", err)
-                return
-            }
-            
-            // Verify expected files exist
-            for _, expectedFile := range tc.expected {
-                if !fileExists(expectedFile) {
-                    t.Errorf("expected file not created: %s", expectedFile)
-                }
-            }
-        })
+    if !strings.Contains(string(output), "1 char = 0.0000001m") {
+        t.Error("submicron zoom output missing correct scale")
     }
 }
 ```
 
-## Performance Considerations
+---
 
-### Caching Strategy
+## 🚀 **Performance Considerations**
 
-```go
-type CacheManager struct {
-    objectCache    *ObjectCache
-    spatialCache   *SpatialCache
-    queryCache     *QueryCache
-    renderCache    *RenderCache
-}
-
-type ObjectCache struct {
-    cache map[string]*ArxObject
-    mutex sync.RWMutex
-    ttl   time.Duration
-}
-
-func (oc *ObjectCache) Get(key string) (*ArxObject, bool) {
-    oc.mutex.RLock()
-    defer oc.mutex.RUnlock()
-    
-    obj, exists := oc.cache[key]
-    if !exists {
-        return nil, false
-    }
-    
-    // Check TTL
-    if time.Since(obj.LastAccessed) > oc.ttl {
-        delete(oc.cache, key)
-        return nil, false
-    }
-    
-    // Update access time
-    obj.LastAccessed = time.Now().UTC()
-    return obj, true
-}
-
-func (oc *ObjectCache) Set(key string, obj *ArxObject) {
-    oc.mutex.Lock()
-    defer oc.mutex.Unlock()
-    
-    obj.LastAccessed = time.Now().UTC()
-    oc.cache[key] = obj
-}
-```
-
-### Spatial Indexing
+### **C Core Integration**
 
 ```go
-type SpatialIndexer struct {
-    rtree    *rtree.RTree
+// Use C core for maximum performance
+type ArxObjectRuntime struct {
+    cRuntime *C.struct_ArxObjectRuntime
     mutex    sync.RWMutex
-    objects  map[string]*ArxObject
 }
 
-func (si *SpatialIndexer) Insert(obj *ArxObject) error {
-    si.mutex.Lock()
-    defer si.mutex.Unlock()
+func (rt *ArxObjectRuntime) GetArxObject(path string) (*ArxObject, error) {
+    rt.mutex.RLock()
+    defer rt.mutex.RUnlock()
     
-    // Create spatial bounds
-    bounds := obj.GetBoundingBox()
+    cPath := C.CString(path)
+    defer C.free(unsafe.Pointer(cPath))
     
-    // Insert into R-tree
-    si.rtree.Insert(bounds, obj)
+    cObj := C.arxobject_get_by_path(rt.cRuntime, cPath)
+    if cObj == nil {
+        return nil, fmt.Errorf("ArxObject not found: %s", path)
+    }
     
-    // Store object reference
-    si.objects[obj.ID] = obj
-    
-    return nil
+    return &ArxObject{cPtr: cObj}, nil
 }
 
-func (si *SpatialIndexer) Search(query *SpatialQuery) ([]*ArxObject, error) {
-    si.mutex.RLock()
-    defer si.mutex.RUnlock()
+// Zero-allocation spatial queries
+func (rt *ArxObjectRuntime) SpatialQuery(bbox [6]float64) ([]*ArxObject, error) {
+    rt.mutex.RLock()
+    defer rt.mutex.RUnlock()
+    
+    var cBbox [6]C.float
+    for i, v := range bbox {
+        cBbox[i] = C.float(v)
+    }
     
     var results []*ArxObject
-    
-    // Execute spatial search
-    si.rtree.Search(query.Bounds, func(item interface{}) bool {
-        if obj, ok := item.(*ArxObject); ok {
-            if si.matchesQuery(obj, query) {
-                results = append(results, obj)
-            }
-        }
-        return true
+    C.arxobject_spatial_query(rt.cRuntime, &cBbox[0], func(obj *C.struct_ArxObject) {
+        results = append(results, &ArxObject{cPtr: obj})
     })
     
     return results, nil
 }
 ```
 
-This development guide provides comprehensive coverage of building the Arxos CLI, from initialization patterns to advanced features like real-time operations and mobile integration. The focus on "Building as Filesystem" and "Infrastructure as Code" principles ensures that the CLI provides a familiar, powerful interface for managing buildings through the terminal.
+---
+
+## 🔗 **Related Documentation**
+
+- **Vision**: [Platform Vision](../../vision.md)
+- **Architecture**: [Current Architecture](current-architecture.md)
+- **ASCII-BIM**: [ASCII-BIM Engine](../architecture/ascii-bim.md)
+- **ArxObjects**: [ArxObject System](../architecture/arxobjects.md)
+- **CLI Architecture**: [CLI Architecture](../architecture/cli-architecture.md)
+- **Workflows**: [PDF to 3D Pipeline](../workflows/pdf-to-3d.md)
+
+---
+
+## 🆘 **Getting Help**
+
+- **Architecture Questions**: Review [Current Architecture](current-architecture.md)
+- **C Development**: Check [Core C Engine](../core/c/README.md)
+- **Go Development**: Review [Go Services](../core/README.md)
+- **CLI Issues**: Test with [Enhanced Zoom Demo](../frontend/demo-enhanced-zoom.html)
+
+**Happy building! 🏗️✨**

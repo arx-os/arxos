@@ -1,41 +1,52 @@
-# ASCII-BIM Rendering System
+# 🎨 Arxos ASCII-BIM Engine
 
-## 🎯 **Overview**
+## 🎯 **Revolutionary ASCII-BIM Engine Overview**
 
-The ASCII-BIM engine is the revolutionary core of Arxos that converts complex 3D building models into human-readable ASCII art representations. This system provides infinite zoom capabilities from campus-level views down to microchip internals, all rendered in ASCII characters that work everywhere from SSH terminals to AR headsets.
+The **Arxos ASCII-BIM Engine** is the revolutionary core that transforms buildings into human-readable ASCII art with infinite zoom capabilities. This engine provides seamless navigation from campus-level views down to microcontroller internals, with each level showing contextually appropriate detail while maintaining millimeter-precise world coordinates.
 
-## 🚀 **Core Innovation**
+**Core Innovation**: Buildings become navigable filesystems with infinite zoom from campus-level down to microcontroller internals, all rendered in human-readable ASCII art that works everywhere from SSH terminals to AR headsets.
 
-### **ASCII as Universal Language**
-- **Works Everywhere**: From SSH terminals to AR headsets
-- **Human Readable**: Anyone can understand ASCII buildings
-- **No Proprietary Formats**: ASCII is universal and eternal
-- **Infinite Resolution**: Scales from satellite to quantum level
+## 🚀 **Infinite Zoom Architecture**
 
-### **Infinite Zoom Architecture**
-Seamless navigation through building scales with contextually appropriate detail at each level:
+### **Multi-Scale Rendering System**
 
+The ASCII-BIM engine provides seamless zoom from campus-level views down to microcontroller internals, with each level showing contextually appropriate detail.
+
+```c
+typedef struct {
+    float scale;           // Current zoom level (mm per ASCII char)
+    int detail_level;      // 0=campus, 1=building, 2=floor, 3=room, 4=equipment, 5=component, 6=chip
+    char* render_mode;     // "structural", "electrical", "hvac", "network", "plumbing"
+} ViewContext;
 ```
-SCALE: 1 char = 100m (Campus View)
-═══════════════════════════════════════
+
+### **Infinite Zoom Example - Electrical System**
+
+#### **SCALE: 1 char = 100m (Campus View)**
+```
+╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗
 ┌───┬───┬───┐
 │ A │ B │ C │  Buildings A, B, C
 └───┴───┴───┘
+```
 
-↓ ZOOM to Building A (1 char = 10m)
-════════════════════════════════════════
-┌─────────────────────┐
+#### **↓ ZOOM to Building A (1 char = 10m)**
+```
+╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗
+┌──────────────────────┐
 │ ┌───┐ ┌───┐ ┌───┐ │
 │ │101│ │102│ │103│ │  Rooms visible
 │ └───┘ └───┘ └───┘ │
-│ ═══════════════════ │  Corridor
+│ ╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗ │  Corridor
 │ ┌───┐ ┌───┐ ┌───┐ │
 │ │201│ │202│ │ELEC│ │  Electrical room
 │ └───┘ └───┘ └───┘ │
-└─────────────────────┘
+└──────────────────────┘
+```
 
-↓ ZOOM to Electrical Room (1 char = 1m)
-════════════════════════════════════════
+#### **↓ ZOOM to Electrical Room (1 char = 1m)**
+```
+╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗
 ┌─────────────────────────┐
 │ ▣▣▣ Panel A  ▣▣▣ Panel B│  Electrical panels
 │ ║ ║ ║        ║ ║ ║     │  
@@ -44,60 +55,97 @@ SCALE: 1 char = 100m (Campus View)
 └─────────────────────────┘
 ```
 
-## 🏗️ **System Architecture**
-
-### **Multi-Pass Rendering Pipeline**
-
-```c
-typedef struct {
-    // Rendering context
-    float scale;                    // Current zoom level (mm per ASCII char)
-    int detail_level;               // 0=campus, 1=building, 2=floor, 3=room, 4=equipment, 5=component, 6=chip
-    char* render_mode;              // "structural", "electrical", "hvac", "network", "plumbing"
-    
-    // Canvas settings
-    int width, height;              // Output dimensions
-    char background_char;            // Background character
-    bool show_labels;                // Show object names
-    bool show_coordinates;           // Show coordinate grid
-    bool optimize_spacing;           // Optimize character spacing
-} ViewContext;
+#### **↓ ZOOM to PLC Cabinet (1 char = 10cm)**
+```
+╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗
+┌─────────────────────────────────┐
+│ ┌──────┐ ┌──────┐ ┌──────┐   │
+│ │POWER │ │ CPU  │ │ I/O  │   │  PLC modules
+│ │24VDC │ │1756L7│ │1756IB│   │
+│ └───┬──┘ └───┬──┘ └───┬──┘   │
+│ ╔╗╔╗┪╔╗╔╗╔╗╔╗╔┪╔╗╔╗╔╗╔╗┪╔╗╔╗  │  Backplane
+│ ┌───▼────────▼────────▼────  │
+│ │   TERMINAL BLOCKS        │  │  Wiring terminals
+│ └─────────────────────────────┘  │
+└─────────────────────────────────┘
 ```
 
-### **Rendering Pipeline Stages**
+#### **↓ ZOOM to CPU Module (1 char = 1cm)**
+```
+╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗
+┌──────────────────────────┐
+│ Allen-Bradley 1756-L73   │
+│ ┌──────────────────────┐ │
+│ │RUN OK I/O FORCE SD BAT│ │  Status LEDs
+│ │[●] [●] [ ] [ ] [ ] [●]│ │
+│ └──────────────────────┘ │
+│ ╔═══════╗    ╔═══════╗    │
+│ ║ETH 1 ║    ║ETH 2 ║    │  Network ports
+│ ╚═══════╝    ╚═══════╝    │
+└──────────────────────────┘
+```
 
-1. **Spatial Indexing**: Build spatial acceleration structures
-2. **Depth Buffer**: Calculate Z-buffer for proper layering
-3. **Character Selection**: Choose appropriate ASCII characters
-4. **Edge Detection**: Identify architectural features
-5. **Label Placement**: Position object names and metadata
-6. **Output Generation**: Generate final ASCII string
+#### **↓ ZOOM to Chip Level (1 char = 1mm)**
+```
+╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗╔╗
+┌─────────────────────────────┐
+│ ┌────┐┌────┐┌────┐┌────┐  │
+│ │FLASH││SRAM││DSP ││FPGA│  │  Silicon components
+│ └──┬─┘└──┬─┘└──┬─┘└──┬─┘  │
+│ ╔╗╔┪╔╗╔╗╔┪╔╗╔╗╔┪╔╗╔╗╔┪╔╗  │  System bus
+│ ┌──▼────────▼────────▼────▼──┐  │
+│ │  ARM Cortex-A9 x2     │  │  Dual-core CPU
+│ └──────────────────────────┘  │
+└─────────────────────────────┘
+```
 
-## 📊 **Performance Characteristics**
+## 🎨 **Pixatool-Inspired Rendering Pipeline**
 
-### **Achieved Performance (Exceeds All Targets)**
+Based on advanced ASCII art generation techniques that successfully render Minecraft in terminals with perfect depth perception.
 
-| Operation | Target | Actual | Performance Ratio |
-|-----------|--------|--------|-------------------|
-| 2D Floor Plan Generation | <10ms | **2.75μs** | 3,636x faster |
-| 3D Building Rendering | <50ms | **12.5μs** | 4,000x faster |
-| ASCII Optimization | <5ms | **1.2μs** | 4,167x faster |
-| Coordinate Transformation | <0.1ms | **0.025μs** | 4,000x faster |
+### **Core Data Structures**
 
-### **Scalability Metrics**
+```c
+/*
+ * Arxos ASCII-BIM Engine - Pixatool-Inspired Implementation
+ * High-performance 3D building model to ASCII conversion
+ * Optimized for sub-10ms building plan rendering
+ */
 
-| Metric | Target | Architecture |
-|--------|--------|--------------|
-| Buildings per instance | 10,000 | Sharded DB |
-| Concurrent users | 10,000 | Edge deployment |
-| ArxObjects per building | 1,000,000 | Hierarchical index |
-| Zoom levels | Infinite | Fractal rendering |
-| ASCII resolution | 8K×4K chars | Tile-based render |
-| Spatial precision | 1mm | Double precision |
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <stdint.h>
 
-## 🔤 **ASCII Character Sets**
+// Core data structures for 3D -> ASCII conversion
+typedef struct {
+    float depth;        // Z-buffer depth value
+    float luminance;    // Brightness 0.0-1.0
+    float edge_strength; // Edge detection result
+    int material_type;  // Wall, door, equipment, etc.
+    float normal_x, normal_y, normal_z; // Surface normal
+} PixelData;
 
-### **Building-Specific Character Sets**
+typedef struct {
+    char character;     // ASCII character to display
+    float density;      // Character visual density 0.0-1.0
+    int is_structural;  // 1 for walls/structure, 0 for details
+    int is_edge;        // 1 for edges/boundaries
+} ASCIICharacterSet;
+
+typedef struct {
+    int width, height;
+    char* ascii_buffer;
+    PixelData* render_buffer;
+    float scale_factor;
+    float depth_range_min, depth_range_max;
+} ASCIICanvas;
+```
+
+### **Pre-computed ASCII Character Sets**
+
+Optimized for building plans with semantic meaning:
 
 ```c
 // Pre-computed ASCII character sets optimized for building plans
@@ -125,7 +173,7 @@ static const ASCIICharacterSet BUILDING_CHARSET[] = {
     {'▣', 0.9, 0, 0},   // Electrical panel
     {'⊞', 0.8, 0, 0},   // Junction box
     {'○', 0.5, 0, 0},   // Outlet/fixture
-    {'◎', 0.6, 0, 0},   // Equipment center
+    {'●', 0.6, 0, 0},   // Equipment center
     
     // Room fill patterns
     {'∴', 0.3, 0, 0},   // Room interior - classroom
@@ -136,101 +184,11 @@ static const ASCIICharacterSet BUILDING_CHARSET[] = {
 };
 ```
 
-### **Character Selection Algorithm**
+## 🗺️ **Coordinate System Architecture**
 
-```c
-typedef struct {
-    char character;     // ASCII character to display
-    float density;      // Character visual density 0.0-1.0
-    int is_structural;  // 1 for walls/structure, 0 for details
-    int is_edge;        // 1 for edges/boundaries
-} ASCIICharacterSet;
+ASCII is the view layer while maintaining millimeter-precise world coordinates internally.
 
-char select_character_for_object(ArxObject* obj, ViewContext* ctx) {
-    // Calculate visual density based on object properties
-    float density = calculate_visual_density(obj);
-    
-    // Determine if this is a structural element
-    bool is_structural = is_structural_element(obj);
-    
-    // Determine if this is an edge/boundary
-    bool is_edge = is_edge_element(obj);
-    
-    // Find best matching character
-    for (int i = 0; i < BUILDING_CHARSET_SIZE; i++) {
-        if (BUILDING_CHARSET[i].is_structural == is_structural &&
-            BUILDING_CHARSET[i].is_edge == is_edge &&
-            abs(BUILDING_CHARSET[i].density - density) < 0.1) {
-            return BUILDING_CHARSET[i].character;
-        }
-    }
-    
-    return ' '; // Default to space
-}
-```
-
-## 🎨 **Rendering Modes**
-
-### **2D Floor Plan Rendering**
-
-```c
-// Generate 2D ASCII floor plan from ArxObjects
-char* generate_2d_floor_plan(ArxObject** objects, int object_count, 
-                             const ASCIIRenderOptions* options) {
-    // Create 2D canvas
-    ASCII2DCanvas* canvas = create_2d_canvas(options->max_width, options->max_height);
-    
-    // Set rendering context
-    ViewContext ctx = {
-        .scale = calculate_scale_for_objects(objects, object_count, canvas),
-        .detail_level = 2, // Floor level
-        .render_mode = "structural",
-        .show_labels = options->show_labels,
-        .show_coordinates = options->show_coordinates
-    };
-    
-    // Render objects in depth order
-    for (int i = 0; i < object_count; i++) {
-        render_object_2d(canvas, objects[i], &ctx);
-    }
-    
-    // Generate output string
-    return canvas_to_string(canvas);
-}
-```
-
-### **3D Building Rendering**
-
-```c
-// Generate 3D ASCII building view from ArxObjects
-char* generate_3d_building_view(ArxObject** objects, int object_count,
-                                const ASCIIRenderOptions* options) {
-    // Create 3D canvas
-    ASCII3DCanvas* canvas = create_3d_canvas(options->max_width, options->max_height, 
-                                            options->max_depth);
-    
-    // Set rendering context
-    ViewContext ctx = {
-        .scale = calculate_scale_for_objects(objects, object_count, canvas),
-        .detail_level = 3, // Room level
-        .render_mode = "all",
-        .show_labels = options->show_labels,
-        .show_coordinates = options->show_coordinates
-    };
-    
-    // Render objects with depth information
-    for (int i = 0; i < object_count; i++) {
-        render_object_3d(canvas, objects[i], &ctx);
-    }
-    
-    // Generate output string
-    return canvas_to_string_3d(canvas);
-}
-```
-
-## 🗺️ **Coordinate System**
-
-### **Dual Coordinate Architecture**
+### **Spatial Mapping Structure**
 
 ```c
 typedef struct {
@@ -248,29 +206,13 @@ typedef struct {
 } SpatialMapping;
 ```
 
-### **Coordinate Transformation Functions**
+### **Bidirectional Coordinate Transformation**
 
 ```c
 // Bidirectional coordinate transformation
-ArxPoint3D ascii_to_world(int ascii_x, int ascii_y, ViewContext* ctx) {
-    ArxPoint3D world_point;
-    world_point.x = ascii_x * ctx->scale;
-    world_point.y = ascii_y * ctx->scale;
-    world_point.z = 0; // 2D rendering
-    return world_point;
-}
+Point3D ascii_to_world(int ascii_x, int ascii_y, ViewContext* ctx);
+Point2D world_to_ascii(double world_x, double world_y, double world_z, ViewContext* ctx);
 
-ArxPoint2D world_to_ascii(double world_x, double world_y, double world_z, ViewContext* ctx) {
-    ArxPoint2D ascii_point;
-    ascii_point.x = (int)(world_x / ctx->scale);
-    ascii_point.y = (int)(world_y / ctx->scale);
-    return ascii_point;
-}
-```
-
-### **Example: Outlet at Exact Position**
-
-```c
 // Example: Outlet at exactly 457mm from wall corner
 // - Truth: world_x = 457.0mm
 // - ASCII at 1:100 scale: ascii_x = 5 (rounds to nearest char)
@@ -278,370 +220,216 @@ ArxPoint2D world_to_ascii(double world_x, double world_y, double world_z, ViewCo
 // - All three representations coexist simultaneously
 ```
 
-## 🔍 **Depth Buffer System**
+## 🔧 **Rendering Pipeline Implementation**
 
-### **Z-Buffer Implementation**
+### **High-Performance Rendering**
+
+The ASCII-BIM engine is optimized for sub-10ms building plan rendering:
 
 ```c
-typedef struct {
-    char** grid;           // 2D character grid
-    float** depth_buffer;  // Z-buffer for proper layering
-    int width, height;     // Canvas dimensions
-    ArxPoint3D origin;     // World coordinate origin
-    double scale;          // Pixels per millimeter
-    char background;       // Background character
-} ASCII2DCanvas;
-
-void render_object_2d(ASCII2DCanvas* canvas, ArxObject* obj, ViewContext* ctx) {
-    // Calculate ASCII position
-    ArxPoint2D ascii_pos = world_to_ascii(obj->position.x, obj->position.y, obj->position.z, ctx);
+// Main rendering pipeline
+int render_building_ascii(BuildingModel* building, ViewContext* ctx, ASCIICanvas* canvas) {
+    // 1. Clear buffers
+    clear_ascii_buffer(canvas);
+    clear_depth_buffer(canvas);
     
-    // Check depth buffer
-    if (ascii_pos.x >= 0 && ascii_pos.x < canvas->width &&
-        ascii_pos.y >= 0 && ascii_pos.y < canvas->height) {
+    // 2. Sort objects by depth (painter's algorithm)
+    sort_objects_by_depth(building->objects, building->object_count);
+    
+    // 3. Render each object
+    for (int i = 0; i < building->object_count; i++) {
+        ArxObject* obj = building->objects[i];
         
-        float obj_depth = obj->position.z;
-        float current_depth = canvas->depth_buffer[ascii_pos.y][ascii_pos.x];
+        // Transform world coordinates to ASCII
+        Point2D ascii_pos = world_to_ascii(obj->position[0], obj->position[1], obj->position[2], ctx);
         
-        // Only render if object is closer (lower Z value)
-        if (obj_depth < current_depth) {
-            // Select appropriate character
-            char ascii_char = select_character_for_object(obj, ctx);
-            
-            // Update canvas and depth buffer
-            canvas->grid[ascii_pos.y][ascii_pos.x] = ascii_char;
-            canvas->depth_buffer[ascii_pos.y][ascii_pos.x] = obj_depth;
-        }
-    }
-}
-```
-
-## 🎯 **Context-Aware Rendering**
-
-### **Scale-Dependent Detail**
-
-```c
-// Render object based on current zoom level
-void render_object_contextual(ASCII2DCanvas* canvas, ArxObject* obj, ViewContext* ctx) {
-    switch (ctx->detail_level) {
-        case 0: // Campus level
-            render_campus_level(canvas, obj, ctx);
-            break;
-        case 1: // Building level
-            render_building_level(canvas, obj, ctx);
-            break;
-        case 2: // Floor level
-            render_floor_level(canvas, obj, ctx);
-            break;
-        case 3: // Room level
-            render_room_level(canvas, obj, ctx);
-            break;
-        case 4: // Equipment level
-            render_equipment_level(canvas, obj, ctx);
-            break;
-        case 5: // Component level
-            render_component_level(canvas, obj, ctx);
-            break;
-        case 6: // Chip level
-            render_chip_level(canvas, obj, ctx);
-            break;
-    }
-}
-```
-
-### **System-Specific Rendering**
-
-```c
-// Render based on system type
-void render_system_specific(ASCII2DCanvas* canvas, ArxObject* obj, ViewContext* ctx) {
-    if (strcmp(ctx->render_mode, "electrical") == 0) {
-        render_electrical_system(canvas, obj, ctx);
-    } else if (strcmp(ctx->render_mode, "hvac") == 0) {
-        render_hvac_system(canvas, obj, ctx);
-    } else if (strcmp(ctx->render_mode, "structural") == 0) {
-        render_structural_system(canvas, obj, ctx);
-    } else if (strcmp(ctx->render_mode, "plumbing") == 0) {
-        render_plumbing_system(canvas, obj, ctx);
-    } else {
-        render_generic_system(canvas, obj, ctx);
-    }
-}
-```
-
-## 🔧 **Performance Optimization**
-
-### **Spatial Indexing**
-
-```c
-// Build spatial acceleration structure
-typedef struct {
-    ArxObject** objects;
-    int object_count;
-    ArxBoundingBox bounds;
-    SpatialNode* children[4]; // Quad-tree for 2D
-} SpatialNode;
-
-SpatialNode* build_spatial_index(ArxObject** objects, int object_count) {
-    SpatialNode* root = create_spatial_node();
-    
-    // Calculate bounding box
-    root->bounds = calculate_bounding_box(objects, object_count);
-    
-    // If few objects, store directly
-    if (object_count < 10) {
-        root->objects = objects;
-        root->object_count = object_count;
-        return root;
-    }
-    
-    // Otherwise, subdivide
-    subdivide_spatial_node(root, objects, object_count);
-    
-    return root;
-}
-```
-
-### **Tile-Based Rendering**
-
-```c
-// Render large buildings in tiles
-typedef struct {
-    int tile_x, tile_y;           // Tile coordinates
-    int tile_width, tile_height;  // Tile dimensions
-    char** content;               // Tile content
-    ArxBoundingBox bounds;        // Tile bounds
-} RenderTile;
-
-RenderTile** create_render_tiles(int building_width, int building_height, 
-                                int tile_size) {
-    int tiles_x = (building_width + tile_size - 1) / tile_size;
-    int tiles_y = (building_height + tile_size - 1) / tile_size;
-    
-    RenderTile** tiles = malloc(tiles_x * tiles_y * sizeof(RenderTile*));
-    
-    for (int y = 0; y < tiles_y; y++) {
-        for (int x = 0; x < tiles_x; x++) {
-            tiles[y * tiles_x + x] = create_render_tile(x, y, tile_size);
-        }
-    }
-    
-    return tiles;
-}
-```
-
-## 📱 **Mobile and AR Integration**
-
-### **Touch-Optimized Rendering**
-
-```c
-// Optimize for mobile touch interfaces
-typedef struct {
-    bool touch_optimized;          // Enable touch optimizations
-    int min_touch_target;          // Minimum touch target size
-    bool show_touch_hints;         // Show touch interaction hints
-    char touch_indicator;          // Character for touchable elements
-} TouchOptimization;
-
-void render_touch_optimized(ASCII2DCanvas* canvas, ArxObject* obj, 
-                           ViewContext* ctx, TouchOptimization* touch_opt) {
-    // Ensure minimum touch target size
-    if (touch_opt->touch_optimized) {
-        int min_size = touch_opt->min_touch_target;
-        ArxPoint2D pos = world_to_ascii(obj->position.x, obj->position.y, 0, ctx);
+        // Get appropriate ASCII character
+        char ascii_char = get_ascii_character(obj, ctx);
         
-        // Expand touch target if needed
-        for (int dy = -min_size/2; dy <= min_size/2; dy++) {
-            for (int dx = -min_size/2; dx <= min_size/2; dx++) {
-                int x = pos.x + dx;
-                int y = pos.y + dy;
-                
-                if (x >= 0 && x < canvas->width && y >= 0 && y < canvas->height) {
-                    if (touch_opt->show_touch_hints) {
-                        canvas->grid[y][x] = touch_opt->touch_indicator;
-                    }
-                }
-            }
+        // Apply depth testing
+        if (should_render_at_position(ascii_pos, obj->position[2], canvas)) {
+            render_ascii_character(canvas, ascii_pos, ascii_char, obj);
         }
     }
+    
+    // 4. Post-processing effects
+    apply_edge_enhancement(canvas);
+    apply_room_patterns(canvas, building);
+    
+    return 0;
 }
 ```
 
-### **AR Overlay Generation**
+### **Depth Buffer Management**
 
 ```c
-// Generate AR overlay from ASCII representation
+// Z-buffer for proper 3D rendering
 typedef struct {
-    char** ascii_overlay;          // ASCII characters for AR
-    ArxPoint3D* world_positions;   // World coordinates for each character
-    float* confidence_scores;      // Confidence for each position
-    int overlay_width, overlay_height;
-} AROverlay;
+    float* depth_buffer;
+    int width, height;
+    float near_plane, far_plane;
+} DepthBuffer;
 
-AROverlay* generate_ar_overlay(ArxObject** objects, int object_count, 
-                               ArxPoint3D device_position, ViewContext* ctx) {
-    AROverlay* overlay = create_ar_overlay(ctx->width, ctx->height);
+int should_render_at_position(Point2D ascii_pos, float world_z, ASCIICanvas* canvas) {
+    int index = ascii_pos.y * canvas->width + ascii_pos.x;
     
-    // Generate ASCII representation
-    char* ascii = generate_2d_floor_plan(objects, object_count, ctx);
-    
-    // Convert to AR overlay format
-    for (int y = 0; y < ctx->height; y++) {
-        for (int x = 0; x < ctx->width; x++) {
-            char ascii_char = ascii[y * ctx->width + x];
-            if (ascii_char != ' ') {
-                overlay->ascii_overlay[y][x] = ascii_char;
-                
-                // Calculate world position for AR placement
-                ArxPoint3D world_pos = ascii_to_world(x, y, ctx);
-                overlay->world_positions[y * ctx->width + x] = world_pos;
-                
-                // Set confidence based on object properties
-                overlay->confidence_scores[y * ctx->width + x] = 0.95f;
-            }
-        }
+    // Check if this position is closer than what's already rendered
+    if (world_z < canvas->render_buffer[index].depth) {
+        canvas->render_buffer[index].depth = world_z;
+        return 1; // Render this object
     }
     
-    return overlay;
+    return 0; // Don't render, something is closer
 }
 ```
 
-## 📊 **Output Formats**
+## 🎯 **Multi-Resolution Rendering**
 
-### **String Generation**
+### **Context-Aware Detail Levels**
+
+The engine automatically adjusts detail based on zoom level and context:
 
 ```c
-// Convert canvas to string output
-char* canvas_to_string(ASCII2DCanvas* canvas) {
-    int total_length = canvas->width * canvas->height + canvas->height; // +height for newlines
-    char* output = malloc(total_length + 1);
+// Detail level determination
+int determine_detail_level(ViewContext* ctx, ArxObject* obj) {
+    float scale = ctx->scale;
     
-    int pos = 0;
-    for (int y = 0; y < canvas->height; y++) {
-        for (int x = 0; x < canvas->width; x++) {
-            output[pos++] = canvas->grid[y][x];
-        }
-        if (y < canvas->height - 1) {
-            output[pos++] = '\n';
-        }
+    if (scale >= 100000.0) return DETAIL_CHIP;        // 1 char = 100m (campus)
+    if (scale >= 10000.0) return DETAIL_BUILDING;     // 1 char = 10m (building)
+    if (scale >= 1000.0) return DETAIL_FLOOR;         // 1 char = 1m (floor)
+    if (scale >= 100.0) return DETAIL_ROOM;           // 1 char = 10cm (room)
+    if (scale >= 10.0) return DETAIL_EQUIPMENT;       // 1 char = 1cm (equipment)
+    if (scale >= 1.0) return DETAIL_COMPONENT;        // 1 char = 1mm (component)
+    return DETAIL_CHIP;                                // 1 char = 0.1mm (chip)
+}
+
+// Context-aware character selection
+char get_contextual_character(ArxObject* obj, ViewContext* ctx, int detail_level) {
+    switch (detail_level) {
+        case DETAIL_CAMPUS:
+            return get_campus_character(obj);
+        case DETAIL_BUILDING:
+            return get_building_character(obj);
+        case DETAIL_FLOOR:
+            return get_floor_character(obj);
+        case DETAIL_ROOM:
+            return get_room_character(obj);
+        case DETAIL_EQUIPMENT:
+            return get_equipment_character(obj);
+        case DETAIL_COMPONENT:
+            return get_component_character(obj);
+        case DETAIL_CHIP:
+            return get_chip_character(obj);
+        default:
+            return '?';
     }
-    output[pos] = '\0';
-    
-    return output;
 }
 ```
 
-### **Formatted Output**
+## 🌐 **Universal ASCII Language**
+
+### **Cross-Platform Compatibility**
+
+The ASCII-BIM engine works everywhere:
+
+- **SSH Terminals** - Standard terminal emulators
+- **Web Browsers** - Monospace font rendering
+- **Mobile Apps** - Terminal-style interfaces
+- **AR Headsets** - ASCII overlay on real world
+- **IoT Devices** - Minimal display requirements
+- **Printers** - Paper-based documentation
+
+### **Character Set Optimization**
 
 ```c
-// Generate formatted output with metadata
+// Fallback character sets for different environments
+static const char* BASIC_CHARSET = " .:-=+*#%@";           // Basic terminals
+static const char* EXTENDED_CHARSET = " .:-=+*#%@█▓▒░│─┌┐└┘┬┴├┤┼"; // Extended terminals
+static const char* UNICODE_CHARSET = " .:-=+*#%@█▓▒░│─┌┐└┘┬┴├┤┼▣⊞○●∴"; // Full Unicode
+
+// Automatic character set detection
+const char* detect_character_set() {
+    if (supports_unicode()) return UNICODE_CHARSET;
+    if (supports_extended_ascii()) return EXTENDED_CHARSET;
+    return BASIC_CHARSET;
+}
+```
+
+## 🚀 **Performance Characteristics**
+
+### **Rendering Performance**
+
+- **Building Plan Rendering**: <10ms for complex buildings
+- **Zoom Level Changes**: <5ms for smooth transitions
+- **Real-time Updates**: <1ms for individual object changes
+- **Memory Usage**: <50MB for 10,000+ objects
+- **Coordinate Precision**: Submillimeter accuracy
+
+### **Optimization Techniques**
+
+```c
+// Spatial indexing for fast rendering
 typedef struct {
-    char* ascii_content;           // ASCII building representation
-    char* metadata;                // JSON metadata
-    ArxBoundingBox bounds;         // Building bounds
-    ViewContext context;            // Rendering context
-    ArxObject** rendered_objects;  // Objects that were rendered
-    int object_count;              // Number of rendered objects
-} FormattedOutput;
+    Octree* spatial_index;
+    SpatialHash* object_hash;
+    ViewFrustum* current_view;
+} RenderOptimizer;
 
-FormattedOutput* generate_formatted_output(ASCII2DCanvas* canvas, 
-                                          ArxObject** objects, int object_count,
-                                          ViewContext* ctx) {
-    FormattedOutput* output = malloc(sizeof(FormattedOutput));
-    
-    // Generate ASCII content
-    output->ascii_content = canvas_to_string(canvas);
-    
-    // Generate metadata
-    output->metadata = generate_metadata_json(objects, object_count, ctx);
-    
-    // Set other fields
-    output->bounds = calculate_bounds(objects, object_count);
-    output->context = *ctx;
-    output->rendered_objects = objects;
-    output->object_count = object_count;
-    
-    return output;
+// Frustum culling for visible objects only
+int is_object_visible(ArxObject* obj, ViewFrustum* frustum) {
+    BoundingBox bbox = get_object_bounding_box(obj);
+    return frustum_contains_box(frustum, bbox);
+}
+
+// Level-of-detail for distant objects
+int get_lod_level(ArxObject* obj, ViewContext* ctx) {
+    float distance = calculate_distance(obj, ctx->camera_position);
+    if (distance > 1000.0) return LOD_LOW;
+    if (distance > 100.0) return LOD_MEDIUM;
+    return LOD_HIGH;
 }
 ```
 
-## 🎯 **Integration with CLI**
+## 🔮 **Future Enhancements**
 
-### **CLI Rendering Commands**
+### **Advanced Rendering Features**
 
-```bash
-# Basic rendering
-arx @building-47 render /electrical
-arx @building-47 render /hvac --format 2d
+- **Dynamic Lighting** - Real-time lighting effects in ASCII
+- **Animation Support** - Moving parts and dynamic elements
+- **Color Support** - ANSI color codes for enhanced visualization
+- **3D ASCII** - True 3D ASCII rendering with depth perception
+- **Custom Fonts** - User-defined character sets for specific domains
 
-# Zoom-specific rendering
-arx @building-47 render / --zoom campus
-arx @building-47 render / --zoom building
-arx @building-47 render / --zoom floor --level 2
-arx @building-47 render / --zoom room --id mechanical-room
+### **Integration Capabilities**
 
-# System-specific rendering
-arx @building-47 render /electrical --mode electrical
-arx @building-47 render /hvac --mode hvac
-arx @building-47 render / --mode structural
+- **CAD Export** - Generate CAD files from ASCII models
+- **3D Model Export** - Export to standard 3D formats
+- **AR Integration** - Real-time ASCII overlay on physical spaces
+- **IoT Integration** - Live sensor data in ASCII visualization
 
-# Output options
-arx @building-47 render / --show-labels --show-coordinates
-arx @building-47 render / --optimize-spacing --max-width 120
-```
+## 🏆 **Key Benefits**
 
-### **Rendering Configuration**
+### **Universal Accessibility**
 
-```yaml
-# Rendering configuration
-render:
-  default_format: "2d"
-  show_labels: true
-  show_coordinates: false
-  optimize_spacing: true
-  max_width: 120
-  max_height: 40
-  
-  # Character sets
-  characters:
-    walls: "█▓▒░"
-    edges: "│─┌┐└┘┬┴├┤┼"
-    equipment: "▣⊞○◎"
-    rooms: "∴▒░· "
-  
-  # Zoom levels
-  zoom_levels:
-    campus: 100000    # mm per character
-    building: 10000
-    floor: 1000
-    room: 100
-    equipment: 10
-    component: 1
-    chip: 0.1
-```
+- **Works Everywhere** - From SSH terminals to AR headsets
+- **No Dependencies** - Pure ASCII, no graphics libraries needed
+- **Cross-Platform** - Same rendering on any device
+- **Human-Readable** - Engineers can read and understand directly
 
-## 📚 **Best Practices**
+### **Performance Excellence**
 
-### **Performance Optimization**
-1. **Use spatial indexing** for large buildings
-2. **Implement tile-based rendering** for very large structures
-3. **Cache rendered results** for frequently accessed views
-4. **Optimize character selection** for target display
-5. **Use depth buffering** for proper layering
+- **Sub-10ms Rendering** - Real-time building visualization
+- **Infinite Zoom** - From campus to chip level seamlessly
+- **Memory Efficient** - Minimal resource requirements
+- **Scalable** - Handles buildings of any size
 
-### **Character Selection**
-1. **Choose characters by density** not just appearance
-2. **Maintain consistency** across zoom levels
-3. **Use system-specific** character sets
-4. **Optimize for readability** on target devices
-5. **Consider accessibility** for different users
+### **Developer Friendly**
 
-### **Coordinate Management**
-1. **Maintain millimeter precision** in world coordinates
-2. **Use appropriate scale factors** for each zoom level
-3. **Handle coordinate transformations** efficiently
-4. **Validate spatial relationships** during rendering
-5. **Support multiple coordinate systems** if needed
+- **Simple API** - Easy to integrate and extend
+- **Open Source** - Full source code available
+- **Well Documented** - Comprehensive implementation guide
+- **Active Community** - Ongoing development and support
 
 ---
 
-**The ASCII-BIM engine transforms complex 3D buildings into universally accessible, human-readable representations.** 🏗️🔤
+**The Arxos ASCII-BIM Engine represents a fundamental shift in building visualization - making complex 3D building models accessible through the universal language of ASCII art.** 🎨✨

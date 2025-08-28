@@ -1,0 +1,300 @@
+syntax = "proto3";
+
+package ai;
+
+option go_package = "github.com/arxos/arxos/proto/ai";
+
+// AI Service for architectural intelligence operations
+service AIService {
+  // Symbol detection in floor plans
+  rpc DetectSymbols(DetectSymbolsRequest) returns (DetectSymbolsResponse);
+  
+  // Room classification
+  rpc ClassifyRoom(ClassifyRoomRequest) returns (ClassifyRoomResponse);
+  
+  // LiDAR point cloud processing
+  rpc ProcessPointCloud(ProcessPointCloudRequest) returns (ProcessPointCloudResponse);
+  
+  // Model training
+  rpc TrainModel(TrainModelRequest) returns (TrainModelResponse);
+  
+  // Model management
+  rpc GetModelInfo(GetModelInfoRequest) returns (GetModelInfoResponse);
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+  
+  // Real-time streaming
+  rpc StreamLiDAR(stream StreamLiDARRequest) returns (stream StreamLiDARResponse);
+}
+
+// Symbol Detection Messages
+message DetectSymbolsRequest {
+  bytes image_data = 1;
+  string image_format = 2; // png, jpg, pdf
+  repeated string symbol_types = 3; // doors, windows, walls, electrical
+  float confidence_threshold = 4;
+  DetectionOptions options = 5;
+}
+
+message DetectSymbolsResponse {
+  repeated DetectedSymbol symbols = 1;
+  ProcessingStats stats = 2;
+  string model_version = 3;
+}
+
+message DetectedSymbol {
+  string type = 1;
+  BoundingBox bbox = 2;
+  float confidence = 3;
+  map<string, string> attributes = 4;
+  Point2D center = 5;
+  float rotation = 6;
+}
+
+message BoundingBox {
+  float x = 1;
+  float y = 2;
+  float width = 3;
+  float height = 4;
+}
+
+message Point2D {
+  float x = 1;
+  float y = 2;
+}
+
+message DetectionOptions {
+  bool include_attributes = 1;
+  bool include_rotation = 2;
+  int32 max_detections = 3;
+  float nms_threshold = 4; // Non-maximum suppression
+}
+
+// Room Classification Messages
+message ClassifyRoomRequest {
+  bytes image_data = 1;
+  BoundingBox room_bbox = 2;
+  repeated DetectedSymbol context_symbols = 3;
+  ClassificationOptions options = 4;
+}
+
+message ClassifyRoomResponse {
+  string room_type = 1;
+  float confidence = 2;
+  repeated RoomTypeCandidate alternatives = 3;
+  map<string, float> features = 4;
+}
+
+message RoomTypeCandidate {
+  string type = 1;
+  float confidence = 2;
+}
+
+message ClassificationOptions {
+  int32 max_alternatives = 1;
+  bool include_features = 2;
+}
+
+// Point Cloud Processing Messages
+message ProcessPointCloudRequest {
+  bytes point_cloud_data = 1;
+  string format = 2; // ply, pcd, las
+  ProcessingType processing_type = 3;
+  PointCloudOptions options = 4;
+}
+
+message ProcessPointCloudResponse {
+  repeated Wall walls = 1;
+  repeated Room rooms = 2;
+  repeated DetectedObject objects = 3;
+  CloudStats stats = 4;
+}
+
+message Wall {
+  Point3D start_point = 1;
+  Point3D end_point = 2;
+  float thickness = 3;
+  float height = 4;
+  string material = 5;
+}
+
+message Room {
+  string id = 1;
+  repeated Point3D boundary = 2;
+  string type = 3;
+  float area = 4;
+  float height = 5;
+}
+
+message DetectedObject {
+  string type = 1;
+  Point3D position = 2;
+  Point3D dimensions = 3;
+  float confidence = 4;
+}
+
+message Point3D {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message CloudStats {
+  int32 total_points = 1;
+  int32 processed_points = 2;
+  float processing_time_seconds = 3;
+  BoundingBox3D bounds = 4;
+}
+
+message BoundingBox3D {
+  Point3D min = 1;
+  Point3D max = 2;
+}
+
+enum ProcessingType {
+  WALL_DETECTION = 0;
+  ROOM_SEGMENTATION = 1;
+  OBJECT_DETECTION = 2;
+  FULL_ANALYSIS = 3;
+}
+
+message PointCloudOptions {
+  float voxel_size = 1;
+  float noise_threshold = 2;
+  int32 min_cluster_size = 3;
+  bool include_colors = 4;
+}
+
+// Model Training Messages
+message TrainModelRequest {
+  string model_type = 1; // symbol_detection, room_classification
+  string dataset_path = 2;
+  TrainingConfig config = 3;
+}
+
+message TrainModelResponse {
+  string job_id = 1;
+  TrainingStatus status = 2;
+  string message = 3;
+}
+
+message TrainingConfig {
+  int32 epochs = 1;
+  int32 batch_size = 2;
+  float learning_rate = 3;
+  string base_model = 4;
+  map<string, string> hyperparameters = 5;
+}
+
+enum TrainingStatus {
+  QUEUED = 0;
+  RUNNING = 1;
+  COMPLETED = 2;
+  FAILED = 3;
+  CANCELLED = 4;
+}
+
+// Model Management Messages
+message GetModelInfoRequest {
+  string model_id = 1;
+}
+
+message GetModelInfoResponse {
+  ModelInfo model = 1;
+}
+
+message ListModelsRequest {
+  string model_type = 1;
+  bool include_metrics = 2;
+}
+
+message ListModelsResponse {
+  repeated ModelInfo models = 1;
+}
+
+message ModelInfo {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string version = 4;
+  int64 created_at = 5;
+  int64 size_bytes = 6;
+  ModelMetrics metrics = 7;
+  map<string, string> metadata = 8;
+}
+
+message ModelMetrics {
+  float accuracy = 1;
+  float precision = 2;
+  float recall = 3;
+  float f1_score = 4;
+  float inference_time_ms = 5;
+}
+
+// Streaming Messages
+message StreamLiDARRequest {
+  oneof payload {
+    StreamConfig config = 1;
+    PointCloudFrame frame = 2;
+    ControlMessage control = 3;
+  }
+}
+
+message StreamLiDARResponse {
+  oneof payload {
+    StreamStatus status = 1;
+    ProcessedFrame processed = 2;
+    ErrorMessage error = 3;
+  }
+}
+
+message StreamConfig {
+  string device_id = 1;
+  float frame_rate = 2;
+  int32 quality = 3; // 1-10
+  bool enable_processing = 4;
+}
+
+message PointCloudFrame {
+  int64 timestamp = 1;
+  int32 frame_id = 2;
+  bytes point_data = 3;
+  CameraInfo camera = 4;
+}
+
+message CameraInfo {
+  Point3D position = 1;
+  Point3D rotation = 2;
+  float fov = 3;
+}
+
+message StreamStatus {
+  string status = 1; // connected, processing, error
+  string session_id = 2;
+  int32 frames_processed = 3;
+}
+
+message ProcessedFrame {
+  int32 frame_id = 1;
+  repeated DetectedObject objects = 2;
+  repeated Wall walls = 3;
+  float processing_time_ms = 4;
+}
+
+message ControlMessage {
+  string command = 1; // start, stop, pause, resume
+  map<string, string> params = 2;
+}
+
+message ErrorMessage {
+  int32 code = 1;
+  string message = 2;
+  string details = 3;
+}
+
+// Common Processing Stats
+message ProcessingStats {
+  float processing_time_seconds = 1;
+  int32 total_detections = 2;
+  string gpu_used = 3;
+  float memory_used_mb = 4;
+}

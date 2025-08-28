@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	
 	// TODO: Replace with generated protobuf when available
-	// ai "github.com/arxos/arxos/proto/ai"
+	// ai "github.com/arxos/arxos/core/proto/ai"
 )
 
 // AIClient wraps the gRPC client for AI services

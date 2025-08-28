@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ai;
 
-option go_package = "github.com/arxos/arxos/proto/ai";
+option go_package = "github.com/arxos/arxos/core/proto/ai";
 
 // AI Service for architectural intelligence operations
 service AIService {

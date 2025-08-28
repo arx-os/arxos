@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	// "github.com/arxos/core/internal/state"
+	// // "github.com/arxos/core/internal/state" // TODO: Fix import
 )
 
 var diffCmd = &cobra.Command{

@@ -1,0 +1,357 @@
+syntax = "proto3";
+
+package arxos.ingestion;
+
+option go_package = "github.com/arxos/arxos/proto/ingestion";
+
+// Service definition for AI-powered ingestion pipeline
+service IngestionService {
+  // Extract text and structure from PDF
+  rpc ExtractPDF(PDFExtractionRequest) returns (PDFExtractionResponse);
+  
+  // Detect walls and rooms from floor plan images
+  rpc DetectWalls(WallDetectionRequest) returns (WallDetectionResponse);
+  
+  // Extract measurements and dimensions from technical drawings
+  rpc ExtractMeasurements(MeasurementRequest) returns (MeasurementResponse);
+  
+  // Generate 3D BIM from 2D floor plans
+  rpc Generate3DBIM(BIMGenerationRequest) returns (BIMGenerationResponse);
+  
+  // Stream processing for large files
+  rpc ProcessLargeFile(stream FileChunk) returns (stream ProcessingStatus);
+  
+  // Get processing status
+  rpc GetStatus(StatusRequest) returns (StatusResponse);
+}
+
+// Common messages
+message Point2D {
+  float x = 1;
+  float y = 2;
+}
+
+message Point3D {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message BoundingBox {
+  Point2D min = 1;
+  Point2D max = 2;
+}
+
+message Confidence {
+  float score = 1; // 0.0 to 1.0
+  string method = 2; // "ml", "heuristic", "manual"
+  repeated string evidence = 3;
+}
+
+// PDF Extraction
+message PDFExtractionRequest {
+  bytes pdf_data = 1;
+  string file_path = 2; // Alternative to pdf_data
+  ExtractionOptions options = 3;
+}
+
+message ExtractionOptions {
+  bool extract_text = 1;
+  bool extract_images = 2;
+  bool extract_tables = 3;
+  bool detect_floor_plans = 4;
+  int32 dpi = 5; // For image extraction
+  string output_format = 6; // "json", "xml", "markdown"
+}
+
+message PDFExtractionResponse {
+  string document_id = 1;
+  DocumentMetadata metadata = 2;
+  repeated Page pages = 3;
+  repeated FloorPlan floor_plans = 4;
+  Confidence confidence = 5;
+  repeated string warnings = 6;
+}
+
+message DocumentMetadata {
+  string title = 1;
+  string author = 2;
+  string creation_date = 3;
+  int32 page_count = 4;
+  string document_type = 5; // "architectural", "structural", "mep", "mixed"
+  map<string, string> properties = 6;
+}
+
+message Page {
+  int32 page_number = 1;
+  string text_content = 2;
+  repeated TextBlock text_blocks = 3;
+  repeated Image images = 4;
+  repeated Table tables = 5;
+  BoundingBox dimensions = 6;
+}
+
+message TextBlock {
+  string text = 1;
+  BoundingBox bbox = 2;
+  string font = 3;
+  float font_size = 4;
+  string block_type = 5; // "title", "heading", "paragraph", "caption"
+}
+
+message Image {
+  bytes data = 1;
+  string format = 2; // "png", "jpeg", "svg"
+  BoundingBox bbox = 3;
+  string caption = 4;
+  string image_type = 5; // "floor_plan", "elevation", "section", "detail", "photo"
+}
+
+message Table {
+  repeated TableRow rows = 1;
+  BoundingBox bbox = 2;
+  string caption = 3;
+}
+
+message TableRow {
+  repeated TableCell cells = 1;
+}
+
+message TableCell {
+  string text = 1;
+  int32 col_span = 2;
+  int32 row_span = 3;
+}
+
+// Wall Detection
+message WallDetectionRequest {
+  bytes image_data = 1;
+  string image_format = 2;
+  DetectionOptions options = 3;
+}
+
+message DetectionOptions {
+  float min_wall_thickness = 1;
+  float max_wall_thickness = 2;
+  bool detect_doors = 3;
+  bool detect_windows = 4;
+  bool detect_columns = 5;
+  string units = 6; // "meters", "feet", "pixels"
+}
+
+message WallDetectionResponse {
+  repeated Wall walls = 1;
+  repeated Door doors = 2;
+  repeated Window windows = 3;
+  repeated Column columns = 4;
+  repeated Room rooms = 5;
+  FloorPlan floor_plan = 6;
+  Confidence confidence = 7;
+}
+
+message Wall {
+  string id = 1;
+  Point2D start = 2;
+  Point2D end = 3;
+  float thickness = 4;
+  string material = 5;
+  string wall_type = 6; // "exterior", "interior", "partition"
+  float height = 7;
+}
+
+message Door {
+  string id = 1;
+  Point2D position = 2;
+  float width = 3;
+  float height = 4;
+  float swing_angle = 5;
+  string door_type = 6; // "single", "double", "sliding", "revolving"
+  string connected_wall_id = 7;
+}
+
+message Window {
+  string id = 1;
+  Point2D position = 2;
+  float width = 3;
+  float height = 4;
+  float sill_height = 5;
+  string window_type = 6; // "fixed", "sliding", "casement"
+  string connected_wall_id = 7;
+}
+
+message Column {
+  string id = 1;
+  Point2D position = 2;
+  float radius = 3; // For circular columns
+  Point2D dimensions = 4; // For rectangular columns
+  string material = 5;
+}
+
+message Room {
+  string id = 1;
+  string name = 2;
+  string room_type = 3; // "office", "conference", "bathroom", etc.
+  repeated Point2D boundary = 4;
+  float area = 5;
+  float height = 6;
+  repeated string adjacent_room_ids = 7;
+  map<string, string> properties = 8;
+}
+
+message FloorPlan {
+  string id = 1;
+  string floor_name = 2;
+  int32 floor_number = 3;
+  BoundingBox bounds = 4;
+  float scale = 5; // pixels per meter
+  float rotation = 6; // degrees
+  Point2D north_direction = 7;
+}
+
+// Measurement Extraction
+message MeasurementRequest {
+  bytes image_data = 1;
+  repeated Wall walls = 2; // Previously detected walls
+  MeasurementOptions options = 3;
+}
+
+message MeasurementOptions {
+  bool extract_dimensions = 1;
+  bool extract_annotations = 2;
+  bool extract_scale = 3;
+  string default_units = 4;
+}
+
+message MeasurementResponse {
+  repeated Dimension dimensions = 1;
+  repeated Annotation annotations = 2;
+  Scale scale = 3;
+  Confidence confidence = 4;
+}
+
+message Dimension {
+  string id = 1;
+  Point2D start = 2;
+  Point2D end = 3;
+  float value = 4;
+  string units = 5;
+  string dimension_type = 6; // "linear", "angular", "radial"
+  string associated_element_id = 7;
+}
+
+message Annotation {
+  string text = 1;
+  Point2D position = 2;
+  string annotation_type = 3; // "label", "note", "callout"
+  string associated_element_id = 4;
+}
+
+message Scale {
+  float pixels_per_unit = 1;
+  string units = 2;
+  Confidence confidence = 3;
+}
+
+// 3D BIM Generation
+message BIMGenerationRequest {
+  FloorPlan floor_plan = 1;
+  repeated Wall walls = 2;
+  repeated Door doors = 3;
+  repeated Window windows = 4;
+  repeated Room rooms = 5;
+  BIMOptions options = 6;
+}
+
+message BIMOptions {
+  float default_floor_height = 1;
+  float default_wall_height = 2;
+  bool generate_ceiling = 3;
+  bool generate_roof = 4;
+  string coordinate_system = 5;
+  int32 level_of_detail = 6; // 100-500 (LOD specification)
+}
+
+message BIMGenerationResponse {
+  BIMModel model = 1;
+  repeated BIMElement elements = 2;
+  repeated BIMSpace spaces = 3;
+  Confidence confidence = 4;
+  repeated string warnings = 5;
+}
+
+message BIMModel {
+  string id = 1;
+  string name = 2;
+  string ifc_version = 3;
+  bytes ifc_data = 4; // IFC file content
+  string gltf_data = 5; // glTF JSON for visualization
+  BoundingBox3D bounds = 6;
+}
+
+message BoundingBox3D {
+  Point3D min = 1;
+  Point3D max = 2;
+}
+
+message BIMElement {
+  string id = 1;
+  string ifc_class = 2; // "IfcWall", "IfcDoor", etc.
+  string name = 3;
+  map<string, string> properties = 4;
+  Transform3D transform = 5;
+  string material_id = 6;
+}
+
+message Transform3D {
+  Point3D position = 1;
+  Point3D rotation = 2; // Euler angles
+  Point3D scale = 3;
+}
+
+message BIMSpace {
+  string id = 1;
+  string name = 2;
+  string space_type = 3;
+  float area = 4;
+  float volume = 5;
+  repeated string boundary_element_ids = 6;
+}
+
+// Streaming for large files
+message FileChunk {
+  string session_id = 1;
+  int32 chunk_index = 2;
+  int32 total_chunks = 3;
+  bytes data = 4;
+  bool is_last = 5;
+}
+
+message ProcessingStatus {
+  string session_id = 1;
+  string status = 2; // "processing", "completed", "error"
+  float progress = 3; // 0.0 to 1.0
+  string current_stage = 4;
+  string message = 5;
+  oneof result {
+    PDFExtractionResponse pdf_result = 6;
+    WallDetectionResponse wall_result = 7;
+    BIMGenerationResponse bim_result = 8;
+  }
+}
+
+// Status checking
+message StatusRequest {
+  string session_id = 1;
+}
+
+message StatusResponse {
+  string session_id = 1;
+  string status = 2;
+  float progress = 3;
+  string current_stage = 4;
+  int64 started_at = 5; // Unix timestamp
+  int64 updated_at = 6;
+  string estimated_completion = 7;
+  repeated string completed_stages = 8;
+  repeated string pending_stages = 9;
+}

@@ -223,6 +223,17 @@ build: ## Build production binaries
 	@cd frontend && npm run build 2>/dev/null || echo "Frontend build not configured"
 	@echo "$(GREEN)✓ Build complete! Binaries in build/bin/$(NC)"
 
+proto: ## Generate protobuf code for Go and Python
+	@echo "$(BLUE)Generating protobuf code...$(NC)"
+	@echo "$(YELLOW)Installing protoc tools if needed...$(NC)"
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest 2>/dev/null || true
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest 2>/dev/null || true
+	@echo "$(YELLOW)Generating Go code...$(NC)"
+	@protoc -I=proto --go_out=. --go-grpc_out=. proto/ingestion/*.proto 2>/dev/null || echo "Protoc not installed"
+	@echo "$(YELLOW)Generating Python code...$(NC)"
+	@cd ai_services && python -m grpc_tools.protoc -I=../proto --python_out=. --grpc_python_out=. ../proto/ingestion/*.proto 2>/dev/null || echo "Python grpc_tools not installed"
+	@echo "$(GREEN)✓ Protobuf code generated$(NC)"
+
 docker-build: ## Build Docker images
 	@echo "$(BLUE)Building Docker images...$(NC)"
 	@docker-compose build
@@ -232,11 +243,28 @@ docker-up: ## Start services with Docker
 	@echo "$(BLUE)Starting services with Docker...$(NC)"
 	@docker-compose up -d
 	@echo "$(GREEN)✓ Services started with Docker$(NC)"
+	@echo "  API: http://localhost:8080"
+	@echo "  AI gRPC: localhost:50051"
+	@echo "  PostgreSQL: localhost:5432"
 
 docker-down: ## Stop Docker services
 	@echo "$(BLUE)Stopping Docker services...$(NC)"
 	@docker-compose down
 	@echo "$(GREEN)✓ Docker services stopped$(NC)"
+
+docker-logs: ## Show Docker service logs
+	@docker-compose logs -f
+
+docker-clean: ## Clean Docker volumes and images
+	@echo "$(RED)WARNING: This will remove all Docker volumes!$(NC)"
+	@sleep 3
+	@docker-compose down -v
+	@docker system prune -f
+	@echo "$(GREEN)✓ Docker cleanup complete$(NC)"
+
+grpc-test: ## Test gRPC connection
+	@echo "$(BLUE)Testing gRPC connection...$(NC)"
+	@python -c "import grpc; channel = grpc.insecure_channel('localhost:50051'); print('✓ gRPC connection successful' if grpc.channel_ready_future(channel).result(timeout=5) else '✗ Connection failed')" 2>/dev/null || echo "$(RED)gRPC connection failed$(NC)"
 
 # ==============================================================================
 # CLEANUP

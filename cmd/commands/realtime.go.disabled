@@ -1,0 +1,455 @@
+package commands
+
+import (
+	"fmt"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/arxos/arxos/core/internal/services/realtime"
+	"github.com/spf13/cobra"
+)
+
+var updateEngine *realtime.UpdateEngine
+
+func init() {
+	// Initialize update engine
+	updateEngine = realtime.NewUpdateEngine()
+}
+
+// RealtimeCmd is the main real-time command
+var RealtimeCmd = &cobra.Command{
+	Use:   "realtime",
+	Short: "Real-time building data updates",
+	Long: `Monitor and visualize real-time updates from building systems.
+
+Provides live streaming of sensor data, system status changes,
+and alerts with ASCII visualization.`,
+}
+
+// RealtimeMonitorCmd monitors real-time updates
+var RealtimeMonitorCmd = &cobra.Command{
+	Use:   "monitor [building-id]",
+	Short: "Monitor real-time building updates",
+	Long: `Stream real-time updates from building systems.
+
+Examples:
+  arxos realtime monitor                    # Monitor all buildings
+  arxos realtime monitor demo-building      # Monitor specific building
+  arxos realtime monitor --floor 2          # Monitor specific floor
+  arxos realtime monitor --system hvac      # Monitor HVAC system only
+  arxos realtime monitor --priority high    # Show high priority updates only`,
+	RunE: runRealtimeMonitor,
+}
+
+// RealtimeStatsCmd shows real-time engine statistics
+var RealtimeStatsCmd = &cobra.Command{
+	Use:   "stats",
+	Short: "Show real-time engine statistics",
+	Long:  `Display statistics about the real-time update engine.`,
+	RunE:  runRealtimeStats,
+}
+
+// RealtimeSimulateCmd simulates real-time events
+var RealtimeSimulateCmd = &cobra.Command{
+	Use:   "simulate <event-type>",
+	Short: "Simulate real-time events",
+	Long: `Generate simulated events for testing and demonstration.
+
+Event types:
+  sensor      - Simulate sensor readings
+  alert       - Simulate system alerts
+  emergency   - Simulate emergency event
+  control     - Simulate control commands
+
+Examples:
+  arxos realtime simulate sensor
+  arxos realtime simulate alert --system electrical
+  arxos realtime simulate emergency --type fire`,
+	Args: cobra.ExactArgs(1),
+	RunE: runRealtimeSimulate,
+}
+
+func init() {
+	// Add subcommands
+	RealtimeCmd.AddCommand(RealtimeMonitorCmd)
+	RealtimeCmd.AddCommand(RealtimeStatsCmd)
+	RealtimeCmd.AddCommand(RealtimeSimulateCmd)
+	
+	// Add flags
+	RealtimeMonitorCmd.Flags().String("floor", "", "Filter by floor ID")
+	RealtimeMonitorCmd.Flags().String("system", "", "Filter by system type (hvac, electrical, etc)")
+	RealtimeMonitorCmd.Flags().String("priority", "", "Minimum priority (normal, high, critical, emergency)")
+	RealtimeMonitorCmd.Flags().Bool("ascii", true, "Show ASCII visualization")
+	RealtimeMonitorCmd.Flags().Duration("interval", 1*time.Second, "Update interval")
+	
+	RealtimeSimulateCmd.Flags().String("system", "", "System to simulate")
+	RealtimeSimulateCmd.Flags().String("type", "", "Specific event type")
+	RealtimeSimulateCmd.Flags().Int("count", 1, "Number of events to generate")
+	RealtimeSimulateCmd.Flags().Duration("interval", 1*time.Second, "Interval between events")
+}
+
+func runRealtimeMonitor(cmd *cobra.Command, args []string) error {
+	// Parse filters
+	filter := realtime.SubscriptionFilter{}
+	
+	if len(args) > 0 {
+		filter.BuildingID = args[0]
+	}
+	
+	if floor, _ := cmd.Flags().GetString("floor"); floor != "" {
+		filter.FloorID = floor
+	}
+	
+	if system, _ := cmd.Flags().GetString("system"); system != "" {
+		filter.SystemTypes = []string{system}
+	}
+	
+	if priority, _ := cmd.Flags().GetString("priority"); priority != "" {
+		switch strings.ToLower(priority) {
+		case "normal":
+			filter.MinPriority = realtime.PriorityNormal
+		case "high":
+			filter.MinPriority = realtime.PriorityHigh
+		case "critical":
+			filter.MinPriority = realtime.PriorityCritical
+		case "emergency":
+			filter.MinPriority = realtime.PriorityEmergency
+		}
+	}
+	
+	showASCII, _ := cmd.Flags().GetBool("ascii")
+	
+	// Start update engine
+	if err := updateEngine.Start(); err != nil {
+		return err
+	}
+	defer updateEngine.Stop()
+	
+	// Create streaming renderer if ASCII mode
+	var renderer *realtime.StreamingRenderer
+	if showASCII {
+		var err error
+		renderer, err = realtime.NewStreamingRenderer(updateEngine, filter)
+		if err != nil {
+			return err
+		}
+		renderer.Start()
+		defer renderer.Stop()
+	}
+	
+	// Subscribe to updates
+	subscriber, err := updateEngine.Subscribe(filter)
+	if err != nil {
+		return err
+	}
+	defer updateEngine.Unsubscribe(subscriber.ID)
+	
+	// Clear screen and show header
+	fmt.Print("\033[2J\033[H") // Clear screen
+	fmt.Printf("🔄 Real-Time Building Monitor\n")
+	fmt.Printf("═══════════════════════════════════════════════════════════════\n")
+	
+	if filter.BuildingID != "" {
+		fmt.Printf("Building: %s\n", filter.BuildingID)
+	}
+	if filter.FloorID != "" {
+		fmt.Printf("Floor: %s\n", filter.FloorID)
+	}
+	if len(filter.SystemTypes) > 0 {
+		fmt.Printf("System: %s\n", strings.Join(filter.SystemTypes, ", "))
+	}
+	fmt.Printf("Press Ctrl+C to exit\n")
+	fmt.Printf("───────────────────────────────────────────────────────────────\n\n")
+	
+	// Handle interrupt
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	
+	// Display loop
+	if showASCII {
+		// ASCII visualization mode
+		go displayASCIIVisualization(renderer.GetOutput())
+	}
+	
+	// Main monitoring loop
+	updateCount := 0
+	lastStats := time.Now()
+	
+	for {
+		select {
+		case <-sigChan:
+			fmt.Printf("\n\n✓ Monitoring stopped. Total updates: %d\n", updateCount)
+			return nil
+			
+		case update := <-subscriber.Channel:
+			updateCount++
+			
+			if !showASCII {
+				// Simple text output
+				displayUpdate(update)
+			}
+			
+			// Show stats every 10 seconds
+			if time.Since(lastStats) > 10*time.Second {
+				stats := updateEngine.GetUpdateStats()
+				fmt.Printf("\n[Stats] Subscribers: %v | Events: %v | Queue: %v\n",
+					stats["subscribers"], stats["event_log_size"], stats["queue_size"])
+				lastStats = time.Now()
+			}
+		}
+	}
+}
+
+func runRealtimeStats(cmd *cobra.Command, args []string) error {
+	// Start engine if not running
+	updateEngine.Start()
+	defer updateEngine.Stop()
+	
+	stats := updateEngine.GetUpdateStats()
+	
+	fmt.Printf("\n📊 Real-Time Engine Statistics\n")
+	fmt.Printf("═══════════════════════════════════════\n")
+	fmt.Printf("Status:          %v\n", stats["running"])
+	fmt.Printf("Subscribers:     %v\n", stats["subscribers"])
+	fmt.Printf("Event Log Size:  %v\n", stats["event_log_size"])
+	fmt.Printf("Queue Size:      %v\n", stats["queue_size"])
+	fmt.Printf("Update Interval: %v\n", stats["update_interval"])
+	
+	// Get recent updates
+	recentUpdates := updateEngine.GetRecentUpdates(5, realtime.SubscriptionFilter{})
+	
+	if len(recentUpdates) > 0 {
+		fmt.Printf("\n📜 Recent Updates:\n")
+		fmt.Printf("───────────────────────────────────────\n")
+		for _, update := range recentUpdates {
+			fmt.Printf("[%s] %s - %s\n",
+				update.Timestamp.Format("15:04:05"),
+				update.Type,
+				update.Description,
+			)
+		}
+	}
+	
+	return nil
+}
+
+func runRealtimeSimulate(cmd *cobra.Command, args []string) error {
+	eventType := args[0]
+	system, _ := cmd.Flags().GetString("system")
+	count, _ := cmd.Flags().GetInt("count")
+	interval, _ := cmd.Flags().GetDuration("interval")
+	
+	// Start engine
+	updateEngine.Start()
+	defer updateEngine.Stop()
+	
+	fmt.Printf("🎮 Simulating %d %s events...\n", count, eventType)
+	
+	for i := 0; i < count; i++ {
+		var update realtime.Update
+		
+		switch eventType {
+		case "sensor":
+			update = generateSensorUpdate(system)
+		case "alert":
+			update = generateAlertUpdate(system)
+		case "emergency":
+			update = generateEmergencyUpdate()
+		case "control":
+			update = generateControlUpdate(system)
+		default:
+			return fmt.Errorf("unknown event type: %s", eventType)
+		}
+		
+		updateEngine.PublishUpdate(update)
+		fmt.Printf("  ✓ Published: %s\n", update.Description)
+		
+		if i < count-1 {
+			time.Sleep(interval)
+		}
+	}
+	
+	fmt.Printf("\n✅ Simulation complete\n")
+	return nil
+}
+
+// Display helpers
+
+func displayUpdate(update realtime.Update) {
+	// Format priority icon
+	var icon string
+	var color string
+	switch update.Priority {
+	case realtime.PriorityEmergency:
+		icon = "🚨"
+		color = "\033[91m" // Red
+	case realtime.PriorityCritical:
+		icon = "❗"
+		color = "\033[91m" // Red
+	case realtime.PriorityHigh:
+		icon = "⚠️ "
+		color = "\033[93m" // Yellow
+	default:
+		icon = "ℹ️ "
+		color = "\033[0m" // Default
+	}
+	
+	// Display update
+	fmt.Printf("%s[%s] %s %s%s\033[0m\n",
+		color,
+		update.Timestamp.Format("15:04:05"),
+		icon,
+		update.Description,
+		color,
+	)
+	
+	// Show details if present
+	if update.NewValue != nil {
+		if data, ok := update.NewValue.(map[string]interface{}); ok {
+			for key, value := range data {
+				fmt.Printf("    %s: %v\n", key, value)
+			}
+		} else {
+			fmt.Printf("    Value: %v\n", update.NewValue)
+		}
+	}
+}
+
+func displayASCIIVisualization(output <-chan string) {
+	// Simple ASCII building visualization that updates with events
+	building := []string{
+		"╔═══════════════════════════════════════╗",
+		"║  Floor 3  │ HVAC: ●  │ Power: ●       ║",
+		"║───────────┼──────────┼────────────────║",
+		"║  Floor 2  │ HVAC: ●  │ Power: ●       ║",
+		"║───────────┼──────────┼────────────────║",
+		"║  Floor 1  │ HVAC: ●  │ Power: ●       ║",
+		"║───────────┴──────────┴────────────────║",
+		"║  🚪 Main Entrance     │ Security: ●    ║",
+		"╚═══════════════════════════════════════╝",
+	}
+	
+	// Update visualization based on events
+	for rendered := range output {
+		// Move cursor to visualization area
+		fmt.Print("\033[10;0H") // Move to line 10
+		
+		// Display building
+		for _, line := range building {
+			fmt.Println(line)
+		}
+		
+		// Display latest update below building
+		fmt.Print("\033[20;0H") // Move to line 20
+		fmt.Print("\033[K")      // Clear line
+		fmt.Print(rendered)
+	}
+}
+
+// Event generation helpers
+
+func generateSensorUpdate(system string) realtime.Update {
+	if system == "" {
+		system = "hvac"
+	}
+	
+	return realtime.Update{
+		Type:        realtime.UpdateSensorReading,
+		Priority:    realtime.PriorityNormal,
+		BuildingID:  "demo-building",
+		FloorID:     fmt.Sprintf("%d", 1+time.Now().Unix()%3),
+		SystemType:  system,
+		ObjectPath:  fmt.Sprintf("/%s/sensor-%d", system, time.Now().Unix()%100),
+		Description: fmt.Sprintf("Sensor reading from %s system", system),
+		Source:      "simulator",
+		NewValue: map[string]interface{}{
+			"temperature": 20 + float64(time.Now().Unix()%10),
+			"humidity":    40 + float64(time.Now().Unix()%20),
+		},
+	}
+}
+
+func generateAlertUpdate(system string) realtime.Update {
+	if system == "" {
+		system = "electrical"
+	}
+	
+	alerts := []string{
+		"High temperature detected",
+		"Low pressure warning",
+		"Circuit overload detected",
+		"Maintenance required",
+		"Sensor offline",
+	}
+	
+	alert := alerts[time.Now().Unix()%int64(len(alerts))]
+	
+	return realtime.Update{
+		Type:        realtime.UpdateSystemAlert,
+		Priority:    realtime.PriorityHigh,
+		BuildingID:  "demo-building",
+		FloorID:     fmt.Sprintf("%d", 1+time.Now().Unix()%3),
+		SystemType:  system,
+		Description: alert,
+		Source:      "simulator",
+	}
+}
+
+func generateEmergencyUpdate() realtime.Update {
+	emergencies := []string{
+		"Fire alarm activated",
+		"Security breach detected",
+		"Power failure",
+		"Gas leak detected",
+		"Water leak detected",
+	}
+	
+	emergency := emergencies[time.Now().Unix()%int64(len(emergencies))]
+	
+	return realtime.Update{
+		Type:        realtime.UpdateEmergencyAlert,
+		Priority:    realtime.PriorityEmergency,
+		BuildingID:  "demo-building",
+		Description: emergency,
+		Source:      "simulator",
+		Metadata: map[string]interface{}{
+			"evacuation_required": true,
+			"emergency_services":  "notified",
+		},
+	}
+}
+
+func generateControlUpdate(system string) realtime.Update {
+	if system == "" {
+		system = "hvac"
+	}
+	
+	commands := map[string]string{
+		"hvac":       "Set temperature to 22°C",
+		"lighting":   "Dim lights to 50%",
+		"electrical": "Switch to backup power",
+		"security":   "Lock all doors",
+	}
+	
+	command := commands[system]
+	if command == "" {
+		command = "Execute control sequence"
+	}
+	
+	return realtime.Update{
+		Type:        realtime.UpdateControlCommand,
+		Priority:    realtime.PriorityNormal,
+		BuildingID:  "demo-building",
+		SystemType:  system,
+		Description: command,
+		Source:      "simulator",
+		NewValue: map[string]interface{}{
+			"command":   command,
+			"status":    "executed",
+			"timestamp": time.Now(),
+		},
+	}
+}

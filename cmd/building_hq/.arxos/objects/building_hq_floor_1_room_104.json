@@ -1,0 +1,25 @@
+{
+  "id": "building:hq:floor:1:room:104",
+  "name": "Room 104",
+  "type": "room",
+  "description": "Office room on floor 1",
+  "properties": {
+    "area": "200 sqm",
+    "capacity": 4,
+    "type": "office"
+  },
+  "location": {
+    "x": 5,
+    "y": 4,
+    "z": 3,
+    "floor": 1,
+    "room": "104",
+    "building": ""
+  },
+  "parent": "building:hq:floor:1",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.269722-04:00",
+  "updated": "2025-08-26T22:06:27.269725Z",
+  "validation_status": "validated",
+  "confidence": 1
+}

@@ -1,0 +1,18 @@
+{
+  "id": "building:hq:system:fire",
+  "name": "Fire Safety System",
+  "type": "system",
+  "description": "Fire detection and suppression",
+  "properties": {
+    "lastChecked": "2024-08-01",
+    "maintenance": "scheduled",
+    "operational": true,
+    "redundancy": "N+1",
+    "systemType": "safety"
+  },
+  "parent": "building:hq",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.286284-04:00",
+  "updated": "2025-08-26T22:06:27.286289Z",
+  "confidence": 0.85
+}

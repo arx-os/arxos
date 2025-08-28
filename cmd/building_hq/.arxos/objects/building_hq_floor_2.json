@@ -1,0 +1,23 @@
+{
+  "id": "building:hq:floor:2",
+  "name": "Floor 2",
+  "type": "floor",
+  "description": "Building floor 2",
+  "properties": {
+    "accessible": true,
+    "area": "16000 sqft",
+    "height": 3
+  },
+  "location": {
+    "x": 0,
+    "y": 0,
+    "z": 6,
+    "floor": 2,
+    "building": ""
+  },
+  "parent": "building:hq",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.272396-04:00",
+  "updated": "2025-08-26T22:06:27.272399Z",
+  "confidence": 0.85
+}

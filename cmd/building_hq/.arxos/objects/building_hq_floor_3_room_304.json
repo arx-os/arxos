@@ -1,0 +1,25 @@
+{
+  "id": "building:hq:floor:3:room:304",
+  "name": "Room 304",
+  "type": "room",
+  "description": "Office room on floor 3",
+  "properties": {
+    "area": "200 sqm",
+    "capacity": 4,
+    "type": "office"
+  },
+  "location": {
+    "x": 5,
+    "y": 4,
+    "z": 9,
+    "floor": 3,
+    "room": "304",
+    "building": ""
+  },
+  "parent": "building:hq:floor:3",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.283214-04:00",
+  "updated": "2025-08-26T22:06:27.283216Z",
+  "validation_status": "pending",
+  "confidence": 0.7
+}

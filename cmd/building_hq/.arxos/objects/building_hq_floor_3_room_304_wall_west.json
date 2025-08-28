@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:3:room:304:wall:west",
+  "name": "Wall-west-304",
+  "type": "wall",
+  "description": "west wall of room 304",
+  "properties": {
+    "fireRated": true,
+    "height": 2.4,
+    "material": "drywall",
+    "thickness": 0.2
+  },
+  "parent": "building:hq:floor:3:room:304",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.284033-04:00",
+  "updated": "2025-08-26T22:06:27.284035Z",
+  "confidence": 0.680303464644988
+}

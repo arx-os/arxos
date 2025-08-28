@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ArxOS ASCII PWA Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #0a0a0a; color: #00ff00; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #333; }
+        .pass { border-color: #00ff00; }
+        .fail { border-color: #ff0000; }
+        .info { color: #ffff00; }
+        button { background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 10px; margin: 5px; cursor: pointer; }
+        #log { background: #1a1a1a; border: 1px solid #333; padding: 10px; height: 200px; overflow-y: auto; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>ArxOS ASCII-BIM PWA Test Suite</h1>
+    
+    <div id="tests">
+        <div class="test" id="pwa-support">
+            <h3>PWA Support Test</h3>
+            <div id="pwa-result">Testing...</div>
+        </div>
+        
+        <div class="test" id="websocket-test">
+            <h3>WebSocket Connection Test</h3>
+            <div id="ws-result">Testing...</div>
+        </div>
+        
+        <div class="test" id="service-worker-test">
+            <h3>Service Worker Test</h3>
+            <div id="sw-result">Testing...</div>
+        </div>
+        
+        <div class="test" id="cache-test">
+            <h3>Cache API Test</h3>
+            <div id="cache-result">Testing...</div>
+        </div>
+        
+        <div class="test" id="offline-storage-test">
+            <h3>Offline Storage Test</h3>
+            <div id="storage-result">Testing...</div>
+        </div>
+    </div>
+    
+    <div class="info">
+        <h3>Manual Tests</h3>
+        <button onclick="testInstallPrompt()">Test Install Prompt</button>
+        <button onclick="testFullscreen()">Test Fullscreen</button>
+        <button onclick="testOfflineMode()">Simulate Offline</button>
+        <button onclick="clearAllData()">Clear All Data</button>
+    </div>
+    
+    <div id="log"></div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div style="color: ${type === 'error' ? '#ff0000' : type === 'success' ? '#00ff00' : '#ffff00'}">[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function runTests() {
+            log('Starting PWA test suite...', 'info');
+            
+            // Test PWA Support
+            await testPWASupport();
+            
+            // Test WebSocket
+            await testWebSocket();
+            
+            // Test Service Worker
+            await testServiceWorker();
+            
+            // Test Cache API
+            await testCacheAPI();
+            
+            // Test Offline Storage
+            await testOfflineStorage();
+            
+            log('Test suite completed!', 'success');
+        }
+        
+        async function testPWASupport() {
+            log('Testing PWA support...', 'info');
+            const resultDiv = document.getElementById('pwa-result');
+            const testDiv = document.getElementById('pwa-support');
+            
+            try {
+                let results = [];
+                
+                // Check manifest support
+                if ('serviceWorker' in navigator) {
+                    results.push('✓ Service Worker supported');
+                } else {
+                    results.push('✗ Service Worker not supported');
+                }
+                
+                // Check cache API
+                if ('caches' in window) {
+                    results.push('✓ Cache API supported');
+                } else {
+                    results.push('✗ Cache API not supported');
+                }
+                
+                // Check IndexedDB
+                if ('indexedDB' in window) {
+                    results.push('✓ IndexedDB supported');
+                } else {
+                    results.push('✗ IndexedDB not supported');
+                }
+                
+                // Check fetch API
+                if ('fetch' in window) {
+                    results.push('✓ Fetch API supported');
+                } else {
+                    results.push('✗ Fetch API not supported');
+                }
+                
+                const allSupported = results.every(r => r.includes('✓'));
+                resultDiv.innerHTML = results.join('<br>');
+                testDiv.className = allSupported ? 'test pass' : 'test fail';
+                
+                log(`PWA support test: ${allSupported ? 'PASS' : 'FAIL'}`, allSupported ? 'success' : 'error');
+                
+            } catch (error) {
+                resultDiv.innerHTML = 'Error: ' + error.message;
+                testDiv.className = 'test fail';
+                log('PWA support test failed: ' + error.message, 'error');
+            }
+        }
+        
+        async function testWebSocket() {
+            log('Testing WebSocket connection...', 'info');
+            const resultDiv = document.getElementById('ws-result');
+            const testDiv = document.getElementById('websocket-test');
+            
+            return new Promise((resolve) => {
+                try {
+                    const ws = new WebSocket('ws://localhost:8080/ws');
+                    let connected = false;
+                    
+                    const timeout = setTimeout(() => {
+                        if (!connected) {
+                            ws.close();
+                            resultDiv.innerHTML = '✗ Connection timeout';
+                            testDiv.className = 'test fail';
+                            log('WebSocket test: FAIL (timeout)', 'error');
+                            resolve();
+                        }
+                    }, 5000);
+                    
+                    ws.onopen = () => {
+                        connected = true;
+                        clearTimeout(timeout);
+                        
+                        // Send test message
+                        ws.send(JSON.stringify({
+                            type: 'get_building_list',
+                            timestamp: new Date().toISOString()
+                        }));
+                    };
+                    
+                    ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            if (message.type === 'building_list') {
+                                resultDiv.innerHTML = `✓ Connected and received building list (${message.payload.length} buildings)`;
+                                testDiv.className = 'test pass';
+                                log('WebSocket test: PASS', 'success');
+                            }
+                        } catch (error) {
+                            log('WebSocket message parse error: ' + error.message, 'error');
+                        }
+                        
+                        ws.close();
+                        resolve();
+                    };
+                    
+                    ws.onerror = (error) => {
+                        clearTimeout(timeout);
+                        resultDiv.innerHTML = '✗ WebSocket error: ' + error.message;
+                        testDiv.className = 'test fail';
+                        log('WebSocket test: FAIL (error)', 'error');
+                        resolve();
+                    };
+                    
+                    ws.onclose = () => {
+                        if (!connected) {
+                            clearTimeout(timeout);
+                            resultDiv.innerHTML = '✗ Connection failed';
+                            testDiv.className = 'test fail';
+                            log('WebSocket test: FAIL (connection failed)', 'error');
+                            resolve();
+                        }
+                    };
+                    
+                } catch (error) {
+                    resultDiv.innerHTML = '✗ Error: ' + error.message;
+                    testDiv.className = 'test fail';
+                    log('WebSocket test error: ' + error.message, 'error');
+                    resolve();
+                }
+            });
+        }
+        
+        async function testServiceWorker() {
+            log('Testing Service Worker...', 'info');
+            const resultDiv = document.getElementById('sw-result');
+            const testDiv = document.getElementById('service-worker-test');
+            
+            try {
+                if (!('serviceWorker' in navigator)) {
+                    throw new Error('Service Worker not supported');
+                }
+                
+                // Try to register service worker
+                const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                
+                if (registration) {
+                    resultDiv.innerHTML = `✓ Service Worker registered (scope: ${registration.scope})`;
+                    testDiv.className = 'test pass';
+                    log('Service Worker test: PASS', 'success');
+                } else {
+                    throw new Error('Registration failed');
+                }
+                
+            } catch (error) {
+                resultDiv.innerHTML = '✗ Error: ' + error.message;
+                testDiv.className = 'test fail';
+                log('Service Worker test: FAIL - ' + error.message, 'error');
+            }
+        }
+        
+        async function testCacheAPI() {
+            log('Testing Cache API...', 'info');
+            const resultDiv = document.getElementById('cache-result');
+            const testDiv = document.getElementById('cache-test');
+            
+            try {
+                if (!('caches' in window)) {
+                    throw new Error('Cache API not supported');
+                }
+                
+                const testCacheName = 'arxos-test-cache';
+                const cache = await caches.open(testCacheName);
+                
+                // Store test data
+                await cache.put('/test', new Response('test data'));
+                
+                // Retrieve test data
+                const response = await cache.match('/test');
+                if (response && await response.text() === 'test data') {
+                    resultDiv.innerHTML = '✓ Cache API working correctly';
+                    testDiv.className = 'test pass';
+                    log('Cache API test: PASS', 'success');
+                } else {
+                    throw new Error('Cache data mismatch');
+                }
+                
+                // Cleanup
+                await caches.delete(testCacheName);
+                
+            } catch (error) {
+                resultDiv.innerHTML = '✗ Error: ' + error.message;
+                testDiv.className = 'test fail';
+                log('Cache API test: FAIL - ' + error.message, 'error');
+            }
+        }
+        
+        async function testOfflineStorage() {
+            log('Testing offline storage (IndexedDB)...', 'info');
+            const resultDiv = document.getElementById('storage-result');
+            const testDiv = document.getElementById('offline-storage-test');
+            
+            try {
+                if (!('indexedDB' in window)) {
+                    throw new Error('IndexedDB not supported');
+                }
+                
+                const dbName = 'ArxOSTestDB';
+                const storeName = 'testStore';
+                
+                const db = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open(dbName, 1);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains(storeName)) {
+                            db.createObjectStore(storeName);
+                        }
+                    };
+                });
+                
+                // Store test data
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    store.put({ test: 'data', timestamp: Date.now() }, 'test-key');
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = () => reject(transaction.error);
+                });
+                
+                // Retrieve test data
+                const data = await new Promise((resolve, reject) => {
+                    const transaction = db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get('test-key');
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                if (data && data.test === 'data') {
+                    resultDiv.innerHTML = '✓ IndexedDB working correctly';
+                    testDiv.className = 'test pass';
+                    log('Offline storage test: PASS', 'success');
+                } else {
+                    throw new Error('Data retrieval failed');
+                }
+                
+                // Cleanup
+                db.close();
+                indexedDB.deleteDatabase(dbName);
+                
+            } catch (error) {
+                resultDiv.innerHTML = '✗ Error: ' + error.message;
+                testDiv.className = 'test fail';
+                log('Offline storage test: FAIL - ' + error.message, 'error');
+            }
+        }
+        
+        // Manual test functions
+        function testInstallPrompt() {
+            log('Testing install prompt (manual)...', 'info');
+            // This would normally be triggered by beforeinstallprompt event
+            alert('Install prompt test - this would show install dialog in supported browsers');
+        }
+        
+        function testFullscreen() {
+            log('Testing fullscreen API...', 'info');
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen()
+                    .then(() => log('Entered fullscreen mode', 'success'))
+                    .catch(err => log('Fullscreen failed: ' + err.message, 'error'));
+            } else {
+                log('Fullscreen API not supported', 'error');
+            }
+        }
+        
+        async function testOfflineMode() {
+            log('Simulating offline mode...', 'info');
+            // This would normally involve service worker testing
+            alert('Offline mode simulation - disconnect network to test offline functionality');
+        }
+        
+        async function clearAllData() {
+            log('Clearing all cached data...', 'info');
+            try {
+                // Clear caches
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+                
+                // Clear IndexedDB
+                indexedDB.deleteDatabase('ArxOSASCII');
+                
+                log('All cached data cleared', 'success');
+            } catch (error) {
+                log('Error clearing data: ' + error.message, 'error');
+            }
+        }
+        
+        // Run tests on load
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

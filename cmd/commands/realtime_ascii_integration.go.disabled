@@ -1,0 +1,419 @@
+package commands
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/arxos/arxos/core/internal/services/realtime"
+)
+
+// ASCIIRealtimeRenderer integrates real-time updates with ASCII visualization
+type ASCIIRealtimeRenderer struct {
+	updateEngine   *realtime.UpdateEngine
+	buildingModel  *ASCIIBuildingModel
+	updateChannel  chan realtime.Update
+	renderChannel  chan string
+}
+
+// ASCIIBuildingModel represents a building in ASCII art
+type ASCIIBuildingModel struct {
+	floors       []FloorModel
+	systemStatus map[string]SystemStatus
+	alerts       []Alert
+}
+
+// FloorModel represents a floor in ASCII
+type FloorModel struct {
+	ID          string
+	Number      int
+	Rooms       []RoomModel
+	Temperature float64
+	Occupancy   int
+	Status      string
+}
+
+// RoomModel represents a room in ASCII
+type RoomModel struct {
+	ID          string
+	Name        string
+	Temperature float64
+	Humidity    float64
+	Lights      bool
+	Occupied    bool
+}
+
+// SystemStatus represents system status
+type SystemStatus struct {
+	Name   string
+	Online bool
+	Health float64
+	Alerts int
+}
+
+// Alert represents an active alert
+type Alert struct {
+	Time     time.Time
+	Priority realtime.Priority
+	Message  string
+	System   string
+}
+
+// NewASCIIRealtimeRenderer creates a new ASCII real-time renderer
+func NewASCIIRealtimeRenderer(engine *realtime.UpdateEngine) *ASCIIRealtimeRenderer {
+	return &ASCIIRealtimeRenderer{
+		updateEngine:  engine,
+		buildingModel: initializeBuildingModel(),
+		updateChannel: make(chan realtime.Update, 100),
+		renderChannel: make(chan string, 10),
+	}
+}
+
+// Start begins processing updates and rendering
+func (r *ASCIIRealtimeRenderer) Start() error {
+	// Subscribe to all updates
+	subscriber, err := r.updateEngine.Subscribe(realtime.SubscriptionFilter{})
+	if err != nil {
+		return err
+	}
+	
+	// Process updates
+	go func() {
+		for update := range subscriber.Channel {
+			r.processUpdate(update)
+			r.render()
+		}
+	}()
+	
+	return nil
+}
+
+// processUpdate applies an update to the building model
+func (r *ASCIIRealtimeRenderer) processUpdate(update realtime.Update) {
+	switch update.Type {
+	case realtime.UpdateSensorReading:
+		r.processSensorUpdate(update)
+	case realtime.UpdateSystemStatus:
+		r.processSystemUpdate(update)
+	case realtime.UpdateSystemAlert, realtime.UpdateEmergencyAlert:
+		r.processAlertUpdate(update)
+	case realtime.UpdateOccupancy:
+		r.processOccupancyUpdate(update)
+	}
+}
+
+// processSensorUpdate handles sensor reading updates
+func (r *ASCIIRealtimeRenderer) processSensorUpdate(update realtime.Update) {
+	if data, ok := update.NewValue.(map[string]interface{}); ok {
+		floorNum := 0
+		fmt.Sscanf(update.FloorID, "%d", &floorNum)
+		
+		if floorNum > 0 && floorNum <= len(r.buildingModel.floors) {
+			floor := &r.buildingModel.floors[floorNum-1]
+			
+			if temp, ok := data["temperature"].(float64); ok {
+				floor.Temperature = temp
+			}
+		}
+	}
+}
+
+// processSystemUpdate handles system status updates
+func (r *ASCIIRealtimeRenderer) processSystemUpdate(update realtime.Update) {
+	if update.SystemType != "" {
+		status, exists := r.buildingModel.systemStatus[update.SystemType]
+		if !exists {
+			status = SystemStatus{Name: update.SystemType}
+		}
+		
+		if statusStr, ok := update.NewValue.(string); ok {
+			status.Online = statusStr == "online"
+			if !status.Online {
+				status.Alerts++
+			}
+		}
+		
+		r.buildingModel.systemStatus[update.SystemType] = status
+	}
+}
+
+// processAlertUpdate handles alert updates
+func (r *ASCIIRealtimeRenderer) processAlertUpdate(update realtime.Update) {
+	alert := Alert{
+		Time:     update.Timestamp,
+		Priority: update.Priority,
+		Message:  update.Description,
+		System:   update.SystemType,
+	}
+	
+	r.buildingModel.alerts = append(r.buildingModel.alerts, alert)
+	
+	// Keep only last 10 alerts
+	if len(r.buildingModel.alerts) > 10 {
+		r.buildingModel.alerts = r.buildingModel.alerts[len(r.buildingModel.alerts)-10:]
+	}
+}
+
+// processOccupancyUpdate handles occupancy updates
+func (r *ASCIIRealtimeRenderer) processOccupancyUpdate(update realtime.Update) {
+	floorNum := 0
+	fmt.Sscanf(update.FloorID, "%d", &floorNum)
+	
+	if floorNum > 0 && floorNum <= len(r.buildingModel.floors) {
+		floor := &r.buildingModel.floors[floorNum-1]
+		
+		if occupancy, ok := update.NewValue.(int); ok {
+			floor.Occupancy = occupancy
+		}
+	}
+}
+
+// render generates the ASCII visualization
+func (r *ASCIIRealtimeRenderer) render() {
+	output := r.renderBuilding()
+	select {
+	case r.renderChannel <- output:
+		// Sent successfully
+	default:
+		// Channel full, skip
+	}
+}
+
+// renderBuilding creates the ASCII art representation
+func (r *ASCIIRealtimeRenderer) renderBuilding() string {
+	var sb strings.Builder
+	
+	// Header
+	sb.WriteString("╔════════════════════════════════════════════════════════════╗\n")
+	sb.WriteString("║               ARXOS REAL-TIME BUILDING VIEW               ║\n")
+	sb.WriteString("╠════════════════════════════════════════════════════════════╣\n")
+	
+	// Render each floor
+	for i := len(r.buildingModel.floors) - 1; i >= 0; i-- {
+		floor := r.buildingModel.floors[i]
+		sb.WriteString(r.renderFloor(floor))
+		if i > 0 {
+			sb.WriteString("║────────────────────────────────────────────────────────────║\n")
+		}
+	}
+	
+	// System status bar
+	sb.WriteString("╠════════════════════════════════════════════════════════════╣\n")
+	sb.WriteString(r.renderSystemStatus())
+	
+	// Alerts section
+	if len(r.buildingModel.alerts) > 0 {
+		sb.WriteString("╠════════════════════════════════════════════════════════════╣\n")
+		sb.WriteString(r.renderAlerts())
+	}
+	
+	// Footer
+	sb.WriteString("╚════════════════════════════════════════════════════════════╝\n")
+	
+	return sb.String()
+}
+
+// renderFloor creates ASCII representation of a floor
+func (r *ASCIIRealtimeRenderer) renderFloor(floor FloorModel) string {
+	var sb strings.Builder
+	
+	// Floor header
+	tempIcon := r.getTempIcon(floor.Temperature)
+	occupancyIcon := r.getOccupancyIcon(floor.Occupancy)
+	statusIcon := r.getStatusIcon(floor.Status)
+	
+	sb.WriteString(fmt.Sprintf("║ Floor %d │ %s %.1f°C │ %s %d │ %s %-8s      ║\n",
+		floor.Number,
+		tempIcon, floor.Temperature,
+		occupancyIcon, floor.Occupancy,
+		statusIcon, floor.Status,
+	))
+	
+	// Room grid (simplified)
+	sb.WriteString("║         ")
+	for _, room := range floor.Rooms {
+		roomChar := r.getRoomChar(room)
+		sb.WriteString(fmt.Sprintf("[%s]", roomChar))
+	}
+	// Pad to width
+	for i := len(floor.Rooms); i < 10; i++ {
+		sb.WriteString("   ")
+	}
+	sb.WriteString("                        ║\n")
+	
+	return sb.String()
+}
+
+// renderSystemStatus creates system status bar
+func (r *ASCIIRealtimeRenderer) renderSystemStatus() string {
+	var sb strings.Builder
+	sb.WriteString("║ Systems: ")
+	
+	systems := []string{"hvac", "electrical", "security", "lighting"}
+	for i, sysName := range systems {
+		if status, exists := r.buildingModel.systemStatus[sysName]; exists {
+			icon := "🟢"
+			if !status.Online {
+				icon = "🔴"
+			} else if status.Alerts > 0 {
+				icon = "🟡"
+			}
+			sb.WriteString(fmt.Sprintf("%s %s", strings.ToUpper(sysName[:3]), icon))
+		} else {
+			sb.WriteString(fmt.Sprintf("%s ⚪", strings.ToUpper(sysName[:3])))
+		}
+		
+		if i < len(systems)-1 {
+			sb.WriteString(" │ ")
+		}
+	}
+	
+	// Pad to width
+	padding := 62 - len(sb.String()) + 2
+	for i := 0; i < padding; i++ {
+		sb.WriteString(" ")
+	}
+	sb.WriteString("║\n")
+	
+	return sb.String()
+}
+
+// renderAlerts creates alert section
+func (r *ASCIIRealtimeRenderer) renderAlerts() string {
+	var sb strings.Builder
+	sb.WriteString("║ Alerts:                                                    ║\n")
+	
+	// Show last 3 alerts
+	start := len(r.buildingModel.alerts) - 3
+	if start < 0 {
+		start = 0
+	}
+	
+	for i := start; i < len(r.buildingModel.alerts); i++ {
+		alert := r.buildingModel.alerts[i]
+		icon := r.getPriorityIcon(alert.Priority)
+		timeStr := alert.Time.Format("15:04:05")
+		msg := truncateString(alert.Message, 40)
+		
+		sb.WriteString(fmt.Sprintf("║  %s [%s] %-40s  ║\n", icon, timeStr, msg))
+	}
+	
+	return sb.String()
+}
+
+// Helper functions
+
+func (r *ASCIIRealtimeRenderer) getTempIcon(temp float64) string {
+	if temp < 18 {
+		return "❄️"
+	} else if temp > 26 {
+		return "🔥"
+	}
+	return "🌡️"
+}
+
+func (r *ASCIIRealtimeRenderer) getOccupancyIcon(occupancy int) string {
+	if occupancy == 0 {
+		return "🚫"
+	} else if occupancy < 10 {
+		return "👤"
+	}
+	return "👥"
+}
+
+func (r *ASCIIRealtimeRenderer) getStatusIcon(status string) string {
+	switch status {
+	case "normal":
+		return "✅"
+	case "warning":
+		return "⚠️"
+	case "critical":
+		return "❌"
+	default:
+		return "ℹ️"
+	}
+}
+
+func (r *ASCIIRealtimeRenderer) getRoomChar(room RoomModel) string {
+	if !room.Occupied {
+		return "□"
+	} else if room.Lights {
+		return "■"
+	}
+	return "▢"
+}
+
+func (r *ASCIIRealtimeRenderer) getPriorityIcon(priority realtime.Priority) string {
+	switch priority {
+	case realtime.PriorityEmergency:
+		return "🚨"
+	case realtime.PriorityCritical:
+		return "❗"
+	case realtime.PriorityHigh:
+		return "⚠️"
+	default:
+		return "ℹ️"
+	}
+}
+
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// initializeBuildingModel creates the initial building model
+func initializeBuildingModel() *ASCIIBuildingModel {
+	model := &ASCIIBuildingModel{
+		floors:       make([]FloorModel, 3),
+		systemStatus: make(map[string]SystemStatus),
+		alerts:       []Alert{},
+	}
+	
+	// Initialize floors
+	for i := 0; i < 3; i++ {
+		model.floors[i] = FloorModel{
+			ID:          fmt.Sprintf("floor-%d", i+1),
+			Number:      i + 1,
+			Temperature: 22.0,
+			Occupancy:   0,
+			Status:      "normal",
+			Rooms:       initializeRooms(i + 1),
+		}
+	}
+	
+	// Initialize systems
+	systems := []string{"hvac", "electrical", "security", "lighting"}
+	for _, sys := range systems {
+		model.systemStatus[sys] = SystemStatus{
+			Name:   sys,
+			Online: true,
+			Health: 100.0,
+			Alerts: 0,
+		}
+	}
+	
+	return model
+}
+
+// initializeRooms creates rooms for a floor
+func initializeRooms(floorNum int) []RoomModel {
+	rooms := []RoomModel{}
+	for i := 0; i < 5; i++ {
+		rooms = append(rooms, RoomModel{
+			ID:          fmt.Sprintf("room-%d%02d", floorNum, i+1),
+			Name:        fmt.Sprintf("Room %d%02d", floorNum, i+1),
+			Temperature: 22.0,
+			Humidity:    45.0,
+			Lights:      false,
+			Occupied:    false,
+		})
+	}
+	return rooms
+}
+
+// GetRenderChannel returns the channel for rendered output
+func (r *ASCIIRealtimeRenderer) GetRenderChannel() <-chan string {
+	return r.renderChannel
+}

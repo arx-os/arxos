@@ -1,0 +1,90 @@
+{
+  "built_at": "2025-08-26T18:07:07.136187-04:00",
+  "building_id": "building:hq",
+  "path_to_entries": {
+    "/": [
+      {
+        "name": "assets",
+        "type": "directory",
+        "path": "/assets",
+        "is_dir": true
+      },
+      {
+        "name": "config",
+        "type": "directory",
+        "path": "/config",
+        "is_dir": true
+      },
+      {
+        "name": "floors",
+        "type": "directory",
+        "path": "/floors",
+        "is_dir": true
+      },
+      {
+        "name": "systems",
+        "type": "directory",
+        "path": "/systems",
+        "is_dir": true
+      },
+      {
+        "name": "zones",
+        "type": "directory",
+        "path": "/zones",
+        "is_dir": true
+      }
+    ],
+    "/systems": [
+      {
+        "name": "automation",
+        "type": "system",
+        "path": "/systems/automation",
+        "is_dir": true
+      },
+      {
+        "name": "electrical",
+        "type": "system",
+        "path": "/systems/electrical",
+        "is_dir": true
+      },
+      {
+        "name": "fire_protection",
+        "type": "system",
+        "path": "/systems/fire_protection",
+        "is_dir": true
+      },
+      {
+        "name": "hvac",
+        "type": "system",
+        "path": "/systems/hvac",
+        "is_dir": true
+      },
+      {
+        "name": "plumbing",
+        "type": "system",
+        "path": "/systems/plumbing",
+        "is_dir": true
+      },
+      {
+        "name": "security",
+        "type": "system",
+        "path": "/systems/security",
+        "is_dir": true
+      }
+    ]
+  },
+  "known_directories": {
+    "/": true,
+    "/assets": true,
+    "/config": true,
+    "/floors": true,
+    "/systems": true,
+    "/systems/automation": true,
+    "/systems/electrical": true,
+    "/systems/fire_protection": true,
+    "/systems/hvac": true,
+    "/systems/plumbing": true,
+    "/systems/security": true,
+    "/zones": true
+  }
+}

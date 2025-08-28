@@ -1,0 +1,22 @@
+{
+  "id": "building:demo:floor:2",
+  "name": "Floor 2",
+  "type": "floor",
+  "description": "Floor 2 of building building:demo",
+  "properties": {
+    "area": "",
+    "floor_number": 2,
+    "height": 3000
+  },
+  "location": {
+    "x": 0,
+    "y": 0,
+    "z": 3000,
+    "floor": 2,
+    "building": "building:demo"
+  },
+  "parent": "building:demo",
+  "status": "active",
+  "created": "2025-08-26T21:06:21.572689Z",
+  "updated": "2025-08-26T21:06:21.572689Z"
+}

@@ -1,0 +1,18 @@
+{
+  "id": "building:hq:system:electrical",
+  "name": "Electrical System",
+  "type": "system",
+  "description": "Building power distribution",
+  "properties": {
+    "lastChecked": "2024-08-01",
+    "maintenance": "scheduled",
+    "operational": true,
+    "redundancy": "N+1",
+    "systemType": "electrical"
+  },
+  "parent": "building:hq",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.2859-04:00",
+  "updated": "2025-08-26T22:06:27.285902Z",
+  "confidence": 0.85
+}

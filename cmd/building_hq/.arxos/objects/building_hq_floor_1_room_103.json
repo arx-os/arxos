@@ -1,0 +1,25 @@
+{
+  "id": "building:hq:floor:1:room:103",
+  "name": "Room 103",
+  "type": "room",
+  "description": "Office room on floor 1",
+  "properties": {
+    "area": "200 sqm",
+    "capacity": 4,
+    "type": "office"
+  },
+  "location": {
+    "x": 0,
+    "y": 4,
+    "z": 3,
+    "floor": 1,
+    "room": "103",
+    "building": ""
+  },
+  "parent": "building:hq:floor:1",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.268464-04:00",
+  "updated": "2025-08-26T22:06:27.268466Z",
+  "validation_status": "validated",
+  "confidence": 1
+}

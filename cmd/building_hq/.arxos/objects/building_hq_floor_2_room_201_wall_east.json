@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:2:room:201:wall:east",
+  "name": "Wall-east-201",
+  "type": "wall",
+  "description": "east wall of room 201",
+  "properties": {
+    "fireRated": true,
+    "height": 2.4,
+    "material": "drywall",
+    "thickness": 0.2
+  },
+  "parent": "building:hq:floor:2:room:201",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.273282-04:00",
+  "updated": "2025-08-26T22:06:27.273283Z",
+  "confidence": 0.772472305733812
+}

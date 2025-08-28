@@ -1,0 +1,17 @@
+{
+  "id": "building:hq:floor:2:room:202:window:main",
+  "name": "Window-202",
+  "type": "window",
+  "description": "Main window for room 202",
+  "properties": {
+    "height": 1.5,
+    "material": "double-pane",
+    "tinted": true,
+    "width": 1.2
+  },
+  "parent": "building:hq:floor:2:room:202",
+  "status": "active",
+  "created": "2025-08-26T18:06:27.275425-04:00",
+  "updated": "2025-08-26T22:06:27.275427Z",
+  "confidence": 0.7999999999999999
+}

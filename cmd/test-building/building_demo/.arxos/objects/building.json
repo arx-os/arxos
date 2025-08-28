@@ -1,0 +1,173 @@
+{
+  "id": "building:demo",
+  "name": "Building building:demo",
+  "type": "building",
+  "description": "office building with 3 floors",
+  "properties": {
+    "area": "",
+    "building_type": "office",
+    "floors": 3,
+    "location": ""
+  },
+  "children": [
+    {
+      "id": "building:demo:floor:1",
+      "name": "Floor 1",
+      "type": "floor",
+      "description": "Floor 1 of building building:demo",
+      "properties": {
+        "area": "",
+        "floor_number": 1,
+        "height": 3000
+      },
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "floor": 1,
+        "building": "building:demo"
+      },
+      "parent": "building:demo",
+      "status": "active",
+      "created": "2025-08-26T21:06:21.572688Z",
+      "updated": "2025-08-26T21:06:21.572688Z"
+    },
+    {
+      "id": "building:demo:floor:2",
+      "name": "Floor 2",
+      "type": "floor",
+      "description": "Floor 2 of building building:demo",
+      "properties": {
+        "area": "",
+        "floor_number": 2,
+        "height": 3000
+      },
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 3000,
+        "floor": 2,
+        "building": "building:demo"
+      },
+      "parent": "building:demo",
+      "status": "active",
+      "created": "2025-08-26T21:06:21.572689Z",
+      "updated": "2025-08-26T21:06:21.572689Z"
+    },
+    {
+      "id": "building:demo:floor:3",
+      "name": "Floor 3",
+      "type": "floor",
+      "description": "Floor 3 of building building:demo",
+      "properties": {
+        "area": "",
+        "floor_number": 3,
+        "height": 3000
+      },
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 6000,
+        "floor": 3,
+        "building": "building:demo"
+      },
+      "parent": "building:demo",
+      "status": "active",
+      "created": "2025-08-26T21:06:21.572689Z",
+      "updated": "2025-08-26T21:06:21.572689Z"
+    },
+    {
+      "id": "building:demo:system:electrical",
+      "name": "Electrical System",
+      "type": "system",
+      "description": "Electrical system for building building:demo",
+      "properties": {
+        "capacity": "800A",
+        "panels": 4,
+        "voltage": "480V"
+      },
+      "parent": "building:demo",
+      "status": "inactive",
+      "created": "2025-08-26T21:06:21.572695Z",
+      "updated": "2025-08-26T21:06:21.572695Z"
+    },
+    {
+      "id": "building:demo:system:hvac",
+      "name": "Hvac System",
+      "type": "system",
+      "description": "Hvac system for building building:demo",
+      "properties": {
+        "type": "vav",
+        "units": 2,
+        "zones_per_floor": 4
+      },
+      "parent": "building:demo",
+      "status": "inactive",
+      "created": "2025-08-26T21:06:21.572696Z",
+      "updated": "2025-08-26T21:06:21.572696Z"
+    },
+    {
+      "id": "building:demo:system:automation",
+      "name": "Automation System",
+      "type": "system",
+      "description": "Automation system for building building:demo",
+      "properties": {
+        "controllers": 8,
+        "protocols": [
+          "BACnet",
+          "Modbus"
+        ]
+      },
+      "parent": "building:demo",
+      "status": "inactive",
+      "created": "2025-08-26T21:06:21.572696Z",
+      "updated": "2025-08-26T21:06:21.572696Z"
+    },
+    {
+      "id": "building:demo:system:plumbing",
+      "name": "Plumbing System",
+      "type": "system",
+      "description": "Plumbing system for building building:demo",
+      "properties": {
+        "fixtures": 24,
+        "water_supply": "municipal"
+      },
+      "parent": "building:demo",
+      "status": "inactive",
+      "created": "2025-08-26T21:06:21.572697Z",
+      "updated": "2025-08-26T21:06:21.572697Z"
+    },
+    {
+      "id": "building:demo:system:fire_protection",
+      "name": "Fire_protection System",
+      "type": "system",
+      "description": "Fire_protection system for building building:demo",
+      "properties": {
+        "alarms": 12,
+        "sprinkler_system": true
+      },
+      "parent": "building:demo",
+      "status": "inactive",
+      "created": "2025-08-26T21:06:21.572698Z",
+      "updated": "2025-08-26T21:06:21.572698Z"
+    },
+    {
+      "id": "building:demo:system:security",
+      "name": "Security System",
+      "type": "system",
+      "description": "Security system for building building:demo",
+      "properties": {
+        "access_control": true,
+        "cameras": 16,
+        "surveillance": true
+      },
+      "parent": "building:demo",
+      "status": "inactive",
+      "created": "2025-08-26T21:06:21.572698Z",
+      "updated": "2025-08-26T21:06:21.572698Z"
+    }
+  ],
+  "status": "active",
+  "created": "2025-08-26T21:06:21.572687Z",
+  "updated": "2025-08-26T21:06:21.572687Z"
+}

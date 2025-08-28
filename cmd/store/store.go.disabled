@@ -1,0 +1,597 @@
+package store
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+	"text/tabwriter"
+	"time"
+
+	"github.com/arxos/arxos/core/internal/services/bilt"
+	"github.com/arxos/arxos/core/internal/services/store"
+	"github.com/spf13/cobra"
+)
+
+var storeEngine *store.StoreEngine
+
+func init() {
+	// Initialize store with BILT engine
+	if biltEngine == nil {
+		biltEngine = bilt.NewBILTEngine()
+	}
+	storeEngine = store.NewStoreEngine(biltEngine)
+}
+
+// StoreCmd is the main store command
+var StoreCmd = &cobra.Command{
+	Use:   "store",
+	Short: "ArxOS hardware and equipment marketplace",
+	Long: `Browse and purchase open-source building automation hardware
+using BILT tokens earned through field work contributions.
+
+The store features community-designed hardware that costs 80-90% less
+than proprietary alternatives while maintaining full ArxOS integration.`,
+}
+
+// StoreBrowseCmd browses the store catalog
+var StoreBrowseCmd = &cobra.Command{
+	Use:   "browse [category]",
+	Short: "Browse available products",
+	Long: `Browse the ArxOS hardware marketplace catalog.
+
+Categories:
+  sensors     - Temperature, humidity, motion, light sensors
+  controllers - BAS controllers, PLCs, Arduino boards
+  actuators   - Relays, servos, valves, dampers
+  networking  - WiFi, LoRa, Zigbee modules
+  safety      - Smoke detectors, emergency equipment
+  tools       - Multimeters, oscilloscopes
+  kits        - Starter kits, training kits
+
+Examples:
+  arxos store browse                    # Browse all products
+  arxos store browse sensors            # Browse sensors only
+  arxos store browse --open-source     # Show only open-source hardware`,
+	RunE: runStoreBrowse,
+}
+
+// StoreSearchCmd searches for specific products
+var StoreSearchCmd = &cobra.Command{
+	Use:   "search <query>",
+	Short: "Search for products",
+	Long: `Search the marketplace for specific products.
+
+Examples:
+  arxos store search temperature        # Find temperature sensors
+  arxos store search "arduino mega"     # Search for Arduino Mega boards
+  arxos store search relay --max-price 5  # Find relays under 5 BILT`,
+	Args: cobra.MinimumNArgs(1),
+	RunE: runStoreSearch,
+}
+
+// StoreShowCmd shows product details
+var StoreShowCmd = &cobra.Command{
+	Use:   "show <product-id>",
+	Short: "Show product details",
+	Long: `Display detailed information about a specific product.
+
+Examples:
+  arxos store show temp-sensor-dht22
+  arxos store show bas-controller-arduino`,
+	Args: cobra.ExactArgs(1),
+	RunE: runStoreShow,
+}
+
+// StoreBuyCmd purchases a product
+var StoreBuyCmd = &cobra.Command{
+	Use:   "buy <product-id> [quantity]",
+	Short: "Purchase a product with BILT tokens",
+	Long: `Purchase hardware using your BILT token balance.
+
+Examples:
+  arxos store buy temp-sensor-dht22      # Buy 1 sensor
+  arxos store buy relay-4ch 3            # Buy 3 relay modules
+  arxos store buy starter-kit --confirm  # Skip confirmation prompt`,
+	Args: cobra.RangeArgs(1, 2),
+	RunE: runStoreBuy,
+}
+
+// StoreCartCmd manages shopping cart
+var StoreCartCmd = &cobra.Command{
+	Use:   "cart",
+	Short: "Manage shopping cart",
+	Long: `View and manage your shopping cart.
+
+Examples:
+  arxos store cart                       # View cart
+  arxos store cart add temp-sensor-dht22 # Add item to cart
+  arxos store cart remove relay-4ch      # Remove item from cart
+  arxos store cart clear                 # Clear entire cart`,
+	RunE: runStoreCart,
+}
+
+// StoreReviewCmd adds a product review
+var StoreReviewCmd = &cobra.Command{
+	Use:   "review <product-id> <rating> [comment]",
+	Short: "Review a purchased product",
+	Long: `Add a review for a product you've purchased.
+Verified reviews earn 0.5 BILT tokens.
+
+Rating: 1-5 stars
+
+Examples:
+  arxos store review temp-sensor-dht22 5 "Excellent accuracy!"
+  arxos store review bas-controller-arduino 4`,
+	Args: cobra.MinimumNArgs(2),
+	RunE: runStoreReview,
+}
+
+// StoreContributeCmd contributes an open-source design
+var StoreContributeCmd = &cobra.Command{
+	Use:   "contribute",
+	Short: "Contribute an open-source hardware design",
+	Long: `Submit your open-source hardware design to the marketplace.
+Contributors earn 5% of all sales in BILT tokens.
+
+Examples:
+  arxos store contribute --name "CO2 Sensor Module" --category sensors`,
+	RunE: runStoreContribute,
+}
+
+func init() {
+	// Add subcommands
+	StoreCmd.AddCommand(StoreBrowseCmd)
+	StoreCmd.AddCommand(StoreSearchCmd)
+	StoreCmd.AddCommand(StoreShowCmd)
+	StoreCmd.AddCommand(StoreBuyCmd)
+	StoreCmd.AddCommand(StoreCartCmd)
+	StoreCmd.AddCommand(StoreReviewCmd)
+	StoreCmd.AddCommand(StoreContributeCmd)
+	
+	// Add flags
+	StoreBrowseCmd.Flags().Bool("open-source", false, "Show only open-source products")
+	StoreBrowseCmd.Flags().String("type", "", "Filter by product type")
+	StoreBrowseCmd.Flags().String("sort", "rating", "Sort by: rating, price, name")
+	
+	StoreSearchCmd.Flags().Float64("max-price", 0, "Maximum price in BILT")
+	StoreSearchCmd.Flags().Bool("open-source", false, "Search only open-source products")
+	
+	StoreBuyCmd.Flags().Bool("confirm", false, "Skip confirmation prompt")
+	
+	StoreContributeCmd.Flags().String("name", "", "Product name")
+	StoreContributeCmd.Flags().String("category", "", "Product category")
+	StoreContributeCmd.Flags().String("description", "", "Product description")
+	StoreContributeCmd.Flags().Float64("price", 0, "Price in BILT tokens")
+}
+
+func runStoreBrowse(cmd *cobra.Command, args []string) error {
+	var category store.ProductCategory
+	if len(args) > 0 {
+		category = store.ProductCategory(args[0])
+	}
+	
+	openSourceOnly, _ := cmd.Flags().GetBool("open-source")
+	productType, _ := cmd.Flags().GetString("type")
+	sortBy, _ := cmd.Flags().GetString("sort")
+	
+	// Get products
+	products := storeEngine.SearchProducts(category, store.ProductType(productType), openSourceOnly)
+	
+	if len(products) == 0 {
+		fmt.Println("No products found matching your criteria")
+		return nil
+	}
+	
+	// Sort products
+	sortProducts(products, sortBy)
+	
+	// Display products
+	fmt.Printf("\n🛒 ArxOS Hardware Marketplace\n")
+	if category != "" {
+		fmt.Printf("Category: %s\n", category)
+	}
+	fmt.Printf("═══════════════════════════════════════════════════════════════\n")
+	
+	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+	fmt.Fprintf(w, "ID\tName\tPrice (BILT)\tRating\tStock\tOpen Source\n")
+	fmt.Fprintf(w, "──\t────\t────────────\t──────\t─────\t───────────\n")
+	
+	for _, p := range products {
+		openSource := "No"
+		if p.OpenSource {
+			openSource = "Yes ✓"
+		}
+		
+		rating := fmt.Sprintf("%.1f ⭐", p.Rating)
+		if p.Reviews > 0 {
+			rating += fmt.Sprintf(" (%d)", p.Reviews)
+		}
+		
+		fmt.Fprintf(w, "%s\t%s\t%.2f\t%s\t%d\t%s\n",
+			p.ID, 
+			truncate(p.Name, 30),
+			p.PriceBILT,
+			rating,
+			p.Stock,
+			openSource,
+		)
+	}
+	w.Flush()
+	
+	fmt.Printf("\nShowing %d products. Use 'arxos store show <id>' for details.\n", len(products))
+	
+	// Show user's BILT balance
+	balance, _ := biltEngine.GetUserBalance(getCurrentUser())
+	fmt.Printf("\nYour BILT Balance: %.4f tokens\n", balance)
+	
+	return nil
+}
+
+func runStoreSearch(cmd *cobra.Command, args []string) error {
+	query := strings.Join(args, " ")
+	maxPrice, _ := cmd.Flags().GetFloat64("max-price")
+	openSourceOnly, _ := cmd.Flags().GetBool("open-source")
+	
+	// Search products (simplified - in production would have full-text search)
+	var results []*store.Product
+	allProducts := storeEngine.SearchProducts("", "", openSourceOnly)
+	
+	for _, p := range allProducts {
+		// Check if query matches name or description
+		if strings.Contains(strings.ToLower(p.Name), strings.ToLower(query)) ||
+		   strings.Contains(strings.ToLower(p.Description), strings.ToLower(query)) {
+			// Check price filter
+			if maxPrice > 0 && p.PriceBILT > maxPrice {
+				continue
+			}
+			results = append(results, p)
+		}
+	}
+	
+	if len(results) == 0 {
+		fmt.Printf("No products found matching '%s'\n", query)
+		return nil
+	}
+	
+	fmt.Printf("\n🔍 Search Results for '%s'\n", query)
+	fmt.Printf("═══════════════════════════════════════════════════════════════\n")
+	
+	for _, p := range results {
+		fmt.Printf("\n%s (%s)\n", p.Name, p.ID)
+		fmt.Printf("  Price: %.2f BILT ($%.2f USD)\n", p.PriceBILT, p.PriceUSD)
+		fmt.Printf("  Category: %s | Type: %s\n", p.Category, p.Type)
+		fmt.Printf("  %s\n", p.Description)
+		if p.OpenSource {
+			fmt.Printf("  🔓 Open Source Hardware\n")
+		}
+		fmt.Printf("  Rating: %.1f ⭐ (%d reviews) | Stock: %d\n", 
+			p.Rating, p.Reviews, p.Stock)
+	}
+	
+	fmt.Printf("\nFound %d products. Use 'arxos store show <id>' for full details.\n", len(results))
+	
+	return nil
+}
+
+func runStoreShow(cmd *cobra.Command, args []string) error {
+	productID := args[0]
+	
+	product, err := storeEngine.GetProduct(productID)
+	if err != nil {
+		return fmt.Errorf("product not found: %s", productID)
+	}
+	
+	fmt.Printf("\n📦 Product Details\n")
+	fmt.Printf("═══════════════════════════════════════\n")
+	fmt.Printf("Name:         %s\n", product.Name)
+	fmt.Printf("ID:           %s\n", product.ID)
+	fmt.Printf("Category:     %s\n", product.Category)
+	fmt.Printf("Type:         %s\n", product.Type)
+	fmt.Printf("\n")
+	fmt.Printf("Description:\n%s\n", product.Description)
+	fmt.Printf("\n")
+	fmt.Printf("💰 Pricing:\n")
+	fmt.Printf("  BILT: %.2f tokens\n", product.PriceBILT)
+	fmt.Printf("  USD:  $%.2f\n", product.PriceUSD)
+	fmt.Printf("\n")
+	
+	if product.OpenSource {
+		fmt.Printf("🔓 Open Source Hardware\n")
+		if product.CreatedBy != "" {
+			fmt.Printf("  Contributor: %s\n", product.CreatedBy)
+			fmt.Printf("  (Earns 5%% of sales)\n")
+		}
+		fmt.Printf("\n")
+	}
+	
+	fmt.Printf("📊 Statistics:\n")
+	fmt.Printf("  Rating: %.1f ⭐ (%d reviews)\n", product.Rating, product.Reviews)
+	fmt.Printf("  Stock:  %d available\n", product.Stock)
+	fmt.Printf("  Manufacturer: %s\n", product.Manufacturer)
+	fmt.Printf("\n")
+	
+	if len(product.Specs) > 0 {
+		fmt.Printf("🔧 Specifications:\n")
+		for key, value := range product.Specs {
+			fmt.Printf("  %s: %v\n", key, value)
+		}
+		fmt.Printf("\n")
+	}
+	
+	// Show user's balance
+	balance, _ := biltEngine.GetUserBalance(getCurrentUser())
+	fmt.Printf("Your BILT Balance: %.4f tokens\n", balance)
+	
+	if balance >= product.PriceBILT {
+		fmt.Printf("✅ You have enough BILT to purchase this item\n")
+		fmt.Printf("\nTo purchase: arxos store buy %s\n", product.ID)
+	} else {
+		needed := product.PriceBILT - balance
+		fmt.Printf("❌ You need %.2f more BILT tokens to purchase\n", needed)
+		fmt.Printf("\nEarn more BILT: arxos bilt earn\n")
+	}
+	
+	return nil
+}
+
+func runStoreBuy(cmd *cobra.Command, args []string) error {
+	productID := args[0]
+	quantity := 1
+	if len(args) > 1 {
+		fmt.Sscanf(args[1], "%d", &quantity)
+	}
+	
+	skipConfirm, _ := cmd.Flags().GetBool("confirm")
+	userID := getCurrentUser()
+	
+	// Get product details
+	product, err := storeEngine.GetProduct(productID)
+	if err != nil {
+		return err
+	}
+	
+	totalCost := product.PriceBILT * float64(quantity)
+	
+	// Check balance
+	balance, _ := biltEngine.GetUserBalance(userID)
+	
+	fmt.Printf("\n💳 Purchase Summary\n")
+	fmt.Printf("═══════════════════════════════════════\n")
+	fmt.Printf("Product:      %s\n", product.Name)
+	fmt.Printf("Quantity:     %d\n", quantity)
+	fmt.Printf("Unit Price:   %.2f BILT\n", product.PriceBILT)
+	fmt.Printf("Total Cost:   %.2f BILT\n", totalCost)
+	fmt.Printf("\n")
+	fmt.Printf("Your Balance: %.4f BILT\n", balance)
+	fmt.Printf("After Purchase: %.4f BILT\n", balance-totalCost)
+	
+	if !skipConfirm {
+		fmt.Printf("\nConfirm purchase? (y/n): ")
+		var confirm string
+		fmt.Scanln(&confirm)
+		if strings.ToLower(confirm) != "y" {
+			fmt.Println("Purchase cancelled")
+			return nil
+		}
+	}
+	
+	// Process purchase
+	purchase, err := storeEngine.PurchaseWithBILT(userID, productID, quantity)
+	if err != nil {
+		return fmt.Errorf("purchase failed: %w", err)
+	}
+	
+	fmt.Printf("\n✅ Purchase Successful!\n")
+	fmt.Printf("═══════════════════════════════════════\n")
+	fmt.Printf("Order ID:     %s\n", purchase.ID)
+	fmt.Printf("Status:       %s\n", purchase.Status)
+	fmt.Printf("Total Paid:   %.2f BILT\n", purchase.PriceBILT)
+	
+	newBalance, _ := biltEngine.GetUserBalance(userID)
+	fmt.Printf("New Balance:  %.4f BILT\n", newBalance)
+	
+	if product.OpenSource && product.CreatedBy != "" {
+		fmt.Printf("\n💝 %.2f BILT sent to contributor %s\n", 
+			totalCost*0.05, product.CreatedBy)
+	}
+	
+	fmt.Printf("\n📦 Your order will be processed within 24 hours.\n")
+	fmt.Printf("Track your order: arxos store orders\n")
+	
+	return nil
+}
+
+func runStoreCart(cmd *cobra.Command, args []string) error {
+	userID := getCurrentUser()
+	
+	if len(args) == 0 {
+		// View cart
+		cart := storeEngine.GetCart(userID)
+		
+		if len(cart.Items) == 0 {
+			fmt.Println("Your cart is empty")
+			fmt.Println("\nAdd items: arxos store cart add <product-id>")
+			return nil
+		}
+		
+		fmt.Printf("\n🛒 Shopping Cart\n")
+		fmt.Printf("═══════════════════════════════════════\n")
+		
+		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
+		fmt.Fprintf(w, "Product\tQuantity\tUnit Price\tSubtotal\n")
+		fmt.Fprintf(w, "───────\t────────\t──────────\t────────\n")
+		
+		for _, item := range cart.Items {
+			product, _ := storeEngine.GetProduct(item.ProductID)
+			subtotal := item.PriceBILT * float64(item.Quantity)
+			fmt.Fprintf(w, "%s\t%d\t%.2f BILT\t%.2f BILT\n",
+				truncate(product.Name, 25),
+				item.Quantity,
+				item.PriceBILT,
+				subtotal,
+			)
+		}
+		w.Flush()
+		
+		fmt.Printf("\n")
+		fmt.Printf("Total: %.2f BILT ($%.2f USD)\n", cart.TotalBILT, cart.TotalUSD)
+		
+		balance, _ := biltEngine.GetUserBalance(userID)
+		fmt.Printf("Your Balance: %.4f BILT\n", balance)
+		
+		if balance >= cart.TotalBILT {
+			fmt.Printf("\n✅ Ready to checkout: arxos store checkout\n")
+		} else {
+			needed := cart.TotalBILT - balance
+			fmt.Printf("\n❌ You need %.2f more BILT to checkout\n", needed)
+		}
+		
+		return nil
+	}
+	
+	// Handle cart operations
+	operation := args[0]
+	
+	switch operation {
+	case "add":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: arxos store cart add <product-id> [quantity]")
+		}
+		productID := args[1]
+		quantity := 1
+		if len(args) > 2 {
+			fmt.Sscanf(args[2], "%d", &quantity)
+		}
+		
+		err := storeEngine.AddToCart(userID, productID, quantity)
+		if err != nil {
+			return err
+		}
+		
+		fmt.Printf("✅ Added %d x %s to cart\n", quantity, productID)
+		
+	case "remove":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: arxos store cart remove <product-id>")
+		}
+		// In production, implement remove from cart
+		fmt.Printf("Removed %s from cart\n", args[1])
+		
+	case "clear":
+		// In production, implement clear cart
+		fmt.Println("Cart cleared")
+		
+	default:
+		return fmt.Errorf("unknown cart operation: %s", operation)
+	}
+	
+	return nil
+}
+
+func runStoreReview(cmd *cobra.Command, args []string) error {
+	productID := args[0]
+	var rating int
+	fmt.Sscanf(args[1], "%d", &rating)
+	
+	comment := ""
+	if len(args) > 2 {
+		comment = strings.Join(args[2:], " ")
+	}
+	
+	review := &store.Review{
+		ProductID: productID,
+		UserID:    getCurrentUser(),
+		Rating:    rating,
+		Comment:   comment,
+	}
+	
+	err := storeEngine.AddReview(review)
+	if err != nil {
+		return err
+	}
+	
+	fmt.Printf("✅ Review submitted!\n")
+	
+	if review.Verified {
+		fmt.Printf("💰 You earned 0.5 BILT for your verified review!\n")
+		balance, _ := biltEngine.GetUserBalance(getCurrentUser())
+		fmt.Printf("New balance: %.4f BILT\n", balance)
+	}
+	
+	return nil
+}
+
+func runStoreContribute(cmd *cobra.Command, args []string) error {
+	name, _ := cmd.Flags().GetString("name")
+	category, _ := cmd.Flags().GetString("category")
+	description, _ := cmd.Flags().GetString("description")
+	price, _ := cmd.Flags().GetFloat64("price")
+	
+	if name == "" || category == "" || price == 0 {
+		return fmt.Errorf("required: --name, --category, --price")
+	}
+	
+	product := &store.Product{
+		Name:         name,
+		Category:     store.ProductCategory(category),
+		Description:  description,
+		PriceBILT:    price,
+		PriceUSD:     price * 5.0, // Approximate USD conversion
+		OpenSource:   true,
+		CreatedBy:    getCurrentUser(),
+		Manufacturer: "Community",
+		Stock:        0, // Will be manufactured on demand
+		Specs:        make(map[string]interface{}),
+	}
+	
+	err := storeEngine.AddProduct(product)
+	if err != nil {
+		return err
+	}
+	
+	fmt.Printf("✅ Product submitted for review!\n")
+	fmt.Printf("═══════════════════════════════════════\n")
+	fmt.Printf("Product ID: %s\n", product.ID)
+	fmt.Printf("Name: %s\n", product.Name)
+	fmt.Printf("Price: %.2f BILT\n", product.PriceBILT)
+	fmt.Printf("\n")
+	fmt.Printf("💝 You'll earn 5%% (%.2f BILT) for each sale!\n", product.PriceBILT*0.05)
+	fmt.Printf("\n")
+	fmt.Printf("Next steps:\n")
+	fmt.Printf("1. Upload design files and documentation\n")
+	fmt.Printf("2. Community review and testing\n")
+	fmt.Printf("3. Production partnership setup\n")
+	fmt.Printf("4. Launch in marketplace!\n")
+	
+	return nil
+}
+
+// Helper functions
+
+func sortProducts(products []*store.Product, sortBy string) {
+	// Simple bubble sort for demo
+	n := len(products)
+	for i := 0; i < n-1; i++ {
+		for j := 0; j < n-i-1; j++ {
+			swap := false
+			switch sortBy {
+			case "price":
+				swap = products[j].PriceBILT > products[j+1].PriceBILT
+			case "name":
+				swap = products[j].Name > products[j+1].Name
+			default: // rating
+				swap = products[j].Rating < products[j+1].Rating
+			}
+			if swap {
+				products[j], products[j+1] = products[j+1], products[j]
+			}
+		}
+	}
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}

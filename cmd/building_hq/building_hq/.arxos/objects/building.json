@@ -1,0 +1,166 @@
+{
+  "id": "building:hq",
+  "name": "Building building:hq",
+  "type": "building",
+  "description": "office building with 3 floors",
+  "properties": {
+    "area": "50,000 sq ft",
+    "building_type": "office",
+    "floors": 3,
+    "location": "Main Street"
+  },
+  "children": [
+    {
+      "id": "building:hq:floor:1",
+      "name": "Floor 1",
+      "type": "floor",
+      "description": "Floor 1 of building building:hq",
+      "properties": {
+        "area": "50,000 sq ft",
+        "floor_number": 1,
+        "height": 3000
+      },
+      "location": {
+        "floor": 1,
+        "building": "building:hq"
+      },
+      "parent": "building:hq",
+      "status": "active",
+      "created": "2025-08-26T22:27:20.00316Z",
+      "updated": "2025-08-26T22:27:20.003161Z"
+    },
+    {
+      "id": "building:hq:floor:2",
+      "name": "Floor 2",
+      "type": "floor",
+      "description": "Floor 2 of building building:hq",
+      "properties": {
+        "area": "50,000 sq ft",
+        "floor_number": 2,
+        "height": 3000
+      },
+      "location": {
+        "floor": 2,
+        "building": "building:hq",
+        "z": 3000
+      },
+      "parent": "building:hq",
+      "status": "active",
+      "created": "2025-08-26T22:27:20.003161Z",
+      "updated": "2025-08-26T22:27:20.003161Z"
+    },
+    {
+      "id": "building:hq:floor:3",
+      "name": "Floor 3",
+      "type": "floor",
+      "description": "Floor 3 of building building:hq",
+      "properties": {
+        "area": "50,000 sq ft",
+        "floor_number": 3,
+        "height": 3000
+      },
+      "location": {
+        "floor": 3,
+        "building": "building:hq",
+        "z": 6000
+      },
+      "parent": "building:hq",
+      "status": "active",
+      "created": "2025-08-26T22:27:20.003162Z",
+      "updated": "2025-08-26T22:27:20.003162Z"
+    },
+    {
+      "id": "building:hq:system:electrical",
+      "name": "Electrical System",
+      "type": "system",
+      "description": "Electrical system for building building:hq",
+      "properties": {
+        "capacity": "800A",
+        "panels": 4,
+        "voltage": "480V"
+      },
+      "parent": "building:hq",
+      "status": "inactive",
+      "created": "2025-08-26T22:27:20.003164Z",
+      "updated": "2025-08-26T22:27:20.003164Z"
+    },
+    {
+      "id": "building:hq:system:hvac",
+      "name": "Hvac System",
+      "type": "system",
+      "description": "Hvac system for building building:hq",
+      "properties": {
+        "type": "vav",
+        "units": 2,
+        "zones_per_floor": 4
+      },
+      "parent": "building:hq",
+      "status": "inactive",
+      "created": "2025-08-26T22:27:20.003165Z",
+      "updated": "2025-08-26T22:27:20.003165Z"
+    },
+    {
+      "id": "building:hq:system:automation",
+      "name": "Automation System",
+      "type": "system",
+      "description": "Automation system for building building:hq",
+      "properties": {
+        "controllers": 8,
+        "protocols": [
+          "BACnet",
+          "Modbus"
+        ]
+      },
+      "parent": "building:hq",
+      "status": "inactive",
+      "created": "2025-08-26T22:27:20.003165Z",
+      "updated": "2025-08-26T22:27:20.003165Z"
+    },
+    {
+      "id": "building:hq:system:plumbing",
+      "name": "Plumbing System",
+      "type": "system",
+      "description": "Plumbing system for building building:hq",
+      "properties": {
+        "fixtures": 24,
+        "water_supply": "municipal"
+      },
+      "parent": "building:hq",
+      "status": "inactive",
+      "created": "2025-08-26T22:27:20.003166Z",
+      "updated": "2025-08-26T22:27:20.003166Z"
+    },
+    {
+      "id": "building:hq:system:fire_protection",
+      "name": "Fire_protection System",
+      "type": "system",
+      "description": "Fire_protection system for building building:hq",
+      "properties": {
+        "alarms": 12,
+        "sprinkler_system": true
+      },
+      "parent": "building:hq",
+      "status": "inactive",
+      "created": "2025-08-26T22:27:20.003167Z",
+      "updated": "2025-08-26T22:27:20.003167Z"
+    },
+    {
+      "id": "building:hq:system:security",
+      "name": "Security System",
+      "type": "system",
+      "description": "Security system for building building:hq",
+      "properties": {
+        "access_control": true,
+        "cameras": 16,
+        "surveillance": true
+      },
+      "parent": "building:hq",
+      "status": "inactive",
+      "created": "2025-08-26T22:27:20.003167Z",
+      "updated": "2025-08-26T22:27:20.003167Z"
+    }
+  ],
+  "status": "active",
+  "created": "2025-08-26T22:27:20.003159Z",
+  "updated": "2025-08-26T22:27:20.00316Z"
+}

@@ -501,13 +501,17 @@ func UploadBIMModel(w http.ResponseWriter, r *http.Request) {
 
 // GetBIMModel serves a BIMModel for a given project/building/floor
 func GetBIMModel(w http.ResponseWriter, r *http.Request) {
-	// TODO: Query and assemble BIMModel from DB for the requested context
-	// For now, get floor_id from query param
+	// Query and assemble BIMModel from DB for the requested context
+	projectID := r.URL.Query().Get("project_id")
+	buildingID := r.URL.Query().Get("building_id")
 	floorIDStr := r.URL.Query().Get("floor_id")
+	
 	var floorID uint
 	if floorIDStr != "" {
 		fmt.Sscanf(floorIDStr, "%d", &floorID)
 	}
+	
+	// Initialize BIM model
 	bimModel := models.BIMModel{
 		Rooms:   []models.Room{},
 		Devices: []models.Device{},
@@ -516,11 +520,22 @@ func GetBIMModel(w http.ResponseWriter, r *http.Request) {
 		Routes:  []models.Route{},
 		Pins:    []models.Pin{},
 	}
-	// Query pins for this floor
+	
+	// Query data based on context hierarchy
 	if floorID != 0 {
-		var pins []models.Pin
-		if err := models.DB.Where("floor_id = ?", floorID).Find(&pins).Error; err == nil {
-			bimModel.Pins = pins
+		// Floor-specific query - get all related data
+		if err := queryFloorBIMData(floorID, &bimModel); err != nil {
+			log.Printf("Error querying floor BIM data: %v", err)
+		}
+	} else if buildingID != "" {
+		// Building-level query - aggregate from all floors
+		if err := queryBuildingBIMData(buildingID, &bimModel); err != nil {
+			log.Printf("Error querying building BIM data: %v", err)
+		}
+	} else if projectID != "" {
+		// Project-level query - aggregate from all buildings
+		if err := queryProjectBIMData(projectID, &bimModel); err != nil {
+			log.Printf("Error querying project BIM data: %v", err)
 		}
 	}
 	json.NewEncoder(w).Encode(bimModel)
@@ -538,6 +553,176 @@ func GetLabelsInRoom(roomID string) ([]models.Label, error) {
 	var labels []models.Label
 	err := db.DB.Where("room_id = ?", roomID).Find(&labels).Error
 	return labels, err
+}
+
+// BIM Data Query Helpers
+
+// queryFloorBIMData populates BIM model with floor-specific data
+func queryFloorBIMData(floorID uint, bimModel *models.BIMModel) error {
+	// Query rooms on this floor
+	var rooms []models.Room
+	if err := models.DB.Where("floor_id = ?", floorID).Find(&rooms).Error; err != nil {
+		return fmt.Errorf("failed to query rooms: %w", err)
+	}
+	bimModel.Rooms = rooms
+	
+	// Query devices on this floor
+	var devices []models.Device
+	if err := models.DB.Where("floor_id = ?", floorID).Find(&devices).Error; err != nil {
+		return fmt.Errorf("failed to query devices: %w", err)
+	}
+	bimModel.Devices = devices
+	
+	// Query labels on this floor
+	var labels []models.Label
+	if err := models.DB.Where("floor_id = ?", floorID).Find(&labels).Error; err != nil {
+		return fmt.Errorf("failed to query labels: %w", err)
+	}
+	bimModel.Labels = labels
+	
+	// Query zones on this floor
+	var zones []models.Zone
+	if err := models.DB.Where("floor_id = ?", floorID).Find(&zones).Error; err != nil {
+		return fmt.Errorf("failed to query zones: %w", err)
+	}
+	bimModel.Zones = zones
+	
+	// Query routes on this floor
+	var routes []models.Route
+	if err := models.DB.Where("floor_id = ?", floorID).Find(&routes).Error; err != nil {
+		return fmt.Errorf("failed to query routes: %w", err)
+	}
+	bimModel.Routes = routes
+	
+	// Query pins on this floor
+	var pins []models.Pin
+	if err := models.DB.Where("floor_id = ?", floorID).Find(&pins).Error; err != nil {
+		return fmt.Errorf("failed to query pins: %w", err)
+	}
+	bimModel.Pins = pins
+	
+	return nil
+}
+
+// queryBuildingBIMData populates BIM model with building-wide data
+func queryBuildingBIMData(buildingID string, bimModel *models.BIMModel) error {
+	// First get all floors in the building
+	var floors []models.Floor
+	if err := models.DB.Where("building_id = ?", buildingID).Find(&floors).Error; err != nil {
+		return fmt.Errorf("failed to query floors: %w", err)
+	}
+	
+	// Collect floor IDs
+	floorIDs := make([]uint, len(floors))
+	for i, floor := range floors {
+		floorIDs[i] = floor.ID
+	}
+	
+	if len(floorIDs) == 0 {
+		return nil // No floors in building
+	}
+	
+	// Query all data from these floors
+	var rooms []models.Room
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&rooms).Error; err != nil {
+		return fmt.Errorf("failed to query rooms: %w", err)
+	}
+	bimModel.Rooms = rooms
+	
+	var devices []models.Device
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&devices).Error; err != nil {
+		return fmt.Errorf("failed to query devices: %w", err)
+	}
+	bimModel.Devices = devices
+	
+	var labels []models.Label
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&labels).Error; err != nil {
+		return fmt.Errorf("failed to query labels: %w", err)
+	}
+	bimModel.Labels = labels
+	
+	var zones []models.Zone
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&zones).Error; err != nil {
+		return fmt.Errorf("failed to query zones: %w", err)
+	}
+	bimModel.Zones = zones
+	
+	var routes []models.Route
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&routes).Error; err != nil {
+		return fmt.Errorf("failed to query routes: %w", err)
+	}
+	bimModel.Routes = routes
+	
+	var pins []models.Pin
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&pins).Error; err != nil {
+		return fmt.Errorf("failed to query pins: %w", err)
+	}
+	bimModel.Pins = pins
+	
+	return nil
+}
+
+// queryProjectBIMData populates BIM model with project-wide data
+func queryProjectBIMData(projectID string, bimModel *models.BIMModel) error {
+	// First get all buildings in the project
+	var buildings []models.Building
+	if err := models.DB.Where("project_id = ?", projectID).Find(&buildings).Error; err != nil {
+		return fmt.Errorf("failed to query buildings: %w", err)
+	}
+	
+	// Collect building IDs and get their floors
+	var floorIDs []uint
+	for _, building := range buildings {
+		var floors []models.Floor
+		if err := models.DB.Where("building_id = ?", building.ID).Find(&floors).Error; err == nil {
+			for _, floor := range floors {
+				floorIDs = append(floorIDs, floor.ID)
+			}
+		}
+	}
+	
+	if len(floorIDs) == 0 {
+		return nil // No floors in project
+	}
+	
+	// Query all data from these floors (similar to building query)
+	var rooms []models.Room
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&rooms).Error; err != nil {
+		return fmt.Errorf("failed to query rooms: %w", err)
+	}
+	bimModel.Rooms = rooms
+	
+	var devices []models.Device
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&devices).Error; err != nil {
+		return fmt.Errorf("failed to query devices: %w", err)
+	}
+	bimModel.Devices = devices
+	
+	var labels []models.Label
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&labels).Error; err != nil {
+		return fmt.Errorf("failed to query labels: %w", err)
+	}
+	bimModel.Labels = labels
+	
+	var zones []models.Zone
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&zones).Error; err != nil {
+		return fmt.Errorf("failed to query zones: %w", err)
+	}
+	bimModel.Zones = zones
+	
+	var routes []models.Route
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&routes).Error; err != nil {
+		return fmt.Errorf("failed to query routes: %w", err)
+	}
+	bimModel.Routes = routes
+	
+	var pins []models.Pin
+	if err := models.DB.Where("floor_id IN ?", floorIDs).Find(&pins).Error; err != nil {
+		return fmt.Errorf("failed to query pins: %w", err)
+	}
+	bimModel.Pins = pins
+	
+	return nil
 }
 
 // --- Room Handlers ---

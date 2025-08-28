@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	// "github.com/arxos/core/internal/deployment"
+	// "github.com/arxos/arxos/core/internal/deployment"
 )
 
 var rollbackCmd = &cobra.Command{

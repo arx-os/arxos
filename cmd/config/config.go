@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
 )
 
 // Config represents the complete Arxos CLI configuration
@@ -29,6 +28,9 @@ type Config struct {
 	
 	// AI configuration
 	AI AIConfig `yaml:"ai" json:"ai"`
+	
+	// Computed fields (not in YAML)
+	DatabaseURL string `yaml:"-" json:"-"`
 }
 
 // CLIConfig contains CLI-specific settings
@@ -147,7 +149,25 @@ func Get() *Config {
 			}
 		}
 	})
+	
+	// Compute DatabaseURL if not set
+	if cfg != nil && cfg.DatabaseURL == "" {
+		cfg.DatabaseURL = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
+			cfg.Database.User,
+			cfg.Database.Password,
+			cfg.Database.Host,
+			cfg.Database.Port,
+			cfg.Database.Database,
+			cfg.Database.SSLMode,
+		)
+	}
+	
 	return cfg
+}
+
+// GetConfig is an alias for Get() to match expected function name
+func GetConfig() *Config {
+	return Get()
 }
 
 // Save saves the current configuration

@@ -62,6 +62,10 @@ type Position struct {
 	Height    float64 `json:"height,omitempty"`     // Height in inches from floor
 	Distance  float64 `json:"distance,omitempty"`   // Distance from reference point
 	Reference string  `json:"reference,omitempty"`  // Reference point description
+	// Added for ASCII rendering compatibility
+	X float64 `json:"x,omitempty"` // X coordinate
+	Y float64 `json:"y,omitempty"` // Y coordinate
+	Z float64 `json:"z,omitempty"` // Z coordinate
 }
 
 // Coordinates represents 3D spatial coordinates

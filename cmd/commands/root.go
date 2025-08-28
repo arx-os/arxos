@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/arxos/arxos/cmd/commands/query"
+	"github.com/arxos/arxos/cmd/commands/deploy"
+	"github.com/arxos/arxos/cmd/commands/state"
 	// "github.com/arxos/arxos/cmd/commands/ingest"
 	// "github.com/arxos/arxos/cmd/commands/export"    // TODO: Implement
 	// "github.com/arxos/arxos/cmd/commands/validate"  // TODO: Implement
@@ -13,8 +15,6 @@ import (
 	// "github.com/arxos/arxos/cmd/commands/serve"     // TODO: Implement
 	// "github.com/arxos/arxos/cmd/commands/ai"
 	// "github.com/arxos/arxos/cmd/commands/support"
-	// "github.com/arxos/arxos/cmd/commands/state"
-	// "github.com/arxos/arxos/cmd/commands/deploy"
 	// "github.com/arxos/arxos/cmd/commands/gitops"
 	// "github.com/arxos/arxos/cmd/config"
 	// "github.com/arxos/arxos/cmd/display"
@@ -60,6 +60,8 @@ func init() {
 	RootCmd.AddCommand(
 		InitCmd, // Building initialization
 		query.QueryCmd,        // AQL query system
+		deploy.DeployCmd,      // Deployment management
+		state.StateCmd,        // State management
 		// ingest.IngestCmd,      // Temporarily disabled
 		// export.ExportCmd,      // TODO: Implement
 		// validate.ValidateCmd,  // TODO: Implement
@@ -68,7 +70,6 @@ func init() {
 		// ai.AICmd,              // Temporarily disabled
 		// support.SupportCmd,    // Temporarily disabled
 		// state.StateCmd,        // Temporarily disabled
-		// deploy.DeployCmd,      // Temporarily disabled
 		// gitops.GitOpsCmd,      // Temporarily disabled
 		interactiveCmd,
 		versionCmd,

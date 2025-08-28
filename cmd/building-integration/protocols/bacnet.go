@@ -277,19 +277,31 @@ func (c *BACnetClient) readRealProperty(address string) (*BACnetValue, error) {
 		return nil, fmt.Errorf("invalid instance: %s", parts[2])
 	}
 	
-	// TODO: Implement actual BACnet request/response handling
-	// This is a complex protocol requiring proper BACnet packet construction
-	// For now, return placeholder data
+	// Construct BACnet Read Property request
+	objectID := BACnetObjectID{
+		Type:     objType,
+		Instance: uint32(instance),
+	}
 	
-	log.Printf("📡 BACnet read request: Network %d, Object %v, Instance %d", 
-		networkNum, objType, instance)
+	// Build BACnet request packet
+	requestID := c.generateRequestID()
+	packet := c.buildReadPropertyRequest(networkNum, objectID, PropPresentValue, requestID)
 	
-	return &BACnetValue{
-		Value:       float64(20 + rand.Intn(10)), // Placeholder value
-		Quality:     "good",
-		Timestamp:   time.Now(),
-		Reliability: "no-fault-detected",
-	}, nil
+	// Send request and wait for response
+	response, err := c.sendRequestAndWait(packet, requestID)
+	if err != nil {
+		log.Printf("⚠️ BACnet read error: %v", err)
+		// Fall back to simulation if available
+		if c.config.Simulation {
+			return c.getSimulatedValue(address)
+		}
+		return nil, err
+	}
+	
+	log.Printf("📡 BACnet read success: Network %d, Object %v, Instance %d = %v", 
+		networkNum, objType, instance, response.Value.Value)
+	
+	return response.Value, nil
 }
 
 // parseObjectType converts string to BACnet object type
@@ -401,9 +413,41 @@ func (c *BACnetClient) receiveLoop() {
 
 // processPacket processes a received BACnet packet
 func (c *BACnetClient) processPacket(data []byte, addr net.Addr) {
-	// TODO: Implement BACnet packet parsing
-	// This requires understanding BACnet APDU format, NPDU, etc.
-	log.Printf("📥 Received BACnet packet (%d bytes) from %s", len(data), addr)
+	// Parse BACnet/IP header (BVLC - BACnet Virtual Link Layer)
+	if len(data) < 4 {
+		log.Printf("⚠️ Invalid BACnet packet: too short (%d bytes)", len(data))
+		return
+	}
+	
+	// Check BVLC type (0x81 for BACnet/IP)
+	if data[0] != 0x81 {
+		log.Printf("⚠️ Invalid BACnet packet: wrong BVLC type (0x%02x)", data[0])
+		return
+	}
+	
+	// Parse BVLC function
+	bvlcFunction := data[1]
+	length := uint16(data[2])<<8 | uint16(data[3])
+	
+	if uint16(len(data)) < length {
+		log.Printf("⚠️ Invalid BACnet packet: length mismatch")
+		return
+	}
+	
+	// Handle different BVLC functions
+	switch bvlcFunction {
+	case 0x0A: // Original-Unicast-NPDU
+		c.parseNPDU(data[4:], addr)
+	case 0x0B: // Original-Broadcast-NPDU
+		c.parseNPDU(data[4:], addr)
+	case 0x04: // Forwarded-NPDU
+		if len(data) >= 10 {
+			c.parseNPDU(data[10:], addr)
+		}
+	default:
+		log.Printf("📥 Received BACnet BVLC function 0x%02x (%d bytes) from %s", 
+			bvlcFunction, len(data), addr)
+	}
 }
 
 // discoveryLoop periodically discovers BACnet devices
@@ -491,4 +535,252 @@ func (c *BACnetClient) Close() error {
 	
 	log.Println("🔌 BACnet client closed")
 	return nil
+}
+
+// generateRequestID generates a unique request ID for tracking responses
+func (c *BACnetClient) generateRequestID() uint8 {
+	// Simple incrementing ID (wraps at 255)
+	// In production, would need better tracking
+	return uint8(time.Now().UnixNano() & 0xFF)
+}
+
+// buildReadPropertyRequest builds a BACnet Read Property request packet
+func (c *BACnetClient) buildReadPropertyRequest(network uint16, objectID BACnetObjectID, property BACnetProperty, requestID uint8) []byte {
+	// Build BACnet/IP packet
+	packet := make([]byte, 0, 128)
+	
+	// BVLC header
+	packet = append(packet, 0x81)  // BVLC type
+	packet = append(packet, 0x0A)  // Original-Unicast-NPDU
+	packet = append(packet, 0x00, 0x00) // Length (filled later)
+	
+	// NPDU (Network Protocol Data Unit)
+	packet = append(packet, 0x01)  // Version
+	packet = append(packet, 0x04)  // Control (expecting reply)
+	
+	// APDU (Application Protocol Data Unit)
+	// PDU Type: Confirmed-Request (0x00)
+	// Service Choice: Read-Property (0x0C)
+	packet = append(packet, 0x00 | (requestID & 0x0F))
+	packet = append(packet, 0x04)  // Max segments, max APDU
+	packet = append(packet, requestID)  // Invoke ID
+	packet = append(packet, 0x0C)  // Service choice: Read Property
+	
+	// Context Tag 0: Object Identifier
+	packet = append(packet, 0x0C)  // Tag
+	objectIDBytes := encodeObjectID(objectID)
+	packet = append(packet, objectIDBytes...)
+	
+	// Context Tag 1: Property Identifier
+	packet = append(packet, 0x19)  // Tag
+	packet = append(packet, byte(property))
+	
+	// Update length in BVLC header
+	length := uint16(len(packet))
+	packet[2] = byte(length >> 8)
+	packet[3] = byte(length & 0xFF)
+	
+	return packet
+}
+
+// encodeObjectID encodes a BACnet object ID
+func encodeObjectID(id BACnetObjectID) []byte {
+	// BACnet encodes object ID as 4 bytes:
+	// 10 bits for type, 22 bits for instance
+	value := (uint32(id.Type) << 22) | (id.Instance & 0x3FFFFF)
+	return []byte{
+		byte(value >> 24),
+		byte(value >> 16),
+		byte(value >> 8),
+		byte(value),
+	}
+}
+
+// sendRequestAndWait sends a request and waits for response
+func (c *BACnetClient) sendRequestAndWait(packet []byte, requestID uint8) (*BACnetResponse, error) {
+	if c.conn == nil {
+		return nil, fmt.Errorf("no connection available")
+	}
+	
+	// Create response channel
+	responseChan := make(chan *BACnetResponse, 1)
+	c.mutex.Lock()
+	c.requests[requestID] = responseChan
+	c.mutex.Unlock()
+	
+	// Clean up on exit
+	defer func() {
+		c.mutex.Lock()
+		delete(c.requests, requestID)
+		c.mutex.Unlock()
+	}()
+	
+	// Send packet (broadcast for discovery)
+	broadcastAddr, _ := net.ResolveUDPAddr("udp", fmt.Sprintf("255.255.255.255:%d", c.config.Port))
+	_, err := c.conn.WriteTo(packet, broadcastAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	
+	// Wait for response
+	select {
+	case response := <-responseChan:
+		return response, nil
+	case <-time.After(c.config.Timeout):
+		return nil, fmt.Errorf("request timeout")
+	case <-c.ctx.Done():
+		return nil, fmt.Errorf("client shutting down")
+	}
+}
+
+// parseNPDU parses the Network Protocol Data Unit
+func (c *BACnetClient) parseNPDU(data []byte, addr net.Addr) {
+	if len(data) < 2 {
+		return
+	}
+	
+	version := data[0]
+	if version != 0x01 {
+		log.Printf("⚠️ Unsupported BACnet version: 0x%02x", version)
+		return
+	}
+	
+	control := data[1]
+	offset := 2
+	
+	// Check for DNET, DLEN, DADR
+	if control&0x20 != 0 {
+		if len(data) < offset+3 {
+			return
+		}
+		dlen := data[offset+2]
+		offset += 3 + int(dlen)
+	}
+	
+	// Check for SNET, SLEN, SADR
+	if control&0x08 != 0 {
+		if len(data) < offset+3 {
+			return
+		}
+		slen := data[offset+2]
+		offset += 3 + int(slen)
+	}
+	
+	// Check for hop count
+	if control&0x20 != 0 {
+		offset++
+	}
+	
+	// Parse APDU
+	if offset < len(data) {
+		c.parseAPDU(data[offset:], addr)
+	}
+}
+
+// parseAPDU parses the Application Protocol Data Unit
+func (c *BACnetClient) parseAPDU(data []byte, addr net.Addr) {
+	if len(data) < 3 {
+		return
+	}
+	
+	pduType := (data[0] >> 4) & 0x0F
+	
+	switch pduType {
+	case 0x03: // Complex-ACK-PDU
+		invokeID := data[1]
+		serviceChoice := data[2]
+		
+		if serviceChoice == 0x0C { // Read-Property-ACK
+			c.parseReadPropertyACK(data[3:], invokeID)
+		}
+		
+	case 0x01: // Unconfirmed-Request-PDU
+		serviceChoice := data[1]
+		if serviceChoice == 0x08 { // I-Am
+			c.parseIAm(data[2:], addr)
+		}
+	}
+}
+
+// parseReadPropertyACK parses a Read Property acknowledgment
+func (c *BACnetClient) parseReadPropertyACK(data []byte, invokeID uint8) {
+	// Simplified parsing - extract present value
+	// In production, would need full ASN.1 decoding
+	
+	var value interface{}
+	if len(data) >= 4 {
+		// Assume real (float) value for now
+		value = float64(data[len(data)-4])
+	}
+	
+	response := &BACnetResponse{
+		Value: &BACnetValue{
+			Value:       value,
+			Quality:     "good",
+			Timestamp:   time.Now(),
+			Reliability: "no-fault-detected",
+		},
+	}
+	
+	// Send to waiting request
+	c.mutex.RLock()
+	if ch, ok := c.requests[invokeID]; ok {
+		select {
+		case ch <- response:
+		default:
+		}
+	}
+	c.mutex.RUnlock()
+}
+
+// parseIAm parses an I-Am response (device discovery)
+func (c *BACnetClient) parseIAm(data []byte, addr net.Addr) {
+	// Extract device ID from I-Am response
+	// Simplified parsing
+	if len(data) < 4 {
+		return
+	}
+	
+	deviceID := uint32(data[3])
+	
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	
+	if _, exists := c.devices[deviceID]; !exists {
+		c.devices[deviceID] = &BACnetDevice{
+			DeviceID:  deviceID,
+			Name:      fmt.Sprintf("Device_%d", deviceID),
+			Address: &BACnetAddress{
+				IPAddress: addr.(*net.UDPAddr).IP,
+				Port:      addr.(*net.UDPAddr).Port,
+			},
+			Objects:   make(map[BACnetObjectID]*BACnetObject),
+			LastSeen:  time.Now(),
+			Reachable: true,
+		}
+		log.Printf("✅ Discovered BACnet device: %d at %s", deviceID, addr)
+	}
+}
+
+// getSimulatedValue returns a simulated value for demo mode
+func (c *BACnetClient) getSimulatedValue(address string) (*BACnetValue, error) {
+	c.simMutex.RLock()
+	defer c.simMutex.RUnlock()
+	
+	if point, ok := c.simData[address]; ok {
+		return &BACnetValue{
+			Value:       point.CurrentValue,
+			Quality:     "good",
+			Timestamp:   point.LastUpdate,
+			Reliability: "no-fault-detected",
+		}, nil
+	}
+	
+	// Return default value if not found
+	return &BACnetValue{
+		Value:       float64(20 + rand.Intn(10)),
+		Quality:     "good",
+		Timestamp:   time.Now(),
+		Reliability: "no-fault-detected",
+	}, nil
 }

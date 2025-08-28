@@ -14,9 +14,10 @@ import (
 
 // Client represents the Arxos backend client
 type Client struct {
-	baseURL    string
-	token      string
-	httpClient *http.Client
+	baseURL      string
+	token        string
+	httpClient   *http.Client
+	auditSession string // For support operations audit trail
 }
 
 var defaultClient *Client
@@ -32,8 +33,33 @@ func GetClient() *Client {
 
 // GetSupportClient returns a client instance for support operations
 func GetSupportClient() *Client {
-	// TODO: Add support-specific auth/config
-	return GetClient()
+	// Get base client configuration
+	client := GetClient()
+	
+	// Add support-specific authentication headers
+	supportToken := os.Getenv("ARXOS_SUPPORT_TOKEN")
+	if supportToken != "" {
+		// Use dedicated support token if available
+		client.token = supportToken
+	}
+	
+	// Add audit context headers
+	auditSession := os.Getenv("ARXOS_AUDIT_SESSION")
+	if auditSession != "" {
+		// Store audit session for request headers
+		client.auditSession = auditSession
+	}
+	
+	// Set longer timeout for support operations
+	client.httpClient.Timeout = 120 * time.Second
+	
+	// Add support-specific base URL override if configured
+	supportBaseURL := os.Getenv("ARXOS_SUPPORT_API_URL")
+	if supportBaseURL != "" {
+		client.baseURL = supportBaseURL
+	}
+	
+	return client
 }
 
 // NewClient creates a new backend client
@@ -133,6 +159,12 @@ func (c *Client) post(endpoint string, body interface{}) (*QueryResult, error) {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 	
+	// Add audit session header for support operations
+	if c.auditSession != "" {
+		req.Header.Set("X-Audit-Session", c.auditSession)
+		req.Header.Set("X-Support-Operation", "true")
+	}
+	
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -160,6 +192,12 @@ func (c *Client) get(endpoint string) (*HistoryResult, error) {
 	
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	
+	// Add audit session header for support operations
+	if c.auditSession != "" {
+		req.Header.Set("X-Audit-Session", c.auditSession)
+		req.Header.Set("X-Support-Operation", "true")
 	}
 	
 	resp, err := c.httpClient.Do(req)

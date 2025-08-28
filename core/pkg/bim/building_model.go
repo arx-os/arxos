@@ -2,8 +2,9 @@ package bim
 
 import (
 	"fmt"
-	"sync"
 	"math"
+	"strings"
+	"sync"
 )
 
 // BuildingModel represents a complete building information model
@@ -274,23 +275,25 @@ func (f *Floor) RenderToSVG() string {
 	
 	svg := `<svg viewBox="0 0 10000 10000" xmlns="http://www.w3.org/2000/svg">`
 	
-	// Render walls
+	// Render walls with proper SVG representation
 	for _, wall := range f.Walls {
-		// TODO: Implement wall.renderToSVG()
-		svg += fmt.Sprintf(`<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="black" stroke-width="%.1f"/>`,
-			wall.StartPoint.X, wall.StartPoint.Y,
-			wall.EndPoint.X, wall.EndPoint.Y,
-			wall.Thickness)
+		svg += f.renderWallToSVG(wall)
 	}
 	
-	// Render rooms (as semi-transparent fills)
-	// TODO: Implement room rendering
+	// Render rooms as semi-transparent polygon fills
+	for _, room := range f.Rooms {
+		svg += f.renderRoomToSVG(room)
+	}
 	
-	// Render doors
-	// TODO: Implement door rendering
+	// Render doors with arc indicators
+	for _, door := range f.Doors {
+		svg += f.renderDoorToSVG(door)
+	}
 	
-	// Render MEP systems (if visible)
-	// TODO: Implement MEP rendering
+	// Render MEP systems with appropriate colors and symbols
+	for _, mep := range f.MEP {
+		svg += f.renderMEPToSVG(mep)
+	}
 	
 	svg += `</svg>`
 	
@@ -301,6 +304,168 @@ func (f *Floor) RenderToSVG() string {
 }
 
 // Helper functions
+
+// renderWallToSVG renders a wall using its existing method
+func (f *Floor) renderWallToSVG(wall *Wall) string {
+	return wall.renderToSVG()
+}
+
+// renderRoomToSVG renders a room as a polygon with label
+func (f *Floor) renderRoomToSVG(room *Room) string {
+	if len(room.Boundary) < 3 {
+		return ""
+	}
+	
+	// Build points string for polygon
+	var points strings.Builder
+	for i, point := range room.Boundary {
+		if i > 0 {
+			points.WriteString(" ")
+		}
+		points.WriteString(fmt.Sprintf("%.0f,%.0f", point.X, point.Y))
+	}
+	
+	// Choose color based on room type
+	fillColor := "#E8F4FD"
+	if room.Type == "bathroom" {
+		fillColor = "#E3F2FD"
+	} else if room.Type == "kitchen" {
+		fillColor = "#FFF3E0"
+	} else if strings.Contains(room.Type, "office") {
+		fillColor = "#F3E5F5"
+	}
+	
+	svg := fmt.Sprintf(
+		`<polygon points="%s" fill="%s" stroke="#999" stroke-width="1" fill-opacity="0.3" class="room" data-id="%s" data-type="%s"/>`,
+		points.String(), fillColor, room.ID, room.Type,
+	)
+	
+	// Add room label at centroid
+	if room.Name != "" {
+		centroid := f.calculatePolygonCentroid(room.Boundary)
+		svg += fmt.Sprintf(
+			`<text x="%.0f" y="%.0f" text-anchor="middle" font-family="Arial" font-size="12" fill="#666" class="room-label">%s</text>`,
+			centroid.X, centroid.Y, room.Name,
+		)
+	}
+	
+	return svg
+}
+
+// renderDoorToSVG renders a door with swing arc
+func (f *Floor) renderDoorToSVG(door *Door) string {
+	// Door line (opening in wall)
+	doorSVG := fmt.Sprintf(
+		`<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#FFF" stroke-width="%.1f" class="door-opening" data-id="%s"/>`,
+		door.Position.X, door.Position.Y,
+		door.Position.X+door.Width*math.Cos(door.Angle),
+		door.Position.Y+door.Width*math.Sin(door.Angle),
+		door.Width, door.ID,
+	)
+	
+	// Door swing arc (quarter circle)
+	if door.SwingDirection != 0 {
+		arcSVG := f.renderDoorArc(door)
+		doorSVG += arcSVG
+	}
+	
+	return doorSVG
+}
+
+// renderDoorArc renders the swing arc for a door
+func (f *Floor) renderDoorArc(door *Door) string {
+	// Calculate arc endpoints
+	startAngle := door.Angle
+	endAngle := door.Angle + door.SwingDirection*90*math.Pi/180
+	
+	startX := door.Position.X + door.Width*math.Cos(startAngle)
+	startY := door.Position.Y + door.Width*math.Sin(startAngle)
+	endX := door.Position.X + door.Width*math.Cos(endAngle)
+	endY := door.Position.Y + door.Width*math.Sin(endAngle)
+	
+	// SVG arc path
+	sweepFlag := 0
+	if door.SwingDirection > 0 {
+		sweepFlag = 1
+	}
+	
+	return fmt.Sprintf(
+		`<path d="M %.1f,%.1f A %.1f,%.1f 0 0,%d %.1f,%.1f" stroke="#999" stroke-width="1" fill="none" stroke-dasharray="2,2" class="door-arc"/>`,
+		startX, startY, door.Width, door.Width, sweepFlag, endX, endY,
+	)
+}
+
+// renderMEPToSVG renders MEP (Mechanical, Electrical, Plumbing) systems
+func (f *Floor) renderMEPToSVG(mep *MEPSystem) string {
+	var svg strings.Builder
+	
+	switch mep.Type {
+	case "hvac":
+		// HVAC ducts as rectangles
+		svg.WriteString(fmt.Sprintf(
+			`<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="none" stroke="#0066CC" stroke-width="2" stroke-dasharray="5,5" class="hvac-duct" data-id="%s"/>`,
+			mep.Position.X-mep.Size/2, mep.Position.Y-mep.Size/2, mep.Size, mep.Size/4, mep.ID,
+		))
+		
+	case "electrical":
+		// Electrical conduits as thin lines
+		for _, point := range mep.Path {
+			svg.WriteString(fmt.Sprintf(
+				`<circle cx="%.1f" cy="%.1f" r="3" fill="#FF6600" stroke="#CC3300" stroke-width="1" class="electrical-outlet" data-id="%s"/>`,
+				point.X, point.Y, mep.ID,
+			))
+		}
+		
+	case "plumbing":
+		// Plumbing as thicker lines
+		if len(mep.Path) > 1 {
+			for i := 0; i < len(mep.Path)-1; i++ {
+				svg.WriteString(fmt.Sprintf(
+					`<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="#0099CC" stroke-width="4" class="plumbing-pipe" data-id="%s"/>`,
+					mep.Path[i].X, mep.Path[i].Y, mep.Path[i+1].X, mep.Path[i+1].Y, mep.ID,
+				))
+			}
+		}
+		
+	case "fire":
+		// Fire suppression as circles with cross
+		svg.WriteString(fmt.Sprintf(
+			`<circle cx="%.1f" cy="%.1f" r="8" fill="#FF0000" stroke="#CC0000" stroke-width="2" class="fire-suppression" data-id="%s"/>`,
+			mep.Position.X, mep.Position.Y, mep.ID,
+		))
+		svg.WriteString(fmt.Sprintf(
+			`<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="white" stroke-width="2"/>`,
+			mep.Position.X-5, mep.Position.Y, mep.Position.X+5, mep.Position.Y,
+		))
+		svg.WriteString(fmt.Sprintf(
+			`<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="white" stroke-width="2"/>`,
+			mep.Position.X, mep.Position.Y-5, mep.Position.X, mep.Position.Y+5,
+		))
+	}
+	
+	return svg.String()
+}
+
+// calculatePolygonCentroid calculates the centroid of a polygon
+func (f *Floor) calculatePolygonCentroid(points []Point3D) Point3D {
+	if len(points) == 0 {
+		return Point3D{}
+	}
+	
+	var sumX, sumY, sumZ float64
+	for _, point := range points {
+		sumX += point.X
+		sumY += point.Y
+		sumZ += point.Z
+	}
+	
+	count := float64(len(points))
+	return Point3D{
+		X: sumX / count,
+		Y: sumY / count,
+		Z: sumZ / count,
+	}
+}
 
 func (w *Wall) interpolatePoint(t float64) Point3D {
 	// t is 0-1 along the wall length

@@ -173,14 +173,98 @@ func (c *ModbusClient) connectTCP() error {
 
 // connectRTU establishes a Modbus RTU serial connection
 func (c *ModbusClient) connectRTU() error {
-	// TODO: Implement RTU serial connection
-	return fmt.Errorf("Modbus RTU not yet implemented")
+	// Modbus RTU uses binary encoding over serial
+	// Note: Full serial implementation would require a serial port library
+	// For now, we'll provide a structured implementation that can be
+	// completed when serial hardware is available
+	
+	log.Printf("🔧 Attempting Modbus RTU connection to %s", c.config.Address)
+	
+	// Validate serial port configuration
+	if c.config.BaudRate == 0 {
+		c.config.BaudRate = 9600 // Default baud rate
+	}
+	if c.config.DataBits == 0 {
+		c.config.DataBits = 8 // Default data bits
+	}
+	if c.config.StopBits == 0 {
+		c.config.StopBits = 1 // Default stop bits
+	}
+	if c.config.Parity == "" {
+		c.config.Parity = "none" // Default parity
+	}
+	
+	// In production, would use a serial library like go.bug.st/serial
+	// For demonstration, we'll simulate the connection
+	if c.config.Simulation {
+		log.Printf("🎮 Modbus RTU running in simulation mode")
+		c.initializeSimulation()
+		return nil
+	}
+	
+	// RTU frame structure:
+	// [Slave Address][Function Code][Data][CRC16]
+	// Silent interval of 3.5 character times between frames
+	
+	serialConfig := fmt.Sprintf("%d-%d-%s-%d", 
+		c.config.BaudRate, c.config.DataBits, c.config.Parity, c.config.StopBits)
+	
+	log.Printf("ℹ️ Modbus RTU serial config: %s", serialConfig)
+	
+	// NOTE: Actual serial port opening would be done here with a library like:
+	// port, err := serial.Open(c.config.Address, &serial.Mode{
+	//     BaudRate: c.config.BaudRate,
+	//     DataBits: c.config.DataBits,
+	//     Parity:   serial.ParityNone,
+	//     StopBits: serial.StopBitsOne,
+	// })
+	
+	return fmt.Errorf("Modbus RTU requires serial hardware connection - enable simulation mode for testing")
 }
 
 // connectASCII establishes a Modbus ASCII serial connection
 func (c *ModbusClient) connectASCII() error {
-	// TODO: Implement ASCII serial connection
-	return fmt.Errorf("Modbus ASCII not yet implemented")
+	// Modbus ASCII uses ASCII encoding over serial
+	// Frames start with ':' and end with CR+LF
+	// Note: Full serial implementation would require a serial port library
+	
+	log.Printf("🔧 Attempting Modbus ASCII connection to %s", c.config.Address)
+	
+	// Validate serial port configuration
+	if c.config.BaudRate == 0 {
+		c.config.BaudRate = 9600 // Default baud rate
+	}
+	if c.config.DataBits == 0 {
+		c.config.DataBits = 7 // ASCII typically uses 7 data bits
+	}
+	if c.config.StopBits == 0 {
+		c.config.StopBits = 1 // Default stop bits
+	}
+	if c.config.Parity == "" {
+		c.config.Parity = "even" // ASCII typically uses even parity
+	}
+	
+	// In production, would use a serial library
+	if c.config.Simulation {
+		log.Printf("🎮 Modbus ASCII running in simulation mode")
+		c.initializeSimulation()
+		return nil
+	}
+	
+	// ASCII frame structure:
+	// [:][Slave Address 2 chars][Function Code 2 chars][Data n*2 chars][LRC 2 chars][CR][LF]
+	// All bytes except start ':' and end CR+LF are encoded as 2 ASCII hex characters
+	
+	serialConfig := fmt.Sprintf("%d-%d-%s-%d", 
+		c.config.BaudRate, c.config.DataBits, c.config.Parity, c.config.StopBits)
+	
+	log.Printf("ℹ️ Modbus ASCII serial config: %s", serialConfig)
+	
+	// NOTE: Actual serial port opening would be done here
+	// ASCII mode is less efficient than RTU but easier to debug
+	// Each byte takes 2 ASCII characters, doubling transmission time
+	
+	return fmt.Errorf("Modbus ASCII requires serial hardware connection - enable simulation mode for testing")
 }
 
 // initializeSimulation sets up simulated Modbus registers and coils
@@ -845,4 +929,132 @@ func (c *ModbusClient) Close() error {
 	
 	log.Println("🔌 Modbus client closed")
 	return nil
+}
+
+// buildRTUFrame builds a Modbus RTU frame with CRC16
+func (c *ModbusClient) buildRTUFrame(slaveID uint8, pdu []byte) []byte {
+	frame := make([]byte, 0, len(pdu)+3)
+	
+	// Slave address
+	frame = append(frame, slaveID)
+	
+	// PDU (function code + data)
+	frame = append(frame, pdu...)
+	
+	// CRC16 checksum
+	crc := calculateCRC16(frame)
+	frame = append(frame, byte(crc&0xFF))        // CRC low byte
+	frame = append(frame, byte((crc>>8)&0xFF))   // CRC high byte
+	
+	return frame
+}
+
+// buildASCIIFrame builds a Modbus ASCII frame with LRC
+func (c *ModbusClient) buildASCIIFrame(slaveID uint8, pdu []byte) []byte {
+	// Build binary data first
+	data := make([]byte, 0, len(pdu)+2)
+	data = append(data, slaveID)
+	data = append(data, pdu...)
+	
+	// Calculate LRC (Longitudinal Redundancy Check)
+	lrc := calculateLRC(data)
+	data = append(data, lrc)
+	
+	// Convert to ASCII hex representation
+	ascii := make([]byte, 0, len(data)*2+3)
+	ascii = append(ascii, ':') // Start character
+	
+	for _, b := range data {
+		ascii = append(ascii, fmt.Sprintf("%02X", b)...)
+	}
+	
+	ascii = append(ascii, '\r', '\n') // End with CR+LF
+	
+	return ascii
+}
+
+// calculateCRC16 calculates Modbus CRC16
+func calculateCRC16(data []byte) uint16 {
+	crc := uint16(0xFFFF)
+	
+	for _, b := range data {
+		crc ^= uint16(b)
+		for i := 0; i < 8; i++ {
+			if crc&0x0001 != 0 {
+				crc = (crc >> 1) ^ 0xA001
+			} else {
+				crc = crc >> 1
+			}
+		}
+	}
+	
+	return crc
+}
+
+// calculateLRC calculates Modbus ASCII LRC
+func calculateLRC(data []byte) uint8 {
+	var lrc uint8
+	for _, b := range data {
+		lrc += b
+	}
+	return uint8(-int8(lrc))
+}
+
+// parseRTUFrame parses a Modbus RTU response frame
+func (c *ModbusClient) parseRTUFrame(frame []byte) (slaveID uint8, pdu []byte, err error) {
+	if len(frame) < 4 {
+		return 0, nil, fmt.Errorf("RTU frame too short")
+	}
+	
+	// Verify CRC
+	dataLen := len(frame) - 2
+	crcReceived := uint16(frame[dataLen]) | (uint16(frame[dataLen+1]) << 8)
+	crcCalculated := calculateCRC16(frame[:dataLen])
+	
+	if crcReceived != crcCalculated {
+		return 0, nil, fmt.Errorf("CRC mismatch: received 0x%04X, calculated 0x%04X", 
+			crcReceived, crcCalculated)
+	}
+	
+	slaveID = frame[0]
+	pdu = frame[1:dataLen]
+	
+	return slaveID, pdu, nil
+}
+
+// parseASCIIFrame parses a Modbus ASCII response frame
+func (c *ModbusClient) parseASCIIFrame(ascii []byte) (slaveID uint8, pdu []byte, err error) {
+	// Remove start ':' and end CR+LF
+	if len(ascii) < 11 || ascii[0] != ':' {
+		return 0, nil, fmt.Errorf("invalid ASCII frame format")
+	}
+	
+	// Convert ASCII hex to binary
+	hexStr := string(ascii[1 : len(ascii)-2]) // Skip ':' and CR+LF
+	data := make([]byte, 0, len(hexStr)/2)
+	
+	for i := 0; i < len(hexStr); i += 2 {
+		var b uint8
+		fmt.Sscanf(hexStr[i:i+2], "%02X", &b)
+		data = append(data, b)
+	}
+	
+	if len(data) < 3 {
+		return 0, nil, fmt.Errorf("ASCII frame too short")
+	}
+	
+	// Verify LRC
+	dataLen := len(data) - 1
+	lrcReceived := data[dataLen]
+	lrcCalculated := calculateLRC(data[:dataLen])
+	
+	if lrcReceived != lrcCalculated {
+		return 0, nil, fmt.Errorf("LRC mismatch: received 0x%02X, calculated 0x%02X", 
+			lrcReceived, lrcCalculated)
+	}
+	
+	slaveID = data[0]
+	pdu = data[1:dataLen]
+	
+	return slaveID, pdu, nil
 }

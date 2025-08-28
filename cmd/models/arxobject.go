@@ -2,6 +2,9 @@ package models
 
 import "time"
 
+// ArxObject is an alias for ArxObjectMetadata for backward compatibility
+type ArxObject = ArxObjectMetadata
+
 // ArxObjectMetadata represents an ArxObject in the system
 type ArxObjectMetadata struct {
 	ID               string                 `json:"id"`
@@ -14,6 +17,8 @@ type ArxObjectMetadata struct {
 	Created          time.Time              `json:"created"`
 	Updated          time.Time              `json:"updated"`
 	Location         *Location              `json:"location,omitempty"`
+	Position         *Position              `json:"position,omitempty"` // Added for ASCII rendering
+	Path             string                 `json:"path,omitempty"`     // Added for filesystem navigation
 	Properties       map[string]interface{} `json:"properties,omitempty"`
 	Confidence       float64                `json:"confidence"`
 	ValidationStatus string                 `json:"validation_status,omitempty"`

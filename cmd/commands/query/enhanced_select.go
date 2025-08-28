@@ -170,9 +170,54 @@ type BasicSelectQuery struct {
 	Offset  int
 }
 
-// parseBasicSelectQuery parses a basic SELECT query
+// parseBasicSelectQuery parses a basic SELECT query using the AQL parser
 func parseBasicSelectQuery(query string) (*BasicSelectQuery, error) {
-	// Simple parsing for demonstration - this will be replaced with proper AQL parsing
+	// Use the new AQL parser
+	parser := NewAQLParser()
+	aqlQuery, err := parser.Parse(query)
+	if err != nil {
+		// Fallback to simple parsing for backward compatibility
+		return parseBasicSelectQuerySimple(query), nil
+	}
+	
+	// Convert AQLQuery to BasicSelectQuery
+	parsed := &BasicSelectQuery{
+		Fields: aqlQuery.Fields,
+		From:   aqlQuery.From,
+		Where:  []string{},
+		Limit:  100,
+	}
+	
+	// Convert WHERE clause
+	if aqlQuery.Where != nil {
+		for _, cond := range aqlQuery.Where.Conditions {
+			whereStr := fmt.Sprintf("%s %s %v", cond.Field, cond.Operator, cond.Value)
+			parsed.Where = append(parsed.Where, whereStr)
+		}
+	}
+	
+	// Convert ORDER BY
+	if len(aqlQuery.OrderBy) > 0 {
+		orderParts := []string{}
+		for _, ob := range aqlQuery.OrderBy {
+			orderParts = append(orderParts, fmt.Sprintf("%s %s", ob.Field, ob.Direction))
+		}
+		parsed.OrderBy = strings.Join(orderParts, ", ")
+	}
+	
+	// Set LIMIT and OFFSET
+	if aqlQuery.Limit > 0 {
+		parsed.Limit = aqlQuery.Limit
+	}
+	if aqlQuery.Offset > 0 {
+		parsed.Offset = aqlQuery.Offset
+	}
+	
+	return parsed, nil
+}
+
+// parseBasicSelectQuerySimple provides backward-compatible simple parsing
+func parseBasicSelectQuerySimple(query string) *BasicSelectQuery {
 	parsed := &BasicSelectQuery{
 		Fields: []string{"*"},
 		From:   "building:*",
@@ -220,7 +265,7 @@ func parseBasicSelectQuery(query string) (*BasicSelectQuery, error) {
 		}
 	}
 
-	return parsed, nil
+	return parsed
 }
 
 // generateMockResults generates mock results for demonstration

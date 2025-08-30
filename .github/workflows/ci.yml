@@ -1,0 +1,288 @@
+name: Arxos CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Rust core library testing
+  test-rust-core:
+    name: Test Rust Core Libraries
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+        
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: "core-${{ hashFiles('Cargo.lock') }}"
+        
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+      
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      
+    - name: Run core library tests
+      run: cargo test --workspace --verbose
+      
+    - name: Test no_std compilation
+      run: |
+        cd src/core
+        cargo check --no-default-features --features no_std
+        
+    - name: Verify ArxObject size constraint
+      run: |
+        cargo test --package arxos-core size_constraint_test -- --nocapture
+
+  # WASM compilation verification
+  test-wasm-compilation:
+    name: Test WASM Compilation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust stable with WASM target
+      uses: dtolnay/rust-toolchain@stable  
+      with:
+        targets: wasm32-unknown-unknown
+        
+    - name: Install wasm-pack
+      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      
+    - name: Build core library for WASM
+      run: |
+        cd src/core
+        wasm-pack build --target web --features wasm
+        
+    - name: Verify WASM output size
+      run: |
+        # Ensure WASM binary is under 5MB for mobile deployment
+        WASM_SIZE=$(stat -c%s "src/core/pkg/*.wasm" | head -1)
+        if [ $WASM_SIZE -gt 5242880 ]; then
+          echo "WASM binary too large: $WASM_SIZE bytes (max 5MB)"
+          exit 1
+        fi
+        echo "WASM binary size: $WASM_SIZE bytes ✓"
+
+  # Database migration testing
+  test-database-migrations:
+    name: Test Database Migrations
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install SQLite
+      run: sudo apt-get install sqlite3
+      
+    - name: Test database migrations
+      run: |
+        # Create test database
+        sqlite3 test.db < migrations/001_init_spatial_database.sql
+        sqlite3 test.db < migrations/002_object_type_definitions.sql
+        
+        # Verify schema creation
+        sqlite3 test.db ".schema" | grep "CREATE TABLE"
+        
+        # Test spatial queries
+        sqlite3 test.db "SELECT COUNT(*) FROM object_types;"
+        sqlite3 test.db "SELECT COUNT(*) FROM buildings;"
+        
+        # Clean up
+        rm test.db
+
+  # Stadium-scale performance benchmarks
+  benchmark-performance:
+    name: Stadium Scale Performance Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      
+    - name: Run performance benchmarks
+      run: |
+        # Test ArxObject serialization speed
+        cargo bench --package arxos-core arxobject_benchmark
+        
+        # Test spatial query performance with 10K+ objects
+        cargo bench --package arxos-core spatial_benchmark
+        
+        # Test progressive ASCII rendering performance
+        cargo bench --package arxos-core rendering_benchmark
+
+  # Security and dependency scanning
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+      
+    - name: Run security audit
+      run: cargo audit
+      
+    - name: Check for unsafe code blocks
+      run: |
+        # Ensure no unsafe code in core libraries
+        if grep -r "unsafe" src/core/src/ --exclude-dir=target; then
+          echo "❌ Unsafe code found in core library"
+          exit 1
+        fi
+        echo "✅ No unsafe code in core library"
+
+  # Build verification across platforms
+  build-matrix:
+    name: Multi-platform Build Test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable]
+        target: 
+          - x86_64-unknown-linux-gnu
+          - x86_64-pc-windows-msvc  
+          - x86_64-apple-darwin
+          - wasm32-unknown-unknown
+        exclude:
+          # Only build WASM on Linux to save CI time
+          - os: windows-latest
+            target: wasm32-unknown-unknown
+          - os: macos-latest  
+            target: wasm32-unknown-unknown
+          # Platform-specific exclusions
+          - os: ubuntu-latest
+            target: x86_64-pc-windows-msvc
+          - os: ubuntu-latest
+            target: x86_64-apple-darwin
+          - os: windows-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-pc-windows-msvc
+            
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust ${{ matrix.rust }}
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        targets: ${{ matrix.target }}
+        
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: "${{ matrix.os }}-${{ matrix.target }}"
+        
+    - name: Build for target
+      run: cargo build --target ${{ matrix.target }} --verbose
+
+  # Documentation generation and deployment
+  docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Generate Rust docs
+      run: |
+        cargo doc --workspace --no-deps --document-private-items
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./target/doc
+        
+  # Release automation
+  release:
+    name: Release Build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test-rust-core, test-wasm-compilation, security-audit]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+        
+    - name: Build release artifacts
+      run: |
+        # Build optimized WASM for production
+        cd src/core && wasm-pack build --release --target web --features wasm
+        
+        # Build CLI tools
+        cargo build --release --package arxos-terminal
+        
+    - name: Create release archive
+      run: |
+        mkdir -p release-artifacts
+        
+        # Copy WASM artifacts
+        cp -r src/core/pkg release-artifacts/arxos-wasm
+        
+        # Copy CLI binary  
+        cp target/release/arxos-terminal release-artifacts/
+        
+        # Copy documentation
+        cp -r docs release-artifacts/
+        
+        # Create archive
+        tar -czf arxos-release.tar.gz release-artifacts/
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: arxos-release.tar.gz
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

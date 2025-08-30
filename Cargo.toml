@@ -20,6 +20,28 @@ nb = "1.0"
 embedded-hal = "0.2"
 postcard = "1.0"
 
+# Database and serialization
+rusqlite = { version = "0.31", features = ["bundled"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# WASM dependencies for universal deployment
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+  "console",
+  "Window", 
+  "Document",
+  "Element",
+  "HtmlElement",
+  "WebGlRenderingContext",
+  "WebGl2RenderingContext",
+  "Performance",
+  "Navigator",
+] }
+getrandom = { version = "0.2", features = ["js"] }
+
 # Terminal dependencies
 crossterm = "0.27"
 ratatui = "0.24"
@@ -37,6 +59,10 @@ defmt = "0.3"
 # Testing
 mockall = "0.12"
 proptest = "1.4"
+
+# Mobile AR dependencies (iOS/Android)
+objc = "0.2"
+block = "0.1"
 
 [profile.release]
 opt-level = "z"     # Optimize for size

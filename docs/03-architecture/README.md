@@ -1,253 +1,259 @@
-# Technical Architecture: The Three-Technology Stack
+# Technical Architecture: RF-Only Mesh Intelligence
 
-## Rust + WASM + SQL = Universal Spatial Intelligence
+## Pure Air-Gapped Building Operations
 
-While competitors use 50+ technologies, Arxos achieves more with just three. This radical simplification enables a single developer to build what normally requires a team of ten.
+Arxos achieves complete internet independence through a radically simplified architecture that operates entirely over RF mesh networks. No cloud, no web, no internet vulnerabilities.
 
 ### 📖 Section Contents
 
-1. **[Rust Core](rust-core.md)** - Memory-safe processing engine
-2. **[WASM Deployment](wasm-deployment.md)** - Universal runtime
-3. **[SQL Intelligence](sql-intelligence.md)** - Spatial queries and storage
-4. **[Integration](integration.md)** - How three technologies interconnect
+1. **[RF Mesh Network](rf-mesh-network.md)** - LoRa/Meshtastic protocols
+2. **[Terminal Architecture](terminal-architecture.md)** - SSH-based interface
+3. **[iOS Integration](ios-integration.md)** - Terminal + Camera app
+4. **[Update Distribution](update-distribution.md)** - RF-only software updates
 
-### 🎯 The Architecture in One Page
+## 🎯 The Architecture in One Page
 
-#### The Problem with Traditional Stacks
+### The Problem with Internet-Connected Systems
 ```
-Traditional "Modern" Stack:
-- Frontend: React + TypeScript + Redux + Webpack
-- Backend: Node.js + Express + GraphQL + MongoDB  
-- Mobile: Swift + Kotlin + React Native
-- Desktop: Electron + More JavaScript
-- Embedded: C++ + Custom protocols
-- Infrastructure: Docker + Kubernetes + AWS
-Total: 50+ technologies, 5+ languages, infinite complexity
+Traditional "Smart" Building:
+- Cloud dependency = Single point of failure
+- Internet requirement = Cyber attack surface
+- Web interfaces = Complex, slow, vulnerable
+- Monthly fees = Ongoing operational cost
+- Data leaves building = Privacy nightmare
 ```
 
-#### The Arxos Solution
+### The Arxos RF-Only Solution
 ```
-Arxos Minimal Stack:
-- Processing: Rust (all business logic)
-- Deployment: WASM (runs everywhere)
-- Storage: SQL (queries and replication)
-Total: 3 technologies, 1 language, radical simplicity
+Arxos Air-Gapped Architecture:
+- RF mesh network = No internet needed
+- Local processing = Data never leaves
+- Terminal interface = Fast, secure, proven
+- One-time cost = No subscriptions
+- Perfect privacy = Air-gapped security
 ```
 
-### 🏗️ Architecture Overview
+## 🏗️ System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Data Sources                          │
-│  iPhone LiDAR | BIM Files | Point Clouds | IoT Sensors  │
-│      ↓             ↓            ↓            ↓           │
-│   RoomPlan     PDF/IFC/DWG   Manual      ESP32 Mesh     │
+│                    USER DEVICES                          │
+├─────────────────────────────────────────────────────────┤
+│  iPhone/Android │ Laptop │ Desktop │ Tablet             │
+│       ↓            ↓        ↓         ↓                 │
+│     SSH Terminal Client (Universal)                      │
+│       ↓            ↓        ↓         ↓                 │
+│    [Camera]     [No Camera] [No Camera] [Camera]        │
 └────────────────┬─────────────────────────────────────────┘
-                 │
+                 │ SSH over Local Network
 ┌────────────────▼─────────────────────────────────────────┐
-│               Rust Processing Core                       │
+│                 MESH NODE LAYER                          │
+├─────────────────────────────────────────────────────────┤
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐    │
-│  │          BIM Daemon Mode                        │    │
-│  │  • File watcher for PDF/IFC/DWG changes        │    │
-│  │  • Bidirectional sync with BIM tools           │    │
-│  │  • Reality validation against models           │    │
+│  │           Arxos Core (Rust Binary)              │    │
+│  │  • 13-byte ArxObject protocol                   │    │
+│  │  • Semantic compression engine                  │    │
+│  │  • Building intelligence logic                  │    │
+│  │  • BILT token calculations                      │    │
 │  └─────────────────────────────────────────────────┘    │
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐    │
-│  │        Semantic Compression Engine              │    │
-│  │  • Point cloud → ArxObject                      │    │
-│  │   • 10,000:1 compression ratio       │    │
-│  │   • Preserves spatial intelligence   │    │
-│  └─────────────────────────────────────┘    │
-│                                              │
-│  ┌─────────────────────────────────────┐    │
-│  │   ASCII Rendering Engine             │    │
-│  │   • CAD-quality terminal graphics    │    │
-│  │   • Progressive detail levels        │    │
-│  │   • Real-time viewport management    │    │
-│  └─────────────────────────────────────┘    │
-│                                              │
-│  ┌─────────────────────────────────────┐    │
-│  │   Spatial Query Processor            │    │
-│  │   • Building compliance checks       │    │
-│  │   • Emergency route finding          │    │
-│  │   • Energy optimization              │    │
-│  └─────────────────────────────────────┘    │
-└────────────────┬─────────────────────────────┘
-                 │ Compiles to
-┌────────────────▼─────────────────────────────┐
-│           WASM Runtime Layer                 │
-│                                              │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
-│  │   iOS    │ │   Web    │ │ Terminal │    │
-│  │ WebView  │ │ Browser  │ │   CLI    │    │
-│  └──────────┘ └──────────┘ └──────────┘    │
-│                                              │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐    │
-│  │ Android  │ │ Desktop  │ │ Embedded │    │
-│  │ WebView  │ │   App    │ │   WASI   │    │
-│  └──────────┘ └──────────┘ └──────────┘    │
-└────────────────┬─────────────────────────────┘
-                 │ Stores in
-┌────────────────▼─────────────────────────────┐
-│            SQL Database Layer                │
-│                                              │
-│  ┌─────────────────────────────────────┐    │
-│  │   Spatial Tables (PostGIS/SQLite)    │    │
-│  │   • ArxObjects with geometry         │    │
-│  │   • Spatial indexes for queries      │    │
-│  │   • Relationships and metadata       │    │
-│  └─────────────────────────────────────┘    │
-│                                              │
-│  ┌─────────────────────────────────────┐    │
-│  │   Replication Protocol               │    │
-│  │   • SQL as synchronization protocol  │    │
-│  │   • Conflict-free merge strategy     │    │
-│  │   • Offline-first architecture       │    │
-│  └─────────────────────────────────────┘    │
-└──────────────────────────────────────────────┘
+│  │           SSH Server (OpenSSH)                  │    │
+│  │  • Terminal interface for all clients           │    │
+│  │  • Camera data receiver for iOS/Android         │    │
+│  │  • Command processing                           │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                          │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │         Local SQLite Database                   │    │
+│  │  • ArxObject storage                            │    │
+│  │  • Building intelligence                        │    │
+│  │  • BILT transactions                            │    │
+│  └─────────────────────────────────────────────────┘    │
+│                                                          │
+└────────────────┬─────────────────────────────────────────┘
+                 │ LoRa Radio (NO INTERNET)
+┌────────────────▼─────────────────────────────────────────┐
+│              RF MESH NETWORK LAYER                       │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  Building A ←──LoRa──→ Building B ←──LoRa──→ Building C │
+│      📡                    📡                    📡      │
+│                                                          │
+│  • Meshtastic protocol for routing                       │
+│  • 915MHz ISM band (US) / 868MHz (EU)                   │
+│  • 2-10km range between nodes                           │
+│  • Automatic mesh healing and routing                   │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### 💡 Key Architectural Decisions
+## 💡 Key Architectural Decisions
 
-#### 1. Rust for Everything
+### 1. Native Rust Everywhere (No WASM)
 ```rust
-// One language for all logic
-pub struct ArxObject {
-    pub id: Uuid,
-    pub geometry: Geometry,
-    pub properties: HashMap<String, Value>,
-    pub compression_metadata: CompressionInfo,
+// Single Rust binary runs on mesh nodes
+pub struct ArxosNode {
+    core: ArxosCore,           // Building intelligence
+    ssh_server: SSHServer,     // Terminal access
+    lora_radio: LoRaMesh,      // RF networking
+    database: SQLite,          // Local storage
 }
 
-// Compiles to native AND WASM
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
+// Compiles natively for each platform:
+// - ARM for Raspberry Pi nodes
+// - RISC-V for ESP32 nodes  
+// - x86 for development
+```
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-pub fn compress_point_cloud(points: Vec<Point3D>) -> ArxObject {
-    // Same code for server, browser, mobile, embedded
+### 2. SSH Terminal as Universal Interface
+```bash
+# Every device connects the same way:
+$ ssh arxos@mesh-node.local
+
+# Power users love terminal efficiency:
+$ arxos query "outlets in room 127"
+$ arxos control hvac --zone=3 --temp=72
+$ arxos report --format=ascii
+
+# Camera integration for iOS/Android:
+$ arxos scan --room=127
+> Opening camera for LiDAR scan...
+```
+
+### 3. RF-Only Communication
+```rust
+pub struct RFOnlyNetworking {
+    // No IP stack needed:
+    protocol: "Meshtastic over LoRa",
+    frequency: "915MHz ISM band",
+    bandwidth: "125-500kHz",
+    data_rate: "0.3-27 kbps",
+    
+    // Perfect for 13-byte packets:
+    packet_size: 13, // bytes
+    transmission_time: 4, // milliseconds
+    
+    // No internet anywhere:
+    internet_required: false,
+    cloud_connection: None,
+    web_interface: None,
 }
 ```
 
-#### 2. WASM as Universal Target
+## 🚀 Why This Architecture Wins
+
+### Simplicity
+- **One language**: Rust for everything
+- **One protocol**: SSH for all clients  
+- **One network**: RF mesh only
+- **One database**: SQLite locally
+
+### Security
+- **Air-gapped**: No internet attack surface
+- **SSH**: Battle-tested secure protocol
+- **Local-only**: Data never leaves building
+- **Encrypted**: All RF traffic encrypted
+
+### Reliability
+- **No dependencies**: Works without internet
+- **Self-healing**: Mesh routes around failures
+- **Disaster-proof**: Operates during outages
+- **Simple**: Fewer things to break
+
+### Performance
+| Component | Metric | Value |
+|-----------|--------|-------|
+| Node boot time | Cold start | <5 seconds |
+| SSH connection | Latency | <100ms |
+| Mesh routing | Hop time | <50ms |
+| Database query | Response | <10ms |
+| Camera scan | Processing | <2 seconds |
+
+## 📊 Data Flow Examples
+
+### Room Scanning Flow
+```
+1. User command: $ arxos scan --room=127
+2. iPhone camera opens → Captures LiDAR data
+3. Data sent via SSH → Mesh node processes
+4. Semantic compression → 50MB to 5KB
+5. Store in SQLite → Local database
+6. Broadcast via LoRa → Other nodes updated
+7. Terminal shows result → ASCII floor plan
+```
+
+### HVAC Control Flow
+```
+1. User command: $ arxos control hvac --temp=72
+2. SSH server receives → Validates command
+3. Create ArxObject → 13-byte packet
+4. Broadcast via LoRa → Mesh network
+5. HVAC node receives → Adjusts temperature
+6. Confirmation packet → Returns via mesh
+7. Terminal shows result → "Temperature set to 72°F"
+```
+
+## 🔧 Implementation Technologies
+
+### Core Stack (Just 3 Technologies)
 ```yaml
-Deployment Targets:
-  iOS:       WKWebView + WASM
-  Android:   WebView + WASM  
-  Browser:   Native WASM support
-  Desktop:   Tauri + WASM
-  Terminal:  Native Rust binary
-  Embedded:  WASI runtime
+Language:
+  Rust: "All business logic"
   
-One Binary: arxos.wasm (2-5MB)
+Database:
+  SQLite: "Local storage on each node"
+  
+Network:
+  LoRa: "RF mesh networking"
+  
+# That's it. No web frameworks, no cloud services, no containers.
 ```
 
-#### 3. SQL as Protocol
-```sql
--- Spatial queries replace REST APIs
-SELECT 
-    id, 
-    ST_AsText(geometry) as location,
-    properties->>'type' as component_type
-FROM arxobjects
-WHERE ST_DWithin(
-    geometry, 
-    ST_MakePoint(?, ?), 
-    10.0  -- 10 meter radius
-);
-
--- Replication replaces custom sync
-CREATE PUBLICATION building_sync
-FOR TABLE arxobjects, relationships;
+### Hardware Platforms
+```yaml
+Mesh Nodes:
+  - ESP32 + LoRa: "$25 minimal node"
+  - Raspberry Pi + LoRa: "$75 powerful node"
+  
+Client Devices:
+  - iPhone/iPad: "SSH client + camera"
+  - Android: "SSH client + camera"  
+  - Laptop/Desktop: "SSH client only"
 ```
 
-### 🚀 Why This Works
+## 🎯 The Paradigm Shift
 
-#### Simplicity Scales
-- **One developer** can understand entire system
-- **One language** to learn and master
-- **One binary** to deploy everywhere
-- **One protocol** (SQL) for all communication
+This isn't just removing internet connectivity. It's a fundamental rethinking:
 
-#### Performance Advantages
-| Component | Traditional | Arxos |
-|-----------|------------|-------|
-| Binary Size | 50-200MB | 2-5MB WASM |
-| Memory Usage | 500MB+ | 10-50MB |
-| Startup Time | 5-10s | <100ms |
-| Query Speed | REST latency | SQL indexes |
-| Sync Protocol | Custom JSON | SQL replication |
+1. **Terminal over GUI**: Power users prefer efficiency
+2. **Mesh over Internet**: RF networks are more resilient
+3. **Local over Cloud**: Privacy and security guaranteed
+4. **Simple over Complex**: Three technologies beat fifty
+5. **Air-gapped over Connected**: Security through isolation
 
-#### Development Velocity
-- **No context switching** between languages
-- **No API versioning** (SQL schema migration)
-- **No platform-specific code** (WASM everywhere)
-- **No dependency hell** (Rust's cargo)
-
-### 📊 Real-World Performance
+## 📈 Scalability
 
 ```
-iPhone LiDAR Scan → ArxObject Creation:
-- Input: 50MB point cloud (1M points)
-- Processing: 0.3 seconds (Rust)
-- Output: 5KB ArxObject
-- Compression: 10,000:1
-- Fidelity: 98% semantic preservation
+Single Building:
+- 10-50 nodes
+- 1,000 ArxObjects
+- 100GB storage
 
-Building Query Performance:
-- Database: 10,000 ArxObjects
-- Query: "Find all emergency exits"
-- Time: 2ms (PostGIS spatial index)
-- Result: 23 exits with routes
+Campus:
+- 500 nodes  
+- 50,000 ArxObjects
+- 5TB storage
 
-Cross-Platform Deployment:
-- Source: 50K lines of Rust
-- WASM Binary: 3.2MB
-- Platforms: iOS, Android, Web, Desktop
-- Development Time: 3 months (1 dev)
+City-wide:
+- 10,000 nodes
+- 1M ArxObjects  
+- 100TB distributed
+
+# All without internet. All air-gapped. All secure.
 ```
-
-### 🔧 Implementation Path
-
-1. **Week 1-2**: Rust core with compression algorithms
-2. **Week 3-4**: WASM compilation and bindings
-3. **Week 5-6**: SQL schema and spatial queries
-4. **Week 7-8**: iOS app with WebView + WASM
-5. **Week 9-10**: Terminal client and ASCII renderer
-6. **Week 11-12**: Testing and optimization
-
-### 📚 Architecture Benefits
-
-#### For Developers
-- Learn three technologies, build anything
-- Single codebase for all platforms
-- Type safety from Rust
-- No runtime surprises
-
-#### For Users
-- 2MB app instead of 200MB
-- Works offline (SQL local)
-- Instant startup (WASM)
-- Runs on any device
-
-#### For Business
-- 10x lower development cost
-- 1 developer vs 10
-- No cloud infrastructure costs
-- Universal deployment
-
-### 🎯 The Paradigm Shift
-
-This isn't just fewer technologies. It's a fundamental rethinking:
-
-1. **Compilation over Interpretation**: WASM beats JavaScript
-2. **Embedded over External**: SQL in the app, not the cloud
-3. **Replication over APIs**: Database sync as protocol
-4. **Compression over Bandwidth**: 10,000:1 beats gigabit
-5. **Simplicity over Features**: Do less, better
 
 ---
 
-*"The constraint is the innovation. Three technologies force elegance."*
+*"The constraint is the innovation. No internet forces elegance."*

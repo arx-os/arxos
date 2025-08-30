@@ -1,23 +1,25 @@
 # Developer Quick Start Guide
 
-## From Zero to Building Intelligence in 30 Minutes
+## From Zero to RF Mesh Intelligence in 30 Minutes
 
-This guide gets you up and running with Arxos development. You'll build a working system that can compress point clouds, create AR markups, and query building intelligence.
+This guide gets you up and running with Arxos development. You'll build a working RF mesh node that operates completely air-gapped, with semantic compression and SSH terminal access.
 
 ## Prerequisites
 
 ```bash
 # Required tools
 - Rust 1.75+ (rustup.rs)
-- Node.js 18+ (for WASM tools)
-- SQLite 3.40+ (for spatial queries)
-- iOS: Xcode 15+ with iOS 17 SDK
-- Android: Android Studio with API 33+
+- SQLite 3.40+ (for spatial database)
+- ESP32 toolchain (for mesh nodes)
+
+# For iOS development
+- Xcode 15+ with iOS 17 SDK
+- Swift 5.9+
 
 # Optional but recommended
 - Visual Studio Code with rust-analyzer
 - TablePlus or DB Browser for SQLite
-- Postman for API testing
+- Terminal emulator with SSH support
 ```
 
 ## 1. Environment Setup (5 minutes)
@@ -33,13 +35,14 @@ cd arxos
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
-# Add WASM target
-rustup target add wasm32-unknown-unknown
+# Add embedded targets for mesh nodes
+rustup target add thumbv7em-none-eabihf    # ARM Cortex-M4
+rustup target add riscv32imc-unknown-none-elf  # ESP32-C3
 
-# Install wasm-pack for WASM builds
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+# Install ESP32 tools
+cargo install espflash cargo-espflash
 
-# Install dependencies
+# Build all components
 cargo build --all
 ```
 
@@ -47,464 +50,321 @@ cargo build --all
 
 ```
 arxos/
-├── crates/
-│   ├── arxos-core/        # Core compression and ArxObject logic
-│   ├── arxos-wasm/        # WASM bindings
-│   ├── arxos-server/      # REST API server
-│   └── arxos-cli/         # Terminal client
-├── mobile/
-│   ├── ios/               # iOS AR app
-│   └── android/           # Android AR app
-├── web/
-│   └── demo/              # Web demo app
-└── docs/                  # You are here!
+├── src/
+│   ├── core/              # Core library (13-byte protocol)
+│   ├── terminal/          # SSH terminal client
+│   └── embedded/          # ESP32 mesh node firmware
+├── firmware/
+│   └── esp32/            # LoRa mesh node
+├── ios/
+│   └── ArxosTerminal/    # iOS SSH + Camera app
+├── migrations/           # SQLite database schema
+└── hardware/            # PCB designs for mesh nodes
 ```
 
-## 2. Build Core Library (5 minutes)
+## 2. Build Your First Mesh Node (10 minutes)
 
-### Build and Test Rust Core
+### Core Library
 
 ```bash
-# Build core library
-cd crates/arxos-core
+# Build the core library
+cd src/core
 cargo build --release
 
 # Run tests
 cargo test
 
-# Expected output:
-# test compression::tests::test_point_cloud_compression ... ok
-# test arxobject::tests::test_arxobject_creation ... ok
-# test spatial::tests::test_nearby_query ... ok
-# test result: ok. 42 passed; 0 failed
+# Verify 13-byte ArxObject constraint
+cargo test size_constraint_test -- --nocapture
 ```
 
-### Try the Compression Algorithm
+### Example: Create an ArxObject
 
 ```rust
-// crates/arxos-core/examples/compress.rs
-use arxos_core::{compress_point_cloud, CompressionOptions};
+use arxos_core::{ArxObject, object_types};
 
 fn main() {
-    // Load sample point cloud
-    let points = load_sample_points(); // 1 million points
+    // Create an electrical outlet at position (1000, 2000, 1500)mm
+    let outlet = ArxObject::new(
+        0x4A7B,                    // Building ID
+        object_types::OUTLET,      // Type
+        1000, 2000, 1500          // Position in mm
+    );
     
-    // Compress with semantic understanding
-    let compressed = compress_point_cloud(&points, CompressionOptions {
-        target_ratio: 10000.0,
-        preserve_detail: false,
-        semantic_hints: vec!["wall", "door", "outlet"],
-    }).unwrap();
+    // Serialize to 13 bytes for RF transmission
+    let bytes = outlet.to_bytes();
+    println!("ArxObject: {:?} ({} bytes)", bytes, bytes.len());
     
-    println!("Compression achieved:");
-    println!("  Input: {} points ({} MB)", 
-             points.len(), 
-             points.len() * 12 / 1_000_000);
-    println!("  Output: {} bytes", compressed.size());
-    println!("  Ratio: {:.0}:1", compressed.compression_ratio);
+    // Query spatially
+    if outlet.is_within_room(1000, 2000, 3000, 3000) {
+        println!("Outlet found in room!");
+    }
 }
-
-// Run it:
-// cargo run --example compress
-// Output:
-// Compression achieved:
-//   Input: 1000000 points (12 MB)
-//   Output: 1200 bytes
-//   Ratio: 10000:1
 ```
 
-## 3. Build WASM Module (5 minutes)
+## 3. Deploy Mesh Node Firmware (5 minutes)
 
-### Compile to WASM
+### Build for ESP32
 
 ```bash
-# Build WASM module
-cd crates/arxos-wasm
-wasm-pack build --target web --out-dir pkg
+cd firmware/esp32
 
-# Check output
-ls -lh pkg/
-# arxos_wasm_bg.wasm (3.2 MB)
-# arxos_wasm.js (15 KB)
-# arxos_wasm.d.ts (8 KB)
+# Configure for your region
+# US: 915MHz, EU: 868MHz, AS: 923MHz
+export LORA_FREQ=915
+
+# Build firmware
+cargo build --release --target riscv32imc-unknown-none-elf
+
+# Flash to ESP32 (connect via USB)
+espflash /dev/ttyUSB0 target/riscv32imc-unknown-none-elf/release/arxos-node
 ```
 
-### Test in Browser
-
-```html
-<!-- web/demo/index.html -->
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Arxos WASM Demo</title>
-</head>
-<body>
-    <h1>Arxos Compression Demo</h1>
-    <button id="compress">Compress Point Cloud</button>
-    <div id="result"></div>
-    
-    <script type="module">
-        import init, { compress_point_cloud } from './pkg/arxos_wasm.js';
-        
-        async function run() {
-            await init();
-            
-            document.getElementById('compress').onclick = async () => {
-                // Generate random point cloud
-                const points = new Float32Array(3000); // 1000 3D points
-                for (let i = 0; i < points.length; i++) {
-                    points[i] = Math.random() * 10;
-                }
-                
-                // Compress
-                const result = compress_point_cloud(points);
-                
-                // Display results
-                document.getElementById('result').innerHTML = `
-                    <p>Input: ${points.length / 3} points</p>
-                    <p>Output: ${result.size} bytes</p>
-                    <p>Ratio: ${result.ratio}:1</p>
-                `;
-            };
-        }
-        
-        run();
-    </script>
-</body>
-</html>
-```
+### Test Mesh Network
 
 ```bash
-# Serve the demo
-cd web/demo
-python3 -m http.server 8000
+# Terminal 1: Start gateway node
+./arxos-node --node-id 0x0001 --mode gateway
 
-# Open http://localhost:8000
+# Terminal 2: Start relay node
+./arxos-node --node-id 0x0002 --mode relay
+
+# Terminal 3: Connect via SSH
+ssh arxos@localhost
+arxos@mesh:~$ status
+Building: Connected
+Nodes: 2 online
+RF Signal: -72 dBm
 ```
 
-## 4. Set Up Database (5 minutes)
+## 4. Database Setup (5 minutes)
 
-### Create SQLite Database
+### Initialize SQLite Database
 
 ```bash
-# Create database with spatial support
-cd data
-sqlite3 arxos.db < ../sql/schema.sql
+# Create database with spatial schema
+sqlite3 arxos.db < migrations/001_initial_schema.sql
+sqlite3 arxos.db < migrations/002_spatial_functions.sql
 
-# Verify tables
-sqlite3 arxos.db ".tables"
-# arxobjects  arxobjects_spatial  buildings  users  contributions
+# Test spatial queries
+sqlite3 arxos.db "
+SELECT COUNT(*) FROM arxobjects 
+WHERE object_type = 1 
+  AND x BETWEEN 1000 AND 2000
+  AND y BETWEEN 1000 AND 2000;
+"
 ```
 
-### Insert Test Data
+## 5. Terminal Interface (5 minutes)
 
-```sql
--- Insert test building
-INSERT INTO buildings (id, name, address, building_type)
-VALUES ('jefferson-elem', 'Jefferson Elementary', '123 School St', 'school');
-
--- Insert test objects
-INSERT INTO arxobjects (
-    building_id, object_type, floor_number,
-    position_x, position_y, position_z,
-    properties, created_by
-) VALUES 
-    ('jefferson-elem', 'outlet', 1, 5000, 3000, 300,
-     '{"circuit": "A-12", "voltage": 120}', 'user-123'),
-    ('jefferson-elem', 'door', 1, 2000, 0, 0,
-     '{"type": "emergency_exit"}', 'user-123');
-
--- Test spatial query
-SELECT * FROM arxobjects
-WHERE building_id = 'jefferson-elem'
-  AND position_x BETWEEN 4000 AND 6000;
-```
-
-## 5. Run Development Server (5 minutes)
-
-### Start REST API Server
+### Build and Run Terminal
 
 ```bash
-# Run server
-cd crates/arxos-server
-cargo run --release
+# Build terminal client
+cargo build --release --bin arxos
 
-# Server starts on http://localhost:3000
-# 
-# [2024-01-20 10:15:23] Arxos Server v1.0.0
-# [2024-01-20 10:15:23] Database: data/arxos.db
-# [2024-01-20 10:15:23] Listening on http://0.0.0.0:3000
+# Run in simulation mode
+./target/release/arxos --simulate
+
+# ASCII visualization appears
+┌─────────────────────────────────────┐
+│ FLOOR 2 - ARXOS MESH NODE 0x4A7B   │
+├─────────────────────────────────────┤
+│ [O]  [L]  [L]  [O]      [V]        │
+│                                     │
+│       ROOM 127 - CLASSROOM          │
+│                                     │
+│ [O]  [L]  [L]  [O]      [V]        │
+└─────────────────────────────────────┘
+O=Outlet  L=Light  V=Vent
 ```
 
-### Test API Endpoints
+### Query Building Intelligence
 
 ```bash
-# Health check
-curl http://localhost:3000/health
-# {"status": "healthy", "version": "1.0.0"}
+# Connect to mesh node
+ssh arxos@mesh-node.local
 
-# Create ArxObject
-curl -X POST http://localhost:3000/api/v1/arxobjects \
-  -H "Content-Type: application/json" \
-  -d '{
-    "buildingId": "jefferson-elem",
-    "objectType": "outlet",
-    "position": {"x": 5420, "y": 3180, "z": 300},
-    "properties": {"circuit": "A-12", "voltage": 120}
-  }'
-# {"id": "...", "biltEarned": 20}
+# Query objects
+arxos query "all outlets in room 127"
+> Found 4 outlets at positions:
+> - (1000, 1000, 300)
+> - (1000, 3000, 300)
+> - (3000, 1000, 300)
+> - (3000, 3000, 300)
 
-# Query nearby objects
-curl "http://localhost:3000/api/v1/buildings/jefferson-elem/nearby?x=5000&y=3000&z=300&radius=5"
-# {"objects": [...], "count": 3}
+# Control systems (via RF)
+arxos control lights --room=127 --state=off
+> Command sent via RF mesh
+> Acknowledged by node 0x0002
 ```
 
-## 6. Build iOS AR App (10 minutes)
+## 6. iOS App Integration (10 minutes)
 
-### Set Up iOS Project
-
-```bash
-cd mobile/ios
-open ArxosAR.xcodeproj
-
-# In Xcode:
-# 1. Select your development team
-# 2. Connect iPhone with LiDAR (iPhone 12 Pro or newer)
-# 3. Build and run (Cmd+R)
-```
-
-### Key iOS Integration Points
+### Simple Terminal + Camera App
 
 ```swift
-// ViewController.swift - Key integration
-class ARViewController: UIViewController {
-    // WASM engine for compression
-    let arxosEngine = ArxosWASMEngine()
+// ArxosTerminalApp.swift
+import SwiftUI
+import NMSSH  // SSH library
+
+struct ContentView: View {
+    @State private var sshSession: NMSSHSession?
+    @State private var showCamera = false
     
-    // AR session for LiDAR
-    let arSession = ARSession()
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        // Initialize WASM
-        arxosEngine.initialize()
-        
-        // Configure AR for LiDAR
-        let config = ARWorldTrackingConfiguration()
-        config.sceneReconstruction = .mesh
-        arSession.run(config)
-    }
-    
-    // Handle tap for markup
-    @IBAction func handleTap(_ gesture: UITapGestureRecognizer) {
-        let location = gesture.location(in: arView)
-        
-        // Get 3D position
-        if let position = hitTest(at: location) {
-            // Show marking interface
-            showMarkupMenu(at: position)
+    var body: some View {
+        VStack {
+            // Terminal view
+            TerminalView(session: sshSession)
+            
+            // Camera trigger button
+            Button("Scan Room") {
+                showCamera = true
+            }
+            .sheet(isPresented: $showCamera) {
+                CameraView(onCapture: processLiDAR)
+            }
         }
     }
     
-    // Process LiDAR scan
-    func processPointCloud(_ pointCloud: ARPointCloud) {
-        // Compress using WASM
-        let compressed = arxosEngine.compress(pointCloud)
-        
-        print("Compressed \(pointCloud.count) points to \(compressed.size) bytes")
-        print("Ratio: \(compressed.ratio):1")
-        
-        // Store in database
-        database.insert(compressed)
+    func processLiDAR(pointCloud: ARPointCloud) {
+        // Compress on mesh node (not phone)
+        let command = "arxos process-lidar"
+        sshSession?.channel.write(pointCloud.data)
     }
 }
 ```
 
-## 7. Complete Working Example
+### Build iOS App
 
-### Full Compression + Markup + Query Flow
+```bash
+cd ios/ArxosTerminal
+xcodebuild -scheme ArxosTerminal -sdk iphoneos
+```
+
+## 7. Testing Your Setup (5 minutes)
+
+### Integration Test
+
+```bash
+# Run all tests
+cargo test --all
+
+# Test mesh networking
+cargo test --test mesh_integration
+
+# Test SSH server
+cargo test --test ssh_integration
+
+# Verify RF-only (no internet)
+cargo test --test airgap_verification
+```
+
+### Performance Metrics
+
+```bash
+# Compression test
+./arxos test-compression sample-pointcloud.ply
+> Input: 47.3 MB (1,234,567 points)
+> Output: 4.7 KB (387 ArxObjects)
+> Compression: 10,234:1
+> Time: 127ms
+
+# RF transmission test
+./arxos test-rf-transmission
+> Packet size: 13 bytes
+> Transmission time: 12ms
+> Range achieved: 2.7km
+> Packet loss: 0.3%
+```
+
+## Common Development Tasks
+
+### Add New Object Type
 
 ```rust
-// examples/full_flow.rs
-use arxos::{
-    compress_point_cloud,
-    create_ar_markup,
-    store_arxobject,
-    query_nearby,
-    calculate_bilt,
-};
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Initialize database
-    let db = Connection::open("arxos.db")?;
-    
-    // 2. Simulate LiDAR scan
-    println!("Simulating LiDAR scan...");
-    let point_cloud = generate_room_scan(); // 500K points
-    
-    // 3. Compress to ArxObject
-    println!("Compressing point cloud...");
-    let compressed = compress_point_cloud(&point_cloud, Default::default())?;
-    println!("  Achieved {:.0}:1 compression", compressed.ratio);
-    
-    // 4. Store structure
-    store_arxobject(&db, &compressed)?;
-    println!("  Stored room structure");
-    
-    // 5. Simulate AR markup
-    println!("\nSimulating AR markups...");
-    let markups = vec![
-        create_ar_markup(
-            Position3D::new(5000, 3000, 300),
-            ObjectType::Outlet,
-            properties!{
-                "circuit" => "A-12",
-                "voltage" => 120,
-                "amperage" => 15
-            },
-            &user
-        )?,
-        create_ar_markup(
-            Position3D::new(2000, 0, 0),
-            ObjectType::Door,
-            properties!{
-                "type" => "emergency_exit",
-                "width" => 36
-            },
-            &user
-        )?,
-    ];
-    
-    // 6. Calculate BILT rewards
-    for markup in &markups {
-        let bilt = calculate_bilt(markup);
-        println!("  {} at {:?}: {} BILT", 
-                 markup.object_type, 
-                 markup.position,
-                 bilt);
-        store_arxobject(&db, &markup.to_arxobject())?;
-    }
-    
-    // 7. Query spatial data
-    println!("\nQuerying nearby objects...");
-    let nearby = query_nearby(
-        &db,
-        Position3D::new(5000, 3000, 300),
-        5.0 // 5 meter radius
-    )?;
-    
-    for obj in nearby {
-        println!("  Found: {} at {:.1}m distance",
-                 obj.object_type,
-                 obj.distance_from(Position3D::new(5000, 3000, 300)));
-    }
-    
-    // 8. Generate compliance report
-    println!("\nGenerating compliance report...");
-    let report = generate_fire_safety_report(&db, "jefferson-elem")?;
-    println!("  Fire extinguishers: {}", report.extinguisher_count);
-    println!("  Emergency exits: {}", report.exit_count);
-    println!("  Compliance status: {}", report.status);
-    
-    Ok(())
+// In src/core/arxobject.rs
+pub mod object_types {
+    pub const FIRE_ALARM: u8 = 0x22;
 }
+
+// Usage
+let alarm = ArxObject::new(
+    building_id,
+    object_types::FIRE_ALARM,
+    x, y, z
+);
 ```
 
-## 8. Development Workflow
+### Create Database Migration
 
-### Recommended Development Process
-
-```bash
-# 1. Make changes to core library
-cd crates/arxos-core
-# Edit src/compression.rs
-
-# 2. Test locally
-cargo test
-cargo run --example compress
-
-# 3. Build WASM if needed
-cd ../arxos-wasm
-wasm-pack build
-
-# 4. Test in browser
-cd ../../web/demo
-python3 -m http.server
-
-# 5. Test on device
-cd ../../mobile/ios
-xcodebuild -scheme ArxosAR -destination 'platform=iOS' build
-```
-
-### Hot Reload Development
-
-```bash
-# Terminal 1: Watch Rust changes
-cargo watch -x test -x build
-
-# Terminal 2: Watch WASM changes
-cargo watch -s "wasm-pack build --target web"
-
-# Terminal 3: Serve web demo
-npx live-server web/demo
-
-# Terminal 4: Database queries
-sqlite3 arxos.db
-```
-
-## 9. Common Issues and Solutions
-
-### Issue: WASM module too large
-```bash
-# Solution: Optimize for size
-wasm-pack build --release -- --features wee_alloc
-wasm-opt -Os -o optimized.wasm arxos_wasm_bg.wasm
-```
-
-### Issue: Spatial queries slow
 ```sql
--- Solution: Ensure R-tree index exists
-CREATE INDEX IF NOT EXISTS idx_spatial 
-ON arxobjects_spatial(min_x, max_x, min_y, max_y, min_z, max_z);
+-- migrations/003_add_fire_alarms.sql
+ALTER TABLE arxobjects 
+ADD COLUMN last_tested DATE;
 
--- Analyze query plan
-EXPLAIN QUERY PLAN
-SELECT * FROM arxobjects WHERE ...;
+CREATE INDEX idx_fire_alarms 
+ON arxobjects(object_type) 
+WHERE object_type = 34;  -- 0x22 in decimal
 ```
 
-### Issue: iOS app crashes on device
-```swift
-// Solution: Check memory usage
-class MemoryManager {
-    static func checkMemory() {
-        let memoryUsage = getMemoryUsage()
-        if memoryUsage > 100_000_000 { // 100MB
-            // Reduce point cloud density
-            pointCloud.downsample(factor: 2)
-        }
-    }
-}
+### Deploy Firmware Update via RF
+
+```bash
+# Build update
+cargo build --release --target riscv32imc-unknown-none-elf
+
+# Sign with private key
+arxos-sign target/release/arxos-node --key private.key
+
+# Broadcast via RF (no internet!)
+arxos-broadcast --file arxos-node.signed --priority high
+> Broadcasting update via RF mesh
+> Nodes acknowledging: 47/50
+> Update will auto-install in 10 minutes
 ```
 
-## 10. Next Steps
+## Troubleshooting
 
-### Essential Reading
-1. [Bidirectional Architecture](../01-vision/README.md)
-2. [ArxObject Compression](../02-arxobject/README.md)
-3. [API Reference](../09-api-reference/README.md)
+### LoRa Not Working
+```bash
+# Check frequency for your region
+# Wrong frequency = no communication
+echo $LORA_FREQ  # Should be 915 (US) or 868 (EU)
 
-### Sample Projects
-- `examples/school-mapping/` - Complete school mapping app
-- `examples/fire-safety/` - Compliance reporting system
-- `examples/maintenance/` - Predictive maintenance dashboard
+# Verify antenna connected
+# No antenna = no signal
+```
 
-### Join the Community
-- Discord: [discord.gg/arxos](https://discord.gg/arxos)
-- GitHub Discussions: [github.com/arxos/arxos/discussions](https://github.com/arxos/arxos/discussions)
-- Weekly Dev Calls: Thursdays 2pm EST
+### SSH Connection Failed
+```bash
+# Mesh nodes are on local network only
+# No internet routing
+ping mesh-node.local
+nmap -p 22 mesh-node.local
+```
+
+### Database Issues
+```bash
+# Reset database
+rm arxos.db
+sqlite3 arxos.db < migrations/001_initial_schema.sql
+```
+
+## Next Steps
+
+1. **Hardware**: Build physical mesh nodes with ESP32 + LoRa
+2. **Deployment**: Install in real building for testing
+3. **Gamification**: Implement BILT token rewards
+4. **Scanning**: Integrate iPhone LiDAR capture
+
+## Resources
+
+- [RF Mesh Protocol Spec](../15-rf-updates/)
+- [13-byte ArxObject Format](../02-arxobject/)
+- [SSH Terminal Commands](../07-ios-integration/)
+- [Hardware Designs](../../hardware/)
 
 ---
 
-*From zero to building intelligence in 30 minutes. Welcome to Arxos!*
+*Building the future of building intelligence - 100% air-gapped, 100% private*

@@ -1,0 +1,49 @@
+[package]
+name = "arxos-firmware"
+version = "0.1.0"
+edition = "2021"
+authors = ["Arxos Contributors"]
+license = "MIT"
+
+[dependencies]
+# ESP32 HAL and runtime
+esp-hal = { version = "0.16", features = ["esp32c3"] }
+esp-backtrace = { version = "0.11", features = ["esp32c3", "panic-handler", "print-uart"] }
+esp-println = { version = "0.9", features = ["esp32c3"] }
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
+embedded-io = "0.6"
+static_cell = "2.0"
+
+# LoRa radio driver
+lora-phy = { version = "2.1", features = ["sx1261_2", "async"] }
+embassy-executor = { version = "0.5", features = ["nightly", "arch-riscv32"] }
+embassy-time = { version = "0.3", features = ["tick-hz-1_000_000"] }
+embassy-sync = "0.5"
+
+# Core library (no_std)
+arxos-core = { path = "../../src/core", default-features = false, features = ["no_std"] }
+
+# Serialization
+heapless = "0.8"
+postcard = "1.0"
+
+# Cryptography (no_std)
+ed25519-dalek = { version = "2.0", default-features = false, features = ["rand_core"] }
+rand_core = { version = "0.6", default-features = false }
+sha2 = { version = "0.10", default-features = false }
+
+# CRC for packet integrity
+crc = "3.0"
+
+[profile.release]
+opt-level = "s"      # Optimize for size
+lto = true           # Link-time optimization
+strip = true         # Strip symbols
+codegen-units = 1    # Better optimization
+panic = "abort"      # Smaller panic handler
+
+[profile.dev]
+opt-level = 1        # Some optimization even in dev
+overflow-checks = true
+debug = true

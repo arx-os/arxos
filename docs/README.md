@@ -2,7 +2,7 @@
 
 ## Universal Spatial Intelligence Through Semantic Compression
 
-Arxos transforms every iPhone into a building intelligence scanner. Using **Rust, WebAssembly, and SQL**, we compress 50MB point clouds into 5KB semantic objects, achieving 10,000:1 compression while preserving queryable building intelligence.
+Arxos transforms every iPhone into a building intelligence scanner. Using **RF mesh networks and semantic compression**, we compress 50MB point clouds into 5KB semantic objects, achieving 10,000:1 compression while preserving queryable building intelligence - all without internet.
 
 ## 📚 Documentation Structure
 
@@ -21,8 +21,8 @@ Arxos transforms every iPhone into a building intelligence scanner. Using **Rust
 ### [03. Technical Architecture](03-architecture/)
 **The Three-Technology Stack**
 - **Rust**: Memory-safe processing engine
-- **WASM**: Universal deployment target
-- **SQL**: Spatial queries and synchronization
+- **RF Mesh**: LoRa packet radio networking
+- **SQL**: Local spatial database
 - Why 3 technologies beat 50 frameworks
 
 ### [04. SQL Database](04-sql-database/)
@@ -31,12 +31,12 @@ Arxos transforms every iPhone into a building intelligence scanner. Using **Rust
 - SQL replication as mesh protocol
 - Building compliance queries
 
-### [05. WASM Deployment](05-wasm-deployment/)
-**Write Once, Run Everywhere**
-- iOS via WebView + WASM
-- Web browsers with native WASM
-- Embedded systems via WASI
-- Single binary for all platforms
+### [05. RF Mesh Network](05-rf-mesh/)
+**Air-Gapped Building Intelligence**
+- LoRa 915MHz/868MHz packet radio
+- SSH terminal access
+- No internet connection required
+- RF-only updates and maintenance
 
 ### [06. Mesh Network](06-mesh-network/)
 **Distributed Intelligence**
@@ -53,7 +53,7 @@ Arxos transforms every iPhone into a building intelligence scanner. Using **Rust
 ### [08. iOS Integration](08-ios-integration/)
 **LiDAR to Intelligence Pipeline**
 - RoomPlan API integration
-- Swift ↔ WASM bridge
+- Native Swift integration
 - 20-second scan-to-query workflow
 
 ### [09. Implementation Guide](09-implementation/)
@@ -71,8 +71,8 @@ Arxos transforms every iPhone into a building intelligence scanner. Using **Rust
 ## 🚀 Quick Start
 
 ```bash
-# Build the WASM module
-cargo build --target wasm32-unknown-unknown
+# Build the terminal client
+cargo build --release --bin arxos
 
 # Run terminal interface
 cargo run --bin arxos-cli
@@ -98,9 +98,9 @@ Arxos:       50MB → 5KB ArxObject → 30sec transfer → Any terminal
 | Aspect | Traditional | Arxos |
 |--------|------------|-------|
 | **Languages** | Swift, Kotlin, JavaScript, Python, C++ | Rust |
-| **Frameworks** | 50+ platform-specific | WASM + SQL |
+| **Frameworks** | 50+ platform-specific | Native + SQL |
 | **Codebases** | 1 per platform | 1 universal |
-| **Binary Size** | 50-200MB | 2-5MB WASM |
+| **Binary Size** | 50-200MB | 5-10MB native |
 | **Dev Time** | 12-18 months | 3-6 months |
 | **Team Size** | 5-10 engineers | 1 developer |
 
@@ -109,8 +109,8 @@ Arxos:       50MB → 5KB ArxObject → 30sec transfer → Any terminal
 ### Semantic Compression
 Point clouds contain geometric redundancy. ArxObjects preserve semantic meaning while discarding redundant geometry, achieving 10,000:1 compression.
 
-### Universal Deployment
-One Rust codebase compiles to WASM, running on iOS, Android, Web, Desktop, and Embedded systems without platform-specific code.
+### Air-Gapped Operation
+RF mesh network ensures complete privacy and security. Updates, maintenance, and all communication happen via LoRa radio - no internet connection ever required.
 
 ### SQL as Protocol
 Database replication becomes the mesh synchronization protocol, eliminating custom networking code.
@@ -130,14 +130,14 @@ Database replication becomes the mesh synchronization protocol, eliminating cust
 ### For Hardware Engineers
 1. [Mesh Network Design](06-mesh-network/)
 2. [LoRa Integration](06-mesh-network/lora.md)
-3. [Embedded Deployment](05-wasm-deployment/embedded.md)
+3. [Embedded Deployment](06-embedded/README.md)
 
 ## 🔧 Development Status
 
 - ✅ ArxObject specification complete
 - ✅ Core compression algorithms
 - ✅ Terminal rendering system
-- 🚧 WASM compilation pipeline
+- ✅ RF mesh networking
 - 🚧 iOS LiDAR integration
 - 📅 SQL database layer
 - 📅 Mesh synchronization

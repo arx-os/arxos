@@ -101,18 +101,9 @@ temp/
 !.env.example
 
 # ============================================
-# Old Go Implementation (archived)
-# ============================================
-docs-old/
-*.go
-go.mod
-go.sum
-
-# ============================================
 # Cache and Dependencies
 # ============================================
 .cache/
-node_modules/
 venv/
 __pycache__/
 

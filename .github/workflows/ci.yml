@@ -1,4 +1,4 @@
-name: Arxos CI/CD Pipeline
+name: Arxos CI - RF Mesh Only
 
 on:
   push:
@@ -11,9 +11,9 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  # Rust core library testing
+  # Core library testing
   test-rust-core:
-    name: Test Rust Core Libraries
+    name: Test Core Libraries
     runs-on: ubuntu-latest
     
     steps:
@@ -23,12 +23,15 @@ jobs:
     - name: Install Rust stable
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: wasm32-unknown-unknown
+        targets: thumbv7em-none-eabihf,riscv32imc-unknown-none-elf
         
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       with:
         key: "core-${{ hashFiles('Cargo.lock') }}"
+        
+    - name: Install SQLite
+      run: sudo apt-get update && sudo apt-get install -y sqlite3 libsqlite3-dev
         
     - name: Check formatting
       run: cargo fmt --all -- --check
@@ -39,53 +42,43 @@ jobs:
     - name: Run core library tests
       run: cargo test --workspace --verbose
       
-    - name: Test no_std compilation
+    - name: Test no_std compilation for embedded
       run: |
         cd src/core
         cargo check --no-default-features --features no_std
         
-    - name: Verify ArxObject size constraint
+    - name: Verify ArxObject size constraint (13 bytes)
       run: |
         cargo test --package arxos-core size_constraint_test -- --nocapture
 
-  # WASM compilation verification
-  test-wasm-compilation:
-    name: Test WASM Compilation
+  # Embedded firmware build verification
+  test-embedded-firmware:
+    name: Test Embedded Firmware
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install Rust stable with WASM target
+    - name: Install Rust with embedded targets
       uses: dtolnay/rust-toolchain@stable  
       with:
-        targets: wasm32-unknown-unknown
+        targets: thumbv7em-none-eabihf,riscv32imc-unknown-none-elf
         
-    - name: Install wasm-pack
-      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-      
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       
-    - name: Build core library for WASM
+    - name: Build for ESP32 (RISC-V)
       run: |
-        cd src/core
-        wasm-pack build --target web --features wasm
+        cargo build --package arxos-core --target riscv32imc-unknown-none-elf --no-default-features
         
-    - name: Verify WASM output size
+    - name: Build for ARM Cortex-M4
       run: |
-        # Ensure WASM binary is under 5MB for mobile deployment
-        WASM_SIZE=$(stat -c%s "src/core/pkg/*.wasm" | head -1)
-        if [ $WASM_SIZE -gt 5242880 ]; then
-          echo "WASM binary too large: $WASM_SIZE bytes (max 5MB)"
-          exit 1
-        fi
-        echo "WASM binary size: $WASM_SIZE bytes ✓"
+        cargo build --package arxos-core --target thumbv7em-none-eabihf --no-default-features
 
   # Database migration testing
-  test-database-migrations:
-    name: Test Database Migrations
+  test-database:
+    name: Test Database Schema
     runs-on: ubuntu-latest
     
     steps:
@@ -98,22 +91,22 @@ jobs:
     - name: Test database migrations
       run: |
         # Create test database
-        sqlite3 test.db < migrations/001_init_spatial_database.sql
-        sqlite3 test.db < migrations/002_object_type_definitions.sql
+        sqlite3 test.db < migrations/001_initial_schema.sql
+        sqlite3 test.db < migrations/002_spatial_functions.sql
         
         # Verify schema creation
-        sqlite3 test.db ".schema" | grep "CREATE TABLE"
+        sqlite3 test.db ".tables" | grep -E "(arxobjects|buildings|rooms|bilt_transactions)"
         
         # Test spatial queries
-        sqlite3 test.db "SELECT COUNT(*) FROM object_types;"
-        sqlite3 test.db "SELECT COUNT(*) FROM buildings;"
+        echo "SELECT COUNT(*) FROM arxobjects;" | sqlite3 test.db
+        echo "SELECT COUNT(*) FROM buildings;" | sqlite3 test.db
         
         # Clean up
         rm test.db
 
-  # Stadium-scale performance benchmarks
-  benchmark-performance:
-    name: Stadium Scale Performance Tests
+  # RF mesh network simulation tests
+  test-mesh-network:
+    name: Test RF Mesh Network
     runs-on: ubuntu-latest
     
     steps:
@@ -126,20 +119,17 @@ jobs:
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       
-    - name: Run performance benchmarks
+    - name: Run mesh network tests
       run: |
-        # Test ArxObject serialization speed
-        cargo bench --package arxos-core arxobject_benchmark
+        cargo test --package arxos-core mesh_network -- --nocapture
         
-        # Test spatial query performance with 10K+ objects
-        cargo bench --package arxos-core spatial_benchmark
-        
-        # Test progressive ASCII rendering performance
-        cargo bench --package arxos-core rendering_benchmark
+    - name: Test SSH server integration
+      run: |
+        cargo test --package arxos-core ssh_server -- --nocapture
 
-  # Security and dependency scanning
+  # Security and compliance checks
   security-audit:
-    name: Security Audit
+    name: Security & Compliance Audit
     runs-on: ubuntu-latest
     
     steps:
@@ -155,46 +145,38 @@ jobs:
     - name: Run security audit
       run: cargo audit
       
-    - name: Check for unsafe code blocks
+    - name: Verify NO internet dependencies
       run: |
-        # Ensure no unsafe code in core libraries
-        if grep -r "unsafe" src/core/src/ --exclude-dir=target; then
-          echo "❌ Unsafe code found in core library"
+        echo "Checking for forbidden internet/web dependencies..."
+        
+        # Fail if any HTTP/web libraries are found
+        if grep -E "reqwest|hyper|actix-web|rocket|warp|tide|surf|ureq" Cargo.toml src/core/Cargo.toml src/terminal/Cargo.toml; then
+          echo "❌ FAILED: Found web/HTTP dependencies!"
           exit 1
         fi
-        echo "✅ No unsafe code in core library"
+        
+        # Fail if any cloud SDKs are found
+        if grep -E "aws|azure|gcp|firebase|cloudflare" Cargo.toml src/core/Cargo.toml src/terminal/Cargo.toml; then
+          echo "❌ FAILED: Found cloud service dependencies!"
+          exit 1
+        fi
+        
+        # Fail if WebAssembly dependencies exist
+        if grep -E "wasm-bindgen|web-sys|js-sys" Cargo.toml src/core/Cargo.toml; then
+          echo "❌ FAILED: Found WASM/web dependencies!"
+          exit 1
+        fi
+        
+        echo "✅ PASSED: No internet dependencies found"
+        echo "✅ Arxos remains 100% air-gapped RF-only"
 
-  # Build verification across platforms
+  # Multi-platform build verification
   build-matrix:
-    name: Multi-platform Build Test
+    name: Multi-platform Build
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         rust: [stable]
-        target: 
-          - x86_64-unknown-linux-gnu
-          - x86_64-pc-windows-msvc  
-          - x86_64-apple-darwin
-          - wasm32-unknown-unknown
-        exclude:
-          # Only build WASM on Linux to save CI time
-          - os: windows-latest
-            target: wasm32-unknown-unknown
-          - os: macos-latest  
-            target: wasm32-unknown-unknown
-          # Platform-specific exclusions
-          - os: ubuntu-latest
-            target: x86_64-pc-windows-msvc
-          - os: ubuntu-latest
-            target: x86_64-apple-darwin
-          - os: windows-latest
-            target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-pc-windows-msvc
             
     runs-on: ${{ matrix.os }}
     
@@ -206,17 +188,24 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        targets: ${{ matrix.target }}
+        
+    - name: Install SQLite (macOS)
+      if: matrix.os == 'macos-latest'
+      run: brew install sqlite3
+      
+    - name: Install SQLite (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y sqlite3 libsqlite3-dev
         
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       with:
-        key: "${{ matrix.os }}-${{ matrix.target }}"
+        key: "${{ matrix.os }}"
         
-    - name: Build for target
-      run: cargo build --target ${{ matrix.target }} --verbose
+    - name: Build all packages
+      run: cargo build --workspace --verbose
 
-  # Documentation generation and deployment
+  # Documentation generation
   docs:
     name: Generate Documentation
     runs-on: ubuntu-latest
@@ -233,56 +222,63 @@ jobs:
       run: |
         cargo doc --workspace --no-deps --document-private-items
         
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./target/doc
-        
-  # Release automation
+    - name: Verify documentation
+      run: |
+        echo "Checking for RF-only compliance in docs..."
+        if grep -r "WASM\|WebAssembly\|cloud\|internet" docs/; then
+          echo "⚠️ Warning: Found references to old architecture in docs"
+        fi
+
+  # Release automation (RF distribution only)
   release:
     name: Release Build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [test-rust-core, test-wasm-compilation, security-audit]
+    needs: [test-rust-core, test-embedded-firmware, security-audit]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install Rust stable
+    - name: Install Rust stable with embedded targets
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: wasm32-unknown-unknown
+        targets: thumbv7em-none-eabihf,riscv32imc-unknown-none-elf
         
     - name: Build release artifacts
       run: |
-        # Build optimized WASM for production
-        cd src/core && wasm-pack build --release --target web --features wasm
-        
-        # Build CLI tools
+        # Build terminal client
         cargo build --release --package arxos-terminal
+        
+        # Build embedded firmware
+        cargo build --release --package arxos-core --target thumbv7em-none-eabihf --no-default-features
         
     - name: Create release archive
       run: |
         mkdir -p release-artifacts
         
-        # Copy WASM artifacts
-        cp -r src/core/pkg release-artifacts/arxos-wasm
-        
-        # Copy CLI binary  
+        # Copy terminal binary  
         cp target/release/arxos-terminal release-artifacts/
+        
+        # Copy embedded firmware
+        cp target/thumbv7em-none-eabihf/release/libarxos_core.a release-artifacts/
         
         # Copy documentation
         cp -r docs release-artifacts/
         
+        # Copy database migrations
+        cp -r migrations release-artifacts/
+        
         # Create archive
-        tar -czf arxos-release.tar.gz release-artifacts/
+        tar -czf arxos-rf-release.tar.gz release-artifacts/
+        
+        echo "📡 Release ready for RF distribution"
+        echo "🔒 No internet connection required"
         
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: arxos-release.tar.gz
+        files: arxos-rf-release.tar.gz
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

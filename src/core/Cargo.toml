@@ -1,0 +1,21 @@
+[package]
+name = "arxos-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+heapless = { workspace = true }
+postcard = { workspace = true }
+defmt = { workspace = true, optional = true }
+
+[features]
+default = ["std"]
+std = []
+no_std = []
+defmt = ["dep:defmt"]
+
+[lib]
+name = "arxos_core"
+path = "lib.rs"

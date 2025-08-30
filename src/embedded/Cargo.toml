@@ -1,0 +1,22 @@
+[package]
+name = "arxos-embedded"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+arxos-core = { path = "../core", default-features = false, features = ["no_std"] }
+heapless = { workspace = true }
+nb = { workspace = true }
+embedded-hal = { workspace = true }
+defmt = { workspace = true }
+
+[features]
+default = []
+esp32 = []
+stm32 = []
+
+[lib]
+name = "arxos_embedded"
+path = "lib.rs"

@@ -1,29 +1,14 @@
-########################
-# Arxos Project .gitignore
-########################
+# Arxos Mesh Network .gitignore
 
 # ============================================
 # Operating System Files
 # ============================================
-# macOS
 .DS_Store
 .DS_Store?
 ._*
-.Spotlight-V100
-.Trashes
-.AppleDouble
-.LSOverride
-
-# Windows
-ehthumbs.db
 Thumbs.db
 desktop.ini
-$RECYCLE.BIN/
-
-# Linux
 *~
-.directory
-.Trash-*
 
 # ============================================
 # IDE and Editor Files
@@ -34,179 +19,128 @@ $RECYCLE.BIN/
 .cursor/
 *.swp
 *.swo
-*.swn
-.project
-.classpath
-.settings/
-.vimrc
-.nvimrc
+.vim*
+.nvim*
 
 # ============================================
-# Language Specific
+# Rust / Cargo
 # ============================================
-# Go
-*.exe
-*.exe~
-*.dll
-# Go compiled binaries
-/building-integration
-/arxos
-/cmd/building-integration/building-integration
-/cmd/*/build/
-vendor/
-*.so
-*.dylib
-*.test
-*.out
-vendor/
-go.work
-
-# JavaScript/Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.npm
-.yarn/
-.pnp.*
-
-# ============================================
-# Build Artifacts and Compiled Files
-# ============================================
-dist/
-build/
 target/
-**/target/
-out/
-bin/
-obj/
+Cargo.lock
+**/*.rs.bk
+*.pdb
 
 # ============================================
-# Temporary and Backup Files
+# Embedded Development
 # ============================================
-*.tmp
-*.temp
+# ESP32 build artifacts
+build/
+sdkconfig
+sdkconfig.old
+*.bin
+*.elf
+*.map
+
+# Arduino
+*.hex
+*.lst
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# ============================================
+# Hardware Design Files (keep sources)
+# ============================================
+# KiCad temporary files
 *.bak
-*.backup
-*.old
-*.orig
-*.rej
-*_backup
-*_old
-.tmp/
-tmp/
-temp/
-
-# ============================================
-# Cache and Log Files
-# ============================================
-*.log
-logs/
-*.cache
-.cache/
-.parcel-cache/
-.sass-cache/
-
-# ============================================
-# Database Files
-# ============================================
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-*.db-wal
-*.db-shm
-
-# ============================================
-# Environment and Config Files
-# ============================================
-.env
-.env.*
-!.env.example
-!.env.template
-config.local.js
-config.local.json
-secrets.json
-credentials.json
-
-# ============================================
-# Arxos Specific
-# ============================================
-# Development databases
-arxos_dev.db
-test.db
-
-# Cache directories
-services/*/*.db
-
-# Generated files
-alafia_es_data.json
-
-# Uploaded PDFs and files
-uploads/
-temp_uploads/
-core/backend/uploads/
-*.pdf
-
-# Test files in wrong places
-test_*.go
-test_*.js
-test_*.py
-test_*.html
-
-# Binary executables
-arxos
-arxos_*
-NO_DEMO_*
-/arxos_backend
-*.exe
-
-# Archive folder (should not be in main branch)
-archive/
-
-# Backup files
-*_backup/
-*.bak
-
-# Node modules in Go backend (shouldn't exist)
-core/backend/node_modules/
-core/backend/package*.json
-
-# ============================================
-# Testing
-# ============================================
-coverage/
-.coverage
-*.cover
-.pytest_cache/
-test-results/
-junit.xml
+*.bck
+*.kicad_pcb-bak
+*-cache.lib
+*-rescue.lib
+*-save.pro
+*-save.kicad_pcb
+fp-info-cache
+# But keep the actual designs
+!*.kicad_pcb
+!*.sch
+!*.pro
 
 # ============================================
 # Documentation Build
 # ============================================
 docs/_build/
 site/
-.docusaurus/
+*.pdf
+!docs/**/*.pdf  # Keep documentation PDFs
 
 # ============================================
-# Package Files
+# Testing & Coverage
 # ============================================
-*.tar
-*.tar.gz
-*.zip
-*.rar
-*.7z
-*.dmg
-*.iso
-*.jar
+coverage/
+*.profraw
+*.profdata
+tarpaulin-report.html
 
 # ============================================
-# Security
+# Logs and Temporary Files
+# ============================================
+*.log
+*.tmp
+*.temp
+logs/
+tmp/
+temp/
+
+# ============================================
+# Environment Files
+# ============================================
+.env
+.env.*
+!.env.example
+
+# ============================================
+# Old Go Implementation (archived)
+# ============================================
+docs-old/
+*.go
+go.mod
+go.sum
+
+# ============================================
+# Cache and Dependencies
+# ============================================
+.cache/
+node_modules/
+venv/
+__pycache__/
+
+# ============================================
+# Backup Files
+# ============================================
+*.backup
+*.old
+*_old
+*_backup
+
+# ============================================
+# Binary Outputs
+# ============================================
+arxos
+arxos.exe
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+
+# ============================================
+# Security - Never Commit These
 # ============================================
 *.pem
 *.key
 *.crt
 *.p12
-.htpasswd
+private/
+secrets/

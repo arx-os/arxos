@@ -1,203 +1,174 @@
-# Arxos - Building Infrastructure-as-Code Platform
+# 📡 Arxos - Building Operating System via Packet Radio Mesh
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://postgresql.org)
-[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+## Minecraft for Buildings + Pokémon GO for Infrastructure
 
-Arxos transforms buildings into programmable infrastructure through revolutionary ASCII-BIM visualization, ArxObject behavioral components, and infrastructure-as-code workflows. Buildings become navigable filesystems with infinite zoom capability, from campus level down to microcontroller internals.
+Arxos revolutionizes building automation by replacing $100,000+ proprietary systems with $25 open-source nodes that communicate via packet radio mesh networks - no internet required.
 
-## 🚀 Key Features
-
-- **ASCII-BIM Engine**: Buildings rendered as navigable ASCII art with <10ms performance
-- **Filesystem Navigation**: Navigate buildings like Unix directories (`/electrical/panel-a/circuit-7`)
-- **Nanometer Precision**: Submicron accuracy with adaptive Level of Detail (LOD)
-- **Progressive Construction**: PDF → LiDAR → 3D with confidence tracking
-- **Infrastructure-as-Code**: Git-like version control for physical buildings
-- **Multi-Modal Interfaces**: 6 layers from 3D rendering to pure CLI
-- **Field Validation**: AR-based progressive validation with BILT token rewards (planned)
-
-## 📊 Performance
-
-| Operation | Performance | vs Target |
-|-----------|------------|-----------|
-| ArxObject Creation | 83ns | 12,048x faster |
-| Property Operations | 167ns | 598x faster |
-| ASCII Rendering | 2.75μs | 3,636x faster |
-| Spatial Query | 2.25μs | 2,222x faster |
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│         Interface Layer (6 Modes)               │
-├─────────────────────────────────────────────────┤
-│         Go Services (API, WebSocket)            │
-├─────────────────────────────────────────────────┤
-│         CGO Bridge (Go ↔ C)                    │
-├─────────────────────────────────────────────────┤
-│         C Core Engine (High Performance)        │
-├─────────────────────────────────────────────────┤
-│         PostgreSQL + PostGIS (Spatial Data)     │
-└─────────────────────────────────────────────────┘
-```
-
-## 🚦 Quick Start
-
-### Prerequisites
-
-- Go 1.21 or higher
-- PostgreSQL 14+ with PostGIS extension
-- Python 3.9+ (for AI services)
-- GCC/Clang (for C core compilation)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/arx-os/arxos.git
-cd arxos
-
-# Setup database
-./scripts/database/setup-postgres.sh
-
-# Build the project
-make build
-
-# Run migrations
-make migrate
-
-# Start the server
-make run
-```
-
-### CLI Usage
-
-```bash
-# Initialize a building
-./arxos init building_demo --type office --floors 3
-
-# Navigate the building
-./arxos ls /electrical
-./arxos cd /electrical/main-panel
-./arxos inspect circuit-1
-
-# Query with AQL
-./arxos query "SELECT * FROM /electrical WHERE type='outlet' AND load > 15A"
-
-# Version control
-./arxos commit -m "Added emergency lighting"
-./arxos diff HEAD~1
-./arxos rollback HEAD~2
-```
-
-## 📁 Project Structure
+### 📁 Project Organization
 
 ```
 arxos/
-├── cmd/           # CLI application
-├── core/          # Core backend (Go + C)
-│   ├── c/        # High-performance C engine
-│   ├── cgo/      # Go-C bridge
-│   └── internal/ # Go services
-├── ai_service/    # Python AI processing
-├── frontend/      # Web interface
-└── scripts/       # Utility scripts
+├── src/                    # Rust source code
+│   ├── core/              # Core protocol library (no_std)
+│   ├── terminal/          # Terminal client (like Minecraft)
+│   └── embedded/          # Embedded systems library
+├── firmware/              # Microcontroller firmware
+│   ├── esp32/            # ESP32 Arduino/PlatformIO
+│   └── arduino/          # Generic Arduino sketches
+├── hardware/              # Open hardware designs
+│   ├── pcb/              # KiCad PCB designs
+│   ├── enclosures/       # 3D printable cases
+│   └── bom/              # Bill of materials
+├── mobile/                # Mobile apps
+│   ├── ios/              # iPhone AR (Swift)
+│   └── android/          # Android AR (Kotlin)
+├── examples/              # Example projects
+├── docs/                  # Documentation
+│   ├── 01-vision/        # Why Arxos exists
+│   ├── 02-protocol/      # 13-byte specification
+│   ├── 03-mesh-network/  # LoRa/Meshtastic
+│   └── ...               # Complete guides
+└── Cargo.toml            # Rust workspace
 ```
 
-## 🔧 Development
+### 🎮 The Gaming Revolution in Building Management
 
-### Building from Source
+Imagine walking into a building with your phone, seeing every outlet, sensor, and system in augmented reality, and earning cryptocurrency-like tokens (BILT) for mapping and maintaining infrastructure. That's Arxos.
+
+```
+Traditional Building Automation:     Arxos Mesh Network:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+$100,000+ investment                 $10,000 complete system
+Proprietary vendor lock-in           Open source everything
+Internet dependent                   Air-gapped packet radio
+Complex professional install         Any electrician can deploy
+400+ byte JSON objects              13-byte ArxObject packets
+```
+
+### 🚀 Quick Start
 
 ```bash
-# Build everything
-make all
+# Terminal shows your building like Minecraft
+$ arxos view --building=main --floor=2
 
-# Build specific components
-make cli        # CLI tool only
-make server     # Backend server
-make c-engine   # C core library
-
-# Development mode (hot reload)
-make dev
+┌──────────────────────────────────────────────────┐
+│ MAIN BUILDING - FLOOR 2 [LIVE]                  │
+├──────────────────────────────────────────────────┤
+│  ┌─────┬─────┬─────┐    ┌─────┬─────┬─────┐   │
+│  │ 201 │ 202 │ 203 │    │ 204 │ 205 │ 206 │   │
+│  │ ●   │ ○   │ ●   │    │ ○   │ ●   │ ○   │   │
+│  └─────┴─────┴─────┘    └─────┴─────┴─────┘   │
+├──────────────────────────────────────────────────┤
+│ ● Light On  ○ Light Off  ▣ Panel  ═ Circuit    │
+│ Players: 3  BILT Today: 847  Efficiency: 92%   │
+└──────────────────────────────────────────────────┘
 ```
 
-### Testing
+### 💡 Core Innovation: The 13-Byte Protocol
 
-```bash
-# Run all tests
-make test
+Every building object - outlets, sensors, rooms - is represented in exactly 13 bytes:
 
-# Run with coverage
-make test-coverage
+```c
+typedef struct {
+    uint16_t object_id;      // 2 bytes - Unique identifier
+    uint8_t  object_type;    // 1 byte  - What it is
+    uint16_t x, y, z;        // 6 bytes - Where it is
+    uint8_t  properties[4];  // 4 bytes - Current state
+} ArxObject_Packet;          // Total: 13 bytes
 
-# Run benchmarks
-make benchmark
-
-# Run specific test suite
-go test ./core/internal/arxobject/...
+// 30x more efficient than JSON
+// Works over 1 kbps mesh networks
+// Fits in $4 microcontroller memory
 ```
 
-### Contributing
+### 🏗️ How It Works
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. **Hardware**: ESP32 + LoRa radio = $25 per node
+2. **Network**: Meshtastic mesh protocol, no internet needed
+3. **Interface**: ASCII terminal (works everywhere) + AR mobile app
+4. **Gaming**: Players earn BILT tokens for mapping/maintaining
+5. **Security**: Air-gapped, unhackable, physically secure
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+### 📚 Documentation
 
-## 📚 Documentation
+- **[Vision](docs/01-vision/)** - Why Arxos exists and the problem it solves
+- **[Protocol](docs/02-protocol/)** - The 13-byte ArxObject specification
+- **[Mesh Network](docs/03-mesh-network/)** - LoRa/Meshtastic architecture
+- **[Hardware](docs/04-hardware/)** - Build your own nodes for $25
+- **[Terminal](docs/05-terminal/)** - ASCII rendering and navigation
+- **[Implementation](docs/06-implementation/)** - Rust development guide
+- **[Deployment](docs/07-deployment/)** - Real-world installation
+- **[AR Interface](docs/08-ar-interface/)** - iPhone ARKit integration
+- **[Legacy](docs/09-legacy/)** - Lessons from the Go implementation
 
-- [Architecture Overview](ARCHITECTURE.md)
-- [Vision Document](vision.md)
-- [API Documentation](docs/api/README.md)
-- [CLI Commands](docs/cli/commands.md)
-- [Development Guide](docs/development/guide.md)
+### 🎯 Use Cases
 
-## 🎯 Roadmap
+#### Schools (Finally Affordable)
+- **Before**: Can't afford $100K+ systems, waste energy
+- **After**: $5K system, students help map, 30% energy savings
 
-### ✅ Completed
-- Core C engine with exceptional performance
-- ArxObject system with nanometer precision
-- CGO bridge for Go-C integration
-- PostgreSQL with spatial indexing
-- Basic CLI navigation
+#### Small Businesses
+- **Before**: No automation, manual control only
+- **After**: Professional-grade control for price of iPad
 
-### 🚧 In Progress
-- BILT token implementation
-- 6-layer interface system
-- Enhanced AQL functionality
-- AI service integration
+#### Developing Nations
+- **Before**: Skip building intelligence entirely
+- **After**: Leapfrog to mesh networks, no infrastructure needed
 
-### 📅 Planned
-- AR field validation app
-- PDF+LiDAR fusion pipeline
-- ArxOS hardware platform
-- Enterprise features
+### 🛠️ Build Your First Node
 
-## 🤝 Community
+```yaml
+Shopping List:
+- ESP32-S3: $4.50
+- SX1262 LoRa: $8.00
+- Antenna: $3.00
+- Power Supply: $3.00
+- Connectors: $2.00
+Total: ~$25
 
-- **Discord**: [Join our server](https://discord.gg/arxos)
-- **Forum**: [community.arxos.io](https://community.arxos.io)
-- **Twitter**: [@arxos_io](https://twitter.com/arxos_io)
+Time: 30 minutes
+Skill: Basic soldering
+Reward: 100 BILT tokens
+```
 
-## 📄 License
+### 🌍 Join the Revolution
 
-This project is proprietary software. See [LICENSE](LICENSE) for details.
+**Discord**: [discord.gg/arxos](https://discord.gg/arxos)  
+**Hardware Designs**: [/docs/04-hardware/](docs/04-hardware/)  
+**Protocol Spec**: [/docs/02-protocol/](docs/02-protocol/)
 
-## 🆘 Support
+### 🏆 Why Arxos Wins
 
-- **Documentation**: [docs.arxos.io](https://docs.arxos.io)
-- **Issues**: [GitHub Issues](https://github.com/arx-os/arxos/issues)
-- **Email**: support@arxos.io
+| Feature | Traditional BAS | Arxos |
+|---------|----------------|-------|
+| **Cost** | $100,000+ | $10,000 |
+| **Install Time** | 3-6 months | 1 week |
+| **Maintenance** | Vendor monopoly | Community |
+| **Security** | Internet vulnerable | Air-gapped |
+| **Data Size** | 400+ bytes/object | 13 bytes |
+| **Gaming** | Boring | Earn while you work |
 
-## 🙏 Acknowledgments
+### 🔮 The Future
 
-- Pixatool for ASCII rendering inspiration
-- The open-source BIM community
-- All contributors and early adopters
+Imagine every building in the world:
+- **Self-aware** of every outlet, sensor, and system
+- **Interconnected** via secure mesh networks
+- **Gamified** with rewards for maintenance
+- **Accessible** to everyone, not just the wealthy
+- **Unhackable** with no internet connection
+
+This isn't just building automation. It's the democratization of building intelligence.
+
+### 📡 Start Playing the Building Game
+
+1. **Read** [The Vision](docs/01-vision/README.md)
+2. **Build** a $25 node
+3. **Deploy** in your building
+4. **Earn** BILT tokens
+5. **Join** the mesh network
 
 ---
 
-**Built with ❤️ by the Arxos Team**
+*"The constraint is the innovation. 13 bytes forces elegance."*
+
+**Building intelligence through packet radio and gaming mechanics.** 🏢📡🎮

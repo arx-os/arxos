@@ -1,0 +1,51 @@
+[workspace]
+members = [
+    "src/core",
+    "src/terminal",
+    "src/embedded",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Arxos Contributors"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/arxos/arxos-mesh"
+
+[workspace.dependencies]
+# Core dependencies
+heapless = "0.7"
+nb = "1.0"
+embedded-hal = "0.2"
+postcard = "1.0"
+
+# Terminal dependencies
+crossterm = "0.27"
+ratatui = "0.24"
+clap = "4.4"
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+embassy-executor = "0.4"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+defmt = "0.3"
+
+# Testing
+mockall = "0.12"
+proptest = "1.4"
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Link-time optimization
+codegen-units = 1   # Single codegen unit for better optimization
+strip = true        # Strip symbols
+panic = "abort"     # Smaller panic handler
+
+[profile.embedded]
+inherits = "release"
+opt-level = "s"     # Optimize for size with decent speed
+debug = false       # No debug info for smaller binary

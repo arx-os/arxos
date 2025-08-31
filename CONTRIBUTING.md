@@ -123,7 +123,7 @@ refactor: Simplify mesh routing algorithm
 
 - Open an issue for bugs
 - Start a discussion for features
-- Read [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) for architecture
+- Read [README.md](README.md) for overview
 - Check [docs/](docs/) for detailed documentation
 
 ## License

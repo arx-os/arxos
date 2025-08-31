@@ -46,6 +46,9 @@ defmt = ["dep:defmt"]
 name = "arxos_core"
 path = "lib.rs"
 
+[dev-dependencies]
+tempfile = "3.8"
+
 [[example]]
 name = "ply_to_ascii"
 required-features = ["std"]

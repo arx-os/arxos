@@ -256,9 +256,13 @@ END-ISO-10303-21;"#.to_string()
         assert_eq!(arxobjects.len(), 1);
         
         let obj = &arxobjects[0];
-        assert_eq!(obj.x, 5000); // 5.0m * 1000 = 5000mm
-        assert_eq!(obj.y, 5000);
-        assert_eq!(obj.z, 300);  // 0.3m * 1000 = 300mm
+        // Copy values from packed struct
+        let x = obj.x;
+        let y = obj.y;
+        let z = obj.z;
+        assert_eq!(x, 5000); // 5.0m * 1000 = 5000mm
+        assert_eq!(y, 5000);
+        assert_eq!(z, 300);  // 0.3m * 1000 = 300mm
     }
     
     #[test]
@@ -301,7 +305,7 @@ END-ISO-10303-21;"#.to_string()
     
     #[test]
     fn test_symbol_detector_initialization() {
-        let detector = symbol_detector::SymbolDetector::new();
+        let _detector = symbol_detector::SymbolDetector::new();
         // Detector should initialize without errors
         assert!(true);
     }

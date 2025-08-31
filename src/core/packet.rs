@@ -68,7 +68,7 @@ impl MeshPacket {
 
 /// Types of detail chunks in slow-bleed protocol
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ChunkType {
     // Material Properties (0x80-0x8F)
     MaterialDensity = 0x80,

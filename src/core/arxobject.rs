@@ -199,6 +199,18 @@ pub mod object_types {
     // HVAC (0x20-0x2F)
     pub const THERMOSTAT: u8 = 0x20;
     pub const AIR_VENT: u8 = 0x21;
+    pub const HVAC_VENT: u8 = 0x22;
+    
+    // Lighting
+    pub const LIGHT: u8 = 0x30;
+    
+    // Fire Safety
+    pub const FIRE_ALARM: u8 = 0x40;
+    pub const SMOKE_DETECTOR: u8 = 0x41;
+    pub const EMERGENCY_EXIT: u8 = 0x42;
+    
+    // Generic
+    pub const GENERIC: u8 = 0xFF;
     pub const VAV_BOX: u8 = 0x22;
     pub const AIR_HANDLER: u8 = 0x23;
     pub const CHILLER: u8 = 0x24;
@@ -214,7 +226,7 @@ pub mod object_types {
     pub const LIGHT_SENSOR: u8 = 0x33;
     pub const PRESSURE_SENSOR: u8 = 0x34;
     pub const HUMIDITY_SENSOR: u8 = 0x35;
-    pub const SMOKE_DETECTOR: u8 = 0x36;
+    pub const CO2_DETECTOR: u8 = 0x36;  // Renamed to avoid duplicate
     pub const WATER_LEAK_SENSOR: u8 = 0x37;
     pub const VIBRATION_SENSOR: u8 = 0x38;
     pub const SOUND_SENSOR: u8 = 0x39;
@@ -260,6 +272,9 @@ pub mod object_types {
     pub const PHONE: u8 = 0x77;
     pub const IOT_GATEWAY: u8 = 0x78;
     pub const PLAYER_AVATAR: u8 = 0x79;
+    
+    // Aliases for compatibility
+    pub const MOTION: u8 = MOTION_SENSOR;  // Alias for semantic compression
 }
 
 /// Property encoding helpers

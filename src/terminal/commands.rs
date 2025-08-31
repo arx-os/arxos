@@ -3,6 +3,7 @@
 //! Handles local and remote commands including document loading
 
 use arxos_core::document_parser::{DocumentParser, BuildingPlan, ParseError};
+use arxos_core::point_cloud_parser::{PointCloudParser, PointCloudError};
 use std::path::Path;
 use std::fs;
 use log::{info, error, debug};
@@ -11,6 +12,9 @@ use log::{info, error, debug};
 pub struct CommandProcessor {
     /// Document parser instance
     document_parser: DocumentParser,
+    
+    /// Point cloud parser instance
+    point_cloud_parser: PointCloudParser,
     
     /// Currently loaded building plan
     current_plan: Option<BuildingPlan>,
@@ -24,6 +28,7 @@ impl CommandProcessor {
     pub fn new() -> Self {
         Self {
             document_parser: DocumentParser::new(),
+            point_cloud_parser: PointCloudParser::new(),
             current_plan: None,
             current_floor: 0,
         }
@@ -40,6 +45,7 @@ impl CommandProcessor {
         match parts[0] {
             "arxos" => self.process_arxos_command(&parts[1..]).await,
             "load-plan" => self.load_plan_command(&parts[1..]).await,
+            "load-scan" => self.load_scan_command(&parts[1..]).await,
             "view-floor" => self.view_floor_command(&parts[1..]),
             "list-floors" => self.list_floors_command(),
             "show-equipment" => self.show_equipment_command(&parts[1..]),
@@ -239,6 +245,82 @@ impl CommandProcessor {
             CommandResult::success_multi(output)
         } else {
             CommandResult::error(format!("Floor {} not found", floor_num))
+        }
+    }
+    
+    /// Load a LiDAR scan from PLY file
+    async fn load_scan_command(&mut self, args: &[&str]) -> CommandResult {
+        if args.is_empty() {
+            return CommandResult::error("Usage: load-scan <ply_file>".to_string());
+        }
+        
+        let file_path = args[0];
+        
+        // Check if file exists
+        if !Path::new(file_path).exists() {
+            return CommandResult::error(format!("File not found: {}", file_path));
+        }
+        
+        info!("Loading point cloud from: {}", file_path);
+        
+        // Parse the point cloud
+        match self.point_cloud_parser.parse_ply(file_path) {
+            Ok(cloud) => {
+                let point_count = cloud.points.len();
+                let bounds = &cloud.bounds;
+                
+                // Extract building name from filename
+                let building_name = Path::new(file_path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Scanned Building");
+                
+                // Convert to building plan
+                let plan = self.point_cloud_parser.to_building_plan(&cloud, building_name);
+                
+                // Convert to ArxObjects for compression stats
+                let arxobjects = self.point_cloud_parser.to_arxobjects(&cloud, 0x0001);
+                
+                // Calculate compression ratio
+                let original_size = point_count * 12;  // 3 floats per point
+                let compressed_size = arxobjects.len() * 13;  // 13 bytes per ArxObject
+                let compression_ratio = original_size as f32 / compressed_size as f32;
+                
+                // Generate ASCII
+                let ascii = self.document_parser.generate_ascii(&plan);
+                
+                self.current_plan = Some(plan.clone());
+                self.current_floor = 0;
+                
+                let mut output = Vec::new();
+                output.push(format!("Successfully loaded LiDAR scan: {}", building_name));
+                output.push(format!("  Points: {}", point_count));
+                output.push(format!("  Bounds: ({:.1}, {:.1}, {:.1}) to ({:.1}, {:.1}, {:.1})",
+                    bounds.min.x, bounds.min.y, bounds.min.z,
+                    bounds.max.x, bounds.max.y, bounds.max.z));
+                output.push(format!("  Detected floors: {}", plan.floors.len()));
+                output.push(format!("  Detected equipment: {}", 
+                    plan.floors.iter().map(|f| f.equipment.len()).sum::<usize>()));
+                output.push("".to_string());
+                output.push(format!("Compression Statistics:"));
+                output.push(format!("  Original: {} bytes", original_size));
+                output.push(format!("  Compressed: {} bytes", compressed_size));
+                output.push(format!("  Ratio: {:.0}:1", compression_ratio));
+                output.push("".to_string());
+                output.push("Building ASCII View:".to_string());
+                output.push("".to_string());
+                
+                // Add ASCII representation
+                for line in ascii.lines() {
+                    output.push(line.to_string());
+                }
+                
+                CommandResult::success_multi(output)
+            }
+            Err(e) => {
+                error!("Failed to parse point cloud: {}", e);
+                CommandResult::error(format!("Failed to load scan: {}", e))
+            }
         }
     }
     

@@ -2,7 +2,7 @@
 //! Pure LoRa mesh communication - no internet required
 
 use crate::arxobject::ArxObject;
-use crate::packet::{MeshPacket, ChunkType};
+use crate::packet::MeshPacket;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
@@ -299,7 +299,7 @@ impl RFUpdateSystem {
         }
         
         // Reassemble firmware
-        let firmware = self.reassemble_firmware()?;
+        let _firmware = self.reassemble_firmware()?;
         
         // In real implementation:
         // 1. Write to backup partition

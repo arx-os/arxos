@@ -13,8 +13,7 @@ use clap::Parser;
 use log::{debug, error, info, warn};
 
 /// Mesh bridge command-line arguments
-#[derive(Parser, Debug)]
-#[command(author, version, about = "Bridge ESP32 UART to TCP for mesh development")]
+#[derive(Debug)]
 struct Args {
     /// Serial port path (e.g., /dev/ttyUSB0)
     #[arg(short, long)]

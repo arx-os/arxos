@@ -4,10 +4,9 @@
 
 use super::{BuildingPlan, FloorPlan, Room, Equipment, EquipmentType, ParseError, Point3D, BoundingBox};
 use lopdf::{Document, Object};
-use image::{DynamicImage, ImageFormat};
+use image::DynamicImage;
 use std::collections::HashMap;
-use std::io::Cursor;
-use log::{debug, info, warn};
+use log::{debug, info};
 
 /// PDF parser for architectural documents
 pub struct PdfParser {
@@ -43,7 +42,7 @@ impl PdfParser {
         debug!("Extracted {} images", images.len());
         
         // Parse room schedule from text
-        let rooms = self.parse_room_schedule(&text_content)?;
+        let _rooms = self.parse_room_schedule(&text_content)?;
         
         // Process floor plan images
         let mut floors = Vec::new();
@@ -53,7 +52,7 @@ impl PdfParser {
         }
         
         // Extract equipment from both text and images
-        let equipment = self.extract_equipment(&text_content, &images)?;
+        let _equipment = self.extract_equipment(&text_content, &images)?;
         
         // Build final plan
         Ok(BuildingPlan {
@@ -69,8 +68,8 @@ impl PdfParser {
         let mut all_text = String::new();
         
         for page_num in 1..=doc.get_pages().len() {
-            if let Ok(page_id) = doc.get_pages().get(&(page_num as u32)) {
-                if let Ok(content) = doc.extract_text(&[*page_id]) {
+            if let Some(page_id) = doc.get_pages().get(&(page_num as u32)) {
+                if let Ok(content) = doc.extract_text(&[page_id.1 as u32]) {
                     all_text.push_str(&content);
                     all_text.push('\n');
                 }
@@ -84,13 +83,14 @@ impl PdfParser {
     fn extract_images(&self, doc: &Document) -> Result<Vec<DynamicImage>, ParseError> {
         let mut images = Vec::new();
         
-        for (page_num, page_id) in doc.get_pages().iter() {
+        for (_page_num, page_id) in doc.get_pages().iter() {
             // Get page resources
-            if let Ok(resources) = doc.get_page_resources(*page_id) {
+            if let (Some(resources), _) = doc.get_page_resources(*page_id) {
                 // Look for XObject images
                 if let Ok(Object::Dictionary(xobjects)) = resources.get(b"XObject") {
-                    for (name, obj_ref) in xobjects.iter() {
-                        if let Ok(Object::Stream(stream)) = doc.get_object(obj_ref) {
+                    for (_name, obj_ref) in xobjects.iter() {
+                        if let Object::Reference(ref_id) = obj_ref {
+                            if let Ok(Object::Stream(stream)) = doc.get_object(*ref_id) {
                             // Check if it's an image
                             if let Ok(Object::Name(subtype)) = stream.dict.get(b"Subtype") {
                                 if subtype == b"Image" {
@@ -102,6 +102,7 @@ impl PdfParser {
                                     }
                                 }
                             }
+                            }
                         }
                     }
                 }
@@ -112,7 +113,7 @@ impl PdfParser {
     }
     
     /// Decode image stream from PDF
-    fn decode_image_stream(&self, stream: &lopdf::Stream, doc: &Document) -> Result<Vec<u8>, ParseError> {
+    fn decode_image_stream(&self, stream: &lopdf::Stream, _doc: &Document) -> Result<Vec<u8>, ParseError> {
         // This is simplified - real implementation would handle various filters
         stream.decompressed_content()
             .map_err(|e| ParseError::PdfError(format!("Failed to decompress image: {}", e)))
@@ -169,7 +170,7 @@ impl PdfParser {
     }
     
     /// OCR room numbers from floor plan
-    fn ocr_room_numbers(&self, image: &DynamicImage) -> Result<Vec<Room>, ParseError> {
+    fn ocr_room_numbers(&self, _image: &DynamicImage) -> Result<Vec<Room>, ParseError> {
         // This would use tesseract-rs or similar
         // For now, return mock data
         Ok(vec![
@@ -187,14 +188,14 @@ impl PdfParser {
     }
     
     /// Detect equipment symbols in floor plan image
-    fn detect_equipment_symbols(&self, image: &DynamicImage) -> Result<Vec<Equipment>, ParseError> {
+    fn detect_equipment_symbols(&self, _image: &DynamicImage) -> Result<Vec<Equipment>, ParseError> {
         let mut equipment = Vec::new();
         
         // Convert to grayscale for processing
-        let gray = image.to_luma8();
+        let _gray = _image.to_luma8();
         
         // Template matching for each symbol type
-        for (eq_type, template) in &self.symbol_templates {
+        for (eq_type, _template) in &self.symbol_templates {
             // This would use OpenCV or imageproc for template matching
             // For now, return mock data
             equipment.push(Equipment {
@@ -263,13 +264,15 @@ impl PdfParser {
             return false;
         }
         
-        let pixel = edges.get_pixel(x, y);
+        // Convert to grayscale and check pixel value
+        let gray = edges.to_luma8();
+        let pixel = gray.get_pixel(x, y);
         // Dark pixels are likely walls in architectural drawings
         pixel[0] < 128
     }
     
     /// Extract equipment from text and images
-    fn extract_equipment(&self, text: &str, images: &[DynamicImage]) -> Result<Vec<Equipment>, ParseError> {
+    fn extract_equipment(&self, text: &str, _images: &[DynamicImage]) -> Result<Vec<Equipment>, ParseError> {
         let mut equipment = Vec::new();
         
         // Parse equipment schedule from text
@@ -326,24 +329,24 @@ impl PdfParser {
         }
     }
     
-    fn extract_address(&self, text: &str) -> Option<String> {
+    fn extract_address(&self, _text: &str) -> Option<String> {
         // Look for address patterns
         None  // Simplified
     }
     
-    fn extract_total_sqft(&self, text: &str) -> f32 {
+    fn extract_total_sqft(&self, _text: &str) -> f32 {
         0.0  // Simplified
     }
     
-    fn extract_year_built(&self, text: &str) -> Option<u16> {
+    fn extract_year_built(&self, _text: &str) -> Option<u16> {
         None  // Simplified
     }
     
-    fn extract_building_type(&self, text: &str) -> Option<String> {
+    fn extract_building_type(&self, _text: &str) -> Option<String> {
         None  // Simplified
     }
     
-    fn extract_occupancy_class(&self, text: &str) -> Option<String> {
+    fn extract_occupancy_class(&self, _text: &str) -> Option<String> {
         None  // Simplified
     }
     

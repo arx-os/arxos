@@ -2,8 +2,8 @@
 members = [
     "src/core",
     "src/terminal",
-    "src/embedded",
-    "src/tools",
+    # "src/embedded",  # Requires embedded toolchain
+    # "src/tools",     # Fix clap derive issues later
 ]
 resolver = "2"
 

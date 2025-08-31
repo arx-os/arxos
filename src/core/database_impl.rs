@@ -3,10 +3,9 @@
 //! Provides persistent storage for ArxObjects with efficient spatial indexing
 
 use rusqlite::{
-    params, Connection, OptionalExtension, Result as SqlResult, Transaction,
-    types::{FromSql, FromSqlResult, ToSql, ToSqlOutput, ValueRef},
+    params, Connection, Result as SqlResult,
+    types::ToSql,
 };
-use std::path::Path;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
@@ -104,11 +103,18 @@ impl ArxosDatabase {
     }
     
     /// Insert ArxObject
-    pub fn insert_object(&self, obj: &ArxObject) -> Result<u32, DatabaseError> {
+    pub fn insert_object(&self, obj: &ArxObject, building_id: u32) -> Result<u32, DatabaseError> {
         let conn = self.pool.get_connection();
         let mut conn = conn.lock().unwrap();
         
         let tx = conn.transaction()?;
+        
+        // Copy values from packed struct
+        let object_type = obj.object_type;
+        let x = obj.x;
+        let y = obj.y;
+        let z = obj.z;
+        let properties = obj.properties;
         
         let id = tx.execute(
             "INSERT INTO arxobjects (
@@ -116,14 +122,14 @@ impl ArxosDatabase {
                 category, validation_flags, created_at
             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))",
             params![
-                obj.building_id,
-                obj.object_type,
-                obj.x,
-                obj.y,
-                obj.z,
-                &obj.properties[..],
-                obj.category as u8,
-                obj.validation_flags,
+                building_id,
+                object_type,
+                x,
+                y,
+                z,
+                &properties[..],
+                obj.category() as u8,
+                0u8,  // Default validation flags
             ],
         )?;
         
@@ -159,7 +165,7 @@ impl ArxosDatabase {
         
         let obj = stmt.query_row(params![id], |row| {
             let mut obj = ArxObject::new(
-                row.get(0)?,  // building_id
+                row.get(0)?,  // id
                 row.get(1)?,  // object_type
                 row.get(2)?,  // x
                 row.get(3)?,  // y
@@ -172,8 +178,9 @@ impl ArxosDatabase {
                 obj.properties.copy_from_slice(&props[..4]);
             }
             
-            obj.category = row.get(6)?;
-            obj.validation_flags = row.get(7)?;
+            // category and validation_flags are in DB but not in ArxObject
+            // let _category: u8 = row.get(6)?;
+            // let _validation_flags: u8 = row.get(7)?;
             
             Ok(obj)
         })?;
@@ -194,7 +201,7 @@ impl ArxosDatabase {
         let conn = self.pool.get_connection();
         let conn = conn.lock().unwrap();
         
-        let query = if let (Some(min_z), Some(max_z)) = (min_z, max_z) {
+        let query = if let (Some(_min_z), Some(_max_z)) = (min_z, max_z) {
             // 3D query
             "SELECT a.building_id, a.object_type, a.x, a.y, a.z, a.properties, 
                     a.category, a.validation_flags
@@ -215,8 +222,14 @@ impl ArxosDatabase {
         
         let mut stmt = conn.prepare(query)?;
         
-        let params: Vec<&dyn ToSql> = if let (Some(min_z), Some(max_z)) = (min_z, max_z) {
-            vec![&min_x, &max_x, &min_y, &max_y, &min_z, &max_z]
+        // Store z values to avoid lifetime issues
+        let z_values = match (min_z, max_z) {
+            (Some(min), Some(max)) => Some((min, max)),
+            _ => None,
+        };
+        
+        let params: Vec<&dyn ToSql> = if let Some((ref min_z, ref max_z)) = z_values {
+            vec![&min_x, &max_x, &min_y, &max_y, min_z, max_z]
         } else {
             vec![&min_x, &max_x, &min_y, &max_y]
         };
@@ -235,8 +248,9 @@ impl ArxosDatabase {
                 obj.properties.copy_from_slice(&props[..4]);
             }
             
-            obj.category = row.get(6)?;
-            obj.validation_flags = row.get(7)?;
+            // category and validation_flags are in DB but not in ArxObject
+            // let _category: u8 = row.get(6)?;
+            // let _validation_flags: u8 = row.get(7)?;
             
             Ok(obj)
         })?
@@ -269,8 +283,9 @@ impl ArxosDatabase {
                 obj.properties.copy_from_slice(&props[..4]);
             }
             
-            obj.category = row.get(6)?;
-            obj.validation_flags = row.get(7)?;
+            // category and validation_flags are in DB but not in ArxObject
+            // let _category: u8 = row.get(6)?;
+            // let _validation_flags: u8 = row.get(7)?;
             
             Ok(obj)
         })?
@@ -344,8 +359,8 @@ impl ArxosDatabase {
 /// Initialize database schema
 fn initialize_schema(conn: &Connection) -> SqlResult<()> {
     // Read and execute migration files
-    conn.execute_batch(include_str!("../../../migrations/001_initial_schema.sql"))?;
-    conn.execute_batch(include_str!("../../../migrations/002_spatial_functions.sql"))?;
+    conn.execute_batch(include_str!("../../migrations/001_initial_schema.sql"))?;
+    conn.execute_batch(include_str!("../../migrations/002_spatial_functions.sql"))?;
     
     Ok(())
 }

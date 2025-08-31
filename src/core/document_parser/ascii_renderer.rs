@@ -2,7 +2,7 @@
 //! 
 //! Converts building data to ASCII art representation
 
-use super::{BuildingPlan, FloorPlan, Room, Equipment, EquipmentType, Point3D};
+use super::{BuildingPlan, FloorPlan, Room, Equipment, EquipmentType};
 use std::collections::HashMap;
 
 /// ASCII renderer for building plans

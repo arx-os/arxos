@@ -1,12 +1,13 @@
 //! Intelligent broadcast scheduling for slow-bleed protocol
 
 use heapless::{BinaryHeap, Vec};
-use crate::packet::{ChunkType, MeshPacket, DetailChunk};
+use heapless::binary_heap::Max;
+use crate::packet::ChunkType;
 
 /// Manages what to broadcast next in the slow-bleed protocol
 pub struct BroadcastScheduler {
     /// Priority queue of chunks to send
-    priority_queue: BinaryHeap<ChunkPriority, 256>,
+    priority_queue: BinaryHeap<ChunkPriority, Max, 256>,
     
     /// Recent broadcasts to avoid repetition
     recent_broadcasts: Vec<(u16, u16), 64>,
@@ -92,8 +93,11 @@ impl BroadcastScheduler {
     /// Record that a chunk was requested by the mesh
     pub fn record_request(&mut self, object_id: u16, chunk_id: u16) {
         let key = (object_id, chunk_id);
-        let count = self.request_counts.entry(key).or_insert(0);
-        *count = count.saturating_add(1);
+        // Use heapless-compatible pattern
+        let count = self.request_counts.get_mut(&key)
+            .map(|c| *c)
+            .unwrap_or(0);
+        let _ = self.request_counts.insert(key, count.saturating_add(1));
     }
     
     /// Calculate priority for a chunk

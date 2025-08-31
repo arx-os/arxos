@@ -245,7 +245,7 @@ impl IfcParser {
     }
     
     /// Extract equipment from floor
-    fn extract_floor_equipment(&self, story_id: u32) -> Result<Vec<Equipment>, ParseError> {
+    fn extract_floor_equipment(&self, _story_id: u32) -> Result<Vec<Equipment>, ParseError> {
         let mut equipment = Vec::new();
         
         // Look for MEP elements
@@ -279,7 +279,7 @@ impl IfcParser {
     }
     
     /// Extract 3D location from entity
-    fn extract_location(&self, entity: &IfcEntity) -> Result<Point3D, ParseError> {
+    fn extract_location(&self, _entity: &IfcEntity) -> Result<Point3D, ParseError> {
         // This would parse the ObjectPlacement attribute
         // For now, return mock location
         Ok(Point3D {

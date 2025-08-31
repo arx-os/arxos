@@ -110,7 +110,9 @@ impl ArxosSshServer {
         let addr = format!("0.0.0.0:{}", self.config.port);
         println!("Starting SSH server on {}", addr);
         
-        russh::server::run(config, &addr, handler).await?;
+        // Use the new russh 0.43 API
+        let mut server = russh::server::Server::new(config);
+        server.run_on_address(handler, &addr).await?;
         
         Ok(())
     }
@@ -130,10 +132,12 @@ impl ArxosSshServer {
         
         // Only allow secure algorithms
         config.preferred.key.clear();
-        config.preferred.key.push(russh::kex::ED25519);
+        // Use the correct constant name for Russh 0.43
+        config.preferred.key.push(russh_keys::key::ED25519.name.to_string());
         
         config.preferred.cipher.clear();
-        config.preferred.cipher.push(russh::cipher::chacha20poly1305::NAME);
+        // Use the correct cipher name for Russh 0.43
+        config.preferred.cipher.push(russh::cipher::Name::ChaCha20Poly1305);
         
         config.preferred.mac.clear();  // AEAD ciphers don't need MAC
         

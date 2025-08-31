@@ -73,7 +73,7 @@ pub struct Equipment {
     pub properties: std::collections::HashMap<String, String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EquipmentType {
     ElectricalOutlet,
     LightFixture,
@@ -162,8 +162,8 @@ impl DocumentParser {
     }
     
     /// Convert equipment to ArxObject
-    fn equipment_to_arxobject(&self, equipment: &Equipment, floor: i8) -> ArxObject {
-        use crate::object_types;
+    fn equipment_to_arxobject(&self, equipment: &Equipment, _floor: i8) -> ArxObject {
+        use crate::arxobject::object_types;
         
         let object_type = match equipment.equipment_type {
             EquipmentType::ElectricalOutlet => object_types::OUTLET,
@@ -179,9 +179,9 @@ impl DocumentParser {
         ArxObject::new(
             0x0001,  // Building ID (would be assigned)
             object_type,
-            (equipment.location.x * 1000.0) as i16,  // Convert to mm
-            (equipment.location.y * 1000.0) as i16,
-            (equipment.location.z * 1000.0) as i16,
+            (equipment.location.x * 1000.0).max(0.0).min(65535.0) as u16,  // Convert to mm
+            (equipment.location.y * 1000.0).max(0.0).min(65535.0) as u16,
+            (equipment.location.z * 1000.0).max(0.0).min(65535.0) as u16,
         )
     }
     

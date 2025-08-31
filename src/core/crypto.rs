@@ -35,6 +35,12 @@ impl fmt::Display for CryptoError {
 
 impl Error for CryptoError {}
 
+impl From<ed25519_dalek::SignatureError> for CryptoError {
+    fn from(_: ed25519_dalek::SignatureError) -> Self {
+        CryptoError::InvalidSignature
+    }
+}
+
 /// Mesh network cryptographic context
 pub struct MeshCrypto {
     /// Node's signing key (private)
@@ -188,7 +194,7 @@ impl FirmwareVerifier {
     fn verify_metadata(&self, metadata: &FirmwareMetadata) -> Result<(), CryptoError> {
         // Serialize metadata for verification
         let data = metadata.to_bytes();
-        let sig = Signature::from_bytes(&metadata.signature)?;
+        let sig = Signature::from_bytes(&metadata.signature);
         
         for key in &self.trusted_keys {
             if key.verify(&data, &sig).is_ok() {

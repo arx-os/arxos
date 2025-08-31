@@ -9,7 +9,6 @@ use crate::{
     ChunkType,
     DetailChunk,
     ProgressiveRenderer,
-    render_progress_bar,
 };
 
 /// A node in the slow-bleed mesh network
@@ -127,7 +126,7 @@ impl SlowBleedNode {
     }
     
     /// Called when an object reaches CAD-level detail
-    fn on_object_complete(&mut self, object_id: u16) {
+    fn on_object_complete(&mut self, _object_id: u16) {
         // Award bonus BILT for completing an object
         self.stats.bilt_earned += 100;
         
@@ -258,6 +257,11 @@ impl SlowBleedNode {
             self.stats.bilt_earned
         );
         
+        // Convert heapless String to std String for compatibility
+        #[cfg(feature = "std")]
+        return output.as_str().to_string();
+        
+        #[cfg(not(feature = "std"))]
         output
     }
     

@@ -52,7 +52,7 @@ impl SymbolDetector {
         let result = match_template(
             image,
             template,
-            MatchTemplateMethod::NormalizedCrossCorrelation,
+            MatchTemplateMethod::CrossCorrelationNormalized,
         );
         
         // Find peaks in the result
@@ -86,7 +86,7 @@ impl SymbolDetector {
     }
     
     /// Check if a point is a local maximum
-    fn is_local_maximum(&self, result: &GrayImage, x: u32, y: u32) -> bool {
+    fn is_local_maximum(&self, result: &image::ImageBuffer<image::Luma<f32>, Vec<f32>>, x: u32, y: u32) -> bool {
         let value = result.get_pixel(x, y)[0];
         let (width, height) = result.dimensions();
         

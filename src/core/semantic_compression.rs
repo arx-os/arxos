@@ -20,14 +20,14 @@ pub struct Point3D {
     pub z: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Vector3D {
     pub x: f32,
     pub y: f32,
     pub z: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct RGB {
     pub r: u8,
     pub g: u8,
@@ -167,15 +167,13 @@ impl SemanticCompressor {
             };
             
             // Convert to millimeters relative to building origin
-            let x = ((position.x - building_origin.x) * 1000.0) as u16;
-            let y = ((position.y - building_origin.y) * 1000.0) as u16;
-            let z = ((position.z - building_origin.z) * 1000.0) as u16;
+            // Values are clamped during cast to u16 (0..65535)
+            let x = ((position.x - building_origin.x) * 1000.0).max(0.0).min(65535.0) as u16;
+            let y = ((position.y - building_origin.y) * 1000.0).max(0.0).min(65535.0) as u16;
+            let z = ((position.z - building_origin.z) * 1000.0).max(0.0).min(65535.0) as u16;
             
-            // Ensure within 16-bit range
-            if x <= 65535 && y <= 65535 && z <= 65535 {
-                objects.push(ArxObject::new(next_id, object_type, x, y, z));
-                next_id += 1;
-            }
+            objects.push(ArxObject::new(next_id, object_type, x, y, z));
+            next_id += 1;
         }
         
         objects
@@ -209,13 +207,15 @@ impl SemanticCompressor {
         let mut best_plane = None;
         let mut best_inliers = 0;
         
-        for _ in 0..MAX_ITERATIONS {
+        for iter in 0..MAX_ITERATIONS {
             // Sample 3 random points
             if points.len() < 3 { return None; }
             
-            let idx1 = rand::random::<usize>() % points.len();
-            let idx2 = rand::random::<usize>() % points.len();
-            let idx3 = rand::random::<usize>() % points.len();
+            // Use deterministic sampling for now (should use rand in production)
+            let step = points.len() / MAX_ITERATIONS.max(1);
+            let idx1 = (step * iter) % points.len();
+            let idx2 = (idx1 + points.len() / 3) % points.len();
+            let idx3 = (idx1 + 2 * points.len() / 3) % points.len();
             
             if idx1 == idx2 || idx2 == idx3 || idx1 == idx3 { continue; }
             
@@ -278,6 +278,7 @@ impl SemanticCompressor {
         Some(Plane {
             point: p1,
             normal,
+            inlier_count: 0,  // Will be updated later
         })
     }
     

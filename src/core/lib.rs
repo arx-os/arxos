@@ -28,13 +28,24 @@ pub mod ssh_server;
 pub mod data_consumer_api;
 
 #[cfg(feature = "std")]
-pub mod ssh_server_impl;
+pub mod ssh_server_stub;
+
+// SSH implementation temporarily disabled for API migration
+// #[cfg(feature = "std")]
+// pub mod ssh_server_impl;
 
 #[cfg(feature = "std")]
 pub mod crypto;
 
 #[cfg(feature = "std")]
 pub mod database_impl;
+
+// Feature-gated modules (only with std)
+#[cfg(feature = "std")]
+pub mod document_parser;
+
+#[cfg(feature = "std")]
+pub mod point_cloud_parser;
 
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};

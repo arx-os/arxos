@@ -5,13 +5,14 @@ use rusqlite::{Connection, Result as SqliteResult, params};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use std::path::Path;
-use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 /// Database connection wrapper
 pub struct ArxDatabase {
     conn: Connection,
 }
+
+/// Type alias for compatibility with other modules
+pub type Database = ArxDatabase;
 
 impl ArxDatabase {
     /// Create a new database connection
@@ -31,8 +32,8 @@ impl ArxDatabase {
     /// Initialize database with schema
     pub fn init_schema(&self) -> SqliteResult<()> {
         // Read and execute migration files
-        let schema_001 = include_str!("../../../migrations/001_initial_schema.sql");
-        let schema_002 = include_str!("../../../migrations/002_spatial_functions.sql");
+        let schema_001 = include_str!("../../migrations/001_initial_schema.sql");
+        let schema_002 = include_str!("../../migrations/002_spatial_functions.sql");
         
         self.conn.execute_batch(schema_001)?;
         self.conn.execute_batch(schema_002)?;

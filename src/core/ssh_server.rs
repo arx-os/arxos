@@ -60,7 +60,7 @@ impl ArxosSSHServer {
     }
     
     /// Handle incoming SSH connection
-    pub fn handle_connection(&self, stream: impl Read + Write) {
+    pub fn handle_connection(&self, _stream: impl Read + Write) {
         // This would integrate with OpenSSH or russh library
         // For now, it's a placeholder showing the structure
     }
@@ -111,7 +111,7 @@ impl CommandProcessor {
         }));
         
         // Markup commands (triggers AR on iOS)
-        self.register("markup", Box::new(|args| {
+        self.register("markup", Box::new(|_args| {
             "CAMERA_REQUEST:AR_MARKUP".to_string()
         }));
         
@@ -139,7 +139,7 @@ impl CommandProcessor {
         self.commands.insert(name.to_string(), handler);
     }
     
-    pub fn execute(&self, session: &Session, command: &str) -> String {
+    pub fn execute(&self, _session: &Session, command: &str) -> String {
         let parts: Vec<&str> = command.trim().split_whitespace().collect();
         if parts.is_empty() {
             return String::new();
@@ -170,6 +170,7 @@ impl CommandProcessor {
 }
 
 /// Terminal Command Interface
+#[allow(dead_code)]
 pub struct TerminalInterface {
     /// Current prompt
     prompt: String,

@@ -99,9 +99,13 @@ impl DetailStore {
     
     /// Update completeness based on chunk type
     fn update_completeness(&mut self, object_id: u16, chunk_type: &ChunkType) {
-        let level = self.completeness
-            .entry(object_id)
-            .or_insert(DetailLevel::default());
+        // Use get_mut or insert pattern for heapless
+        let level = if let Some(level) = self.completeness.get_mut(&object_id) {
+            level
+        } else {
+            self.completeness.insert(object_id, DetailLevel::default()).ok();
+            self.completeness.get_mut(&object_id).unwrap()
+        };
         
         match chunk_type {
             ChunkType::MaterialDensity |
@@ -160,8 +164,15 @@ impl DetailStore {
     
     /// Clear old chunks to free memory
     pub fn clear_old_chunks(&mut self, age_threshold: u32, current_time: u32) {
-        self.chunks.retain(|_, chunk| {
-            current_time.saturating_sub(chunk.timestamp) < age_threshold
-        });
+        // Manually filter chunks for heapless compatibility
+        let mut to_remove = Vec::<(u16, u16), 64>::new();
+        for (key, chunk) in self.chunks.iter() {
+            if current_time.saturating_sub(chunk.timestamp) >= age_threshold {
+                let _ = to_remove.push(*key);
+            }
+        }
+        for key in to_remove {
+            self.chunks.remove(&key);
+        }
     }
 }

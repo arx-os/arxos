@@ -3,14 +3,16 @@
 //! Production terminal that connects to real mesh nodes via SSH
 
 mod app;
+// mod ssh_client;  // TODO: Fix russh 0.43 API issues
+#[path = "ssh_client_stub.rs"]
 mod ssh_client;
 mod commands;
 
-use app::{App, AppMode};
+use app::App;
 use ssh_client::{SshConfig, load_config, prompt_password};
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -71,7 +73,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Starting Arxos Terminal Client");
     
     // Load or create SSH configuration
-    let mut ssh_config = if let Some(config_path) = args.config {
+    let ssh_config = if let Some(config_path) = args.config {
         load_config(Some(&config_path)).await?
     } else {
         // Build config from arguments

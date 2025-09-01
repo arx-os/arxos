@@ -3,19 +3,15 @@
 //! Manages the terminal UI and SSH connection to mesh nodes
 
 use crate::ssh_client::{MeshSshClient, SshConfig, SshClientError};
-use crate::commands::{CommandProcessor, CommandResult};
-use arxos_core::{ArxObject, object_types};
+use crate::commands::CommandProcessor;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style, Stylize},
-    text::{Line, Span, Text},
-    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Gauge, Tabs},
+    text::Line,
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph, Tabs},
     Frame,
 };
-use std::time::{Duration, Instant};
-use tokio::sync::mpsc;
-use log::{debug, error, info};
 
 /// Application state
 pub struct App {
@@ -220,7 +216,7 @@ impl App {
             }
             "load-plan" | "view-floor" | "list-floors" | "show-equipment" | "export-arxobjects" => {
                 // Process document commands
-                let result = self.command_processor.process(&input).await;
+                let result = self.command_processor.process(command).await;
                 for line in result.output {
                     self.add_output(line);
                 }

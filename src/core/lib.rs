@@ -47,6 +47,13 @@ pub mod document_parser;
 #[cfg(feature = "std")]
 pub mod point_cloud_parser;
 
+#[cfg(feature = "std")]
+pub mod point_cloud_parser_enhanced;
+
+// Transport layer for remote access
+#[cfg(feature = "std")]
+pub mod transport;
+
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};
 pub use packet::{MeshPacket, ChunkType, DetailChunk};

@@ -375,9 +375,14 @@ mod tests {
         let mut obj = ArxObject::new(1, object_types::ROOM, 0, 0, 0);
         obj.set_position_meters(10.5, 8.25, 3.0);
         
-        assert_eq!(obj.x, 10500);
-        assert_eq!(obj.y, 8250);
-        assert_eq!(obj.z, 3000);
+        // Copy values from packed struct to avoid alignment issues
+        let x = obj.x;
+        let y = obj.y;
+        let z = obj.z;
+        
+        assert_eq!(x, 10500);
+        assert_eq!(y, 8250);
+        assert_eq!(z, 3000);
         
         let (x, y, z) = obj.position_meters();
         assert!((x - 10.5).abs() < 0.001);

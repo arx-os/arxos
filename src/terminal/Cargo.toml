@@ -5,15 +5,13 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 
-[[bin]]
-name = "test_scan"
-path = "../bin/test_scan.rs"
+# Removed invalid test_scan binary
 
 [dependencies]
 arxos-core = { path = "../core" }
 crossterm = { workspace = true }
 ratatui = { workspace = true }
-clap = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
 tokio = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }

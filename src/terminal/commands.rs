@@ -2,11 +2,11 @@
 //!
 //! Handles local and remote commands including document loading
 
-use arxos_core::document_parser::{DocumentParser, BuildingPlan, ParseError};
-use arxos_core::point_cloud_parser::{PointCloudParser, PointCloudError};
+use arxos_core::document_parser::{DocumentParser, BuildingPlan};
+use arxos_core::point_cloud_parser::PointCloudParser;
 use std::path::Path;
 use std::fs;
-use log::{info, error, debug};
+use log::{info, error};
 
 /// Command processor for terminal
 pub struct CommandProcessor {
@@ -236,7 +236,9 @@ impl CommandProcessor {
             for (eq_type, items) in equipment_by_type {
                 output.push(format!("{}:", eq_type));
                 for item in items {
-                    let room = item.room_number.as_ref().unwrap_or(&"Unknown".to_string());
+                    let room = item.room_number.as_ref()
+                        .map(|s| s.as_str())
+                        .unwrap_or("Unknown");
                     output.push(format!("  - Room {} @ ({:.1}, {:.1})",
                         room, item.location.x, item.location.y));
                 }

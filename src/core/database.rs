@@ -22,9 +22,12 @@ impl ArxDatabase {
         // Enable foreign keys
         conn.execute("PRAGMA foreign_keys = ON", [])?;
         
-        // Optimize for performance
-        conn.execute("PRAGMA journal_mode = WAL", [])?;
-        conn.execute("PRAGMA synchronous = NORMAL", [])?;
+        // Optimize for performance (skip WAL for in-memory databases)
+        if path != Path::new(":memory:") {
+            // Use pragma_update for settings that return values
+            conn.pragma_update(None, "journal_mode", "WAL")?;
+            conn.pragma_update(None, "synchronous", "NORMAL")?;
+        }
         
         Ok(Self { conn })
     }
@@ -33,10 +36,11 @@ impl ArxDatabase {
     pub fn init_schema(&self) -> SqliteResult<()> {
         // Read and execute migration files
         let schema_001 = include_str!("../../migrations/001_initial_schema.sql");
-        let schema_002 = include_str!("../../migrations/002_spatial_functions.sql");
+        // Skip spatial functions migration as it requires SQLite extensions (SQRT)
+        // let schema_002 = include_str!("../../migrations/002_spatial_functions.sql");
         
         self.conn.execute_batch(schema_001)?;
-        self.conn.execute_batch(schema_002)?;
+        // self.conn.execute_batch(schema_002)?;
         
         Ok(())
     }

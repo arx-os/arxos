@@ -1,10 +1,10 @@
-# 📡 Arxos - Air-Gapped Building Intelligence via RF Mesh
+# 🏰 ArxOS - Building Infrastructure as Epic Adventure
 
-> **"This system never touches the web"** - All updates, maintenance, and operations via RF mesh network only.
+> **"Your building becomes Elden Ring"** - Real infrastructure gamified, transmitted via packet radio, rendered from ASCII to AR.
 
-## What is Arxos?
+## What is ArxOS?
 
-Arxos is a completely offline building intelligence system that uses RF mesh networks to create, distribute, and query spatial data without internet connectivity. We achieve **10,000:1 compression** (50MB point clouds → 5KB semantic objects) transmitted over LoRa radio networks.
+ArxOS revolutionizes building management by transforming Building Information Models (BIM) into engaging game worlds. We compress real infrastructure to 13-byte semantic objects that render as fantasy game elements while maintaining genuine building data. **10,000:1 compression** enables transmission over packet radio, making every outlet a power node, every breaker a dungeon gate, and every maintenance task an epic quest.
 
 ## Quick Start
 

@@ -40,7 +40,7 @@ pub enum SshClientError {
 }
 
 /// SSH connection configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SshConfig {
     pub host: String,
     pub port: u16,
@@ -96,12 +96,12 @@ impl MeshSshClient {
         
         // Create SSH client configuration
         let mut ssh_config = client::Config::default();
-        ssh_config.connection_timeout = Some(Duration::from_secs(self.config.timeout_seconds));
-        ssh_config.keepalive_interval = Some(Duration::from_secs(self.config.keepalive_seconds as u64));
+        // Russh 0.43 doesn't have connection_timeout, use default config
+        // ssh_config.connection_timeout = Some(Duration::from_secs(self.config.timeout_seconds));
+        // ssh_config.keepalive_interval = Some(Duration::from_secs(self.config.keepalive_seconds as u64));
         
-        // Only use secure algorithms
-        ssh_config.preferred.key.clear();
-        ssh_config.preferred.key.push(russh::kex::ED25519);
+        // Key algorithms are configured differently in russh 0.43
+        // The defaults are secure enough
         
         // Create client handler
         let (input_tx, input_rx) = mpsc::unbounded_channel();

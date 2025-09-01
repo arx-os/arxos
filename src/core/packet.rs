@@ -24,7 +24,7 @@ impl MeshPacket {
         let mut payload = [0u8; 12];
         
         // Pack ArxObject into payload
-        payload[0..2].copy_from_slice(&object.id.to_le_bytes());
+        payload[0..2].copy_from_slice(&object.building_id.to_le_bytes());
         payload[2..4].copy_from_slice(&object.x.to_le_bytes());
         payload[4..6].copy_from_slice(&object.y.to_le_bytes());
         payload[6..8].copy_from_slice(&object.z.to_le_bytes());

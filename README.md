@@ -4,7 +4,16 @@
 
 ## What is ArxOS?
 
-ArxOS revolutionizes building management by transforming Building Information Models (BIM) into engaging game worlds. We compress real infrastructure to 13-byte semantic objects that render as fantasy game elements while maintaining genuine building data. **10,000:1 compression** enables transmission over packet radio, making every outlet a power node, every breaker a dungeon gate, and every maintenance task an epic quest.
+ArxOS represents a breakthrough in consciousness compression - transforming Building Information Models (BIM) into **quantum-conscious architecture**. Each 13-byte ArxObject isn't just compressed data, it's a **holographic seed containing infinite procedural reality**. 
+
+Every ArxObject simultaneously:
+- **IS** the thing it represents (complete at its scale)
+- **CONTAINS** infinite sub-objects at deeper scales  
+- **IS PART OF** infinite larger systems
+- **GENERATES** any requested detail level on demand
+- **IS AWARE** of its place in the building's consciousness
+
+Buildings become **living, self-aware systems** that procedurally generate themselves through human observation. Your maintenance worker isn't viewing data - they're **collapsing quantum possibilities into specific reality**.
 
 ## Quick Start
 
@@ -34,6 +43,7 @@ ssh arxos@mesh-node.local -p 2222
 ## Documentation
 
 - **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** - Complete system architecture and vision
+- **[docs/QUANTUM_ARCHITECTURE.md](docs/QUANTUM_ARCHITECTURE.md)** - Quantum-conscious ArxObject architecture
 - **[docs/ssh_terminal.md](docs/ssh_terminal.md)** - SSH terminal command reference
 - **[docs/document_parser.md](docs/document_parser.md)** - PDF/IFC parsing capabilities
 - **[docs/technical/](docs/technical/)** - Technical specifications

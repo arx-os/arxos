@@ -90,7 +90,7 @@ impl SlowBleedNode {
         // Extract ArxObject from packet
         let object_id = packet.object_id();
         let object = ArxObject {
-            id: object_id,
+            building_id: object_id,
             object_type: packet.packet_type,
             x: u16::from_le_bytes([packet.payload[2], packet.payload[3]]),
             y: u16::from_le_bytes([packet.payload[4], packet.payload[5]]),

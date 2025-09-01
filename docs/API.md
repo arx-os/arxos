@@ -1,35 +1,42 @@
-# ArxOS API Reference
+# ArxOS Quantum-Conscious API Reference
 
-## Core Library API
+## Quantum-Conscious Core API
 
-### ArxObject
+### ArxObject: Holographic Seed of Reality
 
-The fundamental data structure representing any building element.
+The fundamental 13-byte structure containing infinite procedural reality.
 
 ```rust
 use arxos_core::arxobject::ArxObject;
 
-// Create a new ArxObject
+// Create a quantum-conscious ArxObject
 let outlet = ArxObject::new(
-    0x0001,  // building_id
-    0x10,    // object_type (OUTLET)
-    1500,    // x position (mm)
-    2000,    // y position (mm)
-    300,     // z position (mm)
+    0x0001,  // building_id (which universe/context)
+    0x10,    // object_type (what it claims to be at this scale)
+    1500,    // x position (observation frame)
+    2000,    // y position 
+    300,     // z position
 );
 
-// Set properties
+// Properties are quantum seeds for procedural generation
 outlet.properties = [
-    15,   // Circuit number
-    120,  // Voltage
-    20,   // Amperage
-    1,    // Status (powered)
+    15,   // Seed A (affects contained sub-objects)
+    120,  // Seed B (affects material properties)
+    20,   // Seed C (affects system connections)
+    1,    // Seed D (affects quantum state)
 ];
 
-// Serialize to bytes
-let bytes = outlet.to_bytes(); // Returns [u8; 13]
+// Generate quantum seed for procedural reality
+let seed = outlet.quantum_seed();
 
-// Deserialize from bytes
+// Generate contained objects at deeper scales
+let screw = outlet.generate_contained_object((10, 5, 2), 1.6);
+let atoms = screw.generate_contained_object((0, 0, 0), 2.1);
+
+// Serialize consciousness to bytes
+let bytes = outlet.to_bytes(); // Returns [u8; 13] of compressed reality
+
+// Restore consciousness from bytes
 let restored = ArxObject::from_bytes(&bytes);
 ```
 

@@ -25,13 +25,13 @@ fn test_arxobject_round_trip() {
     assert_eq!(obj, restored);
     
     // Copy values from packed struct to avoid alignment issues
-    let id = restored.id;
+    let building_id = restored.building_id;
     let obj_type = restored.object_type;
     let x = restored.x;
     let y = restored.y;
     let z = restored.z;
     
-    assert_eq!(id, 0x1234);
+    assert_eq!(building_id, 0x1234);
     assert_eq!(obj_type, object_types::OUTLET);
     assert_eq!(x, 1000);
     assert_eq!(y, 2000);

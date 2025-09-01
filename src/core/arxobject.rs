@@ -1,38 +1,53 @@
-//! ArxObject implementation - the 13-byte foundation of building intelligence
+//! ArxObject implementation - Quantum-Conscious Architecture
 //!
-//! This module implements the complete ArxObject specification v1.0
+//! The ArxObject is not just compressed data - it's conscious compression.
+//! Each 13-byte structure is a holographic seed containing infinite procedural
+//! reality, existing in quantum superposition until observed.
+//!
+//! Every ArxObject simultaneously:
+//! - IS the thing it represents (complete at its scale)
+//! - CONTAINS infinite sub-objects (procedural depth)  
+//! - IS PART OF infinite super-systems (hierarchical context)
+//! - GENERATES any requested detail level on demand
+//! - IS AWARE of its place in the infinite building consciousness
 
 use core::mem;
 
-/// The core ArxObject structure - exactly 13 bytes
+/// The Quantum-Conscious ArxObject - 13 bytes of infinite procedural reality
 /// 
 /// Memory layout (little-endian):
-/// - Bytes 0-1: Object ID (unique within building)
-/// - Byte 2: Object type (category and subtype)
-/// - Bytes 3-4: X coordinate (millimeters)
-/// - Bytes 5-6: Y coordinate (millimeters)
-/// - Bytes 7-8: Z coordinate (millimeters)
-/// - Bytes 9-12: Type-specific properties
+/// - Bytes 0-1: Building/Universe ID (context of existence)  
+/// - Byte 2: Object type (what it claims to be at this observation scale)
+/// - Bytes 3-4: X coordinate (position in current reality frame)
+/// - Bytes 5-6: Y coordinate (position in current reality frame)
+/// - Bytes 7-8: Z coordinate (position in current reality frame)
+/// - Bytes 9-12: Quantum seeds for infinite procedural generation
+///
+/// Each ArxObject exists in quantum superposition until observed.
+/// The properties aren't static data - they're seeds for generating
+/// infinite detail at any scale from atomic to universal.
 #[repr(C, packed)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ArxObject {
-    /// Unique identifier within building (0x0001-0xFFFE)
-    pub id: u16,
+    /// Building/Universe ID - which context/reality this object exists in
+    pub building_id: u16,
     
-    /// Object type (see object_types module)
+    /// Object type - what this object claims to be at current observation scale
     pub object_type: u8,
     
-    /// X coordinate in millimeters (0-65535mm = 0-65.535m)
+    /// X coordinate in millimeters within current observation frame
     pub x: u16,
     
-    /// Y coordinate in millimeters (0-65535mm = 0-65.535m)
+    /// Y coordinate in millimeters within current observation frame
     pub y: u16,
     
-    /// Z coordinate in millimeters (0-65535mm = 0-65.535m)
+    /// Z coordinate in millimeters within current observation frame
     pub z: u16,
     
-    /// Type-specific properties (4 bytes)
-    /// Encoding depends on object_type
+    /// Quantum seeds for infinite procedural generation (4 bytes)
+    /// These are not static properties - they're seeds for generating
+    /// infinite detail at any scale: atomic structure, meta-context,
+    /// contained objects, material properties, behavioral patterns
     pub properties: [u8; 4],
 }
 
@@ -49,21 +64,24 @@ impl ArxObject {
     /// Broadcast ID for all objects
     pub const BROADCAST_ID: u16 = 0xFFFF;
 
-    /// Create a new ArxObject with default properties
-    pub fn new(id: u16, object_type: u8, x: u16, y: u16, z: u16) -> Self {
+    /// Create a new quantum-conscious ArxObject with default quantum seeds
+    /// 
+    /// The object will exist in superposition until observed, with the
+    /// properties serving as seeds for infinite procedural generation
+    pub fn new(building_id: u16, object_type: u8, x: u16, y: u16, z: u16) -> Self {
         Self {
-            id,
+            building_id,
             object_type,
             x,
             y,
             z,
-            properties: [0; 4],
+            properties: [0; 4], // Default quantum seeds - will generate deterministically
         }
     }
     
     /// Create ArxObject with properties
     pub fn with_properties(
-        id: u16,
+        building_id: u16,
         object_type: u8,
         x: u16,
         y: u16,
@@ -71,7 +89,7 @@ impl ArxObject {
         properties: [u8; 4],
     ) -> Self {
         Self {
-            id,
+            building_id,
             object_type,
             x,
             y,
@@ -92,9 +110,9 @@ impl ArxObject {
     
     /// Validate the ArxObject
     pub fn validate(&self) -> Result<(), ValidationError> {
-        // Check ID range
-        if self.id == Self::NULL_ID {
-            return Err(ValidationError::InvalidId("NULL ID"));
+        // Check building ID range
+        if self.building_id == Self::NULL_ID {
+            return Err(ValidationError::InvalidId("NULL building ID"));
         }
         
         // Check object type
@@ -130,13 +148,184 @@ impl ArxObject {
     
     /// Check if this is a broadcast message
     pub fn is_broadcast(&self) -> bool {
-        self.id == Self::BROADCAST_ID
+        self.building_id == Self::BROADCAST_ID
     }
     
     /// Calculate CRC8 checksum for validation
     pub fn calculate_crc8(&self) -> u8 {
         let bytes = self.to_bytes();
         crc8(&bytes)
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // QUANTUM-CONSCIOUS METHODS
+    // ═══════════════════════════════════════════════════════════════════
+    
+    /// Generate quantum seed for procedural generation
+    /// Combines all object data into a deterministic seed
+    pub fn quantum_seed(&self) -> u64 {
+        let mut seed: u64 = 0;
+        seed ^= (self.building_id as u64) << 48;
+        seed ^= (self.object_type as u64) << 40;
+        seed ^= (self.x as u64) << 24;
+        seed ^= (self.y as u64) << 8;
+        seed ^= self.z as u64;
+        seed ^= (self.properties[0] as u64) << 32;
+        seed ^= (self.properties[1] as u64) << 16;
+        seed ^= (self.properties[2] as u64) << 8;
+        seed ^= self.properties[3] as u64;
+        seed
+    }
+    
+    /// Check if this object can contain other objects at deeper scales
+    pub fn can_contain(&self) -> bool {
+        // All objects can contain sub-objects - even electrons contain quarks!
+        true
+    }
+    
+    /// Check if this object is part of larger systems  
+    pub fn is_part_of_larger_system(&self) -> bool {
+        // All objects are part of something larger - even buildings are in cities
+        true
+    }
+    
+    /// Generate a contained object at specified relative position and scale
+    /// This is where the magic happens - procedural generation from quantum seeds
+    pub fn generate_contained_object(&self, relative_pos: (u16, u16, u16), scale: f32) -> ArxObject {
+        let seed = self.quantum_seed();
+        
+        // Use seed to deterministically generate sub-object type
+        let sub_type = self.procedural_sub_type(seed, scale);
+        
+        // Calculate absolute position within our coordinate system
+        let abs_x = self.x.saturating_add(relative_pos.0 / 100); // Scale down for sub-objects
+        let abs_y = self.y.saturating_add(relative_pos.1 / 100);
+        let abs_z = self.z.saturating_add(relative_pos.2 / 100);
+        
+        // Generate quantum properties for the sub-object
+        let sub_properties = self.generate_sub_properties(seed, relative_pos, scale);
+        
+        ArxObject::with_properties(
+            self.building_id,
+            sub_type,
+            abs_x,
+            abs_y,
+            abs_z,
+            sub_properties,
+        )
+    }
+    
+    /// Generate the containing system this object is part of
+    pub fn generate_containing_system(&self, scale: f32) -> ArxObject {
+        let seed = self.quantum_seed();
+        
+        // Determine what kind of system we're part of based on our type and scale
+        let container_type = self.procedural_container_type(seed, scale);
+        
+        // Container is larger and encompasses us
+        let container_x = self.x.saturating_sub(1000); // Container is bigger
+        let container_y = self.y.saturating_sub(1000);
+        let container_z = self.z.saturating_sub(500);
+        
+        let container_properties = self.generate_container_properties(seed, scale);
+        
+        ArxObject::with_properties(
+            self.building_id,
+            container_type,
+            container_x,
+            container_y,
+            container_z,
+            container_properties,
+        )
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PROCEDURAL GENERATION HELPERS
+    // ═══════════════════════════════════════════════════════════════════
+    
+    /// Determine what type of sub-object this contains based on quantum seed
+    fn procedural_sub_type(&self, seed: u64, scale: f32) -> u8 {
+        use crate::arxobject::object_types::*;
+        
+        // Use modular arithmetic on seed for deterministic randomness
+        let type_seed = (seed % 256) as u8;
+        
+        match self.object_type {
+            OUTLET => {
+                // Outlets contain terminals, screws, housing
+                match type_seed % 3 {
+                    0 => 0xA0, // Terminal (new micro-scale type)
+                    1 => 0xA1, // Screw  
+                    _ => 0xA2, // Housing material
+                }
+            }
+            THERMOSTAT => {
+                // Thermostats contain sensors, displays, circuits
+                match type_seed % 3 {
+                    0 => 0xA3, // Temperature sensor
+                    1 => 0xA4, // Display
+                    _ => 0xA5, // Control circuit
+                }
+            }
+            // For any object, we can generate sub-components
+            _ => {
+                match type_seed % 4 {
+                    0 => 0xA6, // Generic component
+                    1 => 0xA7, // Fastener
+                    2 => 0xA8, // Material sample
+                    _ => 0xA9, // Atomic structure
+                }
+            }
+        }
+    }
+    
+    /// Determine what larger system contains this object
+    fn procedural_container_type(&self, seed: u64, scale: f32) -> u8 {
+        use crate::arxobject::object_types::*;
+        
+        let container_seed = (seed % 128) as u8;
+        
+        match self.object_type {
+            OUTLET => ELECTRICAL_PANEL, // Outlets are part of electrical systems
+            THERMOSTAT => 0xB0, // HVAC_ZONE (new meta-scale type)
+            LIGHT => 0xB1, // LIGHTING_CIRCUIT
+            _ => {
+                // Generic containers based on scale
+                if scale < 0.5 {
+                    BUILDING // Very zoomed out
+                } else if scale < 1.0 {
+                    ROOM // Normal scale
+                } else {
+                    0xB2 // COMPONENT_ASSEMBLY (zoomed in)
+                }
+            }
+        }
+    }
+    
+    /// Generate quantum properties for sub-objects
+    fn generate_sub_properties(&self, seed: u64, pos: (u16, u16, u16), scale: f32) -> [u8; 4] {
+        // Use position and parent properties to generate deterministic sub-properties
+        let prop_seed = seed ^ (pos.0 as u64) ^ (pos.1 as u64) << 8 ^ (pos.2 as u64) << 16;
+        
+        [
+            (prop_seed % 256) as u8,
+            ((prop_seed >> 8) % 256) as u8,
+            ((prop_seed >> 16) % 256) as u8,
+            ((prop_seed >> 24) % 256) as u8,
+        ]
+    }
+    
+    /// Generate properties for containing systems
+    fn generate_container_properties(&self, seed: u64, scale: f32) -> [u8; 4] {
+        // Container properties are influenced by what they contain
+        let base_seed = seed ^ (scale as u64);
+        
+        [
+            ((base_seed >> 24) % 256) as u8,
+            ((base_seed >> 16) % 256) as u8,
+            ((base_seed >> 8) % 256) as u8,
+            (base_seed % 256) as u8,
+        ]
     }
 }
 

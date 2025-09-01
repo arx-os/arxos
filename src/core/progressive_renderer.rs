@@ -68,7 +68,7 @@ impl ProgressiveRenderer {
         };
         
         // Copy values from packed struct to avoid unaligned references
-        let id = object.id;
+        let id = object.building_id;
         let x = object.x;
         let y = object.y;
         let z = object.z;
@@ -99,14 +99,14 @@ impl ProgressiveRenderer {
                     " ___\n\
                      |o o|\n\
                      |___|\n\
-                     {:04X}", { let id = object.id; id });
+                     {:04X}", { let id = object.building_id; id });
             }
             object_types::LIGHT_SWITCH => {
                 let _ = write!(output,
                     " ___\n\
                      | | |\n\
                      |_|_|\n\
-                     {:04X}", { let id = object.id; id });
+                     {:04X}", { let id = object.building_id; id });
             }
             object_types::THERMOSTAT => {
                 let temp = object.properties[0];
@@ -114,7 +114,7 @@ impl ProgressiveRenderer {
                     " ____\n\
                      |{:3}°|\n\
                      |____|\n\
-                     {:04X}", temp, { let id = object.id; id });
+                     {:04X}", temp, { let id = object.building_id; id });
             }
             object_types::DOOR => {
                 let _ = write!(output,
@@ -123,7 +123,7 @@ impl ProgressiveRenderer {
                      | () |\n\
                      |    |\n\
                      |____|\n\
-                     {:04X}", { let id = object.id; id });
+                     {:04X}", { let id = object.building_id; id });
             }
             _ => self.render_basic(object, output),
         }
@@ -196,7 +196,7 @@ impl ProgressiveRenderer {
                      ║  └──┘  └──┘  ║ {}A\n\
                      ╚════════╝\n\
                      ID: {:04X} | Circuit {}\n",
-                    voltage, amps, { let id = object.id; id }, circuit);
+                    voltage, amps, { let id = object.building_id; id }, circuit);
                 
                 if detail_level.predictive > 0.0 && self.show_predictions {
                     let _ = write!(output, "⚡ Load prediction: Normal\n");
@@ -218,7 +218,7 @@ impl ProgressiveRenderer {
                      ║  [▲] [▼]  ║\n\
                      ╚═══════════╝\n\
                      ID: {:04X} | Zone {}\n",
-                    temp, setpoint, { let id = object.id; id }, zone);
+                    temp, setpoint, { let id = object.building_id; id }, zone);
                 
                 if detail_level.simulation > 0.0 {
                     let _ = write!(output, "📊 Thermal model: Active\n");
@@ -237,7 +237,7 @@ impl ProgressiveRenderer {
                      ║ └─┴─┴─┴─┴─┴─┘ ║\n\
                      ╚═══════════════╝\n\
                      Panel {:04X}\n",
-                    { let id = object.id; id });
+                    { let id = object.building_id; id });
                 
                 if detail_level.systems > 0.8 {
                     let _ = write!(output, "⚡ Total Load: 145A / 200A\n");

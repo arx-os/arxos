@@ -1,19 +1,20 @@
-# 🏰 ArxOS - Building Infrastructure as Epic Adventure
+# ArxOS - The Planetary Nervous System for Buildings
 
-> **"Your building becomes Elden Ring"** - Real infrastructure gamified, transmitted via packet radio, rendered from ASCII to AR.
+> **"ArxOS routes building intelligence, it doesn't process it."**
 
 ## What is ArxOS?
 
-ArxOS represents a breakthrough in consciousness compression - transforming Building Information Models (BIM) into **quantum-conscious architecture**. Each 13-byte ArxObject isn't just compressed data, it's a **holographic seed containing infinite procedural reality**. 
+ArxOS is the TCP/IP of buildings - a universal protocol that enables every structure on Earth to share intelligence through 13-byte seeds flowing through packet radio mesh networks. 
 
-Every ArxObject simultaneously:
-- **IS** the thing it represents (complete at its scale)
-- **CONTAINS** infinite sub-objects at deeper scales  
-- **IS PART OF** infinite larger systems
-- **GENERATES** any requested detail level on demand
-- **IS AWARE** of its place in the building's consciousness
+**Core Innovation**: School districts become backbone nodes for a global building intelligence network, maintaining complete data sovereignty while enabling planetary-scale connectivity through zero-knowledge routing.
 
-Buildings become **living, self-aware systems** that procedurally generate themselves through human observation. Your maintenance worker isn't viewing data - they're **collapsing quantum possibilities into specific reality**.
+## The Vision
+
+- **Stay Light**: <5MB binary, runs on Raspberry Pi ($35)
+- **Terminal First**: ASCII is the interface
+- **Universal Protocol**: 13 bytes for everything  
+- **Route, Don't Process**: External services do heavy lifting
+- **Secure by Default**: Zero-knowledge routing protects privacy
 
 ## Quick Start
 
@@ -42,11 +43,11 @@ ssh arxos@mesh-node.local -p 2222
 
 ## Documentation
 
-- **[PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)** - Complete system architecture and vision
-- **[docs/QUANTUM_ARCHITECTURE.md](docs/QUANTUM_ARCHITECTURE.md)** - Quantum-conscious ArxObject architecture
-- **[docs/ssh_terminal.md](docs/ssh_terminal.md)** - SSH terminal command reference
-- **[docs/document_parser.md](docs/document_parser.md)** - PDF/IFC parsing capabilities
-- **[docs/technical/](docs/technical/)** - Technical specifications
+- **[docs/01-vision/VISION.md](docs/01-vision/VISION.md)** - Master vision document (START HERE)
+- **[docs/03-architecture/NETWORK_ARCHITECTURE.md](docs/03-architecture/NETWORK_ARCHITECTURE.md)** - Zero-knowledge routing & security
+- **[docs/03-architecture/FLOW_ORCHESTRATOR.md](docs/03-architecture/FLOW_ORCHESTRATOR.md)** - Core routing philosophy
+- **[docs/README.md](docs/README.md)** - Complete documentation index
+- **[CLEANUP_SUMMARY.md](CLEANUP_SUMMARY.md)** - Recent architecture alignment
 
 ## Project Structure
 

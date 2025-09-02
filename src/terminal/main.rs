@@ -1,6 +1,7 @@
-//! Arxos Terminal Client with SSH Connectivity
+//! ArxOS Terminal - Lightweight Building Intelligence Interface
 //! 
-//! Production terminal that connects to real mesh nodes via SSH
+//! Simple terminal for routing building intelligence through mesh networks.
+//! No heavy processing - just routing and display.
 
 mod app;
 // mod ssh_client;  // TODO: Fix russh 0.43 API issues

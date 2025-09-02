@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 pub mod mock;
 pub mod lora;
+pub mod lora_impl;
 // pub mod bluetooth;  // TODO: Implement
 // pub mod sms;        // TODO: Implement
 

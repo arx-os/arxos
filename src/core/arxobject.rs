@@ -439,6 +439,12 @@ pub mod object_types {
     pub const CEILING: u8 = 0x55;
     pub const COLUMN: u8 = 0x56;
     pub const BEAM: u8 = 0x57;
+    pub const FOUNDATION: u8 = 0x58;
+    pub const ROOF: u8 = 0x59;
+    pub const DRYWALL: u8 = 0x5A;
+    pub const CONCRETE: u8 = 0x5B;
+    pub const STEEL_BEAM: u8 = 0x5C;
+    pub const GLASS: u8 = 0x5D;
     
     // Plumbing (0x60-0x6F)
     pub const WATER_VALVE: u8 = 0x60;

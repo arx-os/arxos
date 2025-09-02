@@ -15,8 +15,8 @@ pub mod slow_bleed_node;
 #[cfg(feature = "std")]
 pub mod database;
 
-#[cfg(feature = "std")]
-pub mod semantic_compression;
+// Semantic compression moved to external_services/point_cloud_processor/
+// ArxOS routes, doesn't process
 
 #[cfg(feature = "std")]
 pub mod mesh_network;
@@ -44,15 +44,34 @@ pub mod database_impl;
 #[cfg(feature = "std")]
 pub mod document_parser;
 
-#[cfg(feature = "std")]
-pub mod point_cloud_parser;
-
-#[cfg(feature = "std")]
-pub mod point_cloud_parser_enhanced;
+// Point cloud processing moved to external_services/point_cloud_processor/
+// ArxOS receives ASCII descriptions, doesn't process point clouds
 
 // Transport layer for remote access
 #[cfg(feature = "std")]
 pub mod transport;
+
+// Holographic system moved to research/holographic_arxos/
+// Complex quantum processing violates 'stay light' principle
+
+// Persistence layer for SQLite storage
+#[cfg(feature = "std")]
+pub mod persistence;
+
+// Note: Heavy persistence operations moved to external services
+// ArxOS only stores routing tables and basic state
+
+// ASCII Bridge - Interface between field operations and mesh network
+#[cfg(feature = "std")]
+pub mod ascii_bridge;
+
+// Mesh Router - Lightweight packet routing for building networks
+#[cfg(feature = "std")]
+pub mod mesh_router;
+
+// Terminal Interface - Command line for building intelligence
+#[cfg(feature = "std")]
+pub mod terminal_interface;
 
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};
@@ -79,3 +98,6 @@ mod tests {
         assert_eq!(obj, restored);
     }
 }
+
+#[cfg(all(test, feature = "std"))]
+mod integration_test;

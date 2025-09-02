@@ -1,153 +1,142 @@
-# Arxos Documentation
+# ArxOS Documentation
 
-## Universal Spatial Intelligence Through Semantic Compression
+> **The Planetary Nervous System for Buildings**
 
-Arxos transforms every iPhone into a building intelligence scanner. Using **RF mesh networks and semantic compression**, we compress 50MB point clouds into 5KB semantic objects, achieving 10,000:1 compression while preserving queryable building intelligence - all without internet.
+ArxOS transforms every building on Earth into an intelligent node in a planetary mesh network through 13-byte ArxObjects transmitted over packet radio.
 
 ## 📚 Documentation Structure
 
-### [01. Vision & Problem](01-vision/)
-**The Paradigm Shift: From Graphics to Information**
-- Why spatial intelligence requires semantic compression
-- How iPhone LiDAR democratizes building scanning
-- The 10,000:1 compression breakthrough
+### [00 - Overview](./00-overview/)
+- [Quick Start Guide](./00-overview/quickstart-developer.md)
+- [README](./00-overview/README.md)
 
-### [02. ArxObject Specification](02-arxobject/)
-**Semantic Compression at Scale**
-- ArxObject data model and compression algorithms
-- From point clouds to queryable intelligence
-- ASCII rendering for universal access
+### [01 - Vision](./01-vision/)
+- **[🌟 MASTER VISION DOCUMENT](./01-vision/VISION.md)** - Start here!
+- [Problem Statement](./01-vision/problem.md)
+- [Solution Overview](./01-vision/solution.md)
+- [Comparison to Alternatives](./01-vision/comparison.md)
 
-### [03. Technical Architecture](03-architecture/)
-**The Three-Technology Stack**
-- **Rust**: Memory-safe processing engine
-- **RF Mesh**: LoRa packet radio networking
-- **SQL**: Local spatial database
-- Why 3 technologies beat 50 frameworks
+### [02 - ArxObject Protocol](./02-arxobject/)
+The 13-byte universal building language that achieves 10,000,000:1 compression.
 
-### [04. SQL Database](04-sql-database/)
-**Spatial Intelligence Through SQL**
-- PostGIS/SQLite spatial indexing
-- SQL replication as mesh protocol
-- Building compliance queries
+### [03 - Architecture](./03-architecture/)
+- **[Network Architecture](./03-architecture/NETWORK_ARCHITECTURE.md)** - Zero-knowledge routing & security
+- **[Flow Orchestrator](./03-architecture/FLOW_ORCHESTRATOR.md)** - Core routing philosophy
+- [Engineering Design](./03-architecture/engineering-design-architecture.md)
 
-### [05. RF Mesh Network](05-rf-mesh/)
-**Air-Gapped Building Intelligence**
-- LoRa 915MHz/868MHz packet radio
-- SSH terminal access
-- No internet connection required
-- RF-only updates and maintenance
+### [04 - Hardware](./04-hardware/)
+- [Node Types](./04-hardware/node-types.md)
+- [ESP32 Guide](./04-hardware/esp32-guide.md)
+- [Assembly Instructions](./04-hardware/assembly.md)
+- [Reference Node Design](./04-hardware/reference-node.md)
+- [LoRa Dongle Specification](./hardware/lora-dongle-specification.md)
 
-### [06. Mesh Network](06-mesh-network/)
-**Distributed Intelligence**
-- SQL replication for synchronization
-- LoRa for air-gapped environments
-- Epidemic propagation patterns
+### [05 - Holographic System](./05-holographic/)
+Advanced quantum-conscious ArxObject implementation:
+- [API Guide](./05-holographic/HOLOGRAPHIC_API_GUIDE.md)
+- [Engineering Plan](./05-holographic/HOLOGRAPHIC_ARXOBJECT_ENGINEERING_PLAN.md)
+- [Optimization Plan](./05-holographic/HOLOGRAPHIC_OPTIMIZATION_PLAN.md)
+- [Technical Fixes](./05-holographic/HOLOGRAPHIC_TECHNICAL_FIXES.md)
+- [Quantum Architecture](./05-holographic/QUANTUM_ARCHITECTURE.md)
+- [Fractal Compression](./05-holographic/FRACTAL_COMPRESSION_VISION.md)
 
-### [07. Terminal Interface](07-terminal-interface/)
-**ASCII as Information Density**
-- Terminal-first design philosophy
-- Progressive detail rendering
-- Command-line spatial queries
+### [06 - Implementation](./06-implementation/)
+- [Implementation Roadmap](./06-implementation/implementation-roadmap.md)
+- [Next Steps](./06-implementation/NEXT_STEPS.md)
+- [Remaining Development](./06-implementation/REMAINING_DEVELOPMENT.md)
+- [Codebase Assessment](./06-implementation/CODEBASE_ASSESSMENT.md)
+- [Progress Report](./06-implementation/PROGRESS_REPORT.md)
+- [Development Priorities](./development/priorities.md)
 
-### [08. iOS Integration](08-ios-integration/)
-**LiDAR to Intelligence Pipeline**
-- RoomPlan API integration
-- Native Swift integration
-- 20-second scan-to-query workflow
+### [07 - iOS Integration](./07-ios-integration/)
+iPhone AR capture and LiDAR integration for field operations.
 
-### [09. Implementation Guide](09-implementation/)
-**Building Arxos**
-- Development environment setup
-- Core components walkthrough
-- Testing and validation
+### [08 - BILT Economics](./08-bilt-economics/)
+NETWORK token economics and data marketplace model.
 
-### [10. Roadmap](10-roadmap/)
-**From Concept to Reality**
-- 12-week single-developer plan
-- Milestone-based development
-- Deployment strategies
+### [09 - Deployment](./09-deployment/)
+- [Deployment Guide](./09-deployment/DEPLOYMENT.md)
+- [Security Framework](./09-deployment/security-framework.md)
+- [Deployment Tiers](./concepts/deployment-tiers.md)
 
-## 🚀 Quick Start
+### [10 - Roadmap](./10-roadmap/)
+Phased deployment from Tampa Bay to global scale.
 
-```bash
-# Build the terminal client
-cargo build --release --bin arxos
+### [11 - Case Studies](./11-case-studies/)
+- [Hillsborough County Schools](./11-case-studies/hillsborough-county.md)
 
-# Run terminal interface
-cargo run --bin arxos-cli
+### [12 - Protocols](./12-protocols/)
+- [SMS Gateway Protocol](./12-protocols/sms-gateway-protocol.md)
+- [Bluetooth Mesh Bridge](./12-protocols/bluetooth-mesh-bridge.md)
+- [Remote Access Architecture](./12-protocols/remote-access-architecture.md)
 
-# Start web interface
-cd web && python3 -m http.server
+### [13 - Interfaces](./13-interfaces/)
+- [User Manual](./13-interfaces/USER_MANUAL.md)
+- [Mobile App Architecture](./13-interfaces/mobile-app-architecture.md)
+- [iPhone LiDAR Guide](./13-interfaces/iphone_lidar_guide.md)
+- [SSH Terminal](./13-interfaces/ssh_terminal.md)
+- [AR ASCII Overlay](./13-interfaces/AR_ASCII_OVERLAY_CONCEPT.md)
 
-# Deploy to iOS
-./scripts/deploy-ios.sh
-```
+### [14 - BIM Daemon](./14-bim-daemon/)
+Building Information Modeling integration:
+- [File Ingestion](./14-bim-daemon/file-ingestion.md)
 
-## 💡 Core Innovation
+### [15 - RF Updates](./15-rf-updates/)
+Radio frequency sensing and updates.
 
-### The Compression Breakthrough
+### [Technical Specifications](./technical/)
+- [ArxObject Specification](./technical/arxobject_specification.md)
+- [Mesh Architecture](./technical/mesh_architecture.md)
+- [Slow Bleed Architecture](./technical/slow_bleed_architecture.md)
+- [ASCII CAD System](./technical/ascii_cad_system.md)
+- [CAD Integration](./technical/cad_slowbleed_integration.md)
+- [API Documentation](./technical/API.md)
+- [Document Parser](./technical/document_parser.md)
 
-```
-Traditional: 50MB point cloud → 45min transfer → Special viewer
-Arxos:       50MB → 5KB ArxObject → 30sec transfer → Any terminal
-```
+### [Concepts](./concepts/)
+- [Building Nervous System](./concepts/building-nervous-system.md)
+- [Emergency Response](./concepts/emergency-response.md)
+- [WiFi CSI Sensing](./concepts/wifi-csi-sensing.md)
+- [Hybrid RF Sensing](./concepts/hybrid-rf-sensing.md)
+- [Temporal ArxObjects](./concepts/temporal-arxobjects.md)
+- [Platform Performance](./concepts/platform-performance.md)
+- [BIM as Game World](./concepts/BIM_AS_GAME_WORLD.md)
 
-### The Stack Simplification
-
-| Aspect | Traditional | Arxos |
-|--------|------------|-------|
-| **Languages** | Swift, Kotlin, JavaScript, Python, C++ | Rust |
-| **Frameworks** | 50+ platform-specific | Native + SQL |
-| **Codebases** | 1 per platform | 1 universal |
-| **Binary Size** | 50-200MB | 5-10MB native |
-| **Dev Time** | 12-18 months | 3-6 months |
-| **Team Size** | 5-10 engineers | 1 developer |
-
-## 🎯 Key Concepts
-
-### Semantic Compression
-Point clouds contain geometric redundancy. ArxObjects preserve semantic meaning while discarding redundant geometry, achieving 10,000:1 compression.
-
-### Air-Gapped Operation
-RF mesh network ensures complete privacy and security. Updates, maintenance, and all communication happen via LoRa radio - no internet connection ever required.
-
-### SQL as Protocol
-Database replication becomes the mesh synchronization protocol, eliminating custom networking code.
-
-## 📖 Reading Paths
-
-### For Building Owners
-1. [Vision Overview](01-vision/)
-2. [ROI Analysis](01-vision/economics.md)
-3. [Case Studies](10-roadmap/case-studies.md)
+## 🚀 Quick Start Paths
 
 ### For Developers
-1. [Technical Architecture](03-architecture/)
-2. [ArxObject Specification](02-arxobject/)
-3. [Implementation Guide](09-implementation/)
+1. Read [VISION.md](./01-vision/VISION.md)
+2. Understand [ArxObject Protocol](./02-arxobject/)
+3. Review [Flow Orchestrator](./03-architecture/FLOW_ORCHESTRATOR.md)
+4. Start with [Quick Start Guide](./00-overview/quickstart-developer.md)
+
+### For School Districts
+1. Read [VISION.md](./01-vision/VISION.md)
+2. Review [Network Architecture](./03-architecture/NETWORK_ARCHITECTURE.md) (Security Model)
+3. See [Hillsborough County Case Study](./11-case-studies/hillsborough-county.md)
+4. Check [Deployment Guide](./09-deployment/DEPLOYMENT.md)
 
 ### For Hardware Engineers
-1. [Mesh Network Design](06-mesh-network/)
-2. [LoRa Integration](06-mesh-network/lora.md)
-3. [Embedded Deployment](06-embedded/README.md)
+1. Review [Hardware Specs](./04-hardware/)
+2. Check [LoRa Dongle Specification](./hardware/lora-dongle-specification.md)
+3. Follow [Assembly Instructions](./04-hardware/assembly.md)
 
-## 🔧 Development Status
+## 📋 Core Principles
 
-- ✅ ArxObject specification complete
-- ✅ Core compression algorithms
-- ✅ Terminal rendering system
-- ✅ RF mesh networking
-- 🚧 iOS LiDAR integration
-- 📅 SQL database layer
-- 📅 Mesh synchronization
+1. **Stay Light**: <5MB binary, runs on Raspberry Pi
+2. **Terminal First**: ASCII is the interface
+3. **Universal Protocol**: 13 bytes for everything
+4. **Secure by Default**: Zero-knowledge routing
+5. **Radically Simple**: If it's complex, it's wrong
 
-## 📞 Contact & Contributing
+## 🎯 The Mission
 
-- **GitHub**: [github.com/arxos/arxos](https://github.com/arxos/arxos)
-- **Discord**: [discord.gg/arxos](https://discord.gg/arxos)
-- **Email**: team@arxos.io
+Transform disconnected buildings into a living, breathing, planetary organism that senses, responds, and evolves through the collective intelligence of 13-byte seeds flowing through packet radio mesh networks.
+
+## 📡 Key Innovation
+
+**School districts as backbone nodes** - Using existing public infrastructure to create a secure, scalable global building intelligence network where districts maintain complete data sovereignty while enabling planetary-scale connectivity.
 
 ---
 
-*"The constraint is the innovation. Three technologies, universal deployment, infinite scale."*
+*ArxOS: The TCP/IP of buildings*

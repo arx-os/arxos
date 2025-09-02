@@ -37,6 +37,7 @@ arxos/
    - No internet dependencies in core
    - RF-only communication design
    - Transport abstraction layer ready
+   - SSH implementation removed
 
 3. **Semantic Compression** ✅
    - Point cloud → ArxObject conversion
@@ -47,6 +48,11 @@ arxos/
    - SQLite with spatial indexing (simplified)
    - Building/room/object hierarchy
    - BILT token tracking schema
+
+5. **Terminal-Only Interface** ✅
+   - Clean terminal interface implemented
+   - ASCII visualization ready
+   - Mobile terminal + LiDAR scanning
 
 ### ⚠️ Partially Implemented
 

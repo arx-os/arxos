@@ -33,13 +33,13 @@ District Backbone Nodes:
 └── Purpose: Only route + forward, never store or inspect
 ```
 
-### Layer 3: Regional/National (Internet Fallback)
+### Layer 3: Regional/National (LoRa Mesh Only)
 ```
 Long-Distance Routing:
-├── Internet gateways at major districts
-├── Encrypted tunnels between regions
+├── High-power LoRa gateways at major districts
+├── Mesh routing between regions
 ├── Route finding for cross-country queries
-└── Emergency backup when local mesh fails
+└── Emergency backup via satellite mesh (future)
 ```
 
 ## Security Models

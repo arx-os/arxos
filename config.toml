@@ -1,0 +1,37 @@
+# ArxOS Service Configuration
+# Default configuration for ArxOS Service running on Meshtastic hardware
+
+[meshtastic]
+port = "/dev/ttyUSB0"  # Serial port for Meshtastic device
+baud_rate = 9600       # Serial communication baud rate
+node_id = 0x0001       # Unique node identifier
+timeout_seconds = 30   # Connection timeout
+retry_attempts = 3     # Number of retry attempts
+
+[building]
+id = "building-001"
+name = "Crystal Tower"
+description = "Default building configuration for ArxOS Service"
+
+[building.location]
+lat = 40.7128
+lon = -74.0060
+altitude = 10.0
+
+[database]
+path = "/var/lib/arxos/building.db"
+max_size = "100MB"
+backup_interval = 3600  # 1 hour in seconds
+retention_days = 30
+
+[terminal]
+prompt = "arx>"
+history_size = 1000
+auto_complete = true
+syntax_highlighting = true
+
+[service]
+log_level = "info"
+max_connections = 100
+heartbeat_interval = 60    # 1 minute in seconds
+cleanup_interval = 3600    # 1 hour in seconds

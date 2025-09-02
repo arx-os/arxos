@@ -12,29 +12,32 @@
 - Comprehensive documentation created
 
 ### ⚠️ What Needs Attention
-- SSH server implementation disabled (API migration needed)
-- ESP32 firmware not building (toolchain setup required)
+- Service architecture implementation incomplete
 - No tests beyond basic ArxObject validation
 - Missing CI/CD pipeline
-- Transport layer not implemented
+- Meshtastic client integration needed
+- Protocol translation layer incomplete
 
 ### 🚫 Blockers
-- ESP32 embedded toolchain not configured
-- SSH implementation temporarily disabled for API migration
+- Meshtastic client library integration
 - No integration tests
+- Service deployment configuration needed
 
 ## 📋 Immediate Next Steps
 
-### Phase 1: Fix Critical Issues
+### Phase 1: Service Foundation
 
 ```bash
-# 1. Re-enable SSH server implementation
-cd src/core
-# Uncomment in lib.rs:
-# pub mod ssh_server_impl;
+# 1. Complete service architecture implementation
+cd src/service
+# Implement Meshtastic client integration
+# Complete protocol translation layer
+# Add service configuration management
 
-# 2. Fix the SSH API compatibility issue
-# Review ssh_server_impl.rs and update to new API
+# 2. Update terminal app to use service
+cd src/terminal
+# Remove SSH references
+# Implement service client integration
 
 # 3. Run existing tests to establish baseline
 cargo test --all
@@ -44,26 +47,20 @@ echo "Test failures:" > test_failures.log
 cargo test --all 2>&1 | grep FAILED >> test_failures.log
 ```
 
-### Phase 2: ESP32 Firmware Setup
+### Phase 2: Meshtastic Integration
 
 ```bash
-# Install ESP32 Rust toolchain
-rustup target add riscv32imc-unknown-none-elf
-cargo install espflash cargo-espflash
+# Install Meshtastic client dependencies
+cargo add meshtastic-protobufs
+cargo add serialport
+cargo add tokio-serial
 
-# Re-enable ESP32 in workspace
-# Edit Cargo.toml, uncomment:
-# "src/embedded",
+# Test service with Meshtastic hardware
+cd src/service
+cargo run -- --config config.toml --meshtastic-port /dev/ttyUSB0
 
-# Install ESP-IDF (if using std features)
-git clone https://github.com/espressif/esp-idf.git
-cd esp-idf
-./install.sh esp32s3
-. ./export.sh
-
-# Test build
-cd src/firmware/esp32
-cargo build --release --target riscv32imc-unknown-none-elf
+# Test protocol translation
+cargo test protocol_translator
 ```
 
 ### Phase 3: Create Test Infrastructure

@@ -4,6 +4,7 @@
 
 use crate::meshtastic_client::{MeshtasticClient, MeshtasticConfig, MeshtasticClientError};
 use crate::commands::CommandProcessor;
+use crate::arxos_commands::{ArxOSCommand, CommandProcessor as ArxOSCommandProcessor};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
@@ -26,6 +27,9 @@ pub struct App {
     
     /// Command processor
     command_processor: CommandProcessor,
+    
+    /// ArxOS command processor
+    arxos_processor: ArxOSCommandProcessor,
     
     /// Terminal output buffer
     pub output: Vec<String>,
@@ -93,6 +97,7 @@ impl App {
             meshtastic_client: None,
             meshtastic_config,
             command_processor: CommandProcessor::new(),
+            arxos_processor: ArxOSCommandProcessor::new(),
             output: Vec::new(),
             input: String::new(),
             history: Vec::new(),
@@ -229,10 +234,10 @@ impl App {
     /// Show configuration
     fn show_config(&mut self) {
         self.add_output("Current Configuration:".to_string());
-        self.add_output(format!("  Host: {}", self.ssh_config.host));
-        self.add_output(format!("  Port: {}", self.ssh_config.port));
-        self.add_output(format!("  Username: {}", self.ssh_config.username));
-        self.add_output(format!("  Timeout: {}s", self.ssh_config.timeout_seconds));
+        self.add_output(format!("  Node ID: {}", self.meshtastic_config.node_id));
+        self.add_output(format!("  Frequency: {} MHz", self.meshtastic_config.frequency_mhz));
+        self.add_output(format!("  Region: {}", self.meshtastic_config.region));
+        self.add_output(format!("  Timeout: {}s", self.meshtastic_config.timeout_seconds));
     }
     
     /// Show help

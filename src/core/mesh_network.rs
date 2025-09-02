@@ -1,395 +1,347 @@
-//! RF Mesh Networking Module
-//! Pure LoRa mesh communication - no internet required
+//! ArxOS Mesh Network Implementation
+//! 
+//! Pure Rust mesh networking for building intelligence
 
-use crate::arxobject::ArxObject;
-use crate::packet::MeshPacket;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
+use sx126x::Sx126x;
+use arxos_core::{ArxObject, Database};
+use std::collections::HashMap;
 
-/// LoRa radio configuration
-#[derive(Debug, Clone)]
-pub struct LoRaConfig {
-    /// Frequency in MHz (915 for US, 868 for EU)
-    pub frequency: f32,
-    /// Bandwidth in kHz (125, 250, or 500)
-    pub bandwidth: u32,
-    /// Spreading factor (7-12)
-    pub spreading_factor: u8,
-    /// Transmit power in dBm (0-20)
-    pub tx_power: i8,
-    /// Node ID for this device
-    pub node_id: u16,
-}
-
-impl Default for LoRaConfig {
-    fn default() -> Self {
-        Self {
-            frequency: 915.0,  // US ISM band
-            bandwidth: 125,
-            spreading_factor: 9,
-            tx_power: 20,
-            node_id: rand::random(),
-        }
-    }
-}
-
-/// RF Mesh Network Node
-pub struct MeshNode {
-    config: LoRaConfig,
-    /// Routing table for mesh network
-    routing_table: HashMap<u16, Route>,
-    /// Message cache to prevent loops
-    message_cache: MessageCache,
-    /// Neighbor nodes discovered
-    neighbors: HashSet<u16>,
-    /// Pending outgoing packets
-    tx_queue: VecDeque<MeshPacket>,
-    /// Received packets buffer
-    rx_buffer: VecDeque<MeshPacket>,
-    /// Node statistics
-    stats: NodeStats,
-}
-
-#[derive(Debug, Clone)]
-struct Route {
-    next_hop: u16,
-    hop_count: u8,
-    last_seen: Instant,
-    signal_strength: i8,  // RSSI in dBm
-}
-
-struct MessageCache {
-    seen_messages: HashMap<MessageId, Instant>,
-    max_age: Duration,
-}
-
-#[derive(Hash, Eq, PartialEq, Clone, Copy)]
-struct MessageId {
-    source_node: u16,
+/// ArxOS mesh network manager
+pub struct ArxOSMesh {
+    radio: Sx126x,
+    database: Database,
+    node_id: u16,
     sequence: u16,
+    neighbors: HashMap<u16, NeighborInfo>,
 }
 
-#[derive(Debug, Default)]
-pub struct NodeStats {
-    pub packets_sent: u64,
-    pub packets_received: u64,
-    pub packets_forwarded: u64,
-    pub packets_dropped: u64,
-    pub neighbor_count: usize,
+/// Neighbor information
+#[derive(Debug, Clone)]
+pub struct NeighborInfo {
+    pub node_id: u16,
+    pub last_seen: u64,
+    pub rssi: i16,
+    pub hop_count: u8,
 }
 
-impl MeshNode {
-    /// Create new mesh node
-    pub fn new(config: LoRaConfig) -> Self {
+/// ArxOS packet types
+#[derive(Debug, Clone, Copy)]
+pub enum PacketType {
+    Query = 0x01,
+    Response = 0x02,
+    ArxObject = 0x03,
+    ScanRequest = 0x04,
+    Status = 0x05,
+}
+
+/// Packet header
+#[derive(Debug, Clone)]
+pub struct PacketHeader {
+    pub packet_type: PacketType,
+    pub sequence: u16,
+    pub source: u16,
+    pub destination: u16,
+    pub hop_count: u8,
+}
+
+/// Complete ArxOS packet
+#[derive(Debug, Clone)]
+pub struct ArxOSPacket {
+    pub header: PacketHeader,
+    pub query: Option<String>,
+    pub response: Option<String>,
+    pub arxobjects: Vec<ArxObject>,
+    pub scan_request: Option<ScanRequest>,
+}
+
+/// Scan request structure
+#[derive(Debug, Clone)]
+pub struct ScanRequest {
+    pub room: String,
+    pub scan_type: ScanType,
+}
+
+/// Scan types
+#[derive(Debug, Clone)]
+pub enum ScanType {
+    LiDAR,
+    Manual,
+    Equipment,
+}
+
+impl ArxOSMesh {
+    /// Create new mesh network
+    pub fn new(radio: Sx126x, database: Database) -> Self {
         Self {
-            config,
-            routing_table: HashMap::new(),
-            message_cache: MessageCache::new(),
-            neighbors: HashSet::new(),
-            tx_queue: VecDeque::new(),
-            rx_buffer: VecDeque::new(),
-            stats: NodeStats::default(),
+            radio,
+            database,
+            node_id: generate_node_id(),
+            sequence: 0,
+            neighbors: HashMap::new(),
         }
     }
     
-    /// Broadcast ArxObject to mesh network
-    pub fn broadcast_object(&mut self, obj: &ArxObject) {
-        let packet = MeshPacket {
-            packet_type: 0x01,  // ArxObject type
-            payload: obj.to_bytes()[..12].try_into().unwrap(),
-        };
-        
-        self.broadcast_packet(packet);
+    /// Get node ID
+    pub fn node_id(&self) -> u16 {
+        self.node_id
     }
     
-    /// Send packet to specific node
-    pub fn send_to(&mut self, destination: u16, packet: MeshPacket) {
-        // Find route to destination
-        if let Some(route) = self.routing_table.get(&destination) {
-            self.forward_packet(packet, route.next_hop);
-        } else {
-            // No route - broadcast for discovery
-            self.broadcast_packet(packet);
-        }
-    }
-    
-    /// Broadcast packet to all neighbors
-    pub fn broadcast_packet(&mut self, packet: MeshPacket) {
-        self.tx_queue.push_back(packet);
-        self.stats.packets_sent += 1;
-        
-        // In real implementation, this would trigger LoRa transmission
-        self.transmit_rf();
-    }
-    
-    /// Process received packet
-    pub fn receive_packet(&mut self, packet: MeshPacket, rssi: i8, from_node: u16) {
-        self.stats.packets_received += 1;
-        
-        // Update neighbor info
-        self.neighbors.insert(from_node);
-        self.update_route(from_node, from_node, 1, rssi);
-        
-        // Check if we've seen this packet before
-        let msg_id = self.extract_message_id(&packet);
-        if self.message_cache.has_seen(msg_id) {
-            self.stats.packets_dropped += 1;
-            return;
-        }
-        
-        self.message_cache.mark_seen(msg_id);
-        
-        // Process or forward packet
-        if self.is_for_us(&packet) {
-            self.rx_buffer.push_back(packet);
-        } else {
-            self.forward_packet(packet, from_node);
-            self.stats.packets_forwarded += 1;
-        }
-    }
-    
-    /// Forward packet to next hop
-    fn forward_packet(&mut self, packet: MeshPacket, exclude_node: u16) {
-        // Epidemic routing - send to all neighbors except source
-        for &neighbor in &self.neighbors {
-            if neighbor != exclude_node {
-                self.tx_queue.push_back(packet);
-            }
-        }
-    }
-    
-    /// Update routing table
-    fn update_route(&mut self, destination: u16, next_hop: u16, hop_count: u8, rssi: i8) {
-        let route = Route {
-            next_hop,
-            hop_count,
-            last_seen: Instant::now(),
-            signal_strength: rssi,
-        };
-        
-        // Update if better route or fresher
-        match self.routing_table.get(&destination) {
-            Some(existing) if existing.hop_count <= hop_count => {
-                if existing.last_seen.elapsed() > Duration::from_secs(60) {
-                    self.routing_table.insert(destination, route);
+    /// Receive packet from mesh
+    pub async fn receive_packet(&mut self) -> Option<ArxOSPacket> {
+        if self.radio.available() {
+            let mut buffer = [0u8; 255];
+            if let Ok(len) = self.radio.read(&mut buffer) {
+                if let Ok(packet) = ArxOSPacket::from_bytes(&buffer[..len]) {
+                    // Update neighbor info
+                    self.update_neighbor(packet.header.source);
+                    return Some(packet);
                 }
             }
-            _ => {
-                self.routing_table.insert(destination, route);
-            }
         }
+        None
     }
     
-    /// Check if packet is for this node
-    fn is_for_us(&self, _packet: &MeshPacket) -> bool {
-        // In real implementation, check destination field
-        true  // For now, accept all packets
-    }
-    
-    /// Extract message ID for deduplication
-    fn extract_message_id(&self, _packet: &MeshPacket) -> MessageId {
-        MessageId {
-            source_node: rand::random(),  // Would extract from packet
-            sequence: rand::random(),
-        }
-    }
-    
-    /// Simulate RF transmission
-    fn transmit_rf(&self) {
-        // In real implementation, this would:
-        // 1. Configure LoRa radio with self.config
-        // 2. Transmit packets from tx_queue
-        // 3. Handle collision avoidance
-    }
-    
-    /// Get next received packet
-    pub fn get_received_packet(&mut self) -> Option<MeshPacket> {
-        self.rx_buffer.pop_front()
-    }
-    
-    /// Get network statistics
-    pub fn get_stats(&self) -> &NodeStats {
-        &self.stats
-    }
-}
-
-impl MessageCache {
-    fn new() -> Self {
-        Self {
-            seen_messages: HashMap::new(),
-            max_age: Duration::from_secs(300),  // 5 minutes
-        }
-    }
-    
-    fn has_seen(&mut self, id: MessageId) -> bool {
-        // Clean old entries
-        self.clean_old_entries();
-        
-        self.seen_messages.contains_key(&id)
-    }
-    
-    fn mark_seen(&mut self, id: MessageId) {
-        self.seen_messages.insert(id, Instant::now());
-    }
-    
-    fn clean_old_entries(&mut self) {
-        let now = Instant::now();
-        self.seen_messages.retain(|_, time| {
-            now.duration_since(*time) < self.max_age
-        });
-    }
-}
-
-/// RF Update Distribution System
-pub struct RFUpdateSystem {
-    /// Current firmware version
-    current_version: Version,
-    /// Update chunks received
-    update_chunks: HashMap<u16, Vec<u8>>,
-    /// Total chunks expected
-    total_chunks: Option<u16>,
-    /// Update signature for verification
-    update_signature: Option<[u8; 64]>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Version {
-    pub major: u8,
-    pub minor: u8,
-    pub patch: u8,
-}
-
-impl RFUpdateSystem {
-    pub fn new(current_version: Version) -> Self {
-        Self {
-            current_version,
-            update_chunks: HashMap::new(),
-            total_chunks: None,
-            update_signature: None,
-        }
-    }
-    
-    /// Process update announcement
-    pub fn process_announcement(&mut self, version: Version, total_chunks: u16, signature: [u8; 64]) {
-        if version > self.current_version {
-            self.total_chunks = Some(total_chunks);
-            self.update_signature = Some(signature);
-            self.update_chunks.clear();
-        }
-    }
-    
-    /// Receive update chunk
-    pub fn receive_chunk(&mut self, chunk_index: u16, data: Vec<u8>) -> bool {
-        self.update_chunks.insert(chunk_index, data);
-        
-        // Check if complete
-        if let Some(total) = self.total_chunks {
-            self.update_chunks.len() == total as usize
-        } else {
-            false
-        }
-    }
-    
-    /// Verify and install update
-    pub fn install_update(&self) -> Result<(), &'static str> {
-        // Verify signature
-        if !self.verify_signature() {
-            return Err("Invalid update signature");
-        }
-        
-        // Reassemble firmware
-        let _firmware = self.reassemble_firmware()?;
-        
-        // In real implementation:
-        // 1. Write to backup partition
-        // 2. Verify checksum
-        // 3. Set boot flag
-        // 4. Reboot
-        
+    /// Send packet to mesh
+    pub async fn send_packet(&mut self, packet: &ArxOSPacket) -> Result<(), Error> {
+        let data = packet.to_bytes();
+        self.radio.write(&data).await?;
         Ok(())
     }
     
-    fn verify_signature(&self) -> bool {
-        // Ed25519 signature verification
-        // Would use actual crypto library
-        true  // Placeholder
-    }
-    
-    fn reassemble_firmware(&self) -> Result<Vec<u8>, &'static str> {
-        let total = self.total_chunks.ok_or("No update in progress")?;
-        let mut firmware = Vec::new();
-        
-        for i in 0..total {
-            let chunk = self.update_chunks.get(&i)
-                .ok_or("Missing chunk")?;
-            firmware.extend_from_slice(chunk);
-        }
-        
-        Ok(firmware)
-    }
-}
-
-impl PartialOrd for Version {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Version {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match self.major.cmp(&other.major) {
-            std::cmp::Ordering::Equal => {
-                match self.minor.cmp(&other.minor) {
-                    std::cmp::Ordering::Equal => self.patch.cmp(&other.patch),
-                    other => other,
-                }
-            }
-            other => other,
-        }
-    }
-}
-
-impl PartialEq for Version {
-    fn eq(&self, other: &Self) -> bool {
-        self.major == other.major && 
-        self.minor == other.minor && 
-        self.patch == other.patch
-    }
-}
-
-impl Eq for Version {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_mesh_routing() {
-        let config = LoRaConfig::default();
-        let mut node = MeshNode::new(config);
-        
-        // Simulate receiving packet from neighbor
-        let packet = MeshPacket {
-            packet_type: 0x01,
-            payload: [0; 12],
+    /// Send query to mesh network
+    pub async fn send_query(&mut self, query: &str) -> Result<String, Error> {
+        let packet = ArxOSPacket {
+            header: PacketHeader {
+                packet_type: PacketType::Query,
+                sequence: self.next_sequence(),
+                source: self.node_id,
+                destination: 0xFFFF, // Broadcast
+                hop_count: 0,
+            },
+            query: Some(query.to_string()),
+            ..Default::default()
         };
         
-        node.receive_packet(packet, -70, 0x1234);
+        self.send_packet(&packet).await?;
         
-        assert_eq!(node.neighbors.len(), 1);
-        assert!(node.neighbors.contains(&0x1234));
-        assert_eq!(node.stats.packets_received, 1);
+        // Wait for response
+        let response = self.wait_for_response(packet.header.sequence).await?;
+        Ok(response)
     }
     
-    #[test]
-    fn test_version_comparison() {
-        let v1 = Version { major: 1, minor: 0, patch: 0 };
-        let v2 = Version { major: 1, minor: 0, patch: 1 };
-        let v3 = Version { major: 2, minor: 0, patch: 0 };
+    /// Send response to query
+    pub async fn send_response(&mut self, sequence: u16, response: String) -> Result<(), Error> {
+        let packet = ArxOSPacket {
+            header: PacketHeader {
+                packet_type: PacketType::Response,
+                sequence,
+                source: self.node_id,
+                destination: 0xFFFF, // Broadcast
+                hop_count: 0,
+            },
+            response: Some(response),
+            ..Default::default()
+        };
         
-        assert!(v2 > v1);
-        assert!(v3 > v2);
-        assert!(v3 > v1);
+        self.send_packet(&packet).await?;
+        Ok(())
+    }
+    
+    /// Store ArxObjects in local database
+    pub async fn store_arxobjects(&mut self, objects: &[ArxObject]) -> Result<(), Error> {
+        for object in objects {
+            self.database.store_arxobject(object).await?;
+        }
+        Ok(())
+    }
+    
+    /// Send periodic status updates
+    pub async fn send_periodic_updates(&mut self) -> Result<(), Error> {
+        let packet = ArxOSPacket {
+            header: PacketHeader {
+                packet_type: PacketType::Status,
+                sequence: self.next_sequence(),
+                source: self.node_id,
+                destination: 0xFFFF, // Broadcast
+                hop_count: 0,
+            },
+            ..Default::default()
+        };
+        
+        self.send_packet(&packet).await?;
+        Ok(())
+    }
+    
+    /// Update neighbor information
+    fn update_neighbor(&mut self, node_id: u16) {
+        let neighbor = NeighborInfo {
+            node_id,
+            last_seen: get_timestamp(),
+            rssi: -50, // TODO: Get actual RSSI
+            hop_count: 1,
+        };
+        self.neighbors.insert(node_id, neighbor);
+    }
+    
+    /// Get next sequence number
+    fn next_sequence(&mut self) -> u16 {
+        self.sequence = self.sequence.wrapping_add(1);
+        self.sequence
+    }
+    
+    /// Wait for response to query
+    async fn wait_for_response(&mut self, sequence: u16) -> Result<String, Error> {
+        // Simple timeout-based response waiting
+        // In production, this would be more sophisticated
+        for _ in 0..100 { // 10 second timeout
+            if let Some(packet) = self.receive_packet().await {
+                if packet.header.sequence == sequence && 
+                   packet.header.packet_type == PacketType::Response {
+                    return Ok(packet.response.unwrap_or_default());
+                }
+            }
+            esp_hal::delay::FreeRtos::delay_ms(100);
+        }
+        Err(Error::Timeout)
+    }
+}
+
+/// Generate unique node ID
+fn generate_node_id() -> u16 {
+    // Simple node ID generation
+    // In production, this would be more sophisticated
+    0x0001
+}
+
+/// Get current timestamp
+fn get_timestamp() -> u64 {
+    // Simple timestamp
+    // In production, use proper RTC
+    0
+}
+
+/// Error types
+#[derive(Debug)]
+pub enum Error {
+    RadioError,
+    Timeout,
+    InvalidPacket,
+    DatabaseError,
+}
+
+impl Default for ArxOSPacket {
+    fn default() -> Self {
+        Self {
+            header: PacketHeader {
+                packet_type: PacketType::Query,
+                sequence: 0,
+                source: 0,
+                destination: 0,
+                hop_count: 0,
+            },
+            query: None,
+            response: None,
+            arxobjects: Vec::new(),
+            scan_request: None,
+        }
+    }
+}
+
+impl ArxOSPacket {
+    /// Convert packet to bytes
+    pub fn to_bytes(&self) -> Vec<u8> {
+        // Simple serialization
+        // In production, use proper serialization
+        let mut bytes = Vec::new();
+        bytes.push(self.header.packet_type as u8);
+        bytes.extend_from_slice(&self.header.sequence.to_le_bytes());
+        bytes.extend_from_slice(&self.header.source.to_le_bytes());
+        bytes.extend_from_slice(&self.header.destination.to_le_bytes());
+        bytes.push(self.header.hop_count);
+        
+        // Add payload based on packet type
+        match self.header.packet_type {
+            PacketType::Query => {
+                if let Some(query) = &self.query {
+                    bytes.extend_from_slice(query.as_bytes());
+                }
+            }
+            PacketType::Response => {
+                if let Some(response) = &self.response {
+                    bytes.extend_from_slice(response.as_bytes());
+                }
+            }
+            PacketType::ArxObject => {
+                for object in &self.arxobjects {
+                    bytes.extend_from_slice(&object.to_bytes());
+                }
+            }
+            _ => {}
+        }
+        
+        bytes
+    }
+    
+    /// Create packet from bytes
+    pub fn from_bytes(data: &[u8]) -> Result<Self, Error> {
+        if data.len() < 8 {
+            return Err(Error::InvalidPacket);
+        }
+        
+        let packet_type = match data[0] {
+            0x01 => PacketType::Query,
+            0x02 => PacketType::Response,
+            0x03 => PacketType::ArxObject,
+            0x04 => PacketType::ScanRequest,
+            0x05 => PacketType::Status,
+            _ => return Err(Error::InvalidPacket),
+        };
+        
+        let sequence = u16::from_le_bytes([data[1], data[2]]);
+        let source = u16::from_le_bytes([data[3], data[4]]);
+        let destination = u16::from_le_bytes([data[5], data[6]]);
+        let hop_count = data[7];
+        
+        let header = PacketHeader {
+            packet_type,
+            sequence,
+            source,
+            destination,
+            hop_count,
+        };
+        
+        // Parse payload
+        let mut packet = ArxOSPacket {
+            header,
+            query: None,
+            response: None,
+            arxobjects: Vec::new(),
+            scan_request: None,
+        };
+        
+        if data.len() > 8 {
+            let payload = &data[8..];
+            match packet_type {
+                PacketType::Query => {
+                    packet.query = Some(String::from_utf8_lossy(payload).to_string());
+                }
+                PacketType::Response => {
+                    packet.response = Some(String::from_utf8_lossy(payload).to_string());
+                }
+                PacketType::ArxObject => {
+                    // Parse ArxObjects
+                    for chunk in payload.chunks(13) {
+                        if chunk.len() == 13 {
+                            if let Ok(object) = ArxObject::from_bytes(chunk.try_into().unwrap()) {
+                                packet.arxobjects.push(object);
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        Ok(packet)
     }
 }

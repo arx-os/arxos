@@ -5,20 +5,10 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 
-[[bin]]
-name = "mesh-bridge"
-path = "mesh_bridge.rs"
-
-[[bin]]
-name = "test-client"
-path = "test_client.rs"
-
 [dependencies]
 serialport = "4.3"
 clap = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 tokio = { workspace = true }
-russh = "0.43"
-russh-keys = "0.43"
 anyhow = "1.0"

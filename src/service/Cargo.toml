@@ -1,0 +1,49 @@
+[package]
+name = "arxos-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Core ArxOS dependencies
+arxos-core = { path = "../core" }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Serial communication for Meshtastic
+serialport = "4.3"
+tokio-serial = "5.4"
+
+# Configuration
+config = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# CLI
+clap = { version = "4.0", features = ["derive"] }
+
+# Database
+sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls"] }
+
+# Meshtastic protocol
+prost = "0.12"
+prost-types = "0.12"
+
+# Terminal interface
+crossterm = "0.27"
+ratatui = "0.24"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+[[bin]]
+name = "arxos-service"
+path = "src/main.rs"

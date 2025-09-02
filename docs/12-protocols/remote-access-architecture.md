@@ -14,6 +14,7 @@ This document defines the hybrid remote access architecture for Arxos that maint
 3. **Hardware Optional**: Core functionality without special equipment, enhanced with dongles
 4. **Emergency Ready**: Critical access methods that work in disasters
 5. **Privacy Preserved**: No cloud services, telemetry, or external dependencies
+6. **Terminal-Only Interface**: No web interfaces, SSH, or traditional network protocols
 
 ## Architecture Overview
 

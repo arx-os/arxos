@@ -12,6 +12,7 @@ pub mod broadcast_scheduler;
 pub mod progressive_renderer;
 pub mod slow_bleed_node;
 pub mod meshtastic_protocol;
+pub mod mesh_network;
 
 #[cfg(feature = "std")]
 pub mod database;

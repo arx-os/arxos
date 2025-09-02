@@ -502,7 +502,7 @@ The 16-week timeline is aggressive but achievable with dedicated resources. Key 
 
 ```bash
 # Clone repository
-git clone https://github.com/arxos/arxos-remote-access
+git clone arxos-remote-access
 cd arxos-remote-access
 
 # Setup development environment

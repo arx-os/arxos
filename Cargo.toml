@@ -2,6 +2,7 @@
 members = [
     "src/core",
     "src/terminal",
+    "src/service",
     # "src/embedded",  # Requires embedded toolchain
     # "src/tools",     # Fix clap derive issues later
 ]

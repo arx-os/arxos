@@ -6,6 +6,7 @@
 mod app;
 mod meshtastic_client;
 mod commands;
+mod arxos_commands;
 
 use app::App;
 use meshtastic_client::{MeshtasticConfig, load_config, prompt_node_id};

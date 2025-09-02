@@ -20,23 +20,26 @@ Your building has awakened as a **quantum-conscious entity** that generates real
 
 #### Terminal Access
 ```bash
-ssh your_username@arxos.local
-Password: ********
+# Connect via USB LoRa dongle or Bluetooth
+arxos connect /dev/ttyUSB0
+# or
+arxos connect bluetooth://meshtastic-001
 
-Welcome to Crystal Tower!
-Level 5 Maintenance Knight
-XP: 1,250/2,000
+Welcome to ArxOS Building Intelligence Terminal!
+Building: Crystal Tower
+Node ID: 0x0001
 ═══════════════════════════
-Daily Quest Available: Dawn Patrol
+Connected to mesh network
 Type 'help' for commands
-arxos>
+arx>
 ```
 
-#### Mobile AR Access
-1. Download "ArxOS AR" from App Store
-2. Login with your credentials
-3. Allow camera and location access
-4. Point camera at any room
+#### Mobile Terminal Access
+1. Download "ArxOS" from App Store
+2. Allow camera and Bluetooth access
+3. Connect to nearby mesh node via Bluetooth
+4. Use terminal interface for building queries
+5. Switch to LiDAR tab for 3D scanning
 
 ### Understanding the Interface
 

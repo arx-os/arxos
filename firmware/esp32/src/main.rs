@@ -18,7 +18,6 @@ use esp_hal::{
     spi::{master::Spi, SpiMode},
     system::SystemControl,
     timer::{timg::TimerGroup, ErasedTimer, OneShotTimer},
-    uart::{config::Config as UartConfig, TxRxPins, Uart},
 };
 use esp_println::println;
 use embassy_executor::Spawner;
@@ -29,12 +28,12 @@ mod config;
 mod lora_driver;
 mod mesh_router;
 mod packet_processor;
-mod ssh_server;
 mod storage;
 
 use config::NodeConfig;
 use lora_driver::LoRaDriver;
 use mesh_router::MeshRouter;
+use arxos_core::meshtastic_protocol::{MeshtasticProtocolHandler, MockMeshtasticHandler};
 
 /// Main embassy executor
 static EXECUTOR: StaticCell<embassy_executor::Executor> = StaticCell::new();
@@ -95,20 +94,14 @@ async fn main(spawner: Spawner) {
     // Initialize mesh router
     let router = MeshRouter::new(config.node_id, lora);
     
-    // Initialize UART for SSH server
-    let uart_pins = TxRxPins::new(io.pins.gpio21, io.pins.gpio20);
-    let uart = Uart::new_with_config(
-        peripherals.UART0,
-        UartConfig::default(),
-        uart_pins,
-        &clocks,
-    );
+    // Initialize meshtastic protocol handler
+    let mut protocol_handler = MockMeshtasticHandler::new(config.node_id);
     
     // Spawn async tasks
     spawner.spawn(mesh_receive_task(router.clone())).unwrap();
     spawner.spawn(mesh_transmit_task(router.clone())).unwrap();
     spawner.spawn(heartbeat_task()).unwrap();
-    spawner.spawn(ssh_server_task(uart)).unwrap();
+    spawner.spawn(meshtastic_protocol_task(protocol_handler)).unwrap();
     
     println!("Mesh node started successfully!");
     println!("Listening on {} MHz", config.frequency_mhz());
@@ -179,42 +172,21 @@ async fn heartbeat_task() {
     }
 }
 
-/// SSH server task for terminal access
+/// Meshtastic protocol handler task
 #[embassy_executor::task]
-async fn ssh_server_task(uart: Uart<'static, UART0>) {
-    println!("Starting SSH server on UART");
+async fn meshtastic_protocol_task(mut handler: MockMeshtasticHandler) {
+    println!("Starting meshtastic protocol handler");
     
-    // Simple command processor for now
-    // Full SSH implementation would use russh crate
     loop {
-        // Read command from UART
-        let mut buffer = [0u8; 256];
-        match uart.read(&mut buffer).await {
-            Ok(len) => {
-                let command = core::str::from_utf8(&buffer[..len]).unwrap_or("");
-                process_command(command).await;
-            }
-            Err(_) => {
-                Timer::after(Duration::from_millis(100)).await;
-            }
-        }
-    }
-}
-
-async fn process_command(cmd: &str) {
-    match cmd.trim() {
-        "status" => {
-            println!("Node status: OK");
-            println!("Mesh neighbors: 3");
-            println!("Packets routed: 1,234");
-        }
-        "scan" => {
-            println!("Scanning for neighbors...");
-            // Trigger neighbor discovery
-        }
-        _ => {
-            println!("Unknown command: {}", cmd);
-        }
+        // Process incoming meshtastic packets
+        // This will handle building queries, status requests, etc.
+        // All communication happens through the mesh network
+        
+        // For now, just demonstrate the protocol is working
+        let status = handler.get_status().await.unwrap_or_else(|_| "Error".to_string());
+        println!("Protocol handler status: {}", status);
+        
+        Timer::after(Duration::from_secs(30)).await;
     }
 }
 

@@ -51,9 +51,9 @@ iPhone Camera ←←← Terminal Queries ←←← Local Interfaces ←←← Da
 
 ### Interface Types
 
-#### 1. SSH Terminal Interface
+#### 1. Meshtastic Terminal Interface
 **Target Users:** Facilities managers, IT administrators, power users  
-**Access Method:** SSH to mesh node IP address on building network  
+**Access Method:** Direct meshtastic radio connection to mesh network  
 **Capabilities:**
 - Complex building queries and automation
 - System administration and configuration
@@ -62,7 +62,7 @@ iPhone Camera ←←← Terminal Queries ←←← Local Interfaces ←←← Da
 
 **Example Usage:**
 ```bash
-ssh admin@10.50.1.100  # School network IP
+arxos -n 42 -f 915.0  # Connect with node ID 42 on 915 MHz
 arxos> show outlets circuit B-7
 arxos> find equipment type:HVAC floor:2
 arxos> export room:205 format:CAD
@@ -129,7 +129,7 @@ Each Raspberry Pi mesh node provides:
 - **LoRa Radio:** Long-range mesh networking (2km urban, 10km rural)
 - **Ethernet/WiFi Client:** Connects to building's existing network
 - **REST API Server:** Serves building data to local network (port 8080)
-- **SSH Access:** Terminal interface for power users
+- **Meshtastic Access:** Terminal interface for power users
 - **Processing Power:** Local ArxObject queries and spatial indexing
 
 #### Network Integration Options
@@ -167,7 +167,7 @@ Each Raspberry Pi mesh node provides:
 
 **Access Control:**
 - REST API serves building data to authorized local network clients
-- SSH access uses standard key-based authentication
+- Meshtastic access uses node ID-based authentication
 - CMMS integration requires network-level access controls
 - All interfaces access same controlled dataset with appropriate permissions
 
@@ -233,13 +233,13 @@ CREATE TABLE systems (
 
 ### Phase 1: Core Infrastructure (Weeks 1-4)
 
-**Week 1-2: ArxObject Foundation**
+**Phase 1: ArxObject Foundation**
 - Rust parser for basic building geometry
 - SQLite schema with spatial indexing
 - ASCII terminal renderer for floor plans
 - Basic equipment markup structure
 
-**Week 3-4: Data Pipeline**
+**Phase 2: Data Pipeline**
 - iPhone LiDAR → ArxObject conversion
 - SQLite storage and retrieval
 - Terminal query interface
@@ -247,13 +247,13 @@ CREATE TABLE systems (
 
 ### Phase 2: Mesh Networking (Weeks 5-8)
 
-**Week 5-6: Local Mesh**
+**Phase 3: Local Mesh**
 - Meshtastic LoRa integration
 - Multi-node data synchronization
 - Basic mesh routing between Pi nodes
-- Terminal access via SSH over mesh
+- Terminal access via meshtastic protocol
 
-**Week 7-8: Field Testing**
+**Phase 4: Field Testing**
 - Deploy 2-3 nodes at Jefferson Elementary
 - Test mesh reliability and range
 - Facilities manager training and feedback
@@ -261,13 +261,13 @@ CREATE TABLE systems (
 
 ### Phase 3: User Integration (Weeks 9-12)
 
-**Week 9-10: API Integration Development**
+**Phase 5: API Integration Development**
 - REST API design and implementation
 - CMMS system integration patterns
 - Authentication and authorization framework
 - API documentation and integration guides
 
-**Week 11-12: Workflow Testing**
+**Phase 6: Workflow Testing**
 - Site technician workflow testing with existing tools
 - CMMS integration validation
 - Fallback web interface refinement
@@ -275,13 +275,13 @@ CREATE TABLE systems (
 
 ### Phase 4: Production Deployment (Months 4-6)
 
-**Month 4: Pilot Expansion**
+**Phase 7: Pilot Expansion**
 - Deploy across 5-10 Hillsborough County schools
 - Train facilities and maintenance staff
 - Establish data capture procedures
 - Monitor system performance and reliability
 
-**Month 5-6: District Integration**
+**Phase 8: District Integration**
 - Present ROI analysis to district leadership
 - Integrate with existing CMMS systems
 - Establish maintenance and support procedures
@@ -328,7 +328,7 @@ POST /api/markup               // Add equipment annotations
 
 **Data Synchronization:**
 - Web interface queries local SQLite database
-- Same data source as SSH terminal interface
+- Same data source as meshtastic terminal interface
 - Real-time updates via mesh network propagation
 - Consistent information across all interfaces
 
@@ -364,7 +364,7 @@ POST /api/markup               // Add equipment annotations
 
 **Local Network Security:**
 - WiFi networks use standard WPA2/WPA3 encryption
-- SSH access requires key-based authentication
+- Meshtastic access requires node ID authentication
 - Web interface serves from local Pi only
 - All data stays within mesh network boundaries
 
@@ -470,41 +470,41 @@ POST /api/markup               // Add equipment annotations
 
 ## Implementation Timeline
 
-### MVP Development (3 months)
+### MVP Development
 
-**Month 1: Core Infrastructure**
-- Week 1-2: ArxObject parser and ASCII renderer
-- Week 3-4: SQLite spatial database and terminal interface
+**Phase 1: Core Infrastructure**
+- ArxObject parser and ASCII renderer
+- SQLite spatial database and terminal interface
 
-**Month 2: Mesh Integration**
-- Week 5-6: LoRa mesh networking between Pi nodes
-- Week 7-8: Field testing at Jefferson Elementary School
+**Phase 2: Mesh Integration**
+- LoRa mesh networking between Pi nodes
+- Field testing at Jefferson Elementary School
 
-**Month 3: User Interfaces**
-- Week 9-10: WiFi hotspot and web interface development
-- Week 11-12: Contractor workflow testing and refinement
+**Phase 3: User Interfaces**
+- WiFi hotspot and web interface development
+- Contractor workflow testing and refinement
 
 ### Pilot Deployment (Months 4-6)
 
-**Month 4: Single Building Validation**
+**Phase 4: Single Building Validation**
 - Complete Jefferson Elementary deployment
 - Facilities manager and contractor training
 - Performance monitoring and optimization
 - User feedback collection and analysis
 
-**Month 5: Multi-Building Expansion**
+**Phase 5: Multi-Building Expansion**
 - Deploy to 5-10 additional Hillsborough County schools
 - Establish data capture and maintenance procedures
 - Validate mesh networking across multiple buildings
 - Refine business model and pricing
 
-**Month 6: District Presentation**
+**Phase 6: District Presentation**
 - Compile ROI analysis and performance metrics
 - Present to Hillsborough County leadership
 - Negotiate district-wide deployment contract
 - Plan scaling to 300+ school buildings
 
-### Production Scaling (Year 1+)
+### Production Scaling
 
 **Months 7-12: District Deployment**
 - Rollout across Hillsborough County (300 schools)
@@ -512,13 +512,13 @@ POST /api/markup               // Add equipment annotations
 - Train district facilities and IT staff
 - Monitor system performance at scale
 
-**Year 2: State Expansion**
+**Phase 7: State Expansion**
 - Expand to Florida school districts (3,000 schools)
 - Develop commercial real estate partnerships
 - Integrate with existing facilities management systems
 - Launch data sharing marketplace
 
-**Year 3+: National Network**
+**Phase 8: National Network**
 - Partner with CBRE for commercial buildings (13,000+ properties)
 - Establish nationwide mesh infrastructure
 - Launch emergency services integration
@@ -526,7 +526,7 @@ POST /api/markup               // Add equipment annotations
 
 ## Interface Design Specifications
 
-### SSH Terminal Interface
+### Meshtastic Terminal Interface
 
 **Target Users:** Facilities managers, IT administrators, power users
 
@@ -832,4 +832,4 @@ arxos monitor --system electrical --alerts on
 
 **Project Status:** Design phase complete, ready for technical implementation  
 **Team Review Required:** Technical architecture validation, resource allocation, timeline approval  
-**Next Milestone:** Working ArxObject parser and terminal interface (Week 2)
+**Next Milestone:** Working ArxObject parser and terminal interface

@@ -4,13 +4,11 @@
 //! No heavy processing - just routing and display.
 
 mod app;
-// mod ssh_client;  // TODO: Fix russh 0.43 API issues
-#[path = "ssh_client_stub.rs"]
-mod ssh_client;
+mod meshtastic_client;
 mod commands;
 
 use app::App;
-use ssh_client::{SshConfig, load_config, prompt_password};
+use meshtastic_client::{MeshtasticConfig, load_config, prompt_node_id};
 use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
@@ -28,25 +26,17 @@ use log::{error, info};
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Terminal client for Arxos mesh network", long_about = None)]
 struct Args {
-    /// Host to connect to
-    #[arg(short = 'H', long, default_value = "mesh-node.local")]
-    host: String,
+    /// Meshtastic node ID
+    #[arg(short = 'n', long, default_value = "1")]
+    node_id: u32,
     
-    /// Port to connect to
-    #[arg(short, long, default_value_t = 2222)]
-    port: u16,
+    /// Radio frequency in MHz
+    #[arg(short = 'f', long, default_value = "915.0")]
+    frequency: f32,
     
-    /// Username for SSH
-    #[arg(short, long, default_value = "arxos")]
-    username: String,
-    
-    /// Private key path for authentication
-    #[arg(short = 'k', long)]
-    key: Option<String>,
-    
-    /// Use password authentication (will prompt)
-    #[arg(short = 'P', long)]
-    password: bool,
+    /// Radio region
+    #[arg(short = 'r', long, default_value = "US")]
+    region: String,
     
     /// Configuration file path
     #[arg(short, long)]
@@ -73,23 +63,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     info!("Starting Arxos Terminal Client");
     
-    // Load or create SSH configuration
-    let ssh_config = if let Some(config_path) = args.config {
+    // Load or create meshtastic configuration
+    let meshtastic_config = if let Some(config_path) = args.config {
         load_config(Some(&config_path)).await?
     } else {
         // Build config from arguments
-        let mut config = SshConfig::default();
-        config.host = args.host;
-        config.port = args.port;
-        config.username = args.username;
-        config.private_key_path = args.key;
-        
-        // Handle password authentication
-        if args.password {
-            config.password = Some(prompt_password("Password: ")?);
+        MeshtasticConfig {
+            node_id: args.node_id,
+            frequency_mhz: args.frequency,
+            region: args.region,
+            timeout_seconds: 30,
+            retry_attempts: 3,
         }
-        
-        config
     };
     
     // Setup terminal
@@ -100,18 +85,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
     
     // Create app
-    let mut app = App::new(ssh_config);
+    let mut app = App::new(meshtastic_config);
     
     // Auto-connect if requested
     if args.auto_connect {
-        info!("Auto-connecting to mesh node...");
+        info!("Auto-connecting to meshtastic network...");
         if let Err(e) = app.connect().await {
             error!("Auto-connect failed: {}", e);
             app.add_output(format!("Auto-connect failed: {}", e));
         }
     } else {
         app.add_output("Welcome to Arxos Terminal!".to_string());
-        app.add_output("Type 'connect' to connect to a mesh node.".to_string());
+        app.add_output("Type 'connect' to connect to the meshtastic network.".to_string());
         app.add_output("Type 'help' for available commands.".to_string());
     }
     
@@ -159,7 +144,7 @@ async fn run_app<B: Backend>(
             }
         }
         
-        // Process any pending SSH data
+        // Process any pending meshtastic data
         // This would be done in a separate task in production
         // For now, we poll in the main loop
     }
@@ -170,28 +155,26 @@ async fn run_app<B: Backend>(
 /// Print usage information
 fn print_usage() {
     println!("╔════════════════════════════════════════╗");
-    println!("║     Arxos Terminal - RF Mesh Client     ║");
+    println!("║     Arxos Terminal - Meshtastic Client  ║");
     println!("╚════════════════════════════════════════╝");
     println!();
     println!("Usage: arxos [OPTIONS]");
     println!();
     println!("Options:");
-    println!("  -H, --host <HOST>      Host to connect to [default: mesh-node.local]");
-    println!("  -p, --port <PORT>      Port to connect to [default: 2222]");
-    println!("  -u, --username <USER>  SSH username [default: arxos]");
-    println!("  -k, --key <PATH>       Private key path for authentication");
-    println!("  -P, --password         Use password authentication (will prompt)");
+    println!("  -n, --node-id <ID>     Meshtastic node ID [default: 1]");
+    println!("  -f, --frequency <MHz>  Radio frequency [default: 915.0]");
+    println!("  -r, --region <REGION>  Radio region [default: US]");
     println!("  -c, --config <PATH>    Configuration file path");
     println!("  -a, --auto-connect     Auto-connect on startup");
     println!("  -v, --verbose          Enable verbose logging");
     println!("  -h, --help             Print help");
     println!();
     println!("Examples:");
-    println!("  # Connect with key authentication");
-    println!("  arxos -H 192.168.1.100 -k ~/.ssh/arxos_key");
+    println!("  # Connect with default settings");
+    println!("  arxos");
     println!();
-    println!("  # Connect with password");
-    println!("  arxos -H mesh-gateway.local -P");
+    println!("  # Connect with custom node ID");
+    println!("  arxos -n 42 -f 868.0 -r EU");
     println!();
     println!("  # Auto-connect with config file");
     println!("  arxos -c ~/.config/arxos/terminal.toml -a");

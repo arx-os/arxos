@@ -23,9 +23,9 @@
 - SSH implementation temporarily disabled for API migration
 - No integration tests
 
-## 📋 Immediate Next Steps (Week 1-2)
+## 📋 Immediate Next Steps
 
-### Day 1-2: Fix Critical Issues
+### Phase 1: Fix Critical Issues
 
 ```bash
 # 1. Re-enable SSH server implementation
@@ -44,7 +44,7 @@ echo "Test failures:" > test_failures.log
 cargo test --all 2>&1 | grep FAILED >> test_failures.log
 ```
 
-### Day 3-4: ESP32 Firmware Setup
+### Phase 2: ESP32 Firmware Setup
 
 ```bash
 # Install ESP32 Rust toolchain
@@ -66,7 +66,7 @@ cd src/firmware/esp32
 cargo build --release --target riscv32imc-unknown-none-elf
 ```
 
-### Day 5-6: Create Test Infrastructure
+### Phase 3: Create Test Infrastructure
 
 ```bash
 # Create integration test structure
@@ -113,7 +113,7 @@ fn test_arxobject_compression_ratio() {
 }
 ```
 
-## 🏗️ Week 1-2: Foundation Sprint
+## 🏗️ Foundation Sprint
 
 ### Priority 1: Transport Abstraction Layer
 
@@ -194,11 +194,11 @@ impl TransportSelector {
 }
 ```
 
-## 📅 Week 3-4: Hardware Prototyping
+## 📅 Hardware Prototyping
 
 ### LoRa Dongle Development
 
-1. **Order Components** (Day 1)
+1. **Order Components**
 ```yaml
 Immediate Orders:
   - SAMD21 dev board: $25
@@ -211,7 +211,7 @@ Suppliers:
   - Digikey (components)
 ```
 
-2. **Firmware Skeleton** (Day 2-3)
+2. **Firmware Skeleton**
 ```c
 // firmware/lora_dongle/main.c
 #include <Arduino.h>
@@ -243,7 +243,7 @@ void loop() {
 }
 ```
 
-3. **PCB Design** (Day 4-5)
+3. **PCB Design**
 - Use KiCad for schematic
 - Design 4-layer board
 - Send to JLCPCB for prototype
@@ -288,7 +288,7 @@ class SMSHandler:
         self.modem.write(f'{message}\x1A'.encode())
 ```
 
-## 🧪 Week 5-6: Testing & Integration
+## 🧪 Testing & Integration
 
 ### Integration Test Suite
 
@@ -342,7 +342,7 @@ jobs:
       run: cargo fmt --all -- --check
 ```
 
-## 🚀 Week 7-8: Alpha Release
+## 🚀 Alpha Release
 
 ### Milestone Checklist
 
@@ -418,17 +418,17 @@ code .  # or your preferred editor
 
 ## 📊 Success Metrics
 
-### Week 2 Goals
+### Phase 1 Goals
 - [ ] 50+ tests passing
-- [ ] SSH server working
+- [ ] Meshtastic protocol working
 - [ ] ESP32 building
 
-### Week 4 Goals
+### Phase 2 Goals
 - [ ] LoRa packets transmitting
-- [ ] SMS gateway responding
+- [ ] Meshtastic gateway responding
 - [ ] Transport abstraction complete
 
-### Week 8 Goals
+### Phase 3 Goals
 - [ ] Alpha release ready
 - [ ] 3 contributors onboarded
 - [ ] 100+ tests passing
@@ -471,5 +471,5 @@ code .  # or your preferred editor
 
 **Remember:** The goal is to have a working prototype that demonstrates air-gapped building access. Perfect is the enemy of good - we can refine after we have something working!
 
-**Next Review:** September 7, 2025  
+**Next Review:** TBD  
 **Questions?** Open an issue or reach out on Discord!

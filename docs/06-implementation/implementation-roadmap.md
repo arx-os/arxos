@@ -1,7 +1,6 @@
 # Arxos Remote Access Implementation Roadmap
 **Version:** 1.0  
-**Date:** August 31, 2025  
-**Timeline:** 16 Weeks
+**Date:** August 31, 2025
 
 ## Executive Summary
 
@@ -11,7 +10,7 @@ This roadmap outlines the phased implementation of the Arxos hybrid remote acces
 
 ```mermaid
 gantt
-    title Arxos Remote Access Implementation Timeline
+    title Arxos Remote Access Implementation Phases
     dateFormat  YYYY-MM-DD
     section Phase 1
     Core Infrastructure    :2025-09-01, 14d
@@ -29,7 +28,7 @@ gantt
 
 ## Phase 1: Foundation (Weeks 1-4)
 
-### Week 1-2: Core Infrastructure
+### Phase 1: Core Infrastructure
 
 **Deliverables:**
 - [ ] Rust core library with FFI bindings

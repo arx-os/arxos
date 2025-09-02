@@ -11,6 +11,7 @@ pub mod detail_store;
 pub mod broadcast_scheduler;
 pub mod progressive_renderer;
 pub mod slow_bleed_node;
+pub mod meshtastic_protocol;
 
 #[cfg(feature = "std")]
 pub mod database;
@@ -22,17 +23,7 @@ pub mod database;
 pub mod mesh_network;
 
 #[cfg(feature = "std")]
-pub mod ssh_server;
-
-#[cfg(feature = "std")]
 pub mod data_consumer_api;
-
-#[cfg(feature = "std")]
-pub mod ssh_server_stub;
-
-// SSH implementation temporarily disabled for API migration
-// #[cfg(feature = "std")]
-// pub mod ssh_server_impl;
 
 #[cfg(feature = "std")]
 pub mod crypto;
@@ -80,6 +71,7 @@ pub use detail_store::{DetailStore, DetailLevel};
 pub use broadcast_scheduler::{BroadcastScheduler, ChunkPriority};
 pub use progressive_renderer::{ProgressiveRenderer, render_progress_bar};
 pub use slow_bleed_node::{SlowBleedNode, NodeStats, NodeState};
+pub use meshtastic_protocol::{MeshtasticPacket, MeshtasticPacketType, BuildingQuery, MeshtasticProtocolHandler, MockMeshtasticHandler};
 
 #[cfg(test)]
 mod tests {

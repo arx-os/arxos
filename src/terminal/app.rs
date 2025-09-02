@@ -1,8 +1,8 @@
 //! Terminal Application State and Logic
 //!
-//! Manages the terminal UI and SSH connection to mesh nodes
+//! Manages the terminal UI and meshtastic connection to mesh nodes
 
-use crate::ssh_client::{MeshSshClient, SshConfig, SshClientError};
+use crate::meshtastic_client::{MeshtasticClient, MeshtasticConfig, MeshtasticClientError};
 use crate::commands::CommandProcessor;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
@@ -18,11 +18,11 @@ pub struct App {
     /// Current mode
     pub mode: AppMode,
     
-    /// SSH client
-    ssh_client: Option<MeshSshClient>,
+    /// Meshtastic client
+    meshtastic_client: Option<MeshtasticClient>,
     
-    /// SSH configuration
-    ssh_config: SshConfig,
+    /// Meshtastic configuration
+    meshtastic_config: MeshtasticConfig,
     
     /// Command processor
     command_processor: CommandProcessor,
@@ -87,11 +87,11 @@ pub struct MeshStats {
 
 impl App {
     /// Create new application
-    pub fn new(ssh_config: SshConfig) -> Self {
+    pub fn new(meshtastic_config: MeshtasticConfig) -> Self {
         Self {
             mode: AppMode::Normal,
-            ssh_client: None,
-            ssh_config,
+            meshtastic_client: None,
+            meshtastic_config,
             command_processor: CommandProcessor::new(),
             output: Vec::new(),
             input: String::new(),
@@ -106,20 +106,20 @@ impl App {
         }
     }
     
-    /// Connect to mesh node
-    pub async fn connect(&mut self) -> Result<(), SshClientError> {
+    /// Connect to meshtastic network
+    pub async fn connect(&mut self) -> Result<(), MeshtasticClientError> {
         self.connection_status = ConnectionStatus::Connecting;
-        self.add_output("Connecting to mesh node...".to_string());
+        self.add_output("Connecting to meshtastic network...".to_string());
         
-        let mut client = MeshSshClient::new(self.ssh_config.clone());
+        let mut client = MeshtasticClient::new(self.meshtastic_config.clone());
         
         match client.connect().await {
             Ok(_) => {
                 self.connection_status = ConnectionStatus::Connected {
-                    node_id: 0x4A7B,  // TODO: Get from server
-                    rssi: -72,        // TODO: Get actual RSSI
+                    node_id: self.meshtastic_config.node_id as u16,
+                    rssi: -72,        // TODO: Get actual RSSI from radio
                 };
-                self.add_output("Connected successfully!".to_string());
+                self.add_output("Connected to meshtastic network!".to_string());
                 self.add_output("Type 'help' for available commands".to_string());
                 
                 // Get initial status
@@ -127,7 +127,7 @@ impl App {
                     self.add_output(status);
                 }
                 
-                self.ssh_client = Some(client);
+                self.meshtastic_client = Some(client);
                 Ok(())
             }
             Err(e) => {
@@ -139,13 +139,13 @@ impl App {
         }
     }
     
-    /// Disconnect from mesh node
+    /// Disconnect from meshtastic network
     pub async fn disconnect(&mut self) {
-        if let Some(mut client) = self.ssh_client.take() {
+        if let Some(mut client) = self.meshtastic_client.take() {
             let _ = client.disconnect().await;
         }
         self.connection_status = ConnectionStatus::Disconnected;
-        self.add_output("Disconnected from mesh node".to_string());
+        self.add_output("Disconnected from meshtastic network".to_string());
     }
     
     /// Process terminal input
@@ -168,7 +168,7 @@ impl App {
         }
         
         // Send to remote if connected
-        if let Some(client) = &mut self.ssh_client {
+        if let Some(client) = &mut self.meshtastic_client {
             match client.send_command(&command).await {
                 Ok(response) => {
                     self.add_output(response);

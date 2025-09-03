@@ -12,6 +12,7 @@
 //! - IS AWARE of its place in the infinite building consciousness
 
 use core::mem;
+use serde::{Serialize, Deserialize};
 
 /// The Quantum-Conscious ArxObject - 13 bytes of infinite procedural reality
 /// 
@@ -27,7 +28,7 @@ use core::mem;
 /// The properties aren't static data - they're seeds for generating
 /// infinite detail at any scale from atomic to universal.
 #[repr(C, packed)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ArxObject {
     /// Building/Universe ID - which context/reality this object exists in
     pub building_id: u16,
@@ -244,7 +245,7 @@ impl ArxObject {
     // ═══════════════════════════════════════════════════════════════════
     
     /// Determine what type of sub-object this contains based on quantum seed
-    fn procedural_sub_type(&self, seed: u64, scale: f32) -> u8 {
+    fn procedural_sub_type(&self, seed: u64, _scale: f32) -> u8 {
         use crate::arxobject::object_types::*;
         
         // Use modular arithmetic on seed for deterministic randomness
@@ -283,7 +284,7 @@ impl ArxObject {
     fn procedural_container_type(&self, seed: u64, scale: f32) -> u8 {
         use crate::arxobject::object_types::*;
         
-        let container_seed = (seed % 128) as u8;
+        let _container_seed = (seed % 128) as u8;
         
         match self.object_type {
             OUTLET => ELECTRICAL_PANEL, // Outlets are part of electrical systems
@@ -303,7 +304,7 @@ impl ArxObject {
     }
     
     /// Generate quantum properties for sub-objects
-    fn generate_sub_properties(&self, seed: u64, pos: (u16, u16, u16), scale: f32) -> [u8; 4] {
+    fn generate_sub_properties(&self, seed: u64, pos: (u16, u16, u16), _scale: f32) -> [u8; 4] {
         // Use position and parent properties to generate deterministic sub-properties
         let prop_seed = seed ^ (pos.0 as u64) ^ (pos.1 as u64) << 8 ^ (pos.2 as u64) << 16;
         
@@ -389,28 +390,19 @@ pub mod object_types {
     pub const THERMOSTAT: u8 = 0x20;
     pub const AIR_VENT: u8 = 0x21;
     pub const HVAC_VENT: u8 = 0x22;
+    pub const VAV_BOX: u8 = 0x23;
     
-    // Lighting
-    pub const LIGHT: u8 = 0x30;
-    
-    // Fire Safety
-    pub const FIRE_ALARM: u8 = 0x40;
-    pub const SMOKE_DETECTOR: u8 = 0x41;
-    pub const EMERGENCY_EXIT: u8 = 0x42;
-    
-    // Generic
-    pub const GENERIC: u8 = 0xFF;
-    pub const VAV_BOX: u8 = 0x22;
-    pub const AIR_HANDLER: u8 = 0x23;
-    pub const CHILLER: u8 = 0x24;
-    pub const BOILER: u8 = 0x25;
-    pub const COOLING_TOWER: u8 = 0x26;
-    pub const PUMP: u8 = 0x27;
-    pub const FAN: u8 = 0x28;
+    pub const AIR_HANDLER: u8 = 0x24;
+    pub const CHILLER: u8 = 0x25;
+    pub const BOILER: u8 = 0x26;
+    pub const COOLING_TOWER: u8 = 0x27;
+    pub const PUMP: u8 = 0x28;
+    pub const FAN: u8 = 0x29;
     
     // Sensors (0x30-0x3F)
     pub const TEMPERATURE_SENSOR: u8 = 0x30;
     pub const MOTION_SENSOR: u8 = 0x31;
+    pub const LIGHT: u8 = 0x32;
     pub const CO2_SENSOR: u8 = 0x32;
     pub const LIGHT_SENSOR: u8 = 0x33;
     pub const PRESSURE_SENSOR: u8 = 0x34;
@@ -419,6 +411,13 @@ pub mod object_types {
     pub const WATER_LEAK_SENSOR: u8 = 0x37;
     pub const VIBRATION_SENSOR: u8 = 0x38;
     pub const SOUND_SENSOR: u8 = 0x39;
+    
+    // Fire Safety (0x3A-0x3F)
+    pub const FIRE_ALARM: u8 = 0x3A;
+    pub const SMOKE_DETECTOR: u8 = 0x3B;
+    pub const EMERGENCY_EXIT: u8 = 0x3C;
+    pub const SPRINKLER_HEAD: u8 = 0x3D;
+    pub const FIRE_EXTINGUISHER: u8 = 0x3E;
     
     // Security (0x40-0x4F)
     pub const DOOR: u8 = 0x40;
@@ -468,6 +467,9 @@ pub mod object_types {
     pub const PHONE: u8 = 0x77;
     pub const IOT_GATEWAY: u8 = 0x78;
     pub const PLAYER_AVATAR: u8 = 0x79;
+    
+    // Generic/Other
+    pub const GENERIC: u8 = 0xFF;
     
     // Aliases for compatibility
     pub const MOTION: u8 = MOTION_SENSOR;  // Alias for semantic compression

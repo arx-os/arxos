@@ -148,7 +148,7 @@ impl EnhancedPointCloudParser {
     }
     
     /// Detect object type based on position and point distribution
-    fn detect_object_type(&self, x: f32, y: f32, z: f32, 
+    fn detect_object_type(&self, _x: f32, _y: f32, z: f32, 
                          _points: &[crate::document_parser::Point3D], 
                          indices: &[usize]) -> u8 {
         let point_count = indices.len();

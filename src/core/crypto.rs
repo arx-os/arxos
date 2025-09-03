@@ -6,7 +6,7 @@ use ed25519_dalek::{
     Signature, Signer, SigningKey, Verifier, VerifyingKey,
     SECRET_KEY_LENGTH, SIGNATURE_LENGTH,
 };
-use rand::rngs::OsRng;
+use rand::{rngs::OsRng, RngCore};
 use sha2::{Digest, Sha256};
 use std::error::Error;
 use std::fmt;
@@ -54,7 +54,11 @@ pub struct MeshCrypto {
 impl MeshCrypto {
     /// Create new crypto context with generated keys
     pub fn new() -> Result<Self, CryptoError> {
-        let signing_key = SigningKey::generate(&mut OsRng);
+        // Generate random bytes for the key
+        let mut secret_bytes = [0u8; SECRET_KEY_LENGTH];
+        OsRng.fill_bytes(&mut secret_bytes);
+        
+        let signing_key = SigningKey::from_bytes(&secret_bytes);
         let verifying_key = signing_key.verifying_key();
         
         Ok(Self {

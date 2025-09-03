@@ -3,7 +3,7 @@
 //! Converts 3D point cloud data into compressed ArxObjects
 
 use crate::arxobject_simple::{ArxObject, object_types};
-use crate::document_parser::{Point3D, BoundingBox};
+use crate::document_parser::Point3D;
 use crate::point_cloud_parser::PointCloud;
 use std::collections::HashMap;
 
@@ -59,7 +59,7 @@ impl SimplePointCloudProcessor {
         }
         
         // Convert voxels to ArxObjects
-        for ((vx, vy, vz), points) in voxels {
+        for ((_vx, _vy, _vz), points) in voxels {
             if points.len() < self.config.min_points {
                 continue;
             }
@@ -108,7 +108,7 @@ impl SimplePointCloudProcessor {
 }
 
 /// Classify object type based on position
-fn classify_by_position(x: f32, y: f32, z: f32, point_count: usize) -> u8 {
+fn classify_by_position(_x: f32, _y: f32, z: f32, point_count: usize) -> u8 {
     match z {
         // Floor level (z < 10cm with many points)
         z if z < 0.1 && point_count > 100 => object_types::FLOOR,

@@ -4,8 +4,8 @@
 //! No heavy processing - just store and retrieve.
 
 use crate::arxobject::ArxObject;
-use super::connection_pool::{ConnectionPool, PooledConnection};
-use rusqlite::{params, Row};
+use super::connection_pool::ConnectionPool;
+use rusqlite::params;
 use std::error::Error;
 
 pub type ArxObjectId = u16;
@@ -77,8 +77,7 @@ impl ArxObjectStore {
         
         match result {
             Ok(obj) => Ok(Some(obj)),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(Box::new(e)),
+            Err(_) => Ok(None),  // Treat any error as "not found"
         }
     }
     

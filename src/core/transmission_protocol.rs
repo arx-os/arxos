@@ -6,7 +6,7 @@
 
 use crate::arxobject::ArxObject;
 use crate::progressive_detail::{DetailTree, DetailLevel, ProgressiveDetailStore};
-use crate::error::{Result, ArxError};
+use crate::error::Result;
 use std::collections::{HashMap, VecDeque};
 use serde::{Serialize, Deserialize};
 
@@ -231,7 +231,7 @@ impl TransmissionProtocol {
                 // Someone requested details, queue response
                 self.queue_detail_update(id, level);
             }
-            PacketType::DetailUpdate(id, tree) => {
+            PacketType::DetailUpdate(_id, tree) => {
                 // Store received details
                 self.detail_store.store(tree);
             }

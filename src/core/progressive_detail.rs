@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
 
 /// The levels of detail that can be progressively added to an ArxObject
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum DetailLevel {
     /// Level 0: Just the 13-byte core seed
     Core,

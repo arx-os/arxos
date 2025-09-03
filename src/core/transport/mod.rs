@@ -51,8 +51,10 @@ pub enum TransportError {
 /// Metrics for transport performance monitoring
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransportMetrics {
+    pub connected: bool,
     #[serde(skip)]
     pub connected_since: Option<Instant>,
+    pub connection_quality: f32,  // 0.0 to 1.0
     pub bytes_sent: usize,
     pub bytes_received: usize,
     pub packets_sent: usize,
@@ -65,7 +67,9 @@ pub struct TransportMetrics {
 impl Default for TransportMetrics {
     fn default() -> Self {
         Self {
+            connected: false,
             connected_since: None,
+            connection_quality: 0.0,
             bytes_sent: 0,
             bytes_received: 0,
             packets_sent: 0,

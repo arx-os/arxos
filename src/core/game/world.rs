@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use crate::arxobject::{ArxObject, object_types};
 use crate::progressive_renderer::ProgressiveRenderer;
-use crate::detail_store::{DetailStore, DetailLevel};
+use crate::detail_store::DetailStore;
 use crate::error::{Result, ArxError};
 
 /// Cardinal directions for movement
@@ -118,6 +118,16 @@ impl World {
             other_players: HashMap::new(),
             building_id,
         }
+    }
+    
+    /// Get player position
+    pub fn player_position(&self) -> (u16, u16, u16) {
+        self.player_position
+    }
+    
+    /// Get mutable player position
+    pub fn player_position_mut(&mut self) -> &mut (u16, u16, u16) {
+        &mut self.player_position
     }
     
     /// Load world from ArxObjects

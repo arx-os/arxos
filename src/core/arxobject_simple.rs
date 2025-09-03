@@ -3,10 +3,11 @@
 //! This is a clean, working implementation without the complex dependencies
 
 use core::mem;
+use serde::{Serialize, Deserialize};
 
 /// The core ArxObject structure - exactly 13 bytes
 #[repr(C, packed)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ArxObject {
     /// Building/Universe ID (2 bytes)
     pub building_id: u16,
@@ -101,14 +102,20 @@ pub mod object_types {
     // HVAC (0x20-0x2F)
     pub const THERMOSTAT: u8 = 0x20;
     pub const AIR_VENT: u8 = 0x21;
+    pub const HVAC_VENT: u8 = 0x22;
     
     // Lighting (0x30-0x3F)
     pub const LIGHT: u8 = 0x30;
+    
+    // Security/Sensors
+    pub const CAMERA: u8 = 0x31;
+    pub const MOTION_SENSOR: u8 = 0x32;
     
     // Fire/Safety (0x40-0x4F)
     pub const SMOKE_DETECTOR: u8 = 0x40;
     pub const FIRE_ALARM: u8 = 0x41;
     pub const SPRINKLER: u8 = 0x42;
+    pub const EMERGENCY_EXIT: u8 = 0x43;
     
     // Structural (0x50-0x5F)
     pub const WALL: u8 = 0x50;

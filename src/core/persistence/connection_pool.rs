@@ -264,8 +264,10 @@ impl ConnectionPool {
         
         super::PoolStats {
             total_connections: active + available,
-            available_connections: available,
-            waiting_tasks: 0, // Would need to track this separately
+            active_connections: active,
+            idle_connections: available,
+            wait_count: 0,
+            wait_time_ms: 0,
         }
     }
     

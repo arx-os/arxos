@@ -40,6 +40,12 @@ pub mod document_parser;
 pub mod point_cloud_parser;
 
 #[cfg(feature = "std")]
+pub mod ply_parser;
+
+#[cfg(feature = "std")]
+pub mod point_cloud_processor;
+
+#[cfg(feature = "std")]
 pub mod point_cloud_parser_enhanced;
 
 // Simplified implementations for testing
@@ -78,9 +84,6 @@ pub mod rest_api_simple;
 #[cfg(feature = "std")]
 pub mod mesh_network_simple;
 
-#[cfg(feature = "std")]
-pub mod ascii_renderer_2d;
-
 // Point cloud processing moved to external_services/point_cloud_processor/
 // ArxOS receives ASCII descriptions, doesn't process point clouds
 
@@ -102,6 +105,24 @@ pub mod persistence;
 #[cfg(feature = "std")]
 pub mod ascii_bridge;
 
+// AR compression and streaming for field technician collaboration
+#[cfg(feature = "std")]
+pub mod ar_compression;
+#[cfg(feature = "std")]
+pub mod ar_streaming;
+
+// Pixelated aesthetic rendering pipeline
+#[cfg(feature = "std")]
+pub mod pixelated_renderer;
+#[cfg(feature = "std")]
+pub mod aesthetic_pipeline;
+
+// Database integration
+#[cfg(feature = "std")]
+pub mod scan_to_database;
+#[cfg(feature = "std")]
+pub mod database_mesh_bridge;
+
 // Mesh Router - Lightweight packet routing for building networks
 #[cfg(feature = "std")]
 pub mod mesh_router;
@@ -110,9 +131,33 @@ pub mod mesh_router;
 #[cfg(feature = "std")]
 pub mod terminal_interface;
 
-// Game engine for ASCII building exploration
+// Hypori-inspired concepts adapted for ArxOS
 #[cfg(feature = "std")]
-pub mod game;
+pub mod virtual_building_space;
+#[cfg(feature = "std")]
+pub mod arxos_pixel_stream;
+#[cfg(feature = "std")]
+pub mod zero_trust_mesh;
+#[cfg(feature = "std")]
+pub mod offline_workspace_cache;
+
+// Practical field-ready IAM
+#[cfg(feature = "std")]
+pub mod field_identity_access;
+#[cfg(feature = "std")]
+pub mod simple_access_control;
+#[cfg(feature = "std")]
+pub mod access_in_practice;
+#[cfg(feature = "std")]
+pub mod sms_access_token;
+
+// Git-like building version control
+#[cfg(feature = "std")]
+pub mod building_repository;
+#[cfg(feature = "std")]
+pub mod branch_mesh_protocol;
+#[cfg(feature = "std")]
+pub mod merge_review_system;
 
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};

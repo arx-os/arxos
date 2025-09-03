@@ -236,9 +236,9 @@ impl Command {
             
             Command::Status => {
                 Ok(format!("Position: ({:.1}m, {:.1}m, {:.1}m)",
-                    world.player_position.0 as f32 / 1000.0,
-                    world.player_position.1 as f32 / 1000.0,
-                    world.player_position.2 as f32 / 1000.0))
+                    world.player_position().0 as f32 / 1000.0,
+                    world.player_position().1 as f32 / 1000.0,
+                    world.player_position().2 as f32 / 1000.0))
             }
             
             Command::Quit => {
@@ -254,4 +254,3 @@ impl Command {
 }
 
 // Import rand for work order numbers
-use rand::Rng as _;

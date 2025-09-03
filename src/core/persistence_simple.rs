@@ -2,7 +2,7 @@
 //! 
 //! Provides efficient storage and spatial queries for building intelligence
 
-use crate::arxobject_simple::{ArxObject, ObjectCategory, object_types};
+use crate::arxobject_simple::{ArxObject, ObjectCategory};
 use rusqlite::{Connection, Result, params, Row};
 use std::path::Path;
 
@@ -84,16 +84,22 @@ impl ArxObjectDatabase {
     /// Insert single ArxObject
     pub fn insert(&mut self, obj: &ArxObject) -> Result<i64> {
         let properties_bytes = obj.properties.to_vec();
+        // Copy values to avoid packed field alignment issues
+        let building_id = obj.building_id;
+        let object_type = obj.object_type;
+        let x = obj.x;
+        let y = obj.y;
+        let z = obj.z;
         
         self.conn.execute(
             "INSERT INTO arxobjects (building_id, object_type, x, y, z, properties)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             params![
-                obj.building_id,
-                obj.object_type,
-                obj.x,
-                obj.y,
-                obj.z,
+                building_id,
+                object_type,
+                x,
+                y,
+                z,
                 properties_bytes,
             ],
         )?;
@@ -112,13 +118,21 @@ impl ArxObjectDatabase {
             )?;
             
             for obj in objects {
+                // Copy values to avoid packed field alignment issues
+                let building_id = obj.building_id;
+                let object_type = obj.object_type;
+                let x = obj.x;
+                let y = obj.y;
+                let z = obj.z;
+                let properties = obj.properties.to_vec();
+                
                 stmt.execute(params![
-                    obj.building_id,
-                    obj.object_type,
-                    obj.x,
-                    obj.y,
-                    obj.z,
-                    obj.properties.to_vec(),
+                    building_id,
+                    object_type,
+                    x,
+                    y,
+                    z,
+                    properties,
                 ])?;
             }
         }

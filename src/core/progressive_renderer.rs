@@ -4,6 +4,7 @@ use heapless::String;
 use crate::{ArxObject, DetailLevel, object_types};
 
 /// ASCII renderer that shows progressively more detail
+#[derive(Debug, Clone)]
 pub struct ProgressiveRenderer {
     /// ASCII art templates at different detail levels
     templates: TemplateStore,
@@ -15,6 +16,7 @@ pub struct ProgressiveRenderer {
 }
 
 /// Stores ASCII art templates for different object types
+#[derive(Debug, Clone)]
 struct TemplateStore;
 
 impl ProgressiveRenderer {

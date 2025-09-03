@@ -12,8 +12,10 @@ use crate::ArxObject;
 pub struct MeshPacket {
     /// Packet type: 0x00-0x7F for live, 0x80-0xFF for detail chunks
     pub packet_type: u8,
-    /// Type-specific payload (12 bytes)
-    pub payload: [u8; 12],
+    /// Header bytes for routing (4 bytes: type, seq, dest_hi, dest_lo)
+    pub header: [u8; 4],
+    /// Type-specific payload (8 bytes)
+    pub payload: [u8; 8],
 }
 
 impl MeshPacket {
@@ -21,31 +23,39 @@ impl MeshPacket {
     
     /// Create a live update packet
     pub fn live_update(object: &ArxObject) -> Self {
-        let mut payload = [0u8; 12];
+        let mut header = [0u8; 4];
+        let mut payload = [0u8; 8];
         
-        // Pack ArxObject into payload
-        payload[0..2].copy_from_slice(&object.building_id.to_le_bytes());
-        payload[2..4].copy_from_slice(&object.x.to_le_bytes());
-        payload[4..6].copy_from_slice(&object.y.to_le_bytes());
-        payload[6..8].copy_from_slice(&object.z.to_le_bytes());
-        payload[8..12].copy_from_slice(&object.properties);
+        // Header contains building ID and packet info
+        header[0..2].copy_from_slice(&object.building_id.to_le_bytes());
+        header[2] = 0; // sequence number
+        header[3] = 0; // flags
+        
+        // Pack position and properties into payload
+        payload[0..2].copy_from_slice(&object.x.to_le_bytes());
+        payload[2..4].copy_from_slice(&object.y.to_le_bytes());
+        payload[4..6].copy_from_slice(&object.z.to_le_bytes());
+        payload[6..8].copy_from_slice(&object.properties[0..2]);
         
         Self {
             packet_type: object.object_type & 0x7F,  // Ensure live range
+            header,
             payload,
         }
     }
     
     /// Create a detail chunk packet
     pub fn detail_chunk(object_id: u16, chunk_id: u16, chunk_type: ChunkType, data: &[u8]) -> Self {
-        let mut payload = [0u8; 12];
+        let mut header = [0u8; 4];
+        let mut payload = [0u8; 8];
         
-        payload[0..2].copy_from_slice(&object_id.to_le_bytes());
-        payload[2..4].copy_from_slice(&chunk_id.to_le_bytes());
-        payload[4..12].copy_from_slice(&data[..8.min(data.len())]);
+        header[0..2].copy_from_slice(&object_id.to_le_bytes());
+        header[2..4].copy_from_slice(&chunk_id.to_le_bytes());
+        payload[0..8.min(data.len())].copy_from_slice(&data[..8.min(data.len())]);
         
         Self {
             packet_type: chunk_type as u8,
+            header,
             payload,
         }
     }
@@ -62,7 +72,12 @@ impl MeshPacket {
     
     /// Extract object ID from packet
     pub fn object_id(&self) -> u16 {
-        u16::from_le_bytes([self.payload[0], self.payload[1]])
+        u16::from_le_bytes([self.header[0], self.header[1]])
+    }
+    
+    /// Get hop count from header
+    pub fn hop_count(&self) -> u8 {
+        self.header[3]  // Using last byte of header for hop count
     }
 }
 

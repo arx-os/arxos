@@ -4,11 +4,10 @@
 //! with the building mesh network through simple terminal commands.
 
 use crate::arxobject::ArxObject;
-use crate::ascii_bridge::{AsciiBridge, TerminalInterface as AsciiTerminal};
-use crate::mesh_router::{MeshRouter, RouterStats, MeshTopology, RoutingAdvertisement};
+use crate::ascii_bridge::AsciiBridge;
+use crate::mesh_router::{MeshRouter, MeshTopology};
 use crate::transport::Transport;
 use std::collections::VecDeque;
-use std::time::Instant;
 
 /// Terminal command processor for ArxOS
 pub struct TerminalInterface {
@@ -148,17 +147,18 @@ impl TerminalInterface {
         }
         
         // Try to parse hex bytes
-        if args[0] == "hex" && args.len() >= 2 {
-            let hex = args[1..].join("");
-            if let Ok(bytes) = hex::decode(&hex) {
-                if bytes.len() == 13 {
-                    let mut array = [0u8; 13];
-                    array.copy_from_slice(&bytes);
-                    let obj = ArxObject::from_bytes(&array);
-                    return self.ascii_bridge.render(&obj);
-                }
-            }
-        }
+        // TODO: Add hex decoding support
+        // if args[0] == "hex" && args.len() >= 2 {
+        //     let hex = args[1..].join("");
+        //     if let Ok(bytes) = hex::decode(&hex) {
+        //         if bytes.len() == 13 {
+        //             let mut array = [0u8; 13];
+        //             array.copy_from_slice(&bytes);
+        //             let obj = ArxObject::from_bytes(&array);
+        //             return self.ascii_bridge.render(&obj);
+        //         }
+        //     }
+        // }
         
         "Usage: render [hex <13 bytes>]\nExample: render hex 002A150029045B0898".to_string()
     }

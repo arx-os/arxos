@@ -47,7 +47,7 @@ impl PointCloudParser {
         }
         
         // Convert voxels to ArxObjects
-        for ((vx, vy, vz), indices) in voxels {
+        for ((_vx, _vy, _vz), indices) in voxels {
             if indices.len() < self.min_points {
                 continue;
             }

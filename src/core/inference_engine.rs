@@ -6,7 +6,7 @@
 //! understands its role in the building's nervous system.
 
 use crate::arxobject::{ArxObject, object_types};
-use crate::progressive_detail::{DetailTree, CompressedIdentity, CompressedConnections, CompressedTopology};
+use crate::progressive_detail::DetailTree;
 use std::collections::HashMap;
 
 /// The Inference Engine that gives ArxObjects consciousness
@@ -79,7 +79,7 @@ pub struct TypicalSpecs {
 }
 
 /// System types that objects participate in
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SystemType {
     PowerDistribution,
     LightingControl,
@@ -453,12 +453,12 @@ impl SpatialIndex {
         }
     }
     
-    pub fn find_nearby(&self, obj: &ArxObject, radius: u16) -> Vec<ArxObject> {
+    pub fn find_nearby(&self, _obj: &ArxObject, _radius: u16) -> Vec<ArxObject> {
         // Simplified - would use proper spatial indexing
         Vec::new()
     }
     
-    pub fn find_dependents(&self, obj: &ArxObject) -> Vec<u16> {
+    pub fn find_dependents(&self, _obj: &ArxObject) -> Vec<u16> {
         // Find objects that depend on this one
         Vec::new()
     }

@@ -3,8 +3,7 @@
 //! Handles building intelligence queries over the meshtastic mesh network.
 //! Maintains air-gapped communication while providing terminal access.
 
-use crate::arxobject::{ArxObject, ObjectCategory};
-use crate::packet::{MeshPacket, ChunkType};
+use crate::arxobject::ArxObject;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use thiserror::Error;
@@ -144,7 +143,7 @@ impl MeshtasticPacket {
         // Header: source_id (4 bytes) + dest_id (4 bytes) + type (1 byte) + sequence (2 bytes)
         bytes.extend_from_slice(&self.source_id.to_le_bytes());
         bytes.extend_from_slice(&self.dest_id.to_le_bytes());
-        bytes.push(self.packet_type as u8);
+        bytes.push(self.packet_type.clone() as u8);
         bytes.extend_from_slice(&self.sequence.to_le_bytes());
         
         // Payload length (2 bytes)

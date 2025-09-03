@@ -8,10 +8,9 @@ use async_trait::async_trait;
 // use meshtastic::api::{StreamApi, ConnectedStreamApi};
 // use meshtastic::protobufs::{self, FromRadio, ToRadio, MeshPacket, PortNum};
 // use meshtastic::packet::PacketRouter;
-use tokio::sync::mpsc;
 // use tokio_serial::SerialPortBuilderExt;
 use std::time::Duration;
-use log::{debug, info, warn, error};
+use log::{debug, info};
 
 use crate::arxobject::ArxObject;
 use super::{Transport, TransportError, TransportMetrics};
@@ -143,9 +142,10 @@ impl MeshtasticTransport {
 
 #[async_trait]
 impl Transport for MeshtasticTransport {
-    async fn connect(&mut self, building_id: &str) -> Result<(), TransportError> {
+    async fn connect(&mut self, _building_id: &str) -> Result<(), TransportError> {
         // For Meshtastic, building_id could be used to set channel
-        self.connect_serial(&self.serial_port).await
+        let serial_port = self.serial_port.clone();
+        self.connect_serial(&serial_port).await
     }
     
     async fn disconnect(&mut self) -> Result<(), TransportError> {

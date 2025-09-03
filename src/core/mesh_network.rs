@@ -8,11 +8,21 @@ use std::collections::HashMap;
 
 /// Error type for mesh network operations
 #[derive(Debug)]
-pub struct Error(String);
+pub enum Error {
+    RadioError(String),
+    Timeout,
+    InvalidPacket(String),
+    DatabaseError(String),
+}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Mesh network error: {}", self.0)
+        match self {
+            Error::RadioError(msg) => write!(f, "Radio error: {}", msg),
+            Error::Timeout => write!(f, "Operation timed out"),
+            Error::InvalidPacket(msg) => write!(f, "Invalid packet: {}", msg),
+            Error::DatabaseError(msg) => write!(f, "Database error: {}", msg),
+        }
     }
 }
 
@@ -37,7 +47,7 @@ pub struct NeighborInfo {
 }
 
 /// ArxOS packet types
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PacketType {
     Query = 0x01,
     Response = 0x02,
@@ -237,14 +247,6 @@ fn get_timestamp() -> u64 {
     0
 }
 
-/// Error types
-#[derive(Debug)]
-pub enum Error {
-    RadioError,
-    Timeout,
-    InvalidPacket,
-    DatabaseError,
-}
 
 impl Default for ArxOSPacket {
     fn default() -> Self {
@@ -302,7 +304,7 @@ impl ArxOSPacket {
     /// Create packet from bytes
     pub fn from_bytes(data: &[u8]) -> Result<Self, Error> {
         if data.len() < 8 {
-            return Err(Error::InvalidPacket);
+            return Err(Error::InvalidPacket("Packet too short".to_string()));
         }
         
         let packet_type = match data[0] {
@@ -311,7 +313,7 @@ impl ArxOSPacket {
             0x03 => PacketType::ArxObject,
             0x04 => PacketType::ScanRequest,
             0x05 => PacketType::Status,
-            _ => return Err(Error::InvalidPacket),
+            _ => return Err(Error::InvalidPacket(format!("Unknown packet type: {}", data[0]))),
         };
         
         let sequence = u16::from_le_bytes([data[1], data[2]]);
@@ -349,9 +351,8 @@ impl ArxOSPacket {
                     // Parse ArxObjects
                     for chunk in payload.chunks(13) {
                         if chunk.len() == 13 {
-                            if let Ok(object) = ArxObject::from_bytes(chunk.try_into().unwrap()) {
-                                packet.arxobjects.push(object);
-                            }
+                            let object = ArxObject::from_bytes(chunk.try_into().unwrap());
+                            packet.arxobjects.push(object);
                         }
                     }
                 }

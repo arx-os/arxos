@@ -8,7 +8,6 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use serde::{Serialize, Deserialize};
-use tokio::sync::mpsc;
 use std::net::SocketAddr;
 
 /// Node ID in the mesh network
@@ -120,7 +119,7 @@ pub struct MeshNode {
 }
 
 /// Node statistics
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct NodeStats {
     pub messages_sent: u64,
     pub messages_received: u64,
@@ -163,12 +162,12 @@ impl MeshNode {
         let processor_handle = self.start_processor();
         
         // Wait for all tasks
-        tokio::try_join!(
+        let _ = tokio::join!(
             listener_handle,
             broadcast_handle,
             discovery_handle,
             processor_handle
-        )?;
+        );
         
         Ok(())
     }
@@ -176,9 +175,9 @@ impl MeshNode {
     /// Start network listener
     async fn start_listener(&self) -> tokio::task::JoinHandle<()> {
         let config = self.config.clone();
-        let peers = self.peers.clone();
-        let queue = self.message_queue.clone();
-        let stats = self.stats.clone();
+        let _peers = self.peers.clone();
+        let _queue = self.message_queue.clone();
+        let _stats = self.stats.clone();
         
         tokio::spawn(async move {
             // In production, this would use TCP or UDP sockets
@@ -215,7 +214,7 @@ impl MeshNode {
                     let sample: Vec<ArxObject> = objects.into_iter().take(10).collect();
                     
                     if !sample.is_empty() {
-                        let msg = MeshMessage::ObjectBroadcast {
+                        let _msg = MeshMessage::ObjectBroadcast {
                             objects: sample.clone(),
                             timestamp: std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)
@@ -252,7 +251,7 @@ impl MeshNode {
                 interval.tick().await;
                 
                 // Send hello to discover peers
-                let hello = MeshMessage::Hello {
+                let _hello = MeshMessage::Hello {
                     node_id: config.node_id,
                     building_id: config.building_id,
                     capabilities: NodeCapabilities {
@@ -295,7 +294,7 @@ impl MeshNode {
                 
                 if let Some((sender_id, msg)) = message {
                     match msg {
-                        MeshMessage::ObjectBroadcast { objects, timestamp } => {
+                        MeshMessage::ObjectBroadcast { objects, timestamp: _ } => {
                             // Store new objects
                             let mut new_count = 0;
                             let mut db = database.lock().unwrap();
@@ -329,7 +328,7 @@ impl MeshNode {
                             if let Ok(objects) = db.find_within_radius(
                                 center.0, center.1, center.2, radius
                             ) {
-                                let response = MeshMessage::QueryResponse {
+                                let _response = MeshMessage::QueryResponse {
                                     query_id,
                                     objects,
                                 };
@@ -343,11 +342,11 @@ impl MeshNode {
                             }
                         }
                         
-                        MeshMessage::Ping { node_id, load } => {
+                        MeshMessage::Ping { node_id, load: _ } => {
                             // Respond with pong
                             let db = database.lock().unwrap();
                             if let Ok(stats) = db.get_stats() {
-                                let pong = MeshMessage::Pong {
+                                let _pong = MeshMessage::Pong {
                                     node_id: config.node_id,
                                     object_count: stats.total_objects,
                                 };
@@ -377,11 +376,18 @@ impl MeshNode {
         use std::hash::{Hash, Hasher};
         
         let mut hasher = DefaultHasher::new();
-        obj.building_id.hash(&mut hasher);
-        obj.object_type.hash(&mut hasher);
-        obj.x.hash(&mut hasher);
-        obj.y.hash(&mut hasher);
-        obj.z.hash(&mut hasher);
+        // Copy values to avoid packed field alignment issues
+        let building_id = obj.building_id;
+        let object_type = obj.object_type;
+        let x = obj.x;
+        let y = obj.y;
+        let z = obj.z;
+        
+        building_id.hash(&mut hasher);
+        object_type.hash(&mut hasher);
+        x.hash(&mut hasher);
+        y.hash(&mut hasher);
+        z.hash(&mut hasher);
         hasher.finish()
     }
     
@@ -411,11 +417,11 @@ impl MeshNode {
         -> Result<Vec<ArxObject>, Box<dyn std::error::Error>> {
         // First check local database
         let db = self.database.lock().unwrap();
-        let mut results = db.find_within_radius(center.0, center.1, center.2, radius)?;
+        let results = db.find_within_radius(center.0, center.1, center.2, radius)?;
         
         // Then query peers
         let query_id = rand::random::<u64>();
-        let query = MeshMessage::SpatialQuery {
+        let _query = MeshMessage::SpatialQuery {
             query_id,
             center,
             radius,
@@ -430,7 +436,7 @@ impl MeshNode {
     
     /// Get node statistics
     pub fn get_stats(&self) -> NodeStats {
-        self.stats.lock().unwrap().clone()
+        (*self.stats.lock().unwrap()).clone()
     }
     
     /// Trigger manual sync with peers
@@ -440,7 +446,7 @@ impl MeshNode {
             .unwrap()
             .as_secs() - 3600; // Sync last hour
         
-        let sync_request = MeshMessage::SyncRequest {
+        let _sync_request = MeshMessage::SyncRequest {
             since_timestamp: timestamp,
             building_id: self.config.building_id,
         };

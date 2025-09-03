@@ -4,6 +4,7 @@ use heapless::{FnvIndexMap, Vec};
 use crate::packet::{DetailChunk, ChunkType};
 
 /// Stores progressively accumulated detail for objects
+#[derive(Debug, Clone)]
 pub struct DetailStore {
     /// Chunk storage with limited capacity for embedded systems
     chunks: FnvIndexMap<(u16, u16), DetailChunk, 1024>,

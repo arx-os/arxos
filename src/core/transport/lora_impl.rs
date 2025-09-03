@@ -376,10 +376,10 @@ impl LoRaTransport {
 
 #[async_trait]
 impl Transport for LoRaTransport {
-    async fn connect(&mut self, building_id: &str) -> Result<(), TransportError> {
+    async fn connect(&mut self, _building_id: &str) -> Result<(), TransportError> {
         // Detect dongle
         let port_name = Self::detect_dongle()
-            .ok_or_else(|| TransportError::NotAvailable("No LoRa dongle detected".to_string()))?;
+            .ok_or(TransportError::NotAvailable)?;
         
         // Open serial port
         let mut port = LoRaSerialPort::open(&port_name, 115200)?;
@@ -388,8 +388,8 @@ impl Transport for LoRaTransport {
         port.configure(&self.config)?;
         
         // Set up channels for async communication
-        let (tx_send, mut tx_recv) = mpsc::unbounded_channel();
-        let (rx_send, rx_recv) = mpsc::unbounded_channel();
+        let (tx_send, _tx_recv) = mpsc::unbounded_channel();
+        let (_rx_send, rx_recv) = mpsc::unbounded_channel();
         
         self.port = Some(port);
         self.tx_channel = Some(tx_send);
@@ -417,10 +417,12 @@ impl Transport for LoRaTransport {
     }
     
     async fn send(&mut self, data: &[u8]) -> Result<(), TransportError> {
-        let port = self.port.as_mut()
-            .ok_or_else(|| TransportError::NotConnected)?;
+        // Check if connected first
+        if self.port.is_none() {
+            return Err(TransportError::NotConnected);
+        }
         
-        // Fragment if necessary
+        // Fragment if necessary (before borrowing port)
         let packets = if data.len() <= LoRaPacket::MAX_PAYLOAD {
             vec![LoRaPacket::new_data(
                 self.address,
@@ -432,7 +434,8 @@ impl Transport for LoRaTransport {
             self.fragment_data(data, 0xFFFF)
         };
         
-        // Send all packets
+        // Now borrow port and send packets
+        let port = self.port.as_mut().unwrap();
         for packet in packets {
             let bytes = packet.to_bytes();
             port.send_bytes(&bytes)?;
@@ -466,7 +469,7 @@ impl Transport for LoRaTransport {
                 metrics.packets_received += 1;
                 
                 // Estimate signal quality from packet
-                metrics.signal_strength = -60; // Would get from module
+                metrics.signal_strength = Some(-60); // Would get from module
                 metrics.connection_quality = 0.8;
             }
             

@@ -76,13 +76,13 @@ impl RoutingStore {
     }
     
     /// Store a route entry
-    pub fn store_route(&self, route: &RouteEntry) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn store_route(&self, _route: &RouteEntry) -> Result<(), Box<dyn std::error::Error>> {
         // Simple SQL insert for routing table
         Ok(())
     }
     
     /// Get route to destination
-    pub fn get_route(&self, destination: u16) -> Result<Option<RouteEntry>, Box<dyn std::error::Error>> {
+    pub fn get_route(&self, _destination: u16) -> Result<Option<RouteEntry>, Box<dyn std::error::Error>> {
         // Simple SQL query for route
         Ok(None)
     }

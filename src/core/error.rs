@@ -44,6 +44,13 @@ pub enum ArxError {
     #[error("Object not found: {0}")]
     ObjectNotFound(String),
     
+    #[error("Not found: {0}")]
+    NotFound(String),
+    
+    // Input errors
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+    
     // Parsing errors
     #[error("Parse error: {0}")]
     ParseError(String),
@@ -63,6 +70,9 @@ pub enum ArxError {
     // Generic errors
     #[error("Operation not supported: {0}")]
     NotSupported(String),
+    
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
     
     #[error("Internal error: {0}")]
     Internal(String),

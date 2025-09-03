@@ -49,6 +49,23 @@ pub mod arxobject_simple;
 #[cfg(feature = "std")]
 pub mod point_cloud_simple;
 
+// Progressive Detail Architecture
+#[cfg(feature = "std")]
+pub mod progressive_detail;
+
+#[cfg(feature = "std")]
+pub mod inference_engine;
+
+#[cfg(feature = "std")]
+pub mod transmission_protocol;
+
+// Game and rendering modules
+#[cfg(feature = "std")]
+pub mod game;
+
+#[cfg(feature = "std")]
+pub mod ascii_renderer_2d;
+
 #[cfg(feature = "std")]
 pub mod ply_parser_simple;
 

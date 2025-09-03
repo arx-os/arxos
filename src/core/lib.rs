@@ -159,6 +159,14 @@ pub mod branch_mesh_protocol;
 #[cfg(feature = "std")]
 pub mod merge_review_system;
 
+// Terminal-based CMMS
+#[cfg(feature = "std")]
+pub mod terminal_cmms;
+#[cfg(feature = "std")]
+pub mod work_order_tabs;
+#[cfg(feature = "std")]
+pub mod cmms_lifecycle;
+
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};
 pub use packet::{MeshPacket, ChunkType, DetailChunk};

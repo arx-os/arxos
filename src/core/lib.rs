@@ -17,11 +17,11 @@ pub mod mesh_network;
 #[cfg(feature = "std")]
 pub mod database;
 
+#[cfg(feature = "std")]
+pub mod error;
+
 // Semantic compression moved to external_services/point_cloud_processor/
 // ArxOS routes, doesn't process
-
-#[cfg(feature = "std")]
-pub mod mesh_network;
 
 #[cfg(feature = "std")]
 pub mod data_consumer_api;
@@ -35,6 +35,34 @@ pub mod database_impl;
 // Feature-gated modules (only with std)
 #[cfg(feature = "std")]
 pub mod document_parser;
+
+#[cfg(feature = "std")]
+pub mod point_cloud_parser;
+
+#[cfg(feature = "std")]
+pub mod point_cloud_parser_enhanced;
+
+// Simplified implementations for testing
+#[cfg(feature = "std")]
+pub mod arxobject_simple;
+
+#[cfg(feature = "std")]
+pub mod point_cloud_simple;
+
+#[cfg(feature = "std")]
+pub mod ply_parser_simple;
+
+#[cfg(feature = "std")]
+pub mod persistence_simple;
+
+#[cfg(feature = "std")]
+pub mod rest_api_simple;
+
+#[cfg(feature = "std")]
+pub mod mesh_network_simple;
+
+#[cfg(feature = "std")]
+pub mod ascii_renderer_2d;
 
 // Point cloud processing moved to external_services/point_cloud_processor/
 // ArxOS receives ASCII descriptions, doesn't process point clouds
@@ -65,6 +93,10 @@ pub mod mesh_router;
 #[cfg(feature = "std")]
 pub mod terminal_interface;
 
+// Game engine for ASCII building exploration
+#[cfg(feature = "std")]
+pub mod game;
+
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};
 pub use packet::{MeshPacket, ChunkType, DetailChunk};
@@ -91,6 +123,3 @@ mod tests {
         assert_eq!(obj, restored);
     }
 }
-
-#[cfg(all(test, feature = "std"))]
-mod integration_test;

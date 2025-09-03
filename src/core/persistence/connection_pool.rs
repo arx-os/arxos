@@ -11,7 +11,9 @@ use std::sync::{Arc, Mutex, Condvar};
 use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 use rusqlite::{Connection, OpenFlags};
-use crate::holographic::error::{Result, HolographicError};
+use crate::error::ArxError;
+
+type Result<T> = std::result::Result<T, ArxError>;
 
 /// A pooled database connection
 pub struct PooledConnection<'a> {
@@ -24,18 +26,18 @@ impl<'a> PooledConnection<'a> {
     pub fn execute<P: rusqlite::Params>(&self, sql: &str, params: P) -> Result<usize> {
         self.conn
             .as_ref()
-            .ok_or_else(|| HolographicError::InvalidInput("Connection already returned".to_string()))?
+            .ok_or_else(|| ArxError::InvalidArxObject("Connection already returned".to_string()))?
             .execute(sql, params)
-            .map_err(|e| HolographicError::InvalidInput(format!("SQL error: {}", e)))
+            .map_err(|e| ArxError::InvalidArxObject(format!("SQL error: {}", e)))
     }
     
     /// Prepare a SQL statement
     pub fn prepare(&self, sql: &str) -> Result<rusqlite::Statement> {
         self.conn
             .as_ref()
-            .ok_or_else(|| HolographicError::InvalidInput("Connection already returned".to_string()))?
+            .ok_or_else(|| ArxError::InvalidArxObject("Connection already returned".to_string()))?
             .prepare(sql)
-            .map_err(|e| HolographicError::InvalidInput(format!("SQL error: {}", e)))
+            .map_err(|e| ArxError::InvalidArxObject(format!("SQL error: {}", e)))
     }
     
     /// Query a single row
@@ -46,9 +48,9 @@ impl<'a> PooledConnection<'a> {
     {
         self.conn
             .as_ref()
-            .ok_or_else(|| HolographicError::InvalidInput("Connection already returned".to_string()))?
+            .ok_or_else(|| ArxError::InvalidArxObject("Connection already returned".to_string()))?
             .query_row(sql, params, f)
-            .map_err(|e| HolographicError::InvalidInput(format!("SQL error: {}", e)))
+            .map_err(|e| ArxError::InvalidArxObject(format!("SQL error: {}", e)))
     }
     
     /// Get the last insert row ID
@@ -137,14 +139,14 @@ impl ConnectionPool {
             {
                 let mut connections = self.inner.connections
                     .lock()
-                    .map_err(|_| HolographicError::InvalidInput("Pool mutex poisoned".to_string()))?;
+                    .map_err(|_| ArxError::InvalidArxObject("Pool mutex poisoned".to_string()))?;
                 
                 if let Some(conn) = connections.pop_front() {
                     // Verify connection is still valid
                     if Self::check_connection(&conn) {
                         let mut active = self.inner.active_connections
                             .lock()
-                            .map_err(|_| HolographicError::InvalidInput("Active count mutex poisoned".to_string()))?;
+                            .map_err(|_| ArxError::InvalidArxObject("Active count mutex poisoned".to_string()))?;
                         *active += 1;
                         
                         return Ok(PooledConnection {
@@ -160,7 +162,7 @@ impl ConnectionPool {
             {
                 let active = self.inner.active_connections
                     .lock()
-                    .map_err(|_| HolographicError::InvalidInput("Active count mutex poisoned".to_string()))?;
+                    .map_err(|_| ArxError::InvalidArxObject("Active count mutex poisoned".to_string()))?;
                 
                 if *active < self.inner.max_connections {
                     drop(active); // Release lock before creating connection
@@ -169,7 +171,7 @@ impl ConnectionPool {
                     
                     let mut active = self.inner.active_connections
                         .lock()
-                        .map_err(|_| HolographicError::InvalidInput("Active count mutex poisoned".to_string()))?;
+                        .map_err(|_| ArxError::InvalidArxObject("Active count mutex poisoned".to_string()))?;
                     *active += 1;
                     
                     return Ok(PooledConnection {
@@ -182,7 +184,7 @@ impl ConnectionPool {
             // Wait for a connection to be returned
             let now = Instant::now();
             if now >= deadline {
-                return Err(HolographicError::InvalidInput(
+                return Err(ArxError::InvalidArxObject(
                     "Timeout waiting for database connection".to_string()
                 ));
             }
@@ -191,15 +193,15 @@ impl ConnectionPool {
             let (connections, timeout_result) = self.inner.condvar
                 .wait_timeout(
                     self.inner.connections.lock()
-                        .map_err(|_| HolographicError::InvalidInput("Pool mutex poisoned".to_string()))?,
+                        .map_err(|_| ArxError::InvalidArxObject("Pool mutex poisoned".to_string()))?,
                     timeout
                 )
-                .map_err(|_| HolographicError::InvalidInput("Condvar wait failed".to_string()))?;
+                .map_err(|_| ArxError::InvalidArxObject("Condvar wait failed".to_string()))?;
             
             drop(connections); // Release lock before next iteration
             
             if timeout_result.timed_out() {
-                return Err(HolographicError::InvalidInput(
+                return Err(ArxError::InvalidArxObject(
                     "Timeout waiting for database connection".to_string()
                 ));
             }
@@ -234,7 +236,7 @@ impl ConnectionPool {
                 | OpenFlags::SQLITE_OPEN_CREATE
                 | OpenFlags::SQLITE_OPEN_NO_MUTEX
                 | OpenFlags::SQLITE_OPEN_URI
-        ).map_err(|e| HolographicError::InvalidInput(format!("Failed to open database: {}", e)))?;
+        ).map_err(|e| ArxError::InvalidArxObject(format!("Failed to open database: {}", e)))?;
         
         // Set connection-specific pragmas
         conn.execute_batch(crate::persistence::schema::ENABLE_FOREIGN_KEYS)?;
@@ -271,7 +273,7 @@ impl ConnectionPool {
     pub fn clear(&self) -> Result<()> {
         let mut connections = self.inner.connections
             .lock()
-            .map_err(|_| HolographicError::InvalidInput("Pool mutex poisoned".to_string()))?;
+            .map_err(|_| ArxError::InvalidArxObject("Pool mutex poisoned".to_string()))?;
         
         connections.clear();
         Ok(())

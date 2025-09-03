@@ -455,6 +455,7 @@ pub mod object_types {
     pub const DRAIN: u8 = 0x65;
     pub const SUMP_PUMP: u8 = 0x66;
     pub const SPRINKLER: u8 = 0x67;
+    pub const LEAK: u8 = 0x68;
     
     // Network (0x70-0x7F)
     pub const WIFI_AP: u8 = 0x70;

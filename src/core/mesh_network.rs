@@ -2,13 +2,25 @@
 //! 
 //! Pure Rust mesh networking for building intelligence
 
-use sx126x::Sx126x;
-use arxos_core::{ArxObject, Database};
+// use sx126x::Sx126x;  // TODO: Add sx126x dependency when needed
+use crate::{ArxObject, database::Database};
 use std::collections::HashMap;
+
+/// Error type for mesh network operations
+#[derive(Debug)]
+pub struct Error(String);
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Mesh network error: {}", self.0)
+    }
+}
+
+impl std::error::Error for Error {}
 
 /// ArxOS mesh network manager
 pub struct ArxOSMesh {
-    radio: Sx126x,
+    // radio: Sx126x,  // TODO: Add when sx126x is available
     database: Database,
     node_id: u16,
     sequence: u16,
@@ -71,9 +83,9 @@ pub enum ScanType {
 
 impl ArxOSMesh {
     /// Create new mesh network
-    pub fn new(radio: Sx126x, database: Database) -> Self {
+    pub fn new(/*radio: Sx126x,*/ database: Database) -> Self {
         Self {
-            radio,
+            // radio,  // TODO: Add when sx126x is available
             database,
             node_id: generate_node_id(),
             sequence: 0,
@@ -88,23 +100,25 @@ impl ArxOSMesh {
     
     /// Receive packet from mesh
     pub async fn receive_packet(&mut self) -> Option<ArxOSPacket> {
-        if self.radio.available() {
-            let mut buffer = [0u8; 255];
-            if let Ok(len) = self.radio.read(&mut buffer) {
-                if let Ok(packet) = ArxOSPacket::from_bytes(&buffer[..len]) {
-                    // Update neighbor info
-                    self.update_neighbor(packet.header.source);
-                    return Some(packet);
-                }
-            }
-        }
+        // TODO: Implement when radio is available
+        // if self.radio.available() {
+        //     let mut buffer = [0u8; 255];
+        //     if let Ok(len) = self.radio.read(&mut buffer) {
+        //         if let Ok(packet) = ArxOSPacket::from_bytes(&buffer[..len]) {
+        //             // Update neighbor info
+        //             self.update_neighbor(packet.header.source);
+        //             return Some(packet);
+        //         }
+        //     }
+        // }
         None
     }
     
     /// Send packet to mesh
     pub async fn send_packet(&mut self, packet: &ArxOSPacket) -> Result<(), Error> {
-        let data = packet.to_bytes();
-        self.radio.write(&data).await?;
+        let _data = packet.to_bytes();
+        // TODO: Implement when radio is available
+        // self.radio.write(&data).await?;
         Ok(())
     }
     
@@ -149,9 +163,11 @@ impl ArxOSMesh {
     
     /// Store ArxObjects in local database
     pub async fn store_arxobjects(&mut self, objects: &[ArxObject]) -> Result<(), Error> {
-        for object in objects {
-            self.database.store_arxobject(object).await?;
-        }
+        // TODO: Convert ArxObject to ArxObjectDB and store
+        // for object in objects {
+        //     self.database.insert_arxobject(object)?;
+        // }
+        let _ = objects; // Suppress unused warning
         Ok(())
     }
     
@@ -200,7 +216,8 @@ impl ArxOSMesh {
                     return Ok(packet.response.unwrap_or_default());
                 }
             }
-            esp_hal::delay::FreeRtos::delay_ms(100);
+            // esp_hal::delay::FreeRtos::delay_ms(100);  // TODO: Add esp_hal dependency
+            std::thread::sleep(std::time::Duration::from_millis(100));
         }
         Err(Error::Timeout)
     }

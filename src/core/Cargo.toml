@@ -45,15 +45,28 @@ parking_lot = { version = "0.12", optional = true }
 futures = { version = "0.3", optional = true }
 num_cpus = { version = "1.16", optional = true }
 
+# REST API dependencies
+warp = { version = "0.3", optional = true }
+bytes = { version = "1.5", optional = true }
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+# Terminal UI dependencies
+termion = { version = "2.0", optional = true }
+
 [features]
 default = ["std"]
-std = ["dep:rusqlite", "dep:uuid", "dep:serde", "dep:serde_json", "dep:chrono", "dep:rand", "dep:tokio", "dep:async-trait", "dep:thiserror", "dep:lopdf", "dep:image", "dep:imageproc", "dep:regex", "dep:log", "dep:ed25519-dalek", "dep:sha2", "dep:lru", "dep:lazy_static", "dep:rayon", "dep:crossbeam", "dep:parking_lot", "dep:futures", "dep:num_cpus"]
+std = ["dep:rusqlite", "dep:uuid", "dep:serde", "dep:serde_json", "dep:chrono", "dep:rand", "dep:tokio", "dep:async-trait", "dep:thiserror", "dep:lopdf", "dep:image", "dep:imageproc", "dep:regex", "dep:log", "dep:ed25519-dalek", "dep:sha2", "dep:lru", "dep:lazy_static", "dep:rayon", "dep:crossbeam", "dep:parking_lot", "dep:futures", "dep:num_cpus", "dep:warp", "dep:bytes", "dep:reqwest", "dep:termion"]
 no_std = []
 defmt = ["dep:defmt"]
 
 [lib]
 name = "arxos_core"
 path = "lib.rs"
+
+[[bin]]
+name = "arxos-api-server"
+path = "../../src/bin/arxos_api_server.rs"
+required-features = ["std"]
 
 [dev-dependencies]
 tempfile = "3.8"
@@ -84,4 +97,14 @@ required-features = ["std"]
 
 [[example]]
 name = "ply_to_ascii_3d"
+required-features = ["std"]
+
+[[example]]
+name = "api_client"
+path = "../../examples/api_client.rs"
+required-features = ["std"]
+
+[[example]]
+name = "building_database"
+path = "../../examples/building_database.rs"
 required-features = ["std"]

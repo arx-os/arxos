@@ -13,7 +13,8 @@ use std::time::{Duration, Instant};
 pub mod mock;
 pub mod lora;
 pub mod lora_impl;
-// pub mod bluetooth;  // TODO: Implement
+pub mod meshtastic;  // New Meshtastic transport
+// pub mod bluetooth;  // TODO: Implement via Meshtastic BLE
 // pub mod sms;        // TODO: Implement
 
 /// Error types for transport operations
@@ -36,6 +37,12 @@ pub enum TransportError {
     
     #[error("Invalid data: {0}")]
     InvalidData(String),
+    
+    #[error("Invalid configuration: {0}")]
+    InvalidConfig(String),
+    
+    #[error("Would block")]
+    WouldBlock,
     
     #[error("Transport not available")]
     NotAvailable,

@@ -25,18 +25,26 @@ impl ArxObjectStore {
     pub fn store(&self, obj: &ArxObject) -> Result<ArxObjectId, Box<dyn Error>> {
         let conn = self.pool.get()?;
         
+        // Copy fields from packed struct to avoid alignment issues
+        let building_id = obj.building_id;
+        let object_type = obj.object_type;
+        let x = obj.x;
+        let y = obj.y;
+        let z = obj.z;
+        let properties = obj.properties;
+        
         // Simple insert - ArxOS just stores, doesn't process
         conn.execute(
             "INSERT OR REPLACE INTO arxobjects 
              (building_id, object_type, x, y, z, properties) 
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             params![
-                obj.building_id,
-                obj.object_type,
-                obj.x,
-                obj.y,
-                obj.z,
-                &obj.properties[..],
+                building_id,
+                object_type,
+                x,
+                y,
+                z,
+                &properties[..],
             ],
         )?;
         

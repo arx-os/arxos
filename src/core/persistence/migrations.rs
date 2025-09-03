@@ -5,7 +5,9 @@
 //! - Rollback support for failed migrations
 //! - Version tracking in database
 
-use crate::holographic::error::{Result, HolographicError};
+use crate::error::ArxError;
+
+type Result<T> = std::result::Result<T, ArxError>;
 use super::connection_pool::ConnectionPool;
 
 /// Migration manager for schema versioning
@@ -100,7 +102,7 @@ impl MigrationManager {
         // Apply migration
         if let Err(e) = conn.execute_batch(migration.up_sql) {
             conn.execute("ROLLBACK", [])?;
-            return Err(HolographicError::InvalidInput(
+            return Err(ArxError::InvalidInput(
                 format!("Migration {} failed: {}", migration.version, e)
             ));
         }
@@ -111,7 +113,7 @@ impl MigrationManager {
             rusqlite::params![migration.version, migration.name],
         ) {
             conn.execute("ROLLBACK", [])?;
-            return Err(HolographicError::InvalidInput(
+            return Err(ArxError::InvalidInput(
                 format!("Failed to record migration {}: {}", migration.version, e)
             ));
         }
@@ -125,7 +127,7 @@ impl MigrationManager {
     /// Rollback a single migration
     fn rollback_migration(&self, conn: &super::connection_pool::PooledConnection, migration: &Migration) -> Result<()> {
         if migration.down_sql.is_none() {
-            return Err(HolographicError::InvalidInput(
+            return Err(ArxError::InvalidInput(
                 format!("Migration {} cannot be rolled back", migration.version)
             ));
         }
@@ -138,7 +140,7 @@ impl MigrationManager {
         // Rollback migration
         if let Err(e) = conn.execute_batch(migration.down_sql.unwrap()) {
             conn.execute("ROLLBACK", [])?;
-            return Err(HolographicError::InvalidInput(
+            return Err(ArxError::InvalidInput(
                 format!("Rollback of migration {} failed: {}", migration.version, e)
             ));
         }
@@ -149,7 +151,7 @@ impl MigrationManager {
             rusqlite::params![migration.version],
         ) {
             conn.execute("ROLLBACK", [])?;
-            return Err(HolographicError::InvalidInput(
+            return Err(ArxError::InvalidInput(
                 format!("Failed to remove migration record {}: {}", migration.version, e)
             ));
         }

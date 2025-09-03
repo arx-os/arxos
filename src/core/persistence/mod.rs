@@ -12,6 +12,16 @@ pub use arxobject_store::ArxObjectStore;
 pub use connection_pool::{ConnectionPool, PooledConnection};
 pub use migrations::MigrationManager;
 
+/// Pool statistics
+#[derive(Debug, Clone)]
+pub struct PoolStats {
+    pub total_connections: usize,
+    pub active_connections: usize,
+    pub idle_connections: usize,
+    pub wait_count: usize,
+    pub wait_time_ms: u64,
+}
+
 use std::path::Path;
 
 /// Lightweight persistence manager for ArxOS routing data

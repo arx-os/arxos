@@ -452,7 +452,7 @@ impl Transport for LoRaTransport {
         Ok(())
     }
     
-    async fn receive(&mut self) -> Result<Vec<u8>, TransportError> {
+    async fn receive(&mut self, _timeout: Option<Duration>) -> Result<Vec<u8>, TransportError> {
         let port = self.port.as_mut()
             .ok_or_else(|| TransportError::NotConnected)?;
         
@@ -512,6 +512,10 @@ impl Transport for LoRaTransport {
         self.metrics.lock()
             .map(|m| m.clone())
             .unwrap_or_default()
+    }
+    
+    fn name(&self) -> &str {
+        "LoRa Implementation"
     }
     
     async fn is_available(&self) -> bool {

@@ -177,6 +177,10 @@ pub mod minecraft_terminal;
 #[cfg(feature = "std")]
 pub mod data_model_engine;
 
+// SDR Platform and Multi-Service Infrastructure
+#[cfg(feature = "std")]
+pub mod sdr_platform;
+
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};
 pub use packet::{MeshPacket, ChunkType, DetailChunk};

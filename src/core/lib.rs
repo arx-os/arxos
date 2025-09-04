@@ -167,6 +167,16 @@ pub mod work_order_tabs;
 #[cfg(feature = "std")]
 pub mod cmms_lifecycle;
 
+// BILT Token and Gamification
+#[cfg(feature = "std")]
+pub mod bilt_contribution_tracker;
+#[cfg(feature = "std")]
+pub mod minecraft_terminal;
+
+// Data Model and Business Logic
+#[cfg(feature = "std")]
+pub mod data_model_engine;
+
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};
 pub use packet::{MeshPacket, ChunkType, DetailChunk};

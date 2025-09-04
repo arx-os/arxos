@@ -1,4 +1,12 @@
+---
+title: Quantum Architecture (Exploratory)
+summary: Exploratory quantum mechanics concepts applied to building intelligence; not a shipping spec.
+owner: Holographic Research
+last_updated: 2025-09-04
+---
 # ArxOS Quantum Architecture
+
+> Canonical specs remain the 13-byte core `../technical/arxobject_specification.md` and RF mesh protocol. Quantum constructs here are exploratory and must layer above the 13-byte packet without changing it.
 
 ## Overview
 

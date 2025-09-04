@@ -1,5 +1,11 @@
 # ArxOS Network Topology Specification
 
+> Note: Architectural canonicals live here:
+> - High-level architecture: [NETWORK_ARCHITECTURE.md](./NETWORK_ARCHITECTURE.md)
+> - Technical deep dive: [../technical/mesh_architecture.md](../technical/mesh_architecture.md)
+>
+> This document is retained for additional topology details and examples.
+
 ## Network Overview
 
 ArxOS implements a hierarchical mesh network with three distinct tiers, each serving specific functions while maintaining full interoperability.

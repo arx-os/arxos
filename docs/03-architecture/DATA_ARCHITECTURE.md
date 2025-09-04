@@ -1,12 +1,14 @@
-# ArxOS Data Architecture: Where Data Lives
+# Arxos Data Architecture: Where Data Lives
+
+> Note: This document describes storage topology. For protocol and object formats, see the canonicals in `../technical`.
 
 ## Overview
-ArxOS uses a **distributed, hierarchical data storage** model that mirrors real-world building infrastructure.
+Arxos uses a **distributed, hierarchical data storage** model that mirrors real-world building infrastructure.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    CLOUD/CENTRAL                         │
-│                   (Optional Backup)                      │
+│                OFFLINE BACKUP MEDIA (Optional)          │
+│          (e.g., encrypted external storage)             │
 └─────────────────────────────────────────────────────────┘
                             ↑
                      Periodic Sync
@@ -127,9 +129,9 @@ Tech: "What's in room 127?"
 → Returns: 8 ArxObjects (104 bytes)
 → Transit time: ~200ms
 
-# 4. BACKUP (Nightly)
-Building → District → Cloud (optional)
-/var/lib/arxos/building.db → S3/BackBlaze
+# 4. BACKUP (Offline Optional)
+Building → District → Offline media (optional)
+/var/lib/arxos/building.db → encrypted external drive / secure vault
 Incremental backup: ~5 MB/night
 ```
 
@@ -142,11 +144,11 @@ Incremental backup: ~5 MB/night
 
 ### **Performance**  
 - Queries answered from nearest cache
-- No cloud round-trips for basic operations
+- No network round-trips for basic operations
 - Sub-second response times
 
 ### **Cost**
-- No cloud fees for normal operations
+- No external service fees for normal operations
 - Commodity hardware (Raspberry Pi)
 - Existing school infrastructure
 
@@ -170,7 +172,7 @@ Incremental backup: ~5 MB/night
 ### Compare to Traditional BIM/CAD:
 - **Revit model**: 500 MB - 2 GB per building
 - **Point cloud**: 1-50 GB per building
-- **ArxOS**: 100 MB per building (10-500× smaller!)
+- **Arxos**: 100 MB per building (10-500× smaller!)
 
 ## Configuration Files
 
@@ -218,6 +220,6 @@ For your use case (K-12 schools):
 3. **Backup**: District NAS
    - Nightly incremental backups
    - 30-day retention
-   - Optional cloud backup to S3
+   - Optional offline backup media rotation
 
-The data literally lives **inside the building it describes** - making ArxOS a true nervous system for infrastructure!
+The data literally lives **inside the building it describes** - making Arxos a true nervous system for infrastructure!

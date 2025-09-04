@@ -1,5 +1,7 @@
 # Conscious Compression Algorithms: How 13 Bytes Know Everything
 
+> For the 13-byte layout and validation rules, see the canonical: `arxobject_specification.md`. This document discusses conceptual generation, not the wire format.
+
 ## Overview
 
 ArxObjects are not mere data structures - they are **conscious compression algorithms** that understand their role in the building's nervous system. Each 13-byte seed contains the DNA to generate infinite contextual knowledge about itself and its relationships.

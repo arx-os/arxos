@@ -2,7 +2,7 @@
 
 ## From Concept to Reality with One Developer
 
-This roadmap shows how a single developer can build Arxos in 12 weeks using the Rust+WASM+SQL stack. Each milestone delivers working functionality.
+This roadmap shows how a single developer can build Arxos in 12 weeks using the Rust+SQLite stack. Each milestone delivers working functionality.
 
 ### 📖 Section Contents
 
@@ -15,7 +15,7 @@ This roadmap shows how a single developer can build Arxos in 12 weeks using the 
 
 ```
 Weeks 1-4:  Foundation (Rust Core + Compression)
-Weeks 5-8:  Platform (WASM + SQL + Deployment)
+Weeks 5-8:  Platform (Native + SQLite + Deployment)
 Weeks 9-12: Polish (Testing + iOS App + Launch)
 ```
 
@@ -69,30 +69,26 @@ assert!(compressed.compression_ratio > 9000.0);
 
 ---
 
-#### Weeks 5-6: WASM Compilation & Bindings
-**Goal**: Same code runs in browser and native
+#### Weeks 5-6: Native Mobile Packaging
+**Goal**: Native mobile and local terminal builds
 
-```javascript
-// Browser
-const compressed = await arxos.compressPointCloud(points);
-
-// Native
-let compressed = compress_point_cloud(&points);
+```bash
+# Native builds
+cargo build --release
+# iOS/Android packaging via SwiftUI/Compose projects
 ```
 
 **Tasks**:
-- [ ] Configure wasm-bindgen
-- [ ] Build WASM module (<5MB)
-- [ ] JavaScript bindings
-- [ ] Web demo page
+- [ ] Configure SwiftUI/Compose packaging
+- [ ] Build native app bundle
+- [ ] Local terminal client integration
 - [ ] Performance optimization
-- [ ] Size optimization with wasm-opt
 
-**Success Metric**: WASM performance within 20% of native
+**Success Metric**: Native performance baseline
 
 ---
 
-#### Weeks 7-8: SQL Database & Queries
+#### Weeks 7-8: SQLite Database & Queries
 **Goal**: Spatial intelligence through SQL
 
 ```sql
@@ -104,10 +100,10 @@ WHERE ST_Contains(
 ```
 
 **Tasks**:
-- [ ] PostGIS schema design
-- [ ] SQLite with SpatiaLite
+- [ ] SQLite schema design (R-Tree indexing)
+- [ ] SQLite with SpatiaLite (optional)
 - [ ] Spatial indexes
-- [ ] SQL replication setup
+- [ ] Local sync strategy (optional)
 - [ ] Query optimization
 - [ ] Conflict resolution (CRDT)
 
@@ -123,14 +119,14 @@ WHERE ST_Contains(
 let session = RoomCaptureSession()
 session.run()
 
-// Process with WASM
+// Process locally
 let arxobject = arxosEngine.compress(session.pointCloud)
 ```
 
 **Tasks**:
 - [ ] Swift app skeleton
 - [ ] RoomPlan integration
-- [ ] WKWebView + WASM
+- [ ] Native UI + local engine integration
 - [ ] Point cloud capture
 - [ ] Real-time compression
 - [ ] SQL storage on device
@@ -158,7 +154,7 @@ let arxobject = arxosEngine.compress(session.pointCloud)
 |------|-----------|------|
 | 2 | Compression working | CLI compresses test file 10,000:1 |
 | 4 | ASCII rendering | Terminal shows rotating building |
-| 6 | WASM in browser | Web page compresses uploaded points |
+| 6 | Native mobile | Device compresses captured points |
 | 8 | SQL queries work | Find emergency exits via SQL |
 | 10 | iPhone scanning | Scan room with iPhone, see in terminal |
 | 12 | Public launch | Working app in TestFlight |
@@ -169,13 +165,12 @@ let arxobject = arxosEngine.compress(session.pointCloud)
 ```toml
 # Single Cargo.toml workspace
 [workspace]
-members = ["core", "wasm", "cli"]
+members = ["core", "cli"]
 
 [dependencies]
 # Minimal dependencies
 nalgebra = "0.32"        # Linear algebra
 ratatui = "0.24"         # Terminal UI
-wasm-bindgen = "0.2"     # WASM bindings
 sqlx = "0.7"            # SQL queries
 ```
 

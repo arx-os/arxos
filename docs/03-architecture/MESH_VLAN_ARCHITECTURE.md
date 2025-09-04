@@ -1,5 +1,7 @@
 # ArxOS Mesh VLAN Architecture: Virtual Network Segmentation
 
+> Related canonicals: [../technical/mesh_architecture.md](../technical/mesh_architecture.md), [../12-protocols/MESH_PROTOCOL.md](../12-protocols/MESH_PROTOCOL.md). This page focuses on policy/segmentation concepts.
+
 ## Executive Summary
 
 VLANs revolutionized enterprise networks by creating logical separation on shared physical infrastructure. ArxOS implements similar concepts for our mesh network, creating Virtual Mesh Networks (VMNs) that provide isolation, security, and quality of service across the national infrastructure.

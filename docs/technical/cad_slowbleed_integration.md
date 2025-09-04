@@ -1,4 +1,12 @@
+---
+title: CAD and Slow-Bleed Integration Guide
+summary: How ASCII CAD integrates with slow-bleed to render progressively as detail accumulates.
+owner: Interfaces Lead
+last_updated: 2025-09-04
+---
 # CAD and Slow-Bleed Integration Guide
+
+> Canonical specs referenced: `slow_bleed_architecture.md` (protocol), `ascii_cad_system.md` (renderer), `arxobject_specification.md` (13-byte). This guide focuses on integration patterns.
 
 ## Overview
 

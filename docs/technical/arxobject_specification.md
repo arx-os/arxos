@@ -1,3 +1,9 @@
+---
+title: ArxObject 13-Byte Specification v1.0
+summary: Byte-level specification of the 13B ArxObject, including taxonomy, validation rules, and transmission notes.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
 # ArxObject 13-Byte Specification v1.0
 
 ## Core Philosophy

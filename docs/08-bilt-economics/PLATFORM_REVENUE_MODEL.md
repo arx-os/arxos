@@ -1,3 +1,9 @@
+---
+title: ArxOS Platform Revenue Model & Partnership Strategy
+summary: Multi-stream revenue model and partnership roadmap from core services to federal, municipal, and platform revenues.
+owner: Economics/Business Lead
+last_updated: 2025-09-04
+---
 # ArxOS Platform Revenue Model & Partnership Strategy
 
 ## Executive Summary

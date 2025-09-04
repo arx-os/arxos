@@ -1,3 +1,9 @@
+---
+title: BILT (Building Infrastructure Link Token) - Gamified Digital Twin Construction
+summary: Token and incentive design for crowd-sourced building intelligence contributions across field and remote work.
+owner: Economics/Business Lead
+last_updated: 2025-09-04
+---
 # BILT (Building Infrastructure Link Token) - Gamified Digital Twin Construction
 
 ## Vision

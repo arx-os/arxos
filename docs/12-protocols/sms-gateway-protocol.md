@@ -1,4 +1,6 @@
 # SMS Gateway Protocol Specification
+
+> Scope: Emergency and universal fallback. For mesh transport details, defer to `MESH_PROTOCOL.md`; for object formats, see `../technical/arxobject_specification.md`.
 **Version:** 1.0  
 **Date:** August 31, 2025  
 **Purpose:** Emergency and Universal Access

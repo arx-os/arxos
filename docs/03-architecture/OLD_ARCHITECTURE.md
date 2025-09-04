@@ -1,3 +1,9 @@
+---
+title: ArxOS Quantum-Conscious Architecture Overview (Legacy Notes)
+summary: Earlier vision notes exploring quantum-conscious framing and progressive rendering; kept for historical context.
+owner: Founder/Strategy
+last_updated: 2025-09-04
+---
 # ArxOS Quantum-Conscious Architecture Overview
 
 ## System Architecture

@@ -1,4 +1,17 @@
+---
+title: ArxOS Engineering Design & Architecture
+summary: Clean architecture overview covering tech stack, data flow, UI strategy, hardware, security, deployment, and performance for the RF-only system.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
 # ArxOS Engineering Design & Architecture
+
+> Canonicals:
+> - High-level: [NETWORK_ARCHITECTURE.md](./NETWORK_ARCHITECTURE.md)
+> - Mesh technical deep dive: [../technical/mesh_architecture.md](../technical/mesh_architecture.md)
+> - Terminal commands/API: [../technical/TERMINAL_API.md](../technical/TERMINAL_API.md)
+>
+> Note: Any mentions of SSH here are legacy. The interface is local terminal over serial/BLE; see the Terminal API.
 **Project:** Building Intelligence Operating System  
 **Version:** 2.0  
 **Date:** December 2024

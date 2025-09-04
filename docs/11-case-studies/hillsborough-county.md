@@ -1,3 +1,9 @@
+---
+title: Hillsborough County Schools Implementation
+summary: District-scale case study showing phased pilot-to-rollout with measurable ROI and operational impact.
+owner: Deployment Engineering Lead
+last_updated: 2025-09-04
+---
 # Hillsborough County Schools Implementation
 
 ## 300 Schools, 500 Buildings, One Solution

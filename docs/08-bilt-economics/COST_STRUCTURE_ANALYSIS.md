@@ -1,3 +1,9 @@
+---
+title: ArxOS Cost Structure Analysis
+summary: CapEx/OpEx breakdown, unit economics, and cost advantages of leveraging school infrastructure for an RF-only network.
+owner: Economics/Business Lead
+last_updated: 2025-09-04
+---
 # ArxOS Cost Structure Analysis
 
 ## Executive Summary

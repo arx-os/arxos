@@ -1,4 +1,14 @@
+---
+title: ArxOS Mesh Protocol
+summary: RF-only, air-gapped mesh communication spec optimized for 13-byte ArxObjects with secure, efficient routing.
+owner: Protocols Lead
+last_updated: 2025-09-04
+---
 # ArxOS Mesh Protocol
+
+> Related canonicals:
+> - Network architecture overview: [../03-architecture/NETWORK_ARCHITECTURE.md](../03-architecture/NETWORK_ARCHITECTURE.md)
+> - Mesh deep dive: [../technical/mesh_architecture.md](../technical/mesh_architecture.md)
 
 ## Overview
 

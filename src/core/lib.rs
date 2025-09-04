@@ -78,8 +78,7 @@ pub mod ply_parser_simple;
 #[cfg(feature = "std")]
 pub mod persistence_simple;
 
-#[cfg(feature = "std")]
-pub mod rest_api_simple;
+// REST API removed to enforce RF-only operation
 
 #[cfg(feature = "std")]
 pub mod mesh_network_simple;

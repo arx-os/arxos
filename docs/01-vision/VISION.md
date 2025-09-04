@@ -1,5 +1,7 @@
 # ArxOS Vision: The Planetary Nervous System for Buildings
 
+> Canonical: For the up-to-date vision, see [ARXOS_MASTER_VISION.md](./ARXOS_MASTER_VISION.md). This document is retained for historical and supplementary context.
+
 ## The Big Picture
 
 ArxOS transforms every building on Earth into an intelligent node in a planetary mesh network. Through 13-byte ArxObjects transmitted over packet radio, we create a universal building protocol that unifies all existing systems while maintaining extreme simplicity and local security.

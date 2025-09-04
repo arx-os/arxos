@@ -328,6 +328,103 @@ impl ArxObject {
             (base_seed % 256) as u8,
         ]
     }
+
+    /// Create a heartbeat object for broadcasting node presence
+    /// 
+    /// Uses `object_types::MESHTASTIC_NODE` and encodes the `node_id` into
+    /// the first two property bytes (little-endian). Coordinates are zeroed
+    /// and `building_id` is set to `BROADCAST_ID`.
+    pub fn heartbeat(node_id: u16) -> Self {
+        let node_bytes = node_id.to_le_bytes();
+        Self {
+            building_id: Self::BROADCAST_ID,
+            object_type: crate::arxobject::object_types::MESHTASTIC_NODE,
+            x: 0,
+            y: 0,
+            z: 0,
+            properties: [node_bytes[0], node_bytes[1], 0, 0],
+        }
+    }
+
+    /// Parse an `ArxObject` from a compact string.
+    /// 
+    /// Supported formats:
+    /// - 13-byte hex: `0xAABBCC...` (26 hex chars), little-endian layout
+    /// - key=value pairs (whitespace-separated), e.g.:
+    ///   `bid=0x1234 type=0x10 x=1000 y=2000 z=300 props=0x01020304`
+    ///   or `building_id=4660 object_type=16 x=1000 y=2000 z=300 properties=1,2,3,4`
+    pub fn from_string(input: &str) -> Result<Self, ValidationError> {
+        let s = input.trim();
+
+        // Try compact hex (26 hex digits, optional 0x prefix)
+        let mut hex = s;
+        if let Some(stripped) = s.strip_prefix("0x") { hex = stripped; }
+        if hex.len() == 26 && hex.chars().all(|c| c.is_ascii_hexdigit()) {
+            let mut bytes = [0u8; Self::SIZE];
+            for i in 0..13 {
+                let hi = hex.as_bytes()[2 * i] as char;
+                let lo = hex.as_bytes()[2 * i + 1] as char;
+                bytes[i] = match (hex_val(hi), hex_val(lo)) {
+                    (Some(h), Some(l)) => (h << 4) | l,
+                    _ => return Err(ValidationError::InvalidProperties("invalid hex byte")),
+                };
+            }
+            let obj = Self::from_bytes(&bytes);
+            return obj.validate().map(|_| obj);
+        }
+
+        // Parse key=value pairs
+        let mut building_id: Option<u16> = None;
+        let mut object_type: Option<u8> = None;
+        let mut x: Option<u16> = None;
+        let mut y: Option<u16> = None;
+        let mut z: Option<u16> = None;
+        let mut properties: [u8; 4] = [0; 4];
+        let mut props_set = false;
+
+        for token in s.split_whitespace() {
+            let t = token.trim_end_matches(',');
+            if let Some((k, v)) = t.split_once('=') {
+                let key = k.trim().to_ascii_lowercase();
+                let val = v.trim();
+                match key.as_str() {
+                    "building_id" | "bid" | "b" => {
+                        building_id = parse_u16(val);
+                    }
+                    "object_type" | "type" | "ot" => {
+                        object_type = parse_u8(val);
+                    }
+                    "x" => { x = parse_u16(val); }
+                    "y" => { y = parse_u16(val); }
+                    "z" => { z = parse_u16(val); }
+                    "props" | "properties" | "props_hex" => {
+                        if let Some(arr) = parse_props(val) {
+                            properties = arr;
+                            props_set = true;
+                        } else {
+                            return Err(ValidationError::InvalidProperties("could not parse properties"));
+                        }
+                    }
+                    _ => { /* ignore unknown keys */ }
+                }
+            }
+        }
+
+        let bid = building_id.ok_or(ValidationError::InvalidId("missing building_id"))?;
+        let typ = object_type.ok_or(ValidationError::InvalidType(0xFF))?;
+        let xv = x.ok_or(ValidationError::InvalidPosition("missing x"))?;
+        let yv = y.ok_or(ValidationError::InvalidPosition("missing y"))?;
+        let zv = z.ok_or(ValidationError::InvalidPosition("missing z"))?;
+
+        let obj = if props_set {
+            Self::with_properties(bid, typ, xv, yv, zv, properties)
+        } else {
+            Self::new(bid, typ, xv, yv, zv)
+        };
+
+        obj.validate()?;
+        Ok(obj)
+    }
 }
 
 /// Object categories (top 3 bits of object_type)
@@ -368,6 +465,20 @@ pub enum ValidationError {
     InvalidPosition(&'static str),
     InvalidProperties(&'static str),
 }
+
+impl core::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ValidationError::InvalidId(msg) => write!(f, "Invalid ID: {}", msg),
+            ValidationError::InvalidType(t) => write!(f, "Invalid type: 0x{:02X}", t),
+            ValidationError::InvalidPosition(msg) => write!(f, "Invalid position: {}", msg),
+            ValidationError::InvalidProperties(msg) => write!(f, "Invalid properties: {}", msg),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for ValidationError {}
 
 /// Complete object type definitions
 pub mod object_types {
@@ -540,6 +651,63 @@ fn crc8(data: &[u8]) -> u8 {
     crc
 }
 
+// Parsing helpers
+fn hex_val(c: char) -> Option<u8> {
+    match c {
+        '0'..='9' => Some(c as u8 - b'0'),
+        'a'..='f' => Some(10 + (c as u8 - b'a')),
+        'A'..='F' => Some(10 + (c as u8 - b'A')),
+        _ => None,
+    }
+}
+
+fn parse_u16(s: &str) -> Option<u16> {
+    if let Some(h) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+        u16::from_str_radix(h, 16).ok()
+    } else {
+        s.parse::<u16>().ok()
+    }
+}
+
+fn parse_u8(s: &str) -> Option<u8> {
+    if let Some(h) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+        u8::from_str_radix(h, 16).ok()
+    } else {
+        s.parse::<u8>().ok()
+    }
+}
+
+fn parse_props(val: &str) -> Option<[u8; 4]> {
+    // Hex form: 0xAABBCCDD
+    let v = val.trim();
+    if let Some(h) = v.strip_prefix("0x").or_else(|| v.strip_prefix("0X")) {
+        if h.len() == 8 && h.chars().all(|c| c.is_ascii_hexdigit()) {
+            let mut out = [0u8; 4];
+            for i in 0..4 {
+                let hi = h.as_bytes()[2 * i] as char;
+                let lo = h.as_bytes()[2 * i + 1] as char;
+                out[i] = match (hex_val(hi), hex_val(lo)) {
+                    (Some(hh), Some(ll)) => (hh << 4) | ll,
+                    _ => return None,
+                };
+            }
+            return Some(out);
+        }
+    }
+
+    // List form: [a,b,c,d] or a,b,c,d
+    let trimmed = v.trim_matches(|ch| ch == '[' || ch == ']' );
+    let parts: Vec<&str> = trimmed.split(',').map(|p| p.trim()).collect();
+    if parts.len() == 4 {
+        let mut out = [0u8; 4];
+        for (i, p) in parts.iter().enumerate() {
+            out[i] = parse_u8(p)?;
+        }
+        return Some(out);
+    }
+
+    None
+}
 #[cfg(test)]
 mod tests {
     use super::*;

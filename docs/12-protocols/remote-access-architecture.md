@@ -1,4 +1,4 @@
-# Arxos Remote Access Architecture
+# ArxOS Remote Access Architecture
 **Version:** 1.0  
 **Date:** August 31, 2025  
 **Status:** Proposed Architecture
@@ -6,6 +6,8 @@
 ## Executive Summary
 
 This document defines the hybrid remote access architecture for Arxos that maintains complete air-gap security while providing practical connectivity options. The system uses three complementary access methods, each optimized for different scenarios while preserving the core principle: **no internet connectivity ever**.
+
+> Canonicals: For mesh and protocol specs, see `MESH_PROTOCOL.md` and `../technical/mesh_architecture.md`. This document focuses on access modes without internet.
 
 ## Design Principles
 

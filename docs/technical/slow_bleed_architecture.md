@@ -1,4 +1,12 @@
+---
+title: Slow-Bleed Architecture for Building Intelligence
+summary: Bandwidth-first architecture where intelligence accumulates over time via RF mesh using compact ArxObjects.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
 # Slow-Bleed Architecture for Building Intelligence
+
+> Canonical specs referenced: `arxobject_specification.md` (13-byte core) and `../12-protocols/MESH_PROTOCOL.md` (mesh protocol). This document defines the progressive enhancement pattern layered on top.
 
 ## Overview
 
@@ -22,23 +30,17 @@ The Slow-Bleed Architecture is a revolutionary approach to building intelligence
 ### ArxObject Seed System
 **13-byte Universal Format**:
 ```
-[BuildingID][Type][X][Y][Z][Properties][Relationships][Mesh]
-    2B       1B   2B 2B 2B     4B           1B         1B
+[BuildingID][Type][X][Y][Z][Properties]
+    2B       1B   2B 2B 2B     4B
 ```
 
-**Field Descriptions**:
-- **BuildingID (2 bytes):** Building identifier
-- **Type (1 byte):** Object type (outlet, door, HVAC, etc.)
-- **X, Y, Z (2 bytes each):** Position in millimeters
-- **Properties (4 bytes):** Object-specific properties
-- **Relationships (1 byte):** Connections to other objects
-- **Mesh (1 byte):** Mesh participation level
+Refer to `arxobject_specification.md` for field definitions.
 
 ### Slow-Bleed Protocol
-**Packet Structure**:
+**Packet Structure (layered)**:
 ```
-[Header][ArxObject][Priority][Timestamp][HopCount]
-  8B       13B        1B        4B        1B
+[Header][ArxObject][Priority]
+  N        13B        1B
 ```
 
 **Transmission Strategy**:

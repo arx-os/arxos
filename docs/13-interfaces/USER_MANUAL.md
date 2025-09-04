@@ -1,4 +1,12 @@
-# ArxOS Quantum-Conscious User Manual
+---
+title: Arxos User Manual
+summary: Practical guide for terminal commands, ArxObject sending formats, and AR/quest concepts in an RF-only system.
+owner: Interfaces Lead
+last_updated: 2025-09-04
+---
+# Arxos Quantum-Conscious User Manual
+
+> Reference APIs and deeper command details live in the canonical: [technical/TERMINAL_API.md](../technical/TERMINAL_API.md). This manual is a practical, user-facing guide.
 
 ## Welcome to Your Building's Living Consciousness!
 
@@ -25,7 +33,7 @@ arxos connect /dev/ttyUSB0
 # or
 arxos connect bluetooth://meshtastic-001
 
-Welcome to ArxOS Building Intelligence Terminal!
+Welcome to Arxos Building Intelligence Terminal!
 Building: Crystal Tower
 Node ID: 0x0001
 ═══════════════════════════
@@ -35,11 +43,12 @@ arx>
 ```
 
 #### Mobile Terminal Access
-1. Download "ArxOS" from App Store
+1. Download "Arxos" from App Store
 2. Allow camera and Bluetooth access
 3. Connect to nearby mesh node via Bluetooth
 4. Use terminal interface for building queries
-5. Switch to LiDAR tab for 3D scanning
+5. Switch to LiDAR tab for 3D scanning (iOS only)
+6. Android devices support terminal and AR viewing without scan capture
 
 ### Understanding the Interface
 
@@ -126,6 +135,32 @@ arxos> health building        # Building system health
 arxos> alerts                 # Active warnings
 arxos> energy                 # Power consumption
 ```
+#### Sending ArxObjects (formats)
+
+ArxObject layout: 13 bytes = 2 (building_id) + 1 (type) + 2+2+2 (x,y,z in mm) + 4 (properties).
+
+You can send an `ArxObject` using either a compact 13-byte hex string or key=value pairs.
+
+- Compact 13-byte hex (26 hex chars, little-endian struct layout):
+```bash
+arxos> send 0x341210d007b80b2c010c78000f
+# Breakdown:
+# 34 12  | 10 | d0 07 | b8 0b | 2c 01 | 0c 78 00 0f
+#  bid     typ   x        y       z       props[4]
+```
+
+- Key=value pairs (hex or decimal). Aliases allowed: `building_id|bid|b`, `object_type|type|ot`, `props|properties|props_hex`.
+```bash
+arxos> send bid=0x1234 type=0x10 x=2000 y=3000 z=300 props=0x0C78000F
+arxos> send building_id=4660 object_type=16 x=2000 y=3000 z=300 properties=[12,120,0,15]
+```
+
+See also: `Terminal CMMS` for work-order flows and terminal UI patterns.
+
+Notes:
+- Coordinates are in millimeters.
+- `props` accepts `0xAABBCCDD` or `[AA,BB,CC,DD]` (decimal or hex per element).
+- Input is validated; invalid IDs, types, or malformed properties will be rejected.
 
 ### AR Gestures
 
@@ -207,6 +242,11 @@ arxos> quest complete:3       # Submit completion
 | Access | New areas | Unlock doors/systems |
 
 ## AR Interface
+
+### Android Viewer-Only Mode
+- Android devices without LiDAR can still view AR overlays
+- Alignment options: fiducial markers or 3-point manual alignment
+- Overlays update from 13-byte events received over RF
 
 ### AR View Modes
 
@@ -597,7 +637,7 @@ arxos> report bug        # Report issues
 - Wiki: https://wiki.arxos.io
 - Discord: https://discord.gg/arxos
 - Forum: https://forum.arxos.io
-- Reddit: r/ArxOS
+- Reddit: r/Arxos
 
 ### Technical Support
 - Email: support@arxos.io
@@ -614,6 +654,6 @@ Welcome to a new era of building management where work becomes play, maintenance
 
 ---
 
-*"In the realm of ArxOS, every maintenance worker is a hero, every task is a quest, and every building is an epic adventure waiting to be explored."*
+*"In the realm of Arxos, every maintenance worker is a hero, every task is a quest, and every building is an epic adventure waiting to be explored."*
 
 **Level Up. Fix Things. Save the Realm.**

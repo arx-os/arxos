@@ -1,16 +1,20 @@
 # BILT Token Economics
 
+> Scope: Economic model, incentives, pricing, and sustainability assumptions. Audience: founders, economics, partnerships.
+>
+> Owner: Economics/Business Lead.
+
 ## Incentivizing Crowd-Sourced Building Intelligence
 
 BILT (Building Intelligence Labor Token) creates sustainable economic incentives for field workers to contribute accurate building data. Unlike cryptocurrency, BILT is a point-based reward system with real-world redemption value, similar to airline miles or credit card rewards.
 
 ### 📖 Section Contents
 
-1. **[Token Mechanics](token-mechanics.md)** - How BILT points are earned and calculated
-2. **[Reward Tiers](reward-tiers.md)** - Point values for different contributions
-3. **[Redemption Options](redemption.md)** - What workers can buy with BILT
-4. **[Quality Assurance](quality-assurance.md)** - Preventing gaming and ensuring accuracy
-5. **[Economic Model](economic-model.md)** - Sustainability and funding sources
+Economics & Strategy:
+1. **[BILT Tokenomics](./BILT_TOKENOMICS.md)**
+2. **[Platform Revenue Model](./PLATFORM_REVENUE_MODEL.md)**
+3. **[Financial Services Reality](./FINANCIAL_SERVICES_REALITY.md)**
+4. **[Cost Structure Analysis](./COST_STRUCTURE_ANALYSIS.md)**
 
 ## 🎯 Core Economic Principles
 

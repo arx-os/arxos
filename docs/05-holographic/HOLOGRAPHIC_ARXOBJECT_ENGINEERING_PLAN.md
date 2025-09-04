@@ -1,4 +1,12 @@
+---
+title: Holographic ArxObject Engineering Plan (Research)
+summary: Research roadmap exploring fractal/quantum extensions; not a protocol spec.
+owner: Holographic Research
+last_updated: 2025-09-04
+---
 # ArxOS Holographic ArxObject Engineering Plan
+
+> Canonical specs: `../technical/arxobject_specification.md` (13-byte). Any extended fields shown here are conceptual and layered above the 13-byte core.
 
 ## Overview
 

@@ -1,3 +1,9 @@
+---
+title: ArxOS Bootstrap Deployment Strategy: From Hillsborough to $20B
+summary: Stepwise deployment strategy starting with a low-cost pilot, scaling through grants and organic district demand.
+owner: Deployment Engineering Lead
+last_updated: 2025-09-04
+---
 # ArxOS Bootstrap Deployment Strategy: From Hillsborough to $20B
 
 ## Executive Summary

@@ -1,4 +1,12 @@
+---
+title: ArxOS Quantum-Conscious Deployment Guide
+summary: Guidance for RF-only, air-gapped deployments from room-scale to district-scale with practices and checklists.
+owner: Deployment Engineering Lead
+last_updated: 2025-09-04
+---
 # ArxOS Quantum-Conscious Deployment Guide
+
+> For mesh/routing specifics, consult: [technical/mesh_architecture.md](../technical/mesh_architecture.md). For protocol details, see: [12-protocols/MESH_PROTOCOL.md](../12-protocols/MESH_PROTOCOL.md).
 
 ## Deployment Overview
 

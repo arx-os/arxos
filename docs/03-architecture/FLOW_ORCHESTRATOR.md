@@ -1,10 +1,21 @@
-# ArxOS Architecture: Building Intelligence Flow Orchestrator
+---
+title: Arxos Architecture: Building Intelligence Flow Orchestrator
+summary: Design for routing 13-byte ArxObjects through an RF-only mesh using a terminal-first interface and ASCII bridges.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
+# Arxos Architecture: Building Intelligence Flow Orchestrator
+
+> Canonical specs:
+> - ArxObject 13-Byte format: [technical/arxobject_specification.md](../technical/arxobject_specification.md)
+> - Mesh protocol details: [technical/mesh_architecture.md](../technical/mesh_architecture.md)
+> - Slow-bleed progressive detail: [technical/slow_bleed_architecture.md](../technical/slow_bleed_architecture.md)
 
 ## Vision Statement
 
-ArxOS is the universal building protocol that unifies CAD, BAS, IoT, and field operations through a lightweight terminal+AR interface using 13-byte ArxObjects transmitted over packet radio mesh networks.
+Arxos is the universal building protocol that unifies CAD, BAS, IoT, and field operations through a lightweight terminal+AR interface using 13-byte ArxObjects transmitted over packet radio mesh networks.
 
-**Core Philosophy**: ArxOS routes building intelligence, it doesn't process it.
+**Core Philosophy**: Arxos routes building intelligence, it doesn't process it.
 
 ## The Complete Stack
 
@@ -21,7 +32,7 @@ ArxOS is the universal building protocol that unifies CAD, BAS, IoT, and field o
 └────────────────────────┬───────────────────────────────┘
                          ↓
 ┌────────────────────────────────────────────────────────┐
-│               ArxOS PROTOCOL LAYER                     │
+│               Arxos PROTOCOL LAYER                     │
 │         ASCII ↔ ArxObject (13 bytes) ↔ Routing        │
 │      Building Intelligence as Lightweight Seeds        │
 └────────────────────────┬───────────────────────────────┘
@@ -50,7 +61,7 @@ ArxOS is the universal building protocol that unifies CAD, BAS, IoT, and field o
 ### 2. **Terminal-First**
 - Everything is ASCII at the interface
 - Human-readable commands
-- SSH as primary interaction
+- Local serial/BLE as primary interaction
 - AR as visual extension of terminal
 
 ### 3. **Universal Protocol**
@@ -66,7 +77,7 @@ ArxOS is the universal building protocol that unifies CAD, BAS, IoT, and field o
 1. Tech identifies issue via AR
 2. iPhone captures spatial data
 3. External processor → ASCII description
-4. ArxOS converts ASCII → ArxObject (13 bytes)
+4. Arxos converts ASCII → ArxObject (13 bytes)
 5. LoRa broadcasts to mesh
 6. Systems receive and act
 ```
@@ -176,14 +187,14 @@ Maintenance Room:
 ├── Raspberry Pi ($35)
 │   ├── ArxOS Core (2MB)
 │   ├── LoRa Dongle ($25)
-│   └── SSH Server
+│   └── Local Terminal Service (Serial/BLE)
 │
 ├── Existing Infrastructure:
 │   ├── WiFi Network
 │   ├── iPads/iPhones (AR)
 │   └── Desktop Terminals
 │
-└── Cloud Services:
+└── External Services (Optional, offline-prepared):
     ├── Point Cloud Processor
     ├── Revit API Bridge
     └── BAS Gateway
@@ -221,7 +232,7 @@ High_School ←→ District_Office ←→ Maintenance
 ## Security Model
 
 ### Authentication
-- SSH key-based for terminals
+- Local pairing (BLE) or device allowlist (serial)
 - Mesh uses rolling codes
 - ArxObjects are signed
 
@@ -231,7 +242,7 @@ High_School ←→ District_Office ←→ Maintenance
 - Audit trail via ArxObject log
 
 ### Encryption
-- SSH for terminal sessions
+- BLE link-layer or serial over authenticated channel
 - AES-128 for LoRa packets
 - Optional quantum resistance
 
@@ -313,7 +324,7 @@ High_School ←→ District_Office ←→ Maintenance
 ### For Buildings
 1. Deploy single Raspberry Pi
 2. Connect LoRa dongle
-3. SSH configuration
+3. Local terminal configuration (serial/BLE)
 4. Join mesh network
 5. Begin AR capture
 

@@ -1,4 +1,15 @@
+---
+title: ArxOS Complete Data Flow Architecture
+summary: End-to-end data flow from LiDAR and user input to 13-byte ArxObjects, local storage, mesh distribution, and terminal/AR consumption.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
 # ArxOS Complete Data Flow Architecture
+
+> Canonicals:
+> - 13-byte object spec: [../technical/arxobject_specification.md](../technical/arxobject_specification.md)
+> - Mesh protocol/architecture: [../12-protocols/MESH_PROTOCOL.md](../12-protocols/MESH_PROTOCOL.md), [../technical/mesh_architecture.md](../technical/mesh_architecture.md)
+> - Terminal commands/API: [../technical/TERMINAL_API.md](../technical/TERMINAL_API.md)
 
 ## Overview
 

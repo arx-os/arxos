@@ -1,3 +1,9 @@
+---
+title: Technical Documentation
+summary: Index of advanced technical specs and progressive visions for ArxOS, including mesh, slow-bleed, and ASCII CAD.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
 # Technical Documentation
 
 This directory contains advanced technical specifications and alternative visions for Arxos.

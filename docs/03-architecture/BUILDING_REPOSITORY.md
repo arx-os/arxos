@@ -1,5 +1,7 @@
 # ArxOS Building Repository - Git for Buildings
 
+> Scope: Process concept. For wire formats and packet types, defer to the protocol and ArxObject spec canonicals.
+
 ## The Concept
 
 Buildings have a **main branch** that represents the truth - what's actually installed and configured. When contractors arrive, they don't modify main directly. Instead, they get a **branch** - an isolated workspace where they can propose changes. Once complete, their changes are reviewed and merged by facility management.

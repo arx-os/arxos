@@ -1,3 +1,9 @@
+---
+title: ArxOS Mesh Network Architecture
+summary: Technical deep dive on RF-only mesh architecture, protocol stack, routing, security, and KPIs.
+owner: Protocols Lead
+last_updated: 2025-09-04
+---
 # Arxos Mesh Network Architecture
 ## Revolutionary Building Operating System with Packet Radio Infrastructure
 
@@ -69,20 +75,21 @@ Arxos represents a paradigm shift in building automation: an open-source buildin
 
 ---
 
+> Canonical specs referenced: `../12-protocols/MESH_PROTOCOL.md` (application protocol), `arxobject_specification.md` (13-byte), `TERMINAL_API.md` (commands). This deep dive elaborates on engineering decisions.
+
 ## 2. ArxObjects Protocol Specification
 
 ### 2.1 ArxObject Data Structure
 
 ```c
 // Core ArxObject for packet radio transmission
+// Canonical size: 13 bytes. Extended headers belong to higher layers.
 typedef struct {
     uint16_t object_id;         // 2 bytes - unique building object ID
-    uint8_t object_type;        // 1 byte - wall, outlet, panel, sensor, etc.
-    uint16_t x, y, z;          // 6 bytes - 3D coordinates (mm precision)
-    uint8_t properties[4];      // 4 bytes - material, status, metadata
-    uint16_t parent_id;         // 2 bytes - hierarchical relationships
-    uint8_t version;           // 1 byte - version control
-} ArxObject_Packet;            // Total: 16 bytes per object
+    uint8_t object_type;        // 1 byte - type code
+    uint16_t x, y, z;          // 6 bytes - 3D coordinates (mm)
+    uint8_t properties[4];      // 4 bytes - type-specific
+} ArxObject_Packet;            // Total: 13 bytes
 ```
 
 ### 2.2 Object Type Classifications

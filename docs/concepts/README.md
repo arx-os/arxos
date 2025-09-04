@@ -1,6 +1,8 @@
-# Arxos Concepts & Future Vision
+# ArxOS Concepts & Future Vision
 
-This folder contains exploratory concepts and future features for the Arxos building intelligence system. These represent the platform's capabilities across different hardware configurations and deployment scenarios.
+This folder contains exploratory concepts and future features for the ArxOS building intelligence system. These represent the platform's capabilities across different hardware configurations and deployment scenarios.
+
+> Conceptual documents live here. For implementable specs, see canonicals in `../technical/` and architecture in `../03-architecture/`.
 
 ## Platform Philosophy
 
@@ -28,7 +30,7 @@ Latency and capability analysis across different hardware configurations.
 
 ## Platform Principles
 
-The Arxos platform maintains:
+The ArxOS platform maintains:
 - **13-byte ArxObject protocol** - Universal data format
 - **Privacy options** - From anonymous to detailed (user choice)
 - **Scalable hardware** - ESP32 to enterprise-grade

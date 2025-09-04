@@ -1,3 +1,9 @@
+---
+title: ArxOS Financial Services: The Anti-HFT Network
+summary: Why RF mesh latency makes HFT impossible, and the viable financial services ArxOS enables for resilience and inclusion.
+owner: Economics/Business Lead
+last_updated: 2025-09-04
+---
 # ArxOS Financial Services: The Anti-HFT Network
 
 ## The Brutal Truth About Our Latency

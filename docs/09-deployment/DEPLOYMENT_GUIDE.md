@@ -1,5 +1,7 @@
 # ArxOS Deployment Guide
 
+> Canonicals: This guide supplements `DEPLOYMENT.md`. For mesh/protocol details, see `../technical/mesh_architecture.md` and `../12-protocols/MESH_PROTOCOL.md`.
+
 ## Overview
 
 This guide provides step-by-step instructions for deploying ArxOS building intelligence networks. The deployment maintains complete air-gap security while providing powerful building intelligence capabilities.
@@ -12,11 +14,11 @@ This guide provides step-by-step instructions for deploying ArxOS building intel
 - **Physical Isolation:** Complete separation from internet infrastructure
 - **Encrypted Communication:** All mesh traffic encrypted
 
-### Terminal-Only Interface
+### Terminal-Only Interface (Local)
 - **CLI Primary:** Terminal interface for all users
 - **ASCII Visualization:** Building data as ASCII art
 - **Mobile Terminal:** Terminal + LiDAR on mobile devices
-- **No Web UI:** No web interfaces or SSH
+- **No Web UI:** No web interfaces or SSH; commands run via local terminal over serial/BLE
 
 ## Hardware Requirements
 

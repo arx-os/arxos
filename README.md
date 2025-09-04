@@ -108,6 +108,40 @@ arxos query "room:127 type:outlet"
 ╚════════════════════════════════════════╝
 ```
 
+### ArxObject input formats (terminal `send`)
+
+You can send an `ArxObject` in two ways:
+
+- Compact 13-byte hex (26 hex chars, little-endian struct layout):
+```bash
+arxos> send 0x341210d007b80b2c010c78000f
+# Breakdown:
+# 34 12  | 10 | d0 07 | b8 0b | 2c 01 | 0c 78 00 0f
+#  bid     typ   x        y       z       props[4]
+```
+
+- Key=value pairs (hex or decimal). Aliases allowed: `building_id|bid|b`, `object_type|type|ot`, `props|properties|props_hex`.
+```bash
+arxos> send bid=0x1234 type=0x10 x=2000 y=3000 z=300 props=0x0C78000F
+arxos> send building_id=4660 object_type=16 x=2000 y=3000 z=300 properties=[12,120,0,15]
+```
+
+Notes:
+- Coordinates are millimeters.
+- `props` accepts `0xAABBCCDD` or `[AA,BB,CC,DD]` (decimal or hex per element).
+- Inputs are validated; malformed values are rejected.
+
+#### Heartbeat (programmatic)
+
+Heartbeats announce node presence on the RF mesh. The service sends these automatically, but if you need to generate one in Rust:
+```rust
+use arxos_core::ArxObject;
+
+let node_id: u16 = 0x0001;
+let heartbeat: ArxObject = ArxObject::heartbeat(node_id);
+// Now publish via your transport/client; the service does this for you.
+```
+
 ## Hardware Requirements
 
 - **Standard Meshtastic Hardware** (ESP32 + LoRa radio)

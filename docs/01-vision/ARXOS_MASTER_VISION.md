@@ -1,3 +1,9 @@
+---
+title: ArxOS: The Master Vision
+summary: Strategic vision for a terminal-first, RF-only building intelligence network leveraging builders and schools.
+owner: Founder/Strategy
+last_updated: 2025-09-04
+---
 # ArxOS: The Master Vision
 
 > "We're not maintaining buildings. We're playing them."

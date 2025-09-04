@@ -1,4 +1,12 @@
+---
+title: Fractal Compression Vision
+summary: Vision for fractal/semantic compression mapped to 13-byte seeds; non-canonical.
+owner: Holographic Research
+last_updated: 2025-09-04
+---
 # ArxOS Fractal Compression Vision
+
+> Canonical specs: `../technical/arxobject_specification.md` (13-byte), `../technical/slow_bleed_architecture.md` (progressive detail). This is a research vision; it does not change wire formats.
 
 ## Overview
 

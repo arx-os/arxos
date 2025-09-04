@@ -1,5 +1,15 @@
 # RF-Only Software Updates
 
+> Scope: RF-only update distribution design, security, governance, and rollout procedures. Audience: release engineering, RF operations, security.
+>
+> Owner: RF Release Engineering Lead.
+
+## 📖 Section Contents
+
+1. **This Document** – RF-only update distribution
+2. **[Anti-Predatory Network](./ANTI_PREDATORY_NETWORK.md)** – Architecture that resists exploitation
+3. **[SDR Infrastructure Vision](./SDR_INFRASTRUCTURE_VISION.md)** – Software-defined radio plans
+
 ## How to Update 10,000 Buildings Without Internet
 
 Arxos delivers software updates entirely through RF mesh networks. No internet connection required, ever. This document describes how updates propagate from Arxos HQ to every node in the field.

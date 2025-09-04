@@ -1,11 +1,13 @@
 # Arxos Mobile App Architecture
 **Version:** 1.0  
 **Date:** August 31, 2025  
-**Platform:** iOS and Android Native
+**Platform:** iOS (SwiftUI), Android (viewer-only AR)
 
 ## Overview
 
 The Arxos mobile app provides a unified interface for building intelligence access through multiple air-gapped communication methods. Built with Rust core and native UI, it automatically selects the best available connection method while maintaining complete offline operation.
+
+> For API/commands see `../technical/TERMINAL_API.md`. For object and mesh details, see `../technical/arxobject_specification.md` and `../technical/mesh_architecture.md`.
 
 ## Architecture Philosophy
 
@@ -23,7 +25,7 @@ The Arxos mobile app provides a unified interface for building intelligence acce
 ```
 ┌─────────────────────────────────────────────────┐
 │                Native UI Layer                  │
-│         iOS (SwiftUI) | Android (Compose)       │
+│           iOS (SwiftUI) | Android (viewer)      │
 ├─────────────────────────────────────────────────┤
 │              Platform Bridge Layer              │
 │        Swift/Kotlin ←→ Rust FFI Bindings        │
@@ -35,7 +37,7 @@ The Arxos mobile app provides a unified interface for building intelligence acce
 │     LoRa USB | Bluetooth | SMS | Future...      │
 ├─────────────────────────────────────────────────┤
 │              Platform Services                  │
-│    iOS/Android USB | BLE | SMS | Storage        │
+│     iOS USB | BLE | SMS | Storage | Android BLE │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -62,20 +64,6 @@ arxos-mobile/
 │   │   ├── Bridge/           # Rust FFI bridge
 │   │   └── Resources/        # Assets, Info.plist
 │   └── ArxosApp.xcodeproj
-│
-├── android/                   # Android app
-│   ├── app/
-│   │   ├── src/
-│   │   │   ├── main/
-│   │   │   │   ├── java/com/arxos/
-│   │   │   │   │   ├── MainActivity.kt
-│   │   │   │   │   ├── ui/          # Compose UI
-│   │   │   │   │   ├── viewmodels/  # ViewModels
-│   │   │   │   │   ├── services/    # Platform services
-│   │   │   │   │   └── bridge/      # Rust JNI bridge
-│   │   │   │   └── res/             # Resources
-│   │   └── build.gradle
-│   └── settings.gradle
 │
 └── shared/                    # Shared resources
     ├── assets/               # Icons, images
@@ -497,7 +485,9 @@ struct TerminalView: View {
 }
 ```
 
-## Android Application
+## Android (Future Consideration)
+
+Android devices typically lack LiDAR. A future terminal-only Android app (without capture) is possible but is not planned for current scope.
 
 ### Main Activity
 

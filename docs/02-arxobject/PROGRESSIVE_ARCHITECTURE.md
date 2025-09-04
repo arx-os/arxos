@@ -1,5 +1,9 @@
 # Progressive Detail Architecture: ArxObjects as Expandable Puzzle Pieces
 
+> Canonicals:
+> - 13-byte core spec: [../technical/arxobject_specification.md](../technical/arxobject_specification.md)
+> - Slow-bleed progressive detail: [../technical/slow_bleed_architecture.md](../technical/slow_bleed_architecture.md)
+
 ## The Core Concept
 
 ArxObjects are **fractal seeds** that start at 13 bytes but can progressively expand with user input and system inference, like puzzle pieces with expandable tabs. Each object "knows" what it is and automatically generates implied properties through conscious compression.

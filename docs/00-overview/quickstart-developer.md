@@ -2,24 +2,19 @@
 
 ## From Zero to RF Mesh Intelligence in 30 Minutes
 
-This guide gets you up and running with Arxos development. You'll build a working RF mesh node that operates completely air-gapped, with semantic compression and SSH terminal access.
+This guide gets you up and running with ArxOS development. You’ll build and run the local RF service and terminal client. The system is RF-only and air-gapped; no internet services are required.
 
 ## Prerequisites
 
 ```bash
 # Required tools
-- Rust 1.75+ (rustup.rs)
+- Rust 1.75+ (install via rustup; offline installer recommended if air-gapped)
 - SQLite 3.40+ (for spatial database)
-- ESP32 toolchain (for mesh nodes)
 
-# For iOS development
-- Xcode 15+ with iOS 17 SDK
-- Swift 5.9+
-
-# Optional but recommended
-- Visual Studio Code with rust-analyzer
-- TablePlus or DB Browser for SQLite
-- Terminal emulator with SSH support
+# Optional
+- ESP32 toolchain (for external mesh nodes; not required for core dev)
+- iOS toolchain (see mobile/ios)
+- VS Code with rust-analyzer
 ```
 
 ## 1. Environment Setup (5 minutes)
@@ -31,51 +26,31 @@ This guide gets you up and running with Arxos development. You'll build a workin
 git clone https://github.com/arxos/arxos.git
 cd arxos
 
-# Install Rust if needed
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
+# Install Rust (use offline method if needed)
+# See https://rustup.rs for non-interactive/offline options
 
-# Add embedded targets for mesh nodes
-rustup target add thumbv7em-none-eabihf    # ARM Cortex-M4
-rustup target add riscv32imc-unknown-none-elf  # ESP32-C3
-
-# Install ESP32 tools
-cargo install espflash cargo-espflash
-
-# Build all components
-cargo build --all
+# Build core components
+cargo build --release -p arxos-core -p arxos-service -p arxos-terminal
 ```
 
 ### Project Structure
 
 ```
 arxos/
-├── src/
-│   ├── core/              # Core library (13-byte protocol)
-│   ├── terminal/          # SSH terminal client
-│   └── embedded/          # ESP32 mesh node firmware
-├── firmware/
-│   └── esp32/            # LoRa mesh node
-├── ios/
-│   └── ArxosTerminal/    # iOS SSH + Camera app
-├── migrations/           # SQLite database schema
-└── hardware/            # PCB designs for mesh nodes
+├── src/core              # Core library (13-byte protocol, mesh integration)
+├── src/service           # arxos-service (local RF/serial/BLE integration)
+├── src/terminal          # arxos (terminal client)
+├── migrations            # SQLite database schema
+└── mobile/ios            # iOS notes and integration guides
 ```
 
-## 2. Build Your First Mesh Node (10 minutes)
+## 2. Build the Core and Terminal (10 minutes)
 
 ### Core Library
 
 ```bash
-# Build the core library
-cd src/core
-cargo build --release
-
-# Run tests
-cargo test
-
-# Verify 13-byte ArxObject constraint
-cargo test size_constraint_test -- --nocapture
+# Build core and terminal
+cargo build --release -p arxos-core -p arxos-terminal
 ```
 
 ### Example: Create an ArxObject
@@ -102,39 +77,22 @@ fn main() {
 }
 ```
 
-## 3. Deploy Mesh Node Firmware (5 minutes)
-
-### Build for ESP32
+## 3. Run the Local RF Service (5 minutes)
 
 ```bash
-cd firmware/esp32
+# Build the service
+cargo build --release -p arxos-service
 
-# Configure for your region
-# US: 915MHz, EU: 868MHz, AS: 923MHz
-export LORA_FREQ=915
-
-# Build firmware
-cargo build --release --target riscv32imc-unknown-none-elf
-
-# Flash to ESP32 (connect via USB)
-espflash /dev/ttyUSB0 target/riscv32imc-unknown-none-elf/release/arxos-node
+# Run with serial or BLE; use --help to see options
+./target/release/arxos-service --help | cat
 ```
 
-### Test Mesh Network
+### Test Terminal + Service
 
 ```bash
-# Terminal 1: Start gateway node
-./arxos-node --node-id 0x0001 --mode gateway
-
-# Terminal 2: Start relay node
-./arxos-node --node-id 0x0002 --mode relay
-
-# Terminal 3: Connect via SSH
-ssh arxos@localhost
-arxos@mesh:~$ status
-Building: Connected
-Nodes: 2 online
-RF Signal: -72 dBm
+./target/release/arxos --help | cat
+./target/release/arxos status
+./target/release/arxos send bid=0x0001 type=0x01 x=1000 y=2000 z=1500 props=0x00000000
 ```
 
 ## 4. Database Setup (5 minutes)
@@ -160,11 +118,7 @@ WHERE object_type = 1
 ### Build and Run Terminal
 
 ```bash
-# Build terminal client
-cargo build --release --bin arxos
-
-# Run in simulation mode
-./target/release/arxos --simulate
+./target/release/arxos --help | cat
 
 # ASCII visualization appears
 ┌─────────────────────────────────────┐
@@ -199,9 +153,9 @@ arxos control lights --room=127 --state=off
 > Acknowledged by node 0x0002
 ```
 
-## 6. iOS App Integration (10 minutes)
+## 6. iOS App Integration (optional)
 
-### Simple Terminal + Camera App
+### Simple Terminal + Camera App (see `mobile/ios/README.md`)
 
 ```swift
 // ArxosTerminalApp.swift
@@ -247,17 +201,8 @@ xcodebuild -scheme ArxosTerminal -sdk iphoneos
 ### Integration Test
 
 ```bash
-# Run all tests
-cargo test --all
-
-# Test mesh networking
-cargo test --test mesh_integration
-
-# Test SSH server
-cargo test --test ssh_integration
-
-# Verify RF-only (no internet)
-cargo test --test airgap_verification
+# Run workspace tests (if any)
+cargo test
 ```
 
 ### Performance Metrics
@@ -308,21 +253,9 @@ ON arxobjects(object_type)
 WHERE object_type = 34;  -- 0x22 in decimal
 ```
 
-### Deploy Firmware Update via RF
+### RF Firmware Updates
 
-```bash
-# Build update
-cargo build --release --target riscv32imc-unknown-none-elf
-
-# Sign with private key
-arxos-sign target/release/arxos-node --key private.key
-
-# Broadcast via RF (no internet!)
-arxos-broadcast --file arxos-node.signed --priority high
-> Broadcasting update via RF mesh
-> Nodes acknowledging: 47/50
-> Update will auto-install in 10 minutes
-```
+Firmware broadcasting over RF is a future capability. For now, update devices via direct serial flashing.
 
 ## Troubleshooting
 
@@ -360,10 +293,9 @@ sqlite3 arxos.db < migrations/001_initial_schema.sql
 
 ## Resources
 
-- [RF Mesh Protocol Spec](../15-rf-updates/)
-- [13-byte ArxObject Format](../02-arxobject/)
-- [SSH Terminal Commands](../07-ios-integration/)
-- [Hardware Designs](../../hardware/)
+- [Mesh Architecture (technical)](../technical/mesh_architecture.md)
+- [ArxObject 13-byte specification](../technical/arxobject_specification.md)
+- [Terminal API](../technical/TERMINAL_API.md)
 
 ---
 

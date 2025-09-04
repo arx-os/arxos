@@ -22,8 +22,8 @@ DOOR @ (5.0, 0, 0)m WIDTH:0.9 HEIGHT:2.1
 ```
 
 ## Deployment
-- Run as separate Docker container
-- Communicate via REST API or message queue
+- Run offline on a separate local device when needed (no containers required)
+- Communicate via local file drop or serial/BLE bridge (ASCII only)
 - ArxOS receives ASCII, never processes point clouds directly
 
 ## Files

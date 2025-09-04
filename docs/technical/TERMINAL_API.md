@@ -1,4 +1,12 @@
+---
+title: ArxOS Terminal API
+summary: Command reference for the terminal interface covering connection, queries, visualization, and mobile workflows.
+owner: Interfaces Lead
+last_updated: 2025-09-04
+---
 # ArxOS Terminal API
+
+> Canonical specs referenced: `arxobject_specification.md` (13-byte protocol) and `mesh_architecture.md` (transport deep dive). This file is the command reference for interacting with those layers.
 
 ## Overview
 

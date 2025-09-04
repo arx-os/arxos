@@ -1,4 +1,12 @@
+---
+title: Holographic Technical Fixes (Research)
+summary: Proposed fixes/optimizations for holographic prototypes; advisory, non-canonical.
+owner: Holographic Research
+last_updated: 2025-09-04
+---
 # ArxOS Holographic Technical Fixes
+
+> Canonical specs remain `../technical/arxobject_specification.md`, `slow_bleed_architecture.md`, and `TERMINAL_API.md`. Apply fixes without altering core wire formats.
 
 ## Overview
 

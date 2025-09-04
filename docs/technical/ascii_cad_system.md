@@ -1,4 +1,12 @@
+---
+title: ASCII CAD System Technical Documentation
+summary: Terminal-native CAD engine design, data model, rendering pipeline, and integration with ArxObjects and slow-bleed.
+owner: Interfaces Lead
+last_updated: 2025-09-04
+---
 # ASCII CAD System Technical Documentation
+
+> Canonical specs referenced: `TERMINAL_API.md` (terminal commands), `slow_bleed_architecture.md` (progressive detail), `arxobject_specification.md` (13-byte layout). This file describes implementation patterns.
 
 ## Overview
 

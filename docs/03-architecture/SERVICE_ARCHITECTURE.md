@@ -1,19 +1,29 @@
-# ArxOS Service Architecture
+---
+title: Arxos Service Architecture
+summary: Separation of concerns between Arxos service and Meshtastic firmware, with protocol translation and deployment options.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
+# Arxos Service Architecture
+
+> For protocol and transport specifics, see:
+> - Mesh protocol canonical: [../12-protocols/MESH_PROTOCOL.md](../12-protocols/MESH_PROTOCOL.md)
+> - Technical mesh architecture: [../technical/mesh_architecture.md](../technical/mesh_architecture.md)
 
 ## Overview
 
-ArxOS operates as a **software-as-a-service (SaaS)** running on standard Meshtastic hardware. This architecture provides clean separation between the proven Meshtastic mesh networking platform and the ArxOS building intelligence system.
+Arxos operates as a **software-as-a-service (SaaS)** running on standard Meshtastic hardware. This architecture provides clean separation between the proven Meshtastic mesh networking platform and the Arxos building intelligence system.
 
 ## Architecture Principles
 
 ### 1. Service Layer Separation
 - **Meshtastic Hardware**: Unchanged, proven mesh networking
-- **ArxOS Service**: Building intelligence software layer
+- **Arxos Service**: Building intelligence software layer
 - **Clean Interface**: Standard Meshtastic client protocol
 
 ### 2. No Firmware Modification
 - **Standard Meshtastic**: Use existing, stable firmware
-- **Software Layer**: ArxOS runs as a service on top
+- **Software Layer**: Arxos runs as a service on top
 - **Easy Updates**: Software updates without firmware changes
 
 ### 3. Hardware Independence
@@ -29,7 +39,7 @@ ArxOS operates as a **software-as-a-service (SaaS)** running on standard Meshtas
 ┌─────────────────────────────────────────────────────────┐
 │  User Terminal Interface (Desktop/Mobile)              │
 ├─────────────────────────────────────────────────────────┤
-│  ArxOS Service Layer (Rust)                            │
+│  Arxos Service Layer (Rust)                            │
 │  ├── Building Intelligence Engine                      │
 │  ├── ArxObject Processing                              │
 │  ├── Document Parser                                   │
@@ -45,7 +55,7 @@ ArxOS operates as a **software-as-a-service (SaaS)** running on standard Meshtas
 
 ### Service Components
 
-#### 1. ArxOS Service Core
+#### 1. Arxos Service Core
 ```rust
 pub struct ArxOSService {
     meshtastic_client: MeshtasticClient,
@@ -138,23 +148,16 @@ impl ProtocolTranslator {
 
 #### Option 1: Standalone Service
 ```bash
-# Run ArxOS as standalone service on ESP32
+# Run Arxos as standalone service on ESP32
 arxos-service --config config.toml --meshtastic-port /dev/ttyUSB0
 ```
 
-#### Option 2: Docker Container
-```dockerfile
-FROM rust:1.70-alpine
-COPY . /app
-WORKDIR /app
-RUN cargo build --release
-CMD ["./target/release/arxos-service"]
-```
+<!-- Docker/containerization removed per project constraints: pure local binaries on devices only. -->
 
 #### Option 3: System Service
 ```ini
 [Unit]
-Description=ArxOS Building Intelligence Service
+Description=Arxos Building Intelligence Service
 After=network.target
 
 [Service]
@@ -248,13 +251,13 @@ impl ArxOSService {
 
 ### 1. Development Benefits
 - **Faster Development**: Focus on building intelligence, not mesh networking
-- **Easy Testing**: Test ArxOS logic independently of hardware
+- **Easy Testing**: Test Arxos logic independently of hardware
 - **Standard Tools**: Use normal Rust development tools
 - **Version Control**: Easy software versioning and updates
 
 ### 2. Deployment Benefits
-- **Software Updates**: Update ArxOS without touching firmware
-- **A/B Testing**: Deploy different ArxOS versions
+- **Software Updates**: Update Arxos without touching firmware
+- **A/B Testing**: Deploy different Arxos versions
 - **Rollback**: Easy to rollback software changes
 - **Monitoring**: Standard service monitoring and logging
 
@@ -266,9 +269,9 @@ impl ArxOSService {
 
 ### 4. Maintenance Benefits
 - **Separation of Concerns**: Clear boundaries between layers
-- **Independent Updates**: Update ArxOS and Meshtastic independently
+- **Independent Updates**: Update Arxos and Meshtastic independently
 - **Easier Debugging**: Isolate issues to specific layers
-- **Community Support**: Leverage both ArxOS and Meshtastic communities
+- **Community Support**: Leverage both Arxos and Meshtastic communities
 
 ## Implementation Strategy
 
@@ -292,7 +295,7 @@ impl ArxOSService {
 
 ## Conclusion
 
-The ArxOS Service Architecture provides a clean, maintainable approach to building intelligence by leveraging the proven Meshtastic platform while adding advanced building intelligence capabilities. This architecture enables rapid development, easy deployment, and future scalability while maintaining the core principles of air-gapped, terminal-only operation.
+The Arxos Service Architecture provides a clean, maintainable approach to building intelligence by leveraging the proven Meshtastic platform while adding advanced building intelligence capabilities. This architecture enables rapid development, easy deployment, and future scalability while maintaining the core principles of air-gapped, terminal-only operation.
 
 Key advantages include:
 - **Clean Separation**: Clear boundaries between mesh networking and building intelligence

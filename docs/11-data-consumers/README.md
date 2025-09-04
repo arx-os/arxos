@@ -1,5 +1,9 @@
 # Data Consumer Access Guide
 
+> Scope: How third parties access anonymized building intelligence via RF-only gateways, including security and pricing tiers. Audience: partnerships, data consumers, sales engineering.
+>
+> Owner: Data Partnerships Lead.
+
 ## Accessing Building Intelligence Without Internet
 
 Arxos provides multiple methods for data consumers to access building intelligence while maintaining our core promise: **Your data never touches the internet**.
@@ -304,6 +308,10 @@ For data consumer support:
 - SSH Help: `arxos help` within terminal
 - Technical Issues: support@arxos.io
 - Billing/Credits: billing@arxos.io
+
+## Related
+
+- [Terminal Data Marketplace](./TERMINAL_DATA_MARKETPLACE.md)
 
 ---
 

@@ -1,8 +1,6 @@
-# ArxOS Final Architecture
+# ArxOS Architecture (Index)
 
-## Overview
-
-ArxOS is a building intelligence operating system that creates and utilizes digital twins through the "arxobject" - a universal 13-byte protocol that enables every structure on Earth to share intelligence through packet radio mesh networks.
+> This file serves as a short index. For full details, see `docs/03-architecture/README.md` and technical canonicals.
 
 ## Core Philosophy
 
@@ -258,6 +256,4 @@ iPhone LiDAR → Point Cloud → ArxObject Generation → Mesh Transmission
 
 ## Conclusion
 
-ArxOS represents a fundamental shift in building intelligence architecture. By creating a universal, air-gapped protocol for building intelligence, ArxOS enables every structure on Earth to share intelligence through mesh networks, creating a global building intelligence infrastructure that is secure, scalable, and future-proof.
-
-The clean architecture ensures that ArxOS remains simple, maintainable, and aligned with the core philosophy of routing building intelligence rather than processing it. This approach enables rapid development, easy deployment, and long-term sustainability of the building intelligence network.
+See: `docs/03-architecture/README.md` for curated links to all architecture topics.

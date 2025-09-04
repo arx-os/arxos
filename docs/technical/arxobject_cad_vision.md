@@ -1,4 +1,12 @@
+---
+title: ArxObject CAD Vision (ASCII Parity)
+summary: Visionary CAD-level ASCII visualization using intelligent ArxObjects; not a canonical spec.
+owner: Interfaces Lead
+last_updated: 2025-09-04
+---
 # Rust ArxObject Implementation for CAD-Level ASCII Art Visualization
+
+> Canonical specs: `arxobject_specification.md` (13-byte), `TERMINAL_API.md` (interface). This is a vision document; it does not redefine canonicals.
 
 **Version:** 1.0  
 **Date:** August 2025  

@@ -1,4 +1,12 @@
+---
+title: ArxOS Document Parser
+summary: Converts building documents (PDF/IFC/images) into ArxObjects with parsing pipeline, commands, and mesh integration.
+owner: Interfaces Lead
+last_updated: 2025-09-04
+---
 # ArxOS Document Parser
+
+> Note: For ArxObject layout and constraints, see `arxobject_specification.md`. This parser maps external documents into 13-byte seeds and detail streams; it does not define a new format.
 
 ## Overview
 
@@ -200,17 +208,12 @@ impl SymbolDetector {
 
 ### ArxObject Format
 ```
-[BuildingID][Type][X][Y][Z][Properties][Relationships][Parser]
-    2B       1B   2B 2B 2B     4B           1B         1B
+[BuildingID][Type][X][Y][Z][Properties]
+    2B       1B   2B 2B 2B     4B
 ```
 
 **Field Descriptions**:
-- **BuildingID (2 bytes):** Building identifier
-- **Type (1 byte):** Object type (outlet, door, HVAC, etc.)
-- **X, Y, Z (2 bytes each):** Position in millimeters
-- **Properties (4 bytes):** Object-specific properties
-- **Relationships (1 byte):** Connections to other objects
-- **Parser (1 byte):** Parser identification and version
+- See canonical `arxobject_specification.md` for definitions.
 
 ## Performance Characteristics
 

@@ -1,4 +1,12 @@
+---
+title: Holographic Command Guide (Vision)
+summary: Terminal commands and flows for holographic/fractal features; non-canonical.
+owner: Holographic Research
+last_updated: 2025-09-04
+---
 # ArxOS Holographic Command Guide
+
+> Canonical specs: `../technical/TERMINAL_API.md` (terminal), `../technical/arxobject_specification.md` (13-byte). This guide explores future commands consistent with RF-only constraints.
 
 ## Overview
 

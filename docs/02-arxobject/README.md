@@ -1,5 +1,8 @@
 # ArxObject: Semantic Compression at Scale
 
+> Canonical specification: [../technical/arxobject_specification.md](../technical/arxobject_specification.md)
+> This page provides conceptual framing and examples; see the spec for byte layout and validation rules.
+
 ## From 50MB Point Clouds to 5KB Intelligence
 
 ArxObject isn't a fixed 13-byte packet - it's a semantic compression algorithm that achieves 10,000:1 compression ratios by preserving what matters and discarding geometric redundancy.

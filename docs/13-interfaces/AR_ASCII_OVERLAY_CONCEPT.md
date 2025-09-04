@@ -1,5 +1,7 @@
 # AR ASCII Overlay: Reality as a Living Game
 
+> Concept note. For API/commands, see `../technical/TERMINAL_API.md`. For ArxObject spec, see `../technical/arxobject_specification.md`.
+
 ## The Complete Workflow
 
 ```
@@ -118,36 +120,59 @@ Overlay:
 
 ## Technical Implementation
 
-### Frame Processing Pipeline
-```python
-def process_ar_frame(camera_frame, lidar_depth):
-    # 1. Detect objects in 3D space
-    objects = semantic_detect(lidar_depth)
-    
-    # 2. Convert to ArxObjects (13 bytes each)
-    arxobjects = compress_to_arxobjects(objects)
-    
-    # 3. Generate ASCII for each object
-    ascii_overlays = []
-    for obj in arxobjects:
-        ascii = generate_ascii(obj)
-        position = project_to_screen(obj.position, camera_matrix)
-        ascii_overlays.append((ascii, position))
-    
-    # 4. Composite ASCII over camera feed
-    ar_frame = camera_frame.copy()
-    for ascii, pos in ascii_overlays:
-        ar_frame = render_ascii_at(ar_frame, ascii, pos, 
-                                   transparency=0.7)
-    
-    # 5. Handle touch input
-    if user_touch:
-        obj = get_object_at(user_touch.position)
-        if obj:
-            interact_with(obj)
-            broadcast_change(obj)  # 13 bytes over radio!
-    
-    return ar_frame
+### Offline AR Alignment (No Shared Cloud Maps)
+
+Android viewer-only devices can still render AR overlays by aligning to a local coordinate frame without LiDAR:
+
+1. Fiducial Markers (preferred)
+   - Place 2–3 printed markers (e.g., AprilTag/ArUco) at known coordinates in building mm-space
+   - Detect via camera; solve for pose; map screen projection to ArxObject positions
+2. 3-Point Manual Alignment
+   - User taps three known reference points in camera view that correspond to known (x,y,z) in mm
+   - Solve similarity transform; persist locally for the room
+3. IMU + Visual Odometry (drift-managed)
+   - Use device IMU + monocular VO to maintain relative pose
+   - Periodically re-anchor with fiducials or reference taps
+
+Notes:
+- No internet or cloud anchors are used; anchors are local and saved per-room.
+- iOS LiDAR path uses depth for faster convergence; Android path relies on fiducials/manual alignment.
+
+### Frame Processing Pipeline (Rust-style pseudocode)
+```rust
+fn process_ar_frame(camera_frame: &Frame, depth: Option<&DepthMap>, anchors: &Anchors) -> ARFrame {
+    // 1) Detect or load objects
+    let objects = match depth {
+        Some(d) => semantic_detect_from_depth(d),     // iOS LiDAR
+        None => anchors.known_objects(),              // Android viewer-only uses anchors
+    };
+
+    // 2) Convert to ArxObjects (13 bytes)
+    let arxobjects: Vec<ArxObject> = objects.into_iter().map(to_arxobject).collect();
+
+    // 3) Generate ASCII overlays
+    let overlays: Vec<AsciiOverlay> = arxobjects
+        .iter()
+        .map(|obj| AsciiOverlay {
+            ascii: generate_ascii(obj),
+            screen_xy: anchors.project(obj.position_mm),
+        })
+        .collect();
+
+    // 4) Composite overlays
+    let mut frame = camera_frame.clone();
+    for ov in overlays { frame = render_ascii(frame, &ov); }
+
+    // 5) Handle interaction and broadcast minimal updates (13 bytes)
+    if let Some(touch) = read_touch() {
+        if let Some(obj) = pick_object_at(&arxobjects, touch) {
+            interact_with(obj);
+            rf_mesh_broadcast(obj); // 13 bytes
+        }
+    }
+
+    frame
+}
 ```
 
 ### ASCII Rendering Styles
@@ -285,4 +310,4 @@ Imagine entire cities as shared game worlds:
 **ASCII becomes the universal language.**
 **13 bytes become entire worlds.**
 
-This is ArxOS: Turning reality into a living, breathing, shared game world, transmitted through the narrowest possible bandwidth, rendered in the most universal format, and experienced through the simplest possible interface.
+This is Arxos: Turning reality into a living, breathing, shared game world, transmitted through the narrowest possible bandwidth, rendered in the most universal format, and experienced through the simplest possible interface.

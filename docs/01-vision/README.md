@@ -1,14 +1,21 @@
 # Vision: The Paradigm Shift from Graphics to Intelligence
 
+> Scope: Strategic vision, problem framing, solution narrative, and comparative analysis. Audience: founders, strategy, and external stakeholders.
+>
+> Owner: Founder/Strategy.
+
 ## Every iPhone Becomes a Building Scanner
 
 Traditional spatial capture requires $100,000+ laser scanners and weeks of processing. Arxos transforms every iPhone into a building intelligence scanner that captures semantic understanding in 20 seconds.
 
 ### 📖 Section Contents
 
-1. **[Problem](problem.md)** - Why buildings remain dumb despite smart technology
-2. **[Solution](solution.md)** - Semantic compression and universal deployment
-3. **[Economics](economics.md)** - 10,000:1 compression enables new business models
+1. **[Master Vision](ARXOS_MASTER_VISION.md)**
+2. **[Vision Additions](VISION_ADDITIONS.md)**
+3. **[Builder Flank Strategy](BUILDER_FLANK_STRATEGY.md)**
+4. **[Problem](problem.md)** - Why buildings remain dumb despite smart technology
+5. **[Solution](solution.md)** - Semantic compression and universal deployment
+6. **[Comparison](comparison.md)** - Alternatives and tradeoffs
 
 ### 🎯 The Vision in One Page
 
@@ -72,7 +79,7 @@ iPhone LiDAR → RoomPlan API → Semantic Compression → 5KB ArxObject → Any
 | Aspect | Traditional | Arxos |
 |--------|------------|-------|
 | **Languages** | Swift, Kotlin, JavaScript, Python, C++ | Rust |
-| **Deployment** | App Store, Play Store, npm, pip, cargo | WASM |
+| **Deployment** | Native (App Store/Play Store) + Local binaries | No WASM |
 | **Storage** | MongoDB, PostgreSQL, Redis, S3 | SQL |
 | **Networking** | REST, GraphQL, WebSockets, gRPC | SQL replication |
 | **Team Size** | 5-10 engineers | 1 developer |
@@ -114,7 +121,7 @@ This isn't incremental improvement. It's a fundamental rethinking:
 
 3. **Simplicity over Features**: Three technologies beat fifty frameworks.
 
-4. **Universal over Native**: One WASM binary runs everywhere.
+4. **Native over Universal**: Native Rust core with platform UIs; no WASM.
 
 5. **SQL over APIs**: Database replication becomes the protocol.
 

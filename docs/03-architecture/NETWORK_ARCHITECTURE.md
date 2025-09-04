@@ -1,4 +1,12 @@
+---
+title: ArxOS Network Architecture: Global Building Intelligence Mesh
+summary: Architecture for a global RF-only building intelligence mesh using school districts as backbone with zero-knowledge routing.
+owner: Lead Architecture
+last_updated: 2025-09-04
+---
 # ArxOS Network Architecture: Global Building Intelligence Mesh
+
+> For the wire-level and protocol stack details, see the canonical spec: [Mesh Architecture (Technical)](../technical/mesh_architecture.md).
 
 ## Executive Summary
 
@@ -171,7 +179,7 @@ impl ChannelManager {
 ### Phase 3: National Backbone (Year 3)
 - **Target**: Major US metros
 - **Scale**: 10 million buildings
-- **Focus**: Internet backhaul integration
+- **Focus**: RF-only backbone optimization (no Internet backhaul)
 - **Districts**: 13,500 US school districts
 
 ### Phase 4: Global Federation (Year 5)

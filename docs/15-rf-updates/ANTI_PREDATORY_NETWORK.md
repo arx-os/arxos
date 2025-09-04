@@ -1,3 +1,9 @@
+---
+title: ArxOS: The Anti-Predatory Network Architecture
+summary: Network properties and mechanisms that naturally resist exploitation and ensure fairness, privacy, and resilience.
+owner: RF Release Engineering Lead
+last_updated: 2025-09-04
+---
 # ArxOS: The Anti-Predatory Network Architecture
 
 ## Network Properties That Prevent Exploitation

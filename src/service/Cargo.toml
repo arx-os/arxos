@@ -30,8 +30,7 @@ thiserror = "1.0"
 # CLI
 clap = { version = "4.0", features = ["derive"] }
 
-# Database - using rusqlite from arxos-core instead
-# sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls"] }
+# File storage - using file storage from arxos-core instead
 
 # Meshtastic protocol
 prost = "0.12"

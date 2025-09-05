@@ -4,7 +4,7 @@
 //! creating clean, standardized building models and anonymized market insights.
 
 use crate::arxobject::ArxObject;
-use crate::database::Database;
+use crate::file_storage::Database;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 

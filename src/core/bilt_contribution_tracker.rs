@@ -5,7 +5,7 @@
 //! Integrates with blockchain for permanent record keeping.
 
 use crate::arxobject::ArxObject;
-use crate::database::Database;
+use crate::file_storage::Database;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use sha2::{Sha256, Digest};

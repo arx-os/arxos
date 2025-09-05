@@ -3,7 +3,7 @@
 //! Pure Rust mesh networking for building intelligence
 
 // use sx126x::Sx126x;  // TODO: Add sx126x dependency when needed
-use crate::{ArxObject, database::Database};
+use crate::{ArxObject, file_storage::Database};
 use std::collections::HashMap;
 
 /// Error type for mesh network operations

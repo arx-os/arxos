@@ -3,9 +3,12 @@
 //! Inspired by Hypori's zero-trust model but adapted for mesh networks.
 //! Every packet is authenticated, no implicit trust between nodes.
 
-use crate::crypto::{Ed25519PublicKey, Ed25519Signature, Ed25519SecretKey};
+// Simplified crypto types for zero trust mesh
+type Ed25519PublicKey = [u8; 32];
+type Ed25519Signature = [u8; 64];
+type Ed25519SecretKey = [u8; 32];
 use crate::arxobject::ArxObject;
-use crate::mesh_network::MeshPacket;
+use crate::MeshPacket;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 

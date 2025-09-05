@@ -5,7 +5,7 @@
 
 use crate::arxobject::ArxObject;
 use crate::pixelated_renderer::PixelatedRenderer;
-use crate::mesh_network::MeshPacket;
+use crate::MeshPacket;
 
 /// Pixel stream packet - fits in LoRa payload
 #[derive(Debug, Clone)]

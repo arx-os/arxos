@@ -5,6 +5,9 @@
 use thiserror::Error;
 use std::fmt;
 
+/// ArxosError alias for compatibility
+pub type ArxosError = ArxError;
+
 /// Main ArxOS error type
 #[derive(Error, Debug)]
 pub enum ArxError {
@@ -29,10 +32,16 @@ pub enum ArxError {
     #[error("Compression ratio {0:.1}:1 below minimum {1}:1")]
     InsufficientCompression(f64, u32),
     
-    // Database errors
+    // File storage errors
     #[cfg(feature = "std")]
-    #[error("Database error: {0}")]
-    Database(#[from] rusqlite::Error),
+    #[error("File storage error: {0}")]
+    Storage(String),
+    
+    
+    // Serialization errors
+    #[cfg(feature = "std")]
+    #[error("Serialization error: {0}")]
+    Serialization(String),
     
     // Game engine errors
     #[error("Game error: {0}")]

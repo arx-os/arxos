@@ -1,6 +1,5 @@
 -- Spatial helper functions for ArxObject queries
--- These work with simple coordinate columns for SQLite
--- Can be enhanced with PostGIS for PostgreSQL deployment
+-- Pure SQLite implementation using coordinate columns and indexes
 
 -- View for objects with calculated real-world positions
 CREATE VIEW IF NOT EXISTS arxobjects_spatial AS

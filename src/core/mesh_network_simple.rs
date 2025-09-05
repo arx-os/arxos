@@ -3,7 +3,7 @@
 //! Provides peer-to-peer networking for building-wide intelligence
 
 use crate::arxobject_simple::ArxObject;
-use crate::persistence_simple::ArxObjectDatabase;
+use crate::file_storage::MemoryDatabase;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -112,7 +112,7 @@ pub struct PeerInfo {
 pub struct MeshNode {
     config: MeshConfig,
     peers: Arc<Mutex<HashMap<NodeId, PeerInfo>>>,
-    database: Arc<Mutex<ArxObjectDatabase>>,
+    database: Arc<Mutex<MemoryDatabase>>,
     message_queue: Arc<Mutex<VecDeque<(NodeId, MeshMessage)>>>,
     seen_objects: Arc<Mutex<HashSet<u64>>>, // Hash of seen objects to avoid duplicates
     stats: Arc<Mutex<NodeStats>>,
@@ -133,7 +133,7 @@ pub struct NodeStats {
 impl MeshNode {
     /// Create new mesh node
     pub fn new(config: MeshConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        let database = ArxObjectDatabase::open(&config.database_path)?;
+        let database = MemoryDatabase::new();
         
         Ok(Self {
             config,

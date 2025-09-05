@@ -9,7 +9,7 @@
 //! - Municipal services
 
 use crate::arxobject::ArxObject;
-use crate::mesh_network::MeshPacket;
+use crate::MeshPacket;
 use std::collections::HashMap;
 use tokio::sync::mpsc;
 use serde::{Serialize, Deserialize};

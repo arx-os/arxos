@@ -221,7 +221,7 @@ impl AccessMatrix {
         elec_primary.insert(object_types::OUTLET, vec![
             ActionType::View, ActionType::Inspect, ActionType::Modify, ActionType::Replace
         ]);
-        elec_primary.insert(object_types::SWITCH, vec![
+        elec_primary.insert(object_types::LIGHT_SWITCH, vec![
             ActionType::View, ActionType::Inspect, ActionType::Modify, ActionType::Replace
         ]);
         elec_primary.insert(object_types::LIGHT, vec![
@@ -250,7 +250,7 @@ impl AccessMatrix {
             object_types::WINDOW,
             object_types::COLUMN,
             object_types::OUTLET,
-            object_types::SWITCH,
+            object_types::LIGHT_SWITCH,
             object_types::LIGHT,
             object_types::HVAC_VENT,
             object_types::THERMOSTAT,

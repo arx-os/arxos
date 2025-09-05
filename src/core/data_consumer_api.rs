@@ -3,7 +3,7 @@
 //! Provides secure, air-gapped access to building data via SSH commands
 //! No internet connection required - all data flows through RF mesh
 
-use crate::database::Database;
+use crate::file_storage::Database;
 use std::collections::HashMap;
 
 /// Data consumer access levels

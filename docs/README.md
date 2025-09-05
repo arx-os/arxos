@@ -1,200 +1,105 @@
-# Arxos Documentation
+# ArxOS Documentation
 
-> **The Planetary Nervous System for Buildings**
+> **ArxOS: The Routing Company for Building Intelligence**
 
-Arxos transforms every building on Earth into an intelligent node in a planetary mesh network through 13-byte ArxObjects transmitted over packet radio.
+ArxOS routes building intelligence through RF mesh networks, creating a global infrastructure for smart buildings without internet connectivity.
 
-> Scope: Canonical index and navigation for all documentation. Audience: founders, architects, engineering, field ops, and partners.
->
-> Owner: Documentation lead (with section owners maintaining their respective READMEs).
+## Core Documentation
 
-## 📚 Documentation Structure
+| Document | Description |
+|----------|-------------|
+| **[01-VISION.md](01-VISION.md)** | What ArxOS is: A routing company leveraging schools as backbone infrastructure |
+| **[02-ARCHITECTURE.md](02-ARCHITECTURE.md)** | Technical architecture: RF-only mesh, file storage, terminal interface |
+| **[03-ARXOBJECT.md](03-ARXOBJECT.md)** | The 13-byte universal building protocol specification |
+| **[04-DEPLOYMENT.md](04-DEPLOYMENT.md)** | How to deploy ArxOS at schools and commercial buildings |
+| **[05-BUSINESS.md](05-BUSINESS.md)** | Revenue model: Data routing, aggregation, and BILT economics |
 
-### [00 - Overview](./00-overview/)
-- [Quick Start Guide](./00-overview/quickstart-developer.md)
-- [README](./00-overview/README.md)
-
-### [01 - Vision](./01-vision/)
-- **[🌟 Master Vision](./01-vision/ARXOS_MASTER_VISION.md)**
-- [Vision Additions](./01-vision/VISION_ADDITIONS.md)
-- [Builder Flank Strategy](./01-vision/BUILDER_FLANK_STRATEGY.md)
-- [Problem Statement](./01-vision/problem.md)
-- [Solution Overview](./01-vision/solution.md)
-- [Comparison to Alternatives](./01-vision/comparison.md)
-
-### [02 - ArxObject Protocol](./02-arxobject/)
-The 13-byte universal building language that achieves 10,000,000:1 compression.
-
-### [03 - Architecture](./03-architecture/)
-- **[Network Architecture](./03-architecture/NETWORK_ARCHITECTURE.md)** - Zero-knowledge routing & security
-- **[Flow Orchestrator](./03-architecture/FLOW_ORCHESTRATOR.md)** - Core routing philosophy
-- **[Engineering Design (Clean)](./03-architecture/ENGINEERING_DESIGN_CLEAN.md)**
-- [Complete Data Flow](./03-architecture/COMPLETE_DATA_FLOW.md)
-- [Old Architecture Notes](./03-architecture/OLD_ARCHITECTURE.md)
-- [Service Architecture](./03-architecture/SERVICE_ARCHITECTURE.md)
-- [Data Architecture](./03-architecture/DATA_ARCHITECTURE.md)
-- [Business Data Model](./03-architecture/DATA_MODEL_BUSINESS.md)
-- [Mesh VLAN Architecture](./03-architecture/MESH_VLAN_ARCHITECTURE.md)
-- [Network Topology Spec](./03-architecture/NETWORK_TOPOLOGY_SPECIFICATION.md)
-- [Building Repository](./03-architecture/BUILDING_REPOSITORY.md)
-- [Traffic Flow Architecture](./03-architecture/TRAFFIC_FLOW_ARCHITECTURE.md)
-
-### [04 - Hardware](./04-hardware/)
-- [Node Types](./04-hardware/node-types.md)
-- [ESP32 Guide](./04-hardware/esp32-guide.md)
-- [Assembly Instructions](./04-hardware/assembly.md)
-- [Reference Node Design](./04-hardware/reference-node.md)
-- [LoRa Dongle Specification](./hardware/lora-dongle-specification.md)
-
-### [05 - Holographic System](./05-holographic/)
-Advanced quantum-conscious ArxObject implementation:
-- [API Guide](./05-holographic/HOLOGRAPHIC_API_GUIDE.md)
-- [Engineering Plan](./05-holographic/HOLOGRAPHIC_ARXOBJECT_ENGINEERING_PLAN.md)
-- [Optimization Plan](./05-holographic/HOLOGRAPHIC_OPTIMIZATION_PLAN.md)
-- [Technical Fixes](./05-holographic/HOLOGRAPHIC_TECHNICAL_FIXES.md)
-- [Quantum Architecture](./05-holographic/QUANTUM_ARCHITECTURE.md)
-- [Fractal Compression](./05-holographic/FRACTAL_COMPRESSION_VISION.md)
-
-### [06 - Implementation](./06-implementation/)
-- [Implementation Roadmap](./06-implementation/implementation-roadmap.md)
-- [Next Steps](./06-implementation/NEXT_STEPS.md)
-- [Remaining Development](./06-implementation/REMAINING_DEVELOPMENT.md)
-- [Codebase Assessment](./06-implementation/CODEBASE_ASSESSMENT.md)
-- [Progress Report](./06-implementation/PROGRESS_REPORT.md)
-- [Development Priorities](./development/priorities.md)
-
-### [07 - iOS Integration](./07-ios-integration/)
-iPhone AR capture and LiDAR integration for field operations.
-
-### [08 - BILT Economics](./08-bilt-economics/)
-- [BILT Tokenomics](./08-bilt-economics/BILT_TOKENOMICS.md)
-- [Cost Structure Analysis](./08-bilt-economics/COST_STRUCTURE_ANALYSIS.md)
-- [Financial Services Reality](./08-bilt-economics/FINANCIAL_SERVICES_REALITY.md)
-- [Platform Revenue Model](./08-bilt-economics/PLATFORM_REVENUE_MODEL.md)
-
-### [09 - Deployment](./09-deployment/)
-- [Deployment Guide](./09-deployment/DEPLOYMENT.md)
-- [Bootstrap Deployment Strategy](./09-deployment/BOOTSTRAP_DEPLOYMENT_STRATEGY.md)
-- [Education Infrastructure](./09-deployment/EDUCATION_INFRASTRUCTURE.md)
-- [School Backbone Infrastructure](./09-deployment/SCHOOL_BACKBONE_INFRASTRUCTURE.md)
-- [Security Framework](./09-deployment/security-framework.md)
-- [Deployment Tiers](./concepts/deployment-tiers.md)
-
-### [10 - Roadmap](./10-roadmap/)
-Phased deployment from Tampa Bay to global scale.
-
-### [11 - Case Studies](./11-case-studies/)
-- [Hillsborough County Schools](./11-case-studies/hillsborough-county.md)
-
-### [12 - Protocols](./12-protocols/)
-- [Mesh Protocol](./12-protocols/MESH_PROTOCOL.md)
-- [SMS Gateway Protocol](./12-protocols/sms-gateway-protocol.md)
-- [SMS Onboarding](./12-protocols/SMS_ONBOARDING.md)
-- [Bluetooth Mesh Bridge](./12-protocols/bluetooth-mesh-bridge.md)
-- [Remote Access Architecture](./12-protocols/remote-access-architecture.md)
-
-### [13 - Interfaces](./13-interfaces/)
-- [User Manual](./13-interfaces/USER_MANUAL.md)
-- [Terminal CMMS](./13-interfaces/TERMINAL_CMMS.md)
-- [Mobile App Architecture](./13-interfaces/mobile-app-architecture.md)
-- [iPhone LiDAR Guide](./13-interfaces/iphone_lidar_guide.md)
-- [Terminal API](./technical/TERMINAL_API.md)
-- [AR ASCII Overlay](./13-interfaces/AR_ASCII_OVERLAY_CONCEPT.md)
-
-### [14 - BIM Daemon](./14-bim-daemon/)
-Building Information Modeling integration:
-- [File Ingestion](./14-bim-daemon/file-ingestion.md)
-
-### [15 - RF Updates](./15-rf-updates/)
-- [RF-Only Software Updates](./15-rf-updates/README.md)
-- [Anti-Predatory Network](./15-rf-updates/ANTI_PREDATORY_NETWORK.md)
-- [SDR Infrastructure Vision](./15-rf-updates/SDR_INFRASTRUCTURE_VISION.md)
-
-### [Technical Specifications](./technical/)
-- [ArxObject Specification](./technical/arxobject_specification.md)
-- [Mesh Architecture](./technical/mesh_architecture.md)
-- [Slow Bleed Architecture](./technical/slow_bleed_architecture.md)
-- [ASCII CAD System](./technical/ascii_cad_system.md)
-- [CAD Integration](./technical/cad_slowbleed_integration.md)
-- [API Documentation](./technical/API.md)
-- [Document Parser](./technical/document_parser.md)
-
-### [Concepts](./concepts/)
-- [Building Nervous System](./concepts/building-nervous-system.md)
-- [Emergency Response](./concepts/emergency-response.md)
-- [WiFi CSI Sensing](./concepts/wifi-csi-sensing.md)
-- [Hybrid RF Sensing](./concepts/hybrid-rf-sensing.md)
-- [Temporal ArxObjects](./concepts/temporal-arxobjects.md)
-- [Platform Performance](./concepts/platform-performance.md)
-- [BIM as Game World](./concepts/BIM_AS_GAME_WORLD.md)
-
-## 🚀 Quick Start Paths
-
-### For Developers
-1. Read [VISION.md](./01-vision/VISION.md)
-2. Understand [ArxObject Protocol](./02-arxobject/)
-3. Review [Flow Orchestrator](./03-architecture/FLOW_ORCHESTRATOR.md)
-4. Start with [Quick Start Guide](./00-overview/quickstart-developer.md)
+## Quick Start
 
 ### For School Districts
-1. Read [VISION.md](./01-vision/VISION.md)
-2. Review [Network Architecture](./03-architecture/NETWORK_ARCHITECTURE.md) (Security Model)
-3. See [Hillsborough County Case Study](./11-case-studies/hillsborough-county.md)
-4. Check [Deployment Guide](./09-deployment/DEPLOYMENT.md)
+1. Order ArxOS nodes (Raspberry Pi + LoRa)
+2. Deploy one per building
+3. Scan with iPhone LiDAR app
+4. Mesh network auto-forms
+5. Get free routing + revenue share
 
-### For Hardware Engineers
-1. Review [Hardware Specs](./04-hardware/)
-2. Check [LoRa Dongle Specification](./hardware/lora-dongle-specification.md)
-3. Follow [Assembly Instructions](./04-hardware/assembly.md)
+### For Commercial Buildings  
+1. Connect to nearby school mesh
+2. Choose: Share data (free) or private routing (paid)
+3. Earn BILT tokens for shared data
+4. Access building intelligence via terminal
 
-## 📋 Core Principles
+### For Developers
+```bash
+# Clone repository
+git clone https://github.com/arxos/arxos.git
 
-1. **Stay Light**: <5MB binary, runs on Raspberry Pi
-2. **Terminal First**: ASCII is the interface
-3. **Universal Protocol**: 13 bytes for everything
-4. **Secure by Default**: Zero-knowledge routing
-5. **Radically Simple**: If it's complex, it's wrong
+# Build for Raspberry Pi
+cd arxos
+cargo build --release --target arm-unknown-linux-gnueabihf
 
-## 🎯 The Mission
-
-Transform disconnected buildings into a living, breathing, planetary organism that senses, responds, and evolves through the collective intelligence of 13-byte seeds flowing through packet radio mesh networks.
-
-## 📡 Key Innovation
-
-**School districts as backbone nodes** - Using existing public infrastructure to create a secure, scalable global building intelligence network where districts maintain complete data sovereignty while enabling planetary-scale connectivity.
-
----
-
-*Arxos: The TCP/IP of buildings*
-
-## Front-matter schema for long-form docs
-
-Add YAML front-matter at the top of long docs to standardize ownership and summaries:
-
-```yaml
----
-title: Document Title
-summary: 1-2 sentence description of purpose and scope.
-owner: Team or role (e.g., Lead Architecture)
-last_updated: YYYY-MM-DD
----
+# Flash to device
+./scripts/flash.sh /dev/sdb
 ```
 
-## Contributing to docs
+## Key Concepts
 
-- Prefer concise documents with a clear single purpose.
-- Include YAML front-matter (title, summary, owner, last_updated) on long docs.
-- Keep RF-only and air-gapped assumptions explicit; avoid suggesting internet use.
-- Use relative links within `docs/` and reference files with backticks for clarity.
-- For new sections, add or update the section `README.md` to index your doc.
+### The 3 Internet Touch Points
+ArxOS only touches the internet at three points:
+1. **Software Updates** - GitHub/USB for firmware
+2. **Data Marketplace** - Aggregated intelligence sales  
+3. **Emergency Services** - 911 integration (optional)
 
-## 🗓️ Changelog (Docs)
+After setup, ArxOS operates completely offline via RF mesh.
 
-- 2025-09-04
-  - Standardized section intros with Scope/Owner across main READMEs
-  - Created/curated indexes for deployment and protocols
-  - Integrated vision/economics/architecture docs into section indexes
-  - Documented ArxObject input formats and heartbeat usage in root README and user manual
-  - Added canonical banners/front-matter across Technical and Holographic docs
-  - Clarified offline-only stance across Architecture; marked cloud/Internet mentions as optional/offline alternatives
-  - Added Android viewer-only support, offline AR alignment guidance, and user manual notes
+### School Backbone Model
+- Schools provide physical infrastructure
+- ArxOS provides free routing for education
+- Commercial traffic generates revenue
+- 70/20/10 split: Building owners/Schools/ArxOS
+
+### Revenue Streams
+- **70%** - Aggregated data sales to insurance/real estate
+- **20%** - Private routing fees from enterprises
+- **10%** - Support contracts and certification
+
+## Technical Specifications
+
+- **Protocol**: 13-byte ArxObject
+- **Compression**: 10,000,000:1 (1GB → 13 bytes)
+- **Network**: LoRa 915MHz (US) / 868MHz (EU)
+- **Range**: 1-10 miles per node
+- **Storage**: File-based (no database)
+- **Interface**: Terminal-first ASCII
+
+## Additional Resources
+
+### Implementation Guides
+- `examples/school-deployment.md` - Step-by-step school setup
+- `examples/commercial-integration.md` - Connecting commercial buildings
+- `examples/data-broker-setup.md` - Setting up data aggregation
+
+### Technical Deep Dives
+- `technical/mesh_architecture.md` - RF mesh routing details
+- `technical/slow_bleed_architecture.md` - Progressive detail protocol
+- `technical/arxobject_specification.md` - Binary format details
+
+### Historical/Research (Archive)
+- `archive/` - Previous iterations and research documents
+
+## Contact & Support
+
+- **Commercial**: sales@arxos.io
+- **Schools**: education@arxos.io
+- **Technical**: support@arxos.io
+- **GitHub**: https://github.com/arxos/arxos
+
+## License
+
+ArxOS Core: MIT License
+ArxObject Protocol: Open Specification
+Commercial Router: Proprietary
+
+---
+
+*"We're building the AT&T of building intelligence, one school at a time."*

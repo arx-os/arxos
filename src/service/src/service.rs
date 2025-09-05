@@ -11,7 +11,7 @@ use tokio::time::{interval, Duration};
 use crate::config::ServiceConfig;
 use crate::meshtastic_client::{MeshtasticClient, NodeInfo};
 use crate::terminal_interface::TerminalInterface;
-use arxos_core::{ArxObject, Database};
+use arxos_core::{ArxObject, file_storage::{Database, MemoryDatabase}};
 
 /// Main ArxOS Service
 pub struct ArxOSService {

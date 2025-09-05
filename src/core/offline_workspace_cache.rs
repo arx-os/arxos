@@ -5,14 +5,14 @@
 
 use crate::arxobject::ArxObject;
 use crate::virtual_building_space::VirtualBuildingSpace;
-use crate::database_impl::ArxDatabase;
+use crate::file_storage::{FileStorage, Database};
 use std::collections::HashMap;
 use std::path::Path;
 
 /// Offline workspace cache - persists VBS data locally
 pub struct OfflineWorkspaceCache {
-    /// Local SQLite database for this workspace
-    local_db: ArxDatabase,
+    /// Local file storage for this workspace
+    local_storage: FileStorage,
     
     /// Cached ArxObjects for offline access
     object_cache: HashMap<u16, Vec<ArxObject>>,

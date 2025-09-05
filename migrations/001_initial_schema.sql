@@ -1,9 +1,6 @@
 -- Arxos Database Schema v1.0
 -- Foundation for building intelligence storage
--- Supports both SQLite (embedded) and PostgreSQL (with PostGIS)
-
--- Enable spatial extensions if available (PostgreSQL)
--- For SQLite, we'll use simple coordinate columns with indexes
+-- Pure SQLite implementation with spatial indexing
 
 -- Buildings table - top-level spatial containers
 CREATE TABLE IF NOT EXISTS buildings (

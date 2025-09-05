@@ -14,14 +14,13 @@ pub mod slow_bleed_node;
 pub mod meshtastic_protocol;
 pub mod mesh_network;
 
-#[cfg(feature = "std")]
-pub mod database;
 
 #[cfg(feature = "std")]
 pub mod error;
 
-// Semantic compression moved to external_services/point_cloud_processor/
-// ArxOS routes, doesn't process
+// Semantic compression for point cloud processing
+#[cfg(feature = "std")]
+pub mod compression;
 
 #[cfg(feature = "std")]
 pub mod data_consumer_api;
@@ -29,8 +28,6 @@ pub mod data_consumer_api;
 #[cfg(feature = "std")]
 pub mod crypto;
 
-#[cfg(feature = "std")]
-pub mod database_impl;
 
 // Feature-gated modules (only with std)
 #[cfg(feature = "std")]
@@ -75,16 +72,13 @@ pub mod ascii_renderer_2d;
 #[cfg(feature = "std")]
 pub mod ply_parser_simple;
 
-#[cfg(feature = "std")]
-pub mod persistence_simple;
 
 // REST API removed to enforce RF-only operation
 
 #[cfg(feature = "std")]
 pub mod mesh_network_simple;
 
-// Point cloud processing moved to external_services/point_cloud_processor/
-// ArxOS receives ASCII descriptions, doesn't process point clouds
+// Point cloud processing is integrated for compression and routing
 
 // Transport layer for remote access
 #[cfg(feature = "std")]
@@ -93,9 +87,6 @@ pub mod transport;
 // Holographic system moved to research/holographic_arxos/
 // Complex quantum processing violates 'stay light' principle
 
-// Persistence layer for SQLite storage
-#[cfg(feature = "std")]
-pub mod persistence;
 
 // Note: Heavy persistence operations moved to external services
 // ArxOS only stores routing tables and basic state
@@ -116,11 +107,9 @@ pub mod pixelated_renderer;
 #[cfg(feature = "std")]
 pub mod aesthetic_pipeline;
 
-// Database integration
+// File storage integration
 #[cfg(feature = "std")]
-pub mod scan_to_database;
-#[cfg(feature = "std")]
-pub mod database_mesh_bridge;
+pub mod file_storage;
 
 // Mesh Router - Lightweight packet routing for building networks
 #[cfg(feature = "std")]
@@ -172,6 +161,14 @@ pub mod bilt_contribution_tracker;
 #[cfg(feature = "std")]
 pub mod minecraft_terminal;
 
+// Data Broker Feed System (Database-free)
+#[cfg(feature = "std")]
+pub mod data_broker_feed;
+#[cfg(feature = "std")]
+pub mod data_aggregator;
+#[cfg(feature = "std")]
+pub mod report_generator;
+
 // Data Model and Business Logic
 #[cfg(feature = "std")]
 pub mod data_model_engine;
@@ -188,6 +185,9 @@ pub use broadcast_scheduler::{BroadcastScheduler, ChunkPriority};
 pub use progressive_renderer::{ProgressiveRenderer, render_progress_bar};
 pub use slow_bleed_node::{SlowBleedNode, NodeStats, NodeState};
 pub use meshtastic_protocol::{MeshtasticPacket, MeshtasticPacketType, BuildingQuery, MeshtasticProtocolHandler, MockMeshtasticHandler};
+
+#[cfg(feature = "std")]
+pub use file_storage::{FileStorage, MemoryDatabase, Database, FileStorageConfig, StorageStats};
 
 #[cfg(test)]
 mod tests {

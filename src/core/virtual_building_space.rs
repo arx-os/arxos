@@ -4,8 +4,10 @@
 //! Each VBS is a logical view of the building with role-based filtering.
 
 use crate::arxobject::ArxObject;
-use crate::mesh_network::MeshNode;
-use crate::crypto::{Ed25519PublicKey, Ed25519Signature};
+use crate::mesh_network_simple::MeshNode;
+// Simplified crypto types for virtual building space
+type Ed25519PublicKey = [u8; 32];
+type Ed25519Signature = [u8; 64];
 use std::collections::HashMap;
 
 /// Virtual Building Space - an isolated view of building data
@@ -113,7 +115,7 @@ impl VirtualBuildingSpace {
             BuildingRole::ElectricalContractor => ObjectVisibilityMask {
                 allowed_types: vec![
                     crate::arxobject::object_types::OUTLET,
-                    crate::arxobject::object_types::SWITCH,
+                    crate::arxobject::object_types::LIGHT_SWITCH,
                     crate::arxobject::object_types::ELECTRICAL_PANEL,
                     crate::arxobject::object_types::LIGHT,
                 ],

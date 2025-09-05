@@ -15,6 +15,10 @@ ArxOS generates sustainable revenue by leveraging the 95% unused capacity of sch
 
 This approach maintains data sovereignty for building owners while generating revenue from the network effects of global building intelligence.
 
+## Note on Future Services
+
+- Supervisory BAS/BMS over RF mesh (concept): County-wide supervisory controls (setpoints, modes, schedules) with local Pis closing the fast control loops. See `docs/concepts/BAS_BMS_SUPERVISORY.md`.
+
 ## Revenue Model Breakdown
 
 ### 1. Data Aggregation Sales (70% - $980M by Year 10)

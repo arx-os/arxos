@@ -42,9 +42,9 @@ impl BranchID {
         ArxObject {
             building_id: self.building_id,
             object_type: 0xFD, // Special type for branch metadata
-            x: self.branch_num,
-            y: u16::from_le_bytes([self.session_id, self.branch_type as u8]),
-            z: self.expires_hours as u16,
+            x: self.branch_num as i16,
+            y: u16::from_le_bytes([self.session_id, self.branch_type as u8]) as i16,
+            z: self.expires_hours as i16,
             properties: [0; 4], // Reserved for future use
         }
     }
@@ -57,9 +57,16 @@ impl BranchID {
         
         Some(Self {
             building_id: obj.building_id,
-            branch_num: obj.x,
-            session_id: (obj.y & 0xFF) as u8,
-            branch_type: unsafe { std::mem::transmute((obj.y >> 8) as u8) },
+            branch_num: obj.x as u16,
+            session_id: ((obj.y as u16) & 0x00FF) as u8,
+            branch_type: match (((obj.y as u16) >> 8) as u8) {
+                0 => BranchType::Main,
+                1 => BranchType::Contractor,
+                2 => BranchType::Inspector,
+                3 => BranchType::Emergency,
+                4 => BranchType::Maintenance,
+                _ => return None,
+            },
             expires_hours: obj.z as u8,
         })
     }
@@ -115,9 +122,9 @@ impl ChangeProposal {
         ArxObject {
             building_id,
             object_type: 0xFC, // Special type for change proposals
-            x: self.object_id,
-            y: u16::from_le_bytes([self.change_type as u8, self.reason_code as u8]),
-            z: self.severity as u16,
+            x: self.object_id as i16,
+            y: u16::from_le_bytes([self.change_type as u8, self.reason_code as u8]) as i16,
+            z: self.severity as i16,
             properties: self.new_value,
         }
     }
@@ -129,10 +136,29 @@ impl ChangeProposal {
         }
         
         Some(Self {
-            object_id: obj.x,
-            change_type: unsafe { std::mem::transmute((obj.y & 0xFF) as u8) },
+            object_id: obj.x as u16,
+            change_type: match (((obj.y as u16) & 0x00FF) as u8) {
+                1 => ChangeType::Add,
+                2 => ChangeType::Modify,
+                3 => ChangeType::Remove,
+                4 => ChangeType::Annotate,
+                5 => ChangeType::Replace,
+                6 => ChangeType::Inspect,
+                _ => return None,
+            },
             new_value: obj.properties,
-            reason_code: unsafe { std::mem::transmute((obj.y >> 8) as u8) },
+            reason_code: match (((obj.y as u16) >> 8) as u8) {
+                1 => ReasonCode::Repair,
+                2 => ReasonCode::Replace,
+                3 => ReasonCode::Maintenance,
+                4 => ReasonCode::Inspection,
+                5 => ReasonCode::Upgrade,
+                6 => ReasonCode::Safety,
+                7 => ReasonCode::Efficiency,
+                8 => ReasonCode::Compliance,
+                9 => ReasonCode::Emergency,
+                _ => return None,
+            },
             severity: obj.z as u8,
         })
     }

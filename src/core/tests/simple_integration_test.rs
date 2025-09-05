@@ -1,6 +1,6 @@
 //! Simple integration test using the clean implementations
 
-use arxos_core::arxobject_simple::{ArxObject, object_types};
+use arxos_core::{ArxObject, object_types};
 use arxos_core::point_cloud_simple::{SimplePointCloudProcessor};
 use arxos_core::document_parser::{Point3D, BoundingBox};
 use arxos_core::point_cloud_parser::PointCloud;

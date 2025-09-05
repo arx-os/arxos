@@ -2,7 +2,7 @@
 //! 
 //! Converts 3D point cloud data into compressed ArxObjects
 
-use crate::arxobject_simple::{ArxObject, object_types};
+use crate::arxobject::{ArxObject, object_types};
 use crate::document_parser::Point3D;
 use crate::point_cloud_parser::PointCloud;
 use std::collections::HashMap;
@@ -83,10 +83,10 @@ impl SimplePointCloudProcessor {
             // Classify object type based on height and point count
             let object_type = classify_by_position(cx, cy, cz, points.len());
             
-            // Convert to millimeters (clamped to u16 range)
-            let x_mm = (cx * 1000.0).clamp(0.0, 65535.0) as u16;
-            let y_mm = (cy * 1000.0).clamp(0.0, 65535.0) as u16;
-            let z_mm = (cz * 1000.0).clamp(0.0, 65535.0) as u16;
+            // Convert to millimeters (signed, clamped to i16 range ~±32.767m)
+            let x_mm = (cx * 1000.0).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+            let y_mm = (cy * 1000.0).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+            let z_mm = (cz * 1000.0).round().clamp(i16::MIN as f32, i16::MAX as f32) as i16;
             
             // Create properties
             let mut properties = [0u8; 4];

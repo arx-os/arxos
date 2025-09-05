@@ -2,6 +2,9 @@
 //! 
 //! This module provides integration with Meshtastic mesh network devices
 //! for RF-only building intelligence routing.
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 use async_trait::async_trait;
 // TODO: Add meshtastic and tokio_serial dependencies when needed

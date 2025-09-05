@@ -1,3 +1,49 @@
+# ArxOS RF-Only Deployment Overview
+
+This document summarizes the offline-first posture, compile-time features, and onboarding flows implemented in Phase 5.
+
+## Compile-time features
+
+- rf_only (default):
+  - Enforces local-only operation and disables outbound network code paths.
+  - Displays a startup banner in terminal noting RF-only mode.
+
+- internet_touchpoints (off by default):
+  - Gates optional SMS onboarding code and related docs.
+  - Must be explicitly enabled at build time.
+
+- mobile_offline:
+  - Enables BLE/USB bindings for mobile shells (no network permissions).
+
+## RF invite tokens
+
+- Encoded as 13B `ArxObject` with `object_types::ACCESS_INVITE`.
+- Properties encode role and duration; MAC-authenticated using `PacketAuthenticator`.
+- Terminal commands:
+  - `invite generate <viewer|tech|admin> <hours>` → prints 13B hex.
+  - `invite accept <13B-hex>` → validates and displays assigned role/duration.
+
+## Security
+
+- Sealed frames with 16B MAC and anti‑replay window on radio frames.
+- Invite tokens include a compact MAC check to prevent tampering.
+
+## Distribution
+
+- District self‑provisioning: signed images + BOM + first‑boot pairing.
+- Optional public read‑only mirror for transparency.
+
+For a visual overview, see `docs/04-DEPLOYMENT.md`.
+For provisioning steps and BOM, see `docs/PROVISIONING.md`.
+For planning airtime/latency, see `docs/LATENCY_ESTIMATES.md`.
+For onboarding steps, see `docs/ONBOARDING_WORKFLOW.md` and `docs/DAY_OF_SCAN_CHECKLIST.md`.
+For feature flags, see `docs/FEATURE_FLAGS.md`.
+
+## Concepts and Technical
+- Concepts: `docs/concepts/BAS_BMS_SUPERVISORY.md`
+- Wire format: `docs/technical/ARXOBJECT_WIRE_FORMAT.md`
+- Terminal quick reference: `docs/technical/TERMINAL_API.md`
+- Engineering Safety Profile: `docs/ENGINEERING_SAFETY_PROFILE.md`
 # ArxOS Documentation
 
 > **ArxOS: The Routing Company for Building Intelligence**

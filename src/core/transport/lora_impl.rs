@@ -1,6 +1,10 @@
 //! Complete LoRa Transport Implementation with Serial Port Support
 //! 
 //! Production-ready LoRa communication via USB dongles with:
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::pedantic, clippy::nursery)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![allow(clippy::module_name_repetitions, clippy::too_many_arguments, clippy::cast_possible_truncation, clippy::cast_precision_loss, clippy::cast_sign_loss)]
 //! - Automatic device detection
 //! - Error recovery and retransmission
 //! - Adaptive data rate based on signal quality
@@ -135,15 +139,22 @@ impl LoRaPacket {
     fn calculate_checksum(&self) -> u16 {
         let mut crc: u16 = 0xFFFF;
         
-        // Include header (except checksum field)
-        let header_bytes = unsafe {
-            std::slice::from_raw_parts(
-                &self.header as *const _ as *const u8,
-                Self::HEADER_SIZE - 2,
-            )
-        };
+        // Include header (except checksum field) using explicit LE layout
+        let mut header_bytes = [0u8; Self::HEADER_SIZE - 2];
+        // packet_type
+        header_bytes[0] = self.header.packet_type;
+        // flags
+        header_bytes[1] = self.header.flags;
+        // seq (LE)
+        header_bytes[2..4].copy_from_slice(&self.header.seq.to_le_bytes());
+        // src_addr (LE)
+        header_bytes[4..6].copy_from_slice(&self.header.src_addr.to_le_bytes());
+        // dst_addr (LE)
+        header_bytes[6..8].copy_from_slice(&self.header.dst_addr.to_le_bytes());
+        // payload_len
+        header_bytes[8] = self.header.payload_len;
         
-        for &byte in header_bytes {
+        for &byte in &header_bytes {
             crc ^= (byte as u16) << 8;
             for _ in 0..8 {
                 if crc & 0x8000 != 0 {
@@ -176,12 +187,20 @@ impl LoRaPacket {
     
     /// Convert to bytes for transmission
     pub fn to_bytes(&self) -> Vec<u8> {
-        unsafe {
-            std::slice::from_raw_parts(
-                self as *const Self as *const u8,
-                Self::TOTAL_SIZE,
-            ).to_vec()
-        }
+        let mut bytes = vec![0u8; Self::TOTAL_SIZE];
+        // header
+        bytes[0] = self.header.packet_type;
+        bytes[1] = self.header.flags;
+        bytes[2..4].copy_from_slice(&self.header.seq.to_le_bytes());
+        bytes[4..6].copy_from_slice(&self.header.src_addr.to_le_bytes());
+        bytes[6..8].copy_from_slice(&self.header.dst_addr.to_le_bytes());
+        bytes[8] = self.header.payload_len;
+        bytes[9..11].copy_from_slice(&self.header.checksum.to_le_bytes());
+        // payload
+        let plen = self.header.payload_len as usize;
+        bytes[Self::HEADER_SIZE..Self::HEADER_SIZE + plen]
+            .copy_from_slice(&self.payload[..plen]);
+        bytes
     }
     
     /// Parse from received bytes
@@ -191,16 +210,92 @@ impl LoRaPacket {
                 format!("Packet too small: {} < {}", bytes.len(), Self::HEADER_SIZE)
             ));
         }
-        
-        let packet = unsafe {
-            std::ptr::read(bytes.as_ptr() as *const Self)
+        // Parse header explicitly (LE)
+        let header = LoRaHeader {
+            packet_type: bytes[0],
+            flags: bytes[1],
+            seq: u16::from_le_bytes([bytes[2], bytes[3]]),
+            src_addr: u16::from_le_bytes([bytes[4], bytes[5]]),
+            dst_addr: u16::from_le_bytes([bytes[6], bytes[7]]),
+            payload_len: bytes[8],
+            checksum: u16::from_le_bytes([bytes[9], bytes[10]]),
         };
-        
+        if header.payload_len as usize > Self::MAX_PAYLOAD {
+            return Err(TransportError::InvalidData("Payload length out of range".to_string()));
+        }
+        let mut payload = [0u8; 243];
+        let plen = header.payload_len as usize;
+        if bytes.len() < Self::HEADER_SIZE + plen {
+            return Err(TransportError::InvalidData("Truncated payload".to_string()));
+        }
+        payload[..plen].copy_from_slice(&bytes[Self::HEADER_SIZE..Self::HEADER_SIZE + plen]);
+        let packet = Self { header, payload };
         if !packet.verify_checksum() {
             return Err(TransportError::InvalidData("Checksum verification failed".to_string()));
         }
         
         Ok(packet)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::{Rng, SeedableRng};
+    use rand::rngs::StdRng;
+
+    #[test]
+    fn test_lora_header_checksum_roundtrip() {
+        let packet = LoRaPacket::new_data(0x1111, 0x2222, 7, b"hello").unwrap();
+        let bytes = packet.to_bytes();
+        let restored = LoRaPacket::from_bytes(&bytes).unwrap();
+        assert!(restored.verify_checksum());
+        assert_eq!(restored.header.seq, 7);
+        assert_eq!(&restored.payload[..5], b"hello");
+    }
+
+    #[test]
+    fn test_lora_packet_various_payload_lengths() {
+        for len in [0, 1, 5, 50, LoRaPacket::MAX_PAYLOAD] {
+            let data = vec![0xAB; len];
+            let packet = LoRaPacket::new_data(0x0102, 0xA0A1, 99, &data).unwrap();
+            let bytes = packet.to_bytes();
+            let restored = LoRaPacket::from_bytes(&bytes).unwrap();
+            assert_eq!(restored.header.payload_len as usize, len);
+            assert_eq!(&restored.payload[..len], &data[..]);
+            assert!(restored.verify_checksum());
+        }
+    }
+
+    #[test]
+    fn test_lora_packet_rejects_invalid_lengths() {
+        // Create a valid packet then corrupt payload_len to exceed MAX_PAYLOAD
+        let packet = LoRaPacket::new_data(1, 2, 3, b"abc").unwrap();
+        let mut bytes = packet.to_bytes();
+        bytes[8] = (LoRaPacket::MAX_PAYLOAD as u8).saturating_add(1);
+        assert!(LoRaPacket::from_bytes(&bytes).is_err());
+    }
+
+    #[test]
+    fn test_lora_packet_fuzzish_roundtrip_seeded() {
+        let mut rng = StdRng::seed_from_u64(0xDEADBEEF);
+        for _ in 0..100 {
+            let len: usize = rng.gen_range(0..=LoRaPacket::MAX_PAYLOAD);
+            let mut data = vec![0u8; len];
+            rng.fill(&mut data[..]);
+            let seq: u16 = rng.gen();
+            let src: u16 = rng.gen();
+            let dst: u16 = rng.gen();
+            let packet = LoRaPacket::new_data(src, dst, seq, &data).unwrap();
+            let bytes = packet.to_bytes();
+            let restored = LoRaPacket::from_bytes(&bytes).unwrap();
+            assert_eq!(restored.header.seq, seq);
+            assert_eq!(restored.header.src_addr, src);
+            assert_eq!(restored.header.dst_addr, dst);
+            assert_eq!(restored.header.payload_len as usize, len);
+            assert_eq!(&restored.payload[..len], &data[..]);
+            assert!(restored.verify_checksum());
+        }
     }
 }
 
@@ -309,6 +404,9 @@ pub struct LoRaTransport {
 }
 
 impl LoRaTransport {
+    const MAX_PENDING_ACKS: usize = 128;
+    const PENDING_ACK_TTL_MS: u64 = 5000;
+    const CLEANUP_INTERVAL_MS: u64 = 500;
     /// Create new LoRa transport
     pub fn new(config: LoRaConfig) -> Self {
         Self {
@@ -362,7 +460,7 @@ impl LoRaTransport {
                 dst,
                 self.next_sequence(),
                 chunk,
-            ).unwrap();
+            ).expect("fragment build should respect MAX_PAYLOAD");
             
             packet.header.packet_type = packet_type as u8;
             packet.header.flags = i as u8; // Store fragment index
@@ -435,7 +533,8 @@ impl Transport for LoRaTransport {
         };
         
         // Now borrow port and send packets
-        let port = self.port.as_mut().unwrap();
+        let port = match self.port.as_mut() { Some(p) => p, None => return Err(TransportError::NotConnected) };
+        let mut last_cleanup = Instant::now();
         for packet in packets {
             let bytes = packet.to_bytes();
             port.send_bytes(&bytes)?;
@@ -446,9 +545,23 @@ impl Transport for LoRaTransport {
                 metrics.packets_sent += 1;
             }
             
-            // Wait between fragments to avoid congestion
+            // Wait between fragments to avoid congestion (bounded constant)
+            const INTER_FRAGMENT_DELAY_MS: u64 = 10;
             if packet.header.packet_type == PacketType::Fragment as u8 {
-                sleep(Duration::from_millis(10)).await;
+                sleep(Duration::from_millis(INTER_FRAGMENT_DELAY_MS)).await;
+            }
+
+            // Bounded pending-ACK maintenance
+            if last_cleanup.elapsed() >= Duration::from_millis(Self::CLEANUP_INTERVAL_MS) {
+                if let Ok(mut acks) = self.pending_acks.lock() {
+                    let now = Instant::now();
+                    acks.retain(|(_, t)| now.duration_since(*t) < Duration::from_millis(Self::PENDING_ACK_TTL_MS));
+                    if acks.len() > Self::MAX_PENDING_ACKS {
+                        let drop_count = acks.len() - Self::MAX_PENDING_ACKS;
+                        acks.drain(0..drop_count);
+                    }
+                }
+                last_cleanup = Instant::now();
             }
         }
         

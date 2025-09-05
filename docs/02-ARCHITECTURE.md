@@ -6,6 +6,11 @@
 
 ArxOS is designed as a pure routing architecture that moves 13-byte ArxObjects through RF mesh networks without requiring internet connectivity or centralized processing. Every component is optimized for routing efficiency, not computational complexity.
 
+Compile-time features:
+- `rf_only` (default): disables any net clients and enforces local-only operation.
+- `internet_touchpoints` (off by default): compiles optional SMS/docs.
+- `mobile_offline`: enables mobile BLE/USB bindings without network permissions.
+
 ## System Architecture
 
 ```
@@ -56,6 +61,14 @@ ArxOS is designed as a pure routing architecture that moves 13-byte ArxObjects t
 ```
 
 ## Key Architectural Principles
+
+- BAS/BMS Supervisory (concept): Local building Pis close hard loops; RF mesh carries supervisory commands and telemetry. See `docs/concepts/BAS_BMS_SUPERVISORY.md`.
+
+### Sealed Frames and Anti‑Replay
+- Application frames are sealed with a security header (8B: sender_id, key_version, nonce) and a 16B MAC.
+- Anti‑replay enforced via per‑sender sliding window.
+- With a 4B app header (frame index/total), 17 × 13B ArxObjects fit a 255‑byte MTU.
+- See: `docs/technical/ARXOBJECT_WIRE_FORMAT.md` and `docs/LATENCY_ESTIMATES.md`.
 
 ### 1. File-Based Storage (No Database)
 

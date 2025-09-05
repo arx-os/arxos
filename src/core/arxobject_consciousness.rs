@@ -327,11 +327,26 @@ impl ConsciousArxObject {
     // ═══════════════════════════════════════════════════════════════════
     
     pub fn to_bytes(&self) -> [u8; Self::SIZE] {
-        unsafe { mem::transmute(*self) }
+        let mut out = [0u8; Self::SIZE];
+        let bid = self.building_id.to_le_bytes();
+        out[0] = bid[0]; out[1] = bid[1];
+        out[2] = self.object_type;
+        let xb = self.x.to_le_bytes(); out[3] = xb[0]; out[4] = xb[1];
+        let yb = self.y.to_le_bytes(); out[5] = yb[0]; out[6] = yb[1];
+        let zb = self.z.to_le_bytes(); out[7] = zb[0]; out[8] = zb[1];
+        out[9..13].copy_from_slice(&self.consciousness_dna);
+        out
     }
     
     pub fn from_bytes(bytes: &[u8; Self::SIZE]) -> Self {
-        unsafe { mem::transmute(*bytes) }
+        let building_id = u16::from_le_bytes([bytes[0], bytes[1]]);
+        let object_type = bytes[2];
+        let x = u16::from_le_bytes([bytes[3], bytes[4]]);
+        let y = u16::from_le_bytes([bytes[5], bytes[6]]);
+        let z = u16::from_le_bytes([bytes[7], bytes[8]]);
+        let mut dna = [0u8; 4];
+        dna.copy_from_slice(&bytes[9..13]);
+        Self { building_id, object_type, x, y, z, consciousness_dna: dna }
     }
 }
 

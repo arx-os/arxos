@@ -7,6 +7,11 @@ use arxos_core::point_cloud_parser::PointCloudParser;
 use std::path::Path;
 use std::fs;
 use log::{info, error};
+use arxos_core::crypto::PacketAuthenticator;
+use arxos_core::invites::invite::{create_invite, verify_invite, InviteRole};
+use arxos_core::arxobject::ArxObject;
+use arxos_core::mobile_offline::transport::QueueTransport;
+use arxos_core::mobile_offline::binder::MobileBinder;
 
 /// Command processor for terminal
 pub struct CommandProcessor {
@@ -21,6 +26,10 @@ pub struct CommandProcessor {
     
     /// Current floor being viewed
     current_floor: i8,
+    mac: PacketAuthenticator,
+    invite_seed: u32,
+    mobile_sender: Option<MobileBinder<QueueTransport>>,
+    mobile_receiver: Option<MobileBinder<QueueTransport>>,
 }
 
 impl CommandProcessor {
@@ -31,6 +40,10 @@ impl CommandProcessor {
             point_cloud_parser: PointCloudParser::new(),
             current_plan: None,
             current_floor: 0,
+            mac: PacketAuthenticator::new([0x11; 32]),
+            invite_seed: 0xA5A5_0001,
+            mobile_sender: None,
+            mobile_receiver: None,
         }
     }
     
@@ -50,6 +63,9 @@ impl CommandProcessor {
             "list-floors" => self.list_floors_command(),
             "show-equipment" => self.show_equipment_command(&parts[1..]),
             "export-arxobjects" => self.export_arxobjects_command(&parts[1..]),
+            "invite" => self.invite_command(&parts[1..]),
+            "mobile" => self.mobile_command(&parts[1..]),
+            "latency" => self.latency_command(&parts[1..]),
             _ => CommandResult::error(format!("Unknown command: {}", parts[0])),
         }
     }
@@ -361,6 +377,155 @@ impl CommandProcessor {
                 CommandResult::error(format!("Failed to export: {}", e))
             }
         }
+    }
+
+    /// Generate or accept RF invite tokens
+    fn invite_command(&mut self, args: &[&str]) -> CommandResult {
+        if args.is_empty() { return CommandResult::error("Usage: invite generate|accept ...".to_string()); }
+        match args[0] {
+            "generate" => {
+                // Usage: invite generate <role:viewer|tech|admin> <hours>
+                if args.len() < 3 { return CommandResult::error("Usage: invite generate <role> <hours>".to_string()); }
+                let role = match args[1] { "viewer" => InviteRole::Viewer, "tech" | "technician" => InviteRole::Technician, "admin" => InviteRole::Admin, _ => return CommandResult::error("Invalid role".to_string()) };
+                let hours: u8 = args[2].parse().unwrap_or(8);
+                let obj = create_invite(0xFFFF, role, hours, &self.mac, self.invite_seed);
+                let bytes = obj.to_bytes();
+                let mut hex = String::from("0x");
+                for b in &bytes { hex.push_str(&format!("{:02X}", b)); }
+                CommandResult::success_multi(vec![
+                    "Invite generated:".to_string(),
+                    format!("  Role: {:?}", role),
+                    format!("  Hours: {}", hours),
+                    format!("  Object: {}", hex),
+                ])
+            }
+            "accept" => {
+                // Usage: invite accept <13B-hex>
+                if args.len() < 2 { return CommandResult::error("Usage: invite accept <13B-hex>".to_string()); }
+                let s = args[1].trim();
+                let hex = s.strip_prefix("0x").unwrap_or(s);
+                if hex.len() != 26 { return CommandResult::error("Expect 26 hex chars".to_string()); }
+                let mut buf = [0u8; 13];
+                for i in 0..13 {
+                    let byte = u8::from_str_radix(&hex[2*i..2*i+2], 16);
+                    if let Ok(v) = byte { buf[i] = v; } else { return CommandResult::error("Invalid hex".to_string()); }
+                }
+                let obj = ArxObject::from_bytes(&buf);
+                if let Some((role, hours)) = verify_invite(&obj, &self.mac, self.invite_seed) {
+                    CommandResult::success_multi(vec![
+                        "Invite accepted".to_string(),
+                        format!("  Role: {:?}", role),
+                        format!("  Hours: {}", hours),
+                    ])
+                } else {
+                    CommandResult::error("Invalid or tampered invite".to_string())
+                }
+            }
+            _ => CommandResult::error("Unknown invite subcommand".to_string()),
+        }
+    }
+
+    fn mobile_command(&mut self, args: &[&str]) -> CommandResult {
+        if args.is_empty() { return CommandResult::error("Usage: mobile <init|send|recv> ...".to_string()); }
+        match args[0] {
+            "init" => {
+                let sender = MobileBinder::new(QueueTransport::new(), [0x42; 32], 0x1111, 1);
+                let receiver = MobileBinder::new(QueueTransport::new(), [0x42; 32], 0x2222, 1);
+                self.mobile_sender = Some(sender);
+                self.mobile_receiver = Some(receiver);
+                CommandResult::success("Initialized mobile loopback session".to_string())
+            }
+            "send" => {
+                if self.mobile_sender.is_none() || self.mobile_receiver.is_none() {
+                    return CommandResult::error("Run 'mobile init' first".to_string());
+                }
+                if args.len() < 2 { return CommandResult::error("Usage: mobile send <13B-hex> [13B-hex...]".to_string()); }
+
+                let mut objects = Vec::new();
+                for s in &args[1..] {
+                    let hex = s.trim().strip_prefix("0x").unwrap_or(s);
+                    if hex.len() != 26 { return CommandResult::error("Expect 26 hex chars".to_string()); }
+                    let mut buf = [0u8; 13];
+                    for i in 0..13 {
+                        match u8::from_str_radix(&hex[2*i..2*i+2], 16) {
+                            Ok(v) => buf[i] = v,
+                            Err(_) => return CommandResult::error("Invalid hex".to_string()),
+                        }
+                    }
+                    objects.push(ArxObject::from_bytes(&buf));
+                }
+
+                let sender = self.mobile_sender.as_mut().unwrap();
+                let receiver = self.mobile_receiver.as_mut().unwrap();
+                let sent = sender.send_objects(&objects).map_err(|_| ()).unwrap();
+                sender.drain_sent_into(receiver);
+
+                CommandResult::success_multi(vec![
+                    format!("Sent {} frame(s)", sent),
+                    format!("Objects: {}", objects.len()),
+                ])
+            }
+            "recv" => {
+                if self.mobile_receiver.is_none() { return CommandResult::error("Run 'mobile init' first".to_string()); }
+                let receiver = self.mobile_receiver.as_mut().unwrap();
+                let objs = receiver.poll_objects();
+                if objs.is_empty() {
+                    CommandResult::success("No objects available".to_string())
+                } else {
+                    let mut out = vec![format!("Received {} object(s)", objs.len())];
+                    for (i, o) in objs.iter().enumerate() {
+                        let b = o.to_bytes();
+                        let mut hex = String::from("0x");
+                        for byte in &b { hex.push_str(&format!("{:02X}", byte)); }
+                        out.push(format!("  {}: {}", i+1, hex));
+                    }
+                    CommandResult::success_multi(out)
+                }
+            }
+            _ => CommandResult::error("Unknown mobile subcommand".to_string()),
+        }
+    }
+
+    /// Estimate airtime/latency for a markup
+    /// Usage:
+    ///   latency <objects> [hops=1] [profile=range|speed]
+    /// Example:
+    ///   latency 40 hops=2 profile=speed
+    fn latency_command(&self, args: &[&str]) -> CommandResult {
+        if args.is_empty() {
+            return CommandResult::error("Usage: latency <objects> [hops=1] [profile=range|speed]".to_string());
+        }
+        let objects: usize = match args[0].parse() {
+            Ok(n) if n > 0 => n,
+            _ => return CommandResult::error("objects must be a positive integer".to_string()),
+        };
+        let mut hops: usize = 1;
+        let mut profile = "range"; // default conservative
+        for a in &args[1..] {
+            if let Some(v) = a.strip_prefix("hops=") {
+                hops = v.parse().unwrap_or(1);
+            } else if let Some(v) = a.strip_prefix("profile=") {
+                profile = if v == "speed" { "speed" } else { "range" };
+            }
+        }
+
+        // Budget and rates per docs
+        let objs_per_frame = 17usize;
+        let frames = (objects + objs_per_frame - 1) / objs_per_frame;
+        let per_frame_s_range = (1.5f32, 6.0f32);
+        let per_frame_s_speed = (0.08f32, 0.32f32);
+
+        let (lo, hi) = if profile == "speed" { per_frame_s_speed } else { per_frame_s_range };
+        let total_lo = lo * frames as f32 * hops as f32;
+        let total_hi = hi * frames as f32 * hops as f32;
+
+        CommandResult::success_multi(vec![
+            format!("Objects: {}", objects),
+            format!("Frames: {} ({} objs/frame)", frames, objs_per_frame),
+            format!("Hops: {}", hops),
+            format!("Profile: {}", profile),
+            format!("Estimated latency: {:.2}–{:.2} s", total_lo, total_hi),
+        ])
     }
 }
 

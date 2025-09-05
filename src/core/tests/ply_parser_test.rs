@@ -1,7 +1,7 @@
 //! Test the PLY parser with our clean implementation
 
 use arxos_core::ply_parser_simple::{SimplePlyParser, PlyStats};
-use arxos_core::arxobject_simple::object_types;
+use arxos_core::object_types;
 
 #[test]
 fn test_parse_test_ply_file() {

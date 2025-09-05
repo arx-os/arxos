@@ -36,14 +36,14 @@ pub struct ArxObject {
     /// Object type - what this object claims to be at current observation scale
     pub object_type: u8,
     
-    /// X coordinate in millimeters within current observation frame
-    pub x: u16,
+    /// X coordinate in millimeters within current observation frame (signed for local origin)
+    pub x: i16,
     
-    /// Y coordinate in millimeters within current observation frame
-    pub y: u16,
+    /// Y coordinate in millimeters within current observation frame (signed for local origin)
+    pub y: i16,
     
-    /// Z coordinate in millimeters within current observation frame
-    pub z: u16,
+    /// Z coordinate in millimeters within current observation frame (signed for local origin)
+    pub z: i16,
     
     /// Quantum seeds for infinite procedural generation (4 bytes)
     /// These are not static properties - they're seeds for generating
@@ -56,8 +56,9 @@ impl ArxObject {
     /// Size of ArxObject in bytes
     pub const SIZE: usize = 13;
     
-    /// Maximum coordinate value (65.535 meters)
-    pub const MAX_COORDINATE_MM: u16 = 65535;
+    /// Coordinate range in millimeters (±32,767 mm ≈ ±32.767 m)
+    pub const MIN_COORDINATE_MM: i16 = i16::MIN;
+    pub const MAX_COORDINATE_MM: i16 = i16::MAX;
     
     /// Invalid/null object ID
     pub const NULL_ID: u16 = 0x0000;
@@ -69,7 +70,7 @@ impl ArxObject {
     /// 
     /// The object will exist in superposition until observed, with the
     /// properties serving as seeds for infinite procedural generation
-    pub fn new(building_id: u16, object_type: u8, x: u16, y: u16, z: u16) -> Self {
+    pub fn new(building_id: u16, object_type: u8, x: i16, y: i16, z: i16) -> Self {
         Self {
             building_id,
             object_type,
@@ -84,9 +85,9 @@ impl ArxObject {
     pub fn with_properties(
         building_id: u16,
         object_type: u8,
-        x: u16,
-        y: u16,
-        z: u16,
+        x: i16,
+        y: i16,
+        z: i16,
         properties: [u8; 4],
     ) -> Self {
         Self {
@@ -101,12 +102,40 @@ impl ArxObject {
 
     /// Convert to byte array for transmission
     pub fn to_bytes(&self) -> [u8; Self::SIZE] {
-        unsafe { mem::transmute(*self) }
+        let mut out = [0u8; Self::SIZE];
+        // building_id (2)
+        let bid = self.building_id.to_le_bytes();
+        out[0] = bid[0];
+        out[1] = bid[1];
+        // object_type (1)
+        out[2] = self.object_type;
+        // x (2)
+        let xb = self.x.to_le_bytes();
+        out[3] = xb[0];
+        out[4] = xb[1];
+        // y (2)
+        let yb = self.y.to_le_bytes();
+        out[5] = yb[0];
+        out[6] = yb[1];
+        // z (2)
+        let zb = self.z.to_le_bytes();
+        out[7] = zb[0];
+        out[8] = zb[1];
+        // properties (4)
+        out[9..13].copy_from_slice(&self.properties);
+        out
     }
 
     /// Create from byte array (received from network)
     pub fn from_bytes(bytes: &[u8; Self::SIZE]) -> Self {
-        unsafe { mem::transmute(*bytes) }
+        let building_id = u16::from_le_bytes([bytes[0], bytes[1]]);
+        let object_type = bytes[2];
+        let x = i16::from_le_bytes([bytes[3], bytes[4]]);
+        let y = i16::from_le_bytes([bytes[5], bytes[6]]);
+        let z = i16::from_le_bytes([bytes[7], bytes[8]]);
+        let mut properties = [0u8; 4];
+        properties.copy_from_slice(&bytes[9..13]);
+        Self { building_id, object_type, x, y, z, properties }
     }
     
     /// Validate the ArxObject
@@ -142,9 +171,12 @@ impl ArxObject {
     
     /// Set position from meters (convenience method)
     pub fn set_position_meters(&mut self, x: f32, y: f32, z: f32) {
-        self.x = (x * 1000.0).clamp(0.0, 65535.0) as u16;
-        self.y = (y * 1000.0).clamp(0.0, 65535.0) as u16;
-        self.z = (z * 1000.0).clamp(0.0, 65535.0) as u16;
+        let xi = (x * 1000.0).round();
+        let yi = (y * 1000.0).round();
+        let zi = (z * 1000.0).round();
+        self.x = xi.clamp(Self::MIN_COORDINATE_MM as f32, Self::MAX_COORDINATE_MM as f32) as i16;
+        self.y = yi.clamp(Self::MIN_COORDINATE_MM as f32, Self::MAX_COORDINATE_MM as f32) as i16;
+        self.z = zi.clamp(Self::MIN_COORDINATE_MM as f32, Self::MAX_COORDINATE_MM as f32) as i16;
     }
     
     /// Check if this is a broadcast message
@@ -199,9 +231,12 @@ impl ArxObject {
         let sub_type = self.procedural_sub_type(seed, scale);
         
         // Calculate absolute position within our coordinate system
-        let abs_x = self.x.saturating_add(relative_pos.0 / 100); // Scale down for sub-objects
-        let abs_y = self.y.saturating_add(relative_pos.1 / 100);
-        let abs_z = self.z.saturating_add(relative_pos.2 / 100);
+        let dx = (relative_pos.0 / 100) as i16; // Scale down for sub-objects
+        let dy = (relative_pos.1 / 100) as i16;
+        let dz = (relative_pos.2 / 100) as i16;
+        let abs_x = self.x.saturating_add(dx);
+        let abs_y = self.y.saturating_add(dy);
+        let abs_z = self.z.saturating_add(dz);
         
         // Generate quantum properties for the sub-object
         let sub_properties = self.generate_sub_properties(seed, relative_pos, scale);
@@ -224,7 +259,7 @@ impl ArxObject {
         let container_type = self.procedural_container_type(seed, scale);
         
         // Container is larger and encompasses us
-        let container_x = self.x.saturating_sub(1000); // Container is bigger
+        let container_x = self.x.saturating_sub(1000);
         let container_y = self.y.saturating_sub(1000);
         let container_z = self.z.saturating_sub(500);
         
@@ -539,6 +574,7 @@ pub mod object_types {
     pub const MOTION_DETECTOR: u8 = 0x45;
     pub const GLASS_BREAK: u8 = 0x46;
     pub const PANIC_BUTTON: u8 = 0x47;
+    pub const ACCESS_INVITE: u8 = 0x48; // RF invite token object
     
     // Structural (0x50-0x5F)
     pub const ROOM: u8 = 0x50;
@@ -628,7 +664,7 @@ fn is_valid_object_type(object_type: u8) -> bool {
         0x10..=0x18 |  // Electrical
         0x20..=0x28 |  // HVAC
         0x30..=0x39 |  // Sensors
-        0x40..=0x47 |  // Security
+        0x40..=0x48 |  // Security (includes ACCESS_INVITE)
         0x50..=0x57 |  // Structural
         0x60..=0x67 |  // Plumbing
         0x70..=0x79    // Network

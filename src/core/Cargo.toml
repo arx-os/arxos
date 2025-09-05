@@ -57,10 +57,13 @@ memmap2 = { version = "0.9", optional = true }
 hex = { version = "0.4", optional = true }
 
 [features]
-default = ["std"]
+default = ["std", "rf_only"]
 std = ["dep:uuid", "dep:serde", "dep:serde_json", "dep:chrono", "dep:rand", "dep:tokio", "dep:async-trait", "dep:thiserror", "dep:lopdf", "dep:image", "dep:imageproc", "dep:regex", "dep:log", "dep:ed25519-dalek", "dep:sha2", "dep:lru", "dep:lazy_static", "dep:rayon", "dep:crossbeam", "dep:parking_lot", "dep:futures", "dep:num_cpus", "dep:termion", "dep:crossterm", "dep:memmap2", "dep:hex"]
 no_std = []
 defmt = ["dep:defmt"]
+rf_only = []
+internet_touchpoints = []
+mobile_offline = []
 
 [lib]
 name = "arxos_core"

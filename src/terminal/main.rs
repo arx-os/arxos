@@ -63,6 +63,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log_level))
         .init();
     
+    #[cfg(feature = "rf_only")]
+    {
+        eprintln!("ArxOS Terminal starting in RF-only mode (internet_touchpoints disabled)");
+    }
+    
     info!("Starting Arxos Terminal Client");
     
     // Load or create meshtastic configuration

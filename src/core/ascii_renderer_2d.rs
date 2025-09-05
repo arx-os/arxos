@@ -2,7 +2,7 @@
 //! 
 //! Converts ArxObjects into explorable top-down ASCII maps
 
-use crate::arxobject_simple::{ArxObject, object_types};
+use crate::arxobject::{ArxObject, object_types};
 use std::collections::HashMap;
 
 /// 2D grid for ASCII rendering

@@ -2,6 +2,9 @@
 //! 
 //! Inspired by Hypori's zero-trust model but adapted for mesh networks.
 //! Every packet is authenticated, no implicit trust between nodes.
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 // Simplified crypto types for zero trust mesh
 type Ed25519PublicKey = [u8; 32];
@@ -12,7 +15,8 @@ use crate::MeshPacket;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Zero-trust packet wrapper - adds authentication to every message
+/// Zero-trust packet wrapper (LEGACY) - previously used truncated signatures.
+/// Deprecated in favor of MAC-authenticated frames in radio_secure::secure_frame.
 #[derive(Debug, Clone)]
 pub struct ZeroTrustPacket {
     /// Original mesh packet (13 bytes)
@@ -24,7 +28,7 @@ pub struct ZeroTrustPacket {
     /// Timestamp (4 bytes - seconds since epoch)
     pub timestamp: u32,
     
-    /// Signature (8 bytes - truncated Ed25519)
+    /// Signature (8 bytes - truncated Ed25519) [DEPRECATED]
     pub signature: [u8; 8],
     
     /// Nonce to prevent replay (2 bytes)
@@ -32,8 +36,7 @@ pub struct ZeroTrustPacket {
 }
 
 impl ZeroTrustPacket {
-    /// Total size: 13 + 2 + 4 + 8 + 2 = 29 bytes
-    /// Still fits in LoRa payload (max 255 bytes)
+    /// Total size: 13 + 2 + 4 + 8 + 2 = 29 bytes (legacy)
     pub fn to_bytes(&self) -> [u8; 29] {
         let mut bytes = [0u8; 29];
         bytes[0..13].copy_from_slice(&self.inner_packet);
@@ -136,10 +139,10 @@ impl TrustRegistry {
             .ok_or(TrustError::NoPermissions)?;
         
         // Check expiration
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
+        let now = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(dur) => dur.as_secs(),
+            Err(_) => return Err(TrustError::StalePacket),
+        };
         
         if now > perms.expires_at {
             return Err(TrustError::ExpiredPermissions);
@@ -152,7 +155,10 @@ impl TrustRegistry {
         }
         
         // Check nonce for replay prevention
-        let nonces = self.nonce_cache.get_mut(&packet.sender_id).unwrap();
+        let nonces = match self.nonce_cache.get_mut(&packet.sender_id) {
+            Some(n) => n,
+            None => return Err(TrustError::UnknownSender),
+        };
         if nonces.contains(&packet.nonce) {
             return Err(TrustError::ReplayAttack);
         }
@@ -163,8 +169,7 @@ impl TrustRegistry {
             nonces.remove(0);
         }
         
-        // Verify signature (simplified - real impl would use full Ed25519)
-        // In production, expand truncated signature and verify properly
+        // Legacy path: signature verification omitted; replaced by MAC in secure frames
         
         Ok(())
     }

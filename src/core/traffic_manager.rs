@@ -1,3 +1,7 @@
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::pedantic, clippy::nursery)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![allow(clippy::module_name_repetitions)]
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, Instant};
 
@@ -173,14 +177,19 @@ impl ServiceQueues {
     }
     
     pub fn get_next_packet(&mut self, current_slot: u32, schedule: &TimeSlotSchedule) -> Option<Vec<u8>> {
+        // Bound work per call to avoid starvation of other tasks
+        const MAX_SCANS_PER_CALL: usize = 32;
+        let mut scanned = 0usize;
         // First check for starving packets
-        for (service, queue) in &mut self.queues {
+        for (_service, queue) in &mut self.queues {
+            if scanned >= MAX_SCANS_PER_CALL { break; }
             if let Some(age) = queue.age_of_oldest() {
                 if age > self.anti_starvation_timeout {
                     // Anti-starvation override
                     return queue.pop().map(|p| p.data);
                 }
             }
+            scanned += 1;
         }
         
         // Normal TDMA scheduling
@@ -419,6 +428,7 @@ pub struct PathMetrics {
 pub struct LoadBalancer {
     pub strategy: LoadBalancingStrategy,
     pub path_weights: HashMap<PathId, f32>,
+    pub rr_index: usize,
 }
 
 pub enum LoadBalancingStrategy {
@@ -455,7 +465,7 @@ impl MultiPathRouter {
     fn most_reliable_path(&self) -> PathId {
         self.paths
             .iter()
-            .max_by(|a, b| a.reliability_score.partial_cmp(&b.reliability_score).unwrap())
+            .max_by(|a, b| a.reliability_score.partial_cmp(&b.reliability_score).unwrap_or(std::cmp::Ordering::Equal))
             .map(|p| p.path_id)
             .unwrap_or(0)
     }
@@ -483,12 +493,10 @@ impl LoadBalancer {
     pub fn next_path(&mut self, paths: &[RoutePath]) -> PathId {
         match self.strategy {
             LoadBalancingStrategy::RoundRobin => {
-                // Simple round-robin
-                static mut COUNTER: usize = 0;
-                unsafe {
-                    COUNTER = (COUNTER + 1) % paths.len();
-                    paths[COUNTER].path_id
-                }
+                if paths.is_empty() { return 0; }
+                let id = paths[self.rr_index % paths.len()].path_id;
+                self.rr_index = (self.rr_index + 1) % paths.len();
+                id
             },
             LoadBalancingStrategy::WeightedRandom => {
                 // Weighted by available bandwidth
@@ -571,5 +579,17 @@ mod tests {
         assert_eq!(financial.priority, Priority::Low); // Low priority
         
         // This is by design - we're 2,000,000x too slow for HFT
+    }
+
+    #[test]
+    fn test_round_robin_deterministic() {
+        let mut lb = LoadBalancer { strategy: LoadBalancingStrategy::RoundRobin, path_weights: HashMap::new(), rr_index: 0 };
+        let paths = vec![
+            RoutePath { path_id: 1, hops: vec![], total_latency_ms: 10, available_bandwidth_kbps: 10, reliability_score: 0.9 },
+            RoutePath { path_id: 2, hops: vec![], total_latency_ms: 20, available_bandwidth_kbps: 20, reliability_score: 0.8 },
+            RoutePath { path_id: 3, hops: vec![], total_latency_ms: 30, available_bandwidth_kbps: 30, reliability_score: 0.7 },
+        ];
+        let seq: Vec<_> = (0..6).map(|_| lb.next_path(&paths)).collect();
+        assert_eq!(seq, vec![1,2,3,1,2,3]);
     }
 }

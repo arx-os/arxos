@@ -5,16 +5,13 @@
 //! JPEG loading, but for building consciousness.
 
 use crate::arxobject::ArxObject;
+use crate::radio::frame::{FrameConfig, RadioProfile, pack_objects_into_frames};
 use crate::progressive_detail::{DetailTree, DetailLevel, ProgressiveDetailStore};
 use crate::error::Result;
 use std::collections::{HashMap, VecDeque};
 use serde::{Serialize, Deserialize};
 
-/// Maximum packet size for LoRa transmission (255 bytes typical)
-const MAX_PACKET_SIZE: usize = 255;
-
-/// Optimal batch size for ArxObject transmission (19 objects per packet)
-const OBJECTS_PER_PACKET: usize = (MAX_PACKET_SIZE - 4) / ArxObject::SIZE; // -4 for header
+// Removed hard-coded MTU; derived from FrameConfig at runtime
 
 /// Transmission strategy based on bandwidth constraints
 #[derive(Debug, Clone, PartialEq)]
@@ -84,6 +81,8 @@ pub struct TransmissionProtocol {
     detail_store: ProgressiveDetailStore,
     /// Network statistics
     stats: NetworkStats,
+    /// Frame configuration (MTU/header) based on radio profile
+    frame_config: FrameConfig,
 }
 
 /// Network statistics for adaptive behavior
@@ -107,8 +106,12 @@ impl TransmissionProtocol {
             transmission_cache: HashMap::new(),
             detail_store: ProgressiveDetailStore::new(1000),
             stats: NetworkStats::default(),
+            frame_config: FrameConfig::for_profile(RadioProfile::MeshtasticLoRa),
         }
     }
+
+    /// Override the radio profile (e.g., SDR) or set a custom FrameConfig
+    pub fn set_frame_config(&mut self, cfg: FrameConfig) { self.frame_config = cfg; }
     
     /// Adaptively choose transmission strategy based on conditions
     pub fn adapt_strategy(&mut self) {
@@ -147,8 +150,9 @@ impl TransmissionProtocol {
             Priority::High
         );
         
-        // Batch cores into packets
-        for chunk in building_cores.chunks(OBJECTS_PER_PACKET) {
+        // Batch cores into frames worth of objects using FrameConfig
+        let per = self.frame_config.objects_per_frame().max(1);
+        for chunk in building_cores.chunks(per) {
             let packet = PacketType::CoreBatch(chunk.to_vec());
             self.queue.enqueue(packet, Priority::Normal);
         }
@@ -279,7 +283,8 @@ impl TransmissionProtocol {
     /// Calculate bandwidth usage for different strategies
     pub fn bandwidth_analysis(&self, num_objects: usize) -> BandwidthAnalysis {
         let core_bytes = num_objects * ArxObject::SIZE;
-        let packets_for_cores = (num_objects + OBJECTS_PER_PACKET - 1) / OBJECTS_PER_PACKET;
+        let per = self.frame_config.objects_per_frame().max(1);
+        let packets_for_cores = (num_objects + per - 1) / per;
         
         BandwidthAnalysis {
             strategy: self.strategy.clone(),

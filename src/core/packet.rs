@@ -124,6 +124,46 @@ pub enum ChunkType {
     Tolerances = 0xD3,
 }
 
+impl core::convert::TryFrom<u8> for ChunkType {
+    type Error = ();
+    fn try_from(v: u8) -> Result<Self, Self::Error> {
+        match v {
+            0x80 => Ok(ChunkType::MaterialDensity),
+            0x81 => Ok(ChunkType::MaterialThermal),
+            0x82 => Ok(ChunkType::MaterialAcoustic),
+            0x83 => Ok(ChunkType::MaterialStructural),
+            0x84 => Ok(ChunkType::MaterialVisual),
+
+            0x90 => Ok(ChunkType::MaintenanceHistory),
+            0x91 => Ok(ChunkType::PerformanceHistory),
+            0x92 => Ok(ChunkType::FailureHistory),
+            0x93 => Ok(ChunkType::EnergyHistory),
+
+            0xA0 => Ok(ChunkType::ElectricalConnections),
+            0xA1 => Ok(ChunkType::HVACConnections),
+            0xA2 => Ok(ChunkType::PlumbingConnections),
+            0xA3 => Ok(ChunkType::StructuralSupports),
+            0xA4 => Ok(ChunkType::DataConnections),
+
+            0xB0 => Ok(ChunkType::ThermalModel),
+            0xB1 => Ok(ChunkType::AirflowModel),
+            0xB2 => Ok(ChunkType::ElectricalModel),
+            0xB3 => Ok(ChunkType::StructuralModel),
+
+            0xC0 => Ok(ChunkType::FailurePrediction),
+            0xC1 => Ok(ChunkType::MaintenanceSchedule),
+            0xC2 => Ok(ChunkType::OptimizationParams),
+            0xC3 => Ok(ChunkType::EnergyForecast),
+
+            0xD0 => Ok(ChunkType::DetailedGeometry),
+            0xD1 => Ok(ChunkType::SurfaceProperties),
+            0xD2 => Ok(ChunkType::Dimensions),
+            0xD3 => Ok(ChunkType::Tolerances),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Detail chunk with metadata
 #[derive(Clone, Debug)]
 pub struct DetailChunk {
@@ -141,11 +181,15 @@ impl DetailChunk {
             return None;
         }
         
+        let chunk_type = ChunkType::try_from(packet.packet_type).ok()?;
+        let mut data = [0u8; 8];
+        data.copy_from_slice(&packet.payload[4..12]);
+
         Some(Self {
             object_id: u16::from_le_bytes([packet.payload[0], packet.payload[1]]),
             chunk_id: u16::from_le_bytes([packet.payload[2], packet.payload[3]]),
-            chunk_type: unsafe { core::mem::transmute(packet.packet_type) },
-            data: packet.payload[4..12].try_into().unwrap(),
+            chunk_type,
+            data,
             timestamp,
         })
     }

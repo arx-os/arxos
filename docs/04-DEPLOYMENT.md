@@ -1,14 +1,20 @@
-# ArxOS Deployment: Physical RF-Only Infrastructure
+# ArxOS Deployment: RF-Only Default, Optional Internet Touchpoints
 
-> **Core Principle: Air-gapped deployment with no internet connectivity except 3 controlled touch points.**
+> Core principle: ArxOS is air‑gapped by default. Optional internet touch points
+> are disabled unless the `internet_touchpoints` feature is explicitly enabled.
 
 ## Deployment Overview
 
-ArxOS deployment creates a pure RF mesh network that operates independently of internet infrastructure. All building intelligence flows through LoRa radio links, with carefully controlled internet access only for essential services.
+ArxOS deployment creates a pure RF mesh network that operates independently of internet infrastructure. All building intelligence flows through LoRa radio links. Optional internet access points can be compiled in but are disabled by default.
 
-## The 3 Internet Touch Points
+Security & operations highlights:
+- Sealed frames with 16B MAC and anti‑replay window at the radio boundary.
+- Scheduler priorities: control/invites > small deltas > bulk geometry.
+- Duty‑cycle policy: slow‑bleed bulk updates during off‑peak hours.
 
-ArxOS maintains complete air-gap security with exactly three controlled internet connections:
+## Optional Internet Touch Points (feature-gated)
+
+These are OFF by default and compiled only with `internet_touchpoints`.
 
 ### 1. Software Updates & Security Patches
 **Purpose**: Maintain system security and add features

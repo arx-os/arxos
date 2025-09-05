@@ -1,6 +1,10 @@
 //! ArxOS Mesh Network Implementation
 //! 
 //! Pure Rust mesh networking for building intelligence
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::pedantic, clippy::nursery)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![allow(clippy::module_name_repetitions)]
 
 // use sx126x::Sx126x;  // TODO: Add sx126x dependency when needed
 use crate::{ArxObject, file_storage::Database};
@@ -217,9 +221,10 @@ impl ArxOSMesh {
     
     /// Wait for response to query
     async fn wait_for_response(&mut self, sequence: u16) -> Result<String, Error> {
-        // Simple timeout-based response waiting
-        // In production, this would be more sophisticated
-        for _ in 0..100 { // 10 second timeout
+        // Bounded poll loop: 100 iterations x 100ms = 10s max
+        const MAX_POLLS: usize = 100;
+        const POLL_INTERVAL_MS: u64 = 100;
+        for _ in 0..MAX_POLLS {
             if let Some(packet) = self.receive_packet().await {
                 if packet.header.sequence == sequence && 
                    packet.header.packet_type == PacketType::Response {
@@ -227,7 +232,7 @@ impl ArxOSMesh {
                 }
             }
             // esp_hal::delay::FreeRtos::delay_ms(100);  // TODO: Add esp_hal dependency
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            std::thread::sleep(std::time::Duration::from_millis(POLL_INTERVAL_MS));
         }
         Err(Error::Timeout)
     }
@@ -351,7 +356,9 @@ impl ArxOSPacket {
                     // Parse ArxObjects
                     for chunk in payload.chunks(13) {
                         if chunk.len() == 13 {
-                            let object = ArxObject::from_bytes(chunk.try_into().unwrap());
+                            let mut buf = [0u8; 13];
+                            buf.copy_from_slice(chunk);
+                            let object = ArxObject::from_bytes(&buf);
                             packet.arxobjects.push(object);
                         }
                     }
@@ -361,5 +368,29 @@ impl ArxOSPacket {
         }
         
         Ok(packet)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_arxos_packet_round_trip() {
+        let mut p = ArxOSPacket::default();
+        p.header.packet_type = PacketType::Query;
+        p.header.sequence = 42;
+        p.header.source = 0x1111;
+        p.header.destination = 0x2222;
+        p.header.hop_count = 1;
+        p.query = Some("room:127".to_string());
+        let bytes = p.to_bytes();
+        let restored = ArxOSPacket::from_bytes(&bytes).unwrap();
+        assert_eq!(restored.header.packet_type as u8, PacketType::Query as u8);
+        assert_eq!(restored.header.sequence, 42);
+        assert_eq!(restored.header.source, 0x1111);
+        assert_eq!(restored.header.destination, 0x2222);
+        assert_eq!(restored.header.hop_count, 1);
+        assert_eq!(restored.query.as_deref(), Some("room:127"));
     }
 }

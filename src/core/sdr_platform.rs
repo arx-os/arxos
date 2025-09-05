@@ -1,6 +1,9 @@
 //! ArxOS SDR Platform - Multi-Service Mesh Network Implementation
 //! 
 //! Implements Software-Defined Radio infrastructure for schools,
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 //! supporting multiple services beyond building intelligence:
 //! - Emergency communications
 //! - Environmental monitoring
@@ -167,10 +170,10 @@ impl NetworkService for ArxOSService {
                 source_node: self.building_id as u64,
                 destination: Destination::Broadcast,
                 payload,
-                timestamp: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
+                timestamp: match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+                    Ok(d) => d.as_secs(),
+                    Err(_) => 0,
+                },
                 ttl: 16,
             });
         }
@@ -249,7 +252,10 @@ impl NetworkService for EmergencyService {
         
         let mut packets = Vec::new();
         for alert in self.alert_queue.drain(..) {
-            let payload = bincode::serialize(&alert).unwrap();
+            let payload = match bincode::serialize(&alert) {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
             
             packets.push(MultiServicePacket {
                 service_id: self.service_id(),
@@ -257,10 +263,10 @@ impl NetworkService for EmergencyService {
                 source_node: self.node_id,
                 destination: Destination::Broadcast,
                 payload,
-                timestamp: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
+                timestamp: match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+                    Ok(d) => d.as_secs(),
+                    Err(_) => 0,
+                },
                 ttl: 255, // Maximum TTL for emergency
             });
         }
@@ -428,6 +434,14 @@ impl SDRPlatform {
         self.services.insert(service_id, service);
     }
     
+    /// Execute a single bounded tick of platform work
+    pub async fn tick_once(&mut self) -> Result<(), SDRError> {
+        self.receive_packets().await?;
+        self.transmit_packets().await?;
+        self.spectrum_scan().await?;
+        Ok(())
+    }
+
     /// Main processing loop
     pub async fn run(&mut self) -> Result<(), SDRError> {
         // Initialize hardware
@@ -435,16 +449,7 @@ impl SDRPlatform {
         
         // Start service loops
         loop {
-            // Process incoming packets
-            self.receive_packets().await?;
-            
-            // Generate outgoing traffic
-            self.transmit_packets().await?;
-            
-            // Perform spectrum scan
-            self.spectrum_scan().await?;
-            
-            // Sleep briefly
+            self.tick_once().await?;
             tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
         }
     }
@@ -472,7 +477,10 @@ impl SDRPlatform {
             if let Some(packets) = service.generate_traffic() {
                 for packet in packets {
                     // Serialize and transmit
-                    let data = bincode::serialize(&packet).unwrap();
+                    let data = match bincode::serialize(&packet) {
+                        Ok(d) => d,
+                        Err(_) => continue,
+                    };
                     self.sdr_hardware.transmit(915.0, &data).await?;
                 }
             }
@@ -564,6 +572,35 @@ impl PacketRouter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    
+    struct MockSDR {
+        rx_calls: Arc<AtomicUsize>,
+        tx_calls: Arc<AtomicUsize>,
+        scan_calls: Arc<AtomicUsize>,
+    }
+    
+    #[async_trait::async_trait]
+    impl SDRHardware for MockSDR {
+        async fn initialize(&mut self) -> Result<(), SDRError> { Ok(()) }
+        async fn transmit(&mut self, _freq_mhz: f32, _data: &[u8]) -> Result<(), SDRError> { self.tx_calls.fetch_add(1, Ordering::SeqCst); Ok(()) }
+        async fn receive(&mut self, _freq_mhz: f32) -> Result<Vec<u8>, SDRError> { self.rx_calls.fetch_add(1, Ordering::SeqCst); Ok(vec![]) }
+        async fn spectrum_scan(&mut self, _start_mhz: f32, _end_mhz: f32) -> Result<SpectrumData, SDRError> { self.scan_calls.fetch_add(1, Ordering::SeqCst); Ok(SpectrumData{frequencies: vec![], power_levels: vec![]}) }
+    }
+    
+    #[tokio::test]
+    async fn test_tick_once_bounds_calls() {
+        let mock = MockSDR { rx_calls: Arc::new(AtomicUsize::new(0)), tx_calls: Arc::new(AtomicUsize::new(0)), scan_calls: Arc::new(AtomicUsize::new(0)) };
+        let rx_c = mock.rx_calls.clone();
+        let tx_c = mock.tx_calls.clone();
+        let sc_c = mock.scan_calls.clone();
+        let mut platform = SDRPlatform::new(1, Box::new(mock));
+        platform.tick_once().await.unwrap();
+        assert_eq!(rx_c.load(Ordering::SeqCst), 1);
+        assert_eq!(tx_c.load(Ordering::SeqCst), 0);
+        assert_eq!(sc_c.load(Ordering::SeqCst), 1);
+    }
     
     #[test]
     fn test_service_priority() {

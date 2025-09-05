@@ -8,7 +8,7 @@ license.workspace = true
 # Removed invalid test_scan binary
 
 [dependencies]
-arxos-core = { path = "../core" }
+arxos-core = { path = "../core", features = ["std", "rf_only", "mobile_offline"] }
 crossterm = { workspace = true }
 ratatui = { workspace = true }
 clap = { workspace = true, features = ["derive"] }

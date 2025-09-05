@@ -2,6 +2,10 @@
 //!
 //! Handles building intelligence queries over the meshtastic mesh network.
 //! Maintains air-gapped communication while providing terminal access.
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::pedantic, clippy::nursery)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![allow(clippy::module_name_repetitions, clippy::too_many_lines, clippy::missing_errors_doc)]
 
 use crate::arxobject::ArxObject;
 use async_trait::async_trait;
@@ -351,7 +355,9 @@ impl MeshtasticProtocolHandler for MockMeshtasticHandler {
             }
             MeshtasticPacketType::ArxObjectBroadcast => {
                 if packet.payload.len() == 13 {
-                    let arxobject = ArxObject::from_bytes(&packet.payload[..13].try_into().unwrap());
+                    let mut buf = [0u8; 13];
+                    buf.copy_from_slice(&packet.payload[..13]);
+                    let arxobject = ArxObject::from_bytes(&buf);
                     self.arxobjects.push(arxobject);
                 }
                 Ok(None) // No response needed for broadcasts

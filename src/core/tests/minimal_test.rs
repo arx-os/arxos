@@ -95,3 +95,67 @@ fn test_object_types() {
     assert_eq!(object_types::CEILING, 0x55);
     assert_eq!(object_types::LEAK, 0x68);
 }
+
+use arxos_core::{ArxObject, arxobject::object_types};
+use arxos_core::radio::frame::{FrameConfig, RadioProfile, pack_objects_into_frames, unpack_objects_from_frames};
+use arxos_core::radio_secure::secure_frame::{SecurityHeader, seal_frame, open_frame};
+use arxos_core::crypto::PacketAuthenticator;
+use arxos_core::security::replay::ReplayWindow;
+
+#[test]
+fn test_radio_frame_and_secure_roundtrip() {
+    let cfg = FrameConfig::for_profile(RadioProfile::MeshtasticLoRa);
+    let objs = vec![
+        ArxObject::new(0x1111, object_types::OUTLET, 10, 20, 30),
+        ArxObject::new(0x1111, object_types::LIGHT, 11, 21, 31),
+        ArxObject::new(0x1111, object_types::THERMOSTAT, 12, 22, 32),
+    ];
+    let frames = pack_objects_into_frames(cfg, &objs, |i,t| { let mut h=Vec::new(); h.extend_from_slice(&(i as u16).to_le_bytes()); h.extend_from_slice(&(t as u16).to_le_bytes()); h });
+    let mac = PacketAuthenticator::new([0x42; 32]);
+    let sec = SecurityHeader { sender_id: 7, key_version: 1, reserved: 0, nonce: 0x01020304 };
+    let sealed = seal_frame(cfg, frames[0].clone(), sec, &mac);
+    let mut replay = ReplayWindow::new(8);
+    let opened = open_frame(cfg, &sealed, &mac, &mut replay).expect("open ok");
+    let restored = unpack_objects_from_frames(&[opened]);
+    assert_eq!(restored, objs);
+}
+
+#[test]
+fn test_fragmentation_edges() {
+    let cfg = FrameConfig::for_profile(RadioProfile::MeshtasticLoRa);
+    let per = cfg.objects_per_frame().max(1);
+    // 0 objects
+    let frames0 = pack_objects_into_frames(cfg, &[], |i,t| { let mut h=Vec::new(); h.extend_from_slice(&(i as u16).to_le_bytes()); h.extend_from_slice(&(t as u16).to_le_bytes()); h });
+    assert_eq!(frames0.len(), 1);
+    // 1 object
+    let one = vec![ArxObject::new(1, object_types::OUTLET, 0,0,0)];
+    let frames1 = pack_objects_into_frames(cfg, &one, |i,t| { let mut h=Vec::new(); h.extend_from_slice(&(i as u16).to_le_bytes()); h.extend_from_slice(&(t as u16).to_le_bytes()); h });
+    assert_eq!(frames1.len(), 1);
+    // MAX objects in one frame
+    let max_objs: Vec<_> = (0..per).map(|i| ArxObject::new(1, object_types::OUTLET, i as i16,0,0)).collect();
+    let frames_max = pack_objects_into_frames(cfg, &max_objs, |i,t| { let mut h=Vec::new(); h.extend_from_slice(&(i as u16).to_le_bytes()); h.extend_from_slice(&(t as u16).to_le_bytes()); h });
+    assert_eq!(frames_max.len(), 1);
+    // MAX+1 objects spills to 2 frames
+    let maxp1: Vec<_> = (0..(per+1)).map(|i| ArxObject::new(1, object_types::OUTLET, i as i16,0,0)).collect();
+    let frames_maxp1 = pack_objects_into_frames(cfg, &maxp1, |i,t| { let mut h=Vec::new(); h.extend_from_slice(&(i as u16).to_le_bytes()); h.extend_from_slice(&(t as u16).to_le_bytes()); h });
+    assert_eq!(frames_maxp1.len(), 2);
+}
+
+#[test]
+fn test_seeded_fuzz_arxobject_roundtrip() {
+    let mut seed: u64 = 0xDEADBEEFCAFEBABE;
+    for _ in 0..200 {
+        // Simple LCG for determinism without external deps
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let bid = (seed >> 48) as u16 | 1; // non-null
+        let typ = (((seed >> 40) as u8) & 0x1F) | 0x10; // keep in electrical+ range
+        let x = (seed >> 24) as i16;
+        let y = (seed >> 8) as i16;
+        let z = seed as i16;
+        let props = [seed as u8, (seed>>8) as u8, (seed>>16) as u8, (seed>>24) as u8];
+        let obj = ArxObject::with_properties(bid, typ, x, y, z, props);
+        let bytes = obj.to_bytes();
+        let restored = ArxObject::from_bytes(&bytes);
+        assert_eq!(obj, restored);
+    }
+}

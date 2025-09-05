@@ -5,7 +5,7 @@
 
 use std::io::{BufRead, BufReader};
 use std::fs::File;
-use crate::arxobject_simple::ArxObject;
+use crate::arxobject::ArxObject;
 use crate::point_cloud_simple::SimplePointCloudProcessor;
 
 /// Simple PLY point

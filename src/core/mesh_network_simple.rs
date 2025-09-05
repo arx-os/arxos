@@ -2,7 +2,7 @@
 //! 
 //! Provides peer-to-peer networking for building-wide intelligence
 
-use crate::arxobject_simple::ArxObject;
+use crate::arxobject::ArxObject;
 use crate::file_storage::MemoryDatabase;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -208,7 +208,7 @@ impl MeshNode {
                 interval.tick().await;
                 
                 // Get recent objects from database
-                let db = database.lock().unwrap();
+                let db = match database.lock() { Ok(g) => g, Err(_) => continue };
                 if let Ok(objects) = db.get_building_objects(config.building_id) {
                     // Take last 10 objects as sample
                     let sample: Vec<ArxObject> = objects.into_iter().take(10).collect();
@@ -223,14 +223,14 @@ impl MeshNode {
                         };
                         
                         // Broadcast to all peers
-                        let peers = peers.lock().unwrap();
+                        let peers = match peers.lock() { Ok(g) => g, Err(_) => continue };
                         for peer in peers.values() {
                             // In production: send via network
                             println!("Broadcasting {} objects to node {}", 
                                     sample.len(), peer.node_id);
                         }
                         
-                        let mut stats = stats.lock().unwrap();
+                        let mut stats = match stats.lock() { Ok(g) => g, Err(_) => continue };
                         stats.objects_shared += sample.len() as u64;
                         stats.messages_sent += peers.len() as u64;
                     }
@@ -267,7 +267,7 @@ impl MeshNode {
                 println!("Discovering peers for node {}", config.node_id);
                 
                 // Clean up stale peers
-                let mut peers = peers.lock().unwrap();
+                let mut peers = match peers.lock() { Ok(g) => g, Err(_) => continue };
                 let now = Instant::now();
                 peers.retain(|_, peer| {
                     now.duration_since(peer.last_seen) < Duration::from_secs(120)
@@ -285,25 +285,28 @@ impl MeshNode {
         let config = self.config.clone();
         
         tokio::spawn(async move {
+            const MAX_MESSAGES_PER_TICK: usize = 32;
             loop {
-                // Process message queue
-                let message = {
-                    let mut queue = queue.lock().unwrap();
-                    queue.pop_front()
-                };
-                
-                if let Some((sender_id, msg)) = message {
+                let mut processed = 0usize;
+                while processed < MAX_MESSAGES_PER_TICK {
+                    // Process message queue
+                    let message = {
+                        let mut queue = match queue.lock() { Ok(g) => g, Err(_) => break };
+                        queue.pop_front()
+                    };
+                    if message.is_none() { break; }
+                    if let Some((sender_id, msg)) = message {
                     match msg {
                         MeshMessage::ObjectBroadcast { objects, timestamp: _ } => {
                             // Store new objects
                             let mut new_count = 0;
-                            let mut db = database.lock().unwrap();
+                            let mut db = match database.lock() { Ok(g) => g, Err(_) => continue };
                             
                             for obj in objects {
                                 // Create hash for deduplication
                                 let hash = Self::hash_object(&obj);
                                 
-                                let mut seen = seen.lock().unwrap();
+                                let mut seen = match seen.lock() { Ok(g) => g, Err(_) => continue };
                                 if !seen.contains(&hash) {
                                     seen.insert(hash);
                                     
@@ -317,14 +320,14 @@ impl MeshNode {
                                 println!("Received {} new objects from node {}", 
                                         new_count, sender_id);
                                 
-                                let mut stats = stats.lock().unwrap();
+                                let mut stats = match stats.lock() { Ok(g) => g, Err(_) => continue };
                                 stats.objects_received += new_count as u64;
                             }
                         }
                         
                         MeshMessage::SpatialQuery { query_id, center, radius } => {
                             // Handle spatial query
-                            let db = database.lock().unwrap();
+                            let db = match database.lock() { Ok(g) => g, Err(_) => continue };
                             if let Ok(objects) = db.find_within_radius(
                                 center.0, center.1, center.2, radius
                             ) {
@@ -337,14 +340,14 @@ impl MeshNode {
                                 println!("Handled spatial query {} from node {}", 
                                         query_id, sender_id);
                                 
-                                let mut stats = stats.lock().unwrap();
+                                let mut stats = match stats.lock() { Ok(g) => g, Err(_) => continue };
                                 stats.queries_handled += 1;
                             }
                         }
                         
                         MeshMessage::Ping { node_id, load: _ } => {
                             // Respond with pong
-                            let db = database.lock().unwrap();
+                            let db = match database.lock() { Ok(g) => g, Err(_) => continue };
                             if let Ok(stats) = db.get_stats() {
                                 let _pong = MeshMessage::Pong {
                                     node_id: config.node_id,
@@ -361,8 +364,10 @@ impl MeshNode {
                         }
                     }
                     
-                    let mut stats = stats.lock().unwrap();
-                    stats.messages_received += 1;
+                        let mut stats = match stats.lock() { Ok(g) => g, Err(_) => break };
+                        stats.messages_received += 1;
+                    }
+                    processed += 1;
                 }
                 
                 tokio::time::sleep(Duration::from_millis(100)).await;
@@ -393,7 +398,7 @@ impl MeshNode {
     
     /// Add a peer to the network
     pub fn add_peer(&self, node_id: NodeId, address: SocketAddr, capabilities: NodeCapabilities) {
-        let mut peers = self.peers.lock().unwrap();
+        let mut peers = self.peers.lock().expect("peers mutex poisoned");
         
         if peers.len() < self.config.max_peers {
             peers.insert(node_id, PeerInfo {
@@ -407,7 +412,7 @@ impl MeshNode {
             
             println!("Added peer {} at {}", node_id, address);
             
-            let mut stats = self.stats.lock().unwrap();
+            let mut stats = self.stats.lock().expect("stats mutex poisoned");
             stats.active_peers = peers.len();
         }
     }
@@ -416,7 +421,7 @@ impl MeshNode {
     pub async fn query_spatial(&self, center: (f32, f32, f32), radius: f32) 
         -> Result<Vec<ArxObject>, Box<dyn std::error::Error>> {
         // First check local database
-        let db = self.database.lock().unwrap();
+        let db = self.database.lock().expect("database mutex poisoned");
         let results = db.find_within_radius(center.0, center.1, center.2, radius)?;
         
         // Then query peers
@@ -436,7 +441,7 @@ impl MeshNode {
     
     /// Get node statistics
     pub fn get_stats(&self) -> NodeStats {
-        (*self.stats.lock().unwrap()).clone()
+        (*self.stats.lock().expect("stats mutex poisoned")).clone()
     }
     
     /// Trigger manual sync with peers
@@ -451,13 +456,13 @@ impl MeshNode {
             building_id: self.config.building_id,
         };
         
-        let peers = self.peers.lock().unwrap();
+        let peers = self.peers.lock().expect("peers mutex poisoned");
         for peer in peers.values() {
             // In production: send sync request
             println!("Requesting sync from node {}", peer.node_id);
         }
         
-        let mut stats = self.stats.lock().unwrap();
+        let mut stats = self.stats.lock().expect("stats mutex poisoned");
         stats.sync_operations += 1;
     }
 }
@@ -513,7 +518,7 @@ impl MeshSimulator {
         -> Result<(), Box<dyn std::error::Error>> {
         if node_index < self.nodes.len() {
             let node = &self.nodes[node_index];
-            let mut db = node.database.lock().unwrap();
+            let mut db = node.database.lock().expect("database mutex poisoned");
             db.insert_batch(&objects)?;
             
             println!("Injected {} objects into node {}", objects.len(), node_index);

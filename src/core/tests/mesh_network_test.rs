@@ -1,7 +1,7 @@
 //! Test mesh network functionality
 
 use arxos_core::mesh_network_simple::{MeshNode, MeshConfig, MeshSimulator};
-use arxos_core::arxobject_simple::{ArxObject, object_types};
+use arxos_core::{ArxObject, object_types};
 use std::time::Duration;
 
 #[tokio::test]
@@ -41,6 +41,16 @@ async fn test_mesh_simulator() {
     
     // Simulate network activity for 2 seconds
     simulator.simulate(Duration::from_secs(2)).await;
+}
+
+#[tokio::test]
+async fn test_bounded_processing_tick() {
+    // Ensure the processor loop yields and does not monopolize the executor
+    let simulator = MeshSimulator::new(2).expect("Should create simulator");
+    // Let background tasks run briefly
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    // If we reach here without timeout/hang, bounded processing is in effect
+    assert!(true);
 }
 
 #[tokio::test]

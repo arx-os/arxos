@@ -3,9 +3,17 @@
 //! The heart of the Arxos mesh network - 13-byte ArxObject protocol
 //! with slow-bleed progressive enhancement for CAD-level detail
 
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 #![cfg_attr(not(feature = "std"), no_std)]
+// Enforce rf_only at compile time for default builds
+#[cfg(all(feature = "std", feature = "rf_only"))]
+const _RF_ONLY_BUILD: bool = true;
 
 pub mod arxobject;
+#[cfg(feature = "std")]
+pub mod paths;
 pub mod packet;
 pub mod detail_store;
 pub mod broadcast_scheduler;
@@ -46,8 +54,7 @@ pub mod point_cloud_processor;
 pub mod point_cloud_parser_enhanced;
 
 // Simplified implementations for testing
-#[cfg(feature = "std")]
-pub mod arxobject_simple;
+// [removed] arxobject_simple export to enforce canonical arxobject
 
 #[cfg(feature = "std")]
 pub mod point_cloud_simple;
@@ -136,7 +143,7 @@ pub mod field_identity_access;
 pub mod simple_access_control;
 #[cfg(feature = "std")]
 pub mod access_in_practice;
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "internet_touchpoints"))]
 pub mod sms_access_token;
 
 // Git-like building version control
@@ -176,6 +183,22 @@ pub mod data_model_engine;
 // SDR Platform and Multi-Service Infrastructure
 #[cfg(feature = "std")]
 pub mod sdr_platform;
+
+// Radio frame/MTU module
+#[cfg(feature = "std")]
+pub mod radio { pub mod frame; }
+#[cfg(feature = "std")]
+pub mod security { pub mod replay; }
+#[cfg(feature = "std")]
+pub mod invites { pub mod invite; }
+#[cfg(feature = "std")]
+pub mod radio_secure { pub mod secure_frame; }
+#[cfg(feature = "std")]
+pub mod radio_adapter { pub mod adapter; }
+
+// Mobile offline binder & transports
+#[cfg(all(feature = "std", feature = "mobile_offline"))]
+pub mod mobile_offline { pub mod transport; pub mod binder; }
 
 // Re-export the main types
 pub use arxobject::{ArxObject, ObjectCategory, ValidationError, object_types, properties};

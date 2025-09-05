@@ -114,9 +114,24 @@ impl WorkOrder {
         }
         
         Some(Self {
-            wo_id: obj.x,
-            work_type: unsafe { std::mem::transmute((obj.y & 0xFF) as u8) },
-            priority: unsafe { std::mem::transmute((obj.y >> 8) as u8) },
+            wo_id: obj.x as u16,
+            work_type: match (((obj.y as u16) & 0x00FF) as u8) {
+                1 => WorkType::Preventive,
+                2 => WorkType::Corrective,
+                3 => WorkType::Emergency,
+                4 => WorkType::Inspection,
+                5 => WorkType::Installation,
+                6 => WorkType::Upgrade,
+                _ => return None,
+            },
+            priority: match (((obj.y as u16) >> 8) as u8) {
+                1 => Priority::Low,
+                2 => Priority::Medium,
+                3 => Priority::High,
+                4 => Priority::Critical,
+                5 => Priority::Emergency,
+                _ => return None,
+            },
             assigned_to: if obj.z > 0 { Some(obj.z) } else { None },
             location: Location {
                 building_id: obj.building_id,

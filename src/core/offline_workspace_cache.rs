@@ -8,6 +8,7 @@ use crate::virtual_building_space::VirtualBuildingSpace;
 use crate::file_storage::{FileStorage, Database};
 use std::collections::HashMap;
 use std::path::Path;
+use crate::paths::workspace_db_path;
 
 /// Offline workspace cache - persists VBS data locally
 pub struct OfflineWorkspaceCache {
@@ -46,7 +47,7 @@ pub enum SyncOperation {
 impl OfflineWorkspaceCache {
     /// Create new offline cache
     pub fn new(workspace_id: u16) -> Result<Self, Box<dyn std::error::Error>> {
-        let db_path = format!("/var/lib/arxos/vbs_{}.db", workspace_id);
+        let db_path = workspace_db_path(workspace_id);
         let local_db = ArxDatabase::open(Path::new(&db_path))?;
         
         Ok(Self {

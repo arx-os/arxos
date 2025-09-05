@@ -1,4 +1,8 @@
 //! LoRa USB dongle transport implementation
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::pedantic, clippy::nursery)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+#![allow(clippy::module_name_repetitions, clippy::too_many_arguments, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 use super::{Transport, TransportError, TransportMetrics};
 use async_trait::async_trait;
@@ -60,12 +64,16 @@ impl LoRaPacket {
     
     /// Convert to bytes for transmission
     pub fn to_bytes(&self) -> Vec<u8> {
-        unsafe {
-            std::slice::from_raw_parts(
-                self as *const Self as *const u8,
-                Self::SIZE
-            ).to_vec()
-        }
+        let mut bytes = vec![0u8; Self::SIZE];
+        // header (1)
+        bytes[0] = self.header;
+        // seq (2, LE)
+        bytes[1..3].copy_from_slice(&self.seq.to_le_bytes());
+        // payload_len (1)
+        bytes[3] = self.payload_len;
+        // payload (251)
+        bytes[4..4 + Self::MAX_PAYLOAD].copy_from_slice(&self.payload);
+        bytes
     }
     
     /// Parse from received bytes
@@ -75,10 +83,15 @@ impl LoRaPacket {
                 format!("Invalid packet size: {} != {}", bytes.len(), Self::SIZE)
             ));
         }
-        
-        unsafe {
-            Ok(std::ptr::read(bytes.as_ptr() as *const Self))
+        let header = bytes[0];
+        let seq = u16::from_le_bytes([bytes[1], bytes[2]]);
+        let payload_len = bytes[3];
+        if payload_len as usize > Self::MAX_PAYLOAD {
+            return Err(TransportError::InvalidData("Payload length out of range".to_string()));
         }
+        let mut payload = [0u8; Self::MAX_PAYLOAD];
+        payload.copy_from_slice(&bytes[4..4 + Self::MAX_PAYLOAD]);
+        Ok(Self { header, seq, payload_len, payload })
     }
 }
 
@@ -224,7 +237,7 @@ mod tests {
     #[test]
     fn test_lora_packet_creation() {
         let data = b"Hello, LoRa!";
-        let packet = LoRaPacket::new(42, data).unwrap();
+        let packet = LoRaPacket::new(42, data).expect("packet create");
         
         // Copy values from packed struct to avoid alignment issues
         let header = packet.header;
@@ -240,12 +253,12 @@ mod tests {
     #[test]
     fn test_lora_packet_serialization() {
         let data = b"Test data";
-        let packet = LoRaPacket::new(123, data).unwrap();
+        let packet = LoRaPacket::new(123, data).expect("packet create");
         
         let bytes = packet.to_bytes();
         assert_eq!(bytes.len(), LoRaPacket::SIZE);
         
-        let restored = LoRaPacket::from_bytes(&bytes).unwrap();
+        let restored = LoRaPacket::from_bytes(&bytes).expect("from_bytes");
         // Copy values from packed struct to avoid alignment issues
         let seq = restored.seq;
         let payload_len = restored.payload_len;
@@ -258,7 +271,7 @@ mod tests {
     #[test]
     fn test_lora_packet_max_payload() {
         let data = vec![0xAA; LoRaPacket::MAX_PAYLOAD];
-        let packet = LoRaPacket::new(1, &data).unwrap();
+        let packet = LoRaPacket::new(1, &data).expect("packet create");
         assert_eq!(packet.payload_len as usize, LoRaPacket::MAX_PAYLOAD);
         
         // Too large should fail

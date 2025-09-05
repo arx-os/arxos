@@ -3,7 +3,7 @@
 
 #[test]
 fn test_arxobject_simple_core() {
-    use arxos_core::arxobject_simple::{ArxObject, object_types};
+    use arxos_core::{ArxObject, object_types};
     
     // Verify size
     assert_eq!(std::mem::size_of::<ArxObject>(), 13);
@@ -41,7 +41,7 @@ fn test_arxobject_simple_core() {
 
 #[test]
 fn test_point_cloud_simple_processing() {
-    use arxos_core::arxobject_simple::object_types;
+    use arxos_core::object_types;
     use arxos_core::point_cloud_simple::SimplePointCloudProcessor;
     use arxos_core::document_parser::{Point3D, BoundingBox};
     use arxos_core::point_cloud_parser::PointCloud;
@@ -114,7 +114,7 @@ fn test_point_cloud_simple_processing() {
 
 #[test]
 fn test_compression_ratio() {
-    use arxos_core::arxobject_simple::ArxObject;
+    use arxos_core::ArxObject;
     use arxos_core::document_parser::Point3D;
     
     // Simulate point cloud data size
@@ -137,7 +137,8 @@ fn test_compression_ratio() {
 
 #[test]
 fn test_properties_and_validation() {
-    use arxos_core::arxobject_simple::{ArxObject, object_types, is_valid_object_type};
+    use arxos_core::{ArxObject, object_types};
+    use arxos_core::arxobject::is_valid_object_type;
     
     // Test properties storage
     let properties = [10, 20, 30, 40];
@@ -165,7 +166,7 @@ fn test_properties_and_validation() {
 
 #[test]
 fn test_object_categories() {
-    use arxos_core::arxobject_simple::{object_types, ObjectCategory};
+    use arxos_core::{object_types, ObjectCategory};
     
     // Test category classification
     assert_eq!(ObjectCategory::from_type(object_types::OUTLET), ObjectCategory::Electrical);

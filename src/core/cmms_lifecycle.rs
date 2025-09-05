@@ -161,7 +161,19 @@ impl WorkOrderLifecycle {
         
         let wo_id = obj.x;
         let event = LifecycleEvent {
-            event_type: unsafe { std::mem::transmute((obj.y & 0xFF) as u8) },
+            event_type: match (((obj.y as u16) & 0x00FF) as u8) {
+                1 => WOLifecycleEvent::Created,
+                2 => WOLifecycleEvent::Assigned,
+                3 => WOLifecycleEvent::Started,
+                4 => WOLifecycleEvent::Paused,
+                5 => WOLifecycleEvent::Resumed,
+                6 => WOLifecycleEvent::Completed,
+                7 => WOLifecycleEvent::Verified,
+                8 => WOLifecycleEvent::Closed,
+                9 => WOLifecycleEvent::Cancelled,
+                10 => WOLifecycleEvent::Escalated,
+                _ => return None,
+            },
             timestamp: u32::from_be_bytes(obj.properties) as u64,
             user_id: obj.z,
             notes: None, // Notes stored separately if needed
@@ -200,10 +212,17 @@ impl WOAssignment {
         }
         
         Some(Self {
-            wo_id: obj.x,
-            tech_id: obj.y,
-            priority: unsafe { std::mem::transmute((obj.z & 0xFF) as u8) },
-            due_hours: ((obj.z >> 8) & 0xFF) as u8,
+            wo_id: obj.x as u16,
+            tech_id: obj.y as u16,
+            priority: match (((obj.z as u16) & 0x00FF) as u8) {
+                1 => Priority::Low,
+                2 => Priority::Medium,
+                3 => Priority::High,
+                4 => Priority::Critical,
+                5 => Priority::Emergency,
+                _ => return None,
+            },
+            due_hours: (((obj.z as u16) >> 8) & 0x00FF) as u8,
         })
     }
 }

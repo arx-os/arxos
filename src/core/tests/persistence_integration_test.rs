@@ -5,7 +5,7 @@
 /*
 use arxos_core::ply_parser_simple::SimplePlyParser;
 use arxos_core::file_storage::{MemoryDatabase, Database, StorageStats};
-use arxos_core::arxobject_simple::{ArxObject, object_types};
+use arxos_core::{ArxObject, object_types};
 
 #[test]
 fn test_ply_to_database_pipeline() {

@@ -1,7 +1,9 @@
-//! SMS-Based Onboarding & Access Control
+//! SMS-Based Onboarding & Access Control (feature-gated)
 //! 
-//! The SIMPLEST way to grant building access: text messages.
-//! No apps required initially, no complex enrollment, just SMS.
+//! This module is compiled only with the `internet_touchpoints` feature.
+//! Default builds are RF-only and do not include SMS flows.
+
+#![cfg(feature = "internet_touchpoints")]
 
 use arxos_core::simple_access_control::{SimpleAccess, CompanyCode, RoleCode};
 use std::collections::HashMap;

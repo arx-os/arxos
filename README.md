@@ -65,6 +65,7 @@ arxos connect --port /dev/ttyUSB0
 ### Architecture
 - **[docs/03-architecture/NETWORK_ARCHITECTURE.md](docs/03-architecture/NETWORK_ARCHITECTURE.md)** - Zero-knowledge routing
 - **[docs/03-architecture/FLOW_ORCHESTRATOR.md](docs/03-architecture/FLOW_ORCHESTRATOR.md)** - Core routing philosophy
+- **[docs/MARKETPLACE.md](docs/MARKETPLACE.md)** - Real-time data marketplace
 - **[docs/README.md](docs/README.md)** - Complete documentation index
 
 ## Project Structure

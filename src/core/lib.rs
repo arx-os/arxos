@@ -39,6 +39,13 @@ pub use mesh::meshtastic_protocol;
 pub mod compression;
 
 // ═══════════════════════════════════════════════════════════════════
+// MARKETPLACE - Real-time data trading with time-decay pricing
+// ═══════════════════════════════════════════════════════════════════
+
+#[cfg(feature = "std")]
+pub mod marketplace;
+
+// ═══════════════════════════════════════════════════════════════════
 // TERMINAL VISUALIZATION - ASCII art rendering for terminal UI
 // ═══════════════════════════════════════════════════════════════════
 

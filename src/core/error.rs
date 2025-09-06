@@ -37,7 +37,6 @@ pub enum ArxError {
     #[error("File storage error: {0}")]
     Storage(String),
     
-    
     // Serialization errors
     #[cfg(feature = "std")]
     #[error("Serialization error: {0}")]

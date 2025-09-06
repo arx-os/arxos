@@ -4,9 +4,9 @@
 //! Optimized for RF mesh environments with minimal dependencies.
 
 use std::collections::HashMap;
-use std::fs::{File, OpenOptions, create_dir_all, read_dir, remove_file};
-use std::io::{BufReader, BufWriter, BufRead, Write, Read, Seek, SeekFrom};
-use std::path::{Path, PathBuf};
+use std::fs::{File, OpenOptions, create_dir_all};
+use std::io::{BufReader, BufWriter, BufRead, Write, Seek, SeekFrom};
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
@@ -75,7 +75,7 @@ impl FileStorage {
     pub fn new(config: FileStorageConfig) -> Result<Self, ArxosError> {
         // Create base directory if it doesn't exist
         create_dir_all(&config.base_path)
-            .map_err(|e| ArxosError::Io(format!("Failed to create storage directory: {}", e)))?;
+            .map_err(|e| ArxosError::Storage(format!("Failed to create storage directory: {}", e)))?;
         
         let mut storage = FileStorage {
             config,
@@ -109,26 +109,26 @@ impl FileStorage {
             .map_err(|e| ArxosError::Serialization(format!("Failed to serialize object: {}", e)))?;
         
         // Determine file path based on building ID and object type
-        let file_path = self.get_file_path(object.building_id, object.object_type());
+        let file_path = self.get_file_path(object.building_id as u32, object.object_type);
         
         // Append to file
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&file_path)
-            .map_err(|e| ArxosError::Io(format!("Failed to open file: {}", e)))?;
+            .map_err(|e| ArxosError::Storage(format!("Failed to open file: {}", e)))?;
         
         let file_offset = file.seek(SeekFrom::End(0))
-            .map_err(|e| ArxosError::Io(format!("Failed to seek file: {}", e)))? as usize;
+            .map_err(|e| ArxosError::Storage(format!("Failed to seek file: {}", e)))? as usize;
         
         writeln!(file, "{}", object_data)
-            .map_err(|e| ArxosError::Io(format!("Failed to write to file: {}", e)))?;
+            .map_err(|e| ArxosError::Storage(format!("Failed to write to file: {}", e)))?;
         
         // Update index
         let metadata = ObjectMetadata {
             id,
-            object_type: object.object_type(),
-            building_id: object.building_id,
+            object_type: object.object_type,
+            building_id: object.building_id as u32,
             created_at: now,
             updated_at: now,
             file_path: file_path.to_string_lossy().to_string(),
@@ -149,15 +149,15 @@ impl FileStorage {
         };
         
         let file = File::open(&metadata.file_path)
-            .map_err(|e| ArxosError::Io(format!("Failed to open file: {}", e)))?;
+            .map_err(|e| ArxosError::Storage(format!("Failed to open file: {}", e)))?;
         
         let mut reader = BufReader::new(file);
         reader.seek(SeekFrom::Start(metadata.file_offset as u64))
-            .map_err(|e| ArxosError::Io(format!("Failed to seek file: {}", e)))?;
+            .map_err(|e| ArxosError::Storage(format!("Failed to seek file: {}", e)))?;
         
         let mut line = String::new();
         reader.read_line(&mut line)
-            .map_err(|e| ArxosError::Io(format!("Failed to read line: {}", e)))?;
+            .map_err(|e| ArxosError::Io(e))?;
         
         let stored_object: StoredObject = serde_json::from_str(&line.trim())
             .map_err(|e| ArxosError::Serialization(format!("Failed to deserialize object: {}", e)))?;
@@ -261,7 +261,7 @@ impl FileStorage {
         }
         
         let file = File::open(&index_path)
-            .map_err(|e| ArxosError::Io(format!("Failed to open index: {}", e)))?;
+            .map_err(|e| ArxosError::Io(e))?;
         
         let reader = BufReader::new(file);
         self.index_cache = serde_json::from_reader(reader)
@@ -275,7 +275,7 @@ impl FileStorage {
         let index_path = self.config.base_path.join("index.json");
         
         let file = File::create(&index_path)
-            .map_err(|e| ArxosError::Io(format!("Failed to create index: {}", e)))?;
+            .map_err(|e| ArxosError::Storage(format!("Failed to create index: {}", e)))?;
         
         let writer = BufWriter::new(file);
         serde_json::to_writer_pretty(writer, &self.index_cache)
@@ -318,7 +318,7 @@ impl Database for FileStorage {
 #[derive(Debug)]
 pub struct MemoryDatabase {
     objects: HashMap<Uuid, ArxObject>,
-    building_index: HashMap<u32, Vec<Uuid>>,
+    building_index: HashMap<u16, Vec<Uuid>>,
 }
 
 impl MemoryDatabase {
@@ -335,6 +335,67 @@ impl MemoryDatabase {
     
     pub fn is_empty(&self) -> bool {
         self.objects.is_empty()
+    }
+    
+    /// Insert an ArxObject
+    pub fn insert(&mut self, object: &ArxObject) -> Result<Uuid, ArxosError> {
+        self.store_object(object)
+    }
+    
+    /// Insert multiple ArxObjects
+    pub fn insert_batch(&mut self, objects: &[ArxObject]) -> Result<Vec<Uuid>, ArxosError> {
+        let mut ids = Vec::new();
+        for object in objects {
+            ids.push(self.store_object(object)?);
+        }
+        Ok(ids)
+    }
+    
+    /// Find objects within a radius
+    pub fn find_within_radius(&self, x: f32, y: f32, z: f32, radius: f32) -> Result<Vec<ArxObject>, ArxosError> {
+        let mut results = Vec::new();
+        let radius_squared = radius * radius;
+        
+        for object in self.objects.values() {
+            let (ox, oy, oz) = object.position_meters();
+            let dx = ox - x;
+            let dy = oy - y;
+            let dz = oz - z;
+            let distance_squared = dx * dx + dy * dy + dz * dz;
+            
+            if distance_squared <= radius_squared {
+                results.push(*object);
+            }
+        }
+        
+        Ok(results)
+    }
+    
+    /// Get objects for a specific building
+    pub fn get_building_objects(&self, building_id: u16) -> Result<Vec<ArxObject>, ArxosError> {
+        let mut objects = Vec::new();
+        
+        for object in self.objects.values() {
+            if object.building_id == building_id {
+                objects.push(*object);
+            }
+        }
+        
+        Ok(objects)
+    }
+    
+    /// Get statistics
+    pub fn get_stats(&self) -> Result<StorageStats, ArxosError> {
+        Ok(StorageStats {
+            total_objects: self.objects.len(),
+            total_files: 0,
+            storage_size_bytes: (self.objects.len() * std::mem::size_of::<ArxObject>()) as u64,
+            index_size: self.building_index.len(),
+            last_updated: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        })
     }
 }
 
@@ -359,11 +420,9 @@ impl Database for MemoryDatabase {
     fn get_building_objects(&self, building_id: u32) -> Result<Vec<ArxObject>, ArxosError> {
         let mut objects = Vec::new();
         
-        if let Some(object_ids) = self.building_index.get(&building_id) {
-            for id in object_ids {
-                if let Some(object) = self.objects.get(id) {
-                    objects.push(*object);
-                }
+        for object in self.objects.values() {
+            if object.building_id == building_id as u16 {
+                objects.push(*object);
             }
         }
         

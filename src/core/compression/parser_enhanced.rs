@@ -3,8 +3,8 @@
 //! Improves on the basic parser with tunable parameters and better semantic detection
 
 use crate::arxobject::{ArxObject, object_types};
-use crate::document_parser::{Point3D, BoundingBox};
-use crate::compression::parser::{PointCloud, Plane, PlaneType, PointCloudError};
+use crate::document_parser::Point3D;
+use crate::compression::parser::{PointCloud, Plane, PlaneType};
 use std::collections::HashMap;
 
 /// Enhanced parser with tunable parameters
@@ -111,9 +111,9 @@ impl EnhancedPointCloudParser {
             
             for (center, point_count) in merged {
                 // Convert to millimeters and create ArxObject
-                let x_mm = (center.x * 1000.0).max(0.0).min(65535.0) as u16;
-                let y_mm = (center.y * 1000.0).max(0.0).min(65535.0) as u16;
-                let z_mm = (center.z * 1000.0).max(0.0).min(65535.0) as u16;
+                let x_mm = (center.x * 1000.0).max(-32768.0).min(32767.0) as i16;
+                let y_mm = (center.y * 1000.0).max(-32768.0).min(32767.0) as i16;
+                let z_mm = (center.z * 1000.0).max(-32768.0).min(32767.0) as i16;
                 
                 let mut obj = ArxObject::new(building_id, object_type, x_mm, y_mm, z_mm);
                 

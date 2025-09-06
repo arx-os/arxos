@@ -179,9 +179,9 @@ impl DocumentParser {
         ArxObject::new(
             0x0001,  // Building ID (would be assigned)
             object_type,
-            (equipment.location.x * 1000.0).max(0.0).min(65535.0) as u16,  // Convert to mm
-            (equipment.location.y * 1000.0).max(0.0).min(65535.0) as u16,
-            (equipment.location.z * 1000.0).max(0.0).min(65535.0) as u16,
+            (equipment.location.x * 1000.0).max(-32768.0).min(32767.0) as i16,  // Convert to mm
+            (equipment.location.y * 1000.0).max(-32768.0).min(32767.0) as i16,
+            (equipment.location.z * 1000.0).max(-32768.0).min(32767.0) as i16,
         )
     }
     

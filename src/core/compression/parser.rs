@@ -350,7 +350,7 @@ impl PointCloudParser {
             name: building_name.to_string(),
             floors,
             arxobjects: Vec::new(),
-            metadata: super::document_parser::BuildingMetadata {
+            metadata: crate::document_parser::BuildingMetadata {
                 address: None,
                 total_sqft: self.calculate_area(&cloud.bounds),
                 year_built: None,
@@ -392,15 +392,7 @@ impl PointCloudParser {
     
     /// Detect equipment using clustering
     fn detect_equipment(&self, cloud: &PointCloud, floor_z: f32) -> Vec<Equipment> {
-        // use super::document_parser::EquipmentType;
-        // TODO: Replace with proper equipment type enum
-        #[derive(Debug)]
-        enum EquipmentType {
-            Outlet,
-            Switch,
-            Thermostat,
-            Unknown,
-        }
+        use crate::document_parser::EquipmentType;
         let mut equipment = Vec::new();
         
         // Find points at outlet height (0.3m above floor)
@@ -542,9 +534,9 @@ impl PointCloudParser {
             objects.push(ArxObject::new(
                 building_id,
                 object_type,
-                (center.x * 1000.0).max(0.0).min(65535.0) as u16,
-                (center.y * 1000.0).max(0.0).min(65535.0) as u16,
-                (center.z * 1000.0).max(0.0).min(65535.0) as u16,
+                (center.x * 1000.0).max(-32768.0).min(32767.0) as i16,
+                (center.y * 1000.0).max(-32768.0).min(32767.0) as i16,
+                (center.z * 1000.0).max(-32768.0).min(32767.0) as i16,
             ));
         }
         

@@ -4,7 +4,7 @@
 //! Each VBS is a logical view of the building with role-based filtering.
 
 use crate::arxobject::ArxObject;
-use crate::mesh_network_simple::MeshNode;
+use crate::mesh::mesh_network_simple::MeshNode;
 // Simplified crypto types for virtual building space
 type Ed25519PublicKey = [u8; 32];
 type Ed25519Signature = [u8; 64];
@@ -74,12 +74,12 @@ pub struct AccessSchedule {
 /// Spatial boundaries for a VBS
 #[derive(Debug, Clone)]
 pub struct SpatialBounds {
-    pub min_x: u16,
-    pub max_x: u16,
-    pub min_y: u16,
-    pub max_y: u16,
-    pub min_z: u16,
-    pub max_z: u16,
+    pub min_x: i16,
+    pub max_x: i16,
+    pub min_y: i16,
+    pub max_y: i16,
+    pub min_z: i16,
+    pub max_z: i16,
 }
 
 /// Property-based filtering
@@ -215,7 +215,8 @@ impl VirtualBuildingSpace {
     /// Apply encrypted overlays to visible objects
     pub fn apply_overlays(&self, objects: &mut [ArxObject]) {
         for obj in objects {
-            if let Some(overlay) = self.overlay_objects.get(&obj.building_id) {
+            let building_id = obj.building_id;
+            if let Some(overlay) = self.overlay_objects.get(&building_id) {
                 // In real implementation, decrypt and merge overlay data
                 // For now, just mark that overlay exists
                 obj.properties[3] |= 0x80; // Set high bit to indicate overlay

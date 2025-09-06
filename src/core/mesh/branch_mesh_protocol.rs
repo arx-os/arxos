@@ -3,9 +3,7 @@
 //! Contractors work in isolated branches transmitted as ArxObjects.
 //! All changes are proposed, not directly applied.
 
-use crate::arxobject::{ArxObject, object_types};
-use crate::building_repository::{BuildingBranch, BuildingChange, Severity};
-use crate::simple_access_control::SimpleAccess;
+use crate::arxobject::ArxObject;
 
 /// Branch identifier that fits in ArxObject
 #[derive(Debug, Clone, Copy)]
@@ -59,7 +57,7 @@ impl BranchID {
             building_id: obj.building_id,
             branch_num: obj.x as u16,
             session_id: ((obj.y as u16) & 0x00FF) as u8,
-            branch_type: match (((obj.y as u16) >> 8) as u8) {
+            branch_type: match ((obj.y as u16) >> 8) as u8 {
                 0 => BranchType::Main,
                 1 => BranchType::Contractor,
                 2 => BranchType::Inspector,
@@ -137,7 +135,7 @@ impl ChangeProposal {
         
         Some(Self {
             object_id: obj.x as u16,
-            change_type: match (((obj.y as u16) & 0x00FF) as u8) {
+            change_type: match ((obj.y as u16) & 0x00FF) as u8 {
                 1 => ChangeType::Add,
                 2 => ChangeType::Modify,
                 3 => ChangeType::Remove,
@@ -147,7 +145,7 @@ impl ChangeProposal {
                 _ => return None,
             },
             new_value: obj.properties,
-            reason_code: match (((obj.y as u16) >> 8) as u8) {
+            reason_code: match ((obj.y as u16) >> 8) as u8 {
                 1 => ReasonCode::Repair,
                 2 => ReasonCode::Replace,
                 3 => ReasonCode::Maintenance,
@@ -236,7 +234,7 @@ impl BranchMeshOps {
                 let new_obj = ArxObject {
                     building_id: change.object_id,
                     object_type: change.new_value[0],
-                    x: u16::from_le_bytes([change.new_value[1], change.new_value[2]]),
+                    x: i16::from_le_bytes([change.new_value[1], change.new_value[2]]),
                     y: 0,
                     z: 0,
                     properties: [0; 4],

@@ -35,7 +35,7 @@ impl std::error::Error for Error {}
 /// ArxOS mesh network manager
 pub struct ArxOSMesh {
     // radio: Sx126x,  // TODO: Add when sx126x is available
-    database: Database,
+    database: Box<dyn Database>,
     node_id: u16,
     sequence: u16,
     neighbors: HashMap<u16, NeighborInfo>,
@@ -97,7 +97,7 @@ pub enum ScanType {
 
 impl ArxOSMesh {
     /// Create new mesh network
-    pub fn new(/*radio: Sx126x,*/ database: Database) -> Self {
+    pub fn new(/*radio: Sx126x,*/ database: Box<dyn Database>) -> Self {
         Self {
             // radio,  // TODO: Add when sx126x is available
             database,

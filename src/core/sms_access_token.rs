@@ -95,7 +95,7 @@ impl SMSAccessToken {
                     bytes[2] |= val >> 1;
                 }
                 5 => {
-                    bytes[2] |= (val & 0x01);
+                    bytes[2] |= val & 0x01;
                 }
                 _ => {}
             }
@@ -133,9 +133,9 @@ impl SMSAccessToken {
         ArxObject {
             building_id: self.building_id,
             object_type: 0xFE, // Special type for access tokens
-            x: self.phone_suffix,
-            y: u16::from_le_bytes([self.role, self.company]),
-            z: u16::from_le_bytes([self.hours_remaining, self.trust]),
+            x: self.phone_suffix as i16,
+            y: u16::from_le_bytes([self.role, self.company]) as i16,
+            z: u16::from_le_bytes([self.hours_remaining, self.trust]) as i16,
             properties: [
                 self.token_id[0],
                 self.token_id[1],
@@ -154,11 +154,11 @@ impl SMSAccessToken {
         Some(Self {
             token_id: [obj.properties[0], obj.properties[1], obj.properties[2]],
             building_id: obj.building_id,
-            phone_suffix: obj.x,
-            role: (obj.y & 0xFF) as u8,
-            company: (obj.y >> 8) as u8,
-            hours_remaining: (obj.z & 0xFF) as u8,
-            trust: (obj.z >> 8) as u8,
+            phone_suffix: obj.x as u16,
+            role: ((obj.y as u16) & 0xFF) as u8,
+            company: ((obj.y as u16) >> 8) as u8,
+            hours_remaining: ((obj.z as u16) & 0xFF) as u8,
+            trust: ((obj.z as u16) >> 8) as u8,
             checksum: obj.properties[3],
         })
     }

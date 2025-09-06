@@ -51,7 +51,7 @@ pub enum BuildingObjectType {
 pub struct AsciiBridge {
     building_id: u16,
     object_registry: HashMap<String, BuildingObjectType>,
-    location_cache: HashMap<String, (u16, u16, u16)>,
+    location_cache: HashMap<String, (i16, i16, i16)>,
 }
 
 impl AsciiBridge {
@@ -235,14 +235,18 @@ impl AsciiBridge {
         Err(format!("Unknown object type in: {}", text))
     }
     
-    fn extract_position(&mut self, text: &str) -> Result<(u16, u16, u16), String> {
+    fn extract_position(&mut self, text: &str) -> Result<(i16, i16, i16), String> {
         // Try coordinates: @ (x, y, z)
-        let coord_regex = Regex::new(r"@\s*\(?\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)?").unwrap();
+        let coord_regex = Regex::new(r"@\s*\(?\s*([\d.-]+)\s*,\s*([\d.-]+)\s*,\s*([\d.-]+)\s*\)?").unwrap();
         if let Some(caps) = coord_regex.captures(text) {
             let x = caps[1].parse::<f32>().unwrap_or(0.0) * 1000.0; // Convert to mm
             let y = caps[2].parse::<f32>().unwrap_or(0.0) * 1000.0;
             let z = caps[3].parse::<f32>().unwrap_or(0.0) * 1000.0;
-            return Ok((x as u16, y as u16, z as u16));
+            return Ok((
+                x.max(-32768.0).min(32767.0) as i16,
+                y.max(-32768.0).min(32767.0) as i16,
+                z.max(-32768.0).min(32767.0) as i16
+            ));
         }
         
         // Try named location: @ ROOM_205
@@ -256,9 +260,9 @@ impl AsciiBridge {
             // Generate position from room number
             if location.starts_with("room_") || location.starts_with("ROOM_") {
                 let room_num: u16 = location[5..].parse().unwrap_or(0);
-                let floor = (room_num / 100) as u16;
-                let x = ((room_num % 100) * 100) as u16;
-                let y = 5000; // Default middle of building
+                let floor = (room_num / 100) as i16;
+                let x = ((room_num % 100) * 100) as i16;
+                let y = 5000i16; // Default middle of building
                 let z = floor * 3000; // 3m per floor
                 
                 let pos = (x, y, z);

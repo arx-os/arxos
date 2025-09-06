@@ -92,9 +92,9 @@ impl SlowBleedNode {
         let object = ArxObject {
             building_id: object_id,
             object_type: packet.packet_type,
-            x: u16::from_le_bytes([packet.payload[2], packet.payload[3]]),
-            y: u16::from_le_bytes([packet.payload[4], packet.payload[5]]),
-            z: u16::from_le_bytes([packet.payload[6], packet.payload[7]]),
+            x: i16::from_le_bytes([packet.payload[2], packet.payload[3]]),
+            y: i16::from_le_bytes([packet.payload[4], packet.payload[5]]),
+            z: i16::from_le_bytes([packet.payload[6], packet.payload[7]]),
             properties: packet.payload[8..12].try_into().unwrap(),
         };
         

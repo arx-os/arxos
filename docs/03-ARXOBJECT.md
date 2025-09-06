@@ -87,29 +87,69 @@ impl ArxObject {
 
 ## Fractal Nature & Bandwidth Optimization
 
-### The Fractal Principle
+### The Fractal Reality Engine
 
-ArxObjects are **fractal** - they represent different levels of detail based on perspective and available bandwidth:
+ArxObjects are **fractal seeds** - each 13-byte structure contains the DNA for infinite procedural generation. Like fractals in nature, they reveal different levels of detail at different scales, all deterministically generated from the same compact seed.
 
 ```
-Zoom Level 1: Atomic (13 bytes)
-├── Single outlet location
-└── Basic properties
+Zoom Level 0: Molecular (generated from seed)
+├── Material composition at atomic level
+├── Wear patterns and degradation
+└── Quantum properties
 
-Zoom Level 2: Contextual (26-52 bytes)
-├── Outlet + circuit relationship
-├── Connected devices
-└── Power consumption
+Zoom Level 1: Component (13 bytes + generation)
+├── Individual screws, terminals, wires
+├── Generated from parent object's fractal seed
+└── Each sub-component has its own properties
 
-Zoom Level 3: System (100+ bytes)
-├── All outlets on circuit
-├── Breaker panel connection
-└── Load calculations
+Zoom Level 2: Object (core 13 bytes)
+├── Single outlet, switch, or sensor
+├── Position and basic properties
+└── Can generate infinite sub-components
 
-Zoom Level 4: Building (compressed back to ~13 bytes)
-├── Statistical summary
-└── "47 circuits, 3-phase power"
+Zoom Level 3: System (aggregated objects)
+├── All outlets on a circuit
+├── Electrical panel relationships
+├── Load calculations and dependencies
+
+Zoom Level 4: Building (statistical compression)
+├── Entire building as meta-object
+├── "47 circuits, 3-phase, 2000A service"
+└── Can drill down to any detail level
 ```
+
+### Fractal Generation Engine
+
+The 4-byte `properties` field acts as a **fractal seed** that deterministically generates:
+
+```rust
+// Generate infinite detail from 13 bytes
+impl ArxObject {
+    /// Generate contained objects when zooming IN
+    pub fn generate_contained_object(&self, relative_pos: (i16, i16, i16), scale: f32) -> ArxObject {
+        // Fractal seed determines sub-object types
+        // E.g., outlet contains terminals, screws, housing
+    }
+    
+    /// Generate parent systems when zooming OUT  
+    pub fn generate_containing_system(&self, scale: f32) -> ArxObject {
+        // Derive parent system from object type
+        // E.g., outlet belongs to electrical panel
+    }
+    
+    /// Generate implied properties on-demand
+    pub fn implied_properties(&self) -> ImpliedProperties {
+        // Power requirements, materials, maintenance
+        // All derived from object type and seed
+    }
+}
+```
+
+This fractal approach enables:
+- **Infinite zoom**: Explore from building-wide to molecular level
+- **Deterministic generation**: Same seed always produces same details
+- **Bandwidth efficiency**: Only transmit 13 bytes, generate rest locally
+- **Gaming experience**: Terminal becomes explorable 3D ASCII world
 
 ### Bandwidth-Driven Sizing
 

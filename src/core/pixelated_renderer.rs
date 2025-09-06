@@ -5,7 +5,6 @@
 //! Each pixel represents spatial density of ArxObjects.
 
 use crate::arxobject::ArxObject;
-use std::collections::HashMap;
 
 /// ASCII palette inspired by the industrial pixel art aesthetic
 /// Darker to lighter based on object density

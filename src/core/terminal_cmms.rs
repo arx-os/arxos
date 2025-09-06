@@ -4,7 +4,6 @@
 //! Everything in ASCII, everything in 13 bytes over mesh.
 
 use crate::arxobject::ArxObject;
-use crate::building_repository::BuildingBranch;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -114,8 +113,8 @@ impl WorkOrder {
         }
         
         Some(Self {
-            wo_id: obj.x as u16,
-            work_type: match (((obj.y as u16) & 0x00FF) as u8) {
+            wo_id: obj.x.max(0) as u16,
+            work_type: match ((obj.y.max(0) as u16) & 0x00FF) as u8 {
                 1 => WorkType::Preventive,
                 2 => WorkType::Corrective,
                 3 => WorkType::Emergency,
@@ -124,7 +123,7 @@ impl WorkOrder {
                 6 => WorkType::Upgrade,
                 _ => return None,
             },
-            priority: match (((obj.y as u16) >> 8) as u8) {
+            priority: match ((obj.y.max(0) as u16) >> 8) as u8 {
                 1 => Priority::Low,
                 2 => Priority::Medium,
                 3 => Priority::High,
@@ -132,7 +131,7 @@ impl WorkOrder {
                 5 => Priority::Emergency,
                 _ => return None,
             },
-            assigned_to: if obj.z > 0 { Some(obj.z) } else { None },
+            assigned_to: if obj.z > 0 { Some(obj.z as u16) } else { None },
             location: Location {
                 building_id: obj.building_id,
                 room: u16::from_le_bytes([obj.properties[0], obj.properties[1]]),
@@ -143,7 +142,10 @@ impl WorkOrder {
             },
             status: WorkOrderStatus::Open,
             session: TerminalSession::new(0),
-            branch_name: format!("wo-{:04x}", obj.x),
+            branch_name: {
+                let x = obj.x;
+                format!("wo-{:04x}", x)
+            },
             created_at: current_timestamp(),
             due_date: current_timestamp() + 86400, // 24 hours default
         })
@@ -154,9 +156,9 @@ impl WorkOrder {
         ArxObject {
             building_id: self.location.building_id,
             object_type: 0xFA, // Work order type
-            x: self.wo_id,
-            y: u16::from_le_bytes([self.work_type as u8, self.priority as u8]),
-            z: self.assigned_to.unwrap_or(0),
+            x: self.wo_id as i16,
+            y: u16::from_le_bytes([self.work_type as u8, self.priority as u8]) as i16,
+            z: self.assigned_to.unwrap_or(0) as i16,
             properties: [
                 (self.location.room & 0xFF) as u8,
                 (self.location.room >> 8) as u8,
@@ -345,7 +347,9 @@ impl TerminalCMMS {
                     "Note added".to_string()
                 }
                 cmd if cmd.starts_with("show ") => {
-                    self.show_equipment(&cmd[5..])
+                    let equipment_id = cmd[5..].to_string();
+                    drop(wo); // Release the mutable borrow
+                    return self.show_equipment(&equipment_id);
                 }
                 "changes" => {
                     format!("{} changes in branch {}", 
@@ -380,21 +384,26 @@ impl TerminalCMMS {
     pub fn generate_scheduled_work_orders(&mut self) {
         let now = current_timestamp();
         
-        for task in &self.schedule.preventive {
-            if task.due_date <= now {
-                let wo_id = self.create_work_order(
-                    task.task_type,
-                    Priority::Medium,
-                    Location {
-                        building_id: 0x0042,
-                        room: 0,
-                        equipment_id: Some(task.equipment_id),
-                    },
-                );
-                
-                if let Some(wo) = self.work_orders.get_mut(&wo_id) {
-                    wo.session.buffer.push("📅 Scheduled maintenance task".to_string());
-                }
+        // Collect tasks that are due
+        let due_tasks: Vec<_> = self.schedule.preventive.iter()
+            .filter(|task| task.due_date <= now)
+            .cloned()
+            .collect();
+        
+        // Now create work orders without borrowing self.schedule
+        for task in due_tasks {
+            let wo_id = self.create_work_order(
+                task.task_type,
+                Priority::Medium,
+                Location {
+                    building_id: 0x0042,
+                    room: 0,
+                    equipment_id: Some(task.equipment_id),
+                },
+            );
+            
+            if let Some(wo) = self.work_orders.get_mut(&wo_id) {
+                wo.session.buffer.push("📅 Scheduled maintenance task".to_string());
             }
         }
     }

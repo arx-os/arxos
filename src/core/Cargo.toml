@@ -30,6 +30,7 @@ regex = { version = "1.10", optional = true }
 
 # Additional dependencies for crypto and logging
 log = { version = "0.4", optional = true }
+env_logger = { version = "0.10", optional = true }
 ed25519-dalek = { version = "2.0", optional = true }
 sha2 = { version = "0.10", optional = true }
 
@@ -49,6 +50,7 @@ num_cpus = { version = "1.16", optional = true }
 # Terminal UI dependencies
 termion = { version = "2.0", optional = true }
 crossterm = { version = "0.27", optional = true }
+clap = { version = "4.4", features = ["derive"], optional = true }
 
 # Memory mapping for file storage
 memmap2 = { version = "0.9", optional = true }
@@ -58,7 +60,7 @@ hex = { version = "0.4", optional = true }
 
 [features]
 default = ["std", "rf_only"]
-std = ["dep:uuid", "dep:serde", "dep:serde_json", "dep:chrono", "dep:rand", "dep:tokio", "dep:async-trait", "dep:thiserror", "dep:lopdf", "dep:image", "dep:imageproc", "dep:regex", "dep:log", "dep:ed25519-dalek", "dep:sha2", "dep:lru", "dep:lazy_static", "dep:rayon", "dep:crossbeam", "dep:parking_lot", "dep:futures", "dep:num_cpus", "dep:termion", "dep:crossterm", "dep:memmap2", "dep:hex"]
+std = ["dep:uuid", "dep:serde", "dep:serde_json", "dep:chrono", "dep:rand", "dep:tokio", "dep:async-trait", "dep:thiserror", "dep:lopdf", "dep:image", "dep:imageproc", "dep:regex", "dep:log", "dep:env_logger", "dep:ed25519-dalek", "dep:sha2", "dep:lru", "dep:lazy_static", "dep:rayon", "dep:crossbeam", "dep:parking_lot", "dep:futures", "dep:num_cpus", "dep:termion", "dep:crossterm", "dep:clap", "dep:memmap2", "dep:hex"]
 no_std = []
 defmt = ["dep:defmt"]
 rf_only = []
@@ -92,14 +94,17 @@ path = "benches/simd_benchmarks.rs"
 
 [[example]]
 name = "ply_to_ascii"
+path = "../../examples/ply_to_ascii.rs"
 required-features = ["std"]
 
 [[example]]
 name = "ply_to_ascii_enhanced"
+path = "../../examples/demos/ply_to_ascii_enhanced.rs"
 required-features = ["std"]
 
 [[example]]
 name = "ply_to_ascii_3d"
+path = "../../examples/demos/ply_to_ascii_3d.rs"
 required-features = ["std"]
 
 # Removed HTTP client example (RF-only policy)
@@ -108,3 +113,9 @@ required-features = ["std"]
 name = "building_file_storage"
 path = "../../examples/building_file_storage.rs"
 required-features = ["std"]
+
+[[bin]]
+name = "arxos"
+path = "../../src/bin/arxos.rs"
+required-features = ["std"]
+

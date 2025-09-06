@@ -5,7 +5,6 @@
 //! This ensures building integrity while allowing field work.
 
 use crate::arxobject::ArxObject;
-use crate::simple_access_control::SimpleAccess;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -228,7 +227,8 @@ impl BuildingRepository {
                 branch.objects.insert(*object_id, *new);
             }
             BuildingChange::Remove { object, .. } => {
-                branch.objects.remove(&object.building_id);
+                let building_id = object.building_id;
+                branch.objects.remove(&building_id);
             }
             BuildingChange::Annotate { .. } => {
                 // Annotations don't change object state
@@ -312,14 +312,18 @@ impl BuildingRepository {
             .position(|m| m.mr_id == mr_id)
             .ok_or("Merge request not found")?;
         
-        let mr = &self.merge_requests[mr_index];
-        
-        if !matches!(mr.status, MergeStatus::Approved) {
-            return Err("Merge request not approved".to_string());
-        }
+        // Clone the changes we need before any mutable operations
+        let (mr_status, changes, mr_author, mr_title, mr_source_branch) = {
+            let mr = &self.merge_requests[mr_index];
+            if !matches!(mr.status, MergeStatus::Approved) {
+                return Err("Merge request not approved".to_string());
+            }
+            (mr.status.clone(), mr.changes.clone(), mr.author.clone(), 
+             mr.title.clone(), mr.source_branch.clone())
+        };
         
         // Apply changes to main branch
-        for change in &mr.changes {
+        for change in &changes {
             match change {
                 BuildingChange::Add { object, .. } => {
                     self.main_branch.objects.insert(object.building_id, *object);
@@ -328,7 +332,8 @@ impl BuildingRepository {
                     self.main_branch.objects.insert(*object_id, *new);
                 }
                 BuildingChange::Remove { object, .. } => {
-                    self.main_branch.objects.remove(&object.building_id);
+                    let building_id = object.building_id;
+                    self.main_branch.objects.remove(&building_id);
                 }
                 BuildingChange::Annotate { .. } => {
                     // Store annotations separately in production
@@ -346,15 +351,15 @@ impl BuildingRepository {
         self.merge_history.push(MergeLog {
             commit_hash,
             mr_id,
-            author: mr.author.clone(),
+            author: mr_author,
             merged_by: merged_by.to_string(),
-            change_count: mr.changes.len(),
+            change_count: changes.len(),
             timestamp: current_timestamp(),
-            description: mr.title.clone(),
+            description: mr_title,
         });
         
         // Clean up branch
-        self.branches.remove(&mr.source_branch);
+        self.branches.remove(&mr_source_branch);
         
         Ok(commit_hash)
     }

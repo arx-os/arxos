@@ -5,7 +5,7 @@
 
 use crate::arxobject::ArxObject;
 use crate::ascii_bridge::AsciiBridge;
-use crate::mesh_router::{MeshRouter, MeshTopology};
+use crate::mesh::mesh_router::{MeshRouter, MeshTopology};
 use crate::transport::Transport;
 use std::collections::VecDeque;
 

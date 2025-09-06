@@ -119,6 +119,11 @@ impl Default for SemanticCompressor {
 }
 
 impl SemanticCompressor {
+    /// Create a new semantic compressor with default settings
+    pub fn new() -> Self {
+        Self::default()
+    }
+    
     /// Compress point cloud to semantic components
     pub fn compress(&self, cloud: &PointCloud) -> Vec<SemanticComponent> {
         let mut components = Vec::new();
@@ -167,10 +172,10 @@ impl SemanticCompressor {
             };
             
             // Convert to millimeters relative to building origin
-            // Values are clamped during cast to u16 (0..65535)
-            let x = ((position.x - building_origin.x) * 1000.0).max(0.0).min(65535.0) as u16;
-            let y = ((position.y - building_origin.y) * 1000.0).max(0.0).min(65535.0) as u16;
-            let z = ((position.z - building_origin.z) * 1000.0).max(0.0).min(65535.0) as u16;
+            // Values are clamped during cast to i16 (-32768..32767)
+            let x = ((position.x - building_origin.x) * 1000.0).max(-32768.0).min(32767.0) as i16;
+            let y = ((position.y - building_origin.y) * 1000.0).max(-32768.0).min(32767.0) as i16;
+            let z = ((position.z - building_origin.z) * 1000.0).max(-32768.0).min(32767.0) as i16;
             
             objects.push(ArxObject::new(next_id, object_type, x, y, z));
             next_id += 1;

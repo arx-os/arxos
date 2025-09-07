@@ -1,37 +1,30 @@
-# ArxOS Service Configuration
-# Default configuration for ArxOS Service running on Meshtastic hardware
-
-[meshtastic]
-port = "/dev/ttyUSB0"  # Serial port for Meshtastic device
-baud_rate = 9600       # Serial communication baud rate
-node_id = 0x0001       # Unique node identifier
-timeout_seconds = 30   # Connection timeout
-retry_attempts = 3     # Number of retry attempts
-
-[building]
-id = "building-001"
-name = "Crystal Tower"
-description = "Default building configuration for ArxOS Service"
-
-[building.location]
-lat = 40.7128
-lon = -74.0060
-altitude = 10.0
+# ArxOS Configuration
+# Configuration for ArxOS - Buildings as Queryable Databases
 
 [database]
-path = "/var/lib/arxos/building.db"
-max_size = "100MB"
-backup_interval = 3600  # 1 hour in seconds
-retention_days = 30
+# PostgreSQL connection settings
+url = "postgresql://localhost/arxos"
+max_connections = 5
+connection_timeout = 30
 
 [terminal]
-prompt = "arx>"
+# Terminal interface settings
+prompt = "arxos"
 history_size = 1000
 auto_complete = true
-syntax_highlighting = true
 
-[service]
-log_level = "info"
-max_connections = 100
-heartbeat_interval = 60    # 1 minute in seconds
-cleanup_interval = 3600    # 1 hour in seconds
+[logging]
+# Logging configuration
+level = "info"  # trace, debug, info, warn, error
+format = "compact"  # compact, full, json
+
+# Optional web API configuration (when compiled with web feature)
+[web]
+enabled = false
+host = "127.0.0.1"
+port = 8080
+
+# BILT Marketplace configuration (future)
+[marketplace]
+enabled = false
+api_endpoint = "https://api.arxos.io/marketplace"

@@ -1,59 +1,81 @@
-# Arxos Examples
+# ArxOS Examples
 
-## Learn by Building
+Example demonstrations of ArxOS concepts. These are documentation examples that show the intended usage patterns.
 
-This directory contains example code and projects to get you started with Arxos.
+## Available Examples
 
-### Examples
+### navigate.rs
+Demonstrates terminal navigation concepts:
+- Loading buildings from database
+- Navigating filesystem-like paths
+- Using cd, ls, inspect commands
 
-#### 1. Basic Node (`basic_node/`)
-Simple ESP32 node that joins the mesh and sends heartbeats.
+### query.rs  
+Demonstrates SQL query patterns:
+- SELECT queries on building objects
+- Filtering by type, status, path
+- Finding maintenance issues
 
-#### 2. Outlet Controller (`outlet_controller/`)
-Control and monitor an electrical outlet, earning BILT tokens.
+### load_building.rs
+Demonstrates database integration:
+- Connecting to PostgreSQL
+- Loading building objects
+- Finding objects by path
 
-#### 3. Temperature Sensor (`temp_sensor/`)
-Read temperature/humidity and report to mesh network.
-
-#### 4. Terminal Client (`terminal_client/`)
-Connect to mesh network from a PC and view building data.
-
-#### 5. Mobile Scanner (`mobile_scanner/`)
-Use phone + Bluetooth LE to scan and map buildings.
-
-### Quick Start
+## Run Examples
 
 ```bash
-# Run the terminal example
-cd examples/terminal_client
-cargo run
+# Run navigation demo
+cargo run --example navigate
 
-# Flash ESP32 example
-cd examples/basic_node
-pio run -t upload
+# Run query demo
+cargo run --example query
+
+# Run loader demo
+cargo run --example load_building
 ```
 
-### Learning Path
+## Example Queries
 
-1. **Start Here** → `basic_node/` - Understand mesh basics
-2. **Add Sensors** → `temp_sensor/` - Read real data
-3. **Control Things** → `outlet_controller/` - Actuate devices
-4. **Visualize** → `terminal_client/` - See your building
-5. **Go Mobile** → `mobile_scanner/` - Map new areas
+```sql
+-- Find all outlets
+SELECT * FROM objects WHERE type = 'outlet'
 
-### BILT Rewards
+-- Find maintenance issues
+SELECT * FROM objects WHERE needs_repair = true
 
-Complete these examples to earn BILT:
-- Basic Node: 50 BILT
-- First Sensor: 100 BILT
-- First Control: 150 BILT
-- Terminal View: 200 BILT
-- Mobile Scan: 500 BILT
+-- Find objects on circuit 2
+SELECT * FROM objects WHERE path LIKE '/electrical/circuits/2/%'
 
-### Community Examples
+-- Find failed equipment
+SELECT * FROM objects WHERE status = 'failed'
+```
 
-Share your examples! Best examples each month earn bonus BILT.
+## Example Paths
 
----
+```
+/electrical/circuits/2/outlet_2B
+/electrical/panels/panel_1
+/plumbing/supply/hot/valve_3
+/hvac/zones/north/thermostat_1
+/spaces/floor_2/room_205
+```
 
-*"Learning by doing, earning while learning"* 🎓
+## Terminal Commands
+
+```bash
+# Navigate to electrical systems
+cd /electrical
+ls
+cd circuits/2
+inspect outlet_2B
+
+# Trace connections
+trace outlet_2B upstream
+
+# Find nearby objects
+near 5
+
+# Query from terminal
+SELECT * FROM objects WHERE type = 'outlet'
+```

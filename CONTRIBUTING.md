@@ -1,135 +1,287 @@
-# Contributing to Arxos
+# Contributing to ArxOS
 
-Thank you for your interest in contributing to Arxos! This air-gapped building intelligence system has unique requirements that all contributions must follow.
+Thank you for your interest in contributing to ArxOS! We're building the future of building intelligence - where buildings become queryable databases.
 
-## Core Principles
+## Code of Conduct
 
-### 🔒 The Air-Gap Promise
-**"This system never touches the web"** - All contributions must maintain complete offline operation. No internet dependencies, cloud services, or external APIs.
+- Be respectful and inclusive
+- Focus on constructive criticism
+- Help others learn and grow
+- Keep discussions professional
 
-### 📡 RF-Only Communication
-- All updates via LoRa mesh network
-- No WiFi, Bluetooth, or cellular
-- Ed25519 signatures for authenticity
+## How to Contribute
 
-### 🗜️ Semantic Compression
-- Maintain 10,000:1 compression ratio
-- 13-byte ArxObject protocol is sacred
-- ASCII visualization for all data
+### 1. Report Bugs
 
-## Development Setup
+Found a bug? Please create an issue with:
+- Clear title and description
+- Steps to reproduce
+- Expected vs. actual behavior
+- System information (OS, Rust version, PostgreSQL version)
+- Error messages or logs
+
+**Example Bug Report:**
+```markdown
+Title: TRACE command fails with circular references
+
+Description: When tracing electrical paths with circular references, the command hangs.
+
+Steps:
+1. Run `arxos-terminal`
+2. Enter: `TRACE outlet_2B UPSTREAM`
+3. System hangs if circuit has circular reference
+
+Expected: Should detect and handle circular references
+System: macOS 14.0, Rust 1.75, PostgreSQL 15
+```
+
+### 2. Suggest Features
+
+Have an idea? Open a discussion first:
+- Explain the problem it solves
+- Provide use cases
+- Consider backward compatibility
+- Discuss implementation approach
+
+### 3. Submit Code
+
+#### Setup Development Environment
 
 ```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Clone repository
-git clone https://github.com/arxos/arxos.git
+# Fork and clone
+git clone https://github.com/YOUR_USERNAME/arxos.git
 cd arxos
 
-# Build everything
-cargo build --release
+# Install dependencies
+brew install postgresql postgis
+cargo build
+
+# Setup database
+createdb arxos_dev
+psql arxos_dev < schema.sql
 
 # Run tests
 cargo test
 ```
 
-## Code Standards
+#### Code Standards
 
-### Language
-- **Rust only** for core systems
-- **Swift** for iOS LiDAR app only
-- **No JavaScript/TypeScript** (no web components)
-
-### Architecture Rules
-1. **no_std compatibility** where possible
-2. **Terminal-first** user interface
-3. **SQL as protocol** for data exchange
-4. **SSH for access** (no custom protocols)
-
-### Code Style
+**Rust Style:**
+- Follow standard Rust conventions
 - Use `cargo fmt` before committing
 - Run `cargo clippy` and fix warnings
-- Write tests for new features
+- Add tests for new functionality
 - Document public APIs
 
-## Testing
+**Commit Messages:**
+```
+type: brief description
 
+Longer explanation if needed. Explain what and why,
+not how. Reference issues like #123.
+
+Co-authored-by: Name <email>
+```
+
+Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `style`, `chore`
+
+**Examples:**
+```
+feat: add circuit load balancing algorithm
+
+Implements automatic load distribution across circuits
+using graph traversal. Prevents overload conditions
+by redistributing connections.
+Closes #45.
+
+fix: correct spatial index for 3D queries
+
+PostGIS spatial index wasn't properly handling Z-axis.
+Added 3D index for height-based queries.
+```
+
+#### Testing
+
+**Unit Tests:**
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_building_path_parsing() {
+        let path = "/building_42/electrical/circuits/15";
+        let parsed = BuildingPath::parse(path).unwrap();
+        assert_eq!(parsed.building_id, "building_42");
+        assert_eq!(parsed.system, "electrical");
+    }
+}
+```
+
+**Integration Tests:**
+```rust
+// tests/query_integration.rs
+#[tokio::test]
+async fn test_trace_upstream() {
+    let db = setup_test_db().await;
+    let engine = QueryEngine::new(db);
+    
+    let result = engine.execute("TRACE outlet_2B UPSTREAM").await;
+    assert!(result.unwrap().contains("main_panel"));
+}
+```
+
+**Run All Tests:**
 ```bash
-# Unit tests
 cargo test
-
-# Integration tests
-cargo test --test '*'
-
-# Document parser tests
-./scripts/test_document_parser.sh
-
-# Terminal client test
-cargo run --bin arxos -- --help
+cargo test --all-features
 ```
 
-## Submitting Changes
+### 4. Improve Documentation
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** changes with clear messages
-4. **Test** thoroughly (no internet required!)
-5. **Push** to your fork
-6. **Open** a Pull Request
+Documentation is crucial! You can help by:
+- Fixing typos and grammar
+- Adding examples
+- Clarifying confusing sections
+- Creating tutorials
+- Writing guides for specific use cases
 
-## Commit Messages
+**Documentation Files:**
+- `README.md` - Quick start and overview
+- `ARCHITECTURE.md` - System design and structure
+- `CONTRIBUTING.md` - This file
+- `schema.sql` - Database schema documentation
 
-Follow conventional commits:
+### 5. Review Pull Requests
+
+Help review others' PRs:
+- Test the changes locally
+- Review code quality
+- Check for breaking changes
+- Suggest improvements
+- Be constructive and kind
+
+## Pull Request Process
+
+1. **Fork and Branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+
+2. **Make Changes**
+   - Write clean, documented code
+   - Add tests
+   - Update documentation
+
+3. **Test Thoroughly**
+   ```bash
+   cargo fmt
+   cargo clippy
+   cargo test
+   cargo build --release
+   ```
+
+4. **Submit PR**
+   - Clear title and description
+   - Reference related issues
+   - Include screenshots if UI changes
+   - List breaking changes
+
+5. **Address Review**
+   - Respond to feedback
+   - Make requested changes
+   - Keep PR updated with main
+
+## Development Guidelines
+
+### Project Structure
+
 ```
-feat: Add equipment symbol detection
-fix: Correct ArxObject checksum calculation
-docs: Update SSH terminal commands
-test: Add PDF parser integration tests
-refactor: Simplify mesh routing algorithm
+src/
+├── main.rs         # Entry point and CLI
+├── models.rs       # Core data models (BuildingObject, Location, etc.)
+├── database.rs     # PostgreSQL integration
+├── terminal.rs     # Terminal interface and commands
+└── query.rs        # SQL-like query engine
 ```
 
-## Areas Needing Contribution
+### Key Principles
+
+1. **Terminal First**: Terminal is the primary interface
+2. **Offline First**: Must work without internet
+3. **Hierarchical Paths**: Buildings as file systems
+4. **Graph Relationships**: Everything is connected
+5. **SQL Queries**: Familiar query language
+6. **Progressive Enhancement**: Start simple, add complexity
+
+### Performance Considerations
+
+- Queries should complete in < 100ms
+- Spatial queries use PostGIS indexes
+- Graph traversal uses BFS/DFS with cycle detection
+- WebSocket uses binary protocol for efficiency
+- State sync is delta-based
+
+### Security
+
+- Never store credentials in code
+- Validate all user input
+- Use parameterized queries
+- Sanitize file paths
+- Rate limit API endpoints
+- Authenticate WebSocket connections
+
+## Areas Needing Help
 
 ### High Priority
-- [ ] iOS RoomPlan integration
-- [ ] Mesh routing optimization
-- [ ] Hardware PCB designs
-- [ ] Additional equipment symbols
+- [ ] PDF floor plan parsing
+- [ ] Advanced circuit tracing algorithms
+- [ ] Time-series query optimization
+- [ ] AR marker detection
+- [ ] BILT smart contracts
+
+### Good First Issues
+- [ ] Add more SQL query examples
+- [ ] Improve error messages
+- [ ] Add terminal color themes
+- [ ] Create Docker setup
+- [ ] Write integration tests
 
 ### Documentation
-- [ ] Hardware assembly guides
-- [ ] Deployment tutorials
-- [ ] API examples
-- [ ] Troubleshooting guides
+- [ ] Video tutorials
+- [ ] API client libraries
+- [ ] Query cookbook
+- [ ] Deployment guides
 
-### Testing
-- [ ] Mesh network simulations
-- [ ] Load testing for 1000+ nodes
-- [ ] RF interference testing
-- [ ] Battery life optimization
+## Getting Help
 
-## Prohibited Changes
+### Discord
+Join our Discord for real-time help: discord.gg/arxos
 
-❌ **Never add:**
-- Internet connectivity
-- Cloud services
-- Web interfaces
-- External dependencies requiring network
-- Proprietary protocols
-- Closed-source components
+### Office Hours
+Weekly community calls on Thursdays at 2 PM EST
 
-## Questions?
+### Documentation
+- [Architecture Guide](ARCHITECTURE.md)
+- [README](README.md)
 
-- Open an issue for bugs
-- Start a discussion for features
-- Read [README.md](README.md) for overview
-- Check [docs/](docs/) for detailed documentation
+## Recognition
+
+Contributors are recognized in:
+- [AUTHORS.md](AUTHORS.md) file
+- Release notes
+- Project website
+- Annual contributor report
 
 ## License
 
 By contributing, you agree that your contributions will be licensed under the MIT License.
 
----
+## Questions?
 
-*Remember: The constraint is the innovation. Keep it offline, keep it simple, keep it secure.*
+Feel free to:
+- Open an issue for questions
+- Ask in Discord
+- Email: contribute@arxos.io
+
+Thank you for helping make buildings queryable! 🏢💻

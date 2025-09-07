@@ -1,75 +1,60 @@
-[workspace]
-members = [
-    "src/core",
-    "src/terminal",
-    "src/service",
-    # "src/embedded",  # Requires embedded toolchain
-    # "src/tools",     # Fix clap derive issues later
-]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "arxos"
 version = "0.1.0"
-authors = ["Arxos Contributors"]
 edition = "2021"
-license = "MIT"
-repository = "https://github.com/arxos/arxos-mesh"
 
-[workspace.dependencies]
-# Core dependencies
-heapless = "0.7"
-nb = "1.0"
-embedded-hal = "0.2"
-postcard = "1.0"
+[[bin]]
+name = "arxos"
+path = "src/main.rs"
 
-# Serialization
-uuid = { version = "1.0", features = ["v4", "serde"] }
+[dependencies]
+# Core
+tokio = { version = "1.35", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 
-# No web dependencies - pure RF mesh only!
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
 
-# Meshtastic integration (pure Rust)
-meshtastic = "0.1.7"
-prost = "0.12"
-prost-types = "0.12"
-tokio-serial = "5.4"
-btleplug = "0.11"
+# Terminal
+clap = { version = "4.4", features = ["derive", "env"] }
+rustyline = "12.0"
 
 # Error handling
 thiserror = "1.0"
 anyhow = "1.0"
 
-# Terminal dependencies
-crossterm = "0.27"
-ratatui = "0.24"
-clap = { version = "4.4", features = ["derive"] }
-
-# Async runtime
-tokio = { version = "1.35", features = ["full"] }
-embassy-executor = "0.4"
-
 # Logging
 log = "0.4"
 env_logger = "0.10"
-defmt = "0.3"
 
-# Testing
-mockall = "0.12"
-proptest = "1.4"
+# Web API
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-br"] }
+hyper = { version = "1.0", features = ["full"] }
 
-# Mobile AR dependencies (iOS/Android)
-objc = "0.2"
-block = "0.1"
+# API utilities
+async-trait = "0.1"
+futures = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
+async-stream = "0.3"
 
-[profile.release]
-opt-level = "z"     # Optimize for size
-lto = true          # Link-time optimization
-codegen-units = 1   # Single codegen unit for better optimization
-strip = true        # Strip symbols
-panic = "abort"     # Smaller panic handler
+# Webhook support
+reqwest = { version = "0.11", features = ["json"] }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
 
-[profile.embedded]
-inherits = "release"
-opt-level = "s"     # Optimize for size with decent speed
-debug = false       # No debug info for smaller binary
+# Production features (simplified)
+tracing = "0.1" 
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Utilities
+rand = "0.8"
+
+[features]
+default = ["api"]
+api = []

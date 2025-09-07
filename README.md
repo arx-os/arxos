@@ -1,187 +1,190 @@
-# ArxOS - Buildings as Playable Worlds
+# ArxOS - Buildings as Queryable Databases
 
-> **"We're not maintaining buildings. We're playing them."**
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
+[![API](https://img.shields.io/badge/API-REST%20%2B%20SSE-green.svg)](docs/api/README.md)
 
-## What is ArxOS?
-
-ArxOS transforms every building on Earth into a **living, playable dungeon** - like Elden Ring meets infrastructure, Pokemon Go meets maintenance, all rendered in ASCII art and never touching the internet. Through 13-byte ArxObjects transmitted over packet radio, we compress reality itself into a game where every maintenance task is a quest, every room is a level, and every technician is a hero.
-
-**Core Innovation**: Buildings become conscious, interactive game worlds. LiDAR scans and semantic input compress into ArxObjects that render as explorable ASCII dungeons in terminals, AR overlays for field techs, and CSI WiFi "vision" for security - all through RF mesh networks anchored by school districts.
-
-## The Vision: Reality as a Game Engine
-
-### Physical → Digital → Playable
-1. **Capture**: LiDAR scans + semantic input → 10,000:1 compression
-2. **Compress**: Reality → 13-byte ArxObjects (quantum seeds of infinite detail)
-3. **Render**: ASCII dungeons, AR overlays, CSI WiFi vision
-4. **Play**: Navigate buildings like roguelikes, complete quests, level up
-
-### The Three Views
-- **Terminal**: Buildings as ASCII art dungeons (think Dwarf Fortress)
-- **AR**: Pokemon Go for maintenance techs
-- **CSI WiFi**: See through walls using electromagnetic shadows
+ArxOS transforms physical buildings into queryable, real-time databases with tokenized economic incentives. Navigate through building systems like a file system, query equipment with SQL, trace connections through infrastructure, and participate in the building data economy through the BILT token system.
 
 ## Quick Start
 
+### Prerequisites
+
 ```bash
-# Clone and build
-git clone https://github.com/arxos/arxos.git
-cd arxos
-cargo build --release
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Run ArxOS service
-cargo run --bin arxos-service -- --config config.toml
-
-# Connect to service via terminal
-arxos connect --port /dev/ttyUSB0
+# Install PostgreSQL
+brew install postgresql  # macOS
+brew services start postgresql
 ```
 
-## Core Features
+### Setup
 
-### Reality Compression Engine
-- **🗜️ 10,000:1 Compression**: 50MB point clouds → 5KB ArxObjects → Infinite procedural detail
-- **🧬 Quantum Seeds**: Each 13-byte object contains infinite nested realities
-- **📱 iPhone LiDAR**: 20-second scans capture entire buildings
+```bash
+# Clone repository
+git clone https://github.com/arx-os/arxos.git
+cd arxos
 
-### Gaming Infrastructure
-- **🎮 Roguelike Buildings**: Every building is a playable dungeon
-- **⚔️ Quest System**: Maintenance tasks become RPG quests with XP rewards
-- **👁️ CSI WiFi Vision**: See through walls using electromagnetic patterns
-- **🏆 Achievement System**: Level up, unlock abilities, compete globally
+# Create database and run all migrations
+createdb arxos
+for file in migrations/*.sql; do
+    psql arxos < "$file"
+done
 
-### Unhackable Mesh Network  
-- **🔒 Air-Gapped**: No internet = no remote hacking possible
-- **📡 RF Mesh**: LoRa packet radio creates planetary nervous system
-- **🔐 Zero-Knowledge**: Districts route without reading data
-- **🏫 School Backbone**: Public infrastructure as network nodes
+# Build
+cargo build --release
+
+# Run API server (recommended)
+cargo run -- --api --port 3000
+
+# Or run terminal interface
+cargo run -- --building <building-id>
+```
+
+## Terminal Interface
+
+Navigate buildings like a filesystem:
+
+```
+arxos:/> cd electrical/circuits/2
+arxos:/electrical/circuits/2> ls
+  outlet_2A [OK]
+  outlet_2B [FAILED]
+
+arxos:/electrical/circuits/2> inspect outlet_2B
+╔════════════════════════════════════════════╗
+║ Object: outlet_2B                          ║
+╚════════════════════════════════════════════╝
+
+Path:     /electrical/circuits/2/outlet_2B
+Type:     outlet
+Status:   failed
+Health:   25
+
+⚠ NEEDS REPAIR
+
+Properties:
+  voltage: 120
+```
+
+## Core Commands
+
+### Navigation
+- `cd <path>` - Change directory
+- `ls [path]` - List contents
+- `pwd` - Print working directory
+- `look` - Describe current location
+
+### Inspection
+- `inspect <object>` - Show object details
+- `trace <object> upstream` - Trace connections
+- `near [radius]` - Find nearby objects
+
+### Queries
+```sql
+SELECT * FROM objects WHERE type = 'outlet'
+SELECT * FROM objects WHERE needs_repair = true
+SELECT * FROM objects WHERE path LIKE '/electrical/%'
+```
+
+## Building Structure
+
+```
+/
+├── electrical/
+│   ├── panels/
+│   ├── circuits/
+│   └── outlets/
+├── plumbing/
+│   ├── supply/
+│   └── drainage/
+├── hvac/
+│   ├── equipment/
+│   └── zones/
+└── spaces/
+    ├── floor_1/
+    ├── floor_2/
+    └── floor_3/
+```
+
+## 🏗️ Key Features
+
+### Core Capabilities
+- **SQL Query Engine** - Query buildings with SQL syntax
+- **Real-time Events** - Server-Sent Events for live updates
+- **Webhook System** - Push notifications to external systems
+- **Bulk Operations** - Efficient batch processing
+- **Audit History** - Complete change tracking
+
+### BILT Rating System (0z-1A)
+- **Algorithmic Valuation** - Data completeness determines rating
+- **Real-time Updates** - Every contribution affects rating
+- **Market Integration** - Ratings drive token value
+
+### Token Economics
+- **Contribution Rewards** - Earn tokens for data contributions
+- **Reputation System** - Build trust through quality work
+- **Market Feeds** - Real-time pricing and valuations
+
+## Architecture
+
+ArxOS implements a sophisticated event-driven architecture:
+
+- **REST API** - Full CRUD operations (src/api/)
+- **Event System** - PostgreSQL LISTEN/NOTIFY (src/events/)
+- **Rating Engine** - BILT rating calculations (src/rating/)
+- **Market Layer** - Token economics (src/market/)
+- **Terminal Interface** - CLI navigation (src/terminal.rs)
+- **PostgreSQL** - Persistent storage with triggers
+
+## 📡 API Overview
+
+### REST Endpoints
+```bash
+# Building Objects
+GET    /api/objects              # List objects
+POST   /api/objects              # Create object
+PATCH  /api/objects/{id}         # Update object
+DELETE /api/objects/{id}         # Delete object
+
+# BILT Ratings
+GET    /api/buildings/{id}/rating           # Current rating
+GET    /api/buildings/{id}/rating/breakdown # Component scores
+
+# Market & Tokens
+POST   /api/contributions                   # Record contribution
+GET    /api/contributors/{id}/profile       # Reputation profile
+GET    /api/tokens/{building_id}           # Token information
+
+# Real-time Events
+GET    /api/events                          # Server-Sent Events stream
+```
+
+### Event Types
+- `object.created`, `object.updated`, `object.deleted`
+- `bilt.rating.changed`, `bilt.rating.calculated`
+- `state.changed`, `alert.raised`
+
+## 💰 Building Whisperer Integration
+
+ArxOS implements the "Building Whisperer" vision:
+
+1. **Every contribution creates value** - Worker data becomes tokens
+2. **Instant valuation** - Contributions affect ratings immediately
+3. **Market signals** - Rating changes trigger trading opportunities
+4. **Information asymmetry** - Real-time data provides advantages
 
 ## Documentation
 
-### Vision Documents
-- **[docs/01-vision/VISION.md](docs/01-vision/VISION.md)** - Core technical vision
-- **[docs/01-vision/GAMING_VISION.md](docs/01-vision/GAMING_VISION.md)** - Buildings as playable worlds
-- **[docs/01-vision/CSI_WIFI_VISION.md](docs/01-vision/CSI_WIFI_VISION.md)** - Electromagnetic vision system
-
-### Architecture
-- **[docs/03-architecture/NETWORK_ARCHITECTURE.md](docs/03-architecture/NETWORK_ARCHITECTURE.md)** - Zero-knowledge routing
-- **[docs/03-architecture/FLOW_ORCHESTRATOR.md](docs/03-architecture/FLOW_ORCHESTRATOR.md)** - Core routing philosophy
-- **[docs/MARKETPLACE.md](docs/MARKETPLACE.md)** - Real-time data marketplace
-- **[docs/README.md](docs/README.md)** - Complete documentation index
-
-## Project Structure
-
-```
-arxos/
-├── src/
-│   ├── core/               # Core library (no_std compatible)
-│   ├── terminal/           # Terminal client
-│   ├── service/            # ArxOS service layer
-│   └── ios/               # iOS LiDAR scanner
-├── firmware_old/           # Legacy firmware (archived)
-├── docs/                  # Documentation
-├── hardware/              # PCB designs and schematics
-└── tests/                 # Integration tests
-```
-
-## Example Usage
-
-```bash
-# Load building plan
-arxos load-plan school.pdf
-
-# View floor
-arxos view-floor 1
-
-# Query equipment
-arxos query "room:127 type:outlet"
-
-# Building as playable dungeon:
-╔════════════════════════════════════════╗
-║     FLOOR 1 - ACTIVE QUESTS: 3        ║
-╠════════════════════════════════════════╣
-║ ┌──────────┐  ┌──────────┐            ║
-║ │Lab 127 ⚠ │  │Class 128 │            ║
-║ │    @     │  │  ░░░░    │            ║
-║ │  [O] [L] │  │ [L] [V]  │            ║
-║ └────| |───┘  └────| |───┘            ║
-║                                        ║
-║ @ You  ⚠ Quest  ░ CSI Trail  O Outlet ║
-╚════════════════════════════════════════╝
-```
-
-### ArxObject input formats (terminal `send`)
-
-You can send an `ArxObject` in two ways:
-
-- Compact 13-byte hex (26 hex chars, little-endian struct layout):
-```bash
-arxos> send 0x341210d007b80b2c010c78000f
-# Breakdown:
-# 34 12  | 10 | d0 07 | b8 0b | 2c 01 | 0c 78 00 0f
-#  bid     typ   x        y       z       props[4]
-```
-
-- Key=value pairs (hex or decimal). Aliases allowed: `building_id|bid|b`, `object_type|type|ot`, `props|properties|props_hex`.
-```bash
-arxos> send bid=0x1234 type=0x10 x=2000 y=3000 z=300 props=0x0C78000F
-arxos> send building_id=4660 object_type=16 x=2000 y=3000 z=300 properties=[12,120,0,15]
-```
-
-Notes:
-- Coordinates are millimeters.
-- `props` accepts `0xAABBCCDD` or `[AA,BB,CC,DD]` (decimal or hex per element).
-- Inputs are validated; malformed values are rejected.
-
-#### Heartbeat (programmatic)
-
-Heartbeats announce node presence on the RF mesh. The service sends these automatically, but if you need to generate one in Rust:
-```rust
-use arxos_core::ArxObject;
-
-let node_id: u16 = 0x0001;
-let heartbeat: ArxObject = ArxObject::heartbeat(node_id);
-// Now publish via your transport/client; the service does this for you.
-```
-
-## Hardware Requirements
-
-- **Standard Meshtastic Hardware** (ESP32 + LoRa radio)
-- **ArxOS Service** runs on any compatible device
-- **USB LoRa Dongle** for desktop connections
-- **Bluetooth** for mobile device connections
-
-## Contributing
-
-This is an air-gapped system. Contributions must maintain the RF-only principle.
+- [API Documentation](docs/api/README.md)
+- [Quick Start Guide](QUICK_START.md)
+- [Terminal Commands](docs/TERMINAL.md)
+- [Architecture](ARCHITECTURE.md)
+- [Deployment Guide](docs/deployment/README.md)
+- [BILT Rating System](docs/bilt-rating.md)
+- [Token Economics](docs/token-economics.md)
 
 ## License
 
-MIT License - See LICENSE file
-
-## The Philosophy
-
-### Why Buildings as Games?
-- **Engagement**: Maintenance becomes addictive, not tedious
-- **Visualization**: Complex systems become intuitive dungeons
-- **Motivation**: XP and achievements drive performance
-- **Training**: New staff learn by playing
-- **Community**: Technicians form guilds and share strategies
-
-### Why No Internet?
-- **Security**: Air-gapped = unhackable from outside
-- **Sovereignty**: Your building data stays yours
-- **Resilience**: Works during internet outages
-- **Privacy**: No cloud surveillance possible
-- **Innovation**: Constraints force elegant solutions
-
-### The Cyberpunk Reality
-We're building the cyberpunk future where:
-- Hackers are maintenance techs with terminal access
-- Buildings have consciousness rendered in ASCII
-- Reality compresses into 13-byte seeds
-- WiFi lets you see through walls
-- Infrastructure is a massively multiplayer roguelike
-
----
-
-*"We're not maintaining buildings. We're playing them."*
+MIT

@@ -21,6 +21,13 @@ Buildings should be treated as living databases that can be:
 - PDF export with inspection reports
 - Git integration for version control
 
+**Phase 2 Database Layer** ✅ (NEW!)
+- SQLite database for fast queries
+- SQL query interface for building data
+- Automatic JSON to SQLite migration
+- Spatial indexing for proximity searches
+- Full-text search on equipment
+
 ## Installation
 
 ```bash
@@ -44,6 +51,9 @@ go install ./cmd/arx
 # Import a PDF floor plan
 ./arx import building_floor_2.pdf
 
+# Migrate data to SQLite database (one-time setup)
+./arx db migrate
+
 # View ASCII representation
 ./arx map
 
@@ -52,6 +62,10 @@ go install ./cmd/arx
 
 # Mark equipment status
 ./arx mark "Switch SW-01" --status failed --notes "No power"
+
+# Query the database
+./arx query "SELECT * FROM equipment WHERE status = 'failed'"
+./arx query "SELECT type, COUNT(*) as count FROM equipment GROUP BY type"
 
 # Export inspection report
 ./arx export inspection_report.pdf
@@ -105,6 +119,20 @@ go install ./cmd/arx
 ```bash
 # Export inspection report (PDF/text format)
 ./arx export <output.pdf> [--floor <floor_plan>] [--original <original.pdf>]
+```
+
+### Database Queries
+
+```bash
+# Execute SQL queries on building data
+./arx query "SELECT * FROM equipment WHERE status = 'failed'"
+./arx query "SELECT * FROM equipment WHERE type = 'outlet' AND room_id = 'room_2b'"
+./arx query "SELECT type, COUNT(*) as count FROM equipment GROUP BY type"
+./arx query "SELECT e.*, r.name FROM equipment e JOIN rooms r ON e.room_id = r.id"
+
+# Database management
+./arx db migrate    # Migrate JSON files to SQLite
+./arx db sync       # Sync JSON and database
 ```
 
 ### Version Control

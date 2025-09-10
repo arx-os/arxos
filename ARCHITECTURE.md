@@ -422,24 +422,512 @@ CREATE TABLE history (
 );
 ```
 
-### 3. BIM/CAD Sync Daemon (Go)
+### 3. ArxOS Daemon - Kubernetes-Style Building Controller
 
-#### Supported Formats (MVP)
-- **IFC** (Industry Foundation Classes) - Open standard
-- **PDF** - Floor plans and schematics
-- **DWG/DXF** - Via libraries (future)
+The ArxOS daemon (`arxd`) implements a Kubernetes-inspired control plane for building data management. It provides automatic synchronization between multiple data sources, conflict resolution, and a driver-based architecture for extensibility.
 
-#### Sync Operations
-```go
-// Import from BIM
-arx sync import building.ifc
+#### Architecture Overview
 
-// Export changes back to BIM
-arx sync export --format=ifc --branch=field-updates
-
-// Watch for changes
-arx sync watch /path/to/bim/files
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                     ArxOS Daemon (arxd)                      │
+├───────────────┬──────────────┬──────────────┬──────────────┤
+│  Controller   │   Drivers    │   State      │  Reconciler  │
+│   Manager     │   Registry   │   Store      │    Loop      │
+├───────────────┴──────────────┴──────────────┴──────────────┤
+│                     File System Watchers                     │
+└─────────────────────────────────────────────────────────────┘
+        ↑               ↑               ↑               ↑
+        │               │               │               │
+    PDF Files      CAD Files       IFC Models     API Calls
+```
+
+#### Driver Interface Pattern
+
+The daemon uses a plugin-style driver architecture to support multiple file formats:
+
+```go
+// pkg/drivers/interface.go
+type Driver interface {
+    // Identify if this driver can handle the file
+    CanHandle(filepath string) bool
+    
+    // Extract building data from source file
+    Extract(filepath string) (*models.FloorPlan, error)
+    
+    // Write changes back to source format (if supported)
+    Sync(plan *models.FloorPlan, filepath string) error
+    
+    // Watch for changes (optional - some formats support live watching)
+    Watch(filepath string, changes chan<- FileChange) error
+    
+    // Get driver metadata
+    Info() DriverInfo
+}
+
+type DriverInfo struct {
+    Name          string   // "revit", "autocad", "pdf", "ifc"
+    Extensions    []string // [".rvt", ".rfa"]
+    Priority      int      // For handling conflicts when multiple drivers match
+    Bidirectional bool     // Can write changes back
+    Version       string   // Driver version
+}
+```
+
+#### Declarative Configuration (CRD-Style)
+
+Buildings are configured using Kubernetes-style manifests:
+
+```yaml
+# .arxos/building.yaml
+apiVersion: arxos.io/v1
+kind: Building
+metadata:
+  name: building-42
+  namespace: campus-north
+  labels:
+    environment: production
+    region: us-west
+spec:
+  sources:
+    - name: main-drawings
+      type: autocad
+      path: /shared/cad/building42/*.dwg
+      watch: true
+      sync: bidirectional
+      priority: 100  # Higher priority wins conflicts
+    
+    - name: floor-plans  
+      type: pdf
+      path: /docs/floorplans/*.pdf
+      watch: true
+      sync: read-only
+      extractors:
+        - universal  # Try universal parser first
+        - ocr       # Fall back to OCR if needed
+    
+    - name: revit-model
+      type: revit
+      path: /bim/building42.rvt
+      watch: false  # Only sync on demand
+      sync: bidirectional
+      schedule: "0 2 * * *"  # Cron: Daily at 2 AM
+  
+  reconciliation:
+    interval: 5m
+    conflictPolicy: priority  # or 'newest-wins', 'manual'
+    mergeStrategy: three-way  # git-style merging
+    
+  storage:
+    backend: sqlite  # or 'json', 'postgres'
+    path: .arxos/building42.db
+    
+  notifications:
+    webhook: https://api.company.com/arxos/updates
+    events: [conflict, sync-complete, error]
+```
+
+#### Reconciliation Loop Pattern
+
+The daemon implements a control loop similar to Kubernetes controllers:
+
+```go
+// internal/daemon/controller.go
+type BuildingController struct {
+    drivers      map[string]Driver
+    watchers     map[string]*FileWatcher
+    store        state.Store
+    queue        workqueue.RateLimitingInterface
+    informerCache cache.Cache
+}
+
+func (c *BuildingController) Run(ctx context.Context) error {
+    // Start informers for each source
+    for _, source := range c.config.Sources {
+        go c.runInformer(ctx, source)
+    }
+    
+    // Main reconciliation loop
+    for {
+        select {
+        case <-ctx.Done():
+            return ctx.Err()
+            
+        case <-time.Tick(c.config.ReconcileInterval):
+            c.reconcileAll()
+            
+        case event := <-c.eventChannel:
+            c.handleEvent(event)
+        }
+    }
+}
+
+func (c *BuildingController) reconcile(source Source) error {
+    // 1. Get desired state (from source files)
+    driver := c.selectDriver(source)
+    desired, err := driver.Extract(source.Path)
+    if err != nil {
+        return fmt.Errorf("extract failed: %w", err)
+    }
+    
+    // 2. Get actual state (from ArxOS store)
+    actual := c.store.GetFloorPlan(source.Name)
+    
+    // 3. Compute diff
+    diff := c.computeDiff(actual, desired)
+    
+    // 4. Apply reconciliation based on sync policy
+    switch source.Sync {
+    case "bidirectional":
+        // Three-way merge with common ancestor
+        ancestor := c.store.GetAncestor(source.Name)
+        merged := c.threeWayMerge(ancestor, actual, desired)
+        
+        // Update both sides
+        c.store.Update(merged)
+        driver.Sync(merged, source.Path)
+        
+    case "read-only":
+        // Source is authoritative
+        c.store.Update(desired)
+        
+    case "write-only":
+        // ArxOS is authoritative
+        driver.Sync(actual, source.Path)
+    }
+    
+    // 5. Record reconciliation
+    c.recordMetrics(source, diff)
+    
+    return nil
+}
+```
+
+#### State Management
+
+The daemon maintains state with multiple storage backends:
+
+```go
+// internal/daemon/state/store.go
+type Store interface {
+    // Core CRUD operations
+    GetFloorPlan(id string) (*models.FloorPlan, error)
+    UpdateFloorPlan(plan *models.FloorPlan) error
+    DeleteFloorPlan(id string) error
+    
+    // Versioning
+    GetRevision(id string) int64
+    GetHistory(id string, limit int) []Change
+    GetAncestor(id string) *models.FloorPlan
+    
+    // Conflict management
+    HasConflict(id string) bool
+    GetConflicts(id string) []Conflict
+    ResolveConflict(id string, resolution Resolution) error
+    
+    // Watch for changes
+    Watch(id string) <-chan StateChange
+    
+    // Transactions
+    BeginTx() Transaction
+}
+
+// Storage backend implementations
+type SQLiteStore struct { /* ... */ }
+type JSONStore struct { /* ... */ }
+type PostgresStore struct { /* ... */ }
+```
+
+#### Driver Registry and Loading
+
+Drivers can be built-in or loaded as plugins:
+
+```go
+// pkg/drivers/registry.go
+type Registry struct {
+    drivers map[string]Driver
+    mu      sync.RWMutex
+}
+
+func (r *Registry) Register(driver Driver) error {
+    r.mu.Lock()
+    defer r.mu.Unlock()
+    
+    info := driver.Info()
+    if _, exists := r.drivers[info.Name]; exists {
+        return fmt.Errorf("driver %s already registered", info.Name)
+    }
+    
+    r.drivers[info.Name] = driver
+    return nil
+}
+
+func (r *Registry) LoadPlugin(path string) error {
+    // Load Go plugin
+    plug, err := plugin.Open(path)
+    if err != nil {
+        return err
+    }
+    
+    // Look for Driver symbol
+    symbol, err := plug.Lookup("Driver")
+    if err != nil {
+        return err
+    }
+    
+    driver, ok := symbol.(Driver)
+    if !ok {
+        return fmt.Errorf("invalid driver plugin")
+    }
+    
+    return r.Register(driver)
+}
+```
+
+#### Built-in Drivers
+
+##### PDF Driver
+```go
+// pkg/drivers/pdf/driver.go
+type PDFDriver struct {
+    extractors []Extractor
+}
+
+func (d *PDFDriver) Extract(path string) (*models.FloorPlan, error) {
+    // Try each extractor in order
+    for _, extractor := range d.extractors {
+        plan, err := extractor.Extract(path)
+        if err == nil {
+            return plan, nil
+        }
+    }
+    return nil, fmt.Errorf("no extractor could parse PDF")
+}
+```
+
+##### IFC Driver
+```go
+// pkg/drivers/ifc/driver.go
+type IFCDriver struct {
+    parser *ifcparser.Parser
+}
+
+func (d *IFCDriver) Extract(path string) (*models.FloorPlan, error) {
+    model, err := d.parser.Parse(path)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Convert IFC model to ArxOS format
+    return d.convertToFloorPlan(model), nil
+}
+
+func (d *IFCDriver) Sync(plan *models.FloorPlan, path string) error {
+    // Convert ArxOS format back to IFC
+    model := d.convertToIFC(plan)
+    return d.parser.Write(model, path)
+}
+```
+
+##### AutoCAD Driver (via COM/OLE or DXF)
+```go
+// pkg/drivers/autocad/driver.go
+type AutoCADDriver struct {
+    comBridge *COMBridge  // Windows only
+    dxfParser *DXFParser  // Cross-platform fallback
+}
+
+func (d *AutoCADDriver) Extract(path string) (*models.FloorPlan, error) {
+    if runtime.GOOS == "windows" && d.comBridge.Available() {
+        return d.extractViaCOM(path)
+    }
+    // Fall back to DXF parsing
+    return d.extractViaDXF(path)
+}
+```
+
+#### Conflict Resolution
+
+The daemon implements multiple conflict resolution strategies:
+
+```go
+// internal/daemon/conflict/resolver.go
+type Resolver interface {
+    Resolve(ancestor, ours, theirs *models.FloorPlan) *models.FloorPlan
+}
+
+type PriorityResolver struct {
+    priorities map[string]int
+}
+
+func (r *PriorityResolver) Resolve(ancestor, ours, theirs *models.FloorPlan) *models.FloorPlan {
+    // Higher priority source wins
+    if r.priorities["ours"] > r.priorities["theirs"] {
+        return ours
+    }
+    return theirs
+}
+
+type ThreeWayMergeResolver struct{}
+
+func (r *ThreeWayMergeResolver) Resolve(ancestor, ours, theirs *models.FloorPlan) *models.FloorPlan {
+    merged := &models.FloorPlan{}
+    
+    // Merge rooms
+    merged.Rooms = r.mergeRooms(ancestor.Rooms, ours.Rooms, theirs.Rooms)
+    
+    // Merge equipment
+    merged.Equipment = r.mergeEquipment(ancestor.Equipment, ours.Equipment, theirs.Equipment)
+    
+    return merged
+}
+```
+
+#### Daemon CLI Interface
+
+```bash
+# Start daemon
+arxd start --config building.yaml
+
+# Daemon control commands
+arxd status                          # Show daemon status
+arxd reload                          # Reload configuration
+arxd stop                            # Stop daemon
+
+# Source management
+arxd sources list                    # List all sources
+arxd sources sync main-drawings      # Force sync specific source
+arxd sources disable revit-model     # Temporarily disable source
+
+# Driver management
+arxd drivers list                    # List installed drivers
+arxd drivers install autocad-driver  # Install new driver
+arxd drivers info pdf                # Show driver details
+
+# Monitoring
+arxd watch                           # Live reconciliation status
+arxd conflicts                       # Show unresolved conflicts
+arxd history --source main-drawings  # Show sync history
+
+# Apply configuration
+arxd apply -f building.yaml          # Apply new configuration
+arxd diff -f building.yaml           # Preview changes
+arxd validate -f building.yaml       # Validate configuration
+```
+
+#### Integration with CLI
+
+The CLI automatically detects and uses the daemon when available:
+
+```go
+// cmd/arx/client.go
+func getClient() Client {
+    // Try daemon first
+    if daemon, err := connectToDaemon(); err == nil {
+        return daemon
+    }
+    // Fall back to direct mode
+    return &DirectClient{}
+}
+```
+
+#### Metrics and Observability
+
+The daemon exposes Prometheus-style metrics:
+
+```go
+// internal/daemon/metrics/metrics.go
+var (
+    reconciliationDuration = prometheus.NewHistogramVec(
+        prometheus.HistogramOpts{
+            Name: "arxos_reconciliation_duration_seconds",
+            Help: "Duration of reconciliation operations",
+        },
+        []string{"source", "status"},
+    )
+    
+    conflictCount = prometheus.NewCounterVec(
+        prometheus.CounterOpts{
+            Name: "arxos_conflicts_total",
+            Help: "Total number of conflicts detected",
+        },
+        []string{"source", "type"},
+    )
+)
+```
+
+#### Event Stream
+
+The daemon provides real-time event streaming:
+
+```go
+// internal/daemon/events/stream.go
+type EventStream struct {
+    subscribers map[string]chan<- Event
+}
+
+type Event struct {
+    Type      string    // "sync", "conflict", "error"
+    Source    string    // Source name
+    Timestamp time.Time
+    Data      interface{}
+}
+
+func (s *EventStream) Subscribe(id string) <-chan Event {
+    ch := make(chan Event, 100)
+    s.subscribers[id] = ch
+    return ch
+}
+```
+
+#### Daemon Configuration File
+
+```yaml
+# /etc/arxos/daemon.yaml
+daemon:
+  port: 8080
+  socket: /var/run/arxos.sock
+  logLevel: info
+  
+storage:
+  type: sqlite
+  path: /var/lib/arxos/state.db
+  
+drivers:
+  pluginDir: /usr/lib/arxos/drivers
+  builtIn:
+    - pdf
+    - ifc
+    - dxf
+    
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+    
+  healthCheck:
+    interval: 30s
+    timeout: 5s
+```
+
+### 4. BIM/CAD Integration (via Daemon Drivers)
+
+The daemon's driver architecture enables seamless integration with various CAD/BIM systems:
+
+#### Supported Formats
+- **PDF** - Universal format, always supported
+- **IFC** - Open standard for BIM
+- **DWG/DXF** - AutoCAD formats
+- **RVT** - Revit native format (via API)
+- **DGN** - Bentley MicroStation
+- **SKP** - SketchUp models
+
+#### Integration Patterns
+
+1. **File Watching**: Monitor directories for changes
+2. **API Integration**: Direct connection to CAD software
+3. **Export/Import**: Scheduled synchronization
+4. **Webhook**: Receive notifications from BIM servers
 
 ### 4. Mobile AR Interface
 
@@ -545,6 +1033,78 @@ The system maintains a complete audit trail through multiple layers:
 - **Incremental Updates**: Most changes are metadata, not geometry
 - **Bidirectional**: Field changes flow back to design tools
 - **Format Agnostic**: Support multiple CAD formats
+
+## Daemon Implementation Roadmap
+
+The daemon will be implemented incrementally, building on the existing Phase 1 foundation:
+
+### Phase 2.5: Basic Daemon (Month 4)
+**Goal: Single-source file watching with PDF support**
+
+```go
+// Minimal viable daemon
+arxd watch /path/to/pdfs --auto-import
+```
+
+- [ ] Basic file watcher using fsnotify
+- [ ] PDF-only driver implementation
+- [ ] Simple reconciliation (newest wins)
+- [ ] Unix socket for CLI communication
+- [ ] State storage in existing JSON format
+
+### Phase 2.6: Multi-Driver Support (Month 5)
+**Goal: Plugin architecture with IFC support**
+
+- [ ] Driver interface definition
+- [ ] Driver registry and loading
+- [ ] IFC driver implementation
+- [ ] DXF/DWG parser driver
+- [ ] Basic conflict detection
+
+### Phase 2.7: Declarative Configuration (Month 6)
+**Goal: Kubernetes-style building manifests**
+
+- [ ] YAML configuration parser
+- [ ] Multiple source support
+- [ ] Priority-based conflict resolution
+- [ ] Scheduled sync operations
+- [ ] Event notifications
+
+### Phase 2.8: Advanced Reconciliation (Month 7)
+**Goal: Three-way merge and bidirectional sync**
+
+- [ ] Git-style three-way merge
+- [ ] Ancestor tracking
+- [ ] Bidirectional sync for CAD formats
+- [ ] Manual conflict resolution UI
+- [ ] Reconciliation metrics
+
+### Phase 2.9: Production Features (Month 8)
+**Goal: Monitoring, reliability, and performance**
+
+- [ ] Prometheus metrics endpoint
+- [ ] Health checks and readiness probes
+- [ ] Rate limiting and backoff
+- [ ] Transaction support
+- [ ] Backup and recovery
+
+### Daemon Migration Strategy
+
+The transition from CLI-only to daemon-enhanced operation will be seamless:
+
+1. **Phase 1-2**: CLI operates standalone (current state)
+2. **Phase 2.5**: Optional daemon for file watching
+3. **Phase 2.6+**: CLI auto-detects and uses daemon if available
+4. **Phase 3+**: Daemon required for advanced features
+
+```go
+// Backward compatibility maintained
+if daemonAvailable() {
+    return daemonClient.Import(pdf)
+} else {
+    return directImport(pdf)  // Current implementation
+}
+```
 
 ## Implementation Phases
 

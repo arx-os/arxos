@@ -1,4 +1,0 @@
-[alias]
-lint = "clippy --workspace -D warnings"
-lint-pedantic = "clippy --workspace -D warnings -W clippy::pedantic -W clippy::nursery"
-

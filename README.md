@@ -21,12 +21,16 @@ Buildings should be treated as living databases that can be:
 - PDF export with inspection reports
 - Git integration for version control
 
-**Phase 2 Database Layer** ✅ (NEW!)
+**Phase 2 Database & Intelligence Layer** ✅ (NEW!)
 - SQLite database for fast queries
 - SQL query interface for building data
 - Automatic JSON to SQLite migration
 - Spatial indexing for proximity searches
 - Full-text search on equipment
+- Equipment connection tracking
+- System tracing (upstream/downstream)
+- Impact analysis for failures
+- Smart find with proximity search
 
 ## Installation
 
@@ -133,6 +137,35 @@ go install ./cmd/arx
 # Database management
 ./arx db migrate    # Migrate JSON files to SQLite
 ./arx db sync       # Sync JSON and database
+```
+
+### Equipment Connections
+
+```bash
+# Create connections between equipment
+./arx connect outlet_2b panel_1 --type power
+./arx connect switch_1 idf_100 --type data
+./arx connect thermostat_1 hvac_unit_1 --type control
+
+# Remove connections
+./arx disconnect outlet_2b panel_1 --type power
+
+# Trace connections
+./arx trace outlet_2b upstream     # What powers this outlet?
+./arx trace panel_1 downstream     # What does this panel power?
+./arx trace switch_1 both          # All connections
+
+# Analyze failure impact
+./arx analyze panel_1              # What fails if panel_1 fails?
+```
+
+### Smart Search
+
+```bash
+# Find equipment with filters
+./arx find --type outlet --status failed
+./arx find --room room_2b
+./arx find --near outlet_2b --distance 5   # Within 5 meters
 ```
 
 ### Version Control

@@ -1,0 +1,190 @@
+{
+  "name": "Alafia_ES_IDF_CallOut",
+  "building": "Imported Building",
+  "level": 1,
+  "rooms": [
+    {
+      "id": "area_11",
+      "name": "Area 1-1",
+      "bounds": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 30,
+        "max_y": 20
+      },
+      "equipment_ids": []
+    },
+    {
+      "id": "area_12",
+      "name": "Area 1-2",
+      "bounds": {
+        "min_x": 30,
+        "min_y": 0,
+        "max_x": 60,
+        "max_y": 20
+      },
+      "equipment_ids": []
+    },
+    {
+      "id": "area_13",
+      "name": "Area 1-3",
+      "bounds": {
+        "min_x": 60,
+        "min_y": 0,
+        "max_x": 90,
+        "max_y": 20
+      },
+      "equipment_ids": [
+        "idf_800b"
+      ]
+    },
+    {
+      "id": "area_21",
+      "name": "Area 2-1",
+      "bounds": {
+        "min_x": 0,
+        "min_y": 20,
+        "max_x": 30,
+        "max_y": 40
+      },
+      "equipment_ids": []
+    },
+    {
+      "id": "area_22",
+      "name": "Area 2-2",
+      "bounds": {
+        "min_x": 30,
+        "min_y": 20,
+        "max_x": 60,
+        "max_y": 40
+      },
+      "equipment_ids": [
+        "mdf_300c"
+      ]
+    },
+    {
+      "id": "area_23",
+      "name": "Area 2-3",
+      "bounds": {
+        "min_x": 60,
+        "min_y": 20,
+        "max_x": 90,
+        "max_y": 40
+      },
+      "equipment_ids": []
+    },
+    {
+      "id": "area_31",
+      "name": "Area 3-1",
+      "bounds": {
+        "min_x": 0,
+        "min_y": 40,
+        "max_x": 30,
+        "max_y": 60
+      },
+      "equipment_ids": [
+        "idf_606a"
+      ]
+    },
+    {
+      "id": "area_32",
+      "name": "Area 3-2",
+      "bounds": {
+        "min_x": 30,
+        "min_y": 40,
+        "max_x": 60,
+        "max_y": 60
+      },
+      "equipment_ids": [
+        "idf_507a"
+      ]
+    },
+    {
+      "id": "area_33",
+      "name": "Area 3-3",
+      "bounds": {
+        "min_x": 60,
+        "min_y": 40,
+        "max_x": 90,
+        "max_y": 60
+      },
+      "equipment_ids": [
+        "idf_516"
+      ]
+    }
+  ],
+  "equipment": [
+    {
+      "id": "mdf_300c",
+      "name": "MDF 300c",
+      "type": "mdf",
+      "location": {
+        "x": 45,
+        "y": 30
+      },
+      "room_id": "area_22",
+      "status": "failed",
+      "notes": "Power failure",
+      "marked_by": "joelpate",
+      "marked_at": "2025-09-09T23:32:25.732379-04:00"
+    },
+    {
+      "id": "idf_800b",
+      "name": "IDF 800b",
+      "type": "idf",
+      "location": {
+        "x": 75,
+        "y": 10
+      },
+      "room_id": "area_13",
+      "status": "normal",
+      "notes": "",
+      "marked_by": "",
+      "marked_at": "0001-01-01T00:00:00Z"
+    },
+    {
+      "id": "idf_606a",
+      "name": "IDF 606a",
+      "type": "idf",
+      "location": {
+        "x": 15,
+        "y": 50
+      },
+      "room_id": "area_31",
+      "status": "normal",
+      "notes": "",
+      "marked_by": "",
+      "marked_at": "0001-01-01T00:00:00Z"
+    },
+    {
+      "id": "idf_507a",
+      "name": "IDF 507a",
+      "type": "idf",
+      "location": {
+        "x": 45,
+        "y": 50
+      },
+      "room_id": "area_32",
+      "status": "needs-repair",
+      "notes": "Port 24 not responding",
+      "marked_by": "joelpate",
+      "marked_at": "2025-09-09T23:32:25.728642-04:00"
+    },
+    {
+      "id": "idf_516",
+      "name": "IDF 516",
+      "type": "idf",
+      "location": {
+        "x": 75,
+        "y": 50
+      },
+      "room_id": "area_33",
+      "status": "normal",
+      "notes": "",
+      "marked_by": "",
+      "marked_at": "0001-01-01T00:00:00Z"
+    }
+  ],
+  "created_at": "2025-09-09T23:27:36.067691-04:00",
+  "updated_at": "2025-09-09T23:32:25.732383-04:00"
+}

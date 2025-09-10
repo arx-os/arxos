@@ -1,189 +1,219 @@
-# ArxOS - Buildings as Queryable Databases
+# ArxOS - Building Operating System
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
-[![API](https://img.shields.io/badge/API-REST%20%2B%20SSE-green.svg)](docs/api/README.md)
+ArxOS treats buildings as queryable, version-controlled databases. This Go implementation provides a terminal-based interface for managing floor plans and equipment status tracking.
 
-ArxOS transforms physical buildings into queryable, real-time databases with tokenized economic incentives. Navigate through building systems like a file system, query equipment with SQL, trace connections through infrastructure, and participate in the building data economy through the BILT token system.
+## Vision
+
+Buildings should be treated as living databases that can be:
+- **Queried** - "Show me all failed equipment on floor 2"
+- **Version Controlled** - Track all changes with Git-like workflows
+- **Collaborated On** - Multiple technicians working together
+- **Automated** - Integrate with BIM/CAD systems
+
+## Current Status
+
+**Phase 1 Implementation** ✅
+- Terminal-based floor plan viewer
+- PDF import with universal parser
+- Manual equipment entry commands
+- Equipment status tracking  
+- ASCII art visualization
+- PDF export with inspection reports
+- Git integration for version control
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/joelpate/arxos.git
+cd arxos
+
+# Build the application
+go build -o arx cmd/arx/main.go
+
+# Or install globally
+go install ./cmd/arx
+```
 
 ## Quick Start
 
-### Prerequisites
+```bash
+# Initialize Git tracking for floor plans
+./arx git init
+
+# Import a PDF floor plan
+./arx import building_floor_2.pdf
+
+# View ASCII representation
+./arx map
+
+# Add equipment manually
+./arx add "Switch SW-01" --type switch --room room_2a --location 10,5
+
+# Mark equipment status
+./arx mark "Switch SW-01" --status failed --notes "No power"
+
+# Export inspection report
+./arx export inspection_report.pdf
+
+# Commit changes to Git
+./arx git commit "Updated equipment status after inspection"
+```
+
+## Command Reference
+
+### Floor Plan Management
 
 ```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Import PDF floor plan
+./arx import <pdf_file>
 
-# Install PostgreSQL
-brew install postgresql  # macOS
-brew services start postgresql
+# List available floor plans
+./arx list
+
+# View ASCII map
+./arx map [floor_plan]
+
+# View equipment status summary
+./arx status [floor_plan]
 ```
 
-### Setup
+### Equipment Management
 
 ```bash
-# Clone repository
-git clone https://github.com/arx-os/arxos.git
-cd arxos
+# Add new equipment
+./arx add <name> --type <type> --room <room_id> --location <x,y> [--notes <notes>]
+# Types: mdf, idf, switch, access_point, outlet, panel, server
 
-# Create database and run all migrations
-createdb arxos
-for file in migrations/*.sql; do
-    psql arxos < "$file"
-done
+# Remove equipment
+./arx remove <equipment_id> [--floor <floor_plan>]
 
-# Build
-cargo build --release
-
-# Run API server (recommended)
-cargo run -- --api --port 3000
-
-# Or run terminal interface
-cargo run -- --building <building-id>
+# Mark equipment status
+./arx mark <equipment_id> --status <status> [--notes <notes>]
+# Statuses: normal, needs-repair, failed
 ```
 
-## Terminal Interface
+### Room Management
 
-Navigate buildings like a filesystem:
-
-```
-arxos:/> cd electrical/circuits/2
-arxos:/electrical/circuits/2> ls
-  outlet_2A [OK]
-  outlet_2B [FAILED]
-
-arxos:/electrical/circuits/2> inspect outlet_2B
-╔════════════════════════════════════════════╗
-║ Object: outlet_2B                          ║
-╚════════════════════════════════════════════╝
-
-Path:     /electrical/circuits/2/outlet_2B
-Type:     outlet
-Status:   failed
-Health:   25
-
-⚠ NEEDS REPAIR
-
-Properties:
-  voltage: 120
-```
-
-## Core Commands
-
-### Navigation
-- `cd <path>` - Change directory
-- `ls [path]` - List contents
-- `pwd` - Print working directory
-- `look` - Describe current location
-
-### Inspection
-- `inspect <object>` - Show object details
-- `trace <object> upstream` - Trace connections
-- `near [radius]` - Find nearby objects
-
-### Queries
-```sql
-SELECT * FROM objects WHERE type = 'outlet'
-SELECT * FROM objects WHERE needs_repair = true
-SELECT * FROM objects WHERE path LIKE '/electrical/%'
-```
-
-## Building Structure
-
-```
-/
-├── electrical/
-│   ├── panels/
-│   ├── circuits/
-│   └── outlets/
-├── plumbing/
-│   ├── supply/
-│   └── drainage/
-├── hvac/
-│   ├── equipment/
-│   └── zones/
-└── spaces/
-    ├── floor_1/
-    ├── floor_2/
-    └── floor_3/
-```
-
-## 🏗️ Key Features
-
-### Core Capabilities
-- **SQL Query Engine** - Query buildings with SQL syntax
-- **Real-time Events** - Server-Sent Events for live updates
-- **Webhook System** - Push notifications to external systems
-- **Bulk Operations** - Efficient batch processing
-- **Audit History** - Complete change tracking
-
-### BILT Rating System (0z-1A)
-- **Algorithmic Valuation** - Data completeness determines rating
-- **Real-time Updates** - Every contribution affects rating
-- **Market Integration** - Ratings drive token value
-
-### Token Economics
-- **Contribution Rewards** - Earn tokens for data contributions
-- **Reputation System** - Build trust through quality work
-- **Market Feeds** - Real-time pricing and valuations
-
-## Architecture
-
-ArxOS implements a sophisticated event-driven architecture:
-
-- **REST API** - Full CRUD operations (src/api/)
-- **Event System** - PostgreSQL LISTEN/NOTIFY (src/events/)
-- **Rating Engine** - BILT rating calculations (src/rating/)
-- **Market Layer** - Token economics (src/market/)
-- **Terminal Interface** - CLI navigation (src/terminal.rs)
-- **PostgreSQL** - Persistent storage with triggers
-
-## 📡 API Overview
-
-### REST Endpoints
 ```bash
-# Building Objects
-GET    /api/objects              # List objects
-POST   /api/objects              # Create object
-PATCH  /api/objects/{id}         # Update object
-DELETE /api/objects/{id}         # Delete object
-
-# BILT Ratings
-GET    /api/buildings/{id}/rating           # Current rating
-GET    /api/buildings/{id}/rating/breakdown # Component scores
-
-# Market & Tokens
-POST   /api/contributions                   # Record contribution
-GET    /api/contributors/{id}/profile       # Reputation profile
-GET    /api/tokens/{building_id}           # Token information
-
-# Real-time Events
-GET    /api/events                          # Server-Sent Events stream
+# Create new room
+./arx create <room_name> --bounds <minX,minY,maxX,maxY> [--floor <floor_plan>]
 ```
 
-### Event Types
-- `object.created`, `object.updated`, `object.deleted`
-- `bilt.rating.changed`, `bilt.rating.calculated`
-- `state.changed`, `alert.raised`
+### Export & Reports
 
-## 💰 Building Whisperer Integration
+```bash
+# Export inspection report (PDF/text format)
+./arx export <output.pdf> [--floor <floor_plan>] [--original <original.pdf>]
+```
 
-ArxOS implements the "Building Whisperer" vision:
+### Version Control
 
-1. **Every contribution creates value** - Worker data becomes tokens
-2. **Instant valuation** - Contributions affect ratings immediately
-3. **Market signals** - Rating changes trigger trading opportunities
-4. **Information asymmetry** - Real-time data provides advantages
+```bash
+# Initialize Git repository
+./arx git init
 
-## Documentation
+# Check status
+./arx git status
 
-- [API Documentation](docs/api/README.md)
-- [Quick Start Guide](QUICK_START.md)
-- [Terminal Commands](docs/TERMINAL.md)
-- [Architecture](ARCHITECTURE.md)
-- [Deployment Guide](docs/deployment/README.md)
-- [BILT Rating System](docs/bilt-rating.md)
-- [Token Economics](docs/token-economics.md)
+# Commit changes
+./arx git commit "<message>"
+
+# View history
+./arx git log
+```
+
+## Universal PDF Parser
+
+ArxOS uses a universal PDF parser that attempts multiple strategies:
+1. Text extraction from vector PDFs
+2. Content stream parsing for embedded text
+3. Form field extraction from interactive PDFs
+4. Manual entry template when parsing fails
+
+When a PDF cannot be parsed automatically, ArxOS creates a 3x3 grid template that you can populate using the manual entry commands.
+
+## ASCII Map Symbols
+
+```
+Equipment Types:
+  ◉  Access Point / IDF
+  ⚡  MDF / Main Distribution
+  ▢  Switch
+  ○  Outlet
+  ⬡  Panel
+  ▣  Server
+
+Status Indicators:
+  ✓  Normal (green)
+  ⚠  Needs Repair (yellow)
+  ✗  Failed (red)
+```
+
+## Project Structure
+
+```
+arxos/
+├── cmd/arx/           # CLI application
+├── pkg/models/        # Core data models
+├── internal/          # Internal packages
+│   ├── pdf/          # PDF parsing/export
+│   ├── ascii/        # ASCII rendering
+│   ├── state/        # State management
+│   └── vcs/          # Git integration
+├── scripts/          # Demo scripts
+├── test_data/        # Test PDFs
+└── .arxos/           # State files (Git tracked)
+```
+
+## Demo Scripts
+
+```bash
+# Run basic demo
+./scripts/demo.sh
+
+# Run manual entry demo
+./scripts/demo_manual.sh
+```
+
+## Development
+
+```bash
+# Run tests
+go test ./...
+
+# Run specific test
+go test ./cmd/arx -v
+
+# Build for different platforms
+GOOS=linux GOARCH=amd64 go build -o arx-linux ./cmd/arx
+GOOS=darwin GOARCH=arm64 go build -o arx-mac ./cmd/arx
+GOOS=windows GOARCH=amd64 go build -o arx.exe ./cmd/arx
+```
+
+## Phase 1 Completed Features ✅
+
+- [x] Set up Go project structure
+- [x] Universal PDF parser with fallback strategies
+- [x] ASCII map rendering with equipment symbols
+- [x] Equipment status tracking (normal, needs-repair, failed)
+- [x] Manual equipment/room entry commands
+- [x] PDF export with inspection reports
+- [x] Git integration for version control
+- [x] Comprehensive test coverage
+- [x] Demo scripts
+
+## Roadmap
+
+- **Phase 2** - Enhanced parsing with OCR, better PDF generation
+- **Phase 3** - Web interface and collaboration features
+- **Phase 4** - Full building OS with BIM integration
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for design details and [PHASES.md](PHASES.md) for the complete development roadmap.
+
+## Contributing
+
+This project is in active development. Contributions are welcome! Please read the architecture documents before submitting PRs.
 
 ## License
 

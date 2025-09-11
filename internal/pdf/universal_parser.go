@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 	
-	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	
 	"github.com/joelpate/arxos/internal/logger"
@@ -42,14 +41,24 @@ func (p *UniversalParser) ParseAnyPDF(pdfPath string) (*models.FloorPlan, error)
 		Equipment: []models.Equipment{},
 	}
 	
-	// Strategy 1: Try text extraction
-	textData, err := p.extractAllText(pdfPath)
-	if err == nil && len(textData) > 0 {
-		logger.Info("Found %d text elements in PDF", len(textData))
-		p.parseTextElements(textData, plan)
+	// Strategy 1: Try simple text extraction first
+	simpleExtractor := NewSimpleTextExtractor()
+	simpleText, err := simpleExtractor.ExtractText(pdfPath)
+	if err == nil && len(simpleText) > 0 {
+		logger.Info("Extracted %d characters using simple extraction", len(simpleText))
+		simpleExtractor.parseText(simpleText, plan)
 	}
 	
-	// Strategy 2: Try content stream parsing (for embedded text)
+	// Strategy 2: Try detailed text extraction with positions
+	if len(plan.Equipment) == 0 {
+		textData, err := p.extractAllText(pdfPath)
+		if err == nil && len(textData) > 0 {
+			logger.Info("Found %d text elements in PDF", len(textData))
+			p.parseTextElements(textData, plan)
+		}
+	}
+	
+	// Strategy 3: Try content stream parsing (for embedded text)
 	if len(plan.Equipment) == 0 {
 		contentData, err := p.extractContentStream(pdfPath)
 		if err == nil {
@@ -58,7 +67,7 @@ func (p *UniversalParser) ParseAnyPDF(pdfPath string) (*models.FloorPlan, error)
 		}
 	}
 	
-	// Strategy 3: Look for form fields (interactive PDFs)
+	// Strategy 4: Look for form fields (interactive PDFs)
 	if len(plan.Equipment) == 0 {
 		formData, err := p.extractFormFields(pdfPath)
 		if err == nil && len(formData) > 0 {
@@ -67,7 +76,7 @@ func (p *UniversalParser) ParseAnyPDF(pdfPath string) (*models.FloorPlan, error)
 		}
 	}
 	
-	// Strategy 4: If all else fails, create structure for manual input
+	// Strategy 5: If all else fails, create structure for manual input
 	if len(plan.Equipment) == 0 && len(plan.Rooms) == 0 {
 		logger.Warn("Could not extract data from PDF automatically")
 		p.createManualEntryTemplate(plan)
@@ -81,26 +90,9 @@ func (p *UniversalParser) ParseAnyPDF(pdfPath string) (*models.FloorPlan, error)
 
 // extractAllText attempts to extract all text from the PDF
 func (p *UniversalParser) extractAllText(pdfPath string) ([]TextData, error) {
-	var textData []TextData
-	
-	// Try to extract text using pdfcpu
-	// This would need proper implementation with pdfcpu's text extraction
-	// For now, we'll simulate the extraction
-	
-	// Read the PDF file
-	ctx, err := api.ReadContextFile(pdfPath)
-	if err != nil {
-		return nil, err
-	}
-	
-	// Process each page
-	for pageNum := 1; pageNum <= ctx.PageCount; pageNum++ {
-		// Extract text from page (simplified - real implementation would parse content streams)
-		pageText := p.extractPageText(ctx, pageNum)
-		textData = append(textData, pageText...)
-	}
-	
-	return textData, nil
+	// Use the real text extractor
+	extractor := NewTextExtractor()
+	return extractor.ExtractText(pdfPath)
 }
 
 // TextData represents extracted text with position
@@ -112,15 +104,6 @@ type TextData struct {
 	Page     int
 }
 
-// extractPageText extracts text from a specific page
-func (p *UniversalParser) extractPageText(ctx *model.Context, pageNum int) []TextData {
-	var textData []TextData
-	
-	// This is a simplified version - real implementation would parse PDF operators
-	// For now, return empty to trigger fallback strategies
-	
-	return textData
-}
 
 // parseTextElements converts text elements to floor plan objects
 func (p *UniversalParser) parseTextElements(textData []TextData, plan *models.FloorPlan) {

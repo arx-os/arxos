@@ -27,6 +27,20 @@ func NewSQLiteDB(config *Config) *SQLiteDB {
 	}
 }
 
+// NewSQLiteDBFromPath creates a new SQLite database instance from a path
+func NewSQLiteDBFromPath(dbPath string) (*SQLiteDB, error) {
+	config := NewConfig(dbPath)
+	db := NewSQLiteDB(config)
+	
+	// Connect immediately
+	ctx := context.Background()
+	if err := db.Connect(ctx, dbPath); err != nil {
+		return nil, err
+	}
+	
+	return db, nil
+}
+
 // Connect establishes a connection to the SQLite database
 func (s *SQLiteDB) Connect(ctx context.Context, dbPath string) error {
 	if dbPath == "" {
@@ -182,6 +196,16 @@ func (s *SQLiteDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, e
 
 // SaveFloorPlan saves a new floor plan
 func (s *SQLiteDB) SaveFloorPlan(ctx context.Context, plan *models.FloorPlan) error {
+	// Validate floor plan before saving
+	if err := ValidateFloorPlan(plan); err != nil {
+		return fmt.Errorf("invalid floor plan: %w", err)
+	}
+	// Use the fixed version with proper foreign key handling
+	return s.SaveFloorPlanFixed(ctx, plan)
+}
+
+// SaveFloorPlanOld is the original implementation (kept for reference)
+func (s *SQLiteDB) SaveFloorPlanOld(ctx context.Context, plan *models.FloorPlan) error {
 	tx, err := s.BeginTx(ctx)
 	if err != nil {
 		return err
@@ -234,6 +258,16 @@ func (s *SQLiteDB) SaveFloorPlan(ctx context.Context, plan *models.FloorPlan) er
 
 // UpdateFloorPlan updates an existing floor plan
 func (s *SQLiteDB) UpdateFloorPlan(ctx context.Context, plan *models.FloorPlan) error {
+	// Validate floor plan before updating
+	if err := ValidateFloorPlan(plan); err != nil {
+		return fmt.Errorf("invalid floor plan: %w", err)
+	}
+	// Use the fixed version with proper foreign key handling
+	return s.UpdateFloorPlanFixed(ctx, plan)
+}
+
+// UpdateFloorPlanOld is the original implementation (kept for reference)
+func (s *SQLiteDB) UpdateFloorPlanOld(ctx context.Context, plan *models.FloorPlan) error {
 	tx, err := s.BeginTx(ctx)
 	if err != nil {
 		return err
@@ -301,19 +335,21 @@ func (s *SQLiteDB) GetEquipment(ctx context.Context, id string) (*models.Equipme
 	
 	var equipment models.Equipment
 	var locationX, locationY sql.NullFloat64
+	var markedAt sql.NullTime
+	var roomID sql.NullString
 	var floorPlanID string
 	
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&equipment.ID,
 		&equipment.Name,
 		&equipment.Type,
-		&equipment.RoomID,
+		&roomID,
 		&locationX,
 		&locationY,
 		&equipment.Status,
 		&equipment.Notes,
 		&equipment.MarkedBy,
-		&equipment.MarkedAt,
+		&markedAt,
 		&floorPlanID,
 	)
 	
@@ -324,8 +360,14 @@ func (s *SQLiteDB) GetEquipment(ctx context.Context, id string) (*models.Equipme
 		return nil, fmt.Errorf("failed to get equipment: %w", err)
 	}
 	
+	if roomID.Valid {
+		equipment.RoomID = roomID.String
+	}
 	equipment.Location.X = locationX.Float64
 	equipment.Location.Y = locationY.Float64
+	if markedAt.Valid {
+		equipment.MarkedAt = markedAt.Time
+	}
 	
 	return &equipment, nil
 }
@@ -350,25 +392,33 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 	for rows.Next() {
 		var equipment models.Equipment
 		var locationX, locationY sql.NullFloat64
+		var markedAt sql.NullTime
+		var roomID sql.NullString
 		
 		err := rows.Scan(
 			&equipment.ID,
 			&equipment.Name,
 			&equipment.Type,
-			&equipment.RoomID,
+			&roomID,
 			&locationX,
 			&locationY,
 			&equipment.Status,
 			&equipment.Notes,
 			&equipment.MarkedBy,
-			&equipment.MarkedAt,
+			&markedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan equipment: %w", err)
 		}
 		
+		if roomID.Valid {
+			equipment.RoomID = roomID.String
+		}
 		equipment.Location.X = locationX.Float64
 		equipment.Location.Y = locationY.Float64
+		if markedAt.Valid {
+			equipment.MarkedAt = markedAt.Time
+		}
 		
 		equipmentList = append(equipmentList, &equipment)
 	}

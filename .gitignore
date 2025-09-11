@@ -97,6 +97,10 @@ coverage/
 *.profraw
 *.profdata
 tarpaulin-report.html
+/test_*
+/testdata/output/
+/testdata/temp/
+*.test
 
 # ============================================
 # Logs and Temporary Files
@@ -133,11 +137,15 @@ __pycache__/
 # ============================================
 # Binary Outputs
 # ============================================
+/bin/
 arxos
 arxos.exe
 arx
 arx.exe
+arxd
+arxd.exe
 /arx
+/arxd
 *.so
 *.dylib
 *.dll

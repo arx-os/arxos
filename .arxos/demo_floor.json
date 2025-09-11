@@ -6,20 +6,35 @@
     {
       "id": "room_2a",
       "name": "Room 2A",
-      "bounds": {"min_x": 0, "min_y": 0, "max_x": 10, "max_y": 10},
-      "equipment": ["outlet_2a_1", "outlet_2a_2", "outlet_2a_3"]
+      "bounds": {
+        "min_x": 0,
+        "min_y": 0,
+        "max_x": 10,
+        "max_y": 10
+      },
+      "equipment_ids": null
     },
     {
       "id": "room_2b",
       "name": "Room 2B",
-      "bounds": {"min_x": 10, "min_y": 0, "max_x": 20, "max_y": 10},
-      "equipment": ["outlet_2b_1", "outlet_2b_2", "outlet_2b_3"]
+      "bounds": {
+        "min_x": 10,
+        "min_y": 0,
+        "max_x": 20,
+        "max_y": 10
+      },
+      "equipment_ids": null
     },
     {
       "id": "mech",
       "name": "Mechanical",
-      "bounds": {"min_x": 20, "min_y": 0, "max_x": 25, "max_y": 10},
-      "equipment": ["panel_1"]
+      "bounds": {
+        "min_x": 20,
+        "min_y": 0,
+        "max_x": 25,
+        "max_y": 10
+      },
+      "equipment_ids": null
     }
   ],
   "equipment": [
@@ -27,18 +42,24 @@
       "id": "outlet_2a_1",
       "name": "Outlet 2A-1",
       "type": "outlet",
-      "location": {"x": 2, "y": 5},
+      "location": {
+        "x": 2,
+        "y": 5
+      },
       "room_id": "room_2a",
-      "status": "normal",
-      "notes": "",
-      "marked_by": "",
-      "marked_at": "0001-01-01T00:00:00Z"
+      "status": "needs-repair",
+      "notes": "Test marking functionality",
+      "marked_by": "joelpate",
+      "marked_at": "2025-09-10T18:08:39.393478-04:00"
     },
     {
       "id": "outlet_2a_2",
       "name": "Outlet 2A-2",
       "type": "outlet",
-      "location": {"x": 5, "y": 5},
+      "location": {
+        "x": 5,
+        "y": 5
+      },
       "room_id": "room_2a",
       "status": "normal",
       "notes": "",
@@ -49,7 +70,10 @@
       "id": "outlet_2a_3",
       "name": "Outlet 2A-3",
       "type": "outlet",
-      "location": {"x": 8, "y": 5},
+      "location": {
+        "x": 8,
+        "y": 5
+      },
       "room_id": "room_2a",
       "status": "normal",
       "notes": "",
@@ -60,7 +84,10 @@
       "id": "outlet_2b_1",
       "name": "Outlet 2B-1",
       "type": "outlet",
-      "location": {"x": 12, "y": 5},
+      "location": {
+        "x": 12,
+        "y": 5
+      },
       "room_id": "room_2b",
       "status": "normal",
       "notes": "",
@@ -71,7 +98,10 @@
       "id": "outlet_2b_2",
       "name": "Outlet 2B-2",
       "type": "outlet",
-      "location": {"x": 15, "y": 5},
+      "location": {
+        "x": 15,
+        "y": 5
+      },
       "room_id": "room_2b",
       "status": "normal",
       "notes": "",
@@ -82,7 +112,10 @@
       "id": "outlet_2b_3",
       "name": "Outlet 2B-3",
       "type": "outlet",
-      "location": {"x": 18, "y": 5},
+      "location": {
+        "x": 18,
+        "y": 5
+      },
       "room_id": "room_2b",
       "status": "failed",
       "notes": "",
@@ -93,7 +126,10 @@
       "id": "panel_1",
       "name": "Panel 1",
       "type": "panel",
-      "location": {"x": 22, "y": 5},
+      "location": {
+        "x": 22,
+        "y": 5
+      },
       "room_id": "mech",
       "status": "normal",
       "notes": "",
@@ -102,5 +138,5 @@
     }
   ],
   "created_at": "2024-01-15T10:00:00Z",
-  "updated_at": "2024-01-15T10:00:00Z"
+  "updated_at": "2025-09-10T18:08:39.393487-04:00"
 }

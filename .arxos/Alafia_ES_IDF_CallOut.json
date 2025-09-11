@@ -34,9 +34,7 @@
         "max_x": 90,
         "max_y": 20
       },
-      "equipment_ids": [
-        "idf_800b"
-      ]
+      "equipment_ids": []
     },
     {
       "id": "area_21",
@@ -58,9 +56,7 @@
         "max_x": 60,
         "max_y": 40
       },
-      "equipment_ids": [
-        "mdf_300c"
-      ]
+      "equipment_ids": []
     },
     {
       "id": "area_23",
@@ -82,9 +78,7 @@
         "max_x": 30,
         "max_y": 60
       },
-      "equipment_ids": [
-        "idf_606a"
-      ]
+      "equipment_ids": []
     },
     {
       "id": "area_32",
@@ -95,9 +89,7 @@
         "max_x": 60,
         "max_y": 60
       },
-      "equipment_ids": [
-        "idf_507a"
-      ]
+      "equipment_ids": []
     },
     {
       "id": "area_33",
@@ -108,83 +100,25 @@
         "max_x": 90,
         "max_y": 60
       },
-      "equipment_ids": [
-        "idf_516"
-      ]
+      "equipment_ids": []
     }
   ],
   "equipment": [
     {
-      "id": "mdf_300c",
-      "name": "MDF 300c",
-      "type": "mdf",
+      "id": "instruction",
+      "name": "Use 'arx add' to add equipment",
+      "type": "note",
       "location": {
         "x": 45,
         "y": 30
       },
-      "room_id": "area_22",
-      "status": "failed",
-      "notes": "Power failure",
-      "marked_by": "joelpate",
-      "marked_at": "2025-09-09T23:32:25.732379-04:00"
-    },
-    {
-      "id": "idf_800b",
-      "name": "IDF 800b",
-      "type": "idf",
-      "location": {
-        "x": 75,
-        "y": 10
-      },
-      "room_id": "area_13",
-      "status": "normal",
-      "notes": "",
-      "marked_by": "",
-      "marked_at": "0001-01-01T00:00:00Z"
-    },
-    {
-      "id": "idf_606a",
-      "name": "IDF 606a",
-      "type": "idf",
-      "location": {
-        "x": 15,
-        "y": 50
-      },
-      "room_id": "area_31",
-      "status": "normal",
-      "notes": "",
-      "marked_by": "",
-      "marked_at": "0001-01-01T00:00:00Z"
-    },
-    {
-      "id": "idf_507a",
-      "name": "IDF 507a",
-      "type": "idf",
-      "location": {
-        "x": 45,
-        "y": 50
-      },
-      "room_id": "area_32",
-      "status": "needs-repair",
-      "notes": "Port 24 not responding",
-      "marked_by": "joelpate",
-      "marked_at": "2025-09-09T23:32:25.728642-04:00"
-    },
-    {
-      "id": "idf_516",
-      "name": "IDF 516",
-      "type": "idf",
-      "location": {
-        "x": 75,
-        "y": 50
-      },
-      "room_id": "area_33",
-      "status": "normal",
-      "notes": "",
+      "room_id": "",
+      "status": "unknown",
+      "notes": "PDF could not be parsed automatically. Please add equipment manually.",
       "marked_by": "",
       "marked_at": "0001-01-01T00:00:00Z"
     }
   ],
-  "created_at": "2025-09-09T23:27:36.067691-04:00",
-  "updated_at": "2025-09-09T23:32:25.732383-04:00"
+  "created_at": "2025-09-10T18:15:53.648033-04:00",
+  "updated_at": "2025-09-10T18:15:53.651126-04:00"
 }

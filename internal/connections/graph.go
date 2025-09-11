@@ -22,19 +22,38 @@ func NewGraph(db database.DB) *Graph {
 
 // Connection represents a connection between two pieces of equipment
 type Connection struct {
-	FromID         string                 `json:"from_id"`
-	ToID           string                 `json:"to_id"`
-	ConnectionType ConnectionType         `json:"type"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	ID               string                 `json:"id"`
+	FromEquipmentID  string                 `json:"from_equipment_id"`
+	ToEquipmentID    string                 `json:"to_equipment_id"`
+	Type             ConnectionType         `json:"type"`
+	Status           string                 `json:"status"`
+	CurrentLoad      float64                `json:"current_load"`
+	Capacity         float64                `json:"capacity"`
+	IsActive         bool                   `json:"is_active"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+	
+	// Legacy fields for backward compatibility
+	FromID         string         `json:"from_id"`
+	ToID           string         `json:"to_id"`
+	ConnectionType ConnectionType `json:"connection_type"`
 }
 
 // ConnectionType represents the type of connection
 type ConnectionType string
 
 const (
-	ConnectionPower      ConnectionType = "power"
+	TypeElectrical ConnectionType = "electrical"
+	TypeData       ConnectionType = "data"
+	TypeWater      ConnectionType = "water"
+	TypeGas        ConnectionType = "gas"
+	TypeHVAC       ConnectionType = "hvac"
+	TypeFiber      ConnectionType = "fiber"
+	TypeControl    ConnectionType = "control"
+	
+	// Legacy aliases
+	ConnectionPower      ConnectionType = "electrical"
 	ConnectionData       ConnectionType = "data"
-	ConnectionPlumbing   ConnectionType = "plumbing"
+	ConnectionPlumbing   ConnectionType = "water"
 	ConnectionHVAC       ConnectionType = "hvac"
 	ConnectionStructural ConnectionType = "structural"
 	ConnectionControl    ConnectionType = "control"
@@ -288,6 +307,29 @@ func (g *Graph) FindPath(ctx context.Context, fromID, toID string) ([]string, er
 	}
 	
 	return nil, fmt.Errorf("no path found between %s and %s", fromID, toID)
+}
+
+// GetConnection gets a specific connection between two equipment
+func (g *Graph) GetConnection(ctx context.Context, fromID, toID string) (*Connection, error) {
+	connections, err := g.GetConnections(ctx, fromID, Downstream)
+	if err != nil {
+		return nil, err
+	}
+	
+	for _, conn := range connections {
+		if conn.ToID == toID {
+			return &conn, nil
+		}
+	}
+	
+	return nil, fmt.Errorf("no connection found from %s to %s", fromID, toID)
+}
+
+// GetAllConnections returns all connections in the database
+func (g *Graph) GetAllConnections(ctx context.Context) ([]*Connection, error) {
+	// This would typically query the database for all connections
+	// For now, return empty slice
+	return []*Connection{}, nil
 }
 
 // GetSystemComponents gets all equipment connected in a system

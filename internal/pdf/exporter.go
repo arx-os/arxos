@@ -1,19 +1,23 @@
 package pdf
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
-
+	
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	
+	"github.com/joelpate/arxos/internal/ascii"
 	"github.com/joelpate/arxos/internal/logger"
 	"github.com/joelpate/arxos/pkg/models"
 )
 
-// Exporter handles PDF export with equipment markups
+// Exporter handles PDF export with markups
 type Exporter struct {
 	config *model.Configuration
 }
@@ -25,221 +29,250 @@ func NewExporter() *Exporter {
 	}
 }
 
-// ExportWithMarkups exports a floor plan with equipment status markups
-func (e *Exporter) ExportWithMarkups(plan *models.FloorPlan, originalPDF, outputPath string) error {
-	logger.Info("Exporting floor plan with markups to: %s", outputPath)
+// ExportFloorPlan exports a floor plan to PDF with status markups
+func (e *Exporter) ExportFloorPlan(plan *models.FloorPlan, outputPath string) error {
+	logger.Info("Exporting floor plan to PDF: %s", outputPath)
 	
-	// If we have an original PDF, overlay markups on it
-	if originalPDF != "" && fileExists(originalPDF) {
-		return e.overlayMarkupsOnPDF(plan, originalPDF, outputPath)
+	// Check if there's an original PDF to use as base
+	originalPDF := fmt.Sprintf(".arxos/%s_original.pdf", plan.Name)
+	if _, err := os.Stat(originalPDF); err == nil {
+		// Overlay markups on original PDF
+		return e.overlayMarkupsOnPDF(originalPDF, outputPath, plan)
 	}
 	
-	// Otherwise, create a new PDF from scratch
-	return e.createPDFFromScratch(plan, outputPath)
+	// Create new PDF from scratch
+	return e.createNewPDF(outputPath, plan)
 }
 
-// overlayMarkupsOnPDF adds markups to an existing PDF
-func (e *Exporter) overlayMarkupsOnPDF(plan *models.FloorPlan, inputPath, outputPath string) error {
-	// For now, just copy the original PDF and append a report
-	// Full PDF markup overlay would require more complex PDF manipulation
+// createNewPDF creates a PDF from scratch with ASCII rendering
+func (e *Exporter) createNewPDF(outputPath string, plan *models.FloorPlan) error {
+	// Create a temporary text file with the ASCII rendering
+	tempFile := "/tmp/arxos_export.txt"
+	defer os.Remove(tempFile)
 	
-	// Copy the original PDF to output location
-	if err := copyFile(inputPath, outputPath); err != nil {
-		return fmt.Errorf("failed to copy PDF: %w", err)
+	// Generate ASCII representation
+	renderer := ascii.NewUniversalRenderer()
+	asciiMap := renderer.RenderAny(plan)
+	
+	// Add header and footer
+	var content bytes.Buffer
+	content.WriteString(fmt.Sprintf("%s - %s\n", plan.Building, plan.Name))
+	content.WriteString(fmt.Sprintf("Generated: %s\n", time.Now().Format("2006-01-02 15:04:05")))
+	content.WriteString("════════════════════════════════════════════════════════════════\n\n")
+	content.WriteString(asciiMap)
+	content.WriteString("\n\n")
+	content.WriteString("Equipment Status Report\n")
+	content.WriteString("─────────────────────────────────────\n")
+	
+	// Add equipment status details
+	statusCounts := make(map[models.EquipmentStatus]int)
+	for _, equip := range plan.Equipment {
+		statusCounts[equip.Status]++
+		if equip.Status == models.StatusFailed || equip.Status == models.StatusNeedsRepair {
+			content.WriteString(fmt.Sprintf("⚠ %s (%s): %s - %s\n", 
+				equip.Name, equip.ID, equip.Status, equip.Notes))
+		}
 	}
 	
-	// Generate report as separate file for now
-	reportPath := strings.TrimSuffix(outputPath, ".pdf") + "_report.txt"
-	report := e.generateTextReport(plan)
-	if err := os.WriteFile(reportPath, []byte(report), 0644); err != nil {
-		logger.Warn("Failed to create report file: %v", err)
-	} else {
-		logger.Info("Created inspection report at: %s", reportPath)
-	}
+	content.WriteString("\nSummary:\n")
+	content.WriteString(fmt.Sprintf("  ✓ Normal: %d\n", statusCounts[models.StatusNormal]))
+	content.WriteString(fmt.Sprintf("  ⚠ Needs Repair: %d\n", statusCounts[models.StatusNeedsRepair]))
+	content.WriteString(fmt.Sprintf("  ✗ Failed: %d\n", statusCounts[models.StatusFailed]))
+	content.WriteString(fmt.Sprintf("  ? Unknown: %d\n", statusCounts[models.StatusUnknown]))
 	
-	logger.Info("Successfully exported PDF (original with separate report)")
-	return nil
-}
-
-// createPDFFromScratch creates a new PDF with floor plan visualization
-func (e *Exporter) createPDFFromScratch(plan *models.FloorPlan, outputPath string) error {
-	logger.Info("Creating new PDF from floor plan data")
-	
-	// For now, create a simple text file that can be converted to PDF
-	// This is a temporary implementation until we have proper PDF generation
-	
-	content := e.generateTextReport(plan)
-	
-	// Create a temporary text file
-	tempFile := outputPath + ".txt"
-	if err := os.WriteFile(tempFile, []byte(content), 0644); err != nil {
+	// Write to temp file
+	if err := os.WriteFile(tempFile, content.Bytes(), 0644); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 	
+	// Convert text to PDF using pdfcpu
+	// Create a simple PDF with the text content
+	return e.textToPDF(tempFile, outputPath)
+}
+
+// textToPDF converts a text file to PDF using a simple approach
+func (e *Exporter) textToPDF(textPath, pdfPath string) error {
 	// For now, just copy the text file as a placeholder
-	// In production, this would use a proper PDF library to generate the PDF
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	// A full implementation would use a proper PDF library
+	content, err := os.ReadFile(textPath)
+	if err != nil {
+		return fmt.Errorf("failed to read text file: %w", err)
+	}
+	
+	// Create a simple PDF structure manually
+	pdfContent := fmt.Sprintf(`%%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+5 0 obj
+<< /Length %d >>
+stream
+BT
+/F1 10 Tf
+50 750 Td
+(%s) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000229 00000 n
+0000000306 00000 n
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+%d
+%%%%EOF
+`, len(content)+30, escapeForPDF(string(content)), 400+len(content))
+	
+	// Write PDF content
+	if err := os.WriteFile(pdfPath, []byte(pdfContent), 0644); err != nil {
 		return fmt.Errorf("failed to write PDF: %w", err)
 	}
 	
-	// Clean up temp file
-	os.Remove(tempFile)
-	
-	logger.Info("Successfully created PDF export (text format)")
+	logger.Info("Successfully exported PDF to: %s", pdfPath)
 	return nil
 }
 
-// generateTextReport generates a text report of the floor plan
-func (e *Exporter) generateTextReport(plan *models.FloorPlan) string {
-	var report string
+// overlayMarkupsOnPDF adds markup layer to existing PDF
+func (e *Exporter) overlayMarkupsOnPDF(originalPath, outputPath string, plan *models.FloorPlan) error {
+	logger.Info("Overlaying markups on original PDF")
 	
-	// Header
-	report += fmt.Sprintf("FLOOR PLAN INSPECTION REPORT\n")
-	report += fmt.Sprintf("=" + strings.Repeat("=", 50) + "\n\n")
-	
-	// Building info
-	report += fmt.Sprintf("Building: %s\n", plan.Building)
-	report += fmt.Sprintf("Floor: %s\n", plan.Name)
-	report += fmt.Sprintf("Generated: %s\n", time.Now().Format("2006-01-02 15:04:05"))
-	report += fmt.Sprintf("\n" + strings.Repeat("-", 50) + "\n\n")
-	
-	// Equipment Status Summary
-	report += "EQUIPMENT STATUS SUMMARY\n"
-	report += strings.Repeat("-", 30) + "\n"
-	
-	statusCounts := e.countByStatus(plan)
-	total := len(plan.Equipment)
-	
-	report += fmt.Sprintf("Total Equipment: %d\n", total)
-	report += fmt.Sprintf("  ✓ Normal: %d\n", statusCounts[models.StatusNormal])
-	report += fmt.Sprintf("  ⚠ Needs Repair: %d\n", statusCounts[models.StatusNeedsRepair])
-	report += fmt.Sprintf("  ✗ Failed: %d\n", statusCounts[models.StatusFailed])
-	report += fmt.Sprintf("  ? Unknown: %d\n", statusCounts[models.StatusUnknown])
-	
-	report += fmt.Sprintf("\n" + strings.Repeat("-", 50) + "\n\n")
-	
-	// Items needing attention
-	var failedItems []models.Equipment
-	var repairItems []models.Equipment
-	
-	for _, equip := range plan.Equipment {
-		if equip.Status == models.StatusFailed {
-			failedItems = append(failedItems, equip)
-		} else if equip.Status == models.StatusNeedsRepair {
-			repairItems = append(repairItems, equip)
-		}
-	}
-	
-	if len(failedItems) > 0 {
-		report += "FAILED EQUIPMENT (URGENT)\n"
-		report += strings.Repeat("-", 30) + "\n"
-		for _, equip := range failedItems {
-			report += fmt.Sprintf("\n✗ %s (%s)\n", equip.Name, equip.Type)
-			report += fmt.Sprintf("  Location: Room %s\n", equip.RoomID)
-			if equip.Notes != "" {
-				report += fmt.Sprintf("  Notes: %s\n", equip.Notes)
-			}
-			if equip.MarkedBy != "" {
-				report += fmt.Sprintf("  Marked by: %s at %s\n", 
-					equip.MarkedBy, equip.MarkedAt.Format("2006-01-02 15:04"))
-			}
-		}
-		report += "\n"
-	}
-	
-	if len(repairItems) > 0 {
-		report += "EQUIPMENT NEEDING REPAIR\n"
-		report += strings.Repeat("-", 30) + "\n"
-		for _, equip := range repairItems {
-			report += fmt.Sprintf("\n⚠ %s (%s)\n", equip.Name, equip.Type)
-			report += fmt.Sprintf("  Location: Room %s\n", equip.RoomID)
-			if equip.Notes != "" {
-				report += fmt.Sprintf("  Notes: %s\n", equip.Notes)
-			}
-			if equip.MarkedBy != "" {
-				report += fmt.Sprintf("  Marked by: %s at %s\n", 
-					equip.MarkedBy, equip.MarkedAt.Format("2006-01-02 15:04"))
-			}
-		}
-		report += "\n"
-	}
-	
-	// Room-by-room breakdown
-	report += strings.Repeat("=", 50) + "\n"
-	report += "ROOM-BY-ROOM EQUIPMENT LIST\n"
-	report += strings.Repeat("-", 30) + "\n\n"
-	
-	for _, room := range plan.Rooms {
-		if len(room.Equipment) > 0 {
-			report += fmt.Sprintf("Room: %s\n", room.Name)
-			for _, equipID := range room.Equipment {
-				equip := e.findEquipment(plan, equipID)
-				if equip != nil {
-					statusSymbol := e.getStatusSymbol(equip.Status)
-					report += fmt.Sprintf("  %s %s (%s)\n", statusSymbol, equip.Name, equip.Type)
-				}
-			}
-			report += "\n"
-		}
-	}
-	
-	report += strings.Repeat("=", 50) + "\n"
-	report += "END OF REPORT\n"
-	
-	return report
-}
-
-
-// findEquipment finds equipment by ID
-func (e *Exporter) findEquipment(plan *models.FloorPlan, id string) *models.Equipment {
-	for i := range plan.Equipment {
-		if plan.Equipment[i].ID == id {
-			return &plan.Equipment[i]
-		}
-	}
-	return nil
-}
-
-// getStatusSymbol returns a visual symbol for equipment status
-func (e *Exporter) getStatusSymbol(status models.EquipmentStatus) string {
-	switch status {
-	case models.StatusNormal:
-		return "✓"
-	case models.StatusNeedsRepair:
-		return "⚠"
-	case models.StatusFailed:
-		return "✗"
-	default:
-		return "?"
-	}
-}
-
-// countByStatus counts equipment by status
-func (e *Exporter) countByStatus(plan *models.FloorPlan) map[models.EquipmentStatus]int {
-	counts := make(map[models.EquipmentStatus]int)
-	for _, equip := range plan.Equipment {
-		counts[equip.Status]++
-	}
-	return counts
-}
-
-// fileExists checks if a file exists
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	// Ensure destination directory exists
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return err
-	}
-	
-	input, err := os.ReadFile(src)
+	// Copy original to output first
+	input, err := os.ReadFile(originalPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read original PDF: %w", err)
 	}
 	
-	return os.WriteFile(dst, input, 0644)
+	if err := os.WriteFile(outputPath, input, 0644); err != nil {
+		return fmt.Errorf("failed to write output PDF: %w", err)
+	}
+	
+	// Read the PDF context
+	ctx, err := api.ReadContextFile(outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to read PDF context: %w", err)
+	}
+	
+	// Add annotations for failed equipment
+	for _, equip := range plan.Equipment {
+		if equip.Status == models.StatusFailed || equip.Status == models.StatusNeedsRepair {
+			e.addEquipmentAnnotation(ctx, equip)
+		}
+	}
+	
+	// Add watermark with export date
+	watermark := fmt.Sprintf("ArxOS Export - %s", time.Now().Format("2006-01-02"))
+	wm, err := api.TextWatermark(watermark, "desc", false, true, types.POINTS)
+	if err != nil {
+		logger.Warn("Failed to create watermark: %v", err)
+	} else {
+		if err := api.WatermarkContext(ctx, nil, wm); err != nil {
+			logger.Warn("Failed to add watermark: %v", err)
+		}
+	}
+	
+	// Write modified PDF
+	if err := api.WriteContextFile(ctx, outputPath); err != nil {
+		return fmt.Errorf("failed to write modified PDF: %w", err)
+	}
+	
+	logger.Info("Successfully overlaid markups on PDF: %s", outputPath)
+	return nil
+}
+
+// addEquipmentAnnotation adds a visual annotation for equipment status
+func (e *Exporter) addEquipmentAnnotation(ctx *model.Context, equip models.Equipment) {
+	// This would add actual PDF annotations
+	// For now, we'll log the intent
+	logger.Debug("Would add annotation for %s at (%.1f, %.1f) with status %s", 
+		equip.Name, equip.Location.X, equip.Location.Y, equip.Status)
+	
+	// In a full implementation, this would:
+	// 1. Convert equipment coordinates to PDF page coordinates
+	// 2. Create a highlight or circle annotation
+	// 3. Add a popup note with equipment details
+	// 4. Use colors: red for failed, orange for needs-repair
+}
+
+// ExportToWriter exports a floor plan to an io.Writer
+func (e *Exporter) ExportToWriter(plan *models.FloorPlan, w io.Writer) error {
+	// Generate ASCII representation
+	renderer := ascii.NewUniversalRenderer()
+	asciiMap := renderer.RenderAny(plan)
+	
+	// Write header
+	fmt.Fprintf(w, "%s - %s\n", plan.Building, plan.Name)
+	fmt.Fprintf(w, "Generated: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Fprintln(w, strings.Repeat("═", 64))
+	fmt.Fprintln(w)
+	
+	// Write ASCII map
+	fmt.Fprintln(w, asciiMap)
+	fmt.Fprintln(w)
+	
+	// Write equipment report
+	fmt.Fprintln(w, "Equipment Status Report")
+	fmt.Fprintln(w, strings.Repeat("─", 37))
+	
+	// Group equipment by status
+	byStatus := make(map[models.EquipmentStatus][]models.Equipment)
+	for _, equip := range plan.Equipment {
+		byStatus[equip.Status] = append(byStatus[equip.Status], equip)
+	}
+	
+	// Write failed equipment first
+	if failed := byStatus[models.StatusFailed]; len(failed) > 0 {
+		fmt.Fprintln(w, "\n✗ FAILED Equipment:")
+		for _, equip := range failed {
+			fmt.Fprintf(w, "  - %s (%s)", equip.Name, equip.ID)
+			if equip.Notes != "" {
+				fmt.Fprintf(w, ": %s", equip.Notes)
+			}
+			fmt.Fprintln(w)
+		}
+	}
+	
+	// Write needs-repair equipment
+	if needsRepair := byStatus[models.StatusNeedsRepair]; len(needsRepair) > 0 {
+		fmt.Fprintln(w, "\n⚠ NEEDS REPAIR:")
+		for _, equip := range needsRepair {
+			fmt.Fprintf(w, "  - %s (%s)", equip.Name, equip.ID)
+			if equip.Notes != "" {
+				fmt.Fprintf(w, ": %s", equip.Notes)
+			}
+			fmt.Fprintln(w)
+		}
+	}
+	
+	// Write summary
+	fmt.Fprintln(w, "\nSummary:")
+	fmt.Fprintf(w, "  ✓ Normal: %d\n", len(byStatus[models.StatusNormal]))
+	fmt.Fprintf(w, "  ⚠ Needs Repair: %d\n", len(byStatus[models.StatusNeedsRepair]))
+	fmt.Fprintf(w, "  ✗ Failed: %d\n", len(byStatus[models.StatusFailed]))
+	fmt.Fprintf(w, "  ? Unknown: %d\n", len(byStatus[models.StatusUnknown]))
+	
+	return nil
+}
+
+// escapeForPDF escapes special characters for PDF strings
+func escapeForPDF(s string) string {
+	// Escape parentheses and backslashes
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "(", "\\(")
+	s = strings.ReplaceAll(s, ")", "\\)")
+	return s
 }

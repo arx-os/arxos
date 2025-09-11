@@ -15,22 +15,199 @@ Every outlet, light, valve, and piece of equipment becomes part of a hierarchica
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Terminal UI   │    │   Mobile AR     │    │  Web Interface  │
-│      (Go)       │    │   (iOS/Android) │    │   (Basic HTML)  │
+│   Terminal UI   │    │    REST API     │    │  Web Interface  │
+│      (Go)       │    │   (HTTP/JSON)   │    │   (Future)      │
 └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
           │                      │                      │
           └──────────────────────┼──────────────────────┘
                                  │
                     ┌─────────────┴─────────────┐
-                    │     Data Storage Layer    │
-                    │   (JSON + SQLite Index)   │
+                    │  ASCII BUILDING MODEL     │
+                    │  (Unified Visualization)  │
                     └─────────────┬─────────────┘
                                   │
-                    ┌─────────────┴─────────────┐
-                    │    BIM/CAD Sync Daemon    │
-                    │   (Bidirectional Sync)    │
-                    └───────────────────────────┘
+                ┌─────────────────┼─────────────────┐
+                │                 │                 │
+    ┌───────────▼───────┐ ┌──────▼──────┐ ┌───────▼───────┐
+    │   Data Storage    │ │   Physics   │ │  Analytics    │
+    │ JSON/SQLite/R-tree│ │  Particles  │ │  Failure/ML   │
+    └───────────────────┘ └─────────────┘ └───────────────┘
 ```
+
+### ASCII Building Information Model (ABIM)
+
+The ASCII model is the central nervous system of ArxOS - all data flows through and is visualized in this unified representation:
+
+```
+                    ┌─────────────────────────┐
+                    │   ASCII WORLD MODEL     │
+                    │  (Living Building Map)  │
+                    └───────────┬─────────────┘
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        │                       │                       │
+    ┌───▼────┐           ┌─────▼──────┐         ┌─────▼────┐
+    │ STATIC │           │  DYNAMIC   │         │  INTEL   │
+    │ LAYER  │           │   LAYER    │         │  LAYER   │
+    └────────┘           └────────────┘         └──────────┘
+    - Rooms              - Particles            - Predictions
+    - Equipment          - Energy Flow          - Failures  
+    - Connections        - Air Flow             - Patterns
+    - Structure          - Occupancy            - Analytics
+```
+
+#### Unified ASCII Model Implementation
+
+The ASCII Building Information Model (ABIM) provides a unified visualization and interaction layer for all building data. It serves as:
+
+1. **Central Rendering Engine** - All data visualized through ASCII art
+2. **Physics Simulation Platform** - Real-time particle systems for energy/fluid flow
+3. **Spatial Query Interface** - Navigate and query building data spatially
+4. **Analytics Visualization** - Display patterns, predictions, and failures
+5. **Integration Hub** - Common format for all external systems
+
+#### Core Components
+
+##### Rendering Engine (`internal/ascii/renderer.go`)
+```go
+type Renderer struct {
+    layers      map[string]Layer
+    viewport    Viewport
+    compositor  Compositor
+}
+
+type Layer interface {
+    Render(viewport Viewport) [][]rune
+    Update(dt float64)
+    SetVisible(bool)
+}
+```
+
+##### Layer System
+
+Each layer can be viewed independently or composited:
+
+1. **Structure Layer** (`internal/ascii/layers/structure.go`)
+   - Base floor plan with rooms and walls
+   - Equipment placement and identification
+   - Static structural elements
+
+2. **Connection Layer** (`internal/ascii/layers/connections.go`)
+   - Power distribution paths
+   - Data network topology
+   - Plumbing and HVAC routing
+   - Visual connection tracing
+
+3. **Particle Layer** (`internal/particles/system.go`)
+   - Real-time physics simulation
+   - Air flow visualization
+   - Electrical current flow
+   - Water movement
+
+4. **Energy Layer** (`internal/ascii/layers/energy.go`)
+   - Voltage drop visualization
+   - Current flow intensity
+   - Thermal gradients
+   - Power consumption heatmaps
+
+5. **Failure Layer** (`internal/analytics/failure_propagation.go`)
+   - Cascade failure paths
+   - Impact zone visualization
+   - Risk assessment overlays
+   - Redundancy mapping
+
+6. **Temporal Layer** (`internal/ascii/layers/temporal.go`)
+   - Time-based patterns
+   - Occupancy schedules
+   - Maintenance cycles
+   - Historical playback
+
+#### Viewport and Navigation
+
+```go
+type Viewport struct {
+    X, Y          int     // Position in building
+    Width, Height int     // Terminal dimensions
+    Zoom          float64 // Zoom level
+    Floor         string  // Current floor
+}
+```
+
+Navigation commands map directly to viewport changes:
+- `cd` changes floor/area
+- Arrow keys pan viewport
+- `+`/`-` zoom in/out
+- `tab` cycles through layers
+
+#### Real-time Updates
+
+The ASCII model updates at 30 FPS to show:
+- Particle movement and physics
+- Energy flow animations
+- Equipment status changes
+- Occupancy patterns
+- Alert propagation
+
+#### ASCII Art Symbols
+
+```
+Structural Elements:
+  ═ ║ ╔ ╗ ╚ ╝ ╠ ╣ ╦ ╩ ╬  Walls and boundaries
+  ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ┼      Light walls/partitions
+  ░ ▒ ▓                  Fill patterns
+
+Equipment:
+  ⚡ Electrical panel      ○ Outlet (normal)
+  ◉ Circuit breaker       ● Outlet (active)
+  ⊗ Transformer          ◌ Outlet (failed)
+  ▣ Server/Computer      △ HVAC unit
+  ◊ Switch               ▽ Thermostat
+
+Connections:
+  ─ │ Wiring/piping      ╍ ╎ Dashed connections
+  ← → ↑ ↓ Flow direction  ⟵ ⟶ ⟷ High voltage
+  • · Connection points   ✕ Disconnected
+
+Particles:
+  ∘ ° Air particle       ≈ Water particle
+  * ✦ Electrical spark   ♨ Steam/heat
+  ▪ ▫ Data packet       ⚠ Warning particle
+
+Status Indicators:
+  ✓ OK/Normal           ✗ Failed
+  ⚠ Warning             ⛔ Critical
+  ◐ Partial             ⟲ Cycling
+  ▶ Running             ⏸ Paused
+```
+
+#### Integration with Commands
+
+All ArxOS commands integrate with the ASCII model:
+
+```bash
+# View current floor with all layers
+arxos:/> map
+
+# Show only electrical layer
+arxos:/> map --layer electrical
+
+# Animate particle flow
+arxos:/> simulate --particles
+
+# Show failure propagation from panel_2b
+arxos:/> simulate failure panel_2b
+
+# Overlay energy consumption
+arxos:/> map --overlay energy
+```
+
+#### Performance Optimizations
+
+1. **Spatial Indexing**: R-tree for efficient viewport queries
+2. **Layer Caching**: Pre-render static layers
+3. **Dirty Rectangles**: Only update changed regions
+4. **Level of Detail**: Simplify rendering at lower zoom
+5. **Async Updates**: Particle physics in separate goroutine
 
 ## Data Model
 
@@ -1108,33 +1285,48 @@ if daemonAvailable() {
 
 ## Implementation Phases
 
-### Phase 1: Core Terminal (Months 1-3)
-- [ ] Basic file structure and JSON schemas
-- [ ] Terminal navigation commands
-- [ ] SQLite indexing
-- [ ] Simple ASCII rendering
-- [ ] Local Git integration
+### Phase 1: Core Terminal (Months 1-3) ✓ COMPLETE
+- [x] Basic file structure and JSON schemas
+- [x] Terminal navigation commands  
+- [x] SQLite indexing with R-tree spatial index
+- [x] ASCII particle system rendering
+- [x] Local Git integration
 
-### Phase 2: BIM Integration (Months 4-6)
+### Phase 2: Foundation & Intelligence (Months 4-6) ⚡ IN PROGRESS
+- [x] PDF floor plan import with OCR
+- [x] Professional PDF export with pdfcpu
+- [x] R-tree spatial indexing for proximity searches  
+- [x] Multi-building portfolio management
+- [x] REST API server implementation
+- [x] Failure propagation visualization
+- [x] Electrical physics simulation with Ohm's law
+- [x] ASCII particle physics engine
+- [ ] Unified ASCII Building Information Model (ABIM) - NEXT
+- [ ] Energy flow modeling with real physics
+- [ ] Predictive maintenance system
 - [ ] IFC parser and exporter
-- [ ] PDF floor plan import
 - [ ] Sync daemon with file watching
-- [ ] Conflict resolution tools
-- [ ] Change review interface
 
-### Phase 3: Mobile AR (Months 7-9)
+### Phase 3: Unified ASCII Model & Advanced Analytics (Months 7-9)
+- [ ] Complete ABIM implementation with all layers
+- [ ] Real-time compositor for layer blending
+- [ ] Advanced particle effects for all building systems
+- [ ] Machine learning failure prediction
+- [ ] Energy optimization algorithms
+- [ ] Predictive maintenance scheduling
+- [ ] Historical pattern analysis
+- [ ] Automated anomaly detection
+
+### Phase 4: Mobile AR & Field Integration (Months 10-12)
 - [ ] iOS/Android apps with ARKit/ARCore
-- [ ] Offline data sync
-- [ ] Field markup tools
-- [ ] Photo/video attachments
+- [ ] ASCII model rendering on mobile
+- [ ] Offline data sync with conflict resolution
+- [ ] Field markup tools with ASCII preview
+- [ ] Photo/video attachments to objects
 - [ ] Branch creation from mobile
-
-### Phase 4: Advanced Features (Months 10-12)
-- [ ] Real-time collaboration
-- [ ] Advanced ASCII visualizations
-- [ ] Plugin system for custom commands
-- [ ] Web dashboard for management
-- [ ] Analytics and reporting
+- [ ] Real-time collaboration via WebSocket
+- [ ] Web dashboard with ASCII renderer
+- [ ] Plugin system for custom visualizations
 
 ## Performance Requirements
 

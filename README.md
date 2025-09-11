@@ -4,11 +4,16 @@ ArxOS treats buildings as queryable, version-controlled databases. This Go imple
 
 ## Vision
 
-Buildings should be treated as living databases that can be:
-- **Queried** - "Show me all failed equipment on floor 2"
+ArxOS is evolving into a comprehensive platform that treats buildings and physical assets as living, collaborative repositories - like GitHub for the physical world.
+
+**Core Principles:**
+- **Queryable** - "Show me all failed equipment on floor 2"
 - **Version Controlled** - Track all changes with Git-like workflows
-- **Collaborated On** - Multiple technicians working together
-- **Automated** - Integrate with BIM/CAD systems
+- **Collaborative** - Multiple technicians, contractors, and owners working together
+- **Intelligent** - AI-assisted documentation and predictive maintenance
+- **Universal** - From commercial buildings to homes to asset tracking
+
+📚 **[Read the Full Platform Vision](docs/VISION.md)**
 
 ## Current Status
 
@@ -264,13 +269,22 @@ GOOS=windows GOARCH=amd64 go build -o arx.exe ./cmd/arx
 - [x] Comprehensive test coverage
 - [x] Demo scripts
 
-## Roadmap
+## Platform Evolution
 
-- **Phase 2** - Enhanced parsing with OCR, better PDF generation
-- **Phase 3** - Web interface and collaboration features
-- **Phase 4** - Full building OS with BIM integration
+ArxOS is transitioning from a CLI tool to a full platform with:
+- 🌐 **Web Platform** - GitHub-style building repositories at arxos.io
+- 📱 **Mobile Apps** - AR visualization for field workers
+- 🤖 **AI Integration** - Natural language commands and automation
+- 🔄 **Viral Growth** - Bidirectional user acquisition through network effects
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for design details and [PHASES.md](PHASES.md) for the complete development roadmap.
+### Documentation
+
+- 📖 **[Platform Vision](docs/VISION.md)** - Complete vision and strategy
+- 🏗️ **[Architecture v2](docs/ARCHITECTURE_V2.md)** - Technical architecture for the platform
+- ✨ **[Platform Features](docs/PLATFORM_FEATURES.md)** - Detailed feature specifications
+- 🗺️ **[Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md)** - Phased development plan
+- 📐 **[Original Architecture](docs/ARCHITECTURE.md)** - Current CLI architecture
+- 📋 **[Development Phases](docs/PHASES.md)** - Original phase planning
 
 ## Contributing
 

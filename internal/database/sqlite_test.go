@@ -136,6 +136,7 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 	
 	// Create and save initial floor plan
 	plan := &models.FloorPlan{
+		ID:       "UpdateTest",
 		Name:     "UpdateTest",
 		Building: "Building A",
 		Level:    1,
@@ -182,7 +183,7 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 	assert.NoError(t, err)
 	
 	// Load and verify updates
-	loaded, err := db.GetFloorPlan(ctx, "UpdateTest")
+	loaded, err := db.GetFloorPlan(ctx, plan.ID)
 	require.NoError(t, err)
 	
 	assert.Equal(t, "Building B", loaded.Building)
@@ -201,6 +202,7 @@ func TestSQLiteDB_ForeignKeyConstraints(t *testing.T) {
 	
 	// Test that equipment with invalid room_id is handled
 	plan := &models.FloorPlan{
+		ID:       "FKTest",
 		Name:     "FKTest",
 		Building: "Test",
 		Level:    1,
@@ -231,7 +233,7 @@ func TestSQLiteDB_ForeignKeyConstraints(t *testing.T) {
 	assert.NoError(t, err)
 	
 	// Load and check that equipment room_id was set to empty
-	loaded, err := db.GetFloorPlan(ctx, "FKTest")
+	loaded, err := db.GetFloorPlan(ctx, plan.ID)
 	require.NoError(t, err)
 	assert.Len(t, loaded.Equipment, 1)
 	assert.Equal(t, "", loaded.Equipment[0].RoomID)
@@ -253,6 +255,7 @@ func TestValidateFloorPlan(t *testing.T) {
 		{
 			name: "EmptyName",
 			plan: &models.FloorPlan{
+				ID:       "test-id",
 				Building: "Test",
 			},
 			expectError: true,
@@ -261,6 +264,7 @@ func TestValidateFloorPlan(t *testing.T) {
 		{
 			name: "EmptyBuilding",
 			plan: &models.FloorPlan{
+				ID:   "test-id",
 				Name: "Test",
 			},
 			expectError: true,
@@ -269,6 +273,7 @@ func TestValidateFloorPlan(t *testing.T) {
 		{
 			name: "DuplicateRoomID",
 			plan: &models.FloorPlan{
+				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
 				Rooms: []models.Room{
@@ -282,6 +287,7 @@ func TestValidateFloorPlan(t *testing.T) {
 		{
 			name: "DuplicateEquipmentID",
 			plan: &models.FloorPlan{
+				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
 				Equipment: []models.Equipment{
@@ -295,6 +301,7 @@ func TestValidateFloorPlan(t *testing.T) {
 		{
 			name: "InvalidRoomReference",
 			plan: &models.FloorPlan{
+				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
 				Rooms: []models.Room{
@@ -310,6 +317,7 @@ func TestValidateFloorPlan(t *testing.T) {
 		{
 			name: "ValidPlan",
 			plan: &models.FloorPlan{
+				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
 				Rooms: []models.Room{

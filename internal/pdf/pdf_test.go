@@ -5,14 +5,12 @@ import (
 	"context"
 	"strings"
 	"testing"
-
-	"github.com/joelpate/arxos/internal/pdf"
 )
 
 func TestPDFParser(t *testing.T) {
 	// Test with a simple text-based PDF content simulation
 	// In a real test, you would use an actual PDF file
-	parser := pdf.NewParser(nil)
+	parser := NewParser(nil)
 	
 	// Create a mock PDF content (this would normally be a real PDF)
 	mockPDFContent := `
@@ -42,12 +40,12 @@ func TestPDFParser(t *testing.T) {
 
 func TestPDFImporter(t *testing.T) {
 	// Test the importer with nil database (will skip DB operations)
-	importer := pdf.NewImporter(nil)
+	importer := NewImporter(nil)
 	
 	// Create mock PDF content
 	mockPDFContent := bytes.NewReader([]byte("mock pdf content"))
 	
-	options := pdf.ImportOptions{
+	options := ImportOptions{
 		BuildingName: "Test Building",
 		Level:        1,
 		UserID:       "test-user",

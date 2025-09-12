@@ -4,6 +4,7 @@
 BINARY_DIR := bin
 CLI_BINARY := $(BINARY_DIR)/arx
 DAEMON_BINARY := $(BINARY_DIR)/arxd
+SERVER_BINARY := $(BINARY_DIR)/arxos-server
 GO := go
 GOFLAGS := -v
 LDFLAGS := -s -w
@@ -21,8 +22,8 @@ BUILD_FLAGS := -ldflags "$(LDFLAGS) -X main.Version=$(VERSION) -X main.BuildTime
 # Default target
 all: build
 
-# Build both binaries
-build: build-cli build-daemon
+# Build all binaries
+build: build-cli build-daemon build-server
 	@echo "✅ Build complete"
 
 # Build CLI
@@ -37,6 +38,12 @@ build-daemon:
 	@mkdir -p $(BINARY_DIR)
 	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(DAEMON_BINARY) ./cmd/arxd
 
+# Build server
+build-server:
+	@echo "🔨 Building server..."
+	@mkdir -p $(BINARY_DIR)
+	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(SERVER_BINARY) ./cmd/arxos-server
+
 # Run CLI
 run-cli: build-cli
 	@echo "🚀 Running CLI..."
@@ -46,6 +53,11 @@ run-cli: build-cli
 run-daemon: build-daemon
 	@echo "🚀 Running daemon..."
 	$(DAEMON_BINARY) start --config configs/arxd.yaml
+
+# Run server
+run-server: build-server
+	@echo "🚀 Running server..."
+	$(SERVER_BINARY) -db data/arxos.db
 
 # Run tests
 test:
@@ -110,11 +122,13 @@ dev: deps build
 help:
 	@echo "ArxOS Makefile Commands:"
 	@echo ""
-	@echo "  make build        - Build both CLI and daemon"
+	@echo "  make build        - Build all binaries (CLI, daemon, and server)"
 	@echo "  make build-cli    - Build only the CLI"
 	@echo "  make build-daemon - Build only the daemon"
+	@echo "  make build-server - Build only the server"
 	@echo "  make run-cli      - Build and run the CLI"
 	@echo "  make run-daemon   - Build and run the daemon"
+	@echo "  make run-server   - Build and run the server"
 	@echo "  make test         - Run tests"
 	@echo "  make test-coverage- Run tests with coverage report"
 	@echo "  make clean        - Remove build artifacts"

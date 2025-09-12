@@ -1,0 +1,32 @@
+{{define "search-results"}}
+<div class="search-results space-y-4">
+    {{if not .}}
+    <div class="text-center py-8 text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <p class="mt-2">No results found</p>
+        <p class="text-sm">Try adjusting your search terms</p>
+    </div>
+    {{else}}
+    {{range .}}
+    <a href="{{.Link}}" class="block p-4 bg-white rounded-lg border border-gray-200 hover:border-indigo-500 hover:shadow-md transition-all">
+        <div class="flex items-start">
+            <div class="ml-3 flex-1">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-medium text-gray-900">{{.Name}}</h4>
+                    {{if .Status}}
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">{{.Status}}</span>
+                    {{end}}
+                </div>
+                <p class="text-sm text-gray-500">{{.Description}}</p>
+                <div class="mt-1 flex items-center text-xs text-gray-400">
+                    <span class="capitalize">{{.Type}}</span>
+                </div>
+            </div>
+        </div>
+    </a>
+    {{end}}
+    {{end}}
+</div>
+{{end}}

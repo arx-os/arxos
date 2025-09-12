@@ -170,3 +170,8 @@ arxd.exe
 *.p12
 private/
 secrets/
+# SQLite test artifacts
+:memory:
+*.db-journal
+*.db-wal
+*.db-shm

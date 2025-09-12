@@ -103,7 +103,7 @@ func (s *SQLiteDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPl
 	
 	var plan models.FloorPlan
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
-		&plan.Name,
+		&plan.ID,
 		&plan.Name,
 		&plan.Building,
 		&plan.Level,
@@ -139,9 +139,6 @@ func (s *SQLiteDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPl
 	for i, e := range equipment {
 		plan.Equipment[i] = *e
 	}
-	if err != nil {
-		return nil, err
-	}
 	
 	return &plan, nil
 }
@@ -163,9 +160,8 @@ func (s *SQLiteDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, e
 	var plans []*models.FloorPlan
 	for rows.Next() {
 		var plan models.FloorPlan
-		var id string
 		err := rows.Scan(
-			&id,
+			&plan.ID,
 			&plan.Name,
 			&plan.Building,
 			&plan.Level,
@@ -177,12 +173,12 @@ func (s *SQLiteDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, e
 		}
 		
 		// Load rooms and equipment for each plan
-		rooms, _ := s.GetRoomsByFloorPlan(ctx, id)
+		rooms, _ := s.GetRoomsByFloorPlan(ctx, plan.ID)
 		plan.Rooms = make([]models.Room, len(rooms))
 		for i, r := range rooms {
 			plan.Rooms[i] = *r
 		}
-		equipment, _ := s.GetEquipmentByFloorPlan(ctx, id)
+		equipment, _ := s.GetEquipmentByFloorPlan(ctx, plan.ID)
 		plan.Equipment = make([]models.Equipment, len(equipment))
 		for i, e := range equipment {
 			plan.Equipment[i] = *e
@@ -393,7 +389,7 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 		var equipment models.Equipment
 		var locationX, locationY sql.NullFloat64
 		var markedAt sql.NullTime
-		var roomID sql.NullString
+		var roomID, notes, markedBy sql.NullString
 		
 		err := rows.Scan(
 			&equipment.ID,
@@ -403,8 +399,8 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 			&locationX,
 			&locationY,
 			&equipment.Status,
-			&equipment.Notes,
-			&equipment.MarkedBy,
+			&notes,
+			&markedBy,
 			&markedAt,
 		)
 		if err != nil {
@@ -414,8 +410,18 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 		if roomID.Valid {
 			equipment.RoomID = roomID.String
 		}
-		equipment.Location.X = locationX.Float64
-		equipment.Location.Y = locationY.Float64
+		if locationX.Valid {
+			equipment.Location.X = locationX.Float64
+		}
+		if locationY.Valid {
+			equipment.Location.Y = locationY.Float64
+		}
+		if notes.Valid {
+			equipment.Notes = notes.String
+		}
+		if markedBy.Valid {
+			equipment.MarkedBy = markedBy.String
+		}
 		if markedAt.Valid {
 			equipment.MarkedAt = markedAt.Time
 		}
@@ -689,6 +695,705 @@ func (s *SQLiteDB) QueryRow(ctx context.Context, query string, args ...interface
 // Exec executes a query that doesn't return rows
 func (s *SQLiteDB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	return s.db.ExecContext(ctx, query, args...)
+}
+
+// User operations
+
+// GetUser retrieves a user by ID
+func (s *SQLiteDB) GetUser(ctx context.Context, id string) (*models.User, error) {
+	query := `
+		SELECT id, email, name, password_hash, avatar, phone, status, 
+		       email_verified, phone_verified, mfa_enabled, mfa_secret,
+		       created_at, updated_at, last_login_at
+		FROM users WHERE id = ?
+	`
+	
+	var user models.User
+	var lastLoginAt sql.NullTime
+	
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&user.ID, &user.Email, &user.Name, &user.PasswordHash,
+		&user.Avatar, &user.Phone, &user.Status,
+		&user.EmailVerified, &user.PhoneVerified, &user.MFAEnabled, &user.MFASecret,
+		&user.CreatedAt, &user.UpdatedAt, &lastLoginAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if lastLoginAt.Valid {
+		user.LastLoginAt = &lastLoginAt.Time
+	}
+	
+	return &user, nil
+}
+
+// GetUserByEmail retrieves a user by email
+func (s *SQLiteDB) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	query := `
+		SELECT id, email, name, password_hash, avatar, phone, status, 
+		       email_verified, phone_verified, mfa_enabled, mfa_secret,
+		       created_at, updated_at, last_login_at
+		FROM users WHERE email = ?
+	`
+	
+	var user models.User
+	var lastLoginAt sql.NullTime
+	
+	err := s.db.QueryRowContext(ctx, query, email).Scan(
+		&user.ID, &user.Email, &user.Name, &user.PasswordHash,
+		&user.Avatar, &user.Phone, &user.Status,
+		&user.EmailVerified, &user.PhoneVerified, &user.MFAEnabled, &user.MFASecret,
+		&user.CreatedAt, &user.UpdatedAt, &lastLoginAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if lastLoginAt.Valid {
+		user.LastLoginAt = &lastLoginAt.Time
+	}
+	
+	return &user, nil
+}
+
+// CreateUser creates a new user
+func (s *SQLiteDB) CreateUser(ctx context.Context, user *models.User) error {
+	query := `
+		INSERT INTO users (id, email, name, password_hash, avatar, phone, status,
+		                  email_verified, phone_verified, mfa_enabled, mfa_secret,
+		                  created_at, updated_at, last_login_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	
+	var lastLoginAt interface{}
+	if user.LastLoginAt != nil {
+		lastLoginAt = *user.LastLoginAt
+	}
+	
+	_, err := s.db.ExecContext(ctx, query,
+		user.ID, user.Email, user.Name, user.PasswordHash,
+		user.Avatar, user.Phone, user.Status,
+		user.EmailVerified, user.PhoneVerified, user.MFAEnabled, user.MFASecret,
+		user.CreatedAt, user.UpdatedAt, lastLoginAt,
+	)
+	
+	return err
+}
+
+// UpdateUser updates an existing user
+func (s *SQLiteDB) UpdateUser(ctx context.Context, user *models.User) error {
+	query := `
+		UPDATE users SET 
+			name = ?, password_hash = ?, avatar = ?, phone = ?, status = ?,
+			email_verified = ?, phone_verified = ?, mfa_enabled = ?, mfa_secret = ?,
+			updated_at = ?, last_login_at = ?
+		WHERE id = ?
+	`
+	
+	var lastLoginAt interface{}
+	if user.LastLoginAt != nil {
+		lastLoginAt = *user.LastLoginAt
+	}
+	
+	_, err := s.db.ExecContext(ctx, query,
+		user.Name, user.PasswordHash, user.Avatar, user.Phone, user.Status,
+		user.EmailVerified, user.PhoneVerified, user.MFAEnabled, user.MFASecret,
+		user.UpdatedAt, lastLoginAt, user.ID,
+	)
+	
+	return err
+}
+
+// DeleteUser deletes a user
+func (s *SQLiteDB) DeleteUser(ctx context.Context, id string) error {
+	query := `DELETE FROM users WHERE id = ?`
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// Session operations
+
+// CreateSession creates a new user session
+func (s *SQLiteDB) CreateSession(ctx context.Context, session *models.UserSession) error {
+	query := `
+		INSERT INTO user_sessions (id, user_id, organization_id, token, refresh_token, 
+		                          ip_address, user_agent, expires_at, created_at, last_access_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	
+	_, err := s.db.ExecContext(ctx, query,
+		session.ID, session.UserID, session.OrganizationID, session.Token, session.RefreshToken,
+		session.IPAddress, session.UserAgent, session.ExpiresAt, session.CreatedAt, session.LastAccessAt,
+	)
+	return err
+}
+
+// GetSession retrieves a session by access token
+func (s *SQLiteDB) GetSession(ctx context.Context, token string) (*models.UserSession, error) {
+	query := `
+		SELECT id, user_id, organization_id, token, refresh_token,
+		       ip_address, user_agent, expires_at, created_at, last_access_at
+		FROM user_sessions WHERE token = ?
+	`
+	
+	var session models.UserSession
+	var orgID sql.NullString
+	
+	err := s.db.QueryRowContext(ctx, query, token).Scan(
+		&session.ID, &session.UserID, &orgID, &session.Token, &session.RefreshToken,
+		&session.IPAddress, &session.UserAgent, &session.ExpiresAt, &session.CreatedAt, &session.LastAccessAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if orgID.Valid {
+		session.OrganizationID = orgID.String
+	}
+	
+	return &session, nil
+}
+
+// GetSessionByRefreshToken retrieves a session by refresh token
+func (s *SQLiteDB) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*models.UserSession, error) {
+	query := `
+		SELECT id, user_id, organization_id, token, refresh_token,
+		       ip_address, user_agent, expires_at, created_at, last_access_at
+		FROM user_sessions WHERE refresh_token = ?
+	`
+	
+	var session models.UserSession
+	var orgID sql.NullString
+	
+	err := s.db.QueryRowContext(ctx, query, refreshToken).Scan(
+		&session.ID, &session.UserID, &orgID, &session.Token, &session.RefreshToken,
+		&session.IPAddress, &session.UserAgent, &session.ExpiresAt, &session.CreatedAt, &session.LastAccessAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if orgID.Valid {
+		session.OrganizationID = orgID.String
+	}
+	
+	return &session, nil
+}
+
+// UpdateSession updates an existing session
+func (s *SQLiteDB) UpdateSession(ctx context.Context, session *models.UserSession) error {
+	query := `
+		UPDATE user_sessions 
+		SET organization_id = ?, token = ?, refresh_token = ?, 
+		    expires_at = ?, last_access_at = ?
+		WHERE id = ?
+	`
+	
+	_, err := s.db.ExecContext(ctx, query,
+		session.OrganizationID, session.Token, session.RefreshToken,
+		session.ExpiresAt, session.LastAccessAt, session.ID,
+	)
+	return err
+}
+
+// DeleteSession deletes a session by ID
+func (s *SQLiteDB) DeleteSession(ctx context.Context, id string) error {
+	query := `DELETE FROM user_sessions WHERE id = ?`
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// DeleteExpiredSessions removes all expired sessions
+func (s *SQLiteDB) DeleteExpiredSessions(ctx context.Context) error {
+	query := `DELETE FROM user_sessions WHERE expires_at < CURRENT_TIMESTAMP`
+	_, err := s.db.ExecContext(ctx, query)
+	return err
+}
+
+// DeleteUserSessions removes all sessions for a specific user
+func (s *SQLiteDB) DeleteUserSessions(ctx context.Context, userID string) error {
+	query := `DELETE FROM user_sessions WHERE user_id = ?`
+	_, err := s.db.ExecContext(ctx, query, userID)
+	return err
+}
+
+// Organization operations
+
+// GetOrganization retrieves an organization by ID
+func (s *SQLiteDB) GetOrganization(ctx context.Context, id string) (*models.Organization, error) {
+	query := `
+		SELECT id, name, slug, plan, max_users, max_buildings,
+		       status, created_at, updated_at
+		FROM organizations WHERE id = ?
+	`
+	
+	var org models.Organization
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&org.ID, &org.Name, &org.Slug, 
+		&org.Plan, &org.MaxUsers, &org.MaxBuildings,
+		&org.Status, &org.CreatedAt, &org.UpdatedAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	return &org, nil
+}
+
+// GetOrganizationsByUser retrieves organizations for a user
+func (s *SQLiteDB) GetOrganizationsByUser(ctx context.Context, userID string) ([]*models.Organization, error) {
+	query := `
+		SELECT o.id, o.name, o.slug, o.plan, 
+		       o.max_users, o.max_buildings, o.status, 
+		       o.created_at, o.updated_at
+		FROM organizations o
+		JOIN organization_members om ON o.id = om.organization_id
+		WHERE om.user_id = ?
+	`
+	
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var orgs []*models.Organization
+	for rows.Next() {
+		var org models.Organization
+		err := rows.Scan(
+			&org.ID, &org.Name, &org.Slug, 
+			&org.Plan, &org.MaxUsers, &org.MaxBuildings,
+			&org.Status, &org.CreatedAt, &org.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		orgs = append(orgs, &org)
+	}
+	
+	return orgs, nil
+}
+
+// CreateOrganization creates a new organization
+func (s *SQLiteDB) CreateOrganization(ctx context.Context, org *models.Organization) error {
+	query := `
+		INSERT INTO organizations (id, name, slug, plan, 
+		                          max_users, max_buildings, status, 
+		                          created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	
+	_, err := s.db.ExecContext(ctx, query,
+		org.ID, org.Name, org.Slug, org.Plan,
+		org.MaxUsers, org.MaxBuildings, org.Status,
+		org.CreatedAt, org.UpdatedAt,
+	)
+	
+	return err
+}
+
+// UpdateOrganization updates an existing organization
+func (s *SQLiteDB) UpdateOrganization(ctx context.Context, org *models.Organization) error {
+	query := `
+		UPDATE organizations SET 
+			name = ?, slug = ?, plan = ?,
+			max_users = ?, max_buildings = ?, status = ?, updated_at = ?
+		WHERE id = ?
+	`
+	
+	_, err := s.db.ExecContext(ctx, query,
+		org.Name, org.Slug, org.Plan,
+		org.MaxUsers, org.MaxBuildings, org.Status, org.UpdatedAt,
+		org.ID,
+	)
+	
+	return err
+}
+
+// DeleteOrganization deletes an organization
+func (s *SQLiteDB) DeleteOrganization(ctx context.Context, id string) error {
+	query := `DELETE FROM organizations WHERE id = ?`
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// Organization member operations
+
+// AddOrganizationMember adds a member to an organization
+func (s *SQLiteDB) AddOrganizationMember(ctx context.Context, orgID, userID, role string) error {
+	query := `
+		INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+		VALUES (?, ?, ?, ?)
+	`
+	
+	_, err := s.db.ExecContext(ctx, query, orgID, userID, role, time.Now())
+	return err
+}
+
+// RemoveOrganizationMember removes a member from an organization
+func (s *SQLiteDB) RemoveOrganizationMember(ctx context.Context, orgID, userID string) error {
+	query := `DELETE FROM organization_members WHERE organization_id = ? AND user_id = ?`
+	_, err := s.db.ExecContext(ctx, query, orgID, userID)
+	return err
+}
+
+// UpdateOrganizationMemberRole updates a member's role in an organization
+func (s *SQLiteDB) UpdateOrganizationMemberRole(ctx context.Context, orgID, userID, role string) error {
+	query := `
+		UPDATE organization_members SET role = ? 
+		WHERE organization_id = ? AND user_id = ?
+	`
+	
+	_, err := s.db.ExecContext(ctx, query, role, orgID, userID)
+	return err
+}
+
+// GetOrganizationMembers retrieves members of an organization
+func (s *SQLiteDB) GetOrganizationMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error) {
+	query := `
+		SELECT om.user_id, om.organization_id, om.role, om.joined_at,
+		       u.email, u.name, u.avatar
+		FROM organization_members om
+		JOIN users u ON om.user_id = u.id
+		WHERE om.organization_id = ?
+	`
+	
+	rows, err := s.db.QueryContext(ctx, query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var members []*models.OrganizationMember
+	for rows.Next() {
+		var member models.OrganizationMember
+		var joinedAt sql.NullTime
+		
+		// Initialize user if nil
+		if member.User == nil {
+			member.User = &models.User{}
+		}
+		
+		err := rows.Scan(
+			&member.UserID, &member.OrganizationID, &member.Role, 
+			&joinedAt,
+			&member.User.Email, &member.User.Name, &member.User.Avatar,
+		)
+		if err != nil {
+			return nil, err
+		}
+		
+		if joinedAt.Valid {
+			member.JoinedAt = &joinedAt.Time
+		}
+		
+		member.User.ID = member.UserID
+		members = append(members, &member)
+	}
+	
+	return members, nil
+}
+
+// GetOrganizationMember retrieves a specific member of an organization
+func (s *SQLiteDB) GetOrganizationMember(ctx context.Context, orgID, userID string) (*models.OrganizationMember, error) {
+	query := `
+		SELECT om.user_id, om.organization_id, om.role, om.joined_at,
+		       u.email, u.name, u.avatar
+		FROM organization_members om
+		JOIN users u ON om.user_id = u.id
+		WHERE om.organization_id = ? AND om.user_id = ?
+	`
+	
+	var member models.OrganizationMember
+	var joinedAt sql.NullTime
+	
+	// Initialize user
+	member.User = &models.User{}
+	
+	err := s.db.QueryRowContext(ctx, query, orgID, userID).Scan(
+		&member.UserID, &member.OrganizationID, &member.Role, 
+		&joinedAt,
+		&member.User.Email, &member.User.Name, &member.User.Avatar,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if joinedAt.Valid {
+		member.JoinedAt = &joinedAt.Time
+	}
+	
+	member.User.ID = member.UserID
+	return &member, nil
+}
+
+// Organization invitation operations
+
+// CreateOrganizationInvitation creates a new organization invitation
+func (s *SQLiteDB) CreateOrganizationInvitation(ctx context.Context, invitation *models.OrganizationInvitation) error {
+	query := `
+		INSERT INTO organization_invitations 
+		(id, organization_id, email, role, token, invited_by, expires_at, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	
+	_, err := s.db.ExecContext(ctx, query,
+		invitation.ID, invitation.OrganizationID, invitation.Email, invitation.Role,
+		invitation.Token, invitation.InvitedBy, invitation.ExpiresAt, invitation.CreatedAt,
+	)
+	
+	return err
+}
+
+// GetOrganizationInvitationByToken retrieves an invitation by token
+func (s *SQLiteDB) GetOrganizationInvitationByToken(ctx context.Context, token string) (*models.OrganizationInvitation, error) {
+	query := `
+		SELECT id, organization_id, email, role, token, invited_by, expires_at, accepted_at, created_at
+		FROM organization_invitations WHERE token = ?
+	`
+	
+	var invitation models.OrganizationInvitation
+	var acceptedAt sql.NullTime
+	
+	err := s.db.QueryRowContext(ctx, query, token).Scan(
+		&invitation.ID, &invitation.OrganizationID, &invitation.Email, &invitation.Role,
+		&invitation.Token, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt, &invitation.CreatedAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if acceptedAt.Valid {
+		invitation.AcceptedAt = &acceptedAt.Time
+	}
+	
+	return &invitation, nil
+}
+
+// GetOrganizationInvitation retrieves an invitation by ID
+func (s *SQLiteDB) GetOrganizationInvitation(ctx context.Context, id string) (*models.OrganizationInvitation, error) {
+	query := `
+		SELECT id, organization_id, email, role, token, invited_by, expires_at, accepted_at, created_at
+		FROM organization_invitations WHERE id = ?
+	`
+	
+	var invitation models.OrganizationInvitation
+	var acceptedAt sql.NullTime
+	
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&invitation.ID, &invitation.OrganizationID, &invitation.Email, &invitation.Role,
+		&invitation.Token, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt, &invitation.CreatedAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	if acceptedAt.Valid {
+		invitation.AcceptedAt = &acceptedAt.Time
+	}
+	
+	return &invitation, nil
+}
+
+// ListOrganizationInvitations retrieves pending invitations for an organization
+func (s *SQLiteDB) ListOrganizationInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error) {
+	query := `
+		SELECT id, organization_id, email, role, token, invited_by, expires_at, accepted_at, created_at
+		FROM organization_invitations 
+		WHERE organization_id = ? AND accepted_at IS NULL
+		ORDER BY created_at DESC
+	`
+	
+	rows, err := s.db.QueryContext(ctx, query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var invitations []*models.OrganizationInvitation
+	for rows.Next() {
+		var invitation models.OrganizationInvitation
+		var acceptedAt sql.NullTime
+		
+		err := rows.Scan(
+			&invitation.ID, &invitation.OrganizationID, &invitation.Email, &invitation.Role,
+			&invitation.Token, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt, &invitation.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		
+		if acceptedAt.Valid {
+			invitation.AcceptedAt = &acceptedAt.Time
+		}
+		
+		invitations = append(invitations, &invitation)
+	}
+	
+	return invitations, nil
+}
+
+// AcceptOrganizationInvitation marks an invitation as accepted and creates membership
+func (s *SQLiteDB) AcceptOrganizationInvitation(ctx context.Context, token, userID string) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	
+	// Get invitation details
+	var invitation models.OrganizationInvitation
+	query := `
+		SELECT id, organization_id, email, role, invited_by, expires_at, accepted_at
+		FROM organization_invitations WHERE token = ?
+	`
+	
+	var acceptedAt sql.NullTime
+	err = tx.QueryRowContext(ctx, query, token).Scan(
+		&invitation.ID, &invitation.OrganizationID, &invitation.Email, 
+		&invitation.Role, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	
+	// Check if already accepted
+	if acceptedAt.Valid {
+		return fmt.Errorf("invitation already accepted")
+	}
+	
+	// Check if expired
+	if time.Now().After(invitation.ExpiresAt) {
+		return fmt.Errorf("invitation expired")
+	}
+	
+	// Mark invitation as accepted
+	now := time.Now()
+	updateQuery := `UPDATE organization_invitations SET accepted_at = ? WHERE token = ?`
+	_, err = tx.ExecContext(ctx, updateQuery, now, token)
+	if err != nil {
+		return err
+	}
+	
+	// Add user to organization
+	memberQuery := `
+		INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+		VALUES (?, ?, ?, ?)
+	`
+	_, err = tx.ExecContext(ctx, memberQuery, invitation.OrganizationID, userID, invitation.Role, now)
+	if err != nil {
+		return err
+	}
+	
+	return tx.Commit()
+}
+
+// RevokeOrganizationInvitation deletes an invitation
+func (s *SQLiteDB) RevokeOrganizationInvitation(ctx context.Context, id string) error {
+	query := `DELETE FROM organization_invitations WHERE id = ?`
+	_, err := s.db.ExecContext(ctx, query, id)
+	return err
+}
+
+// Password Reset Token operations
+
+// CreatePasswordResetToken creates a new password reset token
+func (s *SQLiteDB) CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error {
+	query := `
+		INSERT INTO password_reset_tokens (id, user_id, token, expires_at, used, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`
+	_, err := s.db.ExecContext(ctx, query,
+		token.ID, token.UserID, token.Token, token.ExpiresAt, token.Used, token.CreatedAt,
+	)
+	return err
+}
+
+// GetPasswordResetToken retrieves a password reset token
+func (s *SQLiteDB) GetPasswordResetToken(ctx context.Context, token string) (*models.PasswordResetToken, error) {
+	query := `
+		SELECT id, user_id, token, expires_at, used, created_at, used_at
+		FROM password_reset_tokens
+		WHERE token = ?
+	`
+	
+	var resetToken models.PasswordResetToken
+	err := s.db.QueryRowContext(ctx, query, token).Scan(
+		&resetToken.ID,
+		&resetToken.UserID,
+		&resetToken.Token,
+		&resetToken.ExpiresAt,
+		&resetToken.Used,
+		&resetToken.CreatedAt,
+		&resetToken.UsedAt,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	
+	return &resetToken, nil
+}
+
+// MarkPasswordResetTokenUsed marks a password reset token as used
+func (s *SQLiteDB) MarkPasswordResetTokenUsed(ctx context.Context, token string) error {
+	query := `
+		UPDATE password_reset_tokens
+		SET used = true, used_at = ?
+		WHERE token = ?
+	`
+	_, err := s.db.ExecContext(ctx, query, time.Now(), token)
+	return err
+}
+
+// DeleteExpiredPasswordResetTokens deletes expired password reset tokens
+func (s *SQLiteDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error {
+	query := `
+		DELETE FROM password_reset_tokens
+		WHERE expires_at < ? OR used = true
+	`
+	_, err := s.db.ExecContext(ctx, query, time.Now())
+	return err
 }
 
 // GetVersion returns the current database schema version

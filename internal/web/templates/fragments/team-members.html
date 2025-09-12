@@ -1,0 +1,113 @@
+<!-- Team Members List -->
+<div>
+    <!-- Header with Invite Button -->
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-lg font-medium text-gray-900">Team Members</h3>
+        {{if .CanInvite}}
+        <button hx-get="/org/{{.OrganizationID}}/invite"
+                hx-target="#modal"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+            <svg class="mr-2 -ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Invite Member
+        </button>
+        {{end}}
+    </div>
+
+    <!-- Members Table -->
+    <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+        <table class="min-w-full divide-y divide-gray-300">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Member
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Role
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Joined
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Last Active
+                    </th>
+                    <th class="relative px-6 py-3">
+                        <span class="sr-only">Actions</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {{range .Members}}
+                <tr id="member-{{.ID}}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                {{if .User.Avatar}}
+                                <img class="h-10 w-10 rounded-full" src="{{.User.Avatar}}" alt="">
+                                {{else}}
+                                <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <span class="text-gray-600 font-medium">{{.User.Initials}}</span>
+                                </div>
+                                {{end}}
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{.User.Name}}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    {{.User.Email}}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{if .CanEditRole}}
+                        <select hx-patch="/org/{{.OrganizationID}}/members/{{.UserID}}/role"
+                                hx-trigger="change"
+                                hx-vals='{"role": this.value}'
+                                class="text-sm rounded-md border-gray-300">
+                            <option value="owner" {{if eq .Role "owner"}}selected{{end}}>Owner</option>
+                            <option value="admin" {{if eq .Role "admin"}}selected{{end}}>Admin</option>
+                            <option value="manager" {{if eq .Role "manager"}}selected{{end}}>Manager</option>
+                            <option value="member" {{if eq .Role "member"}}selected{{end}}>Member</option>
+                            <option value="viewer" {{if eq .Role "viewer"}}selected{{end}}>Viewer</option>
+                        </select>
+                        {{else}}
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            {{if eq .Role "owner"}}bg-purple-100 text-purple-800{{end}}
+                            {{if eq .Role "admin"}}bg-blue-100 text-blue-800{{end}}
+                            {{if eq .Role "manager"}}bg-green-100 text-green-800{{end}}
+                            {{if eq .Role "member"}}bg-gray-100 text-gray-800{{end}}
+                            {{if eq .Role "viewer"}}bg-yellow-100 text-yellow-800{{end}}">
+                            {{.Role}}
+                        </span>
+                        {{end}}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{.JoinedAt.Format "Jan 2, 2006"}}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{if .LastAccessAt}}
+                            {{.LastAccessAt.Format "Jan 2, 2006 3:04 PM"}}
+                        {{else}}
+                            Never
+                        {{end}}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {{if .CanRemove}}
+                        <button hx-delete="/org/{{.OrganizationID}}/members/{{.UserID}}"
+                                hx-confirm="Are you sure you want to remove this member?"
+                                hx-target="#member-{{.ID}}"
+                                hx-swap="outerHTML"
+                                class="text-red-600 hover:text-red-900">
+                            Remove
+                        </button>
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>

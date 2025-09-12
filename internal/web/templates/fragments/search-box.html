@@ -1,0 +1,141 @@
+<!-- Global Search Box Component -->
+<div class="relative" x-data="{ open: false, query: '' }">
+    <!-- Search Input -->
+    <div class="relative">
+        <input type="text" 
+               id="search-input"
+               name="q"
+               x-model="query"
+               @focus="open = true"
+               @blur="setTimeout(() => open = false, 200)"
+               hx-get="/api/search"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#search-results"
+               hx-indicator="#search-spinner"
+               placeholder="Search buildings, rooms, equipment..."
+               class="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+               autocomplete="off">
+        
+        <!-- Search Icon -->
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+        </div>
+        
+        <!-- Spinner -->
+        <div id="search-spinner" class="htmx-indicator absolute inset-y-0 right-0 pr-3 flex items-center">
+            <svg class="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </div>
+        
+        <!-- Clear Button -->
+        <button x-show="query.length > 0"
+                @click="query = ''; $refs.searchInput.value = ''; htmx.trigger('#search-input', 'keyup')"
+                class="absolute inset-y-0 right-8 pr-3 flex items-center">
+            <svg class="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+    </div>
+    
+    <!-- Search Results Dropdown -->
+    <div x-show="open && query.length > 0" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-1"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-1"
+         class="absolute z-50 mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 max-h-96 overflow-y-auto">
+        
+        <!-- Quick Filters -->
+        <div class="px-4 py-2 border-b border-gray-100 flex items-center space-x-2">
+            <span class="text-xs text-gray-500">Filter:</span>
+            <button hx-get="/api/search?types=building"
+                    hx-include="[name='q']"
+                    hx-target="#search-results"
+                    class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                Buildings
+            </button>
+            <button hx-get="/api/search?types=equipment"
+                    hx-include="[name='q']"
+                    hx-target="#search-results"
+                    class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                Equipment
+            </button>
+            <button hx-get="/api/search?types=room"
+                    hx-include="[name='q']"
+                    hx-target="#search-results"
+                    class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                Rooms
+            </button>
+            <button hx-get="/api/search?status=failed"
+                    hx-include="[name='q']"
+                    hx-target="#search-results"
+                    class="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200">
+                Failed
+            </button>
+        </div>
+        
+        <!-- Results Container -->
+        <div id="search-results" class="p-4">
+            <!-- Results loaded here via HTMX -->
+            <div class="text-center py-4 text-gray-500">
+                <p class="text-sm">Start typing to search...</p>
+            </div>
+        </div>
+        
+        <!-- Recent/Popular Searches (shown when no query) -->
+        <div x-show="query.length === 0" 
+             hx-get="/api/search/recent"
+             hx-trigger="load"
+             class="p-4">
+            <!-- Recent searches loaded here -->
+        </div>
+    </div>
+    
+    <!-- Suggestions -->
+    <div id="search-suggestions"
+         hx-get="/api/search/suggestions"
+         hx-trigger="keyup changed delay:200ms from:#search-input"
+         hx-include="[name='q']"
+         class="absolute z-50 mt-1 w-full">
+        <!-- Suggestions loaded here -->
+    </div>
+</div>
+
+<!-- Keyboard Shortcuts -->
+<script>
+document.addEventListener('keydown', function(e) {
+    // Cmd/Ctrl + K to focus search
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('search-input').focus();
+    }
+    
+    // Escape to clear search
+    if (e.key === 'Escape') {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput === document.activeElement) {
+            searchInput.value = '';
+            searchInput.blur();
+        }
+    }
+});
+
+// Handle search result clicks
+document.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === 'search-results') {
+        // Add click tracking
+        evt.detail.target.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function() {
+                // Track click analytics here
+                console.log('Search result clicked:', this.href);
+            });
+        });
+    }
+});
+</script>

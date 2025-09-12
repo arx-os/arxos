@@ -4,13 +4,18 @@ import "time"
 
 // FloorPlan represents a building floor with rooms and equipment
 type FloorPlan struct {
-	Name      string           `json:"name"`
-	Building  string           `json:"building"`
-	Level     int              `json:"level"`
-	Rooms     []Room           `json:"rooms"`
-	Equipment []Equipment      `json:"equipment"`
-	CreatedAt time.Time        `json:"created_at"`
-	UpdatedAt time.Time        `json:"updated_at"`
+	ID             string           `json:"id"`
+	OrganizationID string           `json:"organization_id"`
+	Name           string           `json:"name"`
+	Building       string           `json:"building"`
+	Level          int              `json:"level"`
+	Rooms          []Room           `json:"rooms"`
+	Equipment      []Equipment      `json:"equipment"`
+	Tags           []string         `json:"tags,omitempty"`
+	Metadata       map[string]string `json:"metadata,omitempty"`
+	CreatedBy      string           `json:"created_by"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
 }
 
 // Room represents a space on the floor plan

@@ -87,9 +87,10 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 	// Save floor plan
 	err := db.SaveFloorPlanFixed(ctx, plan)
 	assert.NoError(t, err)
+	assert.NotEmpty(t, plan.ID, "Floor plan should have an ID after saving")
 	
-	// Load floor plan
-	loaded, err := db.GetFloorPlan(ctx, "TestFloor")
+	// Load floor plan using the generated ID
+	loaded, err := db.GetFloorPlan(ctx, plan.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, loaded)
 	

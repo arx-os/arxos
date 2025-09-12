@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"time"
+	
+	"github.com/joelpate/arxos/internal/config"
 )
 
 // Backend represents a storage backend interface
@@ -344,4 +346,23 @@ func (m *Manager) HealthCheck(ctx context.Context) error {
 	}
 	
 	return nil
+}
+
+// NewFromConfig creates a storage backend from configuration
+func NewFromConfig(cfg config.StorageConfig) (Backend, error) {
+	switch cfg.Backend {
+	case "local", "":
+		if cfg.LocalPath == "" {
+			return nil, fmt.Errorf("local storage path not configured")
+		}
+		return Local(cfg.LocalPath), nil
+	case "s3":
+		// TODO: Implement S3 backend
+		return nil, fmt.Errorf("S3 storage not yet implemented")
+	case "azure":
+		// TODO: Implement Azure backend
+		return nil, fmt.Errorf("Azure storage not yet implemented")
+	default:
+		return nil, fmt.Errorf("unknown storage backend: %s", cfg.Backend)
+	}
 }

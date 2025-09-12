@@ -1,0 +1,39 @@
+{{define "building-row"}}
+<tr class="hover:bg-gray-50">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="flex items-center">
+            <div class="flex-shrink-0 h-10 w-10">
+                <svg class="h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+            </div>
+            <div class="ml-4">
+                <div class="text-sm font-medium text-gray-900">
+                    {{.Name}}
+                </div>
+                <div class="text-sm text-gray-500">
+                    {{.Building}}
+                </div>
+            </div>
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+            Level {{.Level}}
+        </span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {{.UpdatedAt.Format "Jan 02, 2006"}}
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <a href="/buildings/{{.ID}}" class="text-indigo-600 hover:text-indigo-900 mr-4">View</a>
+        <a href="/buildings/{{.ID}}/edit" class="text-indigo-600 hover:text-indigo-900 mr-4">Edit</a>
+        <button hx-delete="/buildings/{{.ID}}" 
+                hx-confirm="Are you sure you want to delete this building?" 
+                hx-target="closest tr"
+                hx-swap="outerHTML"
+                class="text-red-600 hover:text-red-900">Delete</button>
+    </td>
+</tr>
+{{end}}

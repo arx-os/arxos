@@ -39,6 +39,50 @@ type DB interface {
 	UpdateRoom(ctx context.Context, room *models.Room) error
 	DeleteRoom(ctx context.Context, id string) error
 	
+	// User operations
+	GetUser(ctx context.Context, id string) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	CreateUser(ctx context.Context, user *models.User) error
+	UpdateUser(ctx context.Context, user *models.User) error
+	DeleteUser(ctx context.Context, id string) error
+	
+	// Session operations
+	CreateSession(ctx context.Context, session *models.UserSession) error
+	GetSession(ctx context.Context, token string) (*models.UserSession, error)
+	GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*models.UserSession, error)
+	UpdateSession(ctx context.Context, session *models.UserSession) error
+	DeleteSession(ctx context.Context, id string) error
+	DeleteExpiredSessions(ctx context.Context) error
+	DeleteUserSessions(ctx context.Context, userID string) error
+	
+	// Password reset operations
+	CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error
+	GetPasswordResetToken(ctx context.Context, token string) (*models.PasswordResetToken, error)
+	MarkPasswordResetTokenUsed(ctx context.Context, token string) error
+	DeleteExpiredPasswordResetTokens(ctx context.Context) error
+	
+	// Organization operations  
+	GetOrganization(ctx context.Context, id string) (*models.Organization, error)
+	GetOrganizationsByUser(ctx context.Context, userID string) ([]*models.Organization, error)
+	CreateOrganization(ctx context.Context, org *models.Organization) error
+	UpdateOrganization(ctx context.Context, org *models.Organization) error
+	DeleteOrganization(ctx context.Context, id string) error
+	
+	// Organization member operations
+	AddOrganizationMember(ctx context.Context, orgID, userID, role string) error
+	RemoveOrganizationMember(ctx context.Context, orgID, userID string) error
+	UpdateOrganizationMemberRole(ctx context.Context, orgID, userID, role string) error
+	GetOrganizationMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error)
+	GetOrganizationMember(ctx context.Context, orgID, userID string) (*models.OrganizationMember, error)
+	
+	// Organization invitation operations
+	CreateOrganizationInvitation(ctx context.Context, invitation *models.OrganizationInvitation) error
+	GetOrganizationInvitationByToken(ctx context.Context, token string) (*models.OrganizationInvitation, error)
+	GetOrganizationInvitation(ctx context.Context, id string) (*models.OrganizationInvitation, error)
+	ListOrganizationInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error)
+	AcceptOrganizationInvitation(ctx context.Context, token, userID string) error
+	RevokeOrganizationInvitation(ctx context.Context, id string) error
+	
 	// Query operations
 	Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row

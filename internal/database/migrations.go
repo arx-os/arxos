@@ -11,9 +11,11 @@ import (
 // Migration represents a database migration
 type Migration struct {
 	Version     int
+	Name        string
 	Description string
 	Up          string
 	Down        string
+	ExecutedAt  *time.Time
 }
 
 // migrations defines all database migrations in order
@@ -189,6 +191,186 @@ var migrations = []Migration{
 			DROP TABLE IF EXISTS query_cache;
 			DROP TABLE IF EXISTS conflicts;
 			DROP TABLE IF EXISTS audit_log;
+		`,
+	},
+	{
+		Version:     4,
+		Description: "Add users and authentication tables",
+		Up: `
+			-- Users table
+			CREATE TABLE IF NOT EXISTS users (
+				id TEXT PRIMARY KEY,
+				email TEXT UNIQUE NOT NULL,
+				name TEXT NOT NULL,
+				password_hash TEXT NOT NULL,
+				avatar TEXT,
+				phone TEXT,
+				status TEXT DEFAULT 'active',
+				email_verified BOOLEAN DEFAULT 0,
+				phone_verified BOOLEAN DEFAULT 0,
+				mfa_enabled BOOLEAN DEFAULT 0,
+				mfa_secret TEXT,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				last_login_at TIMESTAMP
+			);
+
+			-- User sessions table
+			CREATE TABLE IF NOT EXISTS user_sessions (
+				id TEXT PRIMARY KEY,
+				user_id TEXT NOT NULL,
+				organization_id TEXT,
+				token TEXT UNIQUE NOT NULL,
+				refresh_token TEXT UNIQUE NOT NULL,
+				ip_address TEXT,
+				user_agent TEXT,
+				expires_at TIMESTAMP NOT NULL,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				last_access_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+
+			-- Password reset tokens
+			CREATE TABLE IF NOT EXISTS password_resets (
+				id TEXT PRIMARY KEY,
+				user_id TEXT NOT NULL,
+				token TEXT UNIQUE NOT NULL,
+				expires_at TIMESTAMP NOT NULL,
+				used_at TIMESTAMP,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+
+			-- Email verification tokens
+			CREATE TABLE IF NOT EXISTS email_verifications (
+				id TEXT PRIMARY KEY,
+				user_id TEXT NOT NULL,
+				email TEXT NOT NULL,
+				token TEXT UNIQUE NOT NULL,
+				expires_at TIMESTAMP NOT NULL,
+				verified_at TIMESTAMP,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+
+			-- Password reset tokens
+			CREATE TABLE IF NOT EXISTS password_reset_tokens (
+				id TEXT PRIMARY KEY,
+				user_id TEXT NOT NULL,
+				token TEXT UNIQUE NOT NULL,
+				expires_at TIMESTAMP NOT NULL,
+				used BOOLEAN DEFAULT FALSE,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				used_at TIMESTAMP,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+			CREATE INDEX idx_password_reset_tokens_token ON password_reset_tokens(token);
+			CREATE INDEX idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+
+			-- User preferences
+			CREATE TABLE IF NOT EXISTS user_preferences (
+				user_id TEXT PRIMARY KEY,
+				theme TEXT DEFAULT 'light',
+				language TEXT DEFAULT 'en',
+				timezone TEXT DEFAULT 'UTC',
+				date_format TEXT DEFAULT 'YYYY-MM-DD',
+				email_notifications BOOLEAN DEFAULT 1,
+				push_notifications BOOLEAN DEFAULT 1,
+				default_org_id TEXT,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+
+			-- Indexes for users
+			CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+			CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+			CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions(user_id);
+			CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions(expires_at);
+			CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
+			CREATE INDEX IF NOT EXISTS idx_password_resets_expires ON password_resets(expires_at);
+			CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token);
+			CREATE INDEX IF NOT EXISTS idx_email_verifications_expires ON email_verifications(expires_at);
+		`,
+		Down: `
+			DROP TABLE IF EXISTS user_preferences;
+			DROP TABLE IF EXISTS email_verifications;
+			DROP TABLE IF EXISTS password_resets;
+			DROP TABLE IF EXISTS user_sessions;
+			DROP TABLE IF EXISTS users;
+		`,
+	},
+	{
+		Version:     5,
+		Description: "Add organizations and multi-tenancy",
+		Up: `
+			-- Organizations table
+			CREATE TABLE IF NOT EXISTS organizations (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				slug TEXT UNIQUE NOT NULL,
+				plan TEXT DEFAULT 'free',
+				max_users INTEGER DEFAULT 5,
+				max_buildings INTEGER DEFAULT 1,
+				status TEXT DEFAULT 'active',
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);
+
+			-- Organization members
+			CREATE TABLE IF NOT EXISTS organization_members (
+				organization_id TEXT NOT NULL,
+				user_id TEXT NOT NULL,
+				role TEXT NOT NULL DEFAULT 'member',
+				joined_at TIMESTAMP,
+				PRIMARY KEY (organization_id, user_id),
+				FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+			);
+
+			-- Organization invitations
+			CREATE TABLE IF NOT EXISTS organization_invitations (
+				id TEXT PRIMARY KEY,
+				organization_id TEXT NOT NULL,
+				email TEXT NOT NULL,
+				role TEXT NOT NULL DEFAULT 'member',
+				token TEXT UNIQUE NOT NULL,
+				invited_by TEXT NOT NULL,
+				expires_at TIMESTAMP NOT NULL,
+				accepted_at TIMESTAMP,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+				FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
+			);
+
+			-- Organization settings
+			CREATE TABLE IF NOT EXISTS organization_settings (
+				organization_id TEXT PRIMARY KEY,
+				settings TEXT, -- JSON
+				FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+			);
+
+			-- Add organization context to existing tables
+			ALTER TABLE floor_plans ADD COLUMN organization_id TEXT;
+			ALTER TABLE audit_log ADD COLUMN organization_id TEXT;
+
+			-- Indexes for organizations
+			CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
+			CREATE INDEX IF NOT EXISTS idx_organizations_status ON organizations(status);
+			CREATE INDEX IF NOT EXISTS idx_org_members_user ON organization_members(user_id);
+			CREATE INDEX IF NOT EXISTS idx_org_members_role ON organization_members(role);
+			CREATE INDEX IF NOT EXISTS idx_org_invitations_email ON organization_invitations(email);
+			CREATE INDEX IF NOT EXISTS idx_org_invitations_token ON organization_invitations(token);
+			CREATE INDEX IF NOT EXISTS idx_org_invitations_expires ON organization_invitations(expires_at);
+			CREATE INDEX IF NOT EXISTS idx_floor_plans_org ON floor_plans(organization_id);
+			CREATE INDEX IF NOT EXISTS idx_audit_log_org ON audit_log(organization_id);
+		`,
+		Down: `
+			-- Remove organization context from existing tables
+			-- Note: SQLite doesn't support DROP COLUMN, would need table recreation
+			
+			DROP TABLE IF EXISTS organization_settings;
+			DROP TABLE IF EXISTS organization_invitations;
+			DROP TABLE IF EXISTS organization_members;
+			DROP TABLE IF EXISTS organizations;
 		`,
 	},
 }

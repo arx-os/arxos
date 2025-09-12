@@ -19,8 +19,11 @@ func (s *SQLiteDB) SaveFloorPlanFixed(ctx context.Context, plan *models.FloorPla
 	defer tx.Rollback()
 	
 	// Generate ID if not set
+	if plan.ID == "" {
+		plan.ID = fmt.Sprintf("floor_%d", time.Now().Unix())
+	}
 	if plan.Name == "" {
-		plan.Name = fmt.Sprintf("floor_%d", time.Now().Unix())
+		plan.Name = plan.ID
 	}
 	
 	// Use INSERT OR REPLACE to handle existing floor plans
@@ -36,7 +39,7 @@ func (s *SQLiteDB) SaveFloorPlanFixed(ctx context.Context, plan *models.FloorPla
 	plan.UpdatedAt = now
 	
 	_, err = tx.ExecContext(ctx, query,
-		plan.Name, // Using name as ID
+		plan.ID, // Use actual ID
 		plan.Name,
 		plan.Building,
 		plan.Level,
@@ -49,14 +52,14 @@ func (s *SQLiteDB) SaveFloorPlanFixed(ctx context.Context, plan *models.FloorPla
 	
 	// First, save all rooms (they must exist before equipment can reference them)
 	for i := range plan.Rooms {
-		if err := s.saveRoomFixedTx(ctx, tx, plan.Name, &plan.Rooms[i]); err != nil {
+		if err := s.saveRoomFixedTx(ctx, tx, plan.ID, &plan.Rooms[i]); err != nil {
 			return fmt.Errorf("failed to save room %s: %w", plan.Rooms[i].ID, err)
 		}
 	}
 	
 	// Then save equipment (which may reference rooms)
 	for i := range plan.Equipment {
-		if err := s.saveEquipmentFixedTx(ctx, tx, plan.Name, &plan.Equipment[i]); err != nil {
+		if err := s.saveEquipmentFixedTx(ctx, tx, plan.ID, &plan.Equipment[i]); err != nil {
 			return fmt.Errorf("failed to save equipment %s: %w", plan.Equipment[i].ID, err)
 		}
 	}
@@ -65,8 +68,8 @@ func (s *SQLiteDB) SaveFloorPlanFixed(ctx context.Context, plan *models.FloorPla
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	
-	logger.Debug("Successfully saved floor plan: %s with %d rooms and %d equipment", 
-		plan.Name, len(plan.Rooms), len(plan.Equipment))
+	logger.Debug("Successfully saved floor plan: %s (%s) with %d rooms and %d equipment", 
+		plan.Name, plan.ID, len(plan.Rooms), len(plan.Equipment))
 	
 	return nil
 }
@@ -156,13 +159,13 @@ func (s *SQLiteDB) MigrateJSONToDatabase(ctx context.Context, plan *models.Floor
 	// Check if floor plan already exists
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM floor_plans WHERE id = ?)`
-	err := s.db.QueryRowContext(ctx, checkQuery, plan.Name).Scan(&exists)
+	err := s.db.QueryRowContext(ctx, checkQuery, plan.ID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check floor plan existence: %w", err)
 	}
 	
 	if exists {
-		logger.Info("Floor plan '%s' already exists, updating...", plan.Name)
+		logger.Info("Floor plan '%s' (ID: %s) already exists, updating...", plan.Name, plan.ID)
 		return s.UpdateFloorPlanFixed(ctx, plan)
 	}
 	
@@ -192,7 +195,7 @@ func (s *SQLiteDB) UpdateFloorPlanFixed(ctx context.Context, plan *models.FloorP
 		plan.Building,
 		plan.Level,
 		plan.UpdatedAt,
-		plan.Name, // ID
+		plan.ID, // ID
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update floor plan: %w", err)
@@ -201,20 +204,20 @@ func (s *SQLiteDB) UpdateFloorPlanFixed(ctx context.Context, plan *models.FloorP
 	// Delete existing rooms and equipment (cascade will handle equipment)
 	// This ensures clean state before re-inserting
 	deleteRoomsQuery := `DELETE FROM rooms WHERE floor_plan_id = ?`
-	if _, err := tx.ExecContext(ctx, deleteRoomsQuery, plan.Name); err != nil {
+	if _, err := tx.ExecContext(ctx, deleteRoomsQuery, plan.ID); err != nil {
 		return fmt.Errorf("failed to delete existing rooms: %w", err)
 	}
 	
 	// Re-insert rooms
 	for i := range plan.Rooms {
-		if err := s.saveRoomFixedTx(ctx, tx, plan.Name, &plan.Rooms[i]); err != nil {
+		if err := s.saveRoomFixedTx(ctx, tx, plan.ID, &plan.Rooms[i]); err != nil {
 			return fmt.Errorf("failed to save room %s: %w", plan.Rooms[i].ID, err)
 		}
 	}
 	
 	// Re-insert equipment
 	for i := range plan.Equipment {
-		if err := s.saveEquipmentFixedTx(ctx, tx, plan.Name, &plan.Equipment[i]); err != nil {
+		if err := s.saveEquipmentFixedTx(ctx, tx, plan.ID, &plan.Equipment[i]); err != nil {
 			return fmt.Errorf("failed to save equipment %s: %w", plan.Equipment[i].ID, err)
 		}
 	}
@@ -232,6 +235,10 @@ func (s *SQLiteDB) UpdateFloorPlanFixed(ctx context.Context, plan *models.FloorP
 func ValidateFloorPlan(plan *models.FloorPlan) error {
 	if plan == nil {
 		return fmt.Errorf("floor plan is nil")
+	}
+	
+	if plan.ID == "" {
+		return fmt.Errorf("floor plan ID is required")
 	}
 	
 	if plan.Name == "" {

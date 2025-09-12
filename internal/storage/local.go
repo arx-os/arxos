@@ -33,6 +33,12 @@ func NewLocalBackend(basePath string) (*LocalBackend, error) {
 	}, nil
 }
 
+// Local creates a new local filesystem backend (simplified constructor)
+func Local(basePath string) Backend {
+	backend, _ := NewLocalBackend(basePath)
+	return backend
+}
+
 // Type returns the backend type
 func (l *LocalBackend) Type() string {
 	return "local"

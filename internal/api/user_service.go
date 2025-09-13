@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 

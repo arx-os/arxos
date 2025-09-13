@@ -1,3 +1,6 @@
+// Package database provides a unified interface for database operations in ArxOS.
+// It defines database interfaces and error types for consistent data access across
+// the application, supporting floor plans, equipment, rooms, users, and organization management.
 package database
 
 import (

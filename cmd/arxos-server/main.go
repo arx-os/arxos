@@ -15,9 +15,9 @@ import (
 	"github.com/joelpate/arxos/internal/api"
 	"github.com/joelpate/arxos/internal/config"
 	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/joelpate/arxos/internal/importer"
 	"github.com/joelpate/arxos/internal/middleware"
-	"github.com/joelpate/arxos/internal/pdf"
 	"github.com/joelpate/arxos/internal/telemetry"
 	"github.com/joelpate/arxos/internal/web"
 	"github.com/joelpate/arxos/pkg/models"
@@ -97,10 +97,10 @@ func main() {
 		// Continue without web UI
 	}
 
-	// Start session cleanup service
-	sessionCleanup := api.NewSessionCleanup(db, 1*time.Hour)
-	go sessionCleanup.Start(context.Background())
-	defer sessionCleanup.Stop()
+	// Start session manager for cleanup
+	sessionManager := api.NewSessionManager(db, 15*time.Minute, 24*time.Hour)
+	go sessionManager.Start(context.Background())
+	defer sessionManager.Stop()
 
 	// The Chi router from NewChiRouter handles all routes
 	mainRouter := apiHandler
@@ -629,10 +629,10 @@ func (h *handlers) handlePDFUpload(w http.ResponseWriter, r *http.Request) {
 		header.Filename, header.Size, user.ID)
 	
 	// Create PDF importer
-	importer := pdf.NewImporter(h.services.DB)
+	pdfImporter := importer.NewImporter(h.services.DB)
 	
 	// Prepare import options
-	options := pdf.ImportOptions{
+	options := importer.ImportOptions{
 		BuildingName: r.FormValue("building_name"),
 		BuildingID:   r.FormValue("building_id"),
 		UserID:       user.ID,
@@ -649,7 +649,7 @@ func (h *handlers) handlePDFUpload(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	
 	// Process import
-	result, err := importer.Import(ctx, file, options)
+	result, err := pdfImporter.Import(ctx, file, options)
 	if err != nil {
 		logger.Error("PDF import failed: %v", err)
 		respondError(w, http.StatusInternalServerError, fmt.Sprintf("Import failed: %v", err))

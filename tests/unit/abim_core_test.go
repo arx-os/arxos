@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joelpate/arxos/internal/ascii/abim"
-	"github.com/joelpate/arxos/internal/ascii/layers"
+	"github.com/joelpate/arxos/internal/rendering"
+	"github.com/joelpate/arxos/internal/rendering"
 	"github.com/joelpate/arxos/pkg/models"
 )
 

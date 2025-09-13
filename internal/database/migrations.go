@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
 // Migration represents a database migration

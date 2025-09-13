@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/joelpate/arxos/internal/config"
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
 // Collector collects and sends telemetry data

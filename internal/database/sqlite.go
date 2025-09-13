@@ -10,7 +10,7 @@ import (
 
 	_ "modernc.org/sqlite"
 	
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 	"github.com/joelpate/arxos/pkg/models"
 )
 
@@ -20,14 +20,16 @@ type SQLiteDB struct {
 	config *Config
 }
 
-// NewSQLiteDB creates a new SQLite database instance
+// NewSQLiteDB creates a new SQLite database instance with the provided configuration.
+// The database is not connected until Connect() is called explicitly.
 func NewSQLiteDB(config *Config) *SQLiteDB {
 	return &SQLiteDB{
 		config: config,
 	}
 }
 
-// NewSQLiteDBFromPath creates a new SQLite database instance from a path
+// NewSQLiteDBFromPath creates a new SQLite database instance from a file path.
+// It automatically connects to the database and runs migrations, making it ready for use.
 func NewSQLiteDBFromPath(dbPath string) (*SQLiteDB, error) {
 	config := NewConfig(dbPath)
 	db := NewSQLiteDB(config)
@@ -192,12 +194,22 @@ func (s *SQLiteDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, e
 
 // SaveFloorPlan saves a new floor plan
 func (s *SQLiteDB) SaveFloorPlan(ctx context.Context, plan *models.FloorPlan) error {
+	// Generate ID if not set
+	if plan.ID == "" {
+		if plan.Name != "" {
+			plan.ID = plan.Name
+		} else {
+			plan.ID = fmt.Sprintf("floor_%d", time.Now().Unix())
+			plan.Name = plan.ID
+		}
+	}
+	
 	// Validate floor plan before saving
 	if err := ValidateFloorPlan(plan); err != nil {
 		return fmt.Errorf("invalid floor plan: %w", err)
 	}
-	// Use the fixed version with proper foreign key handling
-	return s.SaveFloorPlanFixed(ctx, plan)
+	// Use the original implementation
+	return s.SaveFloorPlanOld(ctx, plan)
 }
 
 // SaveFloorPlanOld is the original implementation (kept for reference)
@@ -258,8 +270,8 @@ func (s *SQLiteDB) UpdateFloorPlan(ctx context.Context, plan *models.FloorPlan) 
 	if err := ValidateFloorPlan(plan); err != nil {
 		return fmt.Errorf("invalid floor plan: %w", err)
 	}
-	// Use the fixed version with proper foreign key handling
-	return s.UpdateFloorPlanFixed(ctx, plan)
+	// Use the original implementation
+	return s.UpdateFloorPlanOld(ctx, plan)
 }
 
 // UpdateFloorPlanOld is the original implementation (kept for reference)

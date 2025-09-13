@@ -85,7 +85,7 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 	}
 	
 	// Save floor plan
-	err := db.SaveFloorPlanFixed(ctx, plan)
+	err := db.SaveFloorPlan(ctx, plan)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, plan.ID, "Floor plan should have an ID after saving")
 	
@@ -152,7 +152,7 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 		},
 	}
 	
-	err := db.SaveFloorPlanFixed(ctx, plan)
+	err := db.SaveFloorPlan(ctx, plan)
 	require.NoError(t, err)
 	
 	// Update the floor plan
@@ -179,7 +179,7 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 		},
 	}
 	
-	err = db.UpdateFloorPlanFixed(ctx, plan)
+	err = db.UpdateFloorPlan(ctx, plan)
 	assert.NoError(t, err)
 	
 	// Load and verify updates
@@ -229,7 +229,7 @@ func TestSQLiteDB_ForeignKeyConstraints(t *testing.T) {
 	}
 	
 	// SaveFloorPlanFixed should handle this gracefully
-	err := db.SaveFloorPlanFixed(ctx, plan)
+	err := db.SaveFloorPlan(ctx, plan)
 	assert.NoError(t, err)
 	
 	// Load and check that equipment room_id was set to empty

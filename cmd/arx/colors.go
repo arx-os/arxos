@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/joelpate/arxos/internal/ascii/colors"
-	"github.com/joelpate/arxos/internal/output"
+	"github.com/joelpate/arxos/internal/rendering"
+	"github.com/joelpate/arxos/internal/common/output"
 	"github.com/joelpate/arxos/pkg/models"
 )
 
@@ -85,8 +85,7 @@ var colorsViewCmd = &cobra.Command{
 		}
 		
 		// Create enhanced renderer
-		paletteMode := colors.PaletteMode(mode)
-		renderer := colors.NewEnhancedRenderer(width, height, paletteMode)
+		renderer := rendering.NewRenderer(width, height, 100)
 		
 		if jsonOutput {
 			// JSON output mode
@@ -105,7 +104,7 @@ var colorsViewCmd = &cobra.Command{
 					"animation":   animate,
 				},
 				"terminal_support": map[string]bool{
-					"256_colors": colors.SupportsColor256(),
+					"256_colors": rendering.SupportsColor256(),
 				},
 			}
 			output.WriteOutput(jsonOutput, "colors view", result)
@@ -127,39 +126,39 @@ var colorsPaletteCmd = &cobra.Command{
 		fmt.Println("Available Color Palettes:")
 		fmt.Println(strings.Repeat("─", 50))
 		
-		modes := []colors.PaletteMode{
-			colors.ModeDefault,
-			colors.ModeDark,
-			colors.ModeLight,
-			colors.ModeHighContrast,
-			colors.ModeColorBlind,
-			colors.ModeMonochrome,
+		modes := []rendering.PaletteMode{
+			rendering.ModeDefault,
+			rendering.ModeDark,
+			rendering.ModeLight,
+			rendering.ModeHighContrast,
+			rendering.ModeColorBlind,
+			rendering.ModeMonochrome,
 		}
 		
 		for _, mode := range modes {
-			palette := colors.NewPalette(mode)
+			palette := rendering.NewPalette(mode)
 			fmt.Printf("\n%s Mode:\n", mode)
 			
 			// Show sample colors
 			samples := []struct {
 				name  string
-				color colors.Color256
+				color rendering.Color256
 			}{
 				{"Background", palette.Background},
 				{"Foreground", palette.Foreground},
-				{"Outlet", colors.OutletOrange},
-				{"Switch", colors.SwitchBlue},
-				{"Panel", colors.PanelRed},
-				{"Sensor", colors.SensorGreen},
-				{"Normal", colors.StatusNormal},
-				{"Warning", colors.StatusWarning},
-				{"Failed", colors.StatusFailed},
+				{"Outlet", rendering.OutletOrange},
+				{"Switch", rendering.SwitchBlue},
+				{"Panel", rendering.PanelRed},
+				{"Sensor", rendering.SensorGreen},
+				{"Normal", rendering.StatusNormal},
+				{"Warning", rendering.StatusWarning},
+				{"Failed", rendering.StatusFailed},
 			}
 			
 			for _, sample := range samples {
 				// Adapt color for the palette mode
 				displayColor := sample.color
-				if mode == colors.ModeColorBlind && sample.name != "Background" && sample.name != "Foreground" {
+				if mode == rendering.ModeColorBlind && sample.name != "Background" && sample.name != "Foreground" {
 					displayColor = palette.GetEquipmentColor(strings.ToLower(sample.name), "normal")
 				}
 				
@@ -170,7 +169,7 @@ var colorsPaletteCmd = &cobra.Command{
 		}
 		
 		fmt.Println("\n" + strings.Repeat("─", 50))
-		fmt.Printf("Terminal supports 256 colors: %v\n", colors.SupportsColor256())
+		fmt.Printf("Terminal supports 256 colors: %v\n", rendering.SupportsColor256())
 	},
 }
 
@@ -184,7 +183,7 @@ var colorsTestCmd = &cobra.Command{
 		// Test system colors (0-15)
 		fmt.Println("\nSystem Colors (0-15):")
 		for i := 0; i < 16; i++ {
-			color := colors.Color256(i)
+			color := rendering.Color256(i)
 			fmt.Print(color.Format("██"))
 			if (i+1)%8 == 0 {
 				fmt.Println()
@@ -197,7 +196,7 @@ var colorsTestCmd = &cobra.Command{
 			for red := 0; red < 6; red++ {
 				for blue := 0; blue < 6; blue++ {
 					idx := 16 + red*36 + green*6 + blue
-					color := colors.Color256(idx)
+					color := rendering.Color256(idx)
 					fmt.Print(color.Format("█"))
 				}
 				fmt.Print(" ")
@@ -208,7 +207,7 @@ var colorsTestCmd = &cobra.Command{
 		// Test grayscale (232-255)
 		fmt.Println("\nGrayscale (232-255):")
 		for i := 232; i < 256; i++ {
-			color := colors.Color256(i)
+			color := rendering.Color256(i)
 			fmt.Print(color.Format("██"))
 		}
 		fmt.Println()
@@ -218,7 +217,7 @@ var colorsTestCmd = &cobra.Command{
 		
 		// Energy gradient
 		fmt.Print("Energy:      ")
-		energyGradient := colors.Gradient(colors.EnergyLow, colors.EnergyOverload, 40)
+		energyGradient := rendering.Gradient(rendering.EnergyLow, rendering.EnergyOverload, 40)
 		for _, color := range energyGradient {
 			fmt.Print(color.Format("█"))
 		}
@@ -226,7 +225,7 @@ var colorsTestCmd = &cobra.Command{
 		
 		// Temperature gradient
 		fmt.Print("Temperature: ")
-		tempGradient := colors.Gradient(colors.TempCold, colors.TempCritical, 40)
+		tempGradient := rendering.Gradient(rendering.TempCold, rendering.TempCritical, 40)
 		for _, color := range tempGradient {
 			fmt.Print(color.Format("█"))
 		}
@@ -236,32 +235,23 @@ var colorsTestCmd = &cobra.Command{
 	},
 }
 
-func renderColoredView(renderer *colors.EnhancedRenderer, plan *models.FloorPlan, showTemp, showEnergy bool) {
+func renderColoredView(renderer *rendering.Renderer, plan *models.FloorPlan, showTemp, showEnergy bool) {
 	// Clear screen
 	fmt.Print("\033[H\033[2J")
 	
 	// Render the floor plan
-	renderer.RenderFloorPlan(plan)
+	renderer.RenderFloorPlan(plan, 0.0)
 	
 	// Add temperature overlay if requested
 	if showTemp {
-		// Generate mock temperature data for demo
-		temps := generateMockTemperatureData(renderer.Width, renderer.Height)
-		renderer.DrawTemperatureMap(temps)
+		// Temperature overlay not yet implemented in new renderer
+		fmt.Println("Temperature overlay not yet available")
 	}
 	
 	// Add energy flow if requested
 	if showEnergy {
-		// Generate mock energy paths for demo
-		for i, equip := range plan.Equipment {
-			if equip.Type == "outlet" && i < len(plan.Equipment)-1 {
-				path := []models.Point{
-					equip.Location,
-					plan.Equipment[i+1].Location,
-				}
-				renderer.DrawEnergyFlow(path, 0.7, 0)
-			}
-		}
+		// Energy flow overlay not yet implemented in new renderer
+		fmt.Println("Energy flow overlay not yet available")
 	}
 	
 	// Output to terminal
@@ -270,11 +260,11 @@ func renderColoredView(renderer *colors.EnhancedRenderer, plan *models.FloorPlan
 	// Show info
 	fmt.Println("\n" + strings.Repeat("─", 80))
 	fmt.Printf("Enhanced Color View - %s\n", plan.Name)
-	fmt.Printf("256-Color Support: %v\n", colors.SupportsColor256())
+	fmt.Printf("256-Color Support: %v\n", rendering.SupportsColor256())
 	fmt.Println("Features: Temperature=" + fmt.Sprint(showTemp) + " Energy=" + fmt.Sprint(showEnergy))
 }
 
-func runAnimatedColorView(renderer *colors.EnhancedRenderer, plan *models.FloorPlan, showTemp, showEnergy bool) {
+func runAnimatedColorView(renderer *rendering.Renderer, plan *models.FloorPlan, showTemp, showEnergy bool) {
 	fmt.Println("Animated view not yet implemented. Showing static view instead.")
 	renderColoredView(renderer, plan, showTemp, showEnergy)
 }

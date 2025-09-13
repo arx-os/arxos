@@ -20,14 +20,15 @@ func NewRouter(h *Handler) chi.Router {
 	// Note: Static files are handled by the template system
 
 	// Main pages
-	r.Get("/", h.handleIndex)
-	r.Get("/login", h.handleLogin)
-	r.Post("/login", h.handleLogin)
+	r.Get("/", h.HandleDashboard)
+	r.Get("/dashboard", h.HandleDashboard)
+	r.Get("/login", h.HandleLogin)
+	r.Post("/login", h.handleLogin)  // API endpoint
 	r.Get("/logout", h.handleLogout)
 	
 	// Buildings routes
 	r.Route("/buildings", func(r chi.Router) {
-		r.Get("/", h.handleBuildings)
+		r.Get("/", h.HandleBuildingsList)
 		r.Get("/new", h.handleNewBuilding)
 		r.Post("/new", h.handleNewBuilding)
 		
@@ -35,6 +36,7 @@ func NewRouter(h *Handler) chi.Router {
 			r.Get("/", h.handleBuildingDetail)
 			r.Put("/", h.handleUpdateBuilding)
 			r.Delete("/", h.handleDeleteBuilding)
+			r.Get("/floor-plan", h.HandleBuildingFloorPlan)  // HTMX endpoint for ASCII
 			r.Get("/view", h.handleFloorPlanViewer)
 		})
 	})

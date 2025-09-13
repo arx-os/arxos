@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
 //go:embed templates/*.html templates/fragments/*.html

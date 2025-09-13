@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 	"github.com/joelpate/arxos/pkg/models"
 )
 

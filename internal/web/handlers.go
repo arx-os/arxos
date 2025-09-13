@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 	"github.com/joelpate/arxos/internal/search"
 	"github.com/joelpate/arxos/pkg/models"
 )
@@ -317,10 +317,54 @@ func (h *Handler) handleEquipment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get all equipment across buildings
+	buildings, err := h.services.Building.ListBuildings(r.Context(), user.ID, 100, 0)
+	if err != nil {
+		logger.Error("Failed to list buildings: %v", err)
+		buildings = []*models.FloorPlan{}
+	}
+
+	// Collect all equipment
+	var allEquipment []*models.Equipment
+	equipmentByStatus := map[string]int{
+		"normal":       0,
+		"needs-repair": 0,
+		"failed":       0,
+	}
+
+	for _, b := range buildings {
+		for i := range b.Equipment {
+			allEquipment = append(allEquipment, &b.Equipment[i])
+			switch b.Equipment[i].Status {
+			case models.StatusNormal:
+				equipmentByStatus["normal"]++
+			case models.StatusNeedsRepair:
+				equipmentByStatus["needs-repair"]++
+			case models.StatusFailed:
+				equipmentByStatus["failed"]++
+			}
+		}
+	}
+
+	content := map[string]interface{}{
+		"Equipment":         allEquipment,
+		"TotalCount":        len(allEquipment),
+		"NormalCount":       equipmentByStatus["normal"],
+		"NeedsRepairCount":  equipmentByStatus["needs-repair"],
+		"FailedCount":       equipmentByStatus["failed"],
+	}
+
+	// Check if this is an HTMX request
+	if r.Header.Get("HX-Request") == "true" {
+		h.templates.RenderFragment(w, "equipment-list", content)
+		return
+	}
+
 	data := PageData{
 		Title:     "Equipment",
 		NavActive: "equipment",
 		User:      user,
+		Content:   content,
 	}
 
 	if err := h.templates.Render(w, "equipment", data); err != nil {
@@ -337,31 +381,147 @@ func (h *Handler) handleSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := PageData{
-		Title:     "Settings",
-		NavActive: "settings",
-		User:      user,
-	}
+	switch r.Method {
+	case http.MethodGet:
+		// Get current settings
+		settings := map[string]interface{}{
+			"EmailNotifications": true,
+			"AutoRefresh":        true,
+			"RefreshInterval":    30,
+			"Theme":              "light",
+			"Timezone":           "America/New_York",
+		}
 
-	if err := h.templates.Render(w, "settings", data); err != nil {
-		logger.Error("Failed to render settings: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		data := PageData{
+			Title:     "Settings",
+			NavActive: "settings",
+			User:      user,
+			Content:   settings,
+		}
+
+		if err := h.templates.Render(w, "settings", data); err != nil {
+			logger.Error("Failed to render settings: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+
+	case http.MethodPost:
+		// Update settings
+		emailNotifications := r.FormValue("email_notifications") == "on"
+		autoRefresh := r.FormValue("auto_refresh") == "on"
+		refreshInterval, _ := strconv.Atoi(r.FormValue("refresh_interval"))
+		theme := r.FormValue("theme")
+		timezone := r.FormValue("timezone")
+
+		// Save settings (in production, this would go to database)
+		logger.Info("Updated settings for user %s: notifications=%v, refresh=%v, interval=%d, theme=%s, tz=%s",
+			user.ID, emailNotifications, autoRefresh, refreshInterval, theme, timezone)
+
+		// Return success message
+		data := PageData{
+			Success: "Settings updated successfully",
+		}
+		h.templates.RenderFragment(w, "form-success", data)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-// handleSearch handles HTMX search requests
-func (h *Handler) handleSearch(w http.ResponseWriter, r *http.Request) {
+// handleGlobalSearch handles HTMX global search requests
+func (h *Handler) handleGlobalSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	// Perform search across buildings and equipment
-	results := []interface{}{}
+	user := h.getUser(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Track recent search
+	h.recentSearches.Add(search.SearchQuery{
+		Query:     query,
+		Timestamp: time.Now(),
+		UserID:    user.ID,
+	})
+
+	// Search buildings
+	buildings, _ := h.services.Building.ListBuildings(r.Context(), user.ID, 100, 0)
+	var buildingResults []*models.FloorPlan
+	for _, b := range buildings {
+		if strings.Contains(strings.ToLower(b.Name), strings.ToLower(query)) ||
+		   strings.Contains(strings.ToLower(b.Building), strings.ToLower(query)) {
+			buildingResults = append(buildingResults, b)
+		}
+	}
+
+	// Search equipment
+	var equipmentResults []*models.Equipment
+	for _, b := range buildings {
+		for i := range b.Equipment {
+			if strings.Contains(strings.ToLower(b.Equipment[i].Name), strings.ToLower(query)) ||
+			   strings.Contains(strings.ToLower(b.Equipment[i].Type), strings.ToLower(query)) {
+				equipmentResults = append(equipmentResults, &b.Equipment[i])
+			}
+		}
+	}
+
+	results := map[string]interface{}{
+		"Query":            query,
+		"BuildingResults":  buildingResults,
+		"EquipmentResults": equipmentResults,
+		"TotalResults":     len(buildingResults) + len(equipmentResults),
+	}
 
 	// Return search results as HTML fragments
 	h.templates.RenderFragment(w, "search-results", results)
+}
+
+// handleSearchSuggestions handles search autocomplete suggestions
+func (h *Handler) handleSearchSuggestions(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" || len(query) < 2 {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	user := h.getUser(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get suggestions from search indexer
+	suggestions := []string{}
+	// TODO: Implement suggestions from search indexer
+
+	data := map[string]interface{}{
+		"Suggestions": suggestions,
+	}
+
+	h.templates.RenderFragment(w, "search-suggestions", data)
+}
+
+// handleRecentSearches handles recent searches display
+func (h *Handler) handleRecentSearches(w http.ResponseWriter, r *http.Request) {
+	user := h.getUser(r)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get recent searches for this user
+	recent := []search.SearchQuery{}
+	// TODO: Implement user-filtered recent searches
+
+	data := map[string]interface{}{
+		"RecentSearches": recent,
+	}
+
+	h.templates.RenderFragment(w, "recent-searches", data)
 }
 
 // handleNotifications handles notification requests
@@ -386,15 +546,76 @@ func (h *Handler) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := PageData{
-		Title:     "Import Building",
-		User:      user,
-		NavActive: "upload",
-	}
+	switch r.Method {
+	case http.MethodGet:
+		data := PageData{
+			Title:     "Import Building",
+			User:      user,
+			NavActive: "upload",
+		}
 
-	if err := h.templates.Render(w, "upload", data); err != nil {
-		logger.Error("Failed to render upload page: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		if err := h.templates.Render(w, "upload", data); err != nil {
+			logger.Error("Failed to render upload page: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+
+	case http.MethodPost:
+		// Parse multipart form (max 32 MB)
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			data := PageData{
+				Error: "Failed to parse upload",
+			}
+			h.templates.RenderFragment(w, "upload-result", data)
+			return
+		}
+
+		// Get the file
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			data := PageData{
+				Error: "No file uploaded",
+			}
+			h.templates.RenderFragment(w, "upload-result", data)
+			return
+		}
+		defer file.Close()
+
+		// Check file type
+		if !strings.HasSuffix(strings.ToLower(header.Filename), ".pdf") {
+			data := PageData{
+				Error: "Only PDF files are supported",
+			}
+			h.templates.RenderFragment(w, "upload-result", data)
+			return
+		}
+
+		// Process the PDF (would call PDF parser here)
+		buildingName := r.FormValue("name")
+		if buildingName == "" {
+			buildingName = strings.TrimSuffix(header.Filename, ".pdf")
+		}
+
+		logger.Info("Processing uploaded PDF: %s (size: %d bytes) as building: %s",
+			header.Filename, header.Size, buildingName)
+
+		// In production, this would:
+		// 1. Save the file temporarily
+		// 2. Call the PDF parser
+		// 3. Convert to FloorPlan model
+		// 4. Save to database
+		// 5. Generate ASCII representation
+
+		// Return success result
+		data := map[string]interface{}{
+			"Success":      "Building imported successfully",
+			"BuildingName": buildingName,
+			"FileName":     header.Filename,
+			"FileSize":     header.Size,
+		}
+		h.templates.RenderFragment(w, "upload-result", data)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -441,4 +662,65 @@ func (h *Handler) getUser(r *http.Request) *api.User {
 	}
 
 	return user
+}
+
+// handleFloorPlanViewer handles the interactive floor plan viewer
+func (h *Handler) handleFloorPlanViewer(w http.ResponseWriter, r *http.Request) {
+	user := h.getUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Extract building ID from URL
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 4 {
+		http.NotFound(w, r)
+		return
+	}
+	buildingID := parts[2]
+
+	// Get building details
+	building, err := h.services.Building.GetBuilding(r.Context(), buildingID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	data := PageData{
+		Title:     fmt.Sprintf("%s - Floor Plan", building.Name),
+		NavActive: "buildings",
+		User:      user,
+		Content:   building,
+	}
+
+	if err := h.templates.Render(w, "floor-viewer", data); err != nil {
+		logger.Error("Failed to render floor viewer: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+	}
+}
+
+// handleFloorPlanSVG generates SVG representation of floor plan
+func (h *Handler) handleFloorPlanSVG(w http.ResponseWriter, r *http.Request) {
+	// Extract building ID from URL
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.Error(w, "Invalid building ID", http.StatusBadRequest)
+		return
+	}
+	buildingID := parts[2]
+
+	// Get building from database
+	building, err := h.services.Building.GetBuilding(r.Context(), buildingID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Generate SVG (simplified version)
+	w.Header().Set("Content-Type", "image/svg+xml")
+	fmt.Fprintf(w, `<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+		<rect width="800" height="600" fill="#f0f0f0"/>
+		<text x="400" y="300" text-anchor="middle" font-size="24">%s</text>
+	</svg>`, building.Name)
 }

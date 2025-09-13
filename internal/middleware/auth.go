@@ -1,3 +1,6 @@
+// Package middleware provides HTTP middleware components for ArxOS web applications.
+// It includes authentication, rate limiting, validation, and other request processing
+// middleware for secure and efficient API operations.
 package middleware
 
 import (
@@ -6,7 +9,7 @@ import (
 	"strings"
 	
 	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
 // contextKey is a custom type for context keys to avoid collisions

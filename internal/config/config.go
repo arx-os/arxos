@@ -1,3 +1,6 @@
+// Package config provides configuration management for ArxOS applications.
+// It handles loading, validation, and management of configuration settings from
+// files and environment variables, supporting development and production modes.
 package config
 
 import (
@@ -8,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
 // Mode represents the operational mode of ArxOS

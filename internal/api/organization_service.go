@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 	"github.com/joelpate/arxos/pkg/models"
 )
 

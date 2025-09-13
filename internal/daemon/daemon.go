@@ -13,9 +13,9 @@ import (
 	"github.com/fsnotify/fsnotify"
 	
 	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 	"github.com/joelpate/arxos/internal/pdf"
-	"github.com/joelpate/arxos/internal/state"
+	"github.com/joelpate/arxos/internal/common/state"
 )
 
 // Daemon represents the ArxOS background service

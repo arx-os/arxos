@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"time"
 	
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
 // Handler provides panic recovery and error handling

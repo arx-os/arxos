@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
 // EmailService handles email sending

@@ -10,6 +10,7 @@ ArxOS is a comprehensive platform that treats buildings as living, queryable, ve
 - **Cloud Sync** - Push/pull synchronization with conflict resolution
 - **CLI Tools** - Powerful command-line interface for all operations
 - **Database Layer** - SQLite with spatial indexing and full-text search
+- **Mobile AR** 🆕 - Augmented Reality app for field workers (in development)
 
 ## 🎯 Key Features
 
@@ -32,6 +33,13 @@ ArxOS is a comprehensive platform that treats buildings as living, queryable, ve
 - **Conflict Resolution** - Multiple resolution strategies
 - **Storage Abstraction** - Local, S3, Azure backends
 - **Offline First** - Works without connection
+
+### Mobile AR Application (Coming Soon)
+- **Spatial Anchoring** - Persistent equipment placement in physical space
+- **Real-time Visualization** - See equipment status and info in AR
+- **Voice Input** - Hands-free equipment updates
+- **Offline Support** - Work without connectivity, sync when online
+- **Cross-Platform** - iOS (ARKit) and Android (ARCore) support
 
 ## 📦 Installation
 
@@ -270,6 +278,8 @@ ARXOS_API_URL=https://api.arxos.io
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
 - **[Architecture](docs/ARCHITECTURE.md)** - System architecture
 - **[Vision](docs/VISION.md)** - Platform vision and roadmap
+- **[Mobile AR Guide](docs/MOBILE_AR.md)** - AR application development
+- **[AR API Specification](docs/AR_API_SPEC.md)** - AR-specific API endpoints
 
 ## 🧪 Testing
 

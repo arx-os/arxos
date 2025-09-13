@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/logger"
+	"github.com/joelpate/arxos/internal/common/logger"
 	"github.com/joelpate/arxos/internal/telemetry"
 )
 
@@ -82,17 +82,20 @@ func (s *Server) recoveryMiddleware(next http.Handler) http.Handler {
 // corsMiddleware adds CORS headers
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Make CORS origins configurable
 		origin := r.Header.Get("Origin")
-		if origin == "" {
-			origin = "*"
+		
+		// Check if origin is allowed
+		if origin != "" && s.isOriginAllowed(origin) {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		} else if s.isOriginAllowed("*") {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 		
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Request-ID")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Max-Age", "3600")
+		// Set allowed methods and headers from config
+		w.Header().Set("Access-Control-Allow-Methods", strings.Join(s.config.CORS.AllowedMethods, ", "))
+		w.Header().Set("Access-Control-Allow-Headers", strings.Join(s.config.CORS.AllowedHeaders, ", "))
+		w.Header().Set("Access-Control-Max-Age", fmt.Sprintf("%d", s.config.CORS.MaxAge))
 		
 		// Handle preflight requests
 		if r.Method == http.MethodOptions {
@@ -102,6 +105,16 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 		
 		next.ServeHTTP(w, r)
 	})
+}
+
+// isOriginAllowed checks if the given origin is in the allowed list
+func (s *Server) isOriginAllowed(origin string) bool {
+	for _, allowed := range s.config.CORS.AllowedOrigins {
+		if allowed == "*" || allowed == origin {
+			return true
+		}
+	}
+	return false
 }
 
 // authMiddleware validates authentication
@@ -162,10 +175,10 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// rateLimitMiddleware implements rate limiting
+// rateLimitMiddleware implements configurable rate limiting
 func (s *Server) rateLimitMiddleware(next http.Handler) http.Handler {
-	// Simple in-memory rate limiter
-	// TODO: Use Redis for distributed rate limiting
+	// In-memory rate limiter with configurable limits
+	// Note: For distributed systems, consider using Redis for rate limiting
 	
 	type client struct {
 		limiter  *rateLimiter
@@ -176,15 +189,15 @@ func (s *Server) rateLimitMiddleware(next http.Handler) http.Handler {
 		clients = make(map[string]*client)
 		mu      sync.Mutex
 		
-		// Clean up old clients every minute
-		cleanup = time.NewTicker(1 * time.Minute)
+		// Configurable cleanup interval
+		cleanup = time.NewTicker(s.config.RateLimit.CleanupInterval)
 	)
 	
 	go func() {
 		for range cleanup.C {
 			mu.Lock()
 			for ip, c := range clients {
-				if time.Since(c.lastSeen) > 5*time.Minute {
+				if time.Since(c.lastSeen) > s.config.RateLimit.ClientTTL {
 					delete(clients, ip)
 				}
 			}
@@ -193,18 +206,19 @@ func (s *Server) rateLimitMiddleware(next http.Handler) http.Handler {
 	}()
 	
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get client IP
-		ip := r.RemoteAddr
-		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-			ip = strings.Split(forwarded, ",")[0]
-		}
+		// Get client IP (handle proxy headers properly)
+		ip := s.getClientIP(r)
 		
 		// Get or create rate limiter for client
 		mu.Lock()
 		c, exists := clients[ip]
 		if !exists {
 			c = &client{
-				limiter: newRateLimiter(100, 1*time.Minute), // 100 requests per minute
+				limiter: newRateLimiter(
+					s.config.RateLimit.RequestsPerMinute,
+					s.config.RateLimit.BurstSize,
+					1*time.Minute,
+				),
 			}
 			clients[ip] = c
 		}
@@ -213,12 +227,42 @@ func (s *Server) rateLimitMiddleware(next http.Handler) http.Handler {
 		
 		// Check rate limit
 		if !c.limiter.allow() {
+			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", s.config.RateLimit.RequestsPerMinute))
+			w.Header().Set("X-RateLimit-Remaining", "0")
+			w.Header().Set("Retry-After", "60")
 			s.respondError(w, http.StatusTooManyRequests, "Rate limit exceeded")
 			return
 		}
 		
+		// Add rate limit headers
+		remaining := c.limiter.remaining()
+		w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", s.config.RateLimit.RequestsPerMinute))
+		w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", remaining))
+		
 		next.ServeHTTP(w, r)
 	})
+}
+
+// getClientIP extracts the real client IP from the request
+func (s *Server) getClientIP(r *http.Request) string {
+	// Check X-Forwarded-For header (proxy/load balancer)
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		// Take the first IP in the chain
+		ips := strings.Split(forwarded, ",")
+		return strings.TrimSpace(ips[0])
+	}
+	
+	// Check X-Real-IP header (nginx)
+	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+		return realIP
+	}
+	
+	// Fallback to RemoteAddr
+	ip := r.RemoteAddr
+	if idx := strings.LastIndex(ip, ":"); idx != -1 {
+		ip = ip[:idx] // Remove port
+	}
+	return ip
 }
 
 // responseWriter wraps http.ResponseWriter to capture status code
@@ -232,19 +276,26 @@ func (w *responseWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-// rateLimiter implements a simple token bucket rate limiter
+// rateLimiter implements a token bucket rate limiter with burst support
 type rateLimiter struct {
-	tokens    int
-	maxTokens int
-	refillAt  time.Time
-	interval  time.Duration
-	mu        sync.Mutex
+	tokens     int
+	maxTokens  int
+	burstSize  int
+	refillAt   time.Time
+	interval   time.Duration
+	mu         sync.Mutex
 }
 
-func newRateLimiter(maxTokens int, interval time.Duration) *rateLimiter {
+func newRateLimiter(maxTokens, burstSize int, interval time.Duration) *rateLimiter {
+	// Burst size should not exceed max tokens
+	if burstSize > maxTokens {
+		burstSize = maxTokens
+	}
+	
 	return &rateLimiter{
-		tokens:    maxTokens,
+		tokens:    burstSize, // Start with burst allowance
 		maxTokens: maxTokens,
+		burstSize: burstSize,
 		refillAt:  time.Now().Add(interval),
 		interval:  interval,
 	}
@@ -254,11 +305,7 @@ func (rl *rateLimiter) allow() bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 	
-	now := time.Now()
-	if now.After(rl.refillAt) {
-		rl.tokens = rl.maxTokens
-		rl.refillAt = now.Add(rl.interval)
-	}
+	rl.refill()
 	
 	if rl.tokens > 0 {
 		rl.tokens--
@@ -266,4 +313,35 @@ func (rl *rateLimiter) allow() bool {
 	}
 	
 	return false
+}
+
+func (rl *rateLimiter) remaining() int {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	
+	rl.refill()
+	return rl.tokens
+}
+
+func (rl *rateLimiter) refill() {
+	now := time.Now()
+	if now.After(rl.refillAt) {
+		// Calculate how many intervals have passed
+		intervals := int(now.Sub(rl.refillAt) / rl.interval) + 1
+		
+		// Add tokens based on intervals passed, but don't exceed max
+		tokensToAdd := intervals * rl.maxTokens / int(rl.interval/time.Minute)
+		rl.tokens = min(rl.tokens + tokensToAdd, rl.maxTokens)
+		
+		// Update refill time
+		rl.refillAt = now.Add(rl.interval)
+	}
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

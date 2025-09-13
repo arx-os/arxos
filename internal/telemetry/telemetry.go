@@ -51,6 +51,92 @@ var (
 	once            sync.Once
 )
 
+// ObservabilityConfig extends the base telemetry config
+type ObservabilityConfig struct {
+	*config.TelemetryConfig
+	ServiceName string
+	Environment string
+	Metrics     struct {
+		Enabled  bool
+		Endpoint string
+		Port     int
+	}
+	Tracing struct {
+		Enabled    bool
+		Endpoint   string
+		SampleRate float64
+	}
+	Logging struct {
+		Level          string
+		Format         string
+		CorrelationIDs bool
+	}
+}
+
+// ExtendedTelemetry provides enhanced telemetry services
+type ExtendedTelemetry struct {
+	config  *ObservabilityConfig
+	metrics *MetricsCollector
+	tracer  *Tracer
+	logger  *StructuredLogger
+	mu      sync.RWMutex
+}
+
+var (
+	extendedInstance *ExtendedTelemetry
+	extendedOnce     sync.Once
+)
+
+// InitializeExtended sets up enhanced telemetry services
+func InitializeExtended(cfg *config.TelemetryConfig) error {
+	var err error
+	extendedOnce.Do(func() {
+		obsConfig := &ObservabilityConfig{
+			TelemetryConfig: cfg,
+			ServiceName:     "arxos",
+			Environment:     "development",
+		}
+		
+		// Set defaults
+		obsConfig.Metrics.Enabled = true
+		obsConfig.Metrics.Endpoint = "/metrics"
+		obsConfig.Metrics.Port = 9090
+		
+		obsConfig.Tracing.Enabled = true
+		obsConfig.Tracing.SampleRate = 0.1
+		
+		obsConfig.Logging.Level = "info"
+		obsConfig.Logging.Format = "json"
+		obsConfig.Logging.CorrelationIDs = true
+
+		extendedInstance = &ExtendedTelemetry{
+			config: obsConfig,
+		}
+
+		if cfg != nil && cfg.Enabled {
+			// Initialize metrics collector
+			if obsConfig.Metrics.Enabled {
+				extendedInstance.metrics = NewMetricsCollector(obsConfig)
+			}
+
+			// Initialize tracer
+			if obsConfig.Tracing.Enabled {
+				extendedInstance.tracer = NewTracer(obsConfig)
+			}
+
+			// Initialize structured logger
+			extendedInstance.logger = NewStructuredLogger(obsConfig)
+
+			logger.Info("Enhanced telemetry initialized - metrics: %v, tracing: %v",
+				obsConfig.Metrics.Enabled, obsConfig.Tracing.Enabled)
+		} else {
+			logger.Info("Enhanced telemetry disabled")
+		}
+	})
+
+	return err
+}
+
 // Initialize sets up the global telemetry collector
 func Initialize(cfg *config.TelemetryConfig) {
 	once.Do(func() {
@@ -122,8 +208,8 @@ func Metric(metricName string, value float64, properties map[string]interface{})
 	globalCollector.enqueue(event)
 }
 
-// Error records an error event
-func Error(errName string, err error, properties map[string]interface{}) {
+// TrackError records an error event
+func TrackError(errName string, err error, properties map[string]interface{}) {
 	if globalCollector == nil {
 		return
 	}
@@ -352,4 +438,111 @@ func (c *Counter) Flush() {
 	if value > 0 {
 		Metric(c.name, value, c.properties)
 	}
+}
+
+// GetExtendedInstance returns the extended telemetry instance
+func GetExtendedInstance() *ExtendedTelemetry {
+	return extendedInstance
+}
+
+// StartDashboard starts the observability dashboard
+func StartDashboard() error {
+	if extendedInstance == nil || extendedInstance.config == nil {
+		return fmt.Errorf("telemetry not initialized")
+	}
+
+	dashboard := NewDashboard(extendedInstance.config)
+	return dashboard.Start()
+}
+
+// GetMetricsCollector returns the metrics collector instance
+func GetMetricsCollector() *MetricsCollector {
+	if extendedInstance != nil {
+		return extendedInstance.metrics
+	}
+	return nil
+}
+
+// GetTracer returns the tracer instance
+func GetTracer() *Tracer {
+	if extendedInstance != nil {
+		return extendedInstance.tracer
+	}
+	return nil
+}
+
+// GetStructuredLogger returns the structured logger instance
+func GetStructuredLogger() *StructuredLogger {
+	if extendedInstance != nil {
+		return extendedInstance.logger
+	}
+	return nil
+}
+
+// HTTPMiddleware provides observability for HTTP requests
+func HTTPMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		
+		// Add correlation ID to context
+		ctx := AddCorrelationID(r.Context())
+		r = r.WithContext(ctx)
+		
+		// Start span if tracing is enabled
+		if extendedInstance != nil && extendedInstance.tracer != nil {
+			ctx, span := extendedInstance.tracer.StartSpan(ctx, fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path))
+			defer span.Finish()
+			
+			// Add request attributes to span
+			span.SetAttribute("http.method", r.Method)
+			span.SetAttribute("http.url", r.URL.String())
+			span.SetAttribute("http.user_agent", r.Header.Get("User-Agent"))
+			
+			r = r.WithContext(ctx)
+		}
+		
+		// Wrap response writer to capture status code
+		wrapped := &responseWriter{ResponseWriter: w}
+		
+		// Process request
+		next.ServeHTTP(wrapped, r)
+		
+		// Record metrics if metrics collector is available
+		if extendedInstance != nil && extendedInstance.metrics != nil {
+			duration := time.Since(start).Seconds()
+			tags := map[string]string{
+				"method": r.Method,
+				"path":   r.URL.Path,
+				"status": fmt.Sprintf("%d", wrapped.statusCode),
+			}
+			
+			extendedInstance.metrics.IncrementCounter("http_requests_total", tags)
+			extendedInstance.metrics.RecordHistogram("http_request_duration_seconds", duration, tags)
+		}
+		
+		// Log request with context
+		InfoWithContext(ctx, "HTTP %s %s %d %v", 
+			r.Method, r.URL.Path, wrapped.statusCode, time.Since(start))
+	})
+}
+
+// responseWriter wraps http.ResponseWriter to capture metrics
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode   int
+	bytesWritten int64
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	if rw.statusCode == 0 {
+		rw.statusCode = 200
+	}
+	n, err := rw.ResponseWriter.Write(b)
+	rw.bytesWritten += int64(n)
+	return n, err
 }

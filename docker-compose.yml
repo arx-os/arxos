@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # ArxOS API Server
+  arxos-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "8080:8080"
+    volumes:
+      - arxos-data:/app/data
+      - arxos-logs:/app/logs
+    environment:
+      - ARXOS_DB_PATH=/app/data/arxos.db
+      - ARXOS_LOG_LEVEL=info
+      - ARXOS_PORT=8080
+      - ARXOS_CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
+      - ARXOS_RATE_LIMIT_RPM=100
+      - ARXOS_RATE_LIMIT_BURST=10
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.arxos-api.rule=Host(`api.yourdomain.com`)"
+      - "traefik.http.routers.arxos-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.arxos-api.loadbalancer.server.port=8080"
+
+  # Reverse Proxy (Traefik)
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenege.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8888:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-letsencrypt:/letsencrypt
+    restart: unless-stopped
+
+  # Database backup service
+  backup:
+    image: alpine:latest
+    volumes:
+      - arxos-data:/app/data:ro
+      - ./backups:/backups
+    command: |
+      sh -c "
+        while true; do
+          echo 'Creating backup at $(date)'
+          cp /app/data/arxos.db /backups/arxos-$(date +%Y%m%d-%H%M%S).db
+          # Keep only last 30 backups
+          ls -t /backups/arxos-*.db | tail -n +31 | xargs -r rm
+          sleep 3600  # Run every hour
+        done
+      "
+    restart: unless-stopped
+
+volumes:
+  arxos-data:
+    driver: local
+  arxos-logs:
+    driver: local
+  traefik-letsencrypt:
+    driver: local

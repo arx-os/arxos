@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Config from 'react-native-config';
-import { AuthTokens, ApiError } from '@/types';
+import { AuthTokens, ApiError } from '../../types';
 
 class ApiClient {
   private client: AxiosInstance;

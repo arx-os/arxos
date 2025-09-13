@@ -9,7 +9,10 @@ import (
 	"github.com/joelpate/arxos/internal/api"
 	"github.com/joelpate/arxos/internal/config"
 	authMiddleware "github.com/joelpate/arxos/internal/middleware"
+	"github.com/joelpate/arxos/internal/telemetry"
 	"github.com/joelpate/arxos/pkg/models"
+	
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 // NewChiRouter creates a new chi router with all API routes
@@ -28,6 +31,9 @@ func NewChiRouter(cfg *config.Config, services *api.Services) http.Handler {
 	r.Use(middleware.Compress(5))
 	r.Use(h.corsMiddleware)
 	
+	// Add telemetry middleware
+	r.Use(telemetry.HTTPMiddleware)
+	
 	// Apply validation middleware
 	validationMw := authMiddleware.NewValidationMiddleware()
 	r.Use(validationMw.Middleware)
@@ -43,6 +49,13 @@ func NewChiRouter(cfg *config.Config, services *api.Services) http.Handler {
 	// Health and ready endpoints
 	r.Get("/health", h.handleHealth)
 	r.Get("/ready", h.handleReady)
+	
+	// Observability endpoints
+	r.Get("/metrics", h.handleMetrics)
+	r.Get("/dashboard", h.handleDashboard)
+	
+	// API Documentation
+	r.Get("/docs/*", httpSwagger.WrapHandler)
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {

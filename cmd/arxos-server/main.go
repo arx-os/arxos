@@ -21,6 +21,8 @@ import (
 	"github.com/joelpate/arxos/internal/telemetry"
 	"github.com/joelpate/arxos/internal/web"
 	"github.com/joelpate/arxos/pkg/models"
+	
+	_ "github.com/joelpate/arxos/docs"
 )
 
 func main() {
@@ -51,6 +53,17 @@ func main() {
 	// Initialize telemetry
 	telemetry.Initialize(&cfg.Telemetry)
 	defer telemetry.Shutdown()
+	
+	// Initialize enhanced telemetry with observability features
+	if err := telemetry.InitializeExtended(&cfg.Telemetry); err != nil {
+		logger.Error("Failed to initialize enhanced telemetry: %v", err)
+		// Continue without enhanced telemetry
+	} else {
+		// Start observability dashboard
+		if err := telemetry.StartDashboard(); err != nil {
+			logger.Warn("Failed to start observability dashboard: %v", err)
+		}
+	}
 
 	// Initialize database
 	dbFile := *dbPath
@@ -525,6 +538,18 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 
 func respondError(w http.ResponseWriter, status int, message string) {
 	respondJSON(w, status, map[string]string{"error": message})
+}
+
+// handleMetrics serves Prometheus metrics
+func (h *handlers) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	// This will be handled by the telemetry package's metrics collector
+	http.Redirect(w, r, ":9090/metrics", http.StatusTemporaryRedirect)
+}
+
+// handleDashboard serves the observability dashboard
+func (h *handlers) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	// This will be handled by the telemetry package's dashboard
+	http.Redirect(w, r, ":8090/", http.StatusTemporaryRedirect)
 }
 
 // handleOrganizations handles organization list operations

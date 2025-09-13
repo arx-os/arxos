@@ -17,7 +17,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 # Build flags with version info
 BUILD_FLAGS := -ldflags "$(LDFLAGS) -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.Commit=$(COMMIT)"
 
-.PHONY: all build clean test run-cli run-daemon install help
+.PHONY: all build clean test run-cli run-daemon run-server install help dev docker deploy
 
 # Default target
 all: build
@@ -117,6 +117,61 @@ deps:
 # Development setup
 dev: deps build
 	@echo "🛠️  Development environment ready"
+
+# Docker commands
+docker-build:
+	@echo "🐳 Building Docker images..."
+	docker build -f Dockerfile.server -t arxos-server:latest .
+	@echo "✅ Docker images built"
+
+docker-run:
+	@echo "🐳 Starting Docker services..."
+	docker-compose up -d
+	@echo "✅ Docker services started"
+
+docker-stop:
+	@echo "🛑 Stopping Docker services..."
+	docker-compose down
+	@echo "✅ Docker services stopped"
+
+docker-logs:
+	@echo "📋 Showing Docker logs..."
+	docker-compose logs -f
+
+# Deployment commands
+deploy-dev: docker-build docker-run
+	@echo "🚀 Development deployment complete"
+	@echo "📡 API Server: http://localhost:8080"
+	@echo "📊 Traefik Dashboard: http://localhost:8888"
+
+deploy-prod:
+	@echo "🚀 Production deployment..."
+	@echo "⚠️  Make sure to configure .env file first"
+	docker-compose -f docker-compose.yml up -d
+	@echo "✅ Production deployment complete"
+
+# Database commands
+db-backup:
+	@echo "💾 Creating database backup..."
+	docker-compose exec arxos-server sqlite3 /app/data/arxos.db ".backup /app/data/backup-$(shell date +%Y%m%d-%H%M%S).db"
+	@echo "✅ Database backup created"
+
+db-migrate:
+	@echo "🔄 Running database migrations..."
+	docker-compose exec arxos-server ./arxos-server migrate
+	@echo "✅ Database migrations complete"
+
+# Release commands
+release-prepare:
+	@echo "📦 Preparing release..."
+	@which goreleaser > /dev/null || (echo "❌ goreleaser not installed. Visit: https://goreleaser.com/install/" && exit 1)
+	goreleaser check
+	@echo "✅ Release preparation complete"
+
+release-snapshot:
+	@echo "📦 Creating snapshot release..."
+	goreleaser release --snapshot --rm-dist
+	@echo "✅ Snapshot release created"
 
 # Help target
 help:

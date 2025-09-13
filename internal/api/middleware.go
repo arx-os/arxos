@@ -65,7 +65,7 @@ func (s *Server) recoveryMiddleware(next http.Handler) http.Handler {
 				logger.Error("[%s] Panic recovered: %v", requestID, err)
 				
 				// Track error
-				telemetry.Error("api_panic", fmt.Errorf("%v", err), map[string]interface{}{
+				telemetry.TrackError("api_panic", fmt.Errorf("%v", err), map[string]interface{}{
 					"request_id": requestID,
 					"path":       r.URL.Path,
 				})

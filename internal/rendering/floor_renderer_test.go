@@ -46,7 +46,7 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 					X: 10,
 					Y: 5,
 				},
-				Status: models.StatusNormal,
+				Status: models.StatusOperational,
 			},
 			{
 				ID:   "switch1",
@@ -56,7 +56,7 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 					X: 5,
 					Y: 10,
 				},
-				Status: models.StatusNormal,
+				Status: models.StatusOperational,
 			},
 			{
 				ID:   "panel1",
@@ -66,7 +66,7 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 					X: 40,
 					Y: 10,
 				},
-				Status: models.StatusNormal,
+				Status: models.StatusOperational,
 			},
 		},
 	}
@@ -200,7 +200,7 @@ func TestFloorRenderer_LargeFloorPlan(t *testing.T) {
 				X: float64(i * 5),
 				Y: 5,
 			},
-			Status: models.StatusNormal,
+			Status: models.StatusOperational,
 		}
 		plan.Equipment = append(plan.Equipment, equip)
 	}

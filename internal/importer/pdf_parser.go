@@ -65,8 +65,8 @@ func (p *Parser) ParsePDF(reader io.Reader) (*models.FloorPlan, error) {
 		Name:      "Imported Floor Plan",
 		Building:  "Unknown Building",
 		Level:     1,
-		Rooms:     []models.Room{},
-		Equipment: []models.Equipment{},
+		Rooms:     []*models.Room{},
+		Equipment: []*models.Equipment{},
 	}
 	
 	lineNum := 0
@@ -77,7 +77,7 @@ func (p *Parser) ParsePDF(reader io.Reader) (*models.FloorPlan, error) {
 		// Extract room numbers
 		if matches := p.config.RoomNumberPattern.FindAllString(line, -1); len(matches) > 0 {
 			for _, match := range matches {
-				room := models.Room{
+				room := &models.Room{
 					ID:   fmt.Sprintf("room_%s", match),
 					Name: fmt.Sprintf("Room %s", match),
 					Bounds: models.Bounds{
@@ -94,11 +94,11 @@ func (p *Parser) ParsePDF(reader io.Reader) (*models.FloorPlan, error) {
 		// Detect doors
 		if p.config.DoorPattern.MatchString(line) {
 			// Add door as equipment
-			equipment := models.Equipment{
+			equipment := &models.Equipment{
 				ID:   fmt.Sprintf("door_%d", lineNum),
 				Name: "Door",
 				Type: "door",
-				Location: models.Point{
+				Location: &models.Point{
 					X: float64(lineNum * 10),
 					Y: 50,
 				},

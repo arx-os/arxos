@@ -288,12 +288,13 @@ func (h *Handler) handleNewBuilding(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodPost:
 		// Create new building
+		now := time.Now()
 		building := &models.FloorPlan{
 			Name:      r.FormValue("name"),
 			Building:  r.FormValue("building"),
 			Level:     1,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			CreatedAt: &now,
+			UpdatedAt: &now,
 		}
 
 		if err := h.services.Building.CreateBuilding(r.Context(), building); err != nil {
@@ -334,11 +335,11 @@ func (h *Handler) handleEquipment(w http.ResponseWriter, r *http.Request) {
 
 	for _, b := range buildings {
 		for i := range b.Equipment {
-			allEquipment = append(allEquipment, &b.Equipment[i])
+			allEquipment = append(allEquipment, b.Equipment[i])
 			switch b.Equipment[i].Status {
-			case models.StatusNormal:
+			case models.StatusOperational:
 				equipmentByStatus["normal"]++
-			case models.StatusNeedsRepair:
+			case models.StatusDegraded:
 				equipmentByStatus["needs-repair"]++
 			case models.StatusFailed:
 				equipmentByStatus["failed"]++
@@ -464,7 +465,7 @@ func (h *Handler) handleGlobalSearch(w http.ResponseWriter, r *http.Request) {
 		for i := range b.Equipment {
 			if strings.Contains(strings.ToLower(b.Equipment[i].Name), strings.ToLower(query)) ||
 			   strings.Contains(strings.ToLower(b.Equipment[i].Type), strings.ToLower(query)) {
-				equipmentResults = append(equipmentResults, &b.Equipment[i])
+				equipmentResults = append(equipmentResults, b.Equipment[i])
 			}
 		}
 	}

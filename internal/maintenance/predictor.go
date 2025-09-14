@@ -189,9 +189,7 @@ func (p *Predictor) AnalyzeSystemWidePatterns(ctx context.Context) (*SystemAnaly
 
 	var allEquipment []*models.Equipment
 	for _, plan := range plans {
-		for i := range plan.Equipment {
-			allEquipment = append(allEquipment, &plan.Equipment[i])
-		}
+		allEquipment = append(allEquipment, plan.Equipment...)
 	}
 
 	analysis.TotalEquipment = len(allEquipment)
@@ -691,9 +689,11 @@ func (p *Predictor) GetScheduledMaintenanceCount(ctx context.Context) (int, erro
 		}
 		
 		// Also count equipment that hasn't been maintained in a long time
-		daysSinceCreation := currentTime.Sub(eq.MarkedAt).Hours() / 24
-		if daysSinceCreation > 90 { // 90 days without maintenance
-			scheduledCount++
+		if eq.MarkedAt != nil {
+			daysSinceCreation := currentTime.Sub(*eq.MarkedAt).Hours() / 24
+			if daysSinceCreation > 90 { // 90 days without maintenance
+				scheduledCount++
+			}
 		}
 	}
 	
@@ -733,9 +733,11 @@ func (p *Predictor) GetOverdueMaintenanceCount(ctx context.Context) (int, error)
 		}
 		
 		// Also count equipment that hasn't been maintained in a very long time
-		daysSinceCreation := currentTime.Sub(eq.MarkedAt).Hours() / 24
-		if daysSinceCreation > 180 { // 180 days is definitely overdue
-			overdueCount++
+		if eq.MarkedAt != nil {
+			daysSinceCreation := currentTime.Sub(*eq.MarkedAt).Hours() / 24
+			if daysSinceCreation > 180 { // 180 days is definitely overdue
+				overdueCount++
+			}
 		}
 	}
 	

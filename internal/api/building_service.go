@@ -59,8 +59,8 @@ func (s *BuildingServiceImpl) ListBuildings(ctx context.Context, userID string, 
 func (s *BuildingServiceImpl) CreateBuilding(ctx context.Context, building *models.FloorPlan) error {
 	// Set timestamps
 	now := time.Now()
-	building.CreatedAt = now
-	building.UpdatedAt = now
+	building.CreatedAt = &now
+	building.UpdatedAt = &now
 	
 	if err := s.db.SaveFloorPlan(ctx, building); err != nil {
 		logger.Error("Failed to create building: %v", err)
@@ -74,7 +74,8 @@ func (s *BuildingServiceImpl) CreateBuilding(ctx context.Context, building *mode
 // UpdateBuilding updates an existing building
 func (s *BuildingServiceImpl) UpdateBuilding(ctx context.Context, building *models.FloorPlan) error {
 	// Update timestamp
-	building.UpdatedAt = time.Now()
+	now := time.Now()
+	building.UpdatedAt = &now
 	
 	if err := s.db.UpdateFloorPlan(ctx, building); err != nil {
 		logger.Error("Failed to update building: %v", err)
@@ -152,7 +153,8 @@ func (s *BuildingServiceImpl) ListEquipment(ctx context.Context, buildingID stri
 // CreateEquipment creates new equipment
 func (s *BuildingServiceImpl) CreateEquipment(ctx context.Context, equipment *models.Equipment) error {
 	// Set timestamp
-	equipment.MarkedAt = time.Now()
+	now := time.Now()
+	equipment.MarkedAt = &now
 	
 	if err := s.db.SaveEquipment(ctx, equipment); err != nil {
 		logger.Error("Failed to create equipment: %v", err)
@@ -166,7 +168,8 @@ func (s *BuildingServiceImpl) CreateEquipment(ctx context.Context, equipment *mo
 // UpdateEquipment updates existing equipment
 func (s *BuildingServiceImpl) UpdateEquipment(ctx context.Context, equipment *models.Equipment) error {
 	// Update timestamp
-	equipment.MarkedAt = time.Now()
+	now := time.Now()
+	equipment.MarkedAt = &now
 	
 	if err := s.db.UpdateEquipment(ctx, equipment); err != nil {
 		logger.Error("Failed to update equipment: %v", err)

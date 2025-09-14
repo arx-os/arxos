@@ -1,362 +1,260 @@
 # ArxOS - Building Intelligence Platform
 
-ArxOS is a comprehensive platform that treats buildings as living, queryable, version-controlled systems. Built with Go and HTMX, it provides both a powerful CLI and a clean web interface for managing building intelligence.
+ArxOS is a comprehensive building management platform that combines traditional database-driven features with innovative Building-as-Code capabilities. Built with Go and HTMX, it offers enterprise-grade facility management with unique version control and portability features.
 
-## 🚀 Current Status
+## 🚀 Platform Overview
 
-**Platform Evolution Complete** ✅
-- **API Server** - RESTful API with authentication
-- **Web UI** - Clean HTMX-based interface (no JavaScript build complexity)
-- **Cloud Sync** - Push/pull synchronization with conflict resolution
-- **CLI Tools** - Powerful command-line interface for all operations
-- **Database Layer** - SQLite with spatial indexing and full-text search
-- **Mobile AR** 🆕 - Augmented Reality app for field workers (in development)
+ArxOS provides multiple ways to manage building infrastructure:
+
+### 1. Building-as-Code Innovation
+- **Text-Based BIM (.bim.txt)** - Human-readable building files
+- **Universal Addressing** - Every equipment gets a hierarchical path
+- **Git-Native** - Full version control with meaningful diffs
+- **Portable** - Edit anywhere, sync everywhere
+
+### 2. Enterprise Platform
+- **PostgreSQL Database** - Fast queries and multi-user access
+- **Web Interface** - HTMX-based UI for non-technical users
+- **REST API** - Integration with existing systems
+- **Mobile AR** - Augmented reality for field workers
+- **Multi-Tenant SaaS** - Cloud-hosted subscription service
+
+## Core Innovation: Universal Addressing
+
+```bash
+# Every piece of equipment has a universal address
+ARXOS-NA-US-NY-NYC-0001/N/3/A/301/E/OUTLET_02
+│                       │ │ │ │   │ └─ Equipment ID
+│                       │ │ │ │   └─── Wall (East)
+│                       │ │ │ └─────── Room 301
+│                       │ │ └───────── Zone A (northwest)
+│                       │ └─────────── Floor 3
+│                       └───────────── Wing (North)
+└───────────────────────────────────── Building UUID
+```
 
 ## 🎯 Key Features
 
-### Web Interface (HTMX)
-- **No Build Step** - Just Go templates + HTMX
-- **Server-Side Rendering** - Fast, SEO-friendly, works without JS
-- **Real-time Updates** - Server-sent events for live data
-- **Progressive Enhancement** - Forms work with or without JavaScript
-- **Minimal Dependencies** - 14kb HTMX vs 45kb+ for React
+### For Developers
+- **Plain Text Format** - Edit .bim.txt files with any editor
+- **Git Workflows** - Branch, merge, diff building configurations
+- **CLI Tools** - Powerful command-line interface
+- **Scriptable** - Automate with bash, Python, etc.
+- **API Access** - RESTful endpoints for integration
 
-### API Server
-- **RESTful Design** - Standard HTTP/JSON API
-- **JWT-like Auth** - Token-based authentication
-- **Rate Limiting** - Built-in protection
-- **CORS Support** - Ready for external integrations
-- **Middleware Stack** - Logging, recovery, auth, rate limiting
+### For Facility Managers
+- **Web Dashboard** - Visual building management
+- **Real-time Status** - Equipment monitoring
+- **Report Generation** - PDF, CSV exports
+- **Mobile Access** - iOS/Android apps
+- **Maintenance Scheduling** - Automated workflows
 
-### Cloud Capabilities
-- **Sync Engine** - Push/pull/full synchronization
-- **Conflict Resolution** - Multiple resolution strategies
-- **Storage Abstraction** - Local, S3, Azure backends
-- **Offline First** - Works without connection
-
-### Mobile AR Application (Coming Soon)
-- **Spatial Anchoring** - Persistent equipment placement in physical space
-- **Real-time Visualization** - See equipment status and info in AR
-- **Voice Input** - Hands-free equipment updates
-- **Offline Support** - Work without connectivity, sync when online
-- **Cross-Platform** - iOS (ARKit) and Android (ARCore) support
+### For Enterprises
+- **Multi-Building Support** - Manage entire portfolios
+- **User Management** - Role-based access control
+- **Audit Trails** - Complete change history
+- **Integrations** - Connect with existing BMS/CMMS
+- **White-Label Options** - Custom branding
 
 ## 📦 Installation
 
+### Quick Start (Building-as-Code)
 ```bash
-# Clone the repository
+# Clone and build
 git clone https://github.com/joelpate/arxos.git
 cd arxos
-
-# Build everything
-make build
-
-# Or build individually
-go build -o bin/arx ./cmd/arx           # CLI tool
-go build -o bin/arxos-server ./cmd/arxos-server  # API + Web server
-go build -o bin/arxd ./cmd/arxd         # Daemon for auto-sync
-```
-
-## 🚀 Quick Start
-
-### Start the Web Server
-
-```bash
-# Start API server with web UI
-./bin/arxos-server -port 8080
-
-# Access the web interface
-open http://localhost:8080
-
-# Default credentials
-# Email: admin@arxos.io
-# Password: admin123
-```
-
-### CLI Operations
-
-```bash
-# Configure for cloud mode
-./bin/arx config set mode cloud
-./bin/arx config set cloud.url http://localhost:8080
-
-# Login to cloud
-./bin/arx sync login
+go build -o bim ./cmd/bim
 
 # Import a building
-./bin/arx import building.pdf
+./bim import building.pdf > building.bim.txt
 
-# Sync with cloud
-./bin/arx sync
+# Track with Git
+git init
+git add building.bim.txt
+git commit -m "Initial building import"
+```
 
-# Query the database
-./bin/arx query "SELECT * FROM equipment WHERE status = 'failed'"
+### Full Platform Setup
+```bash
+# Start PostgreSQL
+docker-compose up -d postgres
+
+# Run migrations
+./scripts/migrate.sh
+
+# Start API server
+go run ./cmd/arxos-server
+
+# Access web interface
+open http://localhost:8080
+```
+
+## 🔄 Hybrid Workflows
+
+ArxOS seamlessly combines database and text-based approaches:
+
+```bash
+# Export from database to Building-as-Code
+arx export building-123 --format bim > building.bim.txt
+
+# Edit offline with vim
+vim building.bim.txt
+
+# Sync changes back to database
+arx import building.bim.txt --update building-123
+
+# Or use web interface for visual editing
+open http://localhost:8080/buildings/123
 ```
 
 ## 🏗️ Architecture
 
-### Technology Stack
-```
-Backend:
-├── Go 1.21+              # Core language
-├── SQLite               # Embedded database
-├── HTMX                 # Dynamic UI without complexity
-├── Tailwind CSS         # Utility-first CSS
-└── Server-Sent Events   # Real-time updates
-
-No Node.js, No Webpack, No npm - Just Go!
-```
-
-### Project Structure
 ```
 arxos/
 ├── cmd/
-│   ├── arx/             # CLI application
-│   ├── arxos-server/    # API + Web server
-│   └── arxd/            # Background daemon
+│   ├── bim/              # Building-as-Code CLI
+│   ├── arxos-server/     # API & Web server
+│   ├── arxd/             # File watcher daemon
+│   └── arx-legacy/       # Database CLI tools
 ├── internal/
-│   ├── api/             # API handlers & services
-│   ├── web/             # HTMX templates & handlers
-│   ├── database/        # SQLite operations
-│   ├── sync/            # Cloud sync engine
-│   ├── storage/         # Storage abstraction
-│   ├── config/          # Configuration management
-│   └── auth/            # Authentication
-├── pkg/models/          # Core data models
-├── templates/           # HTML templates
-└── static/              # Static assets
+│   ├── api/              # REST API handlers
+│   ├── bim/              # BIM parser/writer
+│   ├── database/         # PostgreSQL models
+│   ├── importer/         # PDF/IFC importers
+│   ├── web/              # HTMX interface
+│   └── rendering/        # Visualization
+├── docs/                 # Specifications
+├── examples/             # Sample buildings
+└── scripts/              # Utilities
 ```
 
-## 🌐 Web Interface
+## 📊 Use Cases
 
-The HTMX-based interface provides:
+### Small Business
+- Single building management
+- Basic equipment tracking
+- PDF import/export
+- Git-based backups
 
-- **Dashboard** - Real-time building statistics
-- **Buildings** - Manage floor plans and spaces
-- **Equipment** - Track and monitor all equipment
-- **Search** - Fast, as-you-type search
-- **Analytics** - Building performance metrics
-- **Settings** - User and system configuration
+### Enterprise
+- Portfolio management
+- API integrations
+- Custom workflows
+- Compliance reporting
 
-### Why HTMX?
+### Developers
+- Building-as-Code workflows
+- CI/CD integration
+- Automated testing
+- Version control
 
-We chose HTMX over React/Vue/Angular because:
-- **Simplicity** - No build step, no webpack configuration
-- **Speed** - Server-rendered HTML is fast
-- **Maintainability** - One language (Go) instead of Go + JS
-- **Size** - 14kb vs 45kb+ for React
-- **SEO** - Server-side rendering works for search engines
+## 🌐 API Examples
 
-## 🔌 API Reference
-
-### Authentication
+### Database Operations
 ```bash
-# Login
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@arxos.io","password":"admin123"}'
-
-# Returns: { "access_token": "...", "refresh_token": "..." }
-```
-
-### Buildings
-```bash
-# List buildings
-curl http://localhost:8080/api/v1/buildings \
-  -H "Authorization: Bearer <token>"
-
-# Create building
-curl -X POST http://localhost:8080/api/v1/buildings \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Main Office","building":"HQ","level":1}'
-```
-
-### Equipment
-```bash
-# List equipment
-curl http://localhost:8080/api/v1/equipment \
-  -H "Authorization: Bearer <token>"
+# Get building info
+curl http://localhost:8080/api/v1/buildings/123
 
 # Update equipment status
-curl -X PATCH http://localhost:8080/api/v1/equipment/SW-01 \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"failed","notes":"No power"}'
+curl -X PATCH http://localhost:8080/api/v1/equipment/456 \
+  -d '{"status": "FAILED"}'
+
+# Generate report
+curl http://localhost:8080/api/v1/reports/maintenance?building=123
 ```
 
-## 🔄 Cloud Sync
-
-### Configuration
+### Building-as-Code Operations
 ```bash
-# Set sync mode
-./bin/arx config set mode cloud
+# Import BIM file
+curl -X POST http://localhost:8080/api/v1/bim/import \
+  -F "file=@building.bim.txt"
 
-# Configure conflict resolution
-./bin/arx sync --conflict-mode remote  # remote wins
-./bin/arx sync --conflict-mode local   # local wins
-./bin/arx sync --conflict-mode merge   # attempt merge
+# Export to BIM format
+curl http://localhost:8080/api/v1/buildings/123/export?format=bim
+
+# Validate BIM file
+curl -X POST http://localhost:8080/api/v1/bim/validate \
+  -F "file=@building.bim.txt"
 ```
 
-### Sync Operations
-```bash
-# Full sync
-./bin/arx sync
+## 📱 Mobile AR Features
 
-# Push only
-./bin/arx sync --mode push
+- **Equipment Scanning** - Point camera to identify equipment
+- **Spatial Anchoring** - Persistent AR overlays
+- **Offline Mode** - Sync when connected
+- **Voice Commands** - Hands-free updates
 
-# Pull only
-./bin/arx sync --mode pull
+## 💼 Business Model
 
-# Check sync status
-./bin/arx sync status
-```
+### Open Source Core
+- BIM text format specification
+- Basic CLI tools
+- File parsers/validators
 
-## 📊 Database Operations
+### Commercial Platform
+- Web interface
+- Database backend
+- API server
+- Mobile apps
+- Priority support
+- Custom features
 
-### Direct SQL Queries
-```bash
-# Failed equipment
-./bin/arx query "SELECT * FROM equipment WHERE status = 'failed'"
-
-# Equipment by type
-./bin/arx query "SELECT type, COUNT(*) FROM equipment GROUP BY type"
-
-# Spatial queries
-./bin/arx query "SELECT * FROM equipment WHERE room_id = 'room_2b'"
-```
-
-### Connection Tracking
-```bash
-# Create connections
-./bin/arx connect outlet_2b panel_1 --type power
-./bin/arx connect switch_1 idf_100 --type data
-
-# Trace connections
-./bin/arx trace panel_1 downstream  # What does this power?
-./bin/arx trace outlet_2b upstream  # What powers this?
-
-# Impact analysis
-./bin/arx analyze panel_1  # What fails if panel_1 fails?
-```
-
-## 🚢 Deployment
-
-### Docker
-```bash
-# Build image
-docker build -t arxos .
-
-# Run container
-docker run -p 8080:8080 -v arxos-data:/data arxos
-```
-
-### Systemd Service
-```bash
-# Copy service file
-sudo cp arxos.service /etc/systemd/system/
-
-# Enable and start
-sudo systemctl enable arxos
-sudo systemctl start arxos
-```
-
-### Environment Variables
-```bash
-ARXOS_PORT=8080
-ARXOS_STATE_DIR=/var/lib/arxos
-ARXOS_LOG_LEVEL=info
-ARXOS_MODE=cloud
-ARXOS_API_URL=https://api.arxos.io
-```
+### SaaS Offering
+- Cloud hosting
+- Automatic backups
+- Multi-tenant isolation
+- Usage analytics
+- Enterprise SSO
 
 ## 📖 Documentation
 
-- **[API Documentation](docs/API.md)** - Complete API reference
-- **[Development Guide](docs/DEVELOPMENT.md)** - Setup and contribution guide
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
-- **[Architecture](docs/ARCHITECTURE.md)** - System architecture
-- **[Vision](docs/VISION.md)** - Platform vision and roadmap
-- **[Mobile AR Guide](docs/MOBILE_AR.md)** - AR application development
-- **[AR API Specification](docs/AR_API_SPEC.md)** - AR-specific API endpoints
+- [Architecture](ARCHITECTURE.md) - Technical decisions and data flow
+- [Specifications](docs/SPECIFICATIONS.md) - UUID format, paths, BIM format
 
-## 🧪 Testing
+## 🚀 Next Steps
 
-```bash
-# Run all tests
-go test ./...
+1. **Core**: Complete BIM tool (query/render commands)
+2. **Integration**: Build sync between .bim.txt and SQLite
+3. **API**: Connect database to Building-as-Code files
+4. **Mobile**: Store AR anchors, start with simple 2D
+5. **Scale**: Move to PostGIS when spatial queries needed
 
-# Run with coverage
-go test -cover ./...
+## 🤝 Contributing
 
-# Run specific package
-go test ./internal/api -v
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-# Run integration tests
-go test ./tests/integration -tags=integration
-```
-
-## 🛠️ Development
-
+### Development Setup
 ```bash
 # Install dependencies
 go mod download
 
-# Run development server with hot reload
+# Run tests
+go test ./...
+
+# Start development server
 air
 
-# Format code
-go fmt ./...
-
-# Lint code
+# Run linter
 golangci-lint run
-
-# Generate mocks
-go generate ./...
 ```
-
-## 📈 Performance
-
-- **Fast Startup** - Single binary, no runtime dependencies
-- **Low Memory** - ~50MB RAM for typical usage
-- **SQLite** - Handles millions of records efficiently
-- **HTMX** - Minimal network traffic, only sends diffs
-- **Caching** - Built-in caching for templates and queries
-
-## 🔒 Security
-
-- **bcrypt** - Password hashing
-- **CORS** - Configurable cross-origin policies
-- **Rate Limiting** - Built-in DoS protection
-- **HTTPS** - TLS support built-in
-- **Input Validation** - All inputs sanitized
-- **SQL Injection Protection** - Parameterized queries
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details
+- **Core**: MIT License (open source)
+- **Platform**: Commercial license
+- **SaaS**: Subscription-based
+
+See [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-- **HTMX** - For making web development simple again
-- **SQLite** - The best embedded database
-- **Go** - For being a joy to work with
-- **The Community** - For feedback and contributions
+- **HTMX** - For simple, powerful web development
+- **PostgreSQL** - Reliable database foundation
+- **Go** - Fast, maintainable backend
+- **pdfcpu** - PDF processing capabilities
 
 ---
 
-**ArxOS** - Building Intelligence Made Simple
+**ArxOS** - Where Building Intelligence Meets Code
 
-*No JavaScript frameworks were harmed in the making of this platform* 🎉
+*Manage buildings with the power of both databases and version control*

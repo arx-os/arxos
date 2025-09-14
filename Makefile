@@ -2,7 +2,7 @@
 
 # Variables
 BINARY_DIR := bin
-CLI_BINARY := $(BINARY_DIR)/arx
+CLI_BINARY := $(BINARY_DIR)/arxos
 DAEMON_BINARY := $(BINARY_DIR)/arxd
 SERVER_BINARY := $(BINARY_DIR)/arxos-server
 GO := go
@@ -28,9 +28,9 @@ build: build-cli build-daemon build-server
 
 # Build CLI
 build-cli:
-	@echo "🔨 Building CLI..."
+	@echo "🔨 Building unified ArxOS CLI..."
 	@mkdir -p $(BINARY_DIR)
-	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(CLI_BINARY) ./cmd/arx
+	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(CLI_BINARY) ./cmd/arxos
 
 # Build daemon
 build-daemon:

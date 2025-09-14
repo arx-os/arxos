@@ -110,7 +110,7 @@ func (e *EquipmentLayer) renderEquipment(buffer [][]rune, eq models.Equipment, v
 	// Apply status modifiers
 	if eq.Status == models.StatusFailed {
 		symbol = e.symbols["failed"]
-	} else if eq.Status == models.StatusNeedsRepair {
+	} else if eq.Status == models.StatusDegraded {
 		symbol = e.symbols["warning"]
 	} else if eq.Status == "maintenance" {
 		symbol = e.symbols["maintenance"]
@@ -144,7 +144,7 @@ func (e *EquipmentLayer) renderEquipment(buffer [][]rune, eq models.Equipment, v
 
 func (e *EquipmentLayer) getEquipmentSymbol(eq models.Equipment) rune {
 	// Check for specific state-based symbols
-	if eq.Type == "outlet" && eq.Status == models.StatusNormal {
+	if eq.Type == "outlet" && eq.Status == models.StatusOperational {
 		return e.symbols["outlet_active"]
 	}
 	

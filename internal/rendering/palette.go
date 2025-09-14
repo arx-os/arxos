@@ -43,7 +43,7 @@ const (
 	SensorGreen   Color256 = 46
 	
 	// Status colors
-	StatusNormal  Color256 = 82  // Light green
+	StatusOperational  Color256 = 82  // Light green
 	StatusWarning Color256 = 220 // Gold
 	StatusFailed  Color256 = 160 // Dark red
 	StatusOffline Color256 = 245 // Medium gray
@@ -236,7 +236,7 @@ func (p *Palette) adaptColor(color Color256) Color256 {
 	switch color {
 	case Red, PanelRed, StatusFailed:
 		return Color256(130) // Orange-brown
-	case Green, SensorGreen, StatusNormal:
+	case Green, SensorGreen, StatusOperational:
 		return Color256(33)  // Blue
 	case Yellow, LightYellow, StatusWarning:
 		return Color256(226) // Bright yellow (usually visible)

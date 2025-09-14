@@ -1,0 +1,251 @@
+package importer
+
+import (
+	"fmt"
+	"io"
+	"regexp"
+	"strings"
+
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/joelpate/arxos/internal/common/logger"
+)
+
+// PDFExtractor handles extraction of text and structure from PDF files
+type PDFExtractor struct {
+	// Equipment patterns to detect
+	equipmentPatterns map[string]*regexp.Regexp
+
+	// Room patterns
+	roomPattern *regexp.Regexp
+}
+
+// NewPDFExtractor creates a new PDF extractor
+func NewPDFExtractor() *PDFExtractor {
+	return &PDFExtractor{
+		equipmentPatterns: map[string]*regexp.Regexp{
+			"Network.IDF":        regexp.MustCompile(`(?i)IDF[- ]?(\d+[A-Z]?|\d+\.\d+)`),
+			"Network.MDF":        regexp.MustCompile(`(?i)MDF[- ]?(\d+[A-Z]?)`),
+			"Network.Switch":     regexp.MustCompile(`(?i)SW[- ]?(\d+[A-Z]?)`),
+			"Network.AccessPoint": regexp.MustCompile(`(?i)WAP[- ]?(\d+)|AP[- ]?(\d+)`),
+			"Electrical.Panel":   regexp.MustCompile(`(?i)PANEL[- ]?([A-Z\d]+)`),
+			"Electrical.Outlet":  regexp.MustCompile(`(?i)OUTLET[- ]?(\d+)`),
+			"HVAC.Unit":         regexp.MustCompile(`(?i)RTU[- ]?(\d+)|AHU[- ]?(\d+)`),
+			"HVAC.Thermostat":   regexp.MustCompile(`(?i)TSTAT[- ]?(\d+)|THERM[- ]?(\d+)`),
+			"Fire.Extinguisher": regexp.MustCompile(`(?i)FE[- ]?(\d+)`),
+			"Fire.Alarm":        regexp.MustCompile(`(?i)FA[- ]?(\d+)|FACP`),
+		},
+		roomPattern: regexp.MustCompile(`(?i)(?:ROOM|RM|SUITE|STE)[- ]?(\d+[A-Z]?|\d+\.\d+)`),
+	}
+}
+
+// ExtractedData holds data extracted from a PDF
+type ExtractedData struct {
+	Text      string
+	Equipment []ExtractedEquipment
+	Rooms     []ExtractedRoom
+	Metadata  map[string]string
+}
+
+// ExtractedEquipment represents equipment found in the PDF
+type ExtractedEquipment struct {
+	ID       string
+	Type     string
+	Text     string
+	Page     int
+	Position Position
+}
+
+// ExtractedRoom represents a room found in the PDF
+type ExtractedRoom struct {
+	ID       string
+	Name     string
+	Page     int
+	Position Position
+}
+
+// Position represents location in the PDF
+type Position struct {
+	X, Y float64
+}
+
+// Extract extracts data from a PDF file
+func (e *PDFExtractor) Extract(reader io.ReadSeeker) (*ExtractedData, error) {
+	logger.Debug("Starting PDF extraction")
+
+	// Create a temporary context for pdfcpu
+	ctx, err := pdfcpu.Read(reader, pdfcpu.NewDefaultConfiguration())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read PDF: %w", err)
+	}
+
+	data := &ExtractedData{
+		Equipment: make([]ExtractedEquipment, 0),
+		Rooms:     make([]ExtractedRoom, 0),
+		Metadata:  make(map[string]string),
+	}
+
+	// Extract text from all pages
+	allText := strings.Builder{}
+	pageCount := ctx.PageCount
+
+	for i := 1; i <= pageCount; i++ {
+		// Reset reader position
+		reader.Seek(0, 0)
+
+		// Extract text from page
+		text, err := api.ExtractPageContent(reader, []int{i})
+		if err != nil {
+			logger.Warn("Failed to extract text from page %d: %v", i, err)
+			continue
+		}
+
+		pageText := strings.Join(text, "\n")
+		allText.WriteString(pageText)
+		allText.WriteString("\n--- PAGE BREAK ---\n")
+
+		// Find equipment on this page
+		e.findEquipment(pageText, i, data)
+
+		// Find rooms on this page
+		e.findRooms(pageText, i, data)
+	}
+
+	data.Text = allText.String()
+
+	// Extract metadata
+	if info := ctx.Info; info != nil {
+		if info.Title != "" {
+			data.Metadata["title"] = info.Title
+		}
+		if info.Subject != "" {
+			data.Metadata["subject"] = info.Subject
+		}
+		if info.Author != "" {
+			data.Metadata["author"] = info.Author
+		}
+	}
+
+	logger.Info("Extracted %d equipment items and %d rooms from PDF",
+		len(data.Equipment), len(data.Rooms))
+
+	return data, nil
+}
+
+// findEquipment searches for equipment patterns in text
+func (e *PDFExtractor) findEquipment(text string, page int, data *ExtractedData) {
+	lines := strings.Split(text, "\n")
+
+	for lineNum, line := range lines {
+		// Check each equipment pattern
+		for eqType, pattern := range e.equipmentPatterns {
+			matches := pattern.FindAllStringSubmatch(line, -1)
+			for _, match := range matches {
+				// Extract the ID from the match
+				id := match[0]
+				if len(match) > 1 && match[1] != "" {
+					id = match[1]
+				}
+
+				// Clean up the ID
+				id = strings.TrimSpace(id)
+				id = strings.ReplaceAll(id, " ", "_")
+				id = strings.ToUpper(id)
+
+				// Create full equipment ID
+				fullID := fmt.Sprintf("%s_%s",
+					strings.ReplaceAll(eqType, ".", "_"), id)
+
+				eq := ExtractedEquipment{
+					ID:   fullID,
+					Type: eqType,
+					Text: strings.TrimSpace(line),
+					Page: page,
+					Position: Position{
+						X: 0, // Would need coordinate extraction
+						Y: float64(lineNum * 10), // Approximate
+					},
+				}
+
+				// Check if we already have this equipment
+				found := false
+				for _, existing := range data.Equipment {
+					if existing.ID == eq.ID {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					data.Equipment = append(data.Equipment, eq)
+					logger.Debug("Found equipment: %s (type: %s) on page %d",
+						eq.ID, eq.Type, page)
+				}
+			}
+		}
+	}
+}
+
+// findRooms searches for room patterns in text
+func (e *PDFExtractor) findRooms(text string, page int, data *ExtractedData) {
+	matches := e.roomPattern.FindAllStringSubmatch(text, -1)
+
+	for _, match := range matches {
+		roomID := match[0]
+		if len(match) > 1 && match[1] != "" {
+			roomID = match[1]
+		}
+
+		// Clean up the room ID
+		roomID = strings.TrimSpace(roomID)
+		roomID = strings.ReplaceAll(roomID, " ", "_")
+		roomID = strings.ToUpper(roomID)
+
+		room := ExtractedRoom{
+			ID:   fmt.Sprintf("ROOM_%s", roomID),
+			Name: fmt.Sprintf("Room %s", roomID),
+			Page: page,
+		}
+
+		// Check if we already have this room
+		found := false
+		for _, existing := range data.Rooms {
+			if existing.ID == room.ID {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			data.Rooms = append(data.Rooms, room)
+			logger.Debug("Found room: %s on page %d", room.ID, page)
+		}
+	}
+}
+
+// Common equipment name variations to detect
+var equipmentAliases = map[string][]string{
+	"IDF": {"INTERMEDIATE DISTRIBUTION FRAME", "NETWORK CLOSET", "TELECOM ROOM"},
+	"MDF": {"MAIN DISTRIBUTION FRAME", "MAIN NETWORK ROOM", "SERVER ROOM"},
+	"WAP": {"WIRELESS ACCESS POINT", "ACCESS POINT", "WIFI"},
+	"RTU": {"ROOFTOP UNIT", "ROOF TOP UNIT", "AC UNIT"},
+	"AHU": {"AIR HANDLING UNIT", "AIR HANDLER"},
+}
+
+// DetectEquipmentInText performs additional text analysis for equipment
+func DetectEquipmentInText(text string) []string {
+	equipment := []string{}
+	upperText := strings.ToUpper(text)
+
+	// Check for equipment aliases
+	for code, aliases := range equipmentAliases {
+		for _, alias := range aliases {
+			if strings.Contains(upperText, alias) {
+				equipment = append(equipment, code)
+				break
+			}
+		}
+	}
+
+	return equipment
+}

@@ -227,3 +227,56 @@ func (s *System) AddForce(cx, cy, radius, fx, fy float64) {
 func (s *System) Clear() {
 	s.Particles = s.Particles[:0]
 }
+
+// Initialize prepares the system for simulation with a given number of equipment items
+func (s *System) Initialize(equipmentCount int) {
+	// Reset the system
+	s.Clear()
+
+	// Set spawn rate based on equipment count
+	s.SpawnRate = float64(equipmentCount) * 2
+	s.MaxParticles = equipmentCount * 100
+
+	// Pre-allocate particle capacity
+	s.Particles = make([]Particle, 0, s.MaxParticles)
+}
+
+// Step advances the simulation by a time step
+func (s *System) Step(deltaTime float64) {
+	// Update all particles with the given time step
+	s.Update()
+
+	// Spawn new particles based on spawn rate
+	particlesToSpawn := int(s.SpawnRate * deltaTime)
+	for i := 0; i < particlesToSpawn; i++ {
+		x := rand.Float64() * float64(s.Width)
+		y := rand.Float64() * float64(s.Height/4) // Spawn in top quarter
+		s.Spawn(x, y, TypeAir, 1)
+	}
+}
+
+// GetLoadAt returns the particle load at a specific equipment index
+func (s *System) GetLoadAt(equipmentIndex int) float64 {
+	// Calculate load based on particle density near equipment position
+	// For simplicity, distribute equipment evenly across the width
+	equipmentX := float64(s.Width) * float64(equipmentIndex) / 10.0
+	equipmentY := float64(s.Height) / 2.0
+	radius := 50.0
+
+	load := 0.0
+	radiusSq := radius * radius
+
+	for _, p := range s.Particles {
+		dx := p.X - equipmentX
+		dy := p.Y - equipmentY
+		distSq := dx*dx + dy*dy
+
+		if distSq < radiusSq {
+			// Load increases with particle intensity and proximity
+			proximity := 1.0 - (distSq / radiusSq)
+			load += p.Intensity * proximity
+		}
+	}
+
+	return load
+}

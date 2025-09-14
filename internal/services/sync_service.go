@@ -257,7 +257,7 @@ func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, si
 			Type:      "update",
 			Entity:    "building",
 			EntityID:  buildingID,
-			Timestamp: building.UpdatedAt,
+			Timestamp: *building.UpdatedAt,
 			Data: map[string]interface{}{
 				"name":        building.Name,
 				"rooms":       len(building.Rooms),
@@ -368,7 +368,8 @@ func (s *SyncService) applyBuildingChange(ctx context.Context, change api.Change
 		if level, ok := change.Data["level"].(float64); ok {
 			building.Level = int(level)
 		}
-		building.UpdatedAt = time.Now()
+		now := time.Now()
+		building.UpdatedAt = &now
 		return s.db.SaveFloorPlan(ctx, building)
 		
 	case "delete":

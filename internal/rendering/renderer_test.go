@@ -25,11 +25,11 @@ func getEquipmentSymbol(equipType string, status models.EquipmentStatus) rune {
 	}
 	
 	// Apply status indicator if needed
-	if status != models.StatusNormal {
+	if status != models.StatusOperational {
 		switch status {
 		case models.StatusFailed:
 			return '✗'
-		case models.StatusNeedsRepair:
+		case models.StatusDegraded:
 			return '⚠'
 		case models.StatusUnknown:
 			return '?'
@@ -94,7 +94,7 @@ func TestGetSymbol(t *testing.T) {
 			name: "normal outlet",
 			equip: models.Equipment{
 				Type:   "outlet",
-				Status: models.StatusNormal,
+				Status: models.StatusOperational,
 			},
 			expected: "●",
 		},
@@ -110,7 +110,7 @@ func TestGetSymbol(t *testing.T) {
 			name: "needs repair outlet", 
 			equip: models.Equipment{
 				Type:   "outlet",
-				Status: models.StatusNeedsRepair,
+				Status: models.StatusDegraded,
 			},
 			expected: "⚠", // Updated to match layer implementation
 		},
@@ -118,7 +118,7 @@ func TestGetSymbol(t *testing.T) {
 			name: "panel",
 			equip: models.Equipment{
 				Type:   "panel",
-				Status: models.StatusNormal,
+				Status: models.StatusOperational,
 			},
 			expected: "▣", // Updated to match layer implementation
 		},
@@ -126,7 +126,7 @@ func TestGetSymbol(t *testing.T) {
 			name: "switch",
 			equip: models.Equipment{
 				Type:   "switch",
-				Status: models.StatusNormal,
+				Status: models.StatusOperational,
 			},
 			expected: "▪",
 		},
@@ -134,7 +134,7 @@ func TestGetSymbol(t *testing.T) {
 			name: "unknown type",
 			equip: models.Equipment{
 				Type:   "unknown",
-				Status: models.StatusNormal,
+				Status: models.StatusOperational,
 			},
 			expected: "•", // Updated to match layer implementation
 		},
@@ -277,7 +277,7 @@ func createTestFloorPlan() *models.FloorPlan {
 				Type:     "outlet",
 				Location: models.Point{X: 2, Y: 5},
 				RoomID:   "room_2a",
-				Status:   models.StatusNormal,
+				Status:   models.StatusOperational,
 			},
 			{
 				ID:       "outlet_2a_2",
@@ -285,7 +285,7 @@ func createTestFloorPlan() *models.FloorPlan {
 				Type:     "outlet",
 				Location: models.Point{X: 5, Y: 5},
 				RoomID:   "room_2a",
-				Status:   models.StatusNormal,
+				Status:   models.StatusOperational,
 			},
 			{
 				ID:       "outlet_2b_1",
@@ -293,7 +293,7 @@ func createTestFloorPlan() *models.FloorPlan {
 				Type:     "outlet",
 				Location: models.Point{X: 12, Y: 5},
 				RoomID:   "room_2b",
-				Status:   models.StatusNormal,
+				Status:   models.StatusOperational,
 			},
 			{
 				ID:       "outlet_2b_2",
@@ -309,7 +309,7 @@ func createTestFloorPlan() *models.FloorPlan {
 				Type:     "panel",
 				Location: models.Point{X: 22, Y: 5},
 				RoomID:   "mech",
-				Status:   models.StatusNormal,
+				Status:   models.StatusOperational,
 			},
 		},
 	}

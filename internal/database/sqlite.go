@@ -125,22 +125,15 @@ func (s *SQLiteDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPl
 	if err != nil {
 		return nil, err
 	}
-	// Convert []*Room to []Room
-	plan.Rooms = make([]models.Room, len(rooms))
-	for i, r := range rooms {
-		plan.Rooms[i] = *r
-	}
+	// Rooms are now []*Room
+	plan.Rooms = rooms
 	
 	// Load equipment
 	equipment, err := s.GetEquipmentByFloorPlan(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	// Convert []*Equipment to []Equipment
-	plan.Equipment = make([]models.Equipment, len(equipment))
-	for i, e := range equipment {
-		plan.Equipment[i] = *e
-	}
+	plan.Equipment = equipment
 	
 	return &plan, nil
 }
@@ -176,15 +169,9 @@ func (s *SQLiteDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, e
 		
 		// Load rooms and equipment for each plan
 		rooms, _ := s.GetRoomsByFloorPlan(ctx, plan.ID)
-		plan.Rooms = make([]models.Room, len(rooms))
-		for i, r := range rooms {
-			plan.Rooms[i] = *r
-		}
+		plan.Rooms = rooms
 		equipment, _ := s.GetEquipmentByFloorPlan(ctx, plan.ID)
-		plan.Equipment = make([]models.Equipment, len(equipment))
-		for i, e := range equipment {
-			plan.Equipment[i] = *e
-		}
+		plan.Equipment = equipment
 		
 		plans = append(plans, &plan)
 	}
@@ -232,31 +219,37 @@ func (s *SQLiteDB) SaveFloorPlanOld(ctx context.Context, plan *models.FloorPlan)
 	`
 	
 	now := time.Now()
-	plan.CreatedAt = now
-	plan.UpdatedAt = now
+	plan.CreatedAt = &now
+	plan.UpdatedAt = &now
 	
+	// Use plan.ID if available, otherwise use name
+	planID := plan.ID
+	if planID == "" {
+		planID = plan.Name
+	}
+
 	_, err = tx.ExecContext(ctx, query,
-		plan.Name, // Using name as ID for now
+		planID,
 		plan.Name,
 		plan.Building,
 		plan.Level,
-		plan.CreatedAt,
-		plan.UpdatedAt,
+		*plan.CreatedAt,
+		*plan.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert floor plan: %w", err)
 	}
 	
 	// Save rooms
-	for i := range plan.Rooms {
-		if err := s.saveRoomTx(ctx, tx, plan.Name, &plan.Rooms[i]); err != nil {
+	for _, room := range plan.Rooms {
+		if err := s.saveRoomTx(ctx, tx, planID, room); err != nil {
 			return err
 		}
 	}
-	
+
 	// Save equipment
-	for i := range plan.Equipment {
-		if err := s.saveEquipmentTx(ctx, tx, plan.Name, &plan.Equipment[i]); err != nil {
+	for _, eq := range plan.Equipment {
+		if err := s.saveEquipmentTx(ctx, tx, planID, eq); err != nil {
 			return err
 		}
 	}
@@ -288,13 +281,14 @@ func (s *SQLiteDB) UpdateFloorPlanOld(ctx context.Context, plan *models.FloorPla
 		WHERE id = ?
 	`
 	
-	plan.UpdatedAt = time.Now()
+	now := time.Now()
+	plan.UpdatedAt = &now
 	
 	_, err = tx.ExecContext(ctx, query,
 		plan.Name,
 		plan.Building,
 		plan.Level,
-		plan.UpdatedAt,
+		*plan.UpdatedAt,
 		plan.Name, // Using name as ID
 	)
 	if err != nil {
@@ -310,14 +304,14 @@ func (s *SQLiteDB) UpdateFloorPlanOld(ctx context.Context, plan *models.FloorPla
 	}
 	
 	// Re-save rooms and equipment
-	for i := range plan.Rooms {
-		if err := s.saveRoomTx(ctx, tx, plan.Name, &plan.Rooms[i]); err != nil {
+	for _, room := range plan.Rooms {
+		if err := s.saveRoomTx(ctx, tx, plan.Name, room); err != nil {
 			return err
 		}
 	}
-	
-	for i := range plan.Equipment {
-		if err := s.saveEquipmentTx(ctx, tx, plan.Name, &plan.Equipment[i]); err != nil {
+
+	for _, eq := range plan.Equipment {
+		if err := s.saveEquipmentTx(ctx, tx, plan.Name, eq); err != nil {
 			return err
 		}
 	}
@@ -371,10 +365,15 @@ func (s *SQLiteDB) GetEquipment(ctx context.Context, id string) (*models.Equipme
 	if roomID.Valid {
 		equipment.RoomID = roomID.String
 	}
-	equipment.Location.X = locationX.Float64
-	equipment.Location.Y = locationY.Float64
+	if locationX.Valid || locationY.Valid {
+		equipment.Location = &models.Point{
+			X: locationX.Float64,
+			Y: locationY.Float64,
+		}
+	}
 	if markedAt.Valid {
-		equipment.MarkedAt = markedAt.Time
+		t := markedAt.Time
+		equipment.MarkedAt = &t
 	}
 	
 	return &equipment, nil
@@ -422,11 +421,14 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 		if roomID.Valid {
 			equipment.RoomID = roomID.String
 		}
-		if locationX.Valid {
-			equipment.Location.X = locationX.Float64
-		}
-		if locationY.Valid {
-			equipment.Location.Y = locationY.Float64
+		if locationX.Valid || locationY.Valid {
+			equipment.Location = &models.Point{}
+			if locationX.Valid {
+				equipment.Location.X = locationX.Float64
+			}
+			if locationY.Valid {
+				equipment.Location.Y = locationY.Float64
+			}
 		}
 		if notes.Valid {
 			equipment.Notes = notes.String
@@ -435,7 +437,8 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 			equipment.MarkedBy = markedBy.String
 		}
 		if markedAt.Valid {
-			equipment.MarkedAt = markedAt.Time
+			t := markedAt.Time
+			equipment.MarkedAt = &t
 		}
 		
 		equipmentList = append(equipmentList, &equipment)
@@ -477,13 +480,28 @@ func (s *SQLiteDB) saveEquipmentTx(ctx context.Context, tx *sql.Tx, floorPlanID 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	
+	// Handle nil Location
+	var locX, locY float64
+	if equipment.Location != nil {
+		locX = equipment.Location.X
+		locY = equipment.Location.Y
+	}
+
+	// Handle empty RoomID as NULL for foreign key
+	var roomID interface{}
+	if equipment.RoomID != "" {
+		roomID = equipment.RoomID
+	} else {
+		roomID = nil
+	}
+
 	_, err := tx.ExecContext(ctx, query,
 		equipment.ID,
 		equipment.Name,
 		equipment.Type,
-		equipment.RoomID,
-		equipment.Location.X,
-		equipment.Location.Y,
+		roomID, // NULL if empty
+		locX,
+		locY,
 		equipment.Status,
 		equipment.Notes,
 		equipment.MarkedBy,

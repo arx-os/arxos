@@ -67,13 +67,13 @@ func TestEquipmentStatus(t *testing.T) {
 		ID:     "test_outlet",
 		Name:   "Test Outlet",
 		Type:   "outlet",
-		Status: StatusNormal,
+		Status: StatusOperational,
 	}
 	
 	// Test status values
 	statuses := []EquipmentStatus{
-		StatusNormal,
-		StatusNeedsRepair,
+		StatusOperational,
+		StatusDegraded,
 		StatusFailed,
 		StatusUnknown,
 	}
@@ -110,7 +110,7 @@ func TestFloorPlanCreation(t *testing.T) {
 				Type:     "outlet",
 				Location: Point{X: 50, Y: 50},
 				RoomID:   "room_1",
-				Status:   StatusNormal,
+				Status:   StatusOperational,
 			},
 			{
 				ID:       "equip_2",
@@ -118,7 +118,7 @@ func TestFloorPlanCreation(t *testing.T) {
 				Type:     "switch",
 				Location: Point{X: 30, Y: 30},
 				RoomID:   "room_1",
-				Status:   StatusNeedsRepair,
+				Status:   StatusDegraded,
 			},
 		},
 	}

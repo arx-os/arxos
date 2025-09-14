@@ -71,6 +71,7 @@ fp-info-cache
 # Documentation Build
 # ============================================
 docs/_build/
+docs/*.go
 site/
 # Keep PDFs in test_data and examples
 !test_data/**/*.pdf
@@ -140,17 +141,32 @@ __pycache__/
 /bin/
 arxos
 arxos.exe
+arxos-server
+arxos-server.exe
 arx
 arx.exe
 arxd
 arxd.exe
 /arx
 /arxd
+/arxos-server
+arx-legacy
+bim
+/arx-legacy
+/bim
 *.so
 *.dylib
 *.dll
 *.a
 *.lib
+*.o
+
+# ============================================
+# Generated Output
+# ============================================
+/data/
+/output/
+/poc/
 
 # ============================================
 # Database Files
@@ -160,6 +176,11 @@ arxd.exe
 *.db-wal
 *.sqlite
 *.sqlite3
+
+# ============================================
+# ArxOS Local Data
+# ============================================
+.arxos/
 
 # ============================================
 # Security - Never Commit These

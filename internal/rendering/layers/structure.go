@@ -143,7 +143,7 @@ func (s *StructureLayer) Render(buffer [][]rune, viewport Viewport) {
 	
 	// Render each room
 	for _, room := range s.floorPlan.Rooms {
-		s.renderRoom(buffer, viewport, room, chars)
+		s.renderRoom(buffer, viewport, *room, chars)
 	}
 	
 	// Note: Door rendering removed as Room model doesn't include Doors field

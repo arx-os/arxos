@@ -58,7 +58,7 @@ func RenderSchoolPlan(plan *models.FloorPlan) string {
 	for _, equip := range plan.Equipment {
 		if equip.Type == "idf" || equip.Type == "mdf" {
 			status := "✓"
-			if equip.Status == models.StatusNeedsRepair {
+			if equip.Status == models.StatusDegraded {
 				status = "⚠"
 			} else if equip.Status == models.StatusFailed {
 				status = "✗"
@@ -106,7 +106,7 @@ func formatEquipment(equipment []models.Equipment) string {
 		// Add status indicator
 		if equip.Status == models.StatusFailed {
 			symbol = "✗"
-		} else if equip.Status == models.StatusNeedsRepair {
+		} else if equip.Status == models.StatusDegraded {
 			symbol = "⚠"
 		}
 		

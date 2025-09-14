@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	
+
 	"github.com/joelpate/arxos/internal/database"
 	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/pdf"
+	"github.com/joelpate/arxos/internal/importer"
 	"github.com/joelpate/arxos/internal/common/state"
+	"github.com/joelpate/arxos/pkg/models"
 )
 
 // Daemon represents the ArxOS background service
@@ -365,12 +366,46 @@ func (d *Daemon) importFile(ctx context.Context, filePath string) error {
 // importPDF imports a PDF file
 func (d *Daemon) importPDF(ctx context.Context, filePath string) error {
 	// Use existing PDF extraction logic
-	extractor := pdf.NewExtractor()
-	plan, err := extractor.ExtractFloorPlan(filePath)
+	extractor := importer.NewSimplePDFExtractor()
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer file.Close()
+
+	extractedData, err := extractor.ExtractText(file)
 	if err != nil {
 		return fmt.Errorf("failed to extract floor plan: %w", err)
 	}
 	
+	// Convert to floor plan
+	equipment := make([]*models.Equipment, 0, len(extractedData.Equipment))
+	for _, e := range extractedData.Equipment {
+		equipment = append(equipment, &models.Equipment{
+			ID:     e.ID,
+			Name:   e.ID,
+			Type:   e.Type,
+			Status: models.StatusOperational,
+		})
+	}
+
+	rooms := make([]*models.Room, 0, len(extractedData.Rooms))
+	for _, r := range extractedData.Rooms {
+		rooms = append(rooms, &models.Room{
+			ID:   r.ID,
+			Name: r.Name,
+		})
+	}
+
+	plan := &models.FloorPlan{
+		ID:        filepath.Base(filePath),
+		Name:      filepath.Base(filePath),
+		Building:  filepath.Base(filePath),
+		Equipment: equipment,
+		Rooms:     rooms,
+	}
+
 	// Save to database
 	if err := d.db.SaveFloorPlan(ctx, plan); err != nil {
 		// Try update if save fails

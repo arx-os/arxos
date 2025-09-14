@@ -170,7 +170,7 @@ func (m *JSONMigrator) SyncJSONToDatabase(ctx context.Context) error {
 			if err := m.db.SaveFloorPlan(ctx, jsonPlan); err != nil {
 				logger.Error("Failed to save %s: %v", name, err)
 			}
-		} else if jsonPlan.UpdatedAt.After(dbPlan.UpdatedAt) {
+		} else if jsonPlan.UpdatedAt != nil && dbPlan.UpdatedAt != nil && jsonPlan.UpdatedAt.After(*dbPlan.UpdatedAt) {
 			// JSON is newer than database
 			logger.Info("Updating floor plan %s in database", name)
 			if err := m.db.UpdateFloorPlan(ctx, jsonPlan); err != nil {

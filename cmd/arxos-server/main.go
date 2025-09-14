@@ -22,7 +22,7 @@ import (
 	"github.com/joelpate/arxos/internal/web"
 	"github.com/joelpate/arxos/pkg/models"
 	
-	_ "github.com/joelpate/arxos/docs"
+	// _ "github.com/joelpate/arxos/docs" // TODO: Generate swagger docs
 )
 
 func main() {

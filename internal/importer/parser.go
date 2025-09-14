@@ -353,23 +353,28 @@ func (p *IFCParser) convertToFloorPlan(sourceName string) (*models.FloorPlan, er
 		buildingName = p.header.Name
 	}
 	
+	now := time.Now()
 	plan := &models.FloorPlan{
 		Name:      extractFileName(sourceName),
 		Building:  buildingName,
 		Level:     1, // Default to level 1, will enhance with multi-floor support
-		Rooms:     []models.Room{},
-		Equipment: []models.Equipment{},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Rooms:     []*models.Room{},
+		Equipment: []*models.Equipment{},
+		CreatedAt: &now,
+		UpdatedAt: &now,
 	}
 	
 	// Convert spaces to rooms
 	rooms := p.extractSpaces()
-	plan.Rooms = append(plan.Rooms, rooms...)
+	for i := range rooms {
+		plan.Rooms = append(plan.Rooms, &rooms[i])
+	}
 	
 	// Convert building elements to equipment
 	equipment := p.extractEquipment()
-	plan.Equipment = append(plan.Equipment, equipment...)
+	for i := range equipment {
+		plan.Equipment = append(plan.Equipment, &equipment[i])
+	}
 	
 	logger.Info("Converted IFC file to floor plan: %d rooms, %d equipment items", 
 		len(plan.Rooms), len(plan.Equipment))
@@ -471,7 +476,7 @@ func (p *IFCParser) extractEquipment() []models.Equipment {
 			ID:   "ifc_note",
 			Name: "IFC file processed - use 'arx add' to add equipment",
 			Type: "note",
-			Location: models.Point{X: 25, Y: 25},
+			Location: &models.Point{X: 25, Y: 25},
 			Status: models.StatusUnknown,
 			Notes: "Equipment can be manually added using ArxOS commands",
 		})
@@ -498,10 +503,10 @@ func (p *IFCParser) convertEquipment(entity *IFCEntity, equipmentType string) *m
 		ID:       fmt.Sprintf("ifc_%s_%s", equipmentType, entity.ID),
 		Name:     name,
 		Type:     equipmentType,
-		Location: models.Point{X: x, Y: y},
+		Location: &models.Point{X: x, Y: y},
 		Status:   models.StatusUnknown,
 		Notes:    fmt.Sprintf("Imported from IFC entity %s", entity.ID),
-		MarkedAt: time.Now(),
+		MarkedAt: func() *time.Time { t := time.Now(); return &t }(),
 	}
 }
 

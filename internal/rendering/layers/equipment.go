@@ -39,7 +39,7 @@ var defaultEquipmentSymbols = map[string]rune{
 
 // Status indicators
 const (
-	StatusNormalChar  = ' ' // No special indicator
+	StatusOperationalChar  = ' ' // No special indicator
 	StatusFailedChar  = '✗'
 	StatusWarningChar = '⚠'
 	StatusUnknownChar = '?'
@@ -136,13 +136,13 @@ func (e *EquipmentLayer) renderEquipment(buffer [][]rune, viewport Viewport, equ
 	}
 	
 	// Apply status indicator if needed
-	if equip.Status != models.StatusNormal {
+	if equip.Status != models.StatusOperational {
 		statusChar := e.getStatusChar(equip.Status)
-		if statusChar != StatusNormalChar {
+		if statusChar != StatusOperationalChar {
 			// For failed/warning status, override the symbol
 			if equip.Status == models.StatusFailed {
 				symbol = StatusFailedChar
-			} else if equip.Status == models.StatusNeedsRepair {
+			} else if equip.Status == models.StatusDegraded {
 				symbol = StatusWarningChar
 			}
 		}
@@ -166,16 +166,16 @@ func (e *EquipmentLayer) renderEquipment(buffer [][]rune, viewport Viewport, equ
 }
 
 // getStatusChar returns the character representing equipment status
-func (e *EquipmentLayer) getStatusChar(status models.EquipmentStatus) rune {
+func (e *EquipmentLayer) getStatusChar(status string) rune {
 	switch status {
 	case models.StatusFailed:
 		return StatusFailedChar
-	case models.StatusNeedsRepair:
+	case models.StatusDegraded:
 		return StatusWarningChar
 	case models.StatusUnknown:
 		return StatusUnknownChar
 	default:
-		return StatusNormalChar
+		return StatusOperationalChar
 	}
 }
 

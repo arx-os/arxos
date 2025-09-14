@@ -49,10 +49,10 @@ func (m *Manager) LoadFloorPlan(filename string) error {
 				Name:      filename,
 				Building:  "Default Building",
 				Level:     1,
-				Rooms:     []models.Room{},
-				Equipment: []models.Equipment{},
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				Rooms:     []*models.Room{},
+				Equipment: []*models.Equipment{},
+				CreatedAt: func() *time.Time { t := time.Now(); return &t }(),
+				UpdatedAt: func() *time.Time { t := time.Now(); return &t }(),
 			}
 			m.currentFile = filename
 			return nil
@@ -86,7 +86,8 @@ func (m *Manager) SaveFloorPlan() error {
 		return fmt.Errorf("no file specified")
 	}
 	
-	m.currentPlan.UpdatedAt = time.Now()
+	now := time.Now()
+	m.currentPlan.UpdatedAt = &now
 	
 	data, err := json.MarshalIndent(m.currentPlan, "", "  ")
 	if err != nil {
@@ -127,7 +128,7 @@ func (m *Manager) SetFloorPlan(plan *models.FloorPlan) {
 }
 
 // MarkEquipment updates the status of equipment
-func (m *Manager) MarkEquipment(equipmentID string, status models.EquipmentStatus, notes string, user string) error {
+func (m *Manager) MarkEquipment(equipmentID string, status string, notes string, user string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
@@ -141,7 +142,7 @@ func (m *Manager) MarkEquipment(equipmentID string, status models.EquipmentStatu
 	for i := range m.currentPlan.Equipment {
 		if strings.ToLower(m.currentPlan.Equipment[i].ID) == equipmentIDLower || 
 		   strings.ToLower(m.currentPlan.Equipment[i].Name) == equipmentIDLower {
-			equipment = &m.currentPlan.Equipment[i]
+			equipment = m.currentPlan.Equipment[i]
 			break
 		}
 	}
@@ -157,7 +158,8 @@ func (m *Manager) MarkEquipment(equipmentID string, status models.EquipmentStatu
 		equipment.Notes = notes
 	}
 	equipment.MarkedBy = user
-	equipment.MarkedAt = time.Now()
+	now := time.Now()
+	equipment.MarkedAt = &now
 	
 	m.dirty = true
 	
@@ -188,16 +190,16 @@ func (m *Manager) AddEquipment(name, eqType, roomID string, x, y float64, notes 
 		}
 	}
 	
-	equipment := models.Equipment{
+	equipment := &models.Equipment{
 		ID:       equipmentID,
 		Name:     name,
 		Type:     eqType,
-		Location: models.Point{X: x, Y: y},
+		Location: &models.Point{X: x, Y: y},
 		RoomID:   roomID,
-		Status:   models.StatusNormal,
+		Status:   models.StatusOperational,
 		Notes:    notes,
 	}
-	
+
 	m.currentPlan.Equipment = append(m.currentPlan.Equipment, equipment)
 	
 	// Add to room if specified
@@ -235,9 +237,9 @@ func (m *Manager) RemoveEquipment(equipmentID string) error {
 	
 	// Find and remove equipment
 	found := false
-	var removedEquip models.Equipment
-	newEquipment := []models.Equipment{}
-	
+	var removedEquip *models.Equipment
+	newEquipment := []*models.Equipment{}
+
 	for _, e := range m.currentPlan.Equipment {
 		if strings.EqualFold(e.ID, equipmentID) {
 			found = true
@@ -246,11 +248,11 @@ func (m *Manager) RemoveEquipment(equipmentID string) error {
 			newEquipment = append(newEquipment, e)
 		}
 	}
-	
+
 	if !found {
 		return fmt.Errorf("equipment %s not found", equipmentID)
 	}
-	
+
 	m.currentPlan.Equipment = newEquipment
 	
 	// Remove from room if it was in one
@@ -296,7 +298,7 @@ func (m *Manager) CreateRoom(name string, minX, minY, maxX, maxY float64) error 
 		}
 	}
 	
-	room := models.Room{
+	room := &models.Room{
 		ID:   roomID,
 		Name: name,
 		Bounds: models.Bounds{
@@ -307,7 +309,7 @@ func (m *Manager) CreateRoom(name string, minX, minY, maxX, maxY float64) error 
 		},
 		Equipment: []string{},
 	}
-	
+
 	m.currentPlan.Rooms = append(m.currentPlan.Rooms, room)
 	
 	m.dirty = true
@@ -326,13 +328,13 @@ func (m *Manager) FindEquipment(query string) []models.Equipment {
 	}
 	
 	var results []models.Equipment
-	
+
 	for _, equip := range m.currentPlan.Equipment {
 		// Match by ID, name, or type
-		if equip.ID == query || 
-		   equip.Name == query || 
+		if equip.ID == query ||
+		   equip.Name == query ||
 		   equip.Type == query {
-			results = append(results, equip)
+			results = append(results, *equip)
 		}
 	}
 	
@@ -340,7 +342,7 @@ func (m *Manager) FindEquipment(query string) []models.Equipment {
 }
 
 // GetEquipmentByStatus returns all equipment with a specific status
-func (m *Manager) GetEquipmentByStatus(status models.EquipmentStatus) []models.Equipment {
+func (m *Manager) GetEquipmentByStatus(status string) []*models.Equipment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	
@@ -348,14 +350,14 @@ func (m *Manager) GetEquipmentByStatus(status models.EquipmentStatus) []models.E
 		return nil
 	}
 	
-	var results []models.Equipment
-	
+	var results []*models.Equipment
+
 	for _, equip := range m.currentPlan.Equipment {
 		if equip.Status == status {
 			results = append(results, equip)
 		}
 	}
-	
+
 	return results
 }
 
@@ -370,7 +372,7 @@ func (m *Manager) GetRoom(roomID string) *models.Room {
 	
 	for _, room := range m.currentPlan.Rooms {
 		if room.ID == roomID || room.Name == roomID {
-			return &room
+			return room
 		}
 	}
 	
@@ -427,7 +429,7 @@ func (m *Manager) ExportForGit() (map[string]interface{}, error) {
 	// Count equipment by status
 	for _, equip := range m.currentPlan.Equipment {
 		switch equip.Status {
-		case models.StatusNeedsRepair:
+		case models.StatusDegraded:
 			export["summary"].(map[string]int)["needs_repair"]++
 		case models.StatusFailed:
 			export["summary"].(map[string]int)["failed"]++

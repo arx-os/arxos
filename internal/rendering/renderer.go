@@ -283,7 +283,7 @@ func (r *Renderer) DrawEquipment(equip models.Equipment, floorZ float64) {
 	// Draw equipment with status indication
 	if equip.Status == models.StatusFailed {
 		symbol = '✗'
-	} else if equip.Status == models.StatusNeedsRepair {
+	} else if equip.Status == models.StatusDegraded {
 		symbol = '⚠'
 	}
 

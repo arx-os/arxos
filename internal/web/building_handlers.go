@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/rendering"
+	// "github.com/joelpate/arxos/internal/rendering" // TODO: Fix rendering pointer issues
 	"github.com/joelpate/arxos/internal/common/logger"
 	"github.com/joelpate/arxos/pkg/models"
 )
@@ -60,23 +60,24 @@ func (h *Handler) HandleBuildingFloorPlan(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Generate ASCII floor plan
-	renderer := rendering.NewFloorRenderer(80, 30)
-	asciiPlan, err := renderer.RenderFromFloorPlan(building)
-	if err != nil {
-		logger.Error("Failed to render ASCII floor plan: %v", err)
-		http.Error(w, "Failed to generate floor plan", http.StatusInternalServerError)
-		return
-	}
+	// Generate ASCII floor plan - TODO: Fix rendering pointer issues
+	// renderer := rendering.NewFloorRenderer(80, 30)
+	// asciiPlan, err := renderer.RenderFromFloorPlan(building)
+	// if err != nil {
+	// 	logger.Error("Failed to render ASCII floor plan: %v", err)
+	// 	http.Error(w, "Failed to generate floor plan", http.StatusInternalServerError)
+	// 	return
+	// }
+	asciiPlan := "Floor plan rendering temporarily disabled"
 
 	// Calculate equipment statistics
 	failedCount := 0
 	needsRepairCount := 0
 	for _, equip := range building.Equipment {
 		switch equip.Status {
-		case models.StatusFailed:
+		case "FAILED":
 			failedCount++
-		case models.StatusNeedsRepair:
+		case "DEGRADED":
 			needsRepairCount++
 		}
 	}

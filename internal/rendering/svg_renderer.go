@@ -261,7 +261,7 @@ func (r *SVGRenderer) renderEquipment(equip *models.Equipment, showLabel bool) s
 	if equip.Status == models.StatusFailed {
 		svg.WriteString(fmt.Sprintf(`<circle cx="%g" cy="%g" r="8" fill="none" stroke="red" stroke-width="2" opacity="0.5"/>`,
 			equip.Location.X, equip.Location.Y))
-	} else if equip.Status == models.StatusNeedsRepair {
+	} else if equip.Status == models.StatusDegraded {
 		svg.WriteString(fmt.Sprintf(`<circle cx="%g" cy="%g" r="8" fill="none" stroke="orange" stroke-width="2" opacity="0.5"/>`,
 			equip.Location.X, equip.Location.Y))
 	}

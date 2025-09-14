@@ -38,8 +38,9 @@ func (bs *BuildingService) CreateBuilding(ctx context.Context, building *models.
 	if building.ID == "" {
 		building.ID = generateID()
 	}
-	building.CreatedAt = time.Now()
-	building.UpdatedAt = time.Now()
+	now := time.Now()
+	building.CreatedAt = &now
+	building.UpdatedAt = &now
 	
 	return bs.db.SaveFloorPlan(ctx, building)
 }
@@ -55,7 +56,8 @@ func (bs *BuildingService) UpdateBuilding(ctx context.Context, building *models.
 	existing.Name = building.Name
 	existing.Building = building.Building
 	existing.Level = building.Level
-	existing.UpdatedAt = time.Now()
+	now := time.Now()
+	existing.UpdatedAt = &now
 	
 	return bs.db.SaveFloorPlan(ctx, existing)
 }
@@ -103,7 +105,7 @@ func (bs *BuildingService) ListEquipment(ctx context.Context, buildingID string,
 				}
 			}
 		}
-		result = append(result, &plan.Equipment[i])
+		result = append(result, plan.Equipment[i])
 	}
 	
 	return result, nil
@@ -150,7 +152,7 @@ func (bs *BuildingService) ListRooms(ctx context.Context, buildingID string) ([]
 	// Convert to pointer slice
 	var result []*models.Room
 	for i := range plan.Rooms {
-		result = append(result, &plan.Rooms[i])
+		result = append(result, plan.Rooms[i])
 	}
 	return result, nil
 }

@@ -114,16 +114,14 @@ func (idx *DatabaseIndexer) rebuildIndex(ctx context.Context) error {
 		}
 		
 		// Index rooms
-		for i := range fp.Rooms {
-			room := &fp.Rooms[i]
+		for _, room := range fp.Rooms {
 			if err := idx.engine.Index(ctx, "room", room.ID, room); err != nil {
 				logger.Error("Failed to index room %s: %v", room.ID, err)
 			}
 		}
-		
+
 		// Index equipment
-		for i := range fp.Equipment {
-			equip := &fp.Equipment[i]
+		for _, equip := range fp.Equipment {
 			if err := idx.engine.Index(ctx, "equipment", equip.ID, equip); err != nil {
 				logger.Error("Failed to index equipment %s: %v", equip.ID, err)
 			}
@@ -155,16 +153,14 @@ func (idx *DatabaseIndexer) IndexFloorPlan(ctx context.Context, fp *models.Floor
 	}
 	
 	// Index associated rooms
-	for i := range fp.Rooms {
-		room := &fp.Rooms[i]
+	for _, room := range fp.Rooms {
 		if err := idx.engine.Index(ctx, "room", room.ID, room); err != nil {
 			return err
 		}
 	}
-	
+
 	// Index associated equipment
-	for i := range fp.Equipment {
-		equip := &fp.Equipment[i]
+	for _, equip := range fp.Equipment {
 		if err := idx.engine.Index(ctx, "equipment", equip.ID, equip); err != nil {
 			return err
 		}

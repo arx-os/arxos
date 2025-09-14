@@ -103,7 +103,7 @@ func (i *Importer) Import(ctx context.Context, reader io.Reader, options ImportO
 		result.Warnings = append(result.Warnings, 
 			"No rooms detected in imported file")
 		// Create at least one default room
-		floorPlan.Rooms = append(floorPlan.Rooms, models.Room{
+		floorPlan.Rooms = append(floorPlan.Rooms, &models.Room{
 			ID:   buildingID + "_default",
 			Name: "Main Floor",
 			Bounds: models.Bounds{

@@ -260,7 +260,7 @@ func (r *UniversalRenderer) getSymbol(equip models.Equipment) string {
 	// Status indicators
 	if equip.Status == models.StatusFailed {
 		return "✗"
-	} else if equip.Status == models.StatusNeedsRepair {
+	} else if equip.Status == models.StatusDegraded {
 		return "⚠"
 	}
 	
@@ -327,7 +327,7 @@ func (r *UniversalRenderer) renderLegend(plan *models.FloorPlan) string {
 	sort.Strings(typeList)
 	
 	for _, t := range typeList {
-		sample := models.Equipment{Type: t, Status: models.StatusNormal}
+		sample := models.Equipment{Type: t, Status: models.StatusOperational}
 		symbol := r.getSymbol(sample)
 		sb.WriteString(fmt.Sprintf("  %s %s\n", symbol, t))
 	}
@@ -354,11 +354,11 @@ func (r *UniversalRenderer) renderStatusSummary(plan *models.FloorPlan) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Total Equipment: %d\n", len(plan.Equipment)))
 	
-	if statusCount[models.StatusNormal] > 0 {
-		sb.WriteString(fmt.Sprintf("  Normal: %d\n", statusCount[models.StatusNormal]))
+	if statusCount[models.StatusOperational] > 0 {
+		sb.WriteString(fmt.Sprintf("  Normal: %d\n", statusCount[models.StatusOperational]))
 	}
-	if statusCount[models.StatusNeedsRepair] > 0 {
-		sb.WriteString(fmt.Sprintf("  ⚠ Needs Repair: %d\n", statusCount[models.StatusNeedsRepair]))
+	if statusCount[models.StatusDegraded] > 0 {
+		sb.WriteString(fmt.Sprintf("  ⚠ Needs Repair: %d\n", statusCount[models.StatusDegraded]))
 	}
 	if statusCount[models.StatusFailed] > 0 {
 		sb.WriteString(fmt.Sprintf("  ✗ Failed: %d\n", statusCount[models.StatusFailed]))

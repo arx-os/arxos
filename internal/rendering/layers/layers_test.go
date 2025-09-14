@@ -156,7 +156,7 @@ func TestEquipmentLayer(t *testing.T) {
 				X: 5,
 				Y: 3,
 			},
-			Status: models.StatusNormal,
+			Status: models.StatusOperational,
 		},
 		{
 			ID:   "eq2",

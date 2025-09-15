@@ -120,13 +120,13 @@ func TestBuildingCRUD(t *testing.T) {
 		Name:     "Test Building",
 		Building: "Building A",
 		Level:    1,
-		Rooms: []models.Room{
+		Rooms: []*models.Room{
 			{
 				ID:   "room1",
 				Name: "Conference Room",
 			},
 		},
-		Equipment: []models.Equipment{
+		Equipment: []*models.Equipment{
 			{
 				ID:     "eq1",
 				Name:   "Projector",
@@ -181,7 +181,7 @@ func TestPDFToASCII(t *testing.T) {
 		Name:     "ASCII Test Building",
 		Building: "Test Complex",
 		Level:    1,
-		Rooms: []models.Room{
+		Rooms: []*models.Room{
 			{
 				ID:   "room1",
 				Name: "Office",
@@ -199,12 +199,12 @@ func TestPDFToASCII(t *testing.T) {
 				},
 			},
 		},
-		Equipment: []models.Equipment{
+		Equipment: []*models.Equipment{
 			{
 				ID:   "outlet1",
 				Name: "Power Outlet",
 				Type: "electrical",
-				Location: models.Point{
+				Location: &models.Point{
 					X: 5, Y: 5,
 				},
 				Status: models.StatusNormal,

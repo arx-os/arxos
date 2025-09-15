@@ -113,16 +113,21 @@ func (fr *FloorRenderer) RenderFromPDF(parseResult *models.FloorPlan) (string, e
 
 	// Render rooms
 	for _, room := range parseResult.Rooms {
-		fr.renderRoom(room)
+		fr.renderRoom(*room)
 	}
 
 	// Render equipment
 	for _, equip := range parseResult.Equipment {
-		fr.renderEquipment(equip)
+		fr.renderEquipment(*equip)
 	}
 
 	// Add room labels
-	fr.addRoomLabels(parseResult.Rooms)
+	// Convert to value slice for labels
+	rooms := make([]models.Room, len(parseResult.Rooms))
+	for i, r := range parseResult.Rooms {
+		rooms[i] = *r
+	}
+	fr.addRoomLabels(rooms)
 
 	// Generate final output with legend
 	return fr.generateOutput(), nil

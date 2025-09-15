@@ -6,16 +6,18 @@ import (
 
 // Organization represents a tenant in the multi-tenant system
 type Organization struct {
-	ID          string            `json:"id" db:"id"`
-	Name        string            `json:"name" db:"name"`
-	Slug        string            `json:"slug" db:"slug"` // URL-friendly identifier
-	Domain      string            `json:"domain,omitempty" db:"domain"` // Custom domain (optional)
-	Plan        PlanType          `json:"plan" db:"plan"`
-	Status      OrgStatus         `json:"status" db:"status"`
-	Settings    OrgSettings       `json:"settings" db:"settings"`
-	Metadata    map[string]string `json:"metadata" db:"metadata"`
-	CreatedAt   time.Time         `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at" db:"updated_at"`
+	ID          string                 `json:"id" db:"id"`
+	Name        string                 `json:"name" db:"name"`
+	Description string                 `json:"description,omitempty" db:"description"`
+	Type        string                 `json:"type" db:"type"` // standard, enterprise, educational
+	Slug        string                 `json:"slug" db:"slug"` // URL-friendly identifier
+	Domain      string                 `json:"domain,omitempty" db:"domain"` // Custom domain (optional)
+	Plan        PlanType               `json:"plan" db:"plan"`
+	Status      string                 `json:"status" db:"status"`
+	Settings    map[string]interface{} `json:"settings" db:"settings"`
+	Metadata    map[string]string      `json:"metadata" db:"metadata"`
+	CreatedAt   *time.Time             `json:"created_at" db:"created_at"`
+	UpdatedAt   *time.Time             `json:"updated_at" db:"updated_at"`
 	
 	// Billing
 	StripeCustomerID string     `json:"-" db:"stripe_customer_id"`
@@ -79,15 +81,17 @@ type OrganizationMember struct {
 
 // OrganizationInvitation represents an invitation to join an organization
 type OrganizationInvitation struct {
-	ID             string    `json:"id" db:"id"`
-	OrganizationID string    `json:"organization_id" db:"organization_id"`
-	Email          string    `json:"email" db:"email"`
-	Role           Role      `json:"role" db:"role"`
-	Token          string    `json:"-" db:"token"` // Never send token to client
-	InvitedBy      string    `json:"invited_by" db:"invited_by"`
-	ExpiresAt      time.Time `json:"expires_at" db:"expires_at"`
+	ID             string     `json:"id" db:"id"`
+	OrganizationID string     `json:"organization_id" db:"organization_id"`
+	Email          string     `json:"email" db:"email"`
+	Role           string     `json:"role" db:"role"`
+	Token          string     `json:"-" db:"token"` // Never send token to client
+	InvitedBy      string     `json:"invited_by" db:"invited_by"`
+	Status         string     `json:"status" db:"status"` // pending, accepted, revoked
+	ExpiresAt      time.Time  `json:"expires_at" db:"expires_at"`
 	AcceptedAt     *time.Time `json:"accepted_at,omitempty" db:"accepted_at"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	CreatedAt      *time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      *time.Time `json:"updated_at" db:"updated_at"`
 	
 	// Relationships
 	Organization *Organization `json:"organization,omitempty"`

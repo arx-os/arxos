@@ -71,7 +71,7 @@ func TestEquipmentStatus(t *testing.T) {
 	}
 	
 	// Test status values
-	statuses := []EquipmentStatus{
+	statuses := []string{
 		StatusOperational,
 		StatusDegraded,
 		StatusFailed,
@@ -93,9 +93,9 @@ func TestFloorPlanCreation(t *testing.T) {
 		Name:      "Test Floor",
 		Building:  "Test Building",
 		Level:     2,
-		CreatedAt: now,
-		UpdatedAt: now,
-		Rooms: []Room{
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Rooms: []*Room{
 			{
 				ID:   "room_1",
 				Name: "Room 1",
@@ -103,12 +103,12 @@ func TestFloorPlanCreation(t *testing.T) {
 				Equipment: []string{"equip_1", "equip_2"},
 			},
 		},
-		Equipment: []Equipment{
+		Equipment: []*Equipment{
 			{
 				ID:       "equip_1",
 				Name:     "Outlet 1",
 				Type:     "outlet",
-				Location: Point{X: 50, Y: 50},
+				Location: &Point{X: 50, Y: 50},
 				RoomID:   "room_1",
 				Status:   StatusOperational,
 			},
@@ -116,7 +116,7 @@ func TestFloorPlanCreation(t *testing.T) {
 				ID:       "equip_2",
 				Name:     "Switch 1",
 				Type:     "switch",
-				Location: Point{X: 30, Y: 30},
+				Location: &Point{X: 30, Y: 30},
 				RoomID:   "room_1",
 				Status:   StatusDegraded,
 			},

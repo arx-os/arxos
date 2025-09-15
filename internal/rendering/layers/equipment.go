@@ -7,7 +7,7 @@ import (
 // EquipmentLayer renders equipment and fixtures
 type EquipmentLayer struct {
 	*BaseLayer
-	equipment    []models.Equipment
+	equipment    []*models.Equipment
 	showLabels   bool
 	highlightID  string // Equipment ID to highlight
 	symbolMap    map[string]rune
@@ -46,7 +46,7 @@ const (
 )
 
 // NewEquipmentLayer creates a new equipment layer
-func NewEquipmentLayer(equipment []models.Equipment) *EquipmentLayer {
+func NewEquipmentLayer(equipment []*models.Equipment) *EquipmentLayer {
 	layer := &EquipmentLayer{
 		BaseLayer:  NewBaseLayer("equipment", PriorityEquipment),
 		equipment:  equipment,
@@ -91,7 +91,7 @@ func NewEquipmentLayer(equipment []models.Equipment) *EquipmentLayer {
 }
 
 // SetEquipment updates the equipment list
-func (e *EquipmentLayer) SetEquipment(equipment []models.Equipment) {
+func (e *EquipmentLayer) SetEquipment(equipment []*models.Equipment) {
 	e.equipment = equipment
 }
 
@@ -113,7 +113,7 @@ func (e *EquipmentLayer) SetSymbol(equipType string, symbol rune) {
 // Render renders the equipment to the buffer
 func (e *EquipmentLayer) Render(buffer [][]rune, viewport Viewport) {
 	for _, equip := range e.equipment {
-		e.renderEquipment(buffer, viewport, equip)
+		e.renderEquipment(buffer, viewport, *equip)
 	}
 }
 
@@ -219,8 +219,7 @@ func (e *EquipmentLayer) drawLabel(buffer [][]rune, viewport Viewport, x, y int,
 func (e *EquipmentLayer) GetEquipmentAt(x, y float64) *models.Equipment {
 	tolerance := 0.5 // How close to equipment position to count as "at"
 	
-	for i := range e.equipment {
-		equip := &e.equipment[i]
+	for _, equip := range e.equipment {
 		dx := equip.Location.X - x
 		dy := equip.Location.Y - y
 		if dx*dx+dy*dy <= tolerance*tolerance {

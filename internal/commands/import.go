@@ -23,7 +23,7 @@ func ExecuteImport(opts ImportOptions) error {
 	case "bim":
 		return importBIM(ctx, opts)
 	case "ifc":
-		return fmt.Errorf("IFC import not yet implemented")
+		return importIFC(ctx, opts)
 	default:
 		return fmt.Errorf("unsupported format: %s", opts.Format)
 	}
@@ -149,6 +149,18 @@ func importBIM(ctx context.Context, opts ImportOptions) error {
 	}
 
 	return nil
+}
+
+// importIFC handles IFC file imports (placeholder for future implementation)
+func importIFC(ctx context.Context, opts ImportOptions) error {
+	logger.Info("IFC import requested for file: %s", opts.InputFile)
+
+	// TODO: Implement full IFC import functionality
+	// This is a placeholder that demonstrates the structure
+	// Full implementation would require an IFC parsing library
+
+	// For now, return a helpful error message
+	return fmt.Errorf("IFC import is planned for a future release. Please convert your IFC file to PDF or BIM format for now")
 }
 
 // convertToSimpleBIM converts FloorPlan to SimpleBuilding (defined in export.go)

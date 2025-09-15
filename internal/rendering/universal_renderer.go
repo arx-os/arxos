@@ -76,12 +76,12 @@ func (r *UniversalRenderer) renderRoomLayout(plan *models.FloorPlan) string {
 	
 	// Draw rooms
 	for _, room := range plan.Rooms {
-		r.drawRoom(grid, room, minX, minY, scale)
+		r.drawRoom(grid, *room, minX, minY, scale)
 	}
 	
 	// Place equipment
 	for _, equip := range plan.Equipment {
-		r.placeEquipment(grid, equip, minX, minY, scale)
+		r.placeEquipment(grid, *equip, minX, minY, scale)
 	}
 	
 	// Convert grid to string
@@ -95,7 +95,7 @@ func (r *UniversalRenderer) renderEquipmentGrid(plan *models.FloorPlan) string {
 	// Sort equipment by type
 	equipByType := make(map[string][]models.Equipment)
 	for _, equip := range plan.Equipment {
-		equipByType[equip.Type] = append(equipByType[equip.Type], equip)
+		equipByType[equip.Type] = append(equipByType[equip.Type], *equip)
 	}
 	
 	// Create sections for each type
@@ -346,7 +346,7 @@ func (r *UniversalRenderer) renderStatusSummary(plan *models.FloorPlan) string {
 	}
 	
 	// Count by status
-	statusCount := make(map[models.EquipmentStatus]int)
+	statusCount := make(map[string]int)
 	for _, equip := range plan.Equipment {
 		statusCount[equip.Status]++
 	}

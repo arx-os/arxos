@@ -193,6 +193,7 @@ private/
 secrets/
 # SQLite test artifacts
 :memory:
+:memory:*
 *.db-journal
 *.db-wal
 *.db-shm

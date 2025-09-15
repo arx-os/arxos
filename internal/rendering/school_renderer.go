@@ -79,7 +79,7 @@ func getEquipmentForRoom(plan *models.FloorPlan, roomID string) []models.Equipme
 			for _, equipID := range room.Equipment {
 				for _, equip := range plan.Equipment {
 					if equip.ID == equipID && (equip.Type == "idf" || equip.Type == "mdf") {
-						equipment = append(equipment, equip)
+						equipment = append(equipment, *equip)
 					}
 				}
 			}

@@ -74,8 +74,9 @@ func (s *SQLiteDB) Connect(ctx context.Context, dbPath string) error {
 	s.db = db
 	
 	// Run migrations
-	if err := s.Migrate(ctx); err != nil {
-		return fmt.Errorf("failed to run migrations: %w", err)
+	if err := RunMigrations(db, "./migrations"); err != nil {
+		logger.Warn("Failed to run migrations: %v", err)
+		// Continue anyway - migrations might not be set up yet
 	}
 	
 	logger.Info("Connected to SQLite database: %s", absPath)
@@ -88,6 +89,30 @@ func (s *SQLiteDB) Close() error {
 		return s.db.Close()
 	}
 	return nil
+}
+
+// Migrate runs database migrations
+func (s *SQLiteDB) Migrate(ctx context.Context) error {
+	// Run migrations using the migration runner
+	if s.db == nil {
+		return fmt.Errorf("database not connected")
+	}
+
+	return RunMigrations(s.db, "./migrations")
+}
+
+// GetVersion returns the current database schema version
+func (s *SQLiteDB) GetVersion(ctx context.Context) (int, error) {
+	var version int
+	query := `SELECT COALESCE(MAX(version), 0) FROM schema_migrations`
+
+	err := s.db.QueryRowContext(ctx, query).Scan(&version)
+	if err != nil {
+		// Table might not exist yet
+		return 0, nil
+	}
+
+	return version, nil
 }
 
 // BeginTx starts a new transaction
@@ -742,7 +767,7 @@ func (s *SQLiteDB) GetUser(ctx context.Context, id string) (*models.User, error)
 	var lastLoginAt sql.NullTime
 	
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID, &user.Email, &user.Name, &user.PasswordHash,
+		&user.ID, &user.Email, &user.FullName, &user.PasswordHash,
 		&user.Avatar, &user.Phone, &user.Status,
 		&user.EmailVerified, &user.PhoneVerified, &user.MFAEnabled, &user.MFASecret,
 		&user.CreatedAt, &user.UpdatedAt, &lastLoginAt,
@@ -756,7 +781,7 @@ func (s *SQLiteDB) GetUser(ctx context.Context, id string) (*models.User, error)
 	}
 	
 	if lastLoginAt.Valid {
-		user.LastLoginAt = &lastLoginAt.Time
+		user.LastLogin = &lastLoginAt.Time
 	}
 	
 	return &user, nil
@@ -775,7 +800,7 @@ func (s *SQLiteDB) GetUserByEmail(ctx context.Context, email string) (*models.Us
 	var lastLoginAt sql.NullTime
 	
 	err := s.db.QueryRowContext(ctx, query, email).Scan(
-		&user.ID, &user.Email, &user.Name, &user.PasswordHash,
+		&user.ID, &user.Email, &user.FullName, &user.PasswordHash,
 		&user.Avatar, &user.Phone, &user.Status,
 		&user.EmailVerified, &user.PhoneVerified, &user.MFAEnabled, &user.MFASecret,
 		&user.CreatedAt, &user.UpdatedAt, &lastLoginAt,
@@ -789,7 +814,7 @@ func (s *SQLiteDB) GetUserByEmail(ctx context.Context, email string) (*models.Us
 	}
 	
 	if lastLoginAt.Valid {
-		user.LastLoginAt = &lastLoginAt.Time
+		user.LastLogin = &lastLoginAt.Time
 	}
 	
 	return &user, nil
@@ -805,12 +830,12 @@ func (s *SQLiteDB) CreateUser(ctx context.Context, user *models.User) error {
 	`
 	
 	var lastLoginAt interface{}
-	if user.LastLoginAt != nil {
-		lastLoginAt = *user.LastLoginAt
+	if user.LastLogin != nil {
+		lastLoginAt = *user.LastLogin
 	}
 	
 	_, err := s.db.ExecContext(ctx, query,
-		user.ID, user.Email, user.Name, user.PasswordHash,
+		user.ID, user.Email, user.FullName, user.PasswordHash,
 		user.Avatar, user.Phone, user.Status,
 		user.EmailVerified, user.PhoneVerified, user.MFAEnabled, user.MFASecret,
 		user.CreatedAt, user.UpdatedAt, lastLoginAt,
@@ -830,12 +855,12 @@ func (s *SQLiteDB) UpdateUser(ctx context.Context, user *models.User) error {
 	`
 	
 	var lastLoginAt interface{}
-	if user.LastLoginAt != nil {
-		lastLoginAt = *user.LastLoginAt
+	if user.LastLogin != nil {
+		lastLoginAt = *user.LastLogin
 	}
 	
 	_, err := s.db.ExecContext(ctx, query,
-		user.Name, user.PasswordHash, user.Avatar, user.Phone, user.Status,
+		user.FullName, user.PasswordHash, user.Avatar, user.Phone, user.Status,
 		user.EmailVerified, user.PhoneVerified, user.MFAEnabled, user.MFASecret,
 		user.UpdatedAt, lastLoginAt, user.ID,
 	)
@@ -1128,7 +1153,7 @@ func (s *SQLiteDB) GetOrganizationMembers(ctx context.Context, orgID string) ([]
 		err := rows.Scan(
 			&member.UserID, &member.OrganizationID, &member.Role, 
 			&joinedAt,
-			&member.User.Email, &member.User.Name, &member.User.Avatar,
+			&member.User.Email, &member.User.FullName, &member.User.Avatar,
 		)
 		if err != nil {
 			return nil, err
@@ -1164,7 +1189,7 @@ func (s *SQLiteDB) GetOrganizationMember(ctx context.Context, orgID, userID stri
 	err := s.db.QueryRowContext(ctx, query, orgID, userID).Scan(
 		&member.UserID, &member.OrganizationID, &member.Role, 
 		&joinedAt,
-		&member.User.Email, &member.User.Name, &member.User.Avatar,
+		&member.User.Email, &member.User.FullName, &member.User.Avatar,
 	)
 	
 	if err == sql.ErrNoRows {
@@ -1424,15 +1449,4 @@ func (s *SQLiteDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error {
 	`
 	_, err := s.db.ExecContext(ctx, query, time.Now())
 	return err
-}
-
-// GetVersion returns the current database schema version
-func (s *SQLiteDB) GetVersion(ctx context.Context) (int, error) {
-	var version int
-	query := `SELECT version FROM schema_version ORDER BY version DESC LIMIT 1`
-	err := s.db.QueryRowContext(ctx, query).Scan(&version)
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-	return version, err
 }

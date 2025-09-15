@@ -81,7 +81,7 @@ func TestStructureLayer(t *testing.T) {
 	floorPlan := &models.FloorPlan{
 		Name:     "Test Floor",
 		Building: "Test Building",
-		Rooms: []models.Room{
+		Rooms: []*models.Room{
 			{
 				ID:   "room1",
 				Name: "Office",
@@ -147,12 +147,12 @@ func TestStructureLayer(t *testing.T) {
 }
 
 func TestEquipmentLayer(t *testing.T) {
-	equipment := []models.Equipment{
+	equipment := []*models.Equipment{
 		{
 			ID:   "eq1",
 			Name: "Outlet1",
 			Type: "outlet",
-			Location: models.Point{
+			Location: &models.Point{
 				X: 5,
 				Y: 3,
 			},
@@ -162,7 +162,7 @@ func TestEquipmentLayer(t *testing.T) {
 			ID:   "eq2",
 			Name: "Switch1",
 			Type: "switch",
-			Location: models.Point{
+			Location: &models.Point{
 				X: 8,
 				Y: 3,
 			},
@@ -258,16 +258,16 @@ func TestLayerPrioritySorting(t *testing.T) {
 
 func TestViewportClipping(t *testing.T) {
 	// Test that rendering respects viewport boundaries
-	equipment := []models.Equipment{
+	equipment := []*models.Equipment{
 		{
 			ID:   "inside",
 			Type: "outlet",
-			Location: models.Point{X: 5, Y: 5},
+			Location: &models.Point{X: 5, Y: 5},
 		},
 		{
 			ID:   "outside",
 			Type: "outlet",
-			Location: models.Point{X: 50, Y: 50}, // Outside viewport
+			Location: &models.Point{X: 50, Y: 50}, // Outside viewport
 		},
 	}
 	

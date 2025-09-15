@@ -35,8 +35,7 @@ func NewChiRouter(cfg *config.Config, services *api.Services) http.Handler {
 	r.Use(telemetry.HTTPMiddleware)
 	
 	// Apply validation middleware
-	validationMw := authMiddleware.NewValidationMiddleware()
-	r.Use(validationMw.Middleware)
+	r.Use(authMiddleware.InputValidation)
 	
 	// Apply rate limiting middleware with custom limits for auth endpoints
 	rateLimiter := authMiddleware.NewIPBasedRateLimiter(100, 200) // 100 req/s, burst 200
@@ -325,7 +324,7 @@ func (h *handlers) handleGetOrganization(w http.ResponseWriter, r *http.Request)
 	}
 	
 	// Check if organization is active
-	if org.Status != models.OrgStatusActive {
+	if org.Status != "active" {
 		respondError(w, http.StatusForbidden, "Organization is not active")
 		return
 	}

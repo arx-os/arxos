@@ -2,233 +2,131 @@ package middleware
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
-	"unicode/utf8"
+
+	"github.com/joelpate/arxos/internal/common/logger"
 )
 
-// ValidationMiddleware provides input validation and sanitization
-type ValidationMiddleware struct {
-	maxBodySize    int64
-	maxHeaderSize  int
-	allowedMethods []string
+const (
+	// MaxRequestSize is the maximum allowed request body size (10MB)
+	MaxRequestSize = 10 * 1024 * 1024
+)
+
+// ValidationError represents a validation error
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
 }
 
-// NewValidationMiddleware creates a new validation middleware
-func NewValidationMiddleware() *ValidationMiddleware {
-	return &ValidationMiddleware{
-		maxBodySize:   10 * 1024 * 1024, // 10MB default
-		maxHeaderSize: 8192,              // 8KB headers
-		allowedMethods: []string{
-			http.MethodGet, http.MethodPost, http.MethodPut,
-			http.MethodPatch, http.MethodDelete, http.MethodOptions,
-		},
-	}
+// ValidationResponse represents a validation error response
+type ValidationResponse struct {
+	Error   string            `json:"error"`
+	Details []ValidationError `json:"details,omitempty"`
 }
 
-// Middleware returns the validation middleware handler
-func (v *ValidationMiddleware) Middleware(next http.Handler) http.Handler {
+// Validator interface for request validation
+type Validator interface {
+	Validate() []ValidationError
+}
+
+// InputValidation middleware validates request input
+func InputValidation(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Validate HTTP method
-		if !v.isMethodAllowed(r.Method) {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		// Validate common security concerns
+		if err := validateSecurityHeaders(r); err != nil {
+			writeValidationError(w, []ValidationError{{Field: "headers", Message: err.Error()}})
 			return
 		}
 
 		// Validate request size
-		if r.ContentLength > v.maxBodySize {
-			http.Error(w, "Request body too large", http.StatusRequestEntityTooLarge)
+		if r.ContentLength > MaxRequestSize {
+			writeValidationError(w, []ValidationError{{Field: "body", Message: "request body too large"}})
 			return
 		}
 
-		// Limit request body size
-		r.Body = http.MaxBytesReader(w, r.Body, v.maxBodySize)
-
-		// Validate headers
-		if !v.validateHeaders(r) {
-			http.Error(w, "Invalid headers", http.StatusBadRequest)
-			return
+		// Validate content type for POST/PUT/PATCH requests
+		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
+			contentType := r.Header.Get("Content-Type")
+			if contentType == "" || !strings.Contains(contentType, "application/json") {
+				writeValidationError(w, []ValidationError{{Field: "content-type", Message: "content-type must be application/json"}})
+				return
+			}
 		}
 
-		// Validate URL path
-		if !v.validatePath(r.URL.Path) {
-			http.Error(w, "Invalid path", http.StatusBadRequest)
-			return
-		}
-
-		// Validate query parameters
-		if !v.validateQueryParams(r) {
-			http.Error(w, "Invalid query parameters", http.StatusBadRequest)
-			return
-		}
+		// Sanitize query parameters
+		sanitizeQueryParams(r)
 
 		next.ServeHTTP(w, r)
 	})
 }
 
-// isMethodAllowed checks if the HTTP method is allowed
-func (v *ValidationMiddleware) isMethodAllowed(method string) bool {
-	for _, allowed := range v.allowedMethods {
-		if method == allowed {
-			return true
-		}
+// ValidateRequest validates a request body against a validator
+func ValidateRequest(r *http.Request, v Validator) []ValidationError {
+	// Decode request body
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+		return []ValidationError{{Field: "body", Message: "invalid JSON format"}}
 	}
-	return false
+
+	// Validate using the validator
+	return v.Validate()
 }
 
-// validateHeaders validates request headers
-func (v *ValidationMiddleware) validateHeaders(r *http.Request) bool {
-	totalSize := 0
-	for name, values := range r.Header {
-		// Check header name
-		if !isValidHeaderName(name) {
-			return false
-		}
+// Common validators
 
-		// Check header values
-		for _, value := range values {
-			if !utf8.ValidString(value) {
-				return false
-			}
-			totalSize += len(name) + len(value)
-			if totalSize > v.maxHeaderSize {
-				return false
-			}
-
-			// Check for null bytes
-			if strings.Contains(value, "\x00") {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// validatePath validates the URL path
-func (v *ValidationMiddleware) validatePath(path string) bool {
-	// Check for null bytes
-	if strings.Contains(path, "\x00") {
-		return false
+// ValidateEmail validates an email address
+func ValidateEmail(email string) error {
+	if email == "" {
+		return fmt.Errorf("email is required")
 	}
 
-	// Check for path traversal attempts
-	if strings.Contains(path, "..") {
-		return false
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(email) {
+		return fmt.Errorf("invalid email format")
 	}
 
-	// Validate UTF-8
-	if !utf8.ValidString(path) {
-		return false
-	}
-
-	return true
-}
-
-// validateQueryParams validates query parameters
-func (v *ValidationMiddleware) validateQueryParams(r *http.Request) bool {
-	for key, values := range r.URL.Query() {
-		// Validate parameter name
-		if !isValidParamName(key) {
-			return false
-		}
-
-		// Validate parameter values
-		for _, value := range values {
-			if !utf8.ValidString(value) {
-				return false
-			}
-			// Check for null bytes
-			if strings.Contains(value, "\x00") {
-				return false
-			}
-			// Limit individual parameter value length
-			if len(value) > 2048 {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-// isValidHeaderName checks if a header name is valid
-func isValidHeaderName(name string) bool {
-	// RFC 7230: field-name = token
-	// token = 1*tchar
-	// tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
-	//         "0-9" / "A-Z" / "^" / "_" / "`" / "a-z" / "|" / "~"
-	validHeader := regexp.MustCompile(`^[!#$%&'*+\-.0-9A-Z^_` + "`" + `a-z|~]+$`)
-	return validHeader.MatchString(name)
-}
-
-// isValidParamName checks if a parameter name is valid
-func isValidParamName(name string) bool {
-	// Allow alphanumeric, underscore, hyphen
-	validParam := regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
-	return validParam.MatchString(name) && len(name) <= 100
-}
-
-// ValidateJSON validates and sanitizes JSON input
-func ValidateJSON(data []byte, v interface{}) error {
-	// Check for valid UTF-8
-	if !utf8.Valid(data) {
-		return &ValidationError{Message: "Invalid UTF-8 in JSON"}
-	}
-
-	// Decode JSON with strict validation
-	decoder := json.NewDecoder(strings.NewReader(string(data)))
-	decoder.DisallowUnknownFields()
-	
-	if err := decoder.Decode(v); err != nil {
-		return &ValidationError{Message: "Invalid JSON", Err: err}
+	if len(email) > 255 {
+		return fmt.Errorf("email too long")
 	}
 
 	return nil
 }
 
-// ValidationError represents a validation error
-type ValidationError struct {
-	Message string
-	Field   string
-	Err     error
+// ValidateUsername validates a username
+func ValidateUsername(username string) error {
+	if username == "" {
+		return fmt.Errorf("username is required")
+	}
+
+	if len(username) < 3 || len(username) > 30 {
+		return fmt.Errorf("username must be between 3 and 30 characters")
+	}
+
+	usernameRegex := regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
+	if !usernameRegex.MatchString(username) {
+		return fmt.Errorf("username can only contain letters, numbers, underscores, and hyphens")
+	}
+
+	return nil
 }
 
-func (e *ValidationError) Error() string {
-	if e.Field != "" {
-		return e.Message + ": " + e.Field
-	}
-	if e.Err != nil {
-		return e.Message + ": " + e.Err.Error()
-	}
-	return e.Message
-}
-
-// Email validation regex
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-
-// ValidateEmail validates an email address
-func ValidateEmail(email string) bool {
-	if len(email) > 254 { // RFC 5321
-		return false
-	}
-	return emailRegex.MatchString(email)
-}
-
-// ValidatePassword validates password strength
+// ValidatePassword validates a password
 func ValidatePassword(password string) error {
+	if password == "" {
+		return fmt.Errorf("password is required")
+	}
+
 	if len(password) < 8 {
-		return &ValidationError{Message: "Password must be at least 8 characters"}
+		return fmt.Errorf("password must be at least 8 characters long")
 	}
+
 	if len(password) > 128 {
-		return &ValidationError{Message: "Password too long"}
+		return fmt.Errorf("password too long")
 	}
-	
-	var (
-		hasUpper  bool
-		hasLower  bool
-		hasNumber bool
-	)
-	
+
+	var hasUpper, hasLower, hasNumber bool
 	for _, char := range password {
 		switch {
 		case 'A' <= char && char <= 'Z':
@@ -239,33 +137,254 @@ func ValidatePassword(password string) error {
 			hasNumber = true
 		}
 	}
-	
+
 	if !hasUpper || !hasLower || !hasNumber {
-		return &ValidationError{Message: "Password must contain uppercase, lowercase, and numbers"}
+		return fmt.Errorf("password must contain uppercase, lowercase, and numbers")
 	}
-	
+
 	return nil
 }
 
-// SanitizeString removes potentially dangerous characters
-func SanitizeString(input string) string {
-	// Remove null bytes
-	input = strings.ReplaceAll(input, "\x00", "")
-	
-	// Trim whitespace
-	input = strings.TrimSpace(input)
-	
-	// Ensure valid UTF-8
-	if !utf8.ValidString(input) {
-		return ""
+// ValidateArxosID validates an ArxOS ID format
+func ValidateArxosID(id string) error {
+	if id == "" {
+		return fmt.Errorf("ArxOS ID is required")
 	}
-	
-	return input
+
+	// Format: ARXOS-NA-US-NY-NYC-0001
+	arxosIDRegex := regexp.MustCompile(`^ARXOS-[A-Z]{2}-[A-Z]{2}-[A-Z]{2}-[A-Z]{3}-\d{4}$`)
+	if !arxosIDRegex.MatchString(id) {
+		return fmt.Errorf("invalid ArxOS ID format (expected: ARXOS-XX-XX-XX-XXX-0000)")
+	}
+
+	return nil
 }
 
-// ValidateID validates an ID (UUID or similar)
-func ValidateID(id string) bool {
-	// Allow UUIDs and alphanumeric IDs
-	validID := regexp.MustCompile(`^[a-zA-Z0-9-_]{1,128}$`)
-	return validID.MatchString(id)
+// ValidateUUID validates a UUID
+func ValidateUUID(id string) error {
+	if id == "" {
+		return fmt.Errorf("ID is required")
+	}
+
+	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	if !uuidRegex.MatchString(strings.ToLower(id)) {
+		return fmt.Errorf("invalid UUID format")
+	}
+
+	return nil
+}
+
+// ValidatePagination validates pagination parameters
+func ValidatePagination(page, limit int) error {
+	if page < 1 {
+		return fmt.Errorf("page must be greater than 0")
+	}
+
+	if limit < 1 || limit > 100 {
+		return fmt.Errorf("limit must be between 1 and 100")
+	}
+
+	return nil
+}
+
+// ValidateDateRange validates a date range
+func ValidateDateRange(start, end string) error {
+	if start == "" || end == "" {
+		return fmt.Errorf("both start and end dates are required")
+	}
+
+	// Simple ISO 8601 date validation
+	dateRegex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})?)?$`)
+
+	if !dateRegex.MatchString(start) {
+		return fmt.Errorf("invalid start date format (use ISO 8601)")
+	}
+
+	if !dateRegex.MatchString(end) {
+		return fmt.Errorf("invalid end date format (use ISO 8601)")
+	}
+
+	// TODO: Add actual date comparison
+	return nil
+}
+
+// Helper functions
+
+// validateSecurityHeaders checks for common security issues in headers
+func validateSecurityHeaders(r *http.Request) error {
+	// Check for SQL injection attempts in headers
+	headers := []string{"User-Agent", "Referer", "X-Forwarded-For"}
+	sqlPatterns := []string{
+		"(?i)(union|select|insert|update|delete|drop|create|alter|exec|execute|script|javascript|eval)",
+		"(?i)(--|#|/\\*|\\*/)",
+		"(?i)(char|nchar|varchar|nvarchar|alter|begin|cast|cursor|declare|exec|execute|fetch|kill|open|sys|table)",
+	}
+
+	for _, header := range headers {
+		value := r.Header.Get(header)
+		if value == "" {
+			continue
+		}
+
+		for _, pattern := range sqlPatterns {
+			if matched, _ := regexp.MatchString(pattern, value); matched {
+				logger.Warn("Potential SQL injection in header %s: %s", header, value)
+				return fmt.Errorf("invalid characters in header")
+			}
+		}
+
+		// Check header length
+		if len(value) > 1024 {
+			return fmt.Errorf("header value too long")
+		}
+	}
+
+	return nil
+}
+
+// sanitizeQueryParams sanitizes query parameters
+func sanitizeQueryParams(r *http.Request) {
+	query := r.URL.Query()
+
+	// List of parameters that should be sanitized
+	for key, values := range query {
+		for i, value := range values {
+			// Remove null bytes
+			value = strings.ReplaceAll(value, "\x00", "")
+
+			// Trim whitespace
+			value = strings.TrimSpace(value)
+
+			// Limit length
+			if len(value) > 256 {
+				value = value[:256]
+			}
+
+			values[i] = value
+		}
+		query[key] = values
+	}
+
+	r.URL.RawQuery = query.Encode()
+}
+
+// writeValidationError writes a validation error response
+func writeValidationError(w http.ResponseWriter, errors []ValidationError) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadRequest)
+
+	response := ValidationResponse{
+		Error:   "Validation failed",
+		Details: errors,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// Request validators for specific endpoints
+
+// CreateBuildingRequest validates a create building request
+type CreateBuildingRequest struct {
+	ArxosID    string  `json:"arxos_id"`
+	Name       string  `json:"name"`
+	Address    string  `json:"address"`
+	City       string  `json:"city"`
+	State      string  `json:"state"`
+	Country    string  `json:"country"`
+	PostalCode string  `json:"postal_code"`
+	Latitude   float64 `json:"latitude"`
+	Longitude  float64 `json:"longitude"`
+}
+
+func (r CreateBuildingRequest) Validate() []ValidationError {
+	var errors []ValidationError
+
+	if err := ValidateArxosID(r.ArxosID); err != nil {
+		errors = append(errors, ValidationError{Field: "arxos_id", Message: err.Error()})
+	}
+
+	if r.Name == "" {
+		errors = append(errors, ValidationError{Field: "name", Message: "name is required"})
+	} else if len(r.Name) > 255 {
+		errors = append(errors, ValidationError{Field: "name", Message: "name too long"})
+	}
+
+	if r.Address == "" {
+		errors = append(errors, ValidationError{Field: "address", Message: "address is required"})
+	}
+
+	if r.City == "" {
+		errors = append(errors, ValidationError{Field: "city", Message: "city is required"})
+	}
+
+	if r.Country == "" {
+		errors = append(errors, ValidationError{Field: "country", Message: "country is required"})
+	}
+
+	if r.Latitude < -90 || r.Latitude > 90 {
+		errors = append(errors, ValidationError{Field: "latitude", Message: "latitude must be between -90 and 90"})
+	}
+
+	if r.Longitude < -180 || r.Longitude > 180 {
+		errors = append(errors, ValidationError{Field: "longitude", Message: "longitude must be between -180 and 180"})
+	}
+
+	return errors
+}
+
+// CreateUserRequest validates a create user request
+type CreateUserRequest struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	FullName string `json:"full_name"`
+	Role     string `json:"role"`
+}
+
+func (r CreateUserRequest) Validate() []ValidationError {
+	var errors []ValidationError
+
+	if err := ValidateEmail(r.Email); err != nil {
+		errors = append(errors, ValidationError{Field: "email", Message: err.Error()})
+	}
+
+	if err := ValidateUsername(r.Username); err != nil {
+		errors = append(errors, ValidationError{Field: "username", Message: err.Error()})
+	}
+
+	if err := ValidatePassword(r.Password); err != nil {
+		errors = append(errors, ValidationError{Field: "password", Message: err.Error()})
+	}
+
+	if r.FullName != "" && len(r.FullName) > 255 {
+		errors = append(errors, ValidationError{Field: "full_name", Message: "full name too long"})
+	}
+
+	validRoles := map[string]bool{"admin": true, "user": true, "viewer": true}
+	if r.Role != "" && !validRoles[r.Role] {
+		errors = append(errors, ValidationError{Field: "role", Message: "invalid role"})
+	}
+
+	return errors
+}
+
+// LoginRequest validates a login request
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (r LoginRequest) Validate() []ValidationError {
+	var errors []ValidationError
+
+	if r.Username == "" {
+		errors = append(errors, ValidationError{Field: "username", Message: "username is required"})
+	}
+
+	if r.Password == "" {
+		errors = append(errors, ValidationError{Field: "password", Message: "password is required"})
+	}
+
+	// Don't validate format for login, just presence
+	return errors
 }

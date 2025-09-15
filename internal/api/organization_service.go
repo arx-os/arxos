@@ -62,12 +62,12 @@ func (s *OrganizationServiceImpl) CreateOrganization(ctx context.Context, org *m
 	
 	// Set timestamps
 	now := time.Now()
-	org.CreatedAt = now
-	org.UpdatedAt = now
+	org.CreatedAt = &now
+	org.UpdatedAt = &now
 	
 	// Set defaults
 	if org.Status == "" {
-		org.Status = models.OrgStatusActive
+		org.Status = "active"
 	}
 	if org.Plan == "" {
 		org.Plan = models.PlanFree
@@ -97,7 +97,8 @@ func (s *OrganizationServiceImpl) CreateOrganization(ctx context.Context, org *m
 
 // UpdateOrganization updates an existing organization
 func (s *OrganizationServiceImpl) UpdateOrganization(ctx context.Context, org *models.Organization) error {
-	org.UpdatedAt = time.Now()
+	now := time.Now()
+	org.UpdatedAt = &now
 	return s.db.UpdateOrganization(ctx, org)
 }
 
@@ -146,15 +147,18 @@ func (s *OrganizationServiceImpl) GetMemberRole(ctx context.Context, orgID, user
 // CreateInvitation creates a new organization invitation
 func (s *OrganizationServiceImpl) CreateInvitation(ctx context.Context, orgID, email string, role models.Role, invitedBy string) (*models.OrganizationInvitation, error) {
 	// Generate invitation
+	now := time.Now()
 	invitation := &models.OrganizationInvitation{
 		ID:             uuid.New().String(),
 		OrganizationID: orgID,
 		Email:          email,
-		Role:           role,
+		Role:           string(role),
 		Token:          s.generateInvitationToken(),
 		InvitedBy:      invitedBy,
+		Status:         "pending",
 		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour), // 7 days
-		CreatedAt:      time.Now(),
+		CreatedAt:      &now,
+		UpdatedAt:      &now,
 	}
 	
 	if err := s.db.CreateOrganizationInvitation(ctx, invitation); err != nil {

@@ -48,13 +48,19 @@ type Config struct {
 	
 	// Feature flags
 	Features FeatureFlags `json:"features"`
+
+	// Security settings
+	Security SecurityConfig `json:"security"`
+
+	// Database settings
+	Database DatabaseConfig `json:"database"`
 }
 
 // CloudConfig contains cloud-specific configuration
 type CloudConfig struct {
 	Enabled     bool   `json:"enabled"`
 	BaseURL     string `json:"base_url"`
-	APIKey      string `json:"api_key"`
+	APIKey      string `json:"-"` // Never serialize API keys
 	OrgID       string `json:"org_id"`
 	SyncEnabled bool   `json:"sync_enabled"`
 	SyncInterval time.Duration `json:"sync_interval"`
@@ -95,6 +101,32 @@ type FeatureFlags struct {
 	BetaFeatures     bool `json:"beta_features"`
 	Analytics        bool `json:"analytics"`
 	AutoUpdate       bool `json:"auto_update"`
+}
+
+// SecurityConfig contains security-related settings
+type SecurityConfig struct {
+	JWTSecret          string        `json:"-"` // Never serialize
+	JWTExpiry          time.Duration `json:"jwt_expiry"`
+	SessionTimeout     time.Duration `json:"session_timeout"`
+	APIRateLimit       int           `json:"api_rate_limit"`
+	APIRateLimitWindow time.Duration `json:"api_rate_limit_window"`
+	EnableAuth         bool          `json:"enable_auth"`
+	EnableTLS          bool          `json:"enable_tls"`
+	TLSCertPath        string        `json:"tls_cert_path"`
+	TLSKeyPath         string        `json:"-"` // Never serialize
+	AllowedOrigins     []string      `json:"allowed_origins"`
+	BcryptCost         int           `json:"bcrypt_cost"`
+}
+
+// DatabaseConfig contains database connection settings
+type DatabaseConfig struct {
+	Driver          string        `json:"driver"` // sqlite, postgres
+	DataSourceName  string        `json:"-"` // Never serialize connection strings
+	MaxConnections  int           `json:"max_connections"`
+	MaxIdleConns    int           `json:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
+	MigrationsPath  string        `json:"migrations_path"`
+	AutoMigrate     bool          `json:"auto_migrate"`
 }
 
 // Default returns a default configuration for local mode
@@ -140,6 +172,27 @@ func Default() *Config {
 			BetaFeatures:  false,
 			Analytics:     false,
 			AutoUpdate:    false,
+		},
+
+		Security: SecurityConfig{
+			JWTExpiry:          24 * time.Hour,
+			SessionTimeout:     30 * time.Minute,
+			APIRateLimit:       100,
+			APIRateLimitWindow: 1 * time.Minute,
+			EnableAuth:         true,
+			EnableTLS:          false,
+			AllowedOrigins:     []string{"http://localhost:3000"},
+			BcryptCost:         12,
+		},
+
+		Database: DatabaseConfig{
+			Driver:          "sqlite",
+			DataSourceName:  filepath.Join(homeDir, ".arxos", "arxos.db"),
+			MaxConnections:  25,
+			MaxIdleConns:    5,
+			ConnMaxLifetime: 30 * time.Minute,
+			MigrationsPath:  "./migrations",
+			AutoMigrate:     true,
 		},
 	}
 }
@@ -237,6 +290,54 @@ func (c *Config) LoadFromEnv() {
 	if token := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); token != "" {
 		c.Storage.Credentials["gcp_credentials"] = token
 	}
+
+	// Security settings from environment
+	if secret := os.Getenv("ARXOS_JWT_SECRET"); secret != "" {
+		c.Security.JWTSecret = secret
+	} else {
+		// Generate a random secret if not provided (development only)
+		if c.Mode == ModeLocal {
+			c.Security.JWTSecret = generateDevSecret()
+		}
+	}
+
+	if auth := os.Getenv("ARXOS_ENABLE_AUTH"); auth == "false" {
+		c.Security.EnableAuth = false
+	}
+
+	if tls := os.Getenv("ARXOS_ENABLE_TLS"); tls == "true" {
+		c.Security.EnableTLS = true
+	}
+
+	if cert := os.Getenv("ARXOS_TLS_CERT"); cert != "" {
+		c.Security.TLSCertPath = cert
+	}
+
+	if key := os.Getenv("ARXOS_TLS_KEY"); key != "" {
+		c.Security.TLSKeyPath = key
+	}
+
+	if origins := os.Getenv("ARXOS_ALLOWED_ORIGINS"); origins != "" {
+		c.Security.AllowedOrigins = strings.Split(origins, ",")
+	}
+
+	// Database settings from environment
+	if driver := os.Getenv("ARXOS_DB_DRIVER"); driver != "" {
+		c.Database.Driver = driver
+	}
+
+	if dsn := os.Getenv("ARXOS_DATABASE_URL"); dsn != "" {
+		c.Database.DataSourceName = dsn
+	} else if c.Database.Driver == "postgres" {
+		// Build PostgreSQL DSN from individual components
+		c.Database.DataSourceName = buildPostgresDSN()
+	}
+
+	if maxConn := os.Getenv("ARXOS_DB_MAX_CONNECTIONS"); maxConn != "" {
+		if val, err := parseIntEnv(maxConn); err == nil {
+			c.Database.MaxConnections = val
+		}
+	}
 }
 
 // Validate checks if the configuration is valid
@@ -273,7 +374,30 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("cloud bucket required for %s backend", c.Storage.Backend)
 		}
 	}
-	
+
+	// Validate security settings
+	if c.Mode != ModeLocal && c.Security.JWTSecret == "" {
+		return fmt.Errorf("JWT secret required for non-local modes (set ARXOS_JWT_SECRET)")
+	}
+
+	if c.Security.EnableTLS {
+		if c.Security.TLSCertPath == "" || c.Security.TLSKeyPath == "" {
+			return fmt.Errorf("TLS certificate and key paths required when TLS is enabled")
+		}
+	}
+
+	// Validate database settings
+	switch c.Database.Driver {
+	case "sqlite", "postgres":
+		// Valid drivers
+	default:
+		return fmt.Errorf("invalid database driver: %s", c.Database.Driver)
+	}
+
+	if c.Database.DataSourceName == "" {
+		return fmt.Errorf("database connection string required")
+	}
+
 	return nil
 }
 
@@ -302,13 +426,10 @@ func (c *Config) Save(path string) error {
 	// Don't save sensitive data
 	configCopy := *c
 	configCopy.Storage.Credentials = nil
-	
-	// Mask API key if present
-	if len(c.Cloud.APIKey) > 4 {
-		configCopy.Cloud.APIKey = strings.Repeat("*", 8) + c.Cloud.APIKey[len(c.Cloud.APIKey)-4:]
-	} else if c.Cloud.APIKey != "" {
-		configCopy.Cloud.APIKey = strings.Repeat("*", len(c.Cloud.APIKey))
-	}
+	configCopy.Cloud.APIKey = "" // Never save API keys
+	configCopy.Security.JWTSecret = "" // Never save JWT secrets
+	configCopy.Security.TLSKeyPath = "" // Never save TLS key paths
+	configCopy.Database.DataSourceName = "" // Never save connection strings
 	
 	data, err := json.MarshalIndent(configCopy, "", "  ")
 	if err != nil {
@@ -347,4 +468,47 @@ func GetConfigPath() string {
 	// Use home directory
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".arxos", "config.json")
+}
+
+// Helper functions
+
+// generateDevSecret generates a random JWT secret for development
+func generateDevSecret() string {
+	logger.Warn("Generating random JWT secret for development mode. Set ARXOS_JWT_SECRET for production.")
+	// Simple dev secret (in production, this would use crypto/rand)
+	return fmt.Sprintf("dev-secret-%d", time.Now().UnixNano())
+}
+
+// buildPostgresDSN builds a PostgreSQL connection string from environment variables
+func buildPostgresDSN() string {
+	host := getEnvOrDefault("ARXOS_DB_HOST", "localhost")
+	port := getEnvOrDefault("ARXOS_DB_PORT", "5432")
+	user := getEnvOrDefault("ARXOS_DB_USER", "arxos")
+	password := os.Getenv("ARXOS_DB_PASSWORD")
+	dbname := getEnvOrDefault("ARXOS_DB_NAME", "arxos")
+	sslmode := getEnvOrDefault("ARXOS_DB_SSLMODE", "disable")
+
+	dsn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=%s",
+		host, port, user, dbname, sslmode)
+
+	if password != "" {
+		dsn = fmt.Sprintf("%s password=%s", dsn, password)
+	}
+
+	return dsn
+}
+
+// getEnvOrDefault returns environment variable value or default
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// parseIntEnv parses integer from environment variable
+func parseIntEnv(value string) (int, error) {
+	var result int
+	_, err := fmt.Sscanf(value, "%d", &result)
+	return result, err
 }

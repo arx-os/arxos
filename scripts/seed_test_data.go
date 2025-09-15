@@ -23,13 +23,14 @@ func main() {
 
 	// Create a test floor plan
 	floorPlanID := uuid.New().String()
+	now := time.Now()
 	floorPlan := &models.FloorPlan{
 		ID:        floorPlanID,
 		Name:      "Test Building - Floor 1",
 		Building:  "Test Building",
 		Level:     1,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: &now,
+		UpdatedAt: &now,
 	}
 
 	if err := db.SaveFloorPlan(ctx, floorPlan); err != nil {
@@ -97,28 +98,28 @@ func main() {
 			ID:       uuid.New().String(),
 			Name:     "Switch-01",
 			Type:     "switch",
-			Location: models.Point{X: 100, Y: 80},
+			Location: &models.Point{X: 100, Y: 80},
 			Status:   models.StatusNormal,
 		},
 		{
 			ID:       uuid.New().String(),
 			Name:     "Outlet-01",
 			Type:     "outlet",
-			Location: models.Point{X: 280, Y: 80},
+			Location: &models.Point{X: 280, Y: 80},
 			Status:   models.StatusNormal,
 		},
 		{
 			ID:       uuid.New().String(),
 			Name:     "Panel-100",
 			Type:     "panel",
-			Location: models.Point{X: 80, Y: 200},
-			Status:   models.StatusNeedsRepair,
+			Location: &models.Point{X: 80, Y: 200},
+			Status:   models.StatusOffline,
 		},
 		{
 			ID:       uuid.New().String(),
 			Name:     "Outlet-02",
 			Type:     "outlet",
-			Location: models.Point{X: 250, Y: 200},
+			Location: &models.Point{X: 250, Y: 200},
 			Status:   models.StatusFailed,
 		},
 	}
@@ -145,11 +146,11 @@ func main() {
 		Name:         "Test Organization",
 		Slug:         "test-org",
 		Plan:         models.PlanFree,
-		Status:       models.OrgStatusActive,
+		Status:       "active",
 		MaxUsers:     5,
 		MaxBuildings: 2,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		CreatedAt:    &now,
+		UpdatedAt:    &now,
 	}
 
 	if err := db.CreateOrganization(ctx, org); err != nil {

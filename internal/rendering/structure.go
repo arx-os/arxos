@@ -37,7 +37,7 @@ func (s *StructureLayer) Render(viewport Viewport) [][]rune {
 	
 	// Render rooms
 	for _, room := range s.floorPlan.Rooms {
-		s.renderRoom(buffer, room, viewport)
+		s.renderRoom(buffer, *room, viewport)
 	}
 	
 	// Render walls and connections between rooms

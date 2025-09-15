@@ -6,63 +6,30 @@ import (
 
 // User represents a user account
 type User struct {
-	ID           string    `json:"id" db:"id"`
-	Email        string    `json:"email" db:"email"`
-	Name         string    `json:"name" db:"name"`
-	PasswordHash string    `json:"-" db:"password_hash"`
-	Avatar       string    `json:"avatar,omitempty" db:"avatar"`
-	Phone        string    `json:"phone,omitempty" db:"phone"`
-	
-	// Status
-	Status       UserStatus `json:"status" db:"status"`
-	EmailVerified bool      `json:"email_verified" db:"email_verified"`
-	PhoneVerified bool      `json:"phone_verified" db:"phone_verified"`
-	
+	ID           string     `json:"id" db:"id"`
+	Email        string     `json:"email" db:"email"`
+	Username     string     `json:"username" db:"username"`
+	FullName     string     `json:"full_name" db:"full_name"`
+	PasswordHash string     `json:"-" db:"password_hash"`
+	Avatar       string     `json:"avatar,omitempty" db:"avatar"`
+	Phone        string     `json:"phone,omitempty" db:"phone"`
+	Role         string     `json:"role" db:"role"`
+	Status       string     `json:"status" db:"status"`
+	LastLogin    *time.Time `json:"last_login,omitempty" db:"last_login"`
+	CreatedAt    *time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at" db:"updated_at"`
+
 	// MFA
 	MFAEnabled   bool   `json:"mfa_enabled" db:"mfa_enabled"`
 	MFASecret    string `json:"-" db:"mfa_secret"`
-	
-	// Timestamps
-	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
-	LastLoginAt  *time.Time `json:"last_login_at,omitempty" db:"last_login_at"`
-	
+
+	// Email verification
+	EmailVerified bool      `json:"email_verified" db:"email_verified"`
+	PhoneVerified bool      `json:"phone_verified" db:"phone_verified"`
+
 	// Organization context (not stored in user table)
 	CurrentOrgID string                `json:"current_org_id,omitempty"`
 	Organizations []OrganizationMember  `json:"organizations,omitempty"`
-}
-
-// UserStatus represents the user account status
-type UserStatus string
-
-const (
-	UserStatusActive    UserStatus = "active"
-	UserStatusInactive  UserStatus = "inactive"
-	UserStatusSuspended UserStatus = "suspended"
-)
-
-// UserSession represents an active user session
-type UserSession struct {
-	ID             string    `json:"id" db:"id"`
-	UserID         string    `json:"user_id" db:"user_id"`
-	OrganizationID string    `json:"organization_id" db:"organization_id"`
-	Token          string    `json:"token" db:"token"`
-	RefreshToken   string    `json:"refresh_token" db:"refresh_token"`
-	IPAddress      string    `json:"ip_address" db:"ip_address"`
-	UserAgent      string    `json:"user_agent" db:"user_agent"`
-	ExpiresAt      time.Time `json:"expires_at" db:"expires_at"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-	LastAccessAt   time.Time `json:"last_access_at" db:"last_access_at"`
-}
-
-// IsExpired checks if the session has expired
-func (s *UserSession) IsExpired() bool {
-	return time.Now().After(s.ExpiresAt)
-}
-
-// UpdateLastAccess updates the last access time
-func (s *UserSession) UpdateLastAccess() {
-	s.LastAccessAt = time.Now()
 }
 
 // UserPreferences stores user-specific preferences
@@ -75,16 +42,6 @@ type UserPreferences struct {
 	EmailNotifications bool `json:"email_notifications" db:"email_notifications"`
 	PushNotifications  bool `json:"push_notifications" db:"push_notifications"`
 	DefaultOrgID    string `json:"default_org_id" db:"default_org_id"`
-}
-
-// PasswordReset represents a password reset request
-type PasswordReset struct {
-	ID        string    `json:"id" db:"id"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	Token     string    `json:"-" db:"token"`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
-	UsedAt    *time.Time `json:"used_at,omitempty" db:"used_at"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 // EmailVerification represents an email verification token
@@ -100,7 +57,7 @@ type EmailVerification struct {
 
 // IsActive checks if the user account is active
 func (u *User) IsActive() bool {
-	return u.Status == UserStatusActive
+	return u.Status == "active"
 }
 
 // HasVerifiedEmail checks if the user has verified their email
@@ -126,16 +83,6 @@ func (u *User) GetOrganizationRole(orgID string) *Role {
 		}
 	}
 	return nil
-}
-
-// IsSessionValid checks if a session is still valid
-func (s *UserSession) IsSessionValid() bool {
-	return time.Now().Before(s.ExpiresAt)
-}
-
-// IsExpired checks if a password reset token has expired
-func (p *PasswordReset) IsExpired() bool {
-	return time.Now().After(p.ExpiresAt)
 }
 
 // IsExpired checks if an email verification token has expired

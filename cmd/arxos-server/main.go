@@ -260,7 +260,7 @@ func (h *handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate email format
-	if !middleware.ValidateEmail(req.Email) {
+	if err := middleware.ValidateEmail(req.Email); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid email format")
 		return
 	}
@@ -346,7 +346,7 @@ func (h *handlers) handlePasswordReset(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate email format
-	if !middleware.ValidateEmail(req.Email) {
+	if err := middleware.ValidateEmail(req.Email); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid email format")
 		return
 	}
@@ -919,7 +919,8 @@ func (h *handlers) handleOrganization(w http.ResponseWriter, r *http.Request) {
 		}
 		
 		update.ID = orgID
-		update.UpdatedAt = time.Now()
+		now := time.Now()
+		update.UpdatedAt = &now
 		
 		if err := h.services.Organization.UpdateOrganization(r.Context(), &update); err != nil {
 			respondError(w, http.StatusInternalServerError, err.Error())

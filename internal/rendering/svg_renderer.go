@@ -93,12 +93,12 @@ func (r *SVGRenderer) RenderFloorPlan(plan *models.FloorPlan, opts *RenderOption
 	
 	// Render rooms
 	for _, room := range plan.Rooms {
-		svg.WriteString(r.renderRoom(&room, opts.ShowLabels))
+		svg.WriteString(r.renderRoom(room, opts.ShowLabels))
 	}
 	
 	// Render equipment
 	for _, equip := range plan.Equipment {
-		svg.WriteString(r.renderEquipment(&equip, opts.ShowLabels))
+		svg.WriteString(r.renderEquipment(equip, opts.ShowLabels))
 	}
 	
 	svg.WriteString(`</g>`)

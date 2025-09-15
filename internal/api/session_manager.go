@@ -119,7 +119,7 @@ func (sm *SessionManager) ValidateSession(ctx context.Context, token string) (bo
 	}
 
 	// Update last accessed time
-	session.UpdateLastAccess()
+	session.LastAccessAt = time.Now()
 	if err := sm.db.UpdateSession(ctx, session); err != nil {
 		logger.Error("Failed to update session last access: %v", err)
 		// Don't fail validation if we can't update last access
@@ -136,7 +136,7 @@ func (sm *SessionManager) ExtendSession(ctx context.Context, token string, durat
 	}
 
 	session.ExpiresAt = time.Now().Add(duration)
-	session.UpdateLastAccess()
+	session.LastAccessAt = time.Now()
 
 	return sm.db.UpdateSession(ctx, session)
 }

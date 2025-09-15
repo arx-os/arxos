@@ -229,12 +229,12 @@ func (r *Renderer) RenderFloorPlan(plan *models.FloorPlan, floorZ float64) {
 
 	// Draw rooms as 3D boxes
 	for _, room := range plan.Rooms {
-		r.DrawRoom(room, floorZ)
+		r.DrawRoom(*room, floorZ)
 	}
 
 	// Draw equipment at their positions
 	for _, equip := range plan.Equipment {
-		r.DrawEquipment(equip, floorZ)
+		r.DrawEquipment(*equip, floorZ)
 	}
 
 	// Draw floor grid for reference
@@ -367,11 +367,11 @@ func (r *Renderer) RenderMultiFloor(floors []*models.FloorPlan, floorHeight floa
 		
 		// Draw this floor
 		for _, room := range floor.Rooms {
-			r.DrawRoom(room, floorZ)
+			r.DrawRoom(*room, floorZ)
 		}
 		
 		for _, equip := range floor.Equipment {
-			r.DrawEquipment(equip, floorZ)
+			r.DrawEquipment(*equip, floorZ)
 		}
 		
 		// Draw floor separator

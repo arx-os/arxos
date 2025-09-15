@@ -51,6 +51,7 @@ type Equipment struct {
 // Standard equipment status values (matches BIM v2.0 spec)
 const (
 	StatusOperational = "OPERATIONAL"
+	StatusNormal      = "OPERATIONAL" // Alias for backward compatibility
 	StatusDegraded    = "DEGRADED"
 	StatusFailed      = "FAILED"
 	StatusMaintenance = "MAINTENANCE"

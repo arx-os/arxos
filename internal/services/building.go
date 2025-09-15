@@ -36,7 +36,7 @@ func (bs *BuildingService) GetBuilding(ctx context.Context, buildingID string) (
 func (bs *BuildingService) CreateBuilding(ctx context.Context, building *models.FloorPlan) error {
 	// Set defaults
 	if building.ID == "" {
-		building.ID = generateID()
+		building.ID = generateBuildingID()
 	}
 	now := time.Now()
 	building.CreatedAt = &now
@@ -67,8 +67,8 @@ func (bs *BuildingService) DeleteBuilding(ctx context.Context, buildingID string
 	return bs.db.DeleteFloorPlan(ctx, buildingID)
 }
 
-// generateID generates a unique ID for new buildings
-func generateID() string {
+// generateBuildingID generates a unique ID for new buildings
+func generateBuildingID() string {
 	return fmt.Sprintf("bld_%d", time.Now().UnixNano())
 }
 

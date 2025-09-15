@@ -1,6 +1,8 @@
 package importer
 
 import (
+	"bytes"
+	"context"
 	"strings"
 	"testing"
 )

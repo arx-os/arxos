@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -98,8 +99,8 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*A
 	
 	// Update last login time
 	now := time.Now()
-	user.LastLoginAt = &now
-	user.UpdatedAt = now
+	user.LastLogin = &now
+	user.UpdatedAt = &now
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		logger.Error("Failed to update user last login: %v", err)
 	}
@@ -110,15 +111,15 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*A
 	apiUser := &User{
 		ID:             user.ID,
 		Email:          user.Email,
-		Name:           user.Name,
+		Name:           user.FullName,
 		OrgID:          orgID,
 		Role:           role,
 		Active:         user.IsActive(),
-		CreatedAt:      user.CreatedAt,
-		UpdatedAt:      user.UpdatedAt,
+		CreatedAt:      *user.CreatedAt,
+		UpdatedAt:      *user.UpdatedAt,
 	}
-	if user.LastLoginAt != nil {
-		apiUser.LastLoginAt = *user.LastLoginAt
+	if user.LastLogin != nil {
+		apiUser.LastLoginAt = *user.LastLogin
 	}
 	
 	return &AuthResponse{
@@ -174,14 +175,14 @@ func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name st
 	user := &models.User{
 		ID:           s.generateID(),
 		Email:        email,
-		Name:         name,
+		FullName:     name,
 		PasswordHash: string(hashedPassword),
-		Status:       models.UserStatusActive,
+		Status:       "active",
 		EmailVerified: false,
 		PhoneVerified: false,
 		MFAEnabled:   false,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		CreatedAt:    &now,
+		UpdatedAt:    &now,
 	}
 	
 	// Store user in database
@@ -195,11 +196,11 @@ func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name st
 	return &User{
 		ID:        user.ID,
 		Email:     user.Email,
-		Name:      user.Name,
+		Name:      user.FullName,
 		Role:      "user",
 		Active:    user.IsActive(),
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		CreatedAt: *user.CreatedAt,
+		UpdatedAt: *user.UpdatedAt,
 	}, nil
 }
 
@@ -215,14 +216,14 @@ func (s *AuthServiceImpl) ValidateToken(ctx context.Context, token string) (*Tok
 	}
 	
 	// Check expiration
-	if session.IsExpired() {
+	if time.Now().After(session.ExpiresAt) {
 		// Delete expired session
 		s.db.DeleteSession(ctx, session.ID)
 		return nil, errors.New("token expired")
 	}
 	
 	// Update last access time
-	session.UpdateLastAccess()
+	session.LastAccessAt = time.Now()
 	s.db.UpdateSession(ctx, session)
 	
 	// Get user to construct claims
@@ -282,7 +283,7 @@ func (s *AuthServiceImpl) RefreshToken(ctx context.Context, refreshToken string)
 	session.RefreshToken = newRefreshToken
 	session.ExpiresAt = time.Now().Add(15 * time.Minute)
 	session.OrganizationID = orgID
-	session.UpdateLastAccess()
+	session.LastAccessAt = time.Now()
 	
 	if err := s.db.UpdateSession(ctx, session); err != nil {
 		logger.Error("Failed to update session: %v", err)
@@ -293,15 +294,15 @@ func (s *AuthServiceImpl) RefreshToken(ctx context.Context, refreshToken string)
 	apiUser := &User{
 		ID:        user.ID,
 		Email:     user.Email,
-		Name:      user.Name,
+		Name:      user.FullName,
 		OrgID:     orgID,
 		Role:      role,
 		Active:    user.IsActive(),
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		CreatedAt: *user.CreatedAt,
+		UpdatedAt: *user.UpdatedAt,
 	}
-	if user.LastLoginAt != nil {
-		apiUser.LastLoginAt = *user.LastLoginAt
+	if user.LastLogin != nil {
+		apiUser.LastLoginAt = *user.LastLogin
 	}
 	
 	return &AuthResponse{
@@ -358,7 +359,8 @@ func (s *AuthServiceImpl) ChangePassword(ctx context.Context, userID, oldPasswor
 	
 	// Update password
 	user.PasswordHash = string(hashedPassword)
-	user.UpdatedAt = time.Now()
+	now := time.Now()
+	user.UpdatedAt = &now
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
@@ -382,10 +384,13 @@ func (s *AuthServiceImpl) ResetPassword(ctx context.Context, email string) error
 	}
 	
 	// Create password reset token
-	resetToken, err := models.NewPasswordResetToken(user.ID, 1) // 1 hour expiration
-	if err != nil {
-		logger.Error("Failed to generate password reset token: %v", err)
-		return fmt.Errorf("failed to process password reset request")
+	token := generateSecureToken()
+	resetToken := &models.PasswordResetToken{
+		ID:        s.generateID(),
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: time.Now().Add(1 * time.Hour),
+		CreatedAt: time.Now(),
 	}
 	
 	// Store token in database
@@ -418,7 +423,7 @@ func (s *AuthServiceImpl) ConfirmPasswordReset(ctx context.Context, token, newPa
 	}
 	
 	// Check if token is valid
-	if !resetToken.IsValid() {
+	if resetToken.Used || time.Now().After(resetToken.ExpiresAt) {
 		return errors.New("invalid or expired reset token")
 	}
 	
@@ -439,7 +444,8 @@ func (s *AuthServiceImpl) ConfirmPasswordReset(ctx context.Context, token, newPa
 	
 	// Update user's password
 	user.PasswordHash = string(hashedPassword)
-	user.UpdatedAt = time.Now()
+	now := time.Now()
+	user.UpdatedAt = &now
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
@@ -499,14 +505,14 @@ func (s *AuthServiceImpl) CreateDefaultUser() error {
 	user := &models.User{
 		ID:           "admin",
 		Email:        "admin@arxos.io",
-		Name:         "Admin User",
+		FullName:     "Admin User",
 		PasswordHash: string(hashedPassword),
-		Status:       models.UserStatusActive,
+		Status:       "active",
 		EmailVerified: true,
 		PhoneVerified: false,
 		MFAEnabled:   false,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		CreatedAt:    &now,
+		UpdatedAt:    &now,
 	}
 	
 	if err := s.db.CreateUser(ctx, user); err != nil {
@@ -551,4 +557,14 @@ func (s *AuthServiceImpl) getUserPrimaryRole(ctx context.Context, userID string)
 	}
 	
 	return string(*role), primaryOrg.ID
+}
+
+// generateSecureToken generates a cryptographically secure random token
+func generateSecureToken() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		// Fallback to less secure method if crypto/rand fails
+		return hex.EncodeToString([]byte(time.Now().String()))
+	}
+	return hex.EncodeToString(b)
 }

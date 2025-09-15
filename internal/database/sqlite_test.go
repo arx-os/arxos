@@ -39,13 +39,14 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 	ctx := context.Background()
 	
 	// Create test floor plan
+	now := time.Now()
 	plan := &models.FloorPlan{
 		Name:      "TestFloor",
 		Building:  "TestBuilding",
 		Level:     3,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Rooms: []models.Room{
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Rooms: []*models.Room{
 			{
 				ID:   "room1",
 				Name: "Room 1",
@@ -63,13 +64,13 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 				},
 			},
 		},
-		Equipment: []models.Equipment{
+		Equipment: []*models.Equipment{
 			{
 				ID:       "eq1",
 				Name:     "Equipment 1",
 				Type:     "outlet",
 				RoomID:   "room1",
-				Location: models.Point{X: 5, Y: 5},
+				Location: &models.Point{X: 5, Y: 5},
 				Status:   models.StatusNormal,
 			},
 			{
@@ -77,7 +78,7 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 				Name:     "Equipment 2",
 				Type:     "panel",
 				RoomID:   "room2",
-				Location: models.Point{X: 15, Y: 5},
+				Location: &models.Point{X: 15, Y: 5},
 				Status:   models.StatusFailed,
 				Notes:    "Needs inspection",
 			},
@@ -140,7 +141,7 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 		Name:     "UpdateTest",
 		Building: "Building A",
 		Level:    1,
-		Rooms: []models.Room{
+		Rooms: []*models.Room{
 			{
 				ID:   "room1",
 				Name: "Initial Room",
@@ -206,7 +207,7 @@ func TestSQLiteDB_ForeignKeyConstraints(t *testing.T) {
 		Name:     "FKTest",
 		Building: "Test",
 		Level:    1,
-		Rooms: []models.Room{
+		Rooms: []*models.Room{
 			{
 				ID:   "valid_room",
 				Name: "Valid Room",
@@ -216,13 +217,13 @@ func TestSQLiteDB_ForeignKeyConstraints(t *testing.T) {
 				},
 			},
 		},
-		Equipment: []models.Equipment{
+		Equipment: []*models.Equipment{
 			{
 				ID:       "eq1",
 				Name:     "Equipment with invalid room",
 				Type:     "outlet",
 				RoomID:   "non_existent_room", // This room doesn't exist
-				Location: models.Point{X: 5, Y: 5},
+				Location: &models.Point{X: 5, Y: 5},
 				Status:   models.StatusNormal,
 			},
 		},
@@ -276,7 +277,7 @@ func TestValidateFloorPlan(t *testing.T) {
 				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
-				Rooms: []models.Room{
+				Rooms: []*models.Room{
 					{ID: "room1", Name: "Room 1"},
 					{ID: "room1", Name: "Room 2"},
 				},
@@ -290,7 +291,7 @@ func TestValidateFloorPlan(t *testing.T) {
 				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
-				Equipment: []models.Equipment{
+				Equipment: []*models.Equipment{
 					{ID: "eq1", Name: "Equipment 1"},
 					{ID: "eq1", Name: "Equipment 2"},
 				},
@@ -304,10 +305,10 @@ func TestValidateFloorPlan(t *testing.T) {
 				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
-				Rooms: []models.Room{
+				Rooms: []*models.Room{
 					{ID: "room1", Name: "Room 1"},
 				},
-				Equipment: []models.Equipment{
+				Equipment: []*models.Equipment{
 					{ID: "eq1", Name: "Equipment 1", RoomID: "invalid_room"},
 				},
 			},
@@ -320,10 +321,10 @@ func TestValidateFloorPlan(t *testing.T) {
 				ID:       "test-id",
 				Name:     "Test",
 				Building: "Test",
-				Rooms: []models.Room{
+				Rooms: []*models.Room{
 					{ID: "room1", Name: "Room 1"},
 				},
-				Equipment: []models.Equipment{
+				Equipment: []*models.Equipment{
 					{ID: "eq1", Name: "Equipment 1", RoomID: "room1"},
 					{ID: "eq2", Name: "Equipment 2", RoomID: ""},
 				},

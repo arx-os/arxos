@@ -1,0 +1,17 @@
+# ArxOS Building Information Model
+# Name: Sample Building
+# Source: IFC Import (IFC)
+
+## FLOORS
+FLOOR 1 "Ground Floor" 1111111111111111.0
+FLOOR 2 "First Floor" 4444444444444444.0
+
+## ROOMS
+ROOM 1/100 "Room 101" space 0.0
+ROOM 1/101 "Room 102" space 0.0
+ROOM 2/100 "Room 201" space 0.0
+
+## EQUIPMENT
+EQUIPMENT 2/100/AHU-01 "AHU-01" hvac operational
+EQUIPMENT 2/100/VAV-101 "VAV-101" hvac operational
+

@@ -10,7 +10,7 @@ import (
 
 
 // Helper function to get equipment symbol as the layers do
-func getEquipmentSymbol(equipType string, status models.EquipmentStatus) rune {
+func getEquipmentSymbol(equipType string, status string) rune {
 	// Default equipment symbols (from layers/equipment.go)
 	symbolMap := map[string]rune{
 		"outlet": '●',
@@ -235,14 +235,15 @@ func TestGridToString(t *testing.T) {
 
 // Helper function to create a test floor plan
 func createTestFloorPlan() *models.FloorPlan {
+	now := time.Now()
 	return &models.FloorPlan{
 		Name:      "Test Floor",
 		Building:  "Test Building",
 		Level:     2,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Rooms: []models.Room{
-			{
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Rooms: []*models.Room{
+			&models.Room{
 				ID:   "room_2a",
 				Name: "Room 2A",
 				Bounds: models.Bounds{
@@ -251,7 +252,7 @@ func createTestFloorPlan() *models.FloorPlan {
 				},
 				Equipment: []string{"outlet_2a_1", "outlet_2a_2"},
 			},
-			{
+			&models.Room{
 				ID:   "room_2b",
 				Name: "Room 2B",
 				Bounds: models.Bounds{
@@ -260,7 +261,7 @@ func createTestFloorPlan() *models.FloorPlan {
 				},
 				Equipment: []string{"outlet_2b_1", "outlet_2b_2"},
 			},
-			{
+			&models.Room{
 				ID:   "mech",
 				Name: "Mech",
 				Bounds: models.Bounds{
@@ -270,44 +271,44 @@ func createTestFloorPlan() *models.FloorPlan {
 				Equipment: []string{"panel_1"},
 			},
 		},
-		Equipment: []models.Equipment{
-			{
+		Equipment: []*models.Equipment{
+			&models.Equipment{
 				ID:       "outlet_2a_1",
 				Name:     "Outlet 2A-1",
 				Type:     "outlet",
-				Location: models.Point{X: 2, Y: 5},
+				Location: &models.Point{X: 2, Y: 5},
 				RoomID:   "room_2a",
 				Status:   models.StatusOperational,
 			},
-			{
+			&models.Equipment{
 				ID:       "outlet_2a_2",
 				Name:     "Outlet 2A-2",
 				Type:     "outlet",
-				Location: models.Point{X: 5, Y: 5},
+				Location: &models.Point{X: 5, Y: 5},
 				RoomID:   "room_2a",
 				Status:   models.StatusOperational,
 			},
-			{
+			&models.Equipment{
 				ID:       "outlet_2b_1",
 				Name:     "Outlet 2B-1",
 				Type:     "outlet",
-				Location: models.Point{X: 12, Y: 5},
+				Location: &models.Point{X: 12, Y: 5},
 				RoomID:   "room_2b",
 				Status:   models.StatusOperational,
 			},
-			{
+			&models.Equipment{
 				ID:       "outlet_2b_2",
 				Name:     "Outlet 2B-2",
 				Type:     "outlet",
-				Location: models.Point{X: 15, Y: 5},
+				Location: &models.Point{X: 15, Y: 5},
 				RoomID:   "room_2b",
 				Status:   models.StatusFailed,
 			},
-			{
+			&models.Equipment{
 				ID:       "panel_1",
 				Name:     "Panel 1",
 				Type:     "panel",
-				Location: models.Point{X: 22, Y: 5},
+				Location: &models.Point{X: 22, Y: 5},
 				RoomID:   "mech",
 				Status:   models.StatusOperational,
 			},

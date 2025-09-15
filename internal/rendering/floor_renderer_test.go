@@ -15,7 +15,7 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 		Name:     "Test Floor",
 		Building: "Test Building",
 		Level:    1,
-		Rooms: []models.Room{
+		Rooms: []*models.Room{
 			{
 				ID:   "room1",
 				Name: "Office",
@@ -37,12 +37,12 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 				},
 			},
 		},
-		Equipment: []models.Equipment{
+		Equipment: []*models.Equipment{
 			{
 				ID:   "outlet1",
 				Name: "Outlet 1",
 				Type: "outlet",
-				Location: models.Point{
+				Location: &models.Point{
 					X: 10,
 					Y: 5,
 				},
@@ -52,7 +52,7 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 				ID:   "switch1",
 				Name: "Light Switch",
 				Type: "switch",
-				Location: models.Point{
+				Location: &models.Point{
 					X: 5,
 					Y: 10,
 				},
@@ -62,7 +62,7 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 				ID:   "panel1",
 				Name: "Main Panel",
 				Type: "panel",
-				Location: models.Point{
+				Location: &models.Point{
 					X: 40,
 					Y: 10,
 				},
@@ -149,8 +149,8 @@ func TestFloorRenderer_EmptyFloorPlan(t *testing.T) {
 		Name:     "Empty Floor",
 		Building: "Test",
 		Level:    1,
-		Rooms:    []models.Room{},
-		Equipment: []models.Equipment{},
+		Rooms:    []*models.Room{},
+		Equipment: []*models.Equipment{},
 	}
 	
 	output, err := renderer.RenderFromFloorPlan(plan)
@@ -171,13 +171,13 @@ func TestFloorRenderer_LargeFloorPlan(t *testing.T) {
 		Name:     "Large Floor",
 		Building: "Big Building",
 		Level:    1,
-		Rooms:    make([]models.Room, 0),
-		Equipment: make([]models.Equipment, 0),
+		Rooms:    make([]*models.Room, 0),
+		Equipment: make([]*models.Equipment, 0),
 	}
 	
 	// Add 10 rooms
 	for i := 0; i < 10; i++ {
-		room := models.Room{
+		room := &models.Room{
 			ID:   fmt.Sprintf("room%d", i),
 			Name: fmt.Sprintf("Room %d", i),
 			Bounds: models.Bounds{
@@ -192,11 +192,11 @@ func TestFloorRenderer_LargeFloorPlan(t *testing.T) {
 	
 	// Add 20 equipment items
 	for i := 0; i < 20; i++ {
-		equip := models.Equipment{
+		equip := &models.Equipment{
 			ID:   fmt.Sprintf("equip%d", i),
 			Name: fmt.Sprintf("Equipment %d", i),
 			Type: "outlet",
-			Location: models.Point{
+			Location: &models.Point{
 				X: float64(i * 5),
 				Y: 5,
 			},
@@ -220,7 +220,7 @@ func TestFloorRenderer_ScaleCalculation(t *testing.T) {
 	// Test with a floor plan that needs scaling
 	plan := &models.FloorPlan{
 		ID: "scale-test",
-		Rooms: []models.Room{
+		Rooms: []*models.Room{
 			{
 				ID:   "big-room",
 				Name: "Big Room",

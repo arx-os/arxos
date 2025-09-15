@@ -16,10 +16,8 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build all binaries
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o arx ./cmd/arx || true
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o arxd ./cmd/arxd || true
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o arxos-server ./cmd/arxos-server || true
+# Build single binary
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o arx ./cmd/arx
 
 # Final stage
 FROM alpine:latest
@@ -37,9 +35,9 @@ RUN mkdir -p /app/data /app/logs /app/migrations && \
 
 WORKDIR /app
 
-# Copy binaries from builder
-COPY --from=builder /build/arx* /app/
-COPY --from=builder /build/migrations /app/migrations
+# Copy binary from builder
+COPY --from=builder /build/arx /app/arx
+COPY --from=builder /build/migrations /app/migrations || true
 
 # Copy configuration files
 COPY --chown=arxos:arxos .env.example /app/.env.example
@@ -52,7 +50,7 @@ EXPOSE 8080 9090
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/app/arxos-server", "--health-check"] || exit 1
+    CMD ["/app/arx", "serve", "--health-check"] || exit 1
 
-# Default command
-CMD ["/app/arxos-server"]
+# Default command - run server mode
+CMD ["/app/arx", "serve"]

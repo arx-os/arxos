@@ -1,0 +1,82 @@
+# ArxOS Building Information Model
+# Example: Modern Office Building
+# Universal Address Format: ARXOS-<continent>-<country>-<state>-<city>-<id>
+
+BUILDING: ARXOS-NA-US-NY-NYC-0001 Tech Tower
+ADDRESS: 123 Innovation Drive, New York, NY 10001
+
+# Ground Floor - Main entrance and common areas
+FLOOR: 1 Ground Floor
+  ROOM: 101 [lobby] Main Lobby
+    EQUIPMENT: SEC_01 [security_camera] PTZ Security Camera
+    EQUIPMENT: SEC_02 [access_control] Card Reader System
+    EQUIPMENT: HVAC_01 [thermostat] Nest Thermostat Pro
+    EQUIPMENT: LIGHT_01 [lighting] Smart LED Panel System
+
+  ROOM: 102 [reception] Reception Area
+    EQUIPMENT: COMP_01 [computer] Dell OptiPlex 7090
+    EQUIPMENT: PHONE_01 [phone] Cisco IP Phone 8845
+    EQUIPMENT: PRINTER_01 [printer] HP LaserJet Pro M428
+
+  ROOM: 103 [conference] Large Conference Room
+    EQUIPMENT: PROJ_01 [projector] Epson PowerLite L730U
+    EQUIPMENT: SCREEN_01 [screen] 120" Motorized Projection Screen
+    EQUIPMENT: AV_01 [av_system] Crestron Control System
+    EQUIPMENT: MIC_01 [microphone] Shure Ceiling Array Microphone
+
+  ROOM: 104 [security] Security Office
+    EQUIPMENT: MON_01 [monitor] Security Monitor Array (6x)
+    EQUIPMENT: SERVER_01 [server] Security NVR System
+    EQUIPMENT: RADIO_01 [communication] Two-Way Radio Base Station
+
+# Second Floor - Executive offices
+FLOOR: 2 Executive Floor
+  ROOM: 201 [office] CEO Office
+    EQUIPMENT: COMP_02 [computer] Apple Mac Studio M2 Ultra
+    EQUIPMENT: MON_02 [monitor] Apple Studio Display (2x)
+    EQUIPMENT: PHONE_02 [phone] Cisco IP Phone 8865
+
+  ROOM: 202 [office] CFO Office
+    EQUIPMENT: COMP_03 [computer] Dell Precision 5570
+    EQUIPMENT: PRINTER_02 [printer] Canon imageCLASS MF445dw
+
+  ROOM: 203 [meeting] Executive Meeting Room
+    EQUIPMENT: TV_01 [display] Samsung 85" QLED Smart Display
+    EQUIPMENT: VC_01 [video_conference] Poly Studio X70
+
+  ROOM: 204 [lounge] Executive Lounge
+    EQUIPMENT: COFFEE_01 [coffee_maker] Jura Z10 Automatic Coffee Machine
+    EQUIPMENT: FRIDGE_01 [refrigerator] Sub-Zero Built-in Refrigerator
+
+# Third Floor - Open workspace
+FLOOR: 3 Workspace Floor
+  ROOM: 301 [workspace] Open Office Area
+    EQUIPMENT: DESK_01 [furniture] Standing Desk Station (x20)
+    EQUIPMENT: COMP_04 [computer] Dell OptiPlex 7090 (x20)
+    EQUIPMENT: MON_03 [monitor] Dell 27" UltraSharp (x40)
+
+  ROOM: 302 [meeting] Huddle Room A
+    EQUIPMENT: TV_02 [display] LG 55" 4K Display
+    EQUIPMENT: VC_02 [video_conference] Logitech Rally Bar Mini
+
+  ROOM: 303 [meeting] Huddle Room B
+    EQUIPMENT: TV_03 [display] LG 55" 4K Display
+    EQUIPMENT: VC_03 [video_conference] Logitech Rally Bar Mini
+
+  ROOM: 304 [kitchen] Break Room
+    EQUIPMENT: FRIDGE_02 [refrigerator] Whirlpool French Door Refrigerator
+    EQUIPMENT: MICRO_01 [microwave] Panasonic Commercial Microwave
+    EQUIPMENT: DW_01 [dishwasher] Bosch 800 Series Dishwasher
+    EQUIPMENT: COFFEE_02 [coffee_maker] Keurig K3500 Commercial
+
+# Rooftop - Mechanical systems
+FLOOR: R Rooftop
+  ROOM: R01 [mechanical] HVAC Plant Room
+    EQUIPMENT: HVAC_02 [chiller] Carrier AquaEdge Centrifugal Chiller
+    EQUIPMENT: HVAC_03 [air_handler] Trane IntelliPak Rooftop Unit
+    EQUIPMENT: PUMP_01 [pump] Grundfos CR Vertical Pump
+
+  ROOM: R02 [electrical] Electrical Room
+    EQUIPMENT: GEN_01 [generator] Caterpillar C18 Diesel Generator
+    EQUIPMENT: UPS_01 [ups] Eaton 9395 UPS System
+    EQUIPMENT: PANEL_01 [electrical_panel] Main Distribution Panel

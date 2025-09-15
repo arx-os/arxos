@@ -2,9 +2,7 @@
 
 # Variables
 BINARY_DIR := bin
-CLI_BINARY := $(BINARY_DIR)/arxos
-DAEMON_BINARY := $(BINARY_DIR)/arxd
-SERVER_BINARY := $(BINARY_DIR)/arxos-server
+BINARY := $(BINARY_DIR)/arx
 GO := go
 GOFLAGS := -v
 LDFLAGS := -s -w
@@ -17,47 +15,27 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 # Build flags with version info
 BUILD_FLAGS := -ldflags "$(LDFLAGS) -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.Commit=$(COMMIT)"
 
-.PHONY: all build clean test run-cli run-daemon run-server install help dev docker deploy
+.PHONY: all build clean test run install help dev docker deploy
 
 # Default target
 all: build
 
-# Build all binaries
-build: build-cli build-daemon build-server
-	@echo "✅ Build complete"
-
-# Build CLI
-build-cli:
-	@echo "🔨 Building unified ArxOS CLI..."
+# Build single binary
+build:
+	@echo "🔨 Building ArxOS..."
 	@mkdir -p $(BINARY_DIR)
-	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(CLI_BINARY) ./cmd/arxos
+	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(BINARY) ./cmd/arx
+	@echo "✅ Build complete: $(BINARY)"
 
-# Build daemon
-build-daemon:
-	@echo "🔨 Building daemon..."
-	@mkdir -p $(BINARY_DIR)
-	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(DAEMON_BINARY) ./cmd/arxd
+# Run the CLI
+run: build
+	@echo "🚀 Running ArxOS..."
+	$(BINARY)
 
-# Build server
-build-server:
-	@echo "🔨 Building server..."
-	@mkdir -p $(BINARY_DIR)
-	$(GO) build $(GOFLAGS) $(BUILD_FLAGS) -o $(SERVER_BINARY) ./cmd/arxos-server
-
-# Run CLI
-run-cli: build-cli
-	@echo "🚀 Running CLI..."
-	$(CLI_BINARY)
-
-# Run daemon
-run-daemon: build-daemon
-	@echo "🚀 Running daemon..."
-	$(DAEMON_BINARY) start --config configs/arxd.yaml
-
-# Run server
-run-server: build-server
-	@echo "🚀 Running server..."
-	$(SERVER_BINARY) -db data/arxos.db
+# Run server mode
+run-server: build
+	@echo "🚀 Running ArxOS server..."
+	$(BINARY) serve
 
 # Run tests
 test:
@@ -80,12 +58,11 @@ clean:
 	rm -rf testdata/output testdata/temp
 	@echo "✨ Clean complete"
 
-# Install binaries to GOPATH
+# Install binary to system
 install: build
-	@echo "📦 Installing..."
-	$(GO) install ./cmd/arx
-	$(GO) install ./cmd/arxd
-	@echo "✅ Installed to GOPATH"
+	@echo "📦 Installing ArxOS..."
+	@cp $(BINARY) /usr/local/bin/arx
+	@echo "✅ Installed to /usr/local/bin/arx"
 
 # Format code
 fmt:
@@ -120,9 +97,9 @@ dev: deps build
 
 # Docker commands
 docker-build:
-	@echo "🐳 Building Docker images..."
-	docker build -f Dockerfile.server -t arxos-server:latest .
-	@echo "✅ Docker images built"
+	@echo "🐳 Building Docker image..."
+	docker build -t arxos:latest .
+	@echo "✅ Docker image built"
 
 docker-run:
 	@echo "🐳 Starting Docker services..."
@@ -153,12 +130,12 @@ deploy-prod:
 # Database commands
 db-backup:
 	@echo "💾 Creating database backup..."
-	docker-compose exec arxos-server sqlite3 /app/data/arxos.db ".backup /app/data/backup-$(shell date +%Y%m%d-%H%M%S).db"
+	docker-compose exec arxos sqlite3 /app/data/arxos.db ".backup /app/data/backup-$(shell date +%Y%m%d-%H%M%S).db"
 	@echo "✅ Database backup created"
 
 db-migrate:
 	@echo "🔄 Running database migrations..."
-	docker-compose exec arxos-server ./arxos-server migrate
+	docker-compose exec arxos ./arx migrate
 	@echo "✅ Database migrations complete"
 
 # Release commands
@@ -177,17 +154,13 @@ release-snapshot:
 help:
 	@echo "ArxOS Makefile Commands:"
 	@echo ""
-	@echo "  make build        - Build all binaries (CLI, daemon, and server)"
-	@echo "  make build-cli    - Build only the CLI"
-	@echo "  make build-daemon - Build only the daemon"
-	@echo "  make build-server - Build only the server"
-	@echo "  make run-cli      - Build and run the CLI"
-	@echo "  make run-daemon   - Build and run the daemon"
-	@echo "  make run-server   - Build and run the server"
+	@echo "  make build        - Build the arx binary"
+	@echo "  make run          - Build and run arx CLI"
+	@echo "  make run-server   - Build and run arx in server mode"
 	@echo "  make test         - Run tests"
 	@echo "  make test-coverage- Run tests with coverage report"
 	@echo "  make clean        - Remove build artifacts"
-	@echo "  make install      - Install binaries to GOPATH"
+	@echo "  make install      - Install arx to /usr/local/bin"
 	@echo "  make fmt          - Format code"
 	@echo "  make lint         - Run linter (requires golangci-lint)"
 	@echo "  make security     - Run security check (requires gosec)"

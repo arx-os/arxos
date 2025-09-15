@@ -53,17 +53,14 @@ jobs:
         file: ./coverage.out
         flags: go
         
-    - name: Build binaries
+    - name: Build binary
       run: |
         go build -o bin/arx ./cmd/arx
-        go build -o bin/arxd ./cmd/arxd  
-        go build -o bin/arxos-server ./cmd/arxos-server
-        
-    - name: Test binaries
+
+    - name: Test binary
       run: |
         ./bin/arx --help
-        ./bin/arxd --help
-        ./bin/arxos-server --help
+        ./bin/arx version
 
   # Security and code quality
   security-scan:
@@ -139,26 +136,25 @@ jobs:
     - name: Install SQLite
       run: sudo apt-get update && sudo apt-get install -y sqlite3 libsqlite3-dev
       
-    - name: Build all binaries
+    - name: Build binary
       run: |
         go build -o bin/arx ./cmd/arx
-        go build -o bin/arxd ./cmd/arxd
-        go build -o bin/arxos-server ./cmd/arxos-server
         
     - name: Run integration tests
       run: |
         # Start server in background
-        ./bin/arxos-server --port 8080 --db /tmp/test.db &
+        ./bin/arx serve --port 8080 --db /tmp/test.db &
         SERVER_PID=$!
         sleep 5
-        
+
         # Test API endpoints
         curl -f http://localhost:8080/health || exit 1
         curl -f http://localhost:8080/ready || exit 1
-        
-        # Test CLI integration
+
+        # Test CLI commands
         ./bin/arx --help
-        
+        ./bin/arx version
+
         # Cleanup
         kill $SERVER_PID
 
@@ -198,8 +194,6 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: |
         go build -o bin/arx${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/arx
-        go build -o bin/arxd${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/arxd
-        go build -o bin/arxos-server${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/arxos-server
 
   # Documentation generation
   docs:
@@ -247,28 +241,18 @@ jobs:
       run: |
         # Linux AMD64
         GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o release/linux-amd64/arx ./cmd/arx
-        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o release/linux-amd64/arxd ./cmd/arxd
-        GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o release/linux-amd64/arxos-server ./cmd/arxos-server
-        
+
         # Linux ARM64
         GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o release/linux-arm64/arx ./cmd/arx
-        GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o release/linux-arm64/arxd ./cmd/arxd
-        GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o release/linux-arm64/arxos-server ./cmd/arxos-server
-        
+
         # macOS AMD64
         GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o release/darwin-amd64/arx ./cmd/arx
-        GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o release/darwin-amd64/arxd ./cmd/arxd
-        GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o release/darwin-amd64/arxos-server ./cmd/arxos-server
-        
+
         # macOS ARM64 (Apple Silicon)
         GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o release/darwin-arm64/arx ./cmd/arx
-        GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o release/darwin-arm64/arxd ./cmd/arxd
-        GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o release/darwin-arm64/arxos-server ./cmd/arxos-server
-        
+
         # Windows AMD64
         GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o release/windows-amd64/arx.exe ./cmd/arx
-        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o release/windows-amd64/arxd.exe ./cmd/arxd
-        GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o release/windows-amd64/arxos-server.exe ./cmd/arxos-server
         
     - name: Create release archives
       run: |
@@ -309,14 +293,14 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
         
-    - name: Build and push server image
+    - name: Build and push image
       uses: docker/build-push-action@v4
       with:
         context: .
-        file: ./Dockerfile.server
+        file: ./Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository }}/arxos-server:latest
-          ghcr.io/${{ github.repository }}/arxos-server:${{ github.sha }}
+          ghcr.io/${{ github.repository }}/arxos:latest
+          ghcr.io/${{ github.repository }}/arxos:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max

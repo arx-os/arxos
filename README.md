@@ -4,441 +4,388 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21-blue.svg)](https://go.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-ArxOS is a comprehensive building management platform that treats buildings as code, providing a universal addressing system and powerful automation capabilities for modern smart buildings.
+ArxOS treats buildings as code repositories, providing a universal addressing system for every component, system, and space. One tool manages everything - from field equipment to cloud analytics.
 
-## 🎯 Features
+## 🎯 Core Innovation
 
-### Core Innovation: Universal Addressing
-Every piece of equipment has a hierarchical address:
+**Universal Addressing**: Every piece of equipment has a hierarchical path
 ```
-ARXOS-NA-US-NY-NYC-0001/N/3/A/301/E/OUTLET_02
-│                       │ │ │ │   │ └─ Equipment ID
-│                       │ │ │ │   └─── Wall (East)
-│                       │ │ │ └─────── Room 301
-│                       │ │ └───────── Zone A (northwest)
-│                       │ └─────────── Floor 3
-│                       └───────────── Tower (North)
-└───────────────────────────────────── Building ID
+ARXOS-NA-US-NY-NYC-0001/3/A/301/E/OUTLET_02
+│                       │ │ │   │ └─ Equipment ID
+│                       │ │ │   └─── Wall (East)
+│                       │ │ └─────── Room 301
+│                       │ └───────── Zone A
+│                       └─────────── Floor 3
+└───────────────────────────────────── Building UUID
 ```
 
-### Platform Capabilities
-- **Building-as-Code**: Text-based BIM format with Git version control
-- **Real-time Monitoring**: Live equipment status and sensor data
-- **Energy Management**: Track and optimize energy consumption
-- **Maintenance Scheduling**: Automated maintenance tracking and alerts
-- **Multi-layer Visualization**: Terminal-based and web UI visualization
-- **API-First Architecture**: RESTful API with OpenAPI documentation
-- **Cloud & On-Premise**: Flexible deployment options
-- **Mobile AR Support**: Augmented reality for field workers
+**Building-as-Code**: Human-readable `.bim.txt` files that work with Git, enabling version control, branching, and collaborative workflows impossible with traditional BIM formats.
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- Go 1.21 or later
-- Docker and Docker Compose (optional)
-- PostgreSQL 16+ or SQLite
-
 ### Installation
 
-#### Using Docker (Recommended)
-
 ```bash
-# Clone the repository
+# Install from source
+go install github.com/joelpate/arxos/cmd/arx@latest
+
+# Or build locally
 git clone https://github.com/joelpate/arxos.git
 cd arxos
+go build -o arx ./cmd/arx
+sudo mv arx /usr/local/bin/
 
-# Copy environment configuration
-cp .env.example .env
+# Initialize ArxOS (one-time setup)
+arx install
 
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
+# Verify installation
+arx status
 ```
 
-The ArxOS server will be available at `http://localhost:8080`
-
-#### Manual Installation
+### Your First Building
 
 ```bash
-# Clone the repository
-git clone https://github.com/joelpate/arxos.git
-cd arxos
+# Initialize a new building
+arx repo init ARXOS-NA-US-CA-LAX-0001 --name "Los Angeles Office"
 
-# Install dependencies
-go mod download
+# Convert any building file to BIM format
+arx convert floor_plan.pdf building.bim.txt
 
-# Copy environment configuration
-cp .env.example .env
-# Edit .env with your configuration
+# Import to building repository
+arx import building.bim.txt --building ARXOS-NA-US-CA-LAX-0001
 
-# Run database migrations
-go run cmd/arxos-server/main.go migrate
+# Add equipment manually
+arx add /3/A/301/E/OUTLET_02 --type electrical.outlet --status operational
 
-# Build all binaries
-go build -o bin/arx ./cmd/arx
-go build -o bin/arxd ./cmd/arxd
-go build -o bin/arxos-server ./cmd/arxos-server
+# Check what changed
+arx repo status
 
-# Start the server
-./bin/arxos-server
+# Commit changes
+arx repo commit -m "Added third floor electrical outlets"
+
+# Query equipment
+arx query --floor 3 --type electrical
 ```
 
-### CLI Usage
+## 📖 Command Reference
+
+### System Management
 
 ```bash
-# Import a building from BIM file
-arx import building.bim
+arx install                    # Set up ArxOS (creates database, starts file watcher)
+arx install --with-server      # Also install API server as system service
+arx status                     # Show system-wide status
+arx config                     # View/edit configuration
+arx uninstall                  # Remove ArxOS (preserves data)
+```
 
-# List all buildings
-arx list buildings
+### Repository Operations
 
-# Get building details
-arx get building ARXOS-NA-US-NY-NYC-0001
+```bash
+arx repo init <building-id>    # Initialize building repository
+arx repo status                # Show uncommitted changes
+arx repo diff                  # Show detailed changes
+arx repo commit -m "message"   # Commit changes to history
+arx repo log                   # View commit history
+arx repo branch <name>         # Create branch for experiments
+arx repo merge <branch>        # Merge branch changes
+```
 
-# Monitor equipment status
-arx monitor --building ARXOS-NA-US-NY-NYC-0001
+### Data Operations
 
-# Export building data
-arx export ARXOS-NA-US-NY-NYC-0001 --format json > building.json
+```bash
+arx convert <file> [output]    # Convert any building file to BIM
+arx convert list               # List all supported formats
+arx import <file>              # Import from PDF/IFC/BIM/DWG
+arx export <building-id>       # Export to various formats
+arx validate <file>            # Validate BIM file format
+arx sync                       # Sync between files and database
+```
 
-# Watch for BIM file changes
-arxd watch ./buildings --auto-sync
+### Building Management
+
+```bash
+arx add <path> [options]       # Add component/equipment
+arx update <path> [options]    # Update component properties
+arx remove <path>              # Remove component
+arx get <path>                 # Get component details
+arx list [--type] [--status]   # List components
+arx query [complex filters]    # Advanced queries
+arx search <text>              # Full-text search
+```
+
+### File Monitoring
+
+```bash
+arx watch add <directory>      # Add directory to monitor
+arx watch remove <directory>   # Stop monitoring directory
+arx watch list                 # Show monitored directories
+arx watch pause                # Temporarily pause monitoring
+arx watch resume               # Resume monitoring
+```
+
+### API Server
+
+```bash
+arx serve                      # Start API server (foreground)
+arx serve --daemon             # Start as background service
+arx serve --stop               # Stop background server
+arx serve --status             # Check server status
+```
+
+## 🏗️ How It Works
+
+ArxOS installs as a single tool that manages everything:
+
+1. **Install Once**: `arx install` sets up the entire system
+2. **Automatic Monitoring**: File watcher runs in background, syncing changes
+3. **Unified Interface**: All operations through the `arx` command
+4. **Git-like Workflow**: Familiar version control for building data
+5. **Multiple Access Methods**: Terminal, Web 3D, Mobile AR, or Radio
+
+```
+Your Building Files (.bim.txt)
+        ↓
+    File Watcher (automatic)
+        ↓
+    SQLite Database (fast queries)
+        ↓
+    ┌───────────────────────────────────┐
+    │         Access Methods            │
+    ├───────────────────────────────────┤
+    │ • arx CLI (terminal/ASCII)        │
+    │ • Web 3D (Three.js/D3/Svelte)    │
+    │ • Mobile AR (React Native)        │
+    │ • Packet Radio (LoRaWAN/APRS)    │
+    └───────────────────────────────────┘
 ```
 
 ## 📁 Project Structure
 
+After installation, ArxOS creates:
+
 ```
-arxos/
-├── cmd/                    # Application entrypoints
-│   ├── arx/               # CLI tool
-│   ├── arxd/              # Daemon service
-│   └── arxos-server/      # API server
-├── internal/              # Private application code
-│   ├── api/              # API handlers and routing
-│   ├── bim/              # BIM format parser
-│   ├── common/           # Shared utilities
-│   │   ├── errors/       # Error handling
-│   │   ├── logger/       # Logging
-│   │   ├── resources/    # Resource management
-│   │   └── retry/        # Retry logic
-│   ├── config/           # Configuration management
-│   ├── database/         # Database layer
-│   ├── energy/           # Energy management
-│   ├── middleware/       # HTTP middleware
-│   ├── metrics/          # Metrics collection
-│   └── rendering/        # Visualization layers
-├── pkg/                   # Public packages
-│   └── models/           # Data models
-├── migrations/            # Database migrations
-├── web/                   # Web UI assets
-├── docs/                  # Documentation
-└── examples/              # Example BIM files
+~/.arxos/                      # ArxOS system directory
+├── config.yaml                # System configuration
+├── arxos.db                   # SQLite database
+└── run/                       # Runtime files (PID, sockets)
+
+./buildings/                   # Your building repositories (Git)
+├── ARXOS-NA-US-CA-LAX-0001/
+│   ├── .git/                  # Version history
+│   ├── building.bim.txt       # Building definition
+│   ├── floors/                # Floor plans
+│   └── equipment/             # Equipment data
+└── ARXOS-NA-US-NY-NYC-0002/
+    └── ...
 ```
-
-## 🏗️ Architecture
-
-ArxOS follows a microservices architecture with clean separation of concerns:
-
-### Components
-
-- **API Server**: RESTful API with OpenAPI documentation
-- **Daemon (arxd)**: File watcher and background processor
-- **CLI (arx)**: Command-line interface for operations
-- **Database**: PostgreSQL or SQLite for persistence
-- **Cache**: Optional Redis for performance
-
-### Technology Stack
-
-- **Backend**: Go 1.21 with standard library focus
-- **Database**: PostgreSQL 16 / SQLite
-- **API**: RESTful with OpenAPI 3.0
-- **Authentication**: JWT with refresh tokens
-- **Web UI**: HTMX for progressive enhancement
-- **Monitoring**: Prometheus + Grafana
-- **Container**: Docker with multi-stage builds
-- **CI/CD**: GitHub Actions
-
-## 📊 API Documentation
-
-### Authentication
-
-```bash
-# Register a new user
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","username":"user","password":"SecurePass123!"}'
-
-# Login
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"user","password":"SecurePass123!"}'
-```
-
-### Building Operations
-
-```bash
-# Create a building
-curl -X POST http://localhost:8080/api/v1/buildings \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "arxos_id": "ARXOS-NA-US-NY-NYC-0001",
-    "name": "Empire State Building",
-    "address": "350 5th Ave",
-    "city": "New York",
-    "state": "NY",
-    "country": "USA",
-    "latitude": 40.7484,
-    "longitude": -73.9857
-  }'
-
-# Get building details
-curl http://localhost:8080/api/v1/buildings/ARXOS-NA-US-NY-NYC-0001 \
-  -H "Authorization: Bearer YOUR_TOKEN"
-
-# List all equipment in a building
-curl http://localhost:8080/api/v1/buildings/ARXOS-NA-US-NY-NYC-0001/equipment \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-Full API documentation is available at `http://localhost:8080/swagger` when the server is running.
 
 ## 🔧 Configuration
 
-### Environment Variables
-
-Key environment variables (see `.env.example` for full list):
-
-```bash
-# Database
-ARXOS_DB_DRIVER=postgres
-ARXOS_DATABASE_URL=postgres://arxos:password@localhost:5432/arxos
-
-# Security
-ARXOS_JWT_SECRET=your-secret-key-min-32-chars
-ARXOS_ENABLE_AUTH=true
-ARXOS_ENABLE_TLS=false
-
-# Server
-ARXOS_SERVER_PORT=8080
-ARXOS_LOG_LEVEL=info
-
-# Features
-ARXOS_METRICS_ENABLED=true
-ARXOS_TELEMETRY=false
-ARXOS_CLOUD_SYNC=false
-```
-
-### Configuration File
-
-Create `arxos.json`:
-
-```json
-{
-  "mode": "hybrid",
-  "version": "1.0.0",
-  "database": {
-    "driver": "postgres",
-    "max_connections": 25,
-    "auto_migrate": true
-  },
-  "security": {
-    "enable_auth": true,
-    "jwt_expiry": "24h",
-    "bcrypt_cost": 12,
-    "api_rate_limit": 100
-  },
-  "storage": {
-    "backend": "local",
-    "local_path": "./data"
-  },
-  "features": {
-    "cloud_sync": false,
-    "ai_integration": false,
-    "offline_mode": true
-  }
-}
-```
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-go test ./...
-
-# Run with coverage
-go test -cover ./...
-
-# Run integration tests
-go test -tags=integration ./...
-
-# Run benchmarks
-go test -bench=. ./...
-
-# Run with race detection
-go test -race ./...
-```
-
-## 📈 Monitoring
-
-ArxOS includes comprehensive monitoring:
-
-### Health Endpoints
-- **Health Check**: `GET /health` - Overall system health
-- **Readiness**: `GET /ready` - Ready to serve traffic
-- **Liveness**: `GET /live` - Process is alive
-- **Metrics**: `GET /metrics` - Prometheus metrics
-
-### Grafana Dashboard
-
-```bash
-# Start monitoring stack
-docker-compose --profile monitoring up -d
-
-# Access services
-open http://localhost:3000  # Grafana (admin/admin)
-open http://localhost:9091  # Prometheus
-```
-
-## 🚢 Deployment
-
-### Docker Deployment
-
-```bash
-# Build image
-docker build -t arxos:latest .
-
-# Run container
-docker run -d \
-  -p 8080:8080 \
-  -v arxos_data:/app/data \
-  -e ARXOS_DATABASE_URL=postgres://... \
-  -e ARXOS_JWT_SECRET=... \
-  --name arxos \
-  arxos:latest
-```
-
-### Kubernetes Deployment
+ArxOS configuration lives in `~/.arxos/config.yaml`:
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: arxos-server
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: arxos
-  template:
-    metadata:
-      labels:
-        app: arxos
-    spec:
-      containers:
-      - name: arxos
-        image: arxos:latest
-        ports:
-        - containerPort: 8080
-        env:
-        - name: ARXOS_DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: arxos-secrets
-              key: database-url
+# Database
+database:
+  path: ~/.arxos/arxos.db
+  backup_interval: 24h
+
+# File Monitoring
+watcher:
+  directories:
+    - ./buildings
+    - /shared/bim-files
+  auto_import: true
+  scan_interval: 5s
+
+# API Server (optional)
+server:
+  enabled: false
+  port: 8080
+  auth: false
+
+# Logging
+log:
+  level: info
+  file: ~/.arxos/arxos.log
 ```
 
-### Production Checklist
+## 🏢 Real-World Use Cases
 
-- [ ] Set secure JWT secret (min 32 chars)
-- [ ] Configure TLS/SSL certificates
-- [ ] Enable authentication and authorization
-- [ ] Set up automated database backups
-- [ ] Configure monitoring and alerting
-- [ ] Set resource limits and autoscaling
-- [ ] Enable rate limiting and DDoS protection
-- [ ] Configure centralized logging
-- [ ] Set up CI/CD pipeline
-- [ ] Create disaster recovery plan
+### Construction Site
+```bash
+# Morning: Pull latest changes
+arx sync
+
+# During day: Track installations
+arx update /3/A/301/E/OUTLET_02 --status installed --installer "John Smith"
+arx update /3/A/301/N/HVAC_VAV_01 --status failed --notes "Actuator defective"
+
+# End of day: Commit progress
+arx repo commit -m "Day 47: Third floor electrical 85% complete"
+```
+
+### Facility Management
+```bash
+# Find all degraded equipment
+arx query --status degraded
+
+# Schedule maintenance
+arx update /R/C/MECH/N/RTU_01 --next-maintenance 2024-03-15
+
+# Generate monthly report
+arx export ARXOS-NA-US-NY-NYC-0001 --format pdf --template maintenance-report
+```
+
+### Emergency Response
+```bash
+# Locate fire suppression systems
+arx query --type "fire.*" --floor 3
+
+# Find nearest exits
+arx get /3/*/EXIT_*
+
+# Check critical systems
+arx query --critical --status operational
+```
+
+## 🔄 Universal File Converter
+
+ArxOS can convert between any building file format and the universal BIM text format:
+
+### Supported Formats
+- **IFC** (.ifc, .ifcxml) - Industry Foundation Classes open BIM standard
+- **PDF** (.pdf) - Floor plans, as-builts with OCR extraction
+- **AutoCAD** (.dwg, .dxf) - 2D/3D CAD drawings
+- **Revit** (.rvt, .rfa) - Autodesk BIM models
+- **gbXML** (.gbxml) - Energy analysis models
+- **COBie** (.xlsx, .csv) - Facility management spreadsheets
+- **Point Clouds** (.las, .laz, .e57, .ply) - 3D laser scanning
+- **Haystack/Brick** (.json, .zinc) - IoT sensor data
+- **SketchUp** (.skp), **Navisworks** (.nwd), **ArchiCAD** (.pln), and more
+
+### Conversion Examples
+```bash
+# Convert IFC to BIM
+arx convert model.ifc building.bim.txt
+
+# Auto-detect format and convert
+arx convert floor_plan.pdf
+
+# Merge IoT data into existing BIM
+arx convert sensors.json building.bim.txt --merge
+
+# List all supported formats
+arx convert list
+```
+
+### Use Cases
+- Import existing BIM models from any CAD/BIM software
+- Extract floor plans and equipment from PDF documents
+- Integrate IoT sensor networks with building models
+- Convert facility management spreadsheets to BIM
+- Merge as-built, as-designed, and as-operated data
+
+## 🖥️ Interface Options
+
+ArxOS provides multiple interfaces for different use cases:
+
+### Terminal (Available Now)
+Classic command-line interface with ASCII art visualization:
+```bash
+arx render --floor 3              # ASCII floor plan
+arx monitor --live                 # Live status display
+```
+
+### Web 3D Visualization (Coming Soon)
+Modern browser-based 3D building visualization:
+- **Technology**: Svelte + Three.js + D3.js
+- **Features**: Interactive 3D models, real-time updates, energy flow visualization
+- **Path**: `/web` - See [web/README.md](web/README.md)
+
+### Mobile AR Application (Coming Soon)
+Field technician app with augmented reality:
+- **Technology**: React Native + ARKit/ARCore
+- **Features**: Equipment scanning, spatial anchoring, offline sync
+- **Path**: `/mobile` - See [mobile/README.md](mobile/README.md)
+
+### Packet Radio Transport (Experimental)
+Low-bandwidth communication for remote/emergency situations:
+- **Protocols**: LoRaWAN, APRS, custom packet radio
+- **Compression**: 92% size reduction
+- **Use Case**: Off-grid buildings, disaster response
+- **Path**: `/internal/transport/radio` - See [radio documentation](internal/transport/radio/README.md)
+
+## 📊 API Reference
+
+When you need programmatic access:
+
+```bash
+# Start API server
+arx serve --daemon
+
+# API is now available at http://localhost:8080
+```
+
+### Endpoints
+
+```
+GET    /api/v1/buildings              # List all buildings
+GET    /api/v1/buildings/{id}         # Get building details
+GET    /api/v1/equipment              # Query equipment
+POST   /api/v1/equipment              # Add equipment
+PATCH  /api/v1/equipment/{path}       # Update equipment
+DELETE /api/v1/equipment/{path}       # Remove equipment
+GET    /api/v1/search?q={query}       # Full-text search
+WS     /api/v1/stream                 # Real-time updates
+```
+
+## 🧪 Development
+
+```bash
+# Clone repository
+git clone https://github.com/joelpate/arxos.git
+cd arxos
+
+# Run tests
+go test ./...
+
+# Build development version
+go build -o arx ./cmd/arx
+
+# Run with verbose logging
+ARX_LOG_LEVEL=debug ./arx status
+```
+
+## 📝 BIM Text Format
+
+ArxOS uses a simple, human-readable format:
+
+```
+BUILDING: Example Office
+UUID: ARXOS-NA-US-CA-LAX-0001
+VERSION: 2.0
+CREATED: 2024-01-15T10:00:00Z
+
+EQUIPMENT:
+  ID: HVAC_RTU_01
+  PATH: /R/C/MECH/N
+  TYPE: HVAC.RTU.Package
+  STATUS: OPERATIONAL
+  MODEL: Carrier 48TC
+  SERIAL: CAR987654
+  INSTALLED: 2023-06-01
+  NOTES: Serving floors 1-3
+```
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our contributing guidelines:
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### Development Setup
+## 📄 License
 
-```bash
-# Fork and clone
-git clone https://github.com/YOUR_USERNAME/arxos.git
-cd arxos
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Make changes and test
-go test ./...
-
-# Commit with conventional commits
-git commit -m "feat: add amazing feature"
-
-# Push and create PR
-git push origin feature/amazing-feature
-```
-
-### Code Standards
-- Follow Go best practices and idioms
-- Write tests for new functionality
-- Update documentation
-- Use conventional commits
-- Run `go fmt` and `go vet`
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Building Automation Systems community
-- Go community and standard library
-- HTMX for progressive enhancement
-- OpenAPI Initiative
-
-## 📞 Support
-
-- **Documentation**: [https://arxos.io/docs](https://arxos.io/docs)
-- **Issues**: [GitHub Issues](https://github.com/joelpate/arxos/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/joelpate/arxos/discussions)
-
-## 🗺️ Roadmap
-
-### Phase 1: Foundation (Current)
-- ✅ Core BIM parser
-- ✅ Database layer
-- ✅ REST API
-- ✅ CLI tool
-- ✅ Docker support
-
-### Phase 2: Enhancement (Q1 2025)
-- [ ] Web UI with HTMX
-- [ ] Mobile application
-- [ ] Advanced analytics
-- [ ] AI integration
-
-### Phase 3: Scale (Q2 2025)
-- [ ] Multi-tenant SaaS
-- [ ] GraphQL API
-- [ ] Real-time collaboration
-- [ ] IoT integration
-
-### Phase 4: Innovation (Q3 2025)
-- [ ] AR/VR support
-- [ ] Blockchain audit logs
-- [ ] Predictive maintenance ML
-- [ ] Energy optimization AI
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-Built with ❤️ by the ArxOS Team
+*ArxOS: Because buildings are infrastructure, and infrastructure should be code.*

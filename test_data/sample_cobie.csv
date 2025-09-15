@@ -1,0 +1,7 @@
+SheetName,Name,CreatedBy,CreatedOn,Category,FloorName,Description,Area
+Space,Room 101,John Doe,2024-01-01,Office,Ground Floor,Main office space,150
+Space,Room 102,John Doe,2024-01-01,Conference,Ground Floor,Meeting room,50
+Space,Room 201,John Doe,2024-01-01,Office,First Floor,Executive office,200
+Component,AHU-01,Jane Smith,2024-01-01,HVAC,Roof,Air handling unit,
+Component,VAV-101,Jane Smith,2024-01-01,HVAC,Ground Floor,VAV box for Room 101,
+Component,LIGHT-101-01,Bob Johnson,2024-01-01,Electrical,Ground Floor,LED Panel Light,

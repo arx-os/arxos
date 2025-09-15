@@ -1,0 +1,54 @@
+[
+  {
+    "id": "space-101",
+    "dis": "Room 101",
+    "tags": {
+      "space": true,
+      "room": true,
+      "area": 150,
+      "floor": "ground"
+    }
+  },
+  {
+    "id": "space-102",
+    "dis": "Room 102",
+    "tags": {
+      "space": true,
+      "room": true,
+      "area": 50,
+      "floor": "ground"
+    }
+  },
+  {
+    "id": "ahu-01",
+    "dis": "Air Handler Unit 01",
+    "tags": {
+      "equip": true,
+      "ahu": true,
+      "hvac": true
+    },
+    "points": [
+      {
+        "id": "ahu-01-sat",
+        "dis": "Supply Air Temp",
+        "kind": "Number",
+        "unit": "°F"
+      },
+      {
+        "id": "ahu-01-status",
+        "dis": "Status",
+        "kind": "Bool"
+      }
+    ]
+  },
+  {
+    "id": "vav-101",
+    "dis": "VAV Box Room 101",
+    "tags": {
+      "equip": true,
+      "vav": true,
+      "hvac": true,
+      "spaceRef": "space-101"
+    }
+  }
+]

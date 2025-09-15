@@ -1,199 +1,106 @@
-# Arxos Mesh Network .gitignore
-
-# ============================================
-# Operating System Files
-# ============================================
-.DS_Store
-.DS_Store?
-._*
-Thumbs.db
-desktop.ini
-*~
-
-# ============================================
-# IDE and Editor Files
-# ============================================
-.vscode/
-.idea/
-*.sublime-*
-.cursor/
-*.swp
-*.swo
-.vim*
-.nvim*
-
-# ============================================
-# Rust / Cargo
-# ============================================
-target/
-Cargo.lock
-**/*.rs.bk
-*.pdb
-
-# ============================================
-# Embedded Development
-# ============================================
-# ESP32 build artifacts
-build/
-sdkconfig
-sdkconfig.old
-*.bin
-*.elf
-*.map
-
-# Arduino
-*.hex
-*.lst
-
-# PlatformIO
-.pio/
-.pioenvs/
-.piolibdeps/
-
-# ============================================
-# Hardware Design Files (keep sources)
-# ============================================
-# KiCad temporary files
-*.bak
-*.bck
-*.kicad_pcb-bak
-*-cache.lib
-*-rescue.lib
-*-save.pro
-*-save.kicad_pcb
-fp-info-cache
-# But keep the actual designs
-!*.kicad_pcb
-!*.sch
-!*.pro
-
-# ============================================
-# Documentation Build
-# ============================================
-docs/_build/
-docs/*.go
-site/
-# Keep PDFs in test_data and examples
-!test_data/**/*.pdf
-!examples/**/*.pdf
-
-# ============================================
-# Point Cloud and CAD Files
-# ============================================
-*.ply
-*.las
-*.laz
-*.pcd
-*.xyz
-*.obj
-*.stl
-*.ifc
-*.dwg
-*.dxf
-
-# ============================================
-# Testing & Coverage
-# ============================================
-coverage/
-*.profraw
-*.profdata
-tarpaulin-report.html
-/test_*
-/testdata/output/
-/testdata/temp/
-*.test
-
-# ============================================
-# Logs and Temporary Files
-# ============================================
-*.log
-*.tmp
-*.temp
-logs/
-tmp/
-temp/
-
-# ============================================
-# Environment Files
-# ============================================
-.env
-.env.*
-!.env.example
-
-# ============================================
-# Cache and Dependencies
-# ============================================
-.cache/
-venv/
-__pycache__/
-
-# ============================================
-# Backup Files
-# ============================================
-*.backup
-*.old
-*_old
-*_backup
-
-# ============================================
-# Binary Outputs
-# ============================================
+# Binaries
 /bin/
-arxos
-arxos.exe
-arxos-server
-arxos-server.exe
-arx
-arx.exe
-arxd
-arxd.exe
-/arx
-/arxd
-/arxos-server
-arx-legacy
-bim
-/arx-legacy
-/bim
+*.exe
+*.dll
 *.so
 *.dylib
-*.dll
-*.a
-*.lib
-*.o
 
-# ============================================
-# Generated Output
-# ============================================
+# Test binaries
+*.test
+
+# Go build cache
+/vendor/
+/go.sum.old
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Data and databases
 /data/
-/output/
-/poc/
-
-# ============================================
-# Database Files
-# ============================================
 *.db
 *.db-shm
 *.db-wal
-*.sqlite
-*.sqlite3
+*.db-journal
 
-# ============================================
-# ArxOS Local Data
-# ============================================
-.arxos/
+# Configuration
+.env
+.env.local
+.env.*.local
+*.local.yaml
+*.local.yml
 
-# ============================================
-# Security - Never Commit These
-# ============================================
+# Temporary files
+/tmp/
+/temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# Coverage
+coverage.out
+coverage.html
+*.coverprofile
+
+# Archives and backups
+/archive/
+/backups/
+*.tar.gz
+*.zip
+
+# Build artifacts
+dist/
+build/
+output/
+
+# Test data output
+/testdata/output/
+/testdata/temp/
+test-*.bim.txt
+
+# Documentation build
+/docs/_build/
+/docs/.doctrees/
+
+# Python (for any scripts)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Node (if frontend added later)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore.local
+
+# OS generated
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Security - never commit secrets
 *.pem
 *.key
 *.crt
 *.p12
-private/
-secrets/
-# SQLite test artifacts
-:memory:
-:memory:*
-*.db-journal
-*.db-wal
-*.db-shm
+/secrets/
+/credentials/

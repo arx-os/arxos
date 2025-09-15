@@ -1,0 +1,136 @@
+# ArxOS Building Information Model
+# Building: St. Mary's Medical Center
+# Location: Boston, MA
+# ArxOS ID: ARXOS-NA-US-MA-BOS-0001
+
+## FLOORS
+FLOOR B1 "Basement" -3.0
+FLOOR 1 "Emergency & Reception" 0.0
+FLOOR 2 "Surgery & ICU" 4.0
+FLOOR 3 "Patient Rooms East" 8.0
+FLOOR 4 "Patient Rooms West" 12.0
+FLOOR 5 "Administration" 16.0
+
+## ROOMS
+# Basement
+ROOM B1/001 "Main Electrical Room" utility 150.0
+ROOM B1/002 "Morgue" medical 100.0
+ROOM B1/003 "Laundry" utility 200.0
+ROOM B1/004 "Central Storage" storage 300.0
+ROOM B1/005 "Mechanical Room" utility 250.0
+
+# Floor 1 - Emergency & Reception
+ROOM 1/100 "Main Lobby" lobby 500.0
+ROOM 1/101 "Emergency Reception" medical 150.0
+ROOM 1/102 "Triage Room 1" medical 40.0
+ROOM 1/103 "Triage Room 2" medical 40.0
+ROOM 1/104 "Emergency Bay 1" medical 60.0
+ROOM 1/105 "Emergency Bay 2" medical 60.0
+ROOM 1/106 "Emergency Bay 3" medical 60.0
+ROOM 1/107 "Trauma Room" medical 100.0
+ROOM 1/108 "Radiology" medical 150.0
+ROOM 1/109 "CT Scan Room" medical 80.0
+ROOM 1/110 "MRI Room" medical 100.0
+
+# Floor 2 - Surgery & ICU
+ROOM 2/201 "Operating Room 1" medical 100.0
+ROOM 2/202 "Operating Room 2" medical 100.0
+ROOM 2/203 "Operating Room 3" medical 100.0
+ROOM 2/204 "Pre-Op Prep" medical 150.0
+ROOM 2/205 "Recovery Room" medical 200.0
+ROOM 2/206 "ICU Bay 1" medical 300.0
+ROOM 2/207 "ICU Bay 2" medical 300.0
+ROOM 2/208 "ICU Nurses Station" office 100.0
+
+# Floor 3 - Patient Rooms
+ROOM 3/301 "Patient Room 301" medical 45.0
+ROOM 3/302 "Patient Room 302" medical 45.0
+ROOM 3/303 "Patient Room 303" medical 45.0
+ROOM 3/304 "Patient Room 304" medical 45.0
+ROOM 3/305 "Patient Room 305" medical 45.0
+ROOM 3/306 "Nurses Station 3" office 80.0
+ROOM 3/307 "Medicine Storage 3" storage 40.0
+
+## EQUIPMENT
+# Critical Basement Systems
+EQUIPMENT B1/001/GEN_01 "Primary Generator" power operational
+EQUIPMENT B1/001/GEN_02 "Backup Generator" power operational
+EQUIPMENT B1/001/UPS_01 "Main UPS System" power operational
+EQUIPMENT B1/001/PANEL_01 "Main Distribution Panel" electrical operational
+EQUIPMENT B1/005/BOILER_01 "Main Boiler" hvac operational
+EQUIPMENT B1/005/CHILLER_01 "Main Chiller" hvac operational
+EQUIPMENT B1/002/FREEZE_01 "Morgue Freezer Unit 1" medical operational
+EQUIPMENT B1/002/FREEZE_02 "Morgue Freezer Unit 2" medical operational
+
+# Emergency Department
+EQUIPMENT 1/104/MON_01 "Vital Signs Monitor Bay 1" medical operational
+EQUIPMENT 1/104/DEFIB_01 "Defibrillator Bay 1" medical operational
+EQUIPMENT 1/105/MON_01 "Vital Signs Monitor Bay 2" medical operational
+EQUIPMENT 1/105/DEFIB_01 "Defibrillator Bay 2" medical operational
+EQUIPMENT 1/106/MON_01 "Vital Signs Monitor Bay 3" medical operational
+EQUIPMENT 1/107/MON_01 "Trauma Monitor System" medical operational
+EQUIPMENT 1/107/VENT_01 "Trauma Ventilator" medical operational
+EQUIPMENT 1/107/XRAY_01 "Portable X-Ray" medical operational
+EQUIPMENT 1/108/XRAY_01 "Digital X-Ray System" medical operational
+EQUIPMENT 1/109/CT_01 "CT Scanner" medical operational
+EQUIPMENT 1/110/MRI_01 "MRI Machine" medical maintenance
+
+# Operating Rooms
+EQUIPMENT 2/201/ANES_01 "Anesthesia System OR1" medical operational
+EQUIPMENT 2/201/LIGHT_01 "Surgical Lights OR1" medical operational
+EQUIPMENT 2/201/TABLE_01 "Operating Table OR1" medical operational
+EQUIPMENT 2/201/MON_01 "Patient Monitor OR1" medical operational
+EQUIPMENT 2/202/ANES_01 "Anesthesia System OR2" medical operational
+EQUIPMENT 2/202/LIGHT_01 "Surgical Lights OR2" medical operational
+EQUIPMENT 2/202/TABLE_01 "Operating Table OR2" medical operational
+EQUIPMENT 2/202/MON_01 "Patient Monitor OR2" medical operational
+EQUIPMENT 2/203/ANES_01 "Anesthesia System OR3" medical offline
+EQUIPMENT 2/203/LIGHT_01 "Surgical Lights OR3" medical operational
+EQUIPMENT 2/203/TABLE_01 "Operating Table OR3" medical operational
+
+# ICU
+EQUIPMENT 2/206/BED_01 "ICU Bed 1" medical operational
+EQUIPMENT 2/206/VENT_01 "Ventilator ICU-1" medical operational
+EQUIPMENT 2/206/MON_01 "ICU Monitor 1" medical operational
+EQUIPMENT 2/206/BED_02 "ICU Bed 2" medical operational
+EQUIPMENT 2/206/VENT_02 "Ventilator ICU-2" medical operational
+EQUIPMENT 2/206/MON_02 "ICU Monitor 2" medical operational
+EQUIPMENT 2/206/BED_03 "ICU Bed 3" medical operational
+EQUIPMENT 2/206/VENT_03 "Ventilator ICU-3" medical operational
+EQUIPMENT 2/206/MON_03 "ICU Monitor 3" medical operational
+EQUIPMENT 2/207/BED_01 "ICU Bed 4" medical operational
+EQUIPMENT 2/207/VENT_01 "Ventilator ICU-4" medical operational
+EQUIPMENT 2/207/MON_01 "ICU Monitor 4" medical operational
+
+# Patient Rooms
+EQUIPMENT 3/301/BED_01 "Patient Bed 301" medical operational
+EQUIPMENT 3/301/MON_01 "Room Monitor 301" medical operational
+EQUIPMENT 3/302/BED_01 "Patient Bed 302" medical operational
+EQUIPMENT 3/302/MON_01 "Room Monitor 302" medical operational
+EQUIPMENT 3/303/BED_01 "Patient Bed 303" medical operational
+EQUIPMENT 3/303/MON_01 "Room Monitor 303" medical operational
+EQUIPMENT 3/304/BED_01 "Patient Bed 304" medical operational
+EQUIPMENT 3/304/MON_01 "Room Monitor 304" medical offline
+EQUIPMENT 3/305/BED_01 "Patient Bed 305" medical operational
+EQUIPMENT 3/305/MON_01 "Room Monitor 305" medical operational
+
+# Nurse Stations
+EQUIPMENT 2/208/COMP_01 "ICU Nurse Station Computer" computer operational
+EQUIPMENT 2/208/DISP_01 "Patient Display Board" av operational
+EQUIPMENT 3/306/COMP_01 "Floor 3 Nurse Computer" computer operational
+EQUIPMENT 3/306/MED_01 "Medication Dispenser" medical operational
+
+## CRITICAL SYSTEMS
+# Life Support and Emergency Power
+CRITICAL B1/001/GEN_01 "Primary Emergency Generator"
+CRITICAL B1/001/UPS_01 "Uninterruptible Power Supply"
+CRITICAL B1/001/PANEL_01 "Main Electrical Distribution"
+CRITICAL B1/005/CHILLER_01 "Main HVAC Chiller"
+CRITICAL 1/110/MRI_01 "MRI Scanner - Liquid Helium"
+CRITICAL 2/206/VENT_01 "ICU Ventilator 1"
+CRITICAL 2/206/VENT_02 "ICU Ventilator 2"
+CRITICAL 2/206/VENT_03 "ICU Ventilator 3"
+CRITICAL 2/207/VENT_01 "ICU Ventilator 4"
+CRITICAL 2/201/ANES_01 "OR1 Anesthesia System"
+CRITICAL 2/202/ANES_01 "OR2 Anesthesia System"
+CRITICAL 3/306/MED_01 "Medication Dispensing System"

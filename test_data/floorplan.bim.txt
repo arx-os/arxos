@@ -1,0 +1,49 @@
+# ArxOS Building Information Model
+# Source: PDF Import (PDF)
+
+## FLOORS
+FLOOR 1 "Extracted Floor" 0.0
+
+## ROOMS
+ROOM 1/101 "Reception Area" room 450.0
+ROOM 1/102 "Conference Room A" conference 300.0
+ROOM 1/103 "Conference Room B" conference 250.0
+ROOM 1/104 "Open Office Space" office 1200.0
+ROOM 1/105 "IT Server Room" datacenter 150.0
+ROOM 1/106 "Storage" storage 100.0
+ROOM 1/107 "Break Room" room 400.0
+ROOM 1/108 "Executive Office" office 350.0
+ROOM 1/201 "Board Room" room 600.0
+ROOM 1/202 "CEO Office" office 400.0
+ROOM 1/203 "CFO Office" office 350.0
+ROOM 1/204 "Conference Center" conference 800.0
+
+## EQUIPMENT
+EQUIPMENT 1/101/HVAC-02-Split AC Unit "2 ton" equipment operational
+EQUIPMENT 1/101/HVAC-02 "Split AC Unit" equipment operational
+EQUIPMENT 1/101/SEC-01-Security Panel "" equipment operational
+EQUIPMENT 1/101/RTU-01 "(Rooftop Unit, 20 ton)" equipment operational
+EQUIPMENT 1/101/VAV-101 "through VAV-108" hvac operational
+EQUIPMENT 1/101/EF-01 "(Restrooms), EF-02" equipment operational
+EQUIPMENT 1/101/EP-1A "(Level 1 East), EP-1B" equipment operational
+EQUIPMENT 1/101/GEN-01 "(50kW Diesel)" equipment operational
+EQUIPMENT 1/101/WH-01 "(80 gal, electric)" equipment operational
+EQUIPMENT 1/101/FA-01 "(Main lobby)" equipment operational
+EQUIPMENT 1/101/SD-101 "through SD-120" equipment operational
+EQUIPMENT 1/101/PS-01 "through PS-08" equipment operational
+EQUIPMENT 1/101/ES-01 "through ES-12" equipment operational
+EQUIPMENT 1/105/HVAC-01-Server Room AC Unit "5 ton" equipment operational
+EQUIPMENT 1/105/HVAC-01 "Server Room AC Unit" equipment operational
+EQUIPMENT 1/105/UPS-01-Uninterruptible Power Supply "10kVA" equipment operational
+EQUIPMENT 1/105/UPS-01 "Uninterruptible Power Supply" equipment operational
+EQUIPMENT 1/105/RACK-01-Server Rack A "42U" equipment operational
+EQUIPMENT 1/105/RACK-01 "Server Rack A" equipment operational
+EQUIPMENT 1/105/RACK-02-Server Rack B "42U" equipment operational
+EQUIPMENT 1/105/RACK-02 "Server Rack B" equipment operational
+EQUIPMENT 1/107/REF-01-Refrigerator "Commercial" equipment operational
+EQUIPMENT 1/107/REF-01 "Refrigerator" equipment operational
+EQUIPMENT 1/107/MW-01-Microwave Oven "" equipment operational
+EQUIPMENT 1/107/MW-01 "Microwave Oven" equipment operational
+EQUIPMENT 1/107/DW-01-Dishwasher "" equipment operational
+EQUIPMENT 1/107/DW-01 "Dishwasher" equipment operational
+

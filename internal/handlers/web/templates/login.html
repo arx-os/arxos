@@ -1,0 +1,39 @@
+{{template "base" .}}
+
+{{define "title"}}Sign In - ArxOS{{end}}
+
+{{define "content"}}
+<div class="min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <h2 class="text-center text-3xl font-extrabold text-gray-900">
+                Sign in to ArxOS
+            </h2>
+            <p class="text-center text-sm text-gray-600">
+                Building Intelligence Platform
+            </p>
+        </div>
+        
+        <form class="space-y-6" hx-post="/api/v1/auth/login">
+            <div>
+                <label for="email" class="sr-only">Email</label>
+                <input id="email" name="email" type="email" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                       placeholder="Email address">
+            </div>
+            <div>
+                <label for="password" class="sr-only">Password</label>
+                <input id="password" name="password" type="password" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                       placeholder="Password">
+            </div>
+            <div>
+                <button type="submit" 
+                        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                    Sign in
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,38 @@
+{{template "base" .}}
+
+{{define "title"}}Dashboard - ArxOS{{end}}
+
+{{define "content"}}
+<div class="px-4">
+    <h2 class="text-2xl font-bold text-gray-900 mb-8">Dashboard</h2>
+    
+    <!-- Stats -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="text-2xl font-semibold text-gray-900">{{.Content.BuildingCount}}</div>
+            <div class="text-sm text-gray-500">Buildings</div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="text-2xl font-semibold text-gray-900">{{.Content.EquipmentCount}}</div>
+            <div class="text-sm text-gray-500">Equipment</div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <div class="text-2xl font-semibold text-red-600">{{.Content.FailedEquipment}}</div>
+            <div class="text-sm text-gray-500">Failed</div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-lg font-medium mb-4">Quick Actions</h3>
+        <div class="space-x-4">
+            <a href="/buildings/new" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                Upload PDF
+            </a>
+            <a href="/equipment/search" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                Find Equipment
+            </a>
+        </div>
+    </div>
+</div>
+{{end}}

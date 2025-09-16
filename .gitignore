@@ -5,6 +5,10 @@
 *.so
 *.dylib
 
+# ArxOS specific binaries
+arx
+arx.exe
+
 # Test binaries
 *.test
 

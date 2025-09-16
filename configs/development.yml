@@ -1,0 +1,57 @@
+# ArxOS Development Configuration
+
+# Core settings
+mode: local
+version: "0.1.0"
+state_dir: "~/.arxos"
+cache_dir: "~/.arxos/cache"
+
+# Database settings
+database:
+  driver: sqlite
+  data_source_name: "~/.arxos/arxos.db"
+  max_connections: 25
+  max_idle_conns: 5
+  conn_max_lifetime: 30m
+  migrations_path: "./migrations"
+  auto_migrate: true
+
+# API settings
+api:
+  timeout: 30s
+  retry_attempts: 3
+  retry_delay: 1s
+  user_agent: "ArxOS-CLI/0.1.0"
+
+# Feature flags
+features:
+  cloud_sync: false
+  ai_integration: false
+  offline_mode: true
+  beta_features: true
+  analytics: false
+  auto_update: false
+
+# Security settings
+security:
+  jwt_expiry: 24h
+  session_timeout: 30m
+  api_rate_limit: 100
+  api_rate_limit_window: 1m
+  enable_auth: true
+  enable_tls: false
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:8080"
+  bcrypt_cost: 12
+
+# Storage settings
+storage:
+  backend: local
+  local_path: "~/.arxos/data"
+
+# Logging
+logging:
+  level: debug
+  format: text
+  file: "~/.arxos/logs/arxos.log"

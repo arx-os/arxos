@@ -2,15 +2,34 @@
 
 ## Design Philosophy
 
-ArxOS follows a single-binary architecture where one executable (`arx`) provides all functionality through different runtime modes. This design prioritizes simplicity, user experience, and operational transparency.
+ArxOS follows a **multi-level user experience** architecture where different interfaces serve different precision needs, unified by a single binary that provides all functionality through different runtime modes.
 
 ### Core Principles
 
-1. **One Tool, Complete System**: Single binary handles everything
-2. **Transparent Infrastructure**: Background services managed automatically
-3. **Text as Truth**: `.bim.txt` files are the source of truth
-4. **Git-like Workflow**: Familiar version control patterns
-5. **Progressive Enhancement**: Complexity only when needed
+1. **Multi-Level Precision**: Different interfaces serve different user needs
+   - **Schematic level** (.bim.txt): Building operations and relationships
+   - **Spatial level** (PostGIS): Precise coordinates for AR and field work
+   - **System level** (Terminal detail): Technical specifications and tracing
+
+2. **One Tool, Complete System**: Single binary handles everything
+3. **Transparent Infrastructure**: Background services managed automatically  
+4. **Text as Schematic Truth**: `.bim.txt` files are the authoritative schematic representation
+5. **Git-like Workflow**: Familiar version control patterns for building data
+6. **Progressive Enhancement**: Complexity only when needed
+
+### User Experience Hierarchy
+
+**Building Manager**: "Is there an outlet in Conference Room A?"
+- Uses terminal with `.bim.txt` schematic view
+- Needs general location and system relationships
+
+**Field Technician**: "Where exactly should I mount this device?"
+- Uses mobile AR with PostGIS precise coordinates  
+- Needs millimeter precision for physical installation
+
+**Systems Engineer**: "What's the power path from panel to outlet?"
+- Uses terminal detail mode with system tracing
+- Needs technical specifications and connection paths
 
 ## System Architecture
 
@@ -19,8 +38,8 @@ ArxOS follows a single-binary architecture where one executable (`arx`) provides
 │                    User Interfaces                          │
 │  ┌──────────┬──────────┬──────────┬────────────────────┐  │
 │  │ Terminal │  Web 3D  │Mobile AR │   Packet Radio    │  │
-│  │  (CLI)   │ (Svelte) │ (React  │  (LoRaWAN/APRS)   │  │
-│  │          │          │  Native) │                   │  │
+│  │ (ASCII)  │ (Svelte) │ (React   │  (LoRaWAN/APRS)   │  │
+│  │Schematic │3D Visual │Precise AR│  Compressed      │  │
 │  └──────────┴──────────┴──────────┴────────────────────┘  │
 ├─────────────────────────────────────────────────────────────┤
 │                         arx binary                          │
@@ -28,13 +47,13 @@ ArxOS follows a single-binary architecture where one executable (`arx`) provides
 │                    Command Layer (Cobra)                     │
 │  ┌──────────┬──────────┬──────────┬──────────┬──────────┐ │
 │  │ install  │   repo   │  import  │  query   │  serve   │ │
-│  │          │          │  export  │  search  │  watch   │ │
+│  │  view    │  trace   │  export  │  search  │  watch   │ │
 │  └──────────┴──────────┴──────────┴──────────┴──────────┘ │
 ├─────────────────────────────────────────────────────────────┤
 │                      Core Services                          │
 │  ┌────────────────┬────────────────┬────────────────────┐ │
-│  │   Repository   │    Database    │   File Watcher    │ │
-│  │    Manager     │    Manager     │     Service       │ │
+│  │   Repository   │  Coordinate    │   File Watcher    │ │
+│  │    Manager     │  Translation   │     Service       │ │
 │  └────────────────┴────────────────┴────────────────────┘ │
 ├─────────────────────────────────────────────────────────────┤
 │                    Transport Layers                         │
@@ -49,11 +68,18 @@ ArxOS follows a single-binary architecture where one executable (`arx`) provides
 │  │ (interactive) │ (background)    │    (HTTP API)     │ │
 │  └────────────────┴────────────────┴────────────────────┘ │
 ├─────────────────────────────────────────────────────────────┤
-│                     Storage Layer                           │
-│  ┌────────────────────────┬────────────────────────────┐  │
-│  │   Filesystem (.bim.txt) │      SQLite Database      │  │
-│  │    (source of truth)    │    (query cache)          │  │
-│  └────────────────────────┴────────────────────────────┘  │
+│                 Multi-Level Storage Layer                   │
+│  ┌─────────────────────────┬─────────────────────────────┐  │
+│  │   .bim.txt Files        │     PostGIS Database        │  │
+│  │  (Schematic Truth)      │   (Spatial Precision)       │  │
+│  │  ├─ Human readable      │  ├─ Millimeter precision    │  │
+│  │  ├─ Git version control │  ├─ 3D coordinates          │  │
+│  │  ├─ Grid coordinates    │  ├─ AR spatial anchors      │  │
+│  │  └─ System relationships│  └─ LiDAR point clouds      │  │
+│  └─────────────────────────┴─────────────────────────────┘  │
+│                              ▲                              │
+│                    Bidirectional Sync                       │
+│                  (Coordinate Translation)                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -131,39 +157,79 @@ arx
     └── list                 # List components
 ```
 
-## Data Flow
+## Multi-Level Data Architecture
 
-### Import Flow
+### Coordinate System Design
+
+ArxOS uses a **dual coordinate system** to serve different user needs:
+
+#### **Grid Coordinates (.bim.txt)**
+- **Purpose**: Human-readable schematic representation
+- **Format**: Integer grid positions `LOCATION: (45, 30)`
+- **Scale**: Configurable (e.g., 1 grid unit = 0.5 meters)
+- **Use Cases**: Building operations, ASCII visualization, Git diffs
+- **Precision**: Building/room level (~0.5-1 meter resolution)
+
+#### **World Coordinates (PostGIS)**
+- **Purpose**: Precise spatial positioning for AR and field work
+- **Format**: Real-world 3D coordinates `(12.547, 8.291, 1.127)` meters
+- **Reference**: Building origin with GPS coordinates
+- **Use Cases**: AR overlay, LiDAR integration, precise installation
+- **Precision**: Millimeter level
+
+### Data Flow
+
+#### **Import Flow**
 ```
 PDF/IFC/DWG File
        ↓
-   [Parser]
-       ↓
-   .bim.txt
-       ↓
-   [Validator]
-       ↓
-   Git Repository
-       ↓
-   [Sync Service]
-       ↓
-   SQLite DB
+   [Parser] ──────────────────────┐
+       ↓                         │
+   .bim.txt                      │
+   (Grid coords)                 ▼
+       ↓                    [Coordinate]
+   [Validator]              [Translation]
+       ↓                         │
+   Git Repository                ▼
+       ↓                    PostGIS DB
+   [Sync Service]           (World coords)
+       ↓                         │
+   SQLite DB ◄──────────────────┘
+   (Query cache)
 ```
 
-### Query Flow
+#### **AR Edit Flow**
 ```
-User Query → SQLite (fast) → Results
-                ↑
-                │
-           .bim.txt files
-         (source of truth)
+AR User Edit (3D coords)
+       ↓
+   PostGIS Update
+       ↓
+   [Coordinate Translation]
+       ↓
+   Significant Change? ──Yes──► .bim.txt Update
+       │                        ↓
+       No                   Git Commit
+       ↓                        ↓
+   Cache in SQLite         File Watcher Sync
 ```
 
-### Update Flow
+#### **Query Flow**
 ```
-User Update → .bim.txt → Git Commit → Database Sync
-                            ↓
-                     File Watcher → Auto-sync
+Terminal User Query
+       ↓
+   Query Type?
+   ├─ Overview ──► SQLite ──► .bim.txt data
+   ├─ Detail ────► SQLite ──► System tracing
+   └─ Spatial ───► PostGIS ─► Precise coords
+```
+
+#### **Sync Strategy**
+```
+.bim.txt Changes ──► File Watcher ──► PostGIS Update
+                                     (Grid → World coords)
+
+PostGIS Changes ──► Coordinate ──► .bim.txt Update
+                   Translation    (if significant)
 ```
 
 ## Installation Process
@@ -194,43 +260,165 @@ When user runs `arx install`:
    - Configure ports/authentication
    - Start if requested
 
+## Coordinate Translation System
+
+### Core Translation Service
+
+The coordinate translation service bridges between grid coordinates (.bim.txt) and world coordinates (PostGIS):
+
+```go
+type CoordinateTranslator struct {
+    BuildingOrigin  GPSCoordinate    // Real-world building origin
+    GridScale      float64          // Meters per grid unit
+    GridOrigin     Point2D          // Grid coordinate (0,0) position
+    FloorHeight    float64          // Meters between floors
+    Orientation    float64          // Building rotation (degrees from north)
+}
+
+// Convert grid coordinates to real-world 3D coordinates
+func (ct *CoordinateTranslator) GridToWorld(
+    gridX, gridY int, 
+    floor int, 
+    room string,
+) (worldX, worldY, worldZ float64) {
+    // Apply grid scaling
+    worldX = float64(gridX) * ct.GridScale
+    worldY = float64(gridY) * ct.GridScale
+    worldZ = float64(floor) * ct.FloorHeight
+    
+    // Apply building rotation and origin offset
+    // ... rotation matrix math
+    // ... GPS coordinate transformation
+    
+    return worldX, worldY, worldZ
+}
+
+// Determine if AR edit requires .bim.txt update
+func (ct *CoordinateTranslator) IsSignificantChange(
+    oldWorld, newWorld Point3D,
+) bool {
+    // Different room?
+    if ct.GetRoom(oldWorld) != ct.GetRoom(newWorld) {
+        return true
+    }
+    
+    // Movement > 1 grid unit?
+    gridDistance := ct.WorldDistanceToGridUnits(
+        oldWorld.DistanceTo(newWorld)
+    )
+    return gridDistance >= 1.0
+}
+```
+
+### AR Integration Architecture
+
+```go
+// AR edit handler
+func HandleAREdit(equipmentID string, newWorldCoords Point3D) error {
+    // 1. Update PostGIS with precise coordinates
+    err := spatialDB.UpdateEquipmentPosition(equipmentID, newWorldCoords)
+    if err != nil {
+        return err
+    }
+    
+    // 2. Check if .bim.txt update needed
+    oldCoords := getOldCoordinates(equipmentID)
+    if translator.IsSignificantChange(oldCoords, newWorldCoords) {
+        // 3. Convert to grid coordinates
+        gridCoords := translator.WorldToGrid(newWorldCoords)
+        
+        // 4. Update .bim.txt file
+        err = updateBIMFile(equipmentID, gridCoords)
+        if err != nil {
+            return err
+        }
+        
+        // 5. Commit change
+        return gitCommit(fmt.Sprintf("AR edit: moved %s", equipmentID))
+    }
+    
+    return nil
+}
+```
+
+### LiDAR Integration Pipeline
+
+```go
+// LiDAR processing workflow
+func ProcessLiDARScan(pointCloud PointCloud, buildingID string) error {
+    // 1. Align point cloud to building coordinate system
+    alignedCloud := alignToBuilding(pointCloud, buildingID)
+    
+    // 2. Extract equipment positions (semi-automated)
+    detectedObjects := detectEquipment(alignedCloud)
+    
+    // 3. Match detected objects to existing equipment
+    for _, obj := range detectedObjects {
+        matches := findPotentialMatches(obj, buildingID)
+        
+        if len(matches) == 1 {
+            // Automatic match - update position
+            updateEquipmentFromLiDAR(matches[0], obj.Position)
+        } else {
+            // Ambiguous - require user input
+            queueForManualReview(obj, matches)
+        }
+    }
+    
+    return nil
+}
+```
+
 ## Interface Layers
 
-### 1. Terminal Interface (Current)
+### 1. Terminal Interface (Current) - Building Operations
+- **Target Users**: Building managers, systems engineers, facility operators
 - **Technology**: Native Go with ASCII art rendering
-- **Features**: Command-line operations, ASCII floor plans, live monitoring
-- **Status**: Fully implemented
+- **Data Source**: Primarily .bim.txt with PostGIS for spatial queries
+- **Features**: 
+  - Multi-level viewing (overview, detail, spatial)
+  - System tracing and connection mapping
+  - ASCII floor plans and equipment visualization
+  - Git-like version control operations
+- **Status**: Core functionality implemented
 
-### 2. Web 3D Interface (Future)
-- **Technology**: Svelte + Three.js + D3.js
-- **Architecture**: SPA communicating via WebSocket/REST API
-- **Features**:
-  - Interactive 3D building models
-  - Real-time equipment status updates
-  - Energy flow visualization
-  - Historical data timeline
-- **Status**: Foundation established in `/web`
-
-### 3. Mobile AR Interface (Future)
+### 2. Mobile AR Interface (Future) - Field Operations  
+- **Target Users**: Field technicians, installers, maintenance staff
 - **Technology**: React Native + ARKit/ARCore
-- **Architecture**: Mobile app with offline-first design
+- **Data Source**: PostGIS spatial database with millimeter precision
+- **Architecture**: Offline-first with spatial anchor persistence
 - **Features**:
-  - AR equipment identification
-  - QR code scanning
-  - Spatial anchoring
-  - Work order management
-  - Voice notes and photo documentation
+  - Precise AR equipment overlay
+  - LiDAR scanning integration
+  - Spatial anchoring across sessions
+  - Work order management with voice/photo notes
+  - Offline sync for remote locations
 - **Status**: Foundation established in `/mobile`
 
-### 4. Packet Radio Transport (Experimental)
-- **Technology**: LoRaWAN, APRS, custom protocols
-- **Architecture**: Compressed binary protocol over radio
+### 3. Web 3D Interface (Future) - System Analysis
+- **Target Users**: Engineers, architects, system designers  
+- **Technology**: Svelte + Three.js + D3.js
+- **Data Source**: Combined .bim.txt and PostGIS for comprehensive visualization
+- **Architecture**: SPA with WebSocket real-time updates
 - **Features**:
-  - 92% message compression
-  - Automatic retransmission
-  - Context-based optimization
-  - Battery-efficient operation
-- **Status**: Implementation in `/internal/transport/radio`
+  - Interactive 3D building models
+  - Multi-level zoom (building → system → component)
+  - Real-time equipment status visualization
+  - Energy flow and system relationship mapping
+  - Historical data timeline and analysis
+- **Status**: Foundation established in `/web`
+
+### 4. Packet Radio Transport (Experimental) - Emergency Operations
+- **Target Users**: Emergency responders, remote facility operators
+- **Technology**: LoRaWAN, APRS, custom protocols
+- **Data Source**: Compressed building data optimized for bandwidth constraints
+- **Architecture**: Compressed binary protocol with automatic retransmission
+- **Features**:
+  - 92% message compression for radio efficiency
+  - Context-based data optimization
+  - Battery-efficient operation modes
+  - Automatic retry and error correction
+- **Status**: Core protocol implemented in `/internal/transport/radio`
 
 ## Code Organization
 

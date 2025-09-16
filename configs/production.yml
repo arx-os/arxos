@@ -1,0 +1,64 @@
+# ArxOS Production Configuration
+
+# Core settings
+mode: hybrid
+version: "0.1.0"
+state_dir: "/app/data"
+cache_dir: "/app/cache"
+
+# Database settings
+database:
+  driver: postgres
+  data_source_name: "${DATABASE_URL}"
+  max_connections: 100
+  max_idle_conns: 10
+  conn_max_lifetime: 1h
+  migrations_path: "./migrations"
+  auto_migrate: true
+
+# API settings
+api:
+  timeout: 30s
+  retry_attempts: 5
+  retry_delay: 2s
+  user_agent: "ArxOS-Server/0.1.0"
+
+# Feature flags
+features:
+  cloud_sync: true
+  ai_integration: false
+  offline_mode: false
+  beta_features: false
+  analytics: true
+  auto_update: false
+
+# Security settings
+security:
+  jwt_secret: "${JWT_SECRET}"
+  jwt_expiry: 1h
+  session_timeout: 8h
+  api_rate_limit: 1000
+  api_rate_limit_window: 1m
+  enable_auth: true
+  enable_tls: true
+  allowed_origins:
+    - "${FRONTEND_URL}"
+  bcrypt_cost: 14
+
+# Storage settings
+storage:
+  backend: local
+  local_path: "/app/data"
+
+# Telemetry settings
+telemetry:
+  enabled: true
+  endpoint: "${TELEMETRY_ENDPOINT}"
+  sample_rate: 0.1
+  debug: false
+
+# Logging
+logging:
+  level: info
+  format: json
+  file: "/app/logs/arxos.log"

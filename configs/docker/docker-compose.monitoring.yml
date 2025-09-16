@@ -1,0 +1,44 @@
+version: '3.8'
+
+# Monitoring and observability stack
+services:
+  # Prometheus (optional monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: arxos-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
+    networks:
+      - arxos-network
+    restart: unless-stopped
+
+  # Grafana (optional monitoring)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: arxos-grafana
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - arxos-network
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:

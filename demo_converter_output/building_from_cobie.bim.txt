@@ -1,3 +1,0 @@
-# ArxOS Building Information Model
-# Source: COBie Import (COBie)
-

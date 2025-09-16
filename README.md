@@ -114,6 +114,23 @@ arx query [complex filters]    # Advanced queries
 arx search <text>              # Full-text search
 ```
 
+### Multi-Level Viewing
+
+```bash
+# Overview mode - room/floor level schematic
+arx view CONFERENCE_A          # Shows general layout from .bim.txt
+arx render --floor 3           # ASCII floor plan overview
+
+# Detail mode - equipment specifications and connections  
+arx view CONFERENCE_A/OUTLET_02 --detail    # Equipment specs, maintenance history
+arx view OUTLET_02 --trace-power             # ASCII diagram of electrical path
+arx view HVAC_SYSTEM --connections          # System interconnections
+
+# Spatial mode - precise coordinates for field work
+arx view OUTLET_02 --spatial   # PostGIS coordinates for AR applications
+arx view --floor 3 --spatial   # Precise equipment positions
+```
+
 ### File Monitoring
 
 ```bash
@@ -135,30 +152,52 @@ arx serve --status             # Check server status
 
 ## 🏗️ How It Works
 
-ArxOS installs as a single tool that manages everything:
+ArxOS provides a **multi-level user experience** where different interfaces serve different precision needs:
 
-1. **Install Once**: `arx install` sets up the entire system
-2. **Automatic Monitoring**: File watcher runs in background, syncing changes
-3. **Unified Interface**: All operations through the `arx` command
-4. **Git-like Workflow**: Familiar version control for building data
-5. **Multiple Access Methods**: Terminal, Web 3D, Mobile AR, or Radio
+### **Building Operations Hierarchy**
+
+1. **Building Manager (Terminal)**: Overview and relationships
+   - `.bim.txt` shows general equipment locations and connections
+   - Perfect for: "Is there an outlet in Conference Room A?"
+   - ASCII visualization for quick reference and understanding
+
+2. **Field Technician (Mobile AR)**: Precise positioning and installation
+   - AR overlay shows exact equipment locations in real-world space
+   - Perfect for: "Where exactly should I mount this device?"
+   - Millimeter precision for physical work
+
+3. **Systems Engineer (Terminal Detail)**: Technical specifications and tracing
+   - Detailed views show wiring paths, specifications, connections
+   - Perfect for: "What's the power path from panel to outlet?"
+   - System-level schematics and relationships
+
+### **Data Architecture**
 
 ```
-Your Building Files (.bim.txt)
-        ↓
-    File Watcher (automatic)
-        ↓
-    SQLite Database (fast queries)
-        ↓
-    ┌───────────────────────────────────┐
-    │         Access Methods            │
-    ├───────────────────────────────────┤
-    │ • arx CLI (terminal/ASCII)        │
-    │ • Web 3D (Three.js/D3/Svelte)    │
-    │ • Mobile AR (React Native)        │
-    │ • Packet Radio (LoRaWAN/APRS)    │
-    └───────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    Multi-Level Data Storage                     │
+├─────────────────────────────────────────────────────────────────┤
+│  .bim.txt (Source of Truth)     │  PostGIS (Spatial Database)   │
+│  ├─ Human-readable schematic    │  ├─ Precise 3D coordinates    │
+│  ├─ Git version control         │  ├─ AR spatial anchors        │
+│  ├─ Equipment relationships     │  ├─ LiDAR point clouds        │
+│  └─ System connections          │  └─ Real-world positioning    │
+├─────────────────────────────────────────────────────────────────┤
+│                          Access Methods                         │
+│  ┌─────────────┬─────────────┬─────────────┬─────────────────┐  │
+│  │ Terminal    │  Web 3D     │ Mobile AR   │  Packet Radio   │  │
+│  │ (ASCII)     │ (Svelte)    │ (React      │ (LoRaWAN/APRS) │  │
+│  │             │             │  Native)    │                 │  │
+│  └─────────────┴─────────────┴─────────────┴─────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### **Coordinate System Design**
+
+- **.bim.txt**: Grid-based schematic coordinates for human readability
+- **PostGIS**: Millimeter-precision real-world coordinates for AR/field work
+- **Automatic sync**: AR edits update PostGIS; significant changes update .bim.txt
+- **Zoom levels**: Terminal can show overview, detail, or system-trace views
 
 ## 📁 Project Structure
 
@@ -288,32 +327,61 @@ arx convert list
 
 ## 🖥️ Interface Options
 
-ArxOS provides multiple interfaces for different use cases:
+ArxOS provides multiple interfaces optimized for different user roles and precision needs:
 
-### Terminal (Available Now)
-Classic command-line interface with ASCII art visualization:
+### Terminal (Available Now) - Building Operations
+**Target Users**: Building managers, systems engineers, facility operators
+**Data Source**: `.bim.txt` files with PostGIS for detailed views
+**Precision**: Schematic-level for overview, system-level for detailed tracing
+
 ```bash
-arx render --floor 3              # ASCII floor plan
-arx monitor --live                 # Live status display
+# Overview: Quick reference and understanding
+arx render --floor 3              # ASCII floor plan schematic
+arx list --room CONFERENCE_A      # Equipment in room
+
+# Detail: System tracing and specifications  
+arx view OUTLET_02 --trace-power  # ASCII diagram of electrical path
+arx view HVAC_SYSTEM --detail     # Technical specifications
+arx monitor --live                # Live status display
 ```
 
-### Web 3D Visualization (Coming Soon)
-Modern browser-based 3D building visualization:
-- **Technology**: Svelte + Three.js + D3.js
-- **Features**: Interactive 3D models, real-time updates, energy flow visualization
-- **Path**: `/web` - See [web/README.md](web/README.md)
+### Mobile AR Application (Coming Soon) - Field Operations
+**Target Users**: Field technicians, installers, maintenance staff
+**Data Source**: PostGIS spatial database with millimeter precision
+**Precision**: Real-world 3D coordinates for physical installation work
 
-### Mobile AR Application (Coming Soon)
-Field technician app with augmented reality:
 - **Technology**: React Native + ARKit/ARCore
-- **Features**: Equipment scanning, spatial anchoring, offline sync
+- **Features**: 
+  - Precise equipment positioning with AR overlay
+  - LiDAR scanning integration
+  - Spatial anchoring for persistent AR annotations
+  - Offline sync for remote locations
+- **Use Cases**: Equipment installation, maintenance, troubleshooting
 - **Path**: `/mobile` - See [mobile/README.md](mobile/README.md)
 
-### Packet Radio Transport (Experimental)
-Low-bandwidth communication for remote/emergency situations:
+### Web 3D Visualization (Coming Soon) - System Analysis
+**Target Users**: Engineers, architects, system designers
+**Data Source**: Combined .bim.txt and PostGIS for comprehensive visualization
+**Precision**: Interactive 3D models with system relationships
+
+- **Technology**: Svelte + Three.js + D3.js
+- **Features**: 
+  - Interactive 3D building models
+  - Real-time equipment status updates
+  - Energy flow and system visualization
+  - Multi-level zoom from building to component detail
+- **Use Cases**: System design, analysis, presentations
+- **Path**: `/web` - See [web/README.md](web/README.md)
+
+### Packet Radio Transport (Experimental) - Emergency Operations
+**Target Users**: Emergency responders, remote facility operators
+**Data Source**: Compressed building data optimized for low bandwidth
+**Precision**: Critical system information only
+
 - **Protocols**: LoRaWAN, APRS, custom packet radio
-- **Compression**: 92% size reduction
-- **Use Case**: Off-grid buildings, disaster response
+- **Compression**: 92% size reduction for bandwidth constraints
+- **Use Cases**: Off-grid buildings, disaster response, remote monitoring
+- **Latency**: 1-30 seconds depending on radio technology
 - **Path**: `/internal/transport/radio` - See [radio documentation](internal/transport/radio/README.md)
 
 ## 📊 API Reference
@@ -359,24 +427,48 @@ ARX_LOG_LEVEL=debug ./arx status
 
 ## 📝 BIM Text Format
 
-ArxOS uses a simple, human-readable format:
+ArxOS uses a simple, human-readable format designed for **schematic representation** and version control:
 
+### **Design Philosophy**
+- **Schematic, not CAD**: Focus on relationships and general positioning
+- **Human-readable**: Engineers can read and edit with any text editor
+- **Git-friendly**: Text diffs show meaningful changes
+- **Grid-based coordinates**: Simple integer positions for ASCII visualization
+
+### **Sample Format**
 ```
 BUILDING: Example Office
 UUID: ARXOS-NA-US-CA-LAX-0001
 VERSION: 2.0
 CREATED: 2024-01-15T10:00:00Z
 
+# Coordinate system definition
+COORDINATE_SYSTEM:
+  ORIGIN: building_southwest_corner
+  SCALE: 1_grid_unit = 0.5_meters
+  ORIENTATION: north_up
+
+FLOOR: 1 | Ground Floor
+DIMENSIONS: 200 x 150 feet
+
 EQUIPMENT:
   ID: HVAC_RTU_01
   PATH: /R/C/MECH/N
   TYPE: HVAC.RTU.Package
+  LOCATION: (45, 30)           # Grid coordinates for ASCII display
+  ROOM: MECHANICAL_ROOM
   STATUS: OPERATIONAL
   MODEL: Carrier 48TC
   SERIAL: CAR987654
   INSTALLED: 2023-06-01
   NOTES: Serving floors 1-3
 ```
+
+### **Coordinate System**
+- **Grid coordinates**: `LOCATION: (45, 30)` for ASCII visualization
+- **Room references**: `ROOM: MECHANICAL_ROOM` for spatial context
+- **Precise positioning**: Stored separately in PostGIS for AR/field applications
+- **Automatic sync**: AR edits update PostGIS; significant moves update .bim.txt grid position
 
 ## 🤝 Contributing
 

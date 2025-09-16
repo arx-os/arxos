@@ -1,116 +1,94 @@
-# ArxOS Web 3D Visualization
+# ArxOS Web Interface
 
 ## Overview
 
-Modern web-based 3D building information model visualization using D3.js, Three.js, and Svelte.
+This directory contains the **current HTMX-based web interface** for ArxOS building management. It provides a web-based dashboard for building operations while maintaining the ASCII terminal aesthetic.
 
 ## Technology Stack
 
-- **Svelte** - Reactive UI framework
-- **Three.js** - 3D graphics rendering
-- **D3.js** - Data visualization and layouts
-- **WebGL** - Hardware-accelerated 3D graphics
-- **WebSockets** - Real-time updates from ArxOS server
+- **HTMX** - Dynamic HTML without JavaScript
+- **Tailwind CSS** - Utility-first CSS framework  
+- **Alpine.js** - Minimal client-side interactivity
+- **Go Templates** - Server-side HTML generation
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│          Svelte Application             │
+│           HTMX Web Interface            │
 ├─────────────────────────────────────────┤
-│                                         │
-│  ┌──────────┐  ┌──────────┐           │
-│  │  Three.js│  │  D3.js   │           │
-│  │  3D View │  │  2D View │           │
-│  └──────────┘  └──────────┘           │
-│                                         │
-│  ┌─────────────────────────┐          │
-│  │   Building Data Store    │          │
-│  └─────────────────────────┘          │
-│                                         │
+│  Templates (HTML)    │  Handlers (Go)   │
+│  ├─ layouts/         │  ├─ router.go    │
+│  ├─ pages/           │  ├─ handlers.go  │
+│  └─ partials/        │  └─ templates.go │
 └─────────────────────────────────────────┘
                     │
                     ▼
         ┌──────────────────────┐
         │  ArxOS API Server    │
-        │  (WebSocket + REST)  │
+        │     (Go Backend)     │
         └──────────────────────┘
 ```
 
-## Features (Planned)
+## Features
 
-### 3D Visualization
-- Interactive 3D building models
-- Floor-by-floor navigation
-- Equipment location markers
-- Real-time status updates
-- Energy flow visualization
-- Heat map overlays
+### Current HTMX Interface
+- **Dashboard**: Building overview with statistics
+- **Building Management**: List, view, and manage buildings
+- **ASCII Floor Plans**: Terminal-style floor plan display in browser
+- **Equipment Search**: Find and manage building equipment
+- **Real-time Updates**: HTMX-powered dynamic content
 
-### User Interface
-- Split view (3D + 2D floor plan)
-- Equipment search and filtering
-- Timeline scrubber for historical data
-- Annotation and markup tools
-- Export to various formats
+### Key Benefits
+- **No JavaScript complexity** - Pure HTMX approach
+- **Terminal aesthetic** - ASCII art in web interface
+- **Fast and lightweight** - Server-rendered HTML
+- **Real-time updates** - HTMX handles dynamic content
 
-### Data Integration
-- Real-time WebSocket updates
-- BIM file parsing and rendering
-- Equipment telemetry display
-- Maintenance schedule overlay
-- Alarm and alert visualization
-
-## Development Setup
-
-```bash
-cd web
-npm install
-npm run dev
-```
-
-## API Integration
-
-```javascript
-// Connect to ArxOS WebSocket
-import { ArxOSClient } from './lib/arxos-client';
-
-const client = new ArxOSClient({
-  url: 'ws://localhost:8080/ws',
-  building: 'ARXOS-NA-US-NY-NYC-0001'
-});
-
-client.on('equipment.update', (data) => {
-  // Update 3D model with new equipment status
-  updateEquipmentStatus(data.equipmentId, data.status);
-});
-```
-
-## Component Structure
+## Directory Structure
 
 ```
 web/
-├── src/
-│   ├── components/
-│   │   ├── ThreeJSViewer.svelte    # 3D visualization
-│   │   ├── FloorPlan2D.svelte      # D3.js floor plan
-│   │   ├── EquipmentPanel.svelte   # Equipment details
-│   │   └── Timeline.svelte         # Historical view
-│   ├── lib/
-│   │   ├── arxos-client.js         # API client
-│   │   ├── three-helpers.js        # Three.js utilities
-│   │   └── d3-helpers.js           # D3.js utilities
-│   └── stores/
-│       ├── building.js             # Building data store
-│       └── equipment.js            # Equipment state store
-└── public/
-    └── models/                     # 3D model assets
+├── templates/              # HTMX templates
+│   ├── layouts/
+│   │   └── base.html      # Main layout with HTMX/Tailwind
+│   ├── pages/
+│   │   ├── dashboard.html  # Dashboard page
+│   │   ├── buildings.html  # Buildings list
+│   │   └── login.html     # Authentication
+│   └── partials/
+│       └── floor_plan.html # ASCII floor plan fragment
+├── static/                # Static assets (future)
+└── README.md              # This file
 ```
 
-## Future Enhancements
+## Backend Integration
 
-- VR support via WebXR
-- Collaborative editing
-- Advanced physics simulation
-- Machine learning predictions
-- Photorealistic rendering
+The web interface is served by Go handlers in `internal/handlers/web/`:
+- **handlers.go** - HTTP request handlers
+- **router.go** - Route definitions and middleware
+- **templates.go** - Template loading and rendering
+
+## Usage
+
+The web interface is accessible when running ArxOS in server mode:
+
+```bash
+# Start ArxOS server
+arx serve
+
+# Access web interface
+open http://localhost:8080
+```
+
+## Future Development
+
+This HTMX interface focuses on **building operations and management**. For **advanced 3D visualization**, see the planned Svelte interface in `/frontend/`.
+
+### Interface Hierarchy
+1. **Terminal ASCII** - Primary interface for building operations
+2. **HTMX Web** - Web-based building management (this interface)
+3. **Mobile AR** - Field technician precise positioning
+4. **Frontend 3D** - Advanced visualization and analysis (future)
+
+Each interface serves different user needs in the ArxOS ecosystem.

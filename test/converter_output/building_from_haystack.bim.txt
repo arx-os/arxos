@@ -1,0 +1,13 @@
+# ArxOS Building Information Model
+# Source: Haystack Import (Haystack)
+
+## FLOORS
+FLOOR 1 "IoT Floor" 0.0
+
+## ROOMS
+ROOM 1/space-101 "Room 101" space 0.0
+ROOM 1/space-102 "Room 102" space 0.0
+
+## EQUIPMENT
+EQUIPMENT 1/space-101/ahu-01 "Air Handler Unit 01" hvac operational
+EQUIPMENT 1/space-101/vav-101 "VAV Box Room 101" hvac operational

@@ -17,9 +17,13 @@ type DB interface {
 	// Core operations
 	Connect(ctx context.Context, dbPath string) error
 	Close() error
-	
+
 	// Transaction support
 	BeginTx(ctx context.Context) (*sql.Tx, error)
+
+	// Spatial support detection
+	HasSpatialSupport() bool
+	GetSpatialDB() (SpatialDB, error)
 	
 	// Floor plan operations
 	GetFloorPlan(ctx context.Context, id string) (*models.FloorPlan, error)

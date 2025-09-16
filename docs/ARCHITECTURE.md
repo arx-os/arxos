@@ -688,6 +688,428 @@ arx validate <file>         # Check file format
 arx import --verbose <file> # Detailed error output
 ```
 
+## Building Ingestion & Progressive Enhancement
+
+### Overview
+
+ArxOS supports multiple ingestion methods, each providing different types and precision levels of data. The system intelligently merges these inputs to create a progressively refined building model that combines semantic completeness with spatial accuracy.
+
+### Ingestion Methods & Data Characteristics
+
+#### 1. PDF/HEIC Floor Plans
+**Input Characteristics:**
+- 2D schematic layouts
+- Room boundaries and labels
+- Approximate equipment locations
+- Scale information
+
+**Data Population:**
+```
+.bim.txt:  ✅ Complete (rooms, zones, equipment, grid positions)
+PostGIS:   ⚠️  Estimated (interpolated from scale, ±1-2 meter accuracy)
+Confidence: LOW (requires field verification)
+```
+
+**Processing Pipeline:**
+```go
+func ProcessPDFImport(pdf PDFDocument) (*Building, error) {
+    // 1. OCR and pattern recognition
+    layout := extractFloorPlan(pdf)
+
+    // 2. Scale detection
+    scale := detectScale(layout) // e.g., 1:100
+
+    // 3. Grid mapping
+    gridMap := mapToGrid(layout, scale)
+
+    // 4. Equipment detection
+    equipment := detectEquipment(layout) // outlets, switches, etc.
+
+    // 5. Create .bim.txt with grid coordinates
+    bimFile := generateBIMFile(gridMap, equipment)
+
+    // 6. Estimate world coordinates for PostGIS
+    worldCoords := estimateWorldCoordinates(gridMap, scale)
+    // Mark as "estimated" confidence
+
+    return building, nil
+}
+```
+
+#### 2. IFC (Industry Foundation Classes)
+**Input Characteristics:**
+- 3D BIM model with relative precision
+- Complete equipment metadata
+- System relationships and connections
+- Material properties
+
+**Data Population:**
+```
+.bim.txt:  ✅ Complete (full semantic model)
+PostGIS:   🔶 Good (needs real-world alignment)
+Confidence: MEDIUM (requires GPS/survey alignment)
+```
+
+**Processing Pipeline:**
+```go
+func ProcessIFCImport(ifc IFCModel) (*Building, error) {
+    // 1. Parse IFC structure
+    spaces := extractSpaces(ifc)
+    equipment := extractEquipment(ifc)
+    systems := extractSystems(ifc)
+
+    // 2. Convert to ArxOS addressing
+    addressing := mapToUniversalAddressing(spaces)
+
+    // 3. Extract relative 3D coordinates
+    relativeCoords := extractCoordinates(ifc)
+
+    // 4. Generate complete .bim.txt
+    bimFile := generateFromIFC(spaces, equipment, systems)
+
+    // 5. Store in PostGIS with alignment pending
+    // Requires GPS anchor or survey point for real-world positioning
+
+    return building, nil
+}
+```
+
+#### 3. LiDAR Point Cloud
+**Input Characteristics:**
+- Ultra-precise 3D spatial data
+- No semantic labels
+- Physical geometry only
+- Millimeter accuracy
+
+**Data Population:**
+```
+.bim.txt:  ❌ Minimal (only detected spaces/structures)
+PostGIS:   ✅ Perfect (millimeter precision)
+Confidence: HIGH (actual reality capture)
+```
+
+**Processing Pipeline:**
+```go
+func ProcessLiDARScan(pointCloud PointCloud) (*PartialBuilding, error) {
+    // 1. Point cloud alignment
+    aligned := alignToCoordinateSystem(pointCloud)
+
+    // 2. Space detection (rooms, walls)
+    spaces := detectSpaces(aligned)
+
+    // 3. Object detection (equipment shapes)
+    objects := detectObjects(aligned)
+    // Note: These are unlabeled geometries
+
+    // 4. Store precise coordinates in PostGIS
+    storeSpatialData(objects, spaces)
+
+    // 5. Generate minimal .bim.txt structure
+    // Requires human labeling for semantics
+
+    return partialBuilding, nil
+}
+```
+
+### Progressive Enhancement Strategy
+
+ArxOS handles partial scans and mixed-precision data through a progressive refinement workflow:
+
+#### Coverage Tracking
+
+```go
+type CoverageMap struct {
+    BuildingID   string
+    TotalArea    float64
+    ScannedAreas []ScannedRegion
+}
+
+type ScannedRegion struct {
+    Area         Polygon
+    ScanDate     time.Time
+    ScanType     string // "lidar", "photogrammetry", "manual"
+    Confidence   float64
+    PointDensity float64 // points per square meter
+}
+
+func (c *CoverageMap) GetCoveragePercentage() float64 {
+    scannedArea := c.calculateScannedArea()
+    return (scannedArea / c.TotalArea) * 100
+}
+
+func (c *CoverageMap) GetRegionConfidence(location Point) ConfidenceLevel {
+    region := c.findRegion(location)
+    if region == nil {
+        return CONFIDENCE_ESTIMATED // PDF only
+    }
+
+    switch {
+    case region.ScanType == "lidar" && region.PointDensity > 1000:
+        return CONFIDENCE_HIGH
+    case region.ScanType == "lidar":
+        return CONFIDENCE_MEDIUM
+    default:
+        return CONFIDENCE_LOW
+    }
+}
+```
+
+#### Partial Scan Integration
+
+When a partial LiDAR scan is imported, the system performs intelligent matching with existing data:
+
+```go
+type PartialScanMerger struct {
+    ExistingBuilding *Building
+    NewScan         *PointCloud
+    CoverageMap     *CoverageMap
+}
+
+func (m *PartialScanMerger) MergePartialScan() (*MergeResult, error) {
+    // 1. Detect scan overlap with existing model
+    overlap := m.detectOverlap()
+
+    // 2. Align coordinate systems
+    alignment := m.findBestAlignment(overlap)
+
+    // 3. For each detected object in scan
+    matches := []ObjectMatch{}
+    for _, detectedObj := range m.NewScan.DetectedObjects {
+        // Find potential matches in existing model
+        candidates := m.findNearbyCandidates(detectedObj, alignment)
+
+        match := ObjectMatch{
+            DetectedObject: detectedObj,
+            Candidates:     candidates,
+            Confidence:     m.calculateMatchConfidence(detectedObj, candidates),
+        }
+        matches = append(matches, match)
+    }
+
+    // 4. Process matches based on confidence
+    for _, match := range matches {
+        switch match.Confidence {
+        case HIGH_CONFIDENCE:
+            // Automatically update position
+            m.updateEquipmentPosition(match)
+
+        case MEDIUM_CONFIDENCE:
+            // Queue for user confirmation
+            m.queueForReview(match)
+
+        case LOW_CONFIDENCE:
+            // Possible new equipment or significant change
+            m.flagForInvestigation(match)
+        }
+    }
+
+    // 5. Update coverage map
+    m.CoverageMap.AddScannedRegion(overlap.Area, "lidar", time.Now())
+
+    return &MergeResult{
+        UpdatedEquipment: len(matches),
+        CoverageIncrease: overlap.Area,
+        RequiresReview:   m.getPendingReviews(),
+    }, nil
+}
+```
+
+### Smart Merge Algorithm
+
+The core intelligence for reconciling different data sources:
+
+```go
+type SmartMerger struct {
+    Building     *Building
+    DataSources  []DataSource
+    Strategies   map[string]MergeStrategy
+}
+
+type DataSource struct {
+    Type       string    // "pdf", "ifc", "lidar", "ar_edit"
+    Timestamp  time.Time
+    Confidence float64
+    Coverage   *Polygon  // spatial extent
+}
+
+func (sm *SmartMerger) Merge() error {
+    // 1. Sort sources by confidence and timestamp
+    sort.Slice(sm.DataSources, func(i, j int) bool {
+        if sm.DataSources[i].Confidence != sm.DataSources[j].Confidence {
+            return sm.DataSources[i].Confidence > sm.DataSources[j].Confidence
+        }
+        return sm.DataSources[i].Timestamp.After(sm.DataSources[j].Timestamp)
+    })
+
+    // 2. Build composite model
+    for _, source := range sm.DataSources {
+        strategy := sm.Strategies[source.Type]
+
+        if err := strategy.Apply(sm.Building, source); err != nil {
+            // Handle conflicts
+            conflict := detectConflict(err)
+            resolution := resolveConflict(conflict, source)
+
+            if resolution.RequiresHuman {
+                queueForHumanReview(conflict)
+            } else {
+                applyResolution(resolution)
+            }
+        }
+    }
+
+    // 3. Validate merged model
+    return sm.validateConsistency()
+}
+
+// Conflict Resolution Strategy
+type ConflictResolver struct {
+    Rules []ResolutionRule
+}
+
+type ResolutionRule struct {
+    Condition func(Conflict) bool
+    Action    func(Conflict) Resolution
+}
+
+var defaultRules = []ResolutionRule{
+    {
+        // LiDAR always wins for position
+        Condition: func(c Conflict) bool {
+            return c.Type == "position" && c.NewSource.Type == "lidar"
+        },
+        Action: func(c Conflict) Resolution {
+            return Resolution{
+                UseNew: true,
+                UpdateConfidence: CONFIDENCE_HIGH,
+            }
+        },
+    },
+    {
+        // Newer AR edits override older PDF estimates
+        Condition: func(c Conflict) bool {
+            return c.OldSource.Type == "pdf" && c.NewSource.Type == "ar_edit"
+        },
+        Action: func(c Conflict) Resolution {
+            return Resolution{
+                UseNew: true,
+                UpdateConfidence: CONFIDENCE_MEDIUM,
+            }
+        },
+    },
+    {
+        // Semantic data from IFC preferred over detected objects
+        Condition: func(c Conflict) bool {
+            return c.Type == "semantic" && c.NewSource.Type == "ifc"
+        },
+        Action: func(c Conflict) Resolution {
+            return Resolution{
+                UseNew: true,
+                PreserveSpatial: true,
+            }
+        },
+    },
+}
+```
+
+### Confidence Tracking
+
+Every piece of data in ArxOS carries confidence metadata:
+
+```go
+type EquipmentRecord struct {
+    ID       string
+    Path     string
+    Location Point3D
+
+    // Confidence tracking
+    PositionConfidence ConfidenceLevel
+    PositionSource     string // "pdf", "ifc", "lidar", "ar_verified"
+    PositionUpdated    time.Time
+
+    SemanticConfidence ConfidenceLevel
+    SemanticSource     string
+    SemanticUpdated    time.Time
+
+    LastFieldVerified  *time.Time
+}
+
+type ConfidenceLevel int
+
+const (
+    CONFIDENCE_ESTIMATED ConfidenceLevel = iota // PDF/IFC without verification
+    CONFIDENCE_LOW                              // Automated detection
+    CONFIDENCE_MEDIUM                           // Partial verification
+    CONFIDENCE_HIGH                             // LiDAR or AR verified
+)
+
+// Query by confidence
+func QueryWithConfidence(building string, minConfidence ConfidenceLevel) []Equipment {
+    query := `
+        SELECT * FROM equipment
+        WHERE building_id = ?
+        AND position_confidence >= ?
+        ORDER BY position_confidence DESC
+    `
+    return db.Query(query, building, minConfidence)
+}
+```
+
+### Progressive Enhancement Workflow
+
+A typical progressive enhancement lifecycle:
+
+```bash
+# Stage 1: Initial PDF import (Day 1)
+arx import floor_plans.pdf --building ARXOS-001
+> Created: 500 equipment items (confidence: ESTIMATED)
+> Coverage: 100% semantic, 0% verified
+
+# Stage 2: IFC model import (Day 5)
+arx import design.ifc --building ARXOS-001 --merge
+> Updated: 500 equipment items with metadata
+> Added: System relationships
+> Coverage: 100% semantic, 0% verified
+
+# Stage 3: Partial LiDAR scan - Lobby (Day 10)
+arx scan import lobby_scan.ply --building ARXOS-001 --area "Floor:1/Zone:Lobby"
+> Matched: 15 equipment items (confidence: HIGH)
+> Unknown: 3 objects (pending review)
+> Coverage: 100% semantic, 5% verified
+
+# Stage 4: Technician AR verification (Day 15-30)
+# Technicians verify equipment during routine work
+> Progressive updates via AR app
+> Coverage: 100% semantic, 35% verified
+
+# Stage 5: Complete LiDAR scan - Critical areas (Day 60)
+arx scan import mechanical_rooms.ply --building ARXOS-001
+> Matched: 127 equipment items (confidence: HIGH)
+> Coverage: 100% semantic, 52% verified
+
+# Query coverage status
+arx coverage --building ARXOS-001 --detail
+> Floor 1:
+>   Semantic: 100% (Source: PDF+IFC)
+>   Verified: 45% (LiDAR: 30%, AR: 15%)
+>   Last scan: 2024-03-15
+> Floor 2:
+>   Semantic: 100% (Source: PDF+IFC)
+>   Verified: 12% (AR: 12%)
+>   Last scan: Never
+```
+
+### Implementation Status
+
+- ✅ PDF import with grid mapping
+- ✅ IFC import with semantic extraction
+- 🚧 LiDAR point cloud processing
+- 🚧 Progressive merge algorithm
+- ⬜ Confidence tracking system
+- ⬜ Coverage visualization
+- ⬜ Automated object matching ML
+- ⬜ Conflict resolution UI
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.

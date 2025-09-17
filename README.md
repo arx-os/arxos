@@ -4,7 +4,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21-blue.svg)](https://go.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-ArxOS treats buildings as code repositories, providing a universal addressing system for every component, system, and space. One tool manages everything - from field equipment to cloud analytics.
+ArxOS treats buildings as code repositories with PostGIS spatial precision, providing seamless integration with professional BIM tools and universal addressing for every component, system, and space. One tool manages everything - from professional BIM workflows to field equipment analytics.
 
 ## 🎯 Core Innovation
 
@@ -19,9 +19,31 @@ ARXOS-NA-US-NY-NYC-0001/3/A/301/E/OUTLET_02
 └───────────────────────────────────── Building UUID
 ```
 
-**Building-as-Code**: Human-readable `.bim.txt` files that work with Git, enabling version control, branching, and collaborative workflows impossible with traditional BIM formats.
+**Building-as-Code**: Human-readable `.bim.txt` files generated from PostGIS spatial database, enabling Git version control, team collaboration, and professional BIM tool integration impossible with traditional formats.
+
+**Professional BIM Integration**: Seamless integration with any BIM tool (Revit, AutoCAD, ArchiCAD, Tekla) via standard IFC files - no workflow changes required.
 
 ## 🚀 Quick Start
+
+### Prerequisites
+
+ArxOS requires PostGIS for spatial operations:
+
+```bash
+# Install PostGIS (Ubuntu/Debian)
+sudo apt install postgresql postgis postgresql-contrib
+
+# Or use Docker
+docker run -d --name arxos-postgis \
+  -e POSTGRES_DB=arxos_spatial \
+  -e POSTGRES_USER=arxos \
+  -e POSTGRES_PASSWORD=your_password \
+  -p 5432:5432 \
+  postgis/postgis:15-3.3
+
+# Verify PostGIS installation
+psql -h localhost -U arxos -d arxos_spatial -c "SELECT PostGIS_Version();"
+```
 
 ### Installation
 
@@ -33,38 +55,41 @@ go install github.com/arx-os/arxos/cmd/arx@latest
 git clone https://github.com/arx-os/arxos.git
 cd arxos
 go build -o arx ./cmd/arx
-sudo mv arx /usr/local/bin/
 
-# Initialize ArxOS (one-time setup)
-arx install
+# Initialize ArxOS with PostGIS
+arx install --setup-postgis
+
+# For BIM professionals
+arx install --professional --with-daemon
 
 # Verify installation
-arx status
+arx query --help  # Should show spatial query options
 ```
 
 ### Your First Building
 
 ```bash
-# Initialize a new building
-arx repo init ARXOS-NA-US-CA-LAX-0001 --name "Los Angeles Office"
+# Convert IFC file to PostGIS (imports spatial data)
+arx import model.ifc --building ARXOS-NA-US-CA-LAX-0001
 
-# Convert any building file to BIM format
+# Or convert PDF floor plan
 arx convert floor_plan.pdf building.bim.txt
-
-# Import to building repository
 arx import building.bim.txt --building ARXOS-NA-US-CA-LAX-0001
 
-# Add equipment manually
-arx add /3/A/301/E/OUTLET_02 --type electrical.outlet --status operational
+# Add equipment with precise coordinates
+arx add /3/A/301/E/OUTLET_02 --type electrical.outlet --location "12.547,8.291,1.127"
 
-# Check what changed
-arx repo status
-
-# Commit changes
-arx repo commit -m "Added third floor electrical outlets"
-
-# Query equipment
+# Query with spatial operations (PostGIS-powered)
 arx query --floor 3 --type electrical
+arx query --near "12.5,8.3,1.1" --radius 5.0
+arx query --building ARXOS-NA-US-CA-LAX-0001 --output json
+
+# Update equipment position (millimeter precision)
+arx update /3/A/301/E/OUTLET_02 --location "12.550,8.291,1.127"
+
+# Export to various formats from PostGIS
+arx export ARXOS-NA-US-CA-LAX-0001 --format ifc --precision full
+arx export ARXOS-NA-US-CA-LAX-0001 --format bim --for-git
 ```
 
 ## 📖 Command Reference
@@ -72,73 +97,98 @@ arx query --floor 3 --type electrical
 ### System Management
 
 ```bash
-arx install                    # Set up ArxOS (creates database, starts file watcher)
-arx install --with-server      # Also install API server as system service
-arx status                     # Show system-wide status
-arx config                     # View/edit configuration
-arx uninstall                  # Remove ArxOS (preserves data)
+arx install                    # Set up ArxOS (creates PostGIS database)
+arx install --professional     # Install with BIM professional daemon
+arx install --setup-postgis    # Configure PostGIS spatial database
+arx version                    # Show version information
 ```
 
-### Repository Operations
+### Professional BIM Integration
 
 ```bash
-arx repo init <building-id>    # Initialize building repository
-arx repo status                # Show uncommitted changes
-arx repo diff                  # Show detailed changes
-arx repo commit -m "message"   # Commit changes to history
-arx repo log                   # View commit history
-arx repo branch <name>         # Create branch for experiments
-arx repo merge <branch>        # Merge branch changes
+arx daemon watch --ifc "*.ifc"         # Monitor IFC files from BIM tools
+arx daemon status                      # Show daemon and integration status
+arx daemon start --professional        # Start professional workflow daemon
+arx daemon stop                        # Stop daemon service
+```
+
+### Repository Operations (Planned)
+
+```bash
+arx repo init <building-id>    # Initialize building repository (planned)
+arx repo status                # Show uncommitted changes (planned)
+arx repo diff                  # Show detailed changes (planned)
+arx repo commit -m "message"   # Commit changes to history (planned)
 ```
 
 ### Data Operations
 
 ```bash
-arx convert <file> [output]    # Convert any building file to BIM
-arx convert list               # List all supported formats
-arx import <file>              # Import from PDF/IFC/BIM/DWG
-arx export <building-id>       # Export to various formats
-arx validate <file>            # Validate BIM file format
-arx sync                       # Sync between files and database
+arx convert <file> [output]    # Convert PDF/IFC to BIM format
+arx convert list               # List supported formats (PDF, IFC)
+arx import <file>              # Import to PostGIS from PDF/IFC
+arx export <building-id>       # Export from PostGIS to various formats
+arx validate <file>            # Validate file format
 ```
 
-### Building Management
+### Building Management (PostGIS-Powered)
 
 ```bash
-arx add <path> [options]       # Add component/equipment
-arx update <path> [options]    # Update component properties
-arx remove <path>              # Remove component
-arx get <path>                 # Get component details
-arx list [--type] [--status]   # List components
-arx query [complex filters]    # Advanced queries
-arx search <text>              # Full-text search
+arx add <path> --location "x,y,z"      # Add equipment with precise coordinates
+arx update <path> --location "x,y,z"   # Update equipment position (millimeter precision)
+arx update <path> --move-by "dx,dy,dz" # Move equipment relatively
+arx remove <path>                      # Remove component
+arx get <path>                         # Get component details (planned)
+arx list [--type] [--status]           # List components (planned)
+arx query [spatial filters]            # PostGIS spatial queries ✅
+arx trace <path> --type <system>       # Trace system connections (planned)
 ```
 
-### Multi-Level Viewing
+### Spatial Queries (Available Now)
 
 ```bash
-# Overview mode - room/floor level schematic
-arx view CONFERENCE_A          # Shows general layout from .bim.txt
-arx render --floor 3           # ASCII floor plan overview
-
-# Detail mode - equipment specifications and connections  
-arx view CONFERENCE_A/OUTLET_02 --detail    # Equipment specs, maintenance history
-arx view OUTLET_02 --trace-power             # ASCII diagram of electrical path
-arx view HVAC_SYSTEM --connections          # System interconnections
-
-# Spatial mode - precise coordinates for field work
-arx view OUTLET_02 --spatial   # PostGIS coordinates for AR applications
-arx view --floor 3 --spatial   # Precise equipment positions
+arx query --building <id>              # Filter by building
+arx query --floor 3 --type electrical  # Floor and type filtering
+arx query --status failed             # Status filtering
+arx query --near "x,y,z" --radius 5.0 # Spatial proximity (PostGIS)
+arx query --output json               # JSON output format
+arx query --count                     # Count results only
+arx query --limit 50 --offset 10      # Pagination
 ```
 
-### File Monitoring
+### Multi-Level Viewing (Planned)
 
 ```bash
-arx watch add <directory>      # Add directory to monitor
-arx watch remove <directory>   # Stop monitoring directory
-arx watch list                 # Show monitored directories
-arx watch pause                # Temporarily pause monitoring
-arx watch resume               # Resume monitoring
+# Overview mode - room/floor level schematic (from PostGIS)
+arx visualize --floor 3                     # ASCII floor plan from PostGIS
+arx query --floor 3 --visualize spatial     # Spatial layout visualization
+
+# Detail mode - equipment specifications and connections (planned)
+arx trace OUTLET_02 --type power --visualize path    # System tracing
+arx query --equipment HVAC --visualize connections   # System interconnections
+
+# Spatial mode - precise PostGIS coordinates
+arx query --near "12.5,8.3,1.1" --radius 2.0       # Spatial proximity
+arx query --floor 3 --output csv                    # Export coordinates
+```
+
+### Professional BIM Workflow
+
+```bash
+# One-time setup for BIM professionals
+arx install --professional --with-daemon
+arx daemon watch --ifc "C:\BIM_Projects\*.ifc"
+
+# Daily workflow (automatic)
+# 1. Work in Revit/AutoCAD/ArchiCAD as usual
+# 2. Export IFC file (standard practice)
+# 3. ArxOS daemon automatically processes IFC
+# 4. PostGIS updated with precise coordinates
+# 5. Team sees changes immediately
+
+# View team updates
+arx query --building ARXOS-001 --changed --since "1h"
+arx export ARXOS-001 --format bim --for-git
 ```
 
 ### API Server
@@ -171,33 +221,50 @@ ArxOS provides a **multi-level user experience** where different interfaces serv
    - Perfect for: "What's the power path from panel to outlet?"
    - System-level schematics and relationships
 
-### **Data Architecture**
+### **PostGIS-Centric Data Architecture**
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Multi-Level Data Storage                     │
+│                Professional BIM Tools                           │
+│  ┌──────────┬──────────┬──────────┬────────────────────────┐  │
+│  │  Revit   │ AutoCAD  │ArchiCAD  │    Any IFC Tool        │  │
+│  └──────────┴──────────┴──────────┴────────────────────────┘  │
+│                              │                               │
+│                       Standard IFC Export                    │
+│                              ▼                               │
 ├─────────────────────────────────────────────────────────────────┤
-│  .bim.txt (Source of Truth)     │  PostGIS (Spatial Database)   │
-│  ├─ Human-readable schematic    │  ├─ Precise 3D coordinates    │
-│  ├─ Git version control         │  ├─ AR spatial anchors        │
-│  ├─ Equipment relationships     │  ├─ LiDAR point clouds        │
-│  └─ System connections          │  └─ Real-world positioning    │
+│                      ArxOS Daemon                               │
+│                   (IFC File Monitoring)                         │
 ├─────────────────────────────────────────────────────────────────┤
-│                          Access Methods                         │
-│  ┌─────────────┬─────────────┬─────────────┬─────────────────┐  │
-│  │ Terminal    │  Web 3D     │ Mobile AR   │  Packet Radio   │  │
-│  │ (ASCII)     │ (Svelte)    │ (React      │ (LoRaWAN/APRS) │  │
-│  │             │             │  Native)    │                 │  │
-│  └─────────────┴─────────────┴─────────────┴─────────────────┘  │
+│                   PostGIS Database                              │
+│                 (Single Source of Truth)                        │
+│  ├─ Millimeter-precision 3D coordinates                        │
+│  ├─ Spatial indexes and operations                             │
+│  ├─ Equipment positioning and relationships                     │
+│  ├─ AR spatial anchors and mobile integration                  │
+│  └─ LiDAR point clouds and reality capture                     │
+├─────────────────────────────────────────────────────────────────┤
+│                      User Interfaces                            │
+│  ┌─────────────┬─────────────┬─────────────┬───────────────┐  │
+│  │ Terminal    │  Web 3D     │ Mobile AR   │  Packet Radio │  │
+│  │ (PostGIS)   │ (PostGIS)   │ (PostGIS)   │ (Compressed)  │  │
+│  └─────────────┴─────────────┴─────────────┴───────────────┘  │
+├─────────────────────────────────────────────────────────────────┤
+│                      Derived Outputs                            │
+│  ┌─────────────┬─────────────┬─────────────┬───────────────┐  │
+│  │ .bim.txt    │ IFC Export  │ PDF Plans   │ CSV/JSON      │  │
+│  │(Git/Human)  │(BIM Tools)  │(Reports)    │(Analysis)     │  │
+│  └─────────────┴─────────────┴─────────────┴───────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ### **Coordinate System Design**
 
-- **.bim.txt**: Grid-based schematic coordinates for human readability
-- **PostGIS**: Millimeter-precision real-world coordinates for AR/field work
-- **Automatic sync**: AR edits update PostGIS; significant changes update .bim.txt
-- **Zoom levels**: Terminal can show overview, detail, or system-trace views
+- **PostGIS Database**: Single source of truth with millimeter-precision 3D coordinates
+- **.bim.txt**: Grid-based representation generated from PostGIS for human readability  
+- **IFC Export**: Full-precision coordinates exported from PostGIS for BIM tools
+- **CLI Control**: Terminal commands can query and modify PostGIS coordinates directly
+- **Professional Integration**: BIM tool changes flow through IFC → PostGIS → team updates
 
 ## 📁 Project Structure
 
@@ -206,17 +273,25 @@ After installation, ArxOS creates:
 ```
 ~/.arxos/                      # ArxOS system directory
 ├── config.yaml                # System configuration
-├── arxos.db                   # SQLite database
+├── postgis.conf               # PostGIS connection config
+├── arxos.db                   # SQLite database (fallback)
+├── logs/                      # System logs
 └── run/                       # Runtime files (PID, sockets)
 
-./buildings/                   # Your building repositories (Git)
+./buildings/                   # Building repositories (Git)
 ├── ARXOS-NA-US-CA-LAX-0001/
 │   ├── .git/                  # Version history
-│   ├── building.bim.txt       # Building definition
-│   ├── floors/                # Floor plans
-│   └── equipment/             # Equipment data
+│   ├── building.bim.txt       # Generated from PostGIS
+│   ├── exports/               # IFC exports for BIM tools
+│   └── reports/               # Generated reports
 └── ARXOS-NA-US-NY-NYC-0002/
     └── ...
+
+PostGIS Database:              # Spatial data (primary storage)
+├── equipment (with geom)      # Equipment with 3D coordinates
+├── buildings                  # Building metadata
+├── floors                     # Floor boundaries
+└── spatial_indexes           # Performance optimization
 ```
 
 ## 🔧 Configuration
@@ -224,18 +299,31 @@ After installation, ArxOS creates:
 ArxOS configuration lives in `~/.arxos/config.yaml`:
 
 ```yaml
-# Database
-database:
-  path: ~/.arxos/arxos.db
-  backup_interval: 24h
+# PostGIS primary database
+postgis:
+  enabled: true
+  host: localhost
+  port: 5432
+  database: arxos_spatial
+  user: arxos
+  password: ${POSTGIS_PASSWORD}
+  spatial_reference: 4326
 
-# File Monitoring
-watcher:
-  directories:
-    - ./buildings
-    - /shared/bim-files
-  auto_import: true
-  scan_interval: 5s
+# Professional BIM integration
+professional:
+  enabled: false
+  daemon:
+    enabled: false
+    ifc_patterns: ["*.ifc", "*.ifcxml"]
+    watch_directories: ["C:/BIM_Projects", "C:/Revit_Exports"]
+    auto_export: true
+    auto_commit: true
+
+# Database fallback
+database:
+  type: hybrid                # PostGIS primary, SQLite fallback
+  fallback_path: ~/.arxos/arxos.db
+  backup_interval: 24h
 
 # API Server (optional)
 server:
@@ -246,7 +334,7 @@ server:
 # Logging
 log:
   level: info
-  file: ~/.arxos/arxos.log
+  file: ~/.arxos/logs/arxos.log
 ```
 
 ## 🏢 Real-World Use Cases
@@ -288,61 +376,68 @@ arx get /3/*/EXIT_*
 arx query --critical --status operational
 ```
 
-## 🔄 Universal File Converter
+## 🔄 File Import & Export
 
-ArxOS can convert between any building file format and the universal BIM text format:
+ArxOS imports building data to PostGIS spatial database and exports to multiple formats:
 
-### Supported Formats
-- **IFC** (.ifc, .ifcxml) - Industry Foundation Classes open BIM standard
-- **PDF** (.pdf) - Floor plans, as-builts with OCR extraction
-- **AutoCAD** (.dwg, .dxf) - 2D/3D CAD drawings
-- **Revit** (.rvt, .rfa) - Autodesk BIM models
+### Currently Supported Formats
+- **IFC** (.ifc, .ifcxml) - Industry Foundation Classes open BIM standard ✅
+- **PDF** (.pdf) - Floor plans, as-builts with OCR extraction ✅
+
+### Planned Format Support
+- **Point Clouds** (.las, .laz, .e57, .ply) - 3D laser scanning
+- **AutoCAD** (.dwg, .dxf) - 2D/3D CAD drawings  
 - **gbXML** (.gbxml) - Energy analysis models
 - **COBie** (.xlsx, .csv) - Facility management spreadsheets
-- **Point Clouds** (.las, .laz, .e57, .ply) - 3D laser scanning
 - **Haystack/Brick** (.json, .zinc) - IoT sensor data
-- **SketchUp** (.skp), **Navisworks** (.nwd), **ArchiCAD** (.pln), and more
 
-### Conversion Examples
+### Import/Export Examples
 ```bash
-# Convert IFC to BIM
-arx convert model.ifc building.bim.txt
+# Import IFC directly to PostGIS
+arx import model.ifc --building ARXOS-001
 
-# Auto-detect format and convert
-arx convert floor_plan.pdf
+# Convert PDF and import to PostGIS
+arx convert floor_plan.pdf building.bim.txt
+arx import building.bim.txt --building ARXOS-001
 
-# Merge IoT data into existing BIM
-arx convert sensors.json building.bim.txt --merge
+# Export from PostGIS to various formats
+arx export ARXOS-001 --format ifc --precision full
+arx export ARXOS-001 --format bim --for-git
+arx export ARXOS-001 --format pdf --floor-plans
 
-# List all supported formats
+# List supported formats
 arx convert list
 ```
 
 ### Use Cases
-- Import existing BIM models from any CAD/BIM software
-- Extract floor plans and equipment from PDF documents
-- Integrate IoT sensor networks with building models
-- Convert facility management spreadsheets to BIM
-- Merge as-built, as-designed, and as-operated data
+- **Professional BIM Integration**: Import IFC models from any BIM software
+- **PDF Processing**: Extract floor plans and equipment from PDF documents  
+- **Team Collaboration**: Generate .bim.txt files for Git version control
+- **Spatial Analysis**: Query PostGIS database for equipment relationships
+- **Multi-format Export**: Generate reports and exports for different stakeholders
 
 ## 🖥️ Interface Options
 
 ArxOS provides multiple interfaces optimized for different user roles and precision needs:
 
-### Terminal (Available Now) - Building Operations
-**Target Users**: Building managers, systems engineers, facility operators
-**Data Source**: `.bim.txt` files with PostGIS for detailed views
-**Precision**: Schematic-level for overview, system-level for detailed tracing
+### Terminal (Available Now) - PostGIS-Powered Operations
+**Target Users**: Building managers, systems engineers, facility operators, BIM professionals
+**Data Source**: PostGIS spatial database with .bim.txt derived views
+**Precision**: Millimeter-level spatial queries with human-readable output
 
 ```bash
-# Overview: Quick reference and understanding
-arx render --floor 3              # ASCII floor plan schematic
-arx list --room CONFERENCE_A      # Equipment in room
+# Spatial queries: PostGIS-powered with real-time results
+arx query --floor 3 --type electrical      # Filter by floor and type ✅
+arx query --near "12.5,8.3,1.1" --radius 5.0  # Spatial proximity ✅
+arx query --building ARXOS-001 --output json   # Multiple output formats ✅
 
-# Detail: System tracing and specifications  
-arx view OUTLET_02 --trace-power  # ASCII diagram of electrical path
-arx view HVAC_SYSTEM --detail     # Technical specifications
-arx monitor --live                # Live status display
+# Spatial control: Direct PostGIS coordinate manipulation
+arx update OUTLET_02 --location "12.547,8.291,1.127"  # Precise positioning
+arx update OUTLET_02 --move-by "0.05,0,0"             # Relative movement
+
+# Professional integration: Real-time BIM tool updates
+arx daemon watch --ifc "C:\Projects\*.ifc"            # Monitor BIM exports
+arx export ARXOS-001 --format ifc --precision full    # Export to BIM tools
 ```
 
 ### Mobile AR Application (Coming Soon) - Field Operations
@@ -361,8 +456,8 @@ arx monitor --live                # Live status display
 
 ### Web 3D Visualization (Coming Soon) - System Analysis
 **Target Users**: Engineers, architects, system designers
-**Data Source**: Combined .bim.txt and PostGIS for comprehensive visualization
-**Precision**: Interactive 3D models with system relationships
+**Data Source**: PostGIS spatial database for comprehensive 3D visualization
+**Precision**: Interactive 3D models with real-time PostGIS spatial relationships
 
 - **Technology**: Svelte + Three.js + D3.js
 - **Features**: 
@@ -383,6 +478,56 @@ arx monitor --live                # Live status display
 - **Use Cases**: Off-grid buildings, disaster response, remote monitoring
 - **Latency**: 1-30 seconds depending on radio technology
 - **Path**: `/internal/transport/radio` - See [radio documentation](internal/transport/radio/README.md)
+
+## 👔 Professional BIM Integration
+
+### For BIM Professionals
+
+ArxOS integrates seamlessly with existing professional BIM workflows through standard IFC files:
+
+```bash
+# One-time professional setup
+arx install --professional --with-daemon
+
+# Configure IFC monitoring for your BIM projects
+arx daemon watch --ifc "C:\BIM_Projects\*.ifc"
+arx daemon watch --ifc "C:\Revit_Exports\*.ifc"
+
+# Continue working in your preferred BIM tool
+# Export IFC as usual → ArxOS automatically processes → Team collaboration enabled
+```
+
+### Professional Workflow Benefits
+
+- **Zero Workflow Changes**: Continue using Revit, AutoCAD, ArchiCAD, Tekla, etc.
+- **Universal Compatibility**: Works with any BIM tool that exports IFC
+- **Automatic Team Sync**: No manual coordination steps required
+- **Precision Maintained**: Full millimeter accuracy preserved through PostGIS
+- **Version Control**: Building changes automatically tracked in Git
+- **Real-time Updates**: Changes propagate to field teams within minutes
+
+### Professional Use Cases
+
+#### Architecture Firm
+```bash
+# Architect exports Revit model to IFC
+# ArxOS daemon detects change → PostGIS updated
+# Engineering team sees updates immediately
+arx query --building PROJECT_A --changed --since "1h"
+arx export PROJECT_A --format pdf --floor-plans  # Updated drawings
+```
+
+#### Construction Project
+```bash
+# Multiple BIM tools feeding same project
+arx daemon watch --ifc "C:\Project_Alpha\Revit\*.ifc"     # Architect
+arx daemon watch --ifc "C:\Project_Alpha\AutoCAD\*.ifc"   # Engineer  
+arx daemon watch --ifc "C:\Project_Alpha\Tekla\*.ifc"     # Structural
+
+# Unified building model in PostGIS
+# Field teams get coordinated, up-to-date information
+arx query --building PROJECT_ALPHA --floor 3 --spatial
+```
 
 ## 📊 API Reference
 
@@ -427,13 +572,14 @@ ARX_LOG_LEVEL=debug ./arx status
 
 ## 📝 BIM Text Format
 
-ArxOS uses a simple, human-readable format designed for **schematic representation** and version control:
+ArxOS generates human-readable `.bim.txt` files from PostGIS spatial data for **team collaboration** and version control:
 
 ### **Design Philosophy**
-- **Schematic, not CAD**: Focus on relationships and general positioning
-- **Human-readable**: Engineers can read and edit with any text editor
-- **Git-friendly**: Text diffs show meaningful changes
-- **Grid-based coordinates**: Simple integer positions for ASCII visualization
+- **Derived from PostGIS**: Generated automatically from spatial database, not manually edited
+- **Schematic Representation**: Focus on relationships and general positioning for humans
+- **Git-friendly**: Text diffs show meaningful building changes over time
+- **Grid-based coordinates**: Simple integer positions converted from PostGIS for ASCII visualization
+- **Team Collaboration**: Shareable, readable format for building managers and version control
 
 ### **Sample Format**
 ```
@@ -465,10 +611,11 @@ EQUIPMENT:
 ```
 
 ### **Coordinate System**
-- **Grid coordinates**: `LOCATION: (45, 30)` for ASCII visualization
+- **Grid coordinates**: `LOCATION: (45, 30)` generated from PostGIS for ASCII visualization
 - **Room references**: `ROOM: MECHANICAL_ROOM` for spatial context
-- **Precise positioning**: Stored separately in PostGIS for AR/field applications
-- **Automatic sync**: AR edits update PostGIS; significant moves update .bim.txt grid position
+- **Precise positioning**: Authoritative coordinates stored in PostGIS database
+- **One-way generation**: PostGIS data automatically generates .bim.txt grid positions
+- **CLI Control**: Terminal commands modify PostGIS directly, .bim.txt regenerated as needed
 
 ## 🤝 Contributing
 

@@ -67,7 +67,7 @@ type RadioTransport struct {
 	sequenceNumber  byte
 	pendingAcks     map[byte]time.Time
 	mutex           sync.RWMutex
-	interface       RadioInterface
+	radioInterface  RadioInterface
 }
 
 // RadioInterface defines the hardware interface
@@ -109,7 +109,7 @@ func (r *RadioTransport) Connect() error {
 	logger.Info("Connecting to radio device: %s", r.config.Device)
 
 	// Placeholder for actual hardware initialization
-	// r.interface = NewLoRaWANInterface() or similar
+	// r.radioInterface = NewLoRaWANInterface() or similar
 
 	return nil
 }
@@ -266,15 +266,15 @@ func (r *RadioTransport) transmitWithRetry(data []byte) ([]byte, error) {
 		}
 
 		// Send data
-		if r.interface != nil {
-			if err := r.interface.Send(data); err != nil {
+		if r.radioInterface != nil {
+			if err := r.radioInterface.Send(data); err != nil {
 				logger.Warn("Send failed on attempt %d: %v", attempt, err)
 				continue
 			}
 
 			// Wait for response
-			r.interface.SetTimeout(r.config.AckTimeout)
-			response, err := r.interface.Receive()
+			r.radioInterface.SetTimeout(r.config.AckTimeout)
+			response, err := r.radioInterface.Receive()
 			if err == nil {
 				return response, nil
 			}
@@ -373,8 +373,8 @@ func (r *RadioTransport) EstablishContext(buildingID string) error {
 
 // Close closes the radio transport
 func (r *RadioTransport) Close() error {
-	if r.interface != nil {
-		return r.interface.Close()
+	if r.radioInterface != nil {
+		return r.radioInterface.Close()
 	}
 	return nil
 }

@@ -1,0 +1,157 @@
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: arxos-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: arxos
+      POSTGRES_USER: arxos
+      POSTGRES_PASSWORD: ${POSTGIS_PASSWORD:-arxos_secure_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "${POSTGIS_PORT:-5432}:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ./scripts/init-postgis.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./scripts/optimize-postgis.sql:/docker-entrypoint-initdb.d/02-optimize.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arxos -d arxos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arxos-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  arxos-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arxos-api
+    restart: unless-stopped
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      ARX_DB_TYPE: postgis
+      POSTGIS_HOST: postgis
+      POSTGIS_PORT: 5432
+      POSTGIS_DB: arxos
+      POSTGIS_USER: arxos
+      POSTGIS_PASSWORD: ${POSTGIS_PASSWORD:-arxos_secure_password}
+      ARX_LOG_LEVEL: ${LOG_LEVEL:-info}
+      ARX_STATE_DIR: /data/.arxos
+      ARX_CACHE_DIR: /data/.arxos/cache
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - arxos_data:/data
+      - ./config:/config:ro
+    command: ["arx", "serve", "--port", "8080"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - arxos-network
+
+  arxos-daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arxos-daemon
+    restart: unless-stopped
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      ARX_DB_TYPE: postgis
+      POSTGIS_HOST: postgis
+      POSTGIS_PORT: 5432
+      POSTGIS_DB: arxos
+      POSTGIS_USER: arxos
+      POSTGIS_PASSWORD: ${POSTGIS_PASSWORD:-arxos_secure_password}
+      ARX_LOG_LEVEL: ${LOG_LEVEL:-info}
+      ARX_STATE_DIR: /data/.arxos
+      ARX_CACHE_DIR: /data/.arxos/cache
+      DAEMON_WATCH_PATHS: ${DAEMON_WATCH_PATHS:-/data/ifc}
+      DAEMON_POLL_INTERVAL: ${DAEMON_POLL_INTERVAL:-5s}
+      DAEMON_AUTO_EXPORT: ${DAEMON_AUTO_EXPORT:-true}
+    volumes:
+      - arxos_data:/data
+      - ifc_imports:/data/ifc
+      - exports:/data/exports
+      - ./config/daemon.yaml:/config/daemon.yaml:ro
+    command: ["arx", "daemon", "start", "--config", "/config/daemon.yaml"]
+    networks:
+      - arxos-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: arxos-pgadmin
+    restart: unless-stopped
+    profiles:
+      - debug
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@arxos.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgis
+    networks:
+      - arxos-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: arxos-redis
+    restart: unless-stopped
+    profiles:
+      - cache
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arxos-network
+
+networks:
+  arxos-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  postgis_data:
+    driver: local
+  arxos_data:
+    driver: local
+  ifc_imports:
+    driver: local
+  exports:
+    driver: local
+  pgadmin_data:
+    driver: local
+  redis_data:
+    driver: local

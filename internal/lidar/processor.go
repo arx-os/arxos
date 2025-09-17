@@ -409,10 +409,9 @@ func (p *Processor) calculateAlignment(pc *PointCloud, groundPlane *Plane) spati
 		Z: groundNormal.X*targetNormal.Y - groundNormal.Y*targetNormal.X,
 	}
 
-	// Store rotation as Euler angles (simplified)
-	transform.Rotation[0] = axis.X * angle
-	transform.Rotation[1] = axis.Y * angle
-	transform.Rotation[2] = axis.Z * angle
+	// Store rotation angle (simplified - just use Z rotation for now)
+	// In a full implementation, this would need proper 3D rotation handling
+	transform.Rotation = axis.Z * angle
 
 	// Calculate translation to center the point cloud
 	stats := pc.CalculateStatistics()

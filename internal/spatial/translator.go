@@ -231,8 +231,11 @@ func (ct *CoordinateTranslator) CalculateGridDelta(from, to Point3D) GridDelta {
 // GetTransform returns the transformation matrix for the building
 func (ct *CoordinateTranslator) GetTransform() Transform {
 	return Transform{
+		Origin:      ct.buildingOrigin,
 		Translation: ct.localOrigin,
-		Rotation:    [3]float64{0, 0, ct.rotation},
+		Rotation:    ct.rotation,
+		GridScale:   ct.gridScale,
+		FloorHeight: ct.floorHeight,
 		Scale:       1.0,
 	}
 }
@@ -245,17 +248,16 @@ func (ct *CoordinateTranslator) ApplyTransform(point Point3D, transform Transfor
 // InverseTransform calculates the inverse of a transformation
 func (ct *CoordinateTranslator) InverseTransform(transform Transform) Transform {
 	return Transform{
+		Origin: transform.Origin,
 		Translation: Point3D{
 			X: -transform.Translation.X,
 			Y: -transform.Translation.Y,
 			Z: -transform.Translation.Z,
 		},
-		Rotation: [3]float64{
-			-transform.Rotation[0],
-			-transform.Rotation[1],
-			-transform.Rotation[2],
-		},
-		Scale: 1.0 / transform.Scale,
+		Rotation:    -transform.Rotation,
+		GridScale:   transform.GridScale,
+		FloorHeight: transform.FloorHeight,
+		Scale:       1.0 / transform.Scale,
 	}
 }
 

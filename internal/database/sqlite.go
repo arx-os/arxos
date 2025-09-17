@@ -3,13 +3,14 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
-	
+
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/pkg/models"
 )
@@ -73,10 +74,10 @@ func (s *SQLiteDB) Connect(ctx context.Context, dbPath string) error {
 	
 	s.db = db
 	
-	// Run migrations
-	if err := RunMigrations(db, "./migrations"); err != nil {
+	// Run migrations using embedded files
+	if err := RunMigrations(db, ""); err != nil {
 		logger.Warn("Failed to run migrations: %v", err)
-		// Continue anyway - migrations might not be set up yet
+		// Continue anyway for backward compatibility
 	}
 	
 	logger.Info("Connected to SQLite database: %s", absPath)
@@ -98,7 +99,7 @@ func (s *SQLiteDB) Migrate(ctx context.Context) error {
 		return fmt.Errorf("database not connected")
 	}
 
-	return RunMigrations(s.db, "./migrations")
+	return RunMigrations(s.db, "") // Use embedded migrations
 }
 
 // GetVersion returns the current database schema version
@@ -354,18 +355,18 @@ func (s *SQLiteDB) DeleteFloorPlan(ctx context.Context, id string) error {
 // GetEquipment retrieves equipment by ID
 func (s *SQLiteDB) GetEquipment(ctx context.Context, id string) (*models.Equipment, error) {
 	query := `
-		SELECT id, name, type, room_id, location_x, location_y, 
-		       status, notes, marked_by, marked_at, floor_plan_id
+		SELECT id, name, equipment_type, room_id, location_x, location_y, location_z,
+		       status, model, serial_number, metadata, installation_date, building_id
 		FROM equipment
 		WHERE LOWER(id) = LOWER(?)
 	`
-	
+
 	var equipment models.Equipment
-	var locationX, locationY sql.NullFloat64
-	var markedAt sql.NullTime
-	var roomID sql.NullString
-	var floorPlanID string
-	
+	var locationX, locationY, locationZ sql.NullFloat64
+	var roomID, model, serial, buildingID sql.NullString
+	var metadataJSON sql.NullString
+	var installDate sql.NullTime
+
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&equipment.ID,
 		&equipment.Name,
@@ -373,11 +374,13 @@ func (s *SQLiteDB) GetEquipment(ctx context.Context, id string) (*models.Equipme
 		&roomID,
 		&locationX,
 		&locationY,
+		&locationZ,
 		&equipment.Status,
-		&equipment.Notes,
-		&equipment.MarkedBy,
-		&markedAt,
-		&floorPlanID,
+		&model,
+		&serial,
+		&metadataJSON,
+		&installDate,
+		&buildingID,
 	)
 	
 	if err == sql.ErrNoRows {
@@ -396,21 +399,43 @@ func (s *SQLiteDB) GetEquipment(ctx context.Context, id string) (*models.Equipme
 			Y: locationY.Float64,
 		}
 	}
-	if markedAt.Valid {
-		t := markedAt.Time
-		equipment.MarkedAt = &t
+	if installDate.Valid {
+		t := installDate.Time
+		equipment.Installed = &t
 	}
-	
+	if model.Valid {
+		equipment.Model = model.String
+	}
+	if serial.Valid {
+		equipment.Serial = serial.String
+	}
+
+	// Parse metadata JSON
+	if metadataJSON.Valid && metadataJSON.String != "" {
+		var metadata map[string]interface{}
+		if err := json.Unmarshal([]byte(metadataJSON.String), &metadata); err == nil {
+			equipment.Metadata = metadata
+		}
+	}
+
+	// Store building_id in metadata if needed
+	if equipment.Metadata == nil {
+		equipment.Metadata = make(map[string]interface{})
+	}
+	if buildingID.Valid {
+		equipment.Metadata["building_id"] = buildingID.String
+	}
+
 	return &equipment, nil
 }
 
 // GetEquipmentByFloorPlan retrieves all equipment for a floor plan
 func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Equipment, error) {
 	query := `
-		SELECT id, name, type, room_id, location_x, location_y, 
-		       status, notes, marked_by, marked_at
+		SELECT id, name, equipment_type, room_id, location_x, location_y,
+		       status, model, serial_number
 		FROM equipment
-		WHERE floor_plan_id = ?
+		WHERE floor_id = ?
 		ORDER BY room_id, name
 	`
 	
@@ -424,9 +449,8 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 	for rows.Next() {
 		var equipment models.Equipment
 		var locationX, locationY sql.NullFloat64
-		var markedAt sql.NullTime
-		var roomID, notes, markedBy sql.NullString
-		
+		var roomID, model, serial sql.NullString
+
 		err := rows.Scan(
 			&equipment.ID,
 			&equipment.Name,
@@ -435,9 +459,8 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 			&locationX,
 			&locationY,
 			&equipment.Status,
-			&notes,
-			&markedBy,
-			&markedAt,
+			&model,
+			&serial,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan equipment: %w", err)
@@ -455,15 +478,11 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 				equipment.Location.Y = locationY.Float64
 			}
 		}
-		if notes.Valid {
-			equipment.Notes = notes.String
+		if model.Valid {
+			equipment.Model = model.String
 		}
-		if markedBy.Valid {
-			equipment.MarkedBy = markedBy.String
-		}
-		if markedAt.Valid {
-			t := markedAt.Time
-			equipment.MarkedAt = &t
+		if serial.Valid {
+			equipment.Serial = serial.String
 		}
 		
 		equipmentList = append(equipmentList, &equipment)
@@ -474,26 +493,62 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 
 // SaveEquipment saves new equipment
 func (s *SQLiteDB) SaveEquipment(ctx context.Context, equipment *models.Equipment) error {
+	// Generate equipment tag if not provided
+	equipmentTag := equipment.Path
+	if equipmentTag == "" {
+		equipmentTag = equipment.ID
+	}
+
+	// Extract building_id from metadata or use default
+	buildingID := "DEFAULT_BUILDING"
+	if equipment.Metadata != nil {
+		if bid, exists := equipment.Metadata["building"]; exists {
+			buildingID = fmt.Sprintf("%v", bid)
+		}
+	}
+
+	// Handle optional location coordinates
+	var locationX, locationY, locationZ interface{}
+	if equipment.Location != nil {
+		locationX = equipment.Location.X
+		locationY = equipment.Location.Y
+	}
+	if equipment.Metadata != nil {
+		if z, exists := equipment.Metadata["location_z"]; exists {
+			locationZ = z
+		}
+	}
+
+	// Convert metadata to JSON
+	var metadataJSON []byte
+	if equipment.Metadata != nil {
+		metadataJSON, _ = json.Marshal(equipment.Metadata)
+	}
+
 	query := `
-		INSERT INTO equipment (id, name, type, room_id, location_x, location_y, 
-		                      status, notes, marked_by, marked_at, floor_plan_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO equipment (
+			id, building_id, equipment_tag, name, equipment_type,
+			manufacturer, model, serial_number, status,
+			location_x, location_y, location_z, metadata
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		equipment.ID,
+		buildingID,
+		equipmentTag,
 		equipment.Name,
 		equipment.Type,
-		equipment.RoomID,
-		equipment.Location.X,
-		equipment.Location.Y,
+		"", // manufacturer
+		equipment.Model,
+		equipment.Serial,
 		equipment.Status,
-		equipment.Notes,
-		equipment.MarkedBy,
-		equipment.MarkedAt,
-		"", // floor_plan_id to be set separately
+		locationX,
+		locationY,
+		locationZ,
+		metadataJSON,
 	)
-	
+
 	return err
 }
 
@@ -539,26 +594,46 @@ func (s *SQLiteDB) saveEquipmentTx(ctx context.Context, tx *sql.Tx, floorPlanID 
 
 // UpdateEquipment updates existing equipment
 func (s *SQLiteDB) UpdateEquipment(ctx context.Context, equipment *models.Equipment) error {
+	// Handle optional location coordinates
+	var locationX, locationY, locationZ interface{}
+	if equipment.Location != nil {
+		locationX = equipment.Location.X
+		locationY = equipment.Location.Y
+	}
+	if equipment.Metadata != nil {
+		if z, exists := equipment.Metadata["location_z"]; exists {
+			locationZ = z
+		}
+	}
+
+	// Convert metadata to JSON
+	var metadataJSON []byte
+	if equipment.Metadata != nil {
+		metadataJSON, _ = json.Marshal(equipment.Metadata)
+	}
+
 	query := `
-		UPDATE equipment 
-		SET name = ?, type = ?, room_id = ?, location_x = ?, location_y = ?,
-		    status = ?, notes = ?, marked_by = ?, marked_at = ?
-		WHERE LOWER(id) = LOWER(?)
+		UPDATE equipment
+		SET name = ?, equipment_type = ?,
+		    location_x = ?, location_y = ?, location_z = ?,
+		    status = ?, model = ?, serial_number = ?, metadata = ?,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		equipment.Name,
 		equipment.Type,
-		equipment.RoomID,
-		equipment.Location.X,
-		equipment.Location.Y,
+		locationX,
+		locationY,
+		locationZ,
 		equipment.Status,
-		equipment.Notes,
-		equipment.MarkedBy,
-		equipment.MarkedAt,
+		equipment.Model,
+		equipment.Serial,
+		metadataJSON,
 		equipment.ID,
 	)
-	
+
 	return err
 }
 

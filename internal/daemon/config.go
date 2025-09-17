@@ -41,6 +41,33 @@ func DefaultConfig() *Config {
 	}
 }
 
+// LoadFromFile loads configuration from a YAML or JSON file (method version)
+func (c *Config) LoadFromFile(filename string) error {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	ext := filepath.Ext(filename)
+	switch ext {
+	case ".yaml", ".yml":
+		return yaml.Unmarshal(data, c)
+	case ".json":
+		return json.Unmarshal(data, c)
+	default:
+		// Try YAML first, then JSON
+		if err := yaml.Unmarshal(data, c); err != nil {
+			return json.Unmarshal(data, c)
+		}
+		return nil
+	}
+}
+
+// SaveToFile saves configuration to a YAML or JSON file (method version)
+func (c *Config) SaveToFile(filename string) error {
+	return SaveConfig(c, filename)
+}
+
 // LoadConfig loads configuration from file
 func LoadConfig(path string) (*Config, error) {
 	data, err := ioutil.ReadFile(path)

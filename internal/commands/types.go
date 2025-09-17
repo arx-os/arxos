@@ -67,6 +67,12 @@ type QueryOptions struct {
 	Spatial    string
 	Format     string
 	OutputFile string
+
+	// Spatial query parameters
+	Near      string  // Coordinates for proximity search (x,y,z)
+	Radius    float64 // Search radius in meters
+	Within    string  // Bounding box (minX,minY,minZ,maxX,maxY,maxZ)
+	Contains  string  // Point to check containment (x,y,z)
 }
 
 // SyncOptions defines options for the sync command

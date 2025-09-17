@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: arxos-postgis-test
+    environment:
+      POSTGRES_USER: arxos
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: arxos_test
+      POSTGIS_VERSION: 3.4
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/init-postgis.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - postgis-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arxos -d arxos_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      ARXOS_DB_TYPE: postgis
+      ARXOS_POSTGIS_URL: postgres://arxos:testpass@postgis:5432/arxos_test?sslmode=disable
+      CGO_ENABLED: 1
+      GOOS: linux
+      GOARCH: amd64
+    volumes:
+      - .:/app
+      - go-cache:/go/pkg/mod
+    working_dir: /app
+    command: go test ./... -tags=integration -v
+
+volumes:
+  postgis-data:
+  go-cache:

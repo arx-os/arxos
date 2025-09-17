@@ -37,6 +37,11 @@ var (
 	queryGroupBy   string
 	queryMetric    string
 	queryExport    string
+	// Spatial query flags
+	queryNear      string
+	queryRadius    float64
+	queryWithin    string
+	queryContains  string
 )
 
 func init() {
@@ -58,6 +63,12 @@ func init() {
 	queryCmd.Flags().StringVar(&queryGroupBy, "group-by", "", "Group results by field for visualization")
 	queryCmd.Flags().StringVar(&queryMetric, "metric", "", "Metric to visualize (count, sum, avg)")
 	queryCmd.Flags().StringVar(&queryExport, "export", "", "Export visualization to file")
+
+	// Spatial query flags
+	queryCmd.Flags().StringVar(&queryNear, "near", "", "Find equipment near coordinates (x,y,z)")
+	queryCmd.Flags().Float64Var(&queryRadius, "radius", 0, "Search radius in meters (use with --near)")
+	queryCmd.Flags().StringVar(&queryWithin, "within", "", "Find equipment within bounding box (minX,minY,minZ,maxX,maxY,maxZ)")
+	queryCmd.Flags().StringVar(&queryContains, "contains", "", "Find equipment containing point (x,y,z)")
 }
 
 func runQuery(cmd *cobra.Command, args []string) error {
@@ -80,6 +91,11 @@ func runQuery(cmd *cobra.Command, args []string) error {
 		Offset:   queryOffset,
 		Count:    queryCount,
 		Fields:   queryFields,
+		// Spatial query parameters
+		Near:     queryNear,
+		Radius:   queryRadius,
+		Within:   queryWithin,
+		Contains: queryContains,
 	}
 
 	// Validate output format

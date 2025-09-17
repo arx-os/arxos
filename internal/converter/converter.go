@@ -84,8 +84,11 @@ func (r *ConverterRegistry) ConvertFile(inputPath, outputPath string) error {
 // Building represents the universal building data model
 type Building struct {
 	ID          string      `json:"id"`
+	GUID        string      `json:"guid"`        // Global Unique ID from IFC
 	Name        string      `json:"name"`
+	Description string      `json:"description"`
 	Address     string      `json:"address"`
+	Project     string      `json:"project"`     // Project name for IFC
 	Metadata    Metadata    `json:"metadata"`
 	Floors      []Floor     `json:"floors"`
 	Systems     []System    `json:"systems"`
@@ -103,6 +106,8 @@ type Metadata struct {
 
 type Floor struct {
 	ID        string     `json:"id"`
+	GUID      string     `json:"guid"`      // Global Unique ID from IFC
+	IFCId     string     `json:"ifc_id"`    // Original IFC entity ID
 	Name      string     `json:"name"`
 	Level     int        `json:"level"`
 	Elevation float64    `json:"elevation"`
@@ -113,6 +118,8 @@ type Floor struct {
 
 type Room struct {
 	ID         string      `json:"id"`
+	GUID       string      `json:"guid"`       // Global Unique ID from IFC
+	IFCId      string      `json:"ifc_id"`     // Original IFC entity ID
 	Name       string      `json:"name"`
 	Number     string      `json:"number"`
 	Type       string      `json:"type"`
@@ -124,12 +131,16 @@ type Room struct {
 
 type Equipment struct {
 	ID           string            `json:"id"`
+	GUID         string            `json:"guid"`         // Global Unique ID from IFC
+	IFCId        string            `json:"ifc_id"`       // Original IFC entity ID
+	IFCType      string            `json:"ifc_type"`     // Original IFC type
 	Tag          string            `json:"tag"`
 	Name         string            `json:"name"`
 	Type         string            `json:"type"`
 	Category     string            `json:"category"`
 	Manufacturer string            `json:"manufacturer"`
 	Model        string            `json:"model"`
+	SerialNumber string            `json:"serial_number"`
 	Serial       string            `json:"serial"`
 	Status       string            `json:"status"`
 	Location     Location          `json:"location"`

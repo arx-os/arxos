@@ -115,9 +115,12 @@ type GPSCoordinate struct {
 
 // Transform represents a 3D transformation matrix
 type Transform struct {
-	Translation Point3D    `json:"translation"`
-	Rotation    [3]float64 `json:"rotation"` // Euler angles in degrees
-	Scale       float64    `json:"scale"`
+	Origin      GPSCoordinate `json:"origin"`      // GPS origin for building
+	Translation Point3D       `json:"translation"`
+	Rotation    float64       `json:"rotation"`    // Single rotation angle in degrees
+	GridScale   float64       `json:"grid_scale"`  // Meters per grid unit
+	FloorHeight float64       `json:"floor_height"` // Meters between floors
+	Scale       float64       `json:"scale"`
 }
 
 // Apply applies the transform to a point
@@ -132,39 +135,35 @@ func (t Transform) Apply(p Point3D) Point3D {
 	return rotated.Add(t.Translation)
 }
 
-// applyRotation applies rotation using Euler angles
+// applyRotation applies rotation around Z axis (for building orientation)
 func (t Transform) applyRotation(p Point3D) Point3D {
 	// Convert degrees to radians
-	rx := t.Rotation[0] * math.Pi / 180
-	ry := t.Rotation[1] * math.Pi / 180
-	rz := t.Rotation[2] * math.Pi / 180
+	theta := t.Rotation * math.Pi / 180
 
-	// Rotation around X axis
-	cosX, sinX := math.Cos(rx), math.Sin(rx)
-	y1 := p.Y*cosX - p.Z*sinX
-	z1 := p.Y*sinX + p.Z*cosX
+	// Rotation around Z axis (2D rotation in XY plane)
+	cosTheta, sinTheta := math.Cos(theta), math.Sin(theta)
+	x := p.X*cosTheta - p.Y*sinTheta
+	y := p.X*sinTheta + p.Y*cosTheta
 
-	// Rotation around Y axis
-	cosY, sinY := math.Cos(ry), math.Sin(ry)
-	x2 := p.X*cosY + z1*sinY
-	z2 := -p.X*sinY + z1*cosY
-
-	// Rotation around Z axis
-	cosZ, sinZ := math.Cos(rz), math.Sin(rz)
-	x3 := x2*cosZ - y1*sinZ
-	y3 := x2*sinZ + y1*cosZ
-
-	return Point3D{X: x3, Y: y3, Z: z2}
+	return Point3D{X: x, Y: y, Z: p.Z}
 }
 
 // ConfidenceLevel represents the confidence in spatial data
 type ConfidenceLevel int
 
 const (
-	ConfidenceEstimated ConfidenceLevel = iota // PDF/IFC without verification
-	ConfidenceLow                              // Automated detection
-	ConfidenceMedium                           // Partial verification
-	ConfidenceHigh                             // LiDAR or AR verified
+	CONFIDENCE_ESTIMATED ConfidenceLevel = iota // PDF/IFC without verification
+	CONFIDENCE_LOW                              // Automated detection
+	CONFIDENCE_MEDIUM                           // Partial verification
+	CONFIDENCE_HIGH                             // LiDAR or AR verified
+)
+
+// Alias names for backwards compatibility
+const (
+	ConfidenceEstimated = CONFIDENCE_ESTIMATED
+	ConfidenceLow       = CONFIDENCE_LOW
+	ConfidenceMedium    = CONFIDENCE_MEDIUM
+	ConfidenceHigh      = CONFIDENCE_HIGH
 )
 
 // String returns the string representation of confidence level
@@ -192,11 +191,18 @@ type SpatialMetadata struct {
 	PositionSource     string          `json:"position_source"`
 	PositionUpdated    time.Time       `json:"position_updated"`
 	Orientation        [3]float64      `json:"orientation,omitempty"` // Euler angles
+	LastUpdated        time.Time       `json:"last_updated"`
+	Source             string          `json:"source"`
+	DistanceFromQuery  float64         `json:"distance_from_query,omitempty"`
 }
 
 // SpatialExtent represents the spatial coverage of a region
 type SpatialExtent struct {
 	Boundary []Point2D `json:"boundary"` // 2D polygon boundary
+	MinX     float64   `json:"min_x"`
+	MinY     float64   `json:"min_y"`
+	MaxX     float64   `json:"max_x"`
+	MaxY     float64   `json:"max_y"`
 	MinZ     float64   `json:"min_z"`
 	MaxZ     float64   `json:"max_z"`
 }
@@ -205,7 +211,9 @@ type SpatialExtent struct {
 type ScannedRegion struct {
 	ID           string        `json:"id"`
 	BuildingID   string        `json:"building_id"`
+	Floor        int           `json:"floor"`
 	Region       SpatialExtent `json:"region"`
+	Boundary     SpatialExtent `json:"boundary"`     // Simplified boundary for PostGIS
 	ScanDate     time.Time     `json:"scan_date"`
 	ScanType     string        `json:"scan_type"`     // "lidar", "photogrammetry", "ar_verify"
 	PointDensity float64       `json:"point_density"` // points per square meter
@@ -271,7 +279,10 @@ type ARCoordinate struct {
 // SpatialAnchor represents an AR spatial anchor
 type SpatialAnchor struct {
 	ID            string    `json:"id"`
+	BuildingID    string    `json:"building_id"`
+	Position      Point3D   `json:"position"`
 	WorldPosition Point3D   `json:"world_position"`
+	Type          string    `json:"type"`
 	Created       time.Time `json:"created"`
 	LastSeen      time.Time `json:"last_seen"`
 	Confidence    float64   `json:"confidence"`

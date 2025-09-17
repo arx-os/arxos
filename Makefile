@@ -15,7 +15,7 @@ COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 # Build flags with version info
 BUILD_FLAGS := -ldflags "$(LDFLAGS) -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.Commit=$(COMMIT)"
 
-.PHONY: all build clean test run install help dev docker deploy
+.PHONY: all build clean test run install help dev docker deploy test-integration docker-test-up docker-test-down
 
 # Default target
 all: build
@@ -126,6 +126,26 @@ deploy-prod:
 	@echo "⚠️  Make sure to configure .env file first"
 	docker-compose -f docker-compose.yml up -d
 	@echo "✅ Production deployment complete"
+
+# PostGIS test commands
+docker-test-up:
+	@echo "🐳 Starting PostGIS test container..."
+	@docker-compose -f docker-compose.test.yml up -d postgis
+	@sleep 5
+	@echo "✅ PostGIS test container ready"
+
+docker-test-down:
+	@echo "🛑 Stopping PostGIS test container..."
+	@docker-compose -f docker-compose.test.yml down -v
+	@echo "✅ PostGIS test container stopped"
+
+test-integration: docker-test-up
+	@echo "🧪 Running integration tests..."
+	@ARXOS_DB_TYPE=postgis \
+	 ARXOS_POSTGIS_URL=postgres://arxos:testpass@localhost:5432/arxos_test?sslmode=disable \
+	 $(GO) test -tags=integration $(GOFLAGS) ./internal/database/...
+	@$(MAKE) docker-test-down
+	@echo "✅ Integration tests complete"
 
 # Database commands
 db-backup:

@@ -39,7 +39,11 @@ type Config struct {
 	
 	// Storage settings
 	Storage StorageConfig `json:"storage"`
-	
+
+	// Database settings
+	Database DatabaseConfig `json:"database"`
+	PostGIS  PostGISConfig  `json:"postgis"`
+
 	// API settings
 	API APIConfig `json:"api"`
 	
@@ -74,6 +78,26 @@ type StorageConfig struct {
 	CloudRegion  string            `json:"cloud_region"`
 	CloudPrefix  string            `json:"cloud_prefix"`
 	Credentials  map[string]string `json:"-"` // Sensitive, not serialized
+}
+
+// DatabaseConfig defines database configuration
+type DatabaseConfig struct {
+	Type         string        `json:"type"` // sqlite, postgres
+	Path         string        `json:"path"` // For SQLite
+	MaxOpenConns int           `json:"max_open_conns"`
+	MaxIdleConns int           `json:"max_idle_conns"`
+	ConnLifetime time.Duration `json:"conn_lifetime"`
+}
+
+// PostGISConfig defines PostGIS spatial database configuration
+type PostGISConfig struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Database string `json:"database"`
+	User     string `json:"user"`
+	Password string `json:"-"` // Sensitive
+	SSLMode  string `json:"ssl_mode"`
+	SRID     int    `json:"srid"` // Spatial reference ID (default: 900913)
 }
 
 // APIConfig contains API client configuration

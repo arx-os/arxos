@@ -16,6 +16,12 @@ import (
 
 // ExecuteQuery handles database queries using proper SQL queries
 func ExecuteQuery(opts QueryOptions) error {
+	// Check if spatial parameters are provided
+	if hasSpatialParams(opts) {
+		// Route to spatial query handler
+		return ExecuteSpatialQuery(opts)
+	}
+
 	ctx := context.Background()
 
 	// Connect to database

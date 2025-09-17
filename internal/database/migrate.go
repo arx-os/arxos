@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"io/fs"
 	"os"
@@ -11,6 +12,11 @@ import (
 
 	"github.com/arx-os/arxos/internal/common/logger"
 )
+
+// Embed all migration files
+//
+//go:embed migrations/*.sql
+var embeddedMigrations embed.FS
 
 // Migration represents a database migration
 type Migration struct {
@@ -173,9 +179,22 @@ func (m *MigrationRunner) ensureMigrationsTable() error {
 	return err
 }
 
-// loadMigrations loads all migration files from the migrations directory
+// loadMigrations loads all migration files from embedded filesystem or directory
 func (m *MigrationRunner) loadMigrations() ([]*Migration, error) {
 	var migrations []*Migration
+
+	// Try embedded migrations first
+	embeddedMigs, err := m.loadEmbeddedMigrations()
+	if err == nil && len(embeddedMigs) > 0 {
+		logger.Debug("Using %d embedded migrations", len(embeddedMigs))
+		return embeddedMigs, nil
+	}
+
+	// Fall back to filesystem if path provided
+	if m.migrationsPath == "" {
+		logger.Debug("No migrations path provided and no embedded migrations found")
+		return migrations, nil
+	}
 
 	// Check if migrations directory exists
 	if _, err := os.Stat(m.migrationsPath); os.IsNotExist(err) {
@@ -184,7 +203,7 @@ func (m *MigrationRunner) loadMigrations() ([]*Migration, error) {
 	}
 
 	// Read migration files
-	err := filepath.WalkDir(m.migrationsPath, func(path string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(m.migrationsPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -241,6 +260,83 @@ func (m *MigrationRunner) loadMigrations() ([]*Migration, error) {
 				Version: version,
 				Name:    name,
 			}
+			migrations = append(migrations, migration)
+		}
+
+		// Set SQL content
+		if isUp {
+			migration.UpSQL = string(content)
+		} else {
+			migration.DownSQL = string(content)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Sort migrations by version
+	sort.Slice(migrations, func(i, j int) bool {
+		return migrations[i].Version < migrations[j].Version
+	})
+
+	return migrations, nil
+}
+
+// loadEmbeddedMigrations loads migrations from embedded filesystem
+func (m *MigrationRunner) loadEmbeddedMigrations() ([]*Migration, error) {
+	var migrations []*Migration
+	migrationMap := make(map[string]*Migration)
+
+	// Walk embedded migrations directory
+	err := fs.WalkDir(embeddedMigrations, "migrations", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories and non-SQL files
+		if d.IsDir() || !strings.HasSuffix(path, ".sql") {
+			return nil
+		}
+
+		filename := filepath.Base(path)
+
+		// Parse version from filename (e.g., "001_initial.up.sql")
+		parts := strings.Split(filename, "_")
+		if len(parts) < 2 {
+			return nil
+		}
+		version := parts[0]
+
+		// Determine if this is an up or down migration
+		isUp := strings.Contains(filename, ".up.sql")
+		if !isUp && !strings.Contains(filename, ".down.sql") {
+			return nil
+		}
+
+		// Read file content
+		content, err := fs.ReadFile(embeddedMigrations, path)
+		if err != nil {
+			return fmt.Errorf("failed to read migration %s: %w", path, err)
+		}
+
+		// Get or create migration
+		migration := migrationMap[version]
+		if migration == nil {
+			// Extract name from filename
+			nameEnd := strings.LastIndex(filename, ".up.sql")
+			if nameEnd < 0 {
+				nameEnd = strings.LastIndex(filename, ".down.sql")
+			}
+			name := filename[len(version)+1 : nameEnd]
+
+			migration = &Migration{
+				Version: version,
+				Name:    name,
+			}
+			migrationMap[version] = migration
 			migrations = append(migrations, migration)
 		}
 

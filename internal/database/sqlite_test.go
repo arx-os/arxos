@@ -159,7 +159,7 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 	// Update the floor plan
 	plan.Building = "Building B"
 	plan.Level = 2
-	plan.Rooms = []models.Room{
+	plan.Rooms = []*models.Room{
 		{
 			ID:   "room2",
 			Name: "Updated Room",
@@ -169,13 +169,13 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 			},
 		},
 	}
-	plan.Equipment = []models.Equipment{
+	plan.Equipment = []*models.Equipment{
 		{
 			ID:       "new_eq",
 			Name:     "New Equipment",
 			Type:     "switch",
 			RoomID:   "room2",
-			Location: models.Point{X: 5, Y: 5},
+			Location: &models.Point{X: 5, Y: 5},
 			Status:   models.StatusNormal,
 		},
 	}

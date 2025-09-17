@@ -1,18 +1,15 @@
 # ArxOS Development Plan
 
-**Version**: 2.0  
-**Created**: September 17, 2025  
-**Updated**: September 17, 2025  
-**Status**: In Progress - PostGIS Architecture  
+**Version**: 3.0
+**Created**: September 17, 2025
+**Updated**: September 17, 2025
+**Status**: In Progress - PostGIS Architecture Implementation
 
-## 🎯 Overview
+## 🎯 Executive Summary
 
-This document outlines the development plan for implementing ArxOS as a PostGIS-centric professional BIM integration platform:
+ArxOS has a **strong architectural foundation** with well-designed interfaces and patterns aligned with our PostGIS-centric professional BIM integration vision. The main gaps are **missing implementations** rather than architectural misalignments. This unified plan incorporates gap analysis findings into actionable development tasks.
 
-1. **PostGIS Core Implementation**: Single source of truth for all spatial data ✅ 
-2. **Professional BIM Integration**: IFC-focused daemon for seamless BIM tool workflow
-3. **Export Pipeline**: PostGIS to multiple formats (IFC, BIM, PDF)
-4. **Repository & Collaboration**: Git-based version control with automatic updates
+**Overall Assessment**: 🟡 **Foundation Strong, Implementation Required**
 
 ## 🏗️ Architecture Philosophy
 
@@ -24,371 +21,422 @@ This document outlines the development plan for implementing ArxOS as a PostGIS-
 
 **Professional Workflow Integration**: Daemon monitors IFC exports from any BIM tool, automatically updating PostGIS and regenerating collaborative formats.
 
-## 📊 Current State Analysis
+## 📊 Current State & Gap Analysis
 
-### 1. Query System Status 🔍 ✅
-- **Status**: Completed (Phase 1.1)
-- **Current**: Full SQL-based query engine with PostGIS integration
-- **Completed**: Database queries, filtering, spatial operations, output formats
-- **Foundation**: Comprehensive QueryBuilder with parameterized SQL queries
-- **Files**: `internal/commands/query.go`, `internal/commands/query_test.go`
+### Component Status Overview
 
-### 2. PostGIS Integration Status 🗺️
-- **Status**: Foundation Ready
-- **Current**: Database schema supports spatial operations, basic structure exists
-- **Missing**: Full PostGIS client implementation, spatial indexing, coordinate transformations
-- **Foundation**: Spatial types defined, migration structure in place
-- **Files**: `internal/database/spatial.go`, `internal/spatial/translator.go`
+| Priority | Component | Current State | Gap | Impact |
+|----------|-----------|---------------|-----|--------|
+| 🚨 **Critical** | PostGIS Database | Schema only, no connection | Missing implementation | Blocks all spatial operations |
+| 🔶 **High** | IFC → PostGIS Pipeline | Parser exists, no DB output | Missing database integration | Blocks professional workflow |
+| 🔶 **High** | Professional BIM Daemon | Framework ready, not implemented | IFC processing TODO | Blocks professional adoption |
+| 🔶 **Medium** | CLI Spatial Commands | Structure ready, no spatial flags | Missing spatial parameters | Limits spatial control |
+| ✅ **Complete** | Query System | Full SQL engine with filters | Working | Foundation complete |
 
-### 3. IFC Processing Status 📐
-- **Status**: Basic Implementation
-- **Current**: IFC parser exists with basic entity extraction
-- **Missing**: Direct PostGIS output, professional workflow integration
-- **Foundation**: IFC entity parsing, converter registry pattern
-- **Files**: `internal/converter/ifc_improved.go`, `internal/converter/converter.go`
+### Architecture Strengths
 
-### 4. Professional Integration Status 👔
-- **Status**: Not Implemented
-- **Current**: Basic command stubs exist
-- **Missing**: IFC file monitoring daemon, automatic processing, professional workflows
-- **Foundation**: Command structure ready, daemon architecture planned
-- **Files**: `cmd/arx/cmd_daemon.go` (placeholder)
+- **HybridDB Design**: PostGIS-primary with SQLite fallback ready
+- **Spatial Interface**: Comprehensive spatial operation definitions
+- **Converter System**: IFC parser and PDF extraction working
+- **Daemon Infrastructure**: File monitoring and worker system ready
+- **Development Patterns**: Clean interfaces, proper Go patterns
 
 ## 🚀 Implementation Plan
 
-### Phase 1: PostGIS Core Implementation (Week 1-2)
+### Phase 1: PostGIS Core Foundation (Week 1)
 
-**Duration**: 10 days  
-**Priority**: Critical - Foundation for all other systems
+**Duration**: 5 days
+**Priority**: 🚨 Critical - Blocks all spatial features
 
-#### Tasks
+#### Task 1.1: Database Query Engine ✅
+- **Status**: COMPLETED
+- **Files**: `internal/commands/query.go`, `internal/commands/query_test.go`
 
-- [x] **Task 1.1: Database Query Engine** (3 days) ✅
-  - [x] Complete SQL-based query engine with proper filtering
-  - [x] Enhanced table, JSON, and CSV output formats  
-  - [x] Advanced filtering: building, floor, type, status, room, system
-  - [x] Query result pagination and counting
-  - **Files**: `internal/commands/query.go`, `internal/commands/query_test.go`
+#### Task 1.2: PostGIS Database Implementation
+**Duration**: 2 days
+**Priority**: Critical
 
-- [ ] **Task 1.2: PostGIS Integration** (3 days)
-  - [ ] Set up PostGIS as primary spatial database
-  - [ ] Implement spatial query operations (distance, bounding box, proximity)
-  - [ ] Create equipment positioning with full coordinate precision
-  - [ ] Add spatial indexing for performance
-  - **Files**: `internal/database/postgis.go`, `internal/spatial/postgis_client.go`
+##### Implementation Steps:
+1. **Add PostgreSQL driver** to `go.mod`
+   ```go
+   require (
+       github.com/lib/pq v1.10.9  // or github.com/jackc/pgx/v5
+   )
+   ```
 
-- [ ] **Task 1.3: IFC Import Pipeline** (3 days)
-  - [ ] Enhanced IFC parser with direct PostGIS output
-  - [ ] Coordinate system transformation and validation
-  - [ ] Equipment extraction with spatial positioning
-  - [ ] Building structure mapping (floors, rooms, zones)
-  - **Files**: `internal/converter/ifc_improved.go`, `internal/importer/ifc_pipeline.go`
+2. **Create PostGIS implementation** (`internal/database/postgis.go`)
+   ```go
+   package database
 
-- [ ] **Task 1.4: BIM Generation Pipeline** (1 day)
-  - [ ] PostGIS to .bim.txt conversion with grid coordinate mapping
-  - [ ] Maintain human-readable format while preserving spatial relationships
-  - [ ] Git-friendly diff generation for building changes
-  - **Files**: `internal/exporter/bim_generator.go`
+   type PostGISDB struct {
+       db *sql.DB
+       config PostGISConfig
+   }
 
-- [ ] **Task 1.5: CLI Spatial Control Commands** (2 days)
-  - [ ] Implement `arx update <path> --location "x,y,z"` for precise positioning
-  - [ ] Add `arx move <path> --by "dx,dy,dz"` for relative movements  
-  - [ ] Create `arx add <path> --location "x,y,z"` with exact coordinates
-  - [ ] Implement spatial validation and coordinate parsing
-  - [ ] Add CLI spatial query commands (--near, --within, --contains)
-  - **Files**: `cmd/arx/cmd_crud.go`, `internal/commands/crud.go`, `internal/commands/spatial.go`
+   func (p *PostGISDB) Connect(ctx context.Context, config PostGISConfig) error
+   func (p *PostGISDB) QuerySpatial(ctx context.Context, query SpatialQuery) (*SpatialResult, error)
+   func (p *PostGISDB) StoreEquipment(ctx context.Context, eq *Equipment, coords Point3D) error
+   ```
 
-### Phase 2: Professional BIM Integration (Week 2-3)
+3. **Implement spatial queries**
+   - ST_Distance for proximity queries
+   - ST_Contains for containment
+   - ST_DWithin for radius searches
+   - Spatial indexing setup
 
-**Duration**: 9 days  
-**Priority**: High - Key differentiator for professional adoption
+**Files to Create/Modify**:
+- [ ] `internal/database/postgis.go` (NEW)
+- [ ] `internal/database/postgis_test.go` (NEW)
+- [ ] `go.mod` (ADD PostgreSQL driver)
+- [ ] `internal/database/hybrid.go` (CONNECT PostGIS)
 
-#### Tasks
+#### Task 1.3: Wire HybridDB to Query System
+**Duration**: 1 day
+**Priority**: Critical
 
-- [ ] **Task 2.1: IFC File Monitoring Daemon** (3 days)
-  - [ ] Universal IFC file watching (any BIM tool output)
-  - [ ] File change detection and processing queue
-  - [ ] Automatic import pipeline integration
-  - [ ] Error handling and notification system
-  - **Files**: `internal/daemon/ifc_watcher.go`, `cmd/arx/cmd_daemon.go`
+**Implementation**:
+- Connect query command to HybridDB
+- Add PostGIS detection and fallback logic
+- Test spatial query execution
 
-- [ ] **Task 2.2: Professional Installation Workflow** (2 days)
-  - [ ] Streamlined setup for BIM professionals
-  - [ ] IFC export folder configuration
-  - [ ] Automatic daemon service installation
-  - [ ] Professional workflow documentation
-  - **Files**: `cmd/arx/cmd_install.go`, `internal/daemon/professional.go`
+**Files to Modify**:
+- [ ] `internal/commands/query.go` (USE HybridDB)
+- [ ] `cmd/arx/cmd_query.go` (INIT HybridDB)
 
-- [ ] **Task 2.3: Automatic Export Generation** (2 days)
-  - [ ] PostGIS to IFC export with full precision
-  - [ ] Automatic .bim.txt regeneration on PostGIS changes
-  - [ ] Git integration for version tracking
-  - [ ] Export format validation and quality checks
-  - **Files**: `internal/exporter/ifc_exporter.go`, `internal/daemon/auto_export.go`
+#### Task 1.4: CLI Spatial Query Flags
+**Duration**: 2 days
+**Priority**: High
 
-- [ ] **Task 2.4: Multi-Format Export Pipeline** (2 days)
-  - [ ] PostGIS to PDF floor plan generation
-  - [ ] PostGIS to CSV/JSON data exports
-  - [ ] Template-based report generation
-  - [ ] Batch export capabilities
-  - **Files**: `internal/exporter/pdf_renderer.go`, `internal/exporter/multi_format.go`
-
-### Phase 3: Repository & Collaboration (Week 3-4)  
-
-**Duration**: 8 days
-**Priority**: Medium - Enhanced collaboration features
-
-#### Tasks
-
-- [ ] **Task 3.1: Git Repository Integration** (3 days)
-  - [ ] Building repository initialization and management
-  - [ ] Automatic .bim.txt commits on PostGIS changes
-  - [ ] Branch and merge workflows for building experiments
-  - [ ] Conflict resolution for concurrent edits
-  - **Files**: `cmd/arx/cmd_repo.go`, `internal/storage/git_integration.go`
-
-- [ ] **Task 3.2: Change Tracking and Visualization** (3 days)
-  - [ ] PostGIS change detection and logging
-  - [ ] Visual diff generation for building changes
-  - [ ] Change impact analysis (what equipment affected)
-  - [ ] Audit trail for compliance and tracking
-  - **Files**: `internal/storage/change_tracker.go`, `internal/visualization/diff_renderer.go`
-
-- [ ] **Task 3.3: Team Collaboration Features** (2 days)
-  - [ ] Multi-user PostGIS access coordination
-  - [ ] Change notifications and alerts
-  - [ ] Role-based access control for building data
-  - [ ] Collaborative workflow documentation
-  - **Files**: `internal/api/collaboration.go`, `internal/auth/rbac.go`
-
-### Phase 4: Testing & Performance (Week 4-5)
-
-**Duration**: 8 days
-**Priority**: High - Ensure reliability for professional use
-
-#### Tasks
-
-- [ ] **Task 4.1: PostGIS Performance Testing** (2 days)
-  - [ ] Large dataset spatial query performance
-  - [ ] IFC import processing time optimization
-  - [ ] Concurrent access and locking tests
-  - [ ] Memory usage optimization for large buildings
-  - **Files**: `internal/performance/postgis_test.go`, `internal/performance/benchmarks.go`
-
-- [ ] **Task 4.2: Professional Workflow Integration Testing** (3 days)
-  - [ ] End-to-end IFC workflow testing (multiple BIM tools)
-  - [ ] Daemon reliability and error recovery testing
-  - [ ] File watching robustness across different file systems
-  - [ ] Professional user acceptance testing scenarios
-  - **Files**: `internal/integration/professional_workflow_test.go`
-
-- [ ] **Task 4.3: Data Precision and Accuracy Testing** (2 days)
-  - [ ] IFC import/export coordinate precision validation
-  - [ ] PostGIS spatial operation accuracy testing
-  - [ ] Cross-format data consistency verification
-  - [ ] Professional BIM tool compatibility testing
-  - **Files**: `internal/precision/accuracy_test.go`, `internal/integration/bim_compatibility_test.go`
-
-- [ ] **Task 4.4: Production Deployment Testing** (1 day)
-  - [ ] Professional installation process validation
-  - [ ] Service reliability and startup testing
-  - [ ] Error logging and monitoring setup
-  - [ ] Performance monitoring and alerting
-  - **Files**: `internal/deployment/production_test.go`
-
-## 🗓️ Timeline & Dependencies
-
-### 5-Week Development Timeline
-
-```
-Week 1: PostGIS Core Foundation
-├─ Days 1-3: PostGIS Integration (Task 1.2) 
-├─ Days 4-5: IFC Import Pipeline (Task 1.3 start)
-└─ Weekend: IFC Import Pipeline (Task 1.3 continue)
-
-Week 2: PostGIS + CLI Spatial Control
-├─ Day 1: IFC Import Pipeline (Task 1.3 complete)
-├─ Day 2: BIM Generation Pipeline (Task 1.4)
-├─ Days 3-4: CLI Spatial Control Commands (Task 1.5)
-├─ Day 5: IFC File Monitoring Daemon (Task 2.1 start)
-└─ Weekend: IFC File Monitoring Daemon (Task 2.1 continue)
-
-Week 3: Professional Integration
-├─ Day 1: IFC File Monitoring Daemon (Task 2.1 complete)
-├─ Days 2-3: Professional Installation Workflow (Task 2.2)
-├─ Days 4-5: Automatic Export Generation (Task 2.3)
-└─ Weekend: Multi-Format Export Pipeline (Task 2.4)
-
-Week 4: Collaboration + Repository Integration
-├─ Days 1-2: Multi-Format Export Pipeline (Task 2.4 complete)
-├─ Days 3-4: Git Repository Integration (Task 3.1)
-├─ Day 5: Change Tracking and Visualization (Task 3.2 start)
-└─ Weekend: Change Tracking and Visualization (Task 3.2 continue)
-
-Week 5: Testing + Team Collaboration
-├─ Day 1: Change Tracking and Visualization (Task 3.2 complete)
-├─ Day 2: Team Collaboration Features (Task 3.3)
-├─ Days 3-4: PostGIS Performance Testing (Task 4.1)
-├─ Day 5: Professional Workflow Integration Testing (Task 4.2)
-└─ Weekend: Data Precision Testing (Task 4.3) + Production Testing (Task 4.4)
+**Add Spatial Flags**:
+```bash
+arx query --near "12.5,8.3,1.1" --radius 2.0
+arx query --within "building_boundary"
+arx query --contains "room_polygon"
 ```
 
-### Critical Dependencies
+**Files to Modify**:
+- [ ] `cmd/arx/cmd_query.go` (ADD spatial flags)
+- [ ] `internal/commands/query.go` (BUILD spatial queries)
+- [ ] `internal/commands/query_test.go` (TEST spatial queries)
 
-1. **PostGIS Core** → **CLI Spatial Control**: Terminal commands need PostGIS spatial operations
-2. **CLI Spatial Control** → **Professional Integration**: Daemon needs CLI spatial command infrastructure
-3. **IFC Import Pipeline** → **Export Pipeline**: Export formats depend on PostGIS data structure  
-4. **Professional Integration** → **Collaboration**: Git operations triggered by daemon and CLI changes
-5. **All Systems** → **Professional Testing**: End-to-end tests require complete BIM workflow with CLI control
+### Phase 2: IFC → PostGIS Pipeline (Week 1-2)
 
-### Parallel Work Opportunities
+**Duration**: 4 days
+**Priority**: 🔶 High - Enables professional workflow
 
-- **Week 2**: BIM generation pipeline can be developed in parallel with daemon implementation
-- **Week 3**: Export pipeline and Git integration can be developed in parallel
-- **Week 4**: Change tracking and collaboration features can be developed in parallel
-- **Week 5**: Different types of testing can be parallelized (performance, integration, precision)
+#### Task 2.1: Converter Database Interface
+**Duration**: 1 day
+**Priority**: High
+
+**Extend Converter Interface**:
+```go
+type Converter interface {
+    ConvertToBIM(input io.Reader, output io.Writer) error
+    ConvertToDB(input io.Reader, db SpatialDB) error  // NEW
+}
+```
+
+**Files to Modify**:
+- [ ] `internal/converter/converter.go` (ADD DB interface)
+- [ ] `internal/converter/types.go` (ADD spatial types)
+
+#### Task 2.2: IFC Spatial Extraction
+**Duration**: 2 days
+**Priority**: High
+
+**Implementation**:
+- Extract 3D coordinates from IFC entities
+- Map IFC coordinate system to PostGIS
+- Handle IFC units and transformations
+
+**Files to Modify**:
+- [ ] `internal/converter/ifc_improved.go` (ADD spatial extraction)
+- [ ] `internal/converter/ifc_spatial.go` (ENHANCE coordinate handling)
+
+#### Task 2.3: IFC → PostGIS Import
+**Duration**: 1 day
+**Priority**: High
+
+**Connect Pipeline**:
+```go
+func (c *ImprovedIFCConverter) ConvertToDB(input io.Reader, db SpatialDB) error {
+    entities := c.parseIFCEntities(input)
+    for _, entity := range entities {
+        coords := c.extractSpatialCoordinates(entity)
+        db.StoreEquipment(entity, coords)
+    }
+}
+```
+
+**Files to Modify**:
+- [ ] `internal/converter/ifc_improved.go` (IMPLEMENT ConvertToDB)
+- [ ] `internal/commands/import_v2.go` (USE DB import)
+
+### Phase 3: Professional BIM Integration (Week 2)
+
+**Duration**: 5 days
+**Priority**: 🔶 High - Key differentiator
+
+#### Task 3.1: Daemon IFC Processing
+**Duration**: 2 days
+**Priority**: High
+
+**Implementation**:
+- Connect daemon to IFC converter
+- Automatic PostGIS import on file detection
+- Error handling and retry logic
+
+**Files to Modify**:
+- [ ] `internal/daemon/daemon.go` (IMPLEMENT IFC processing)
+- [ ] `internal/daemon/worker.go` (ADD import job type)
+
+#### Task 3.2: Professional CLI Commands
+**Duration**: 1 day
+**Priority**: High
+
+**Add Professional Commands**:
+```bash
+arx install --professional --with-daemon
+arx daemon watch --ifc "C:\Projects\*.ifc"
+arx daemon status --show-integrations
+```
+
+**Files to Modify**:
+- [ ] `cmd/arx/cmd_daemon.go` (IMPLEMENT commands)
+- [ ] `cmd/arx/cmd_install.go` (ADD professional mode)
+
+#### Task 3.3: CLI Spatial CRUD Commands
+**Duration**: 2 days
+**Priority**: Medium
+
+**Add Spatial Parameters**:
+```bash
+arx add /3/A/301/E/OUTLET_02 --location "12.547,8.291,1.127"
+arx update OUTLET_02 --move-by "0.05,0,0"
+```
+
+**Files to Modify**:
+- [ ] `cmd/arx/cmd_crud.go` (ADD location flags)
+- [ ] `internal/commands/crud.go` (IMPLEMENT spatial updates)
+
+### Phase 4: Export & Generation Pipeline (Week 2-3)
+
+**Duration**: 4 days
+**Priority**: Medium - Enables collaboration
+
+#### Task 4.1: PostGIS → BIM Generation
+**Duration**: 1 day
+**Priority**: Medium
+
+**Implementation**:
+- Query PostGIS for all equipment
+- Convert to grid coordinates
+- Generate .bim.txt format
+
+**Files to Create**:
+- [ ] `internal/exporter/bim_generator.go` (NEW)
+- [ ] `internal/exporter/bim_generator_test.go` (NEW)
+
+#### Task 4.2: Multi-Format Export
+**Duration**: 2 days
+**Priority**: Medium
+
+**Formats**:
+- CSV/JSON data exports for reporting
+- Equipment status reports
+- Maintenance schedules
+
+**Files to Create**:
+- [ ] `internal/exporter/csv_exporter.go` (NEW)
+- [ ] `internal/exporter/json_exporter.go` (NEW)
+- [ ] `internal/exporter/report_generator.go` (NEW)
+
+#### Task 4.3: Automatic Export Generation
+**Duration**: 1 day
+**Priority**: Medium
+
+**Implementation**:
+- Trigger exports on PostGIS changes
+- Git integration for version control
+- Daemon-based automation
+
+**Files to Create**:
+- [ ] `internal/daemon/auto_export.go` (NEW)
+
+### Phase 5: Testing & Integration (Week 3)
+
+**Duration**: 5 days
+**Priority**: High - Ensure reliability
+
+#### Task 5.1: Integration Testing
+**Duration**: 2 days
+**Priority**: High
+
+**Test Scenarios**:
+- End-to-end IFC import → PostGIS → Export
+- Professional daemon workflow
+- Multi-user concurrent access
+
+**Files to Create**:
+- [ ] `internal/integration/postgis_test.go` (NEW)
+- [ ] `internal/integration/professional_workflow_test.go` (NEW)
+
+#### Task 5.2: Performance Testing
+**Duration**: 2 days
+**Priority**: Medium
+
+**Benchmarks**:
+- PostGIS spatial query performance
+- IFC import speed (target: <30s)
+- Export generation time (target: <15s)
+
+**Files to Create**:
+- [ ] `internal/performance/postgis_bench_test.go` (NEW)
+- [ ] `internal/performance/ifc_bench_test.go` (NEW)
+
+#### Task 5.3: Component Integration
+**Duration**: 1 day
+**Priority**: High
+
+**Connect All Systems**:
+- Configuration loading
+- Service initialization
+- Error propagation
+
+**Files to Modify**:
+- [ ] `internal/config/config.go` (LOAD PostGIS settings)
+- [ ] `cmd/arx/main.go` (INIT all systems)
+
+## 🗓️ Critical Path & Dependencies
+
+```mermaid
+graph TD
+    A[PostGIS Implementation] --> B[HybridDB Connection]
+    B --> C[Spatial Query Commands]
+    A --> D[IFC Spatial Extraction]
+    D --> E[IFC → PostGIS Import]
+    E --> F[Daemon IFC Processing]
+    E --> G[PostGIS → BIM Export]
+    F --> H[Professional Workflow]
+    G --> H
+    C --> H
+```
 
 ## ⚠️ Risk Mitigation
 
 ### Technical Risks
 
-- **PostGIS Learning Curve**: Complex spatial database operations
-  - *Mitigation*: Comprehensive PostGIS training, start with simple operations
-- **IFC Standard Variations**: Different BIM tools export different IFC dialects
-  - *Mitigation*: Test with multiple BIM tool outputs, flexible parsing
-- **Large File Performance**: Multi-gigabyte IFC files from complex buildings
-  - *Mitigation*: Streaming processing, background import queues
-- **Spatial Precision Loss**: Coordinate transformation accuracy
-  - *Mitigation*: High-precision coordinate handling, validation testing
-
-### Professional Adoption Risks
-
-- **Workflow Disruption**: Professionals resistant to new tools
-  - *Mitigation*: Zero-disruption design, works with existing IFC exports
-- **Tool Compatibility**: New BIM software versions breaking compatibility
-  - *Mitigation*: Standard IFC compliance, automated compatibility testing
-- **Performance Expectations**: Professional tools expect instant responses
-  - *Mitigation*: Aggressive performance optimization, background processing
-
-### Project Risks
-
-- **PostGIS Complexity**: Spatial database integration more complex than expected
-  - *Mitigation*: Start with simple spatial operations, incremental complexity
-- **IFC Standard Complexity**: IFC specification variations and edge cases
-  - *Mitigation*: Focus on common IFC patterns first, expand compatibility iteratively
-- **Professional User Feedback**: Limited access to professional BIM users for testing
-  - *Mitigation*: Use open IFC samples, engage BIM community early
+| Risk | Mitigation |
+|------|-----------|
+| PostGIS complexity | Start with basic queries, incrementally add spatial functions |
+| IFC variations | Test with samples from Revit, AutoCAD, ArchiCAD |
+| Performance issues | Profile early, optimize critical paths |
+| Integration failures | Comprehensive error handling, fallback to SQLite |
 
 ## 📈 Success Metrics
 
+### Week 1 Deliverables
+- [ ] PostGIS connection working
+- [ ] Spatial queries via CLI functional
+- [ ] IFC imports to PostGIS
+
+### Week 2 Deliverables
+- [ ] Professional daemon processing IFC files
+- [ ] Spatial CRUD commands working
+- [ ] Export pipeline operational
+
+### Week 3 Deliverables
+- [ ] All integration tests passing
+- [ ] Performance targets met
+- [ ] Professional workflow documented
+
 ### Performance Targets
-- **PostGIS Queries**: Sub-50ms response for 10K+ equipment spatial queries
-- **IFC Processing**: <30 seconds import time for typical building models
-- **File Monitoring**: <5 second detection and processing of IFC file changes
-- **Export Generation**: <15 seconds for .bim.txt generation from large PostGIS datasets
+- **PostGIS Queries**: <50ms for 10K equipment
+- **IFC Import**: <30s for typical building
+- **Export Generation**: <15s for .bim.txt
+- **Daemon Response**: <5s file detection
 
-### Professional Adoption Targets
-- **Zero-Disruption Integration**: Works with existing BIM tool workflows
-- **Universal Compatibility**: Supports IFC files from any major BIM software
-- **Automatic Sync**: >95% success rate for daemon-based file processing
-- **Data Precision**: Millimeter-level accuracy maintained through full pipeline
+## 🔄 Implementation Checklist
 
-### System Reliability Targets
-- **Daemon Uptime**: >99.5% availability for file monitoring
-- **Data Consistency**: 100% spatial data integrity between imports/exports
-- **Error Recovery**: Graceful handling of corrupted or invalid IFC files
-- **Concurrent Access**: Support for 10+ simultaneous users on single building
+### Immediate Actions (Day 1)
+- [ ] Add PostgreSQL driver to go.mod
+- [ ] Create internal/database/postgis.go skeleton
+- [ ] Set up local PostGIS for development
+- [ ] Create test IFC files
 
-### Quality Targets
-- All existing tests continue to pass
-- No regression in current functionality  
-- Clean integration between new and existing systems
-- Comprehensive error handling and user feedback
+### Week 1 Focus
+- [ ] Complete PostGIS implementation
+- [ ] Wire HybridDB to queries
+- [ ] Add spatial CLI flags
+- [ ] Begin IFC spatial extraction
 
-### Professional User Experience Targets
-- **Zero-Disruption Installation**: <10 minute setup for BIM professionals
-- **Seamless Integration**: Works with existing IFC export workflows
-- **Intuitive Commands**: Clear CLI interface matching Git-like patterns
-- **Professional Documentation**: Integration guides for major BIM tools
+### Week 2 Focus
+- [ ] Complete IFC → PostGIS pipeline
+- [ ] Implement daemon processing
+- [ ] Add spatial CRUD commands
+- [ ] Create export pipeline
 
-## 📝 Progress Tracking
+### Week 3 Focus
+- [ ] Integration testing
+- [ ] Performance optimization
+- [ ] Documentation
+- [ ] Professional workflow validation
 
-### Week 1 Progress
-- [x] Task 1.1: Database Query Engine ✅
-- [ ] Task 1.2: PostGIS Integration  
-- [ ] Task 1.3: IFC Import Pipeline (start)
+## 📝 Development Guidelines
 
-### Week 2 Progress  
-- [ ] Task 1.3: IFC Import Pipeline (complete)
-- [ ] Task 1.4: BIM Generation Pipeline
-- [ ] Task 1.5: CLI Spatial Control Commands
-- [ ] Task 2.1: IFC File Monitoring Daemon (start)
+### Code Organization
+```go
+// PostGIS implementation follows interface pattern
+type PostGISDB struct {
+    db *sql.DB
+    config PostGISConfig
+}
 
-### Week 3 Progress
-- [ ] Task 2.3: Automatic Export Generation
-- [ ] Task 2.4: Multi-Format Export Pipeline
-- [ ] Task 3.1: Git Repository Integration (start)
+// Implement SpatialDB interface
+func (p *PostGISDB) QueryBySpatialProximity(center Point3D, radius float64) ([]Equipment, error)
 
-### Week 4 Progress
-- [ ] Task 3.1: Git Repository Integration (complete)
-- [ ] Task 3.2: Change Tracking and Visualization
-- [ ] Task 3.3: Team Collaboration Features
-- [ ] Task 4.1: PostGIS Performance Testing (start)
-
-### Week 5 Progress
-- [ ] Task 4.1: PostGIS Performance Testing (complete)
-- [ ] Task 4.2: Professional Workflow Integration Testing
-- [ ] Task 4.3: Data Precision and Accuracy Testing
-- [ ] Task 4.4: Production Deployment Testing
-
-## 🔄 Review & Updates
-
-This plan should be reviewed and updated weekly:
-
-- **Monday**: Review previous week's progress
-- **Wednesday**: Mid-week checkpoint and adjustments
-- **Friday**: Plan next week's priorities
-
-## 👔 Professional BIM Integration
-
-### Target Workflow
-1. **BIM Professional** works in preferred tool (Revit, AutoCAD, ArchiCAD, etc.)
-2. **Standard Export** to IFC file (existing professional workflow)
-3. **ArxOS Daemon** automatically detects and processes IFC file
-4. **PostGIS Database** updated with precise spatial data
-5. **Team Collaboration** via automatically generated .bim.txt files in Git
-6. **Field Teams** access updated data via mobile AR interface
-
-### Professional Value Proposition
-- **No Workflow Changes**: Professionals continue using preferred BIM tools
-- **Automatic Integration**: Zero manual steps for team collaboration
-- **Universal Compatibility**: Works with any BIM tool that exports IFC
-- **Precision Maintained**: Full coordinate accuracy preserved through pipeline
-- **Version Control**: Building changes automatically tracked in Git
-- **Real-time Updates**: Team sees changes within minutes of IFC export
-
-### Professional Commands
-```bash
-# Professional installation
-arx install --professional --with-daemon
-
-# IFC monitoring setup
-arx daemon watch --ifc "C:\Projects\*.ifc"
-arx daemon status --show-integrations
-
-# Advanced exports
-arx export --format ifc --precision full
-arx export --format bim --for-git
-arx export --format pdf --floor-plans
+// Use contexts for all DB operations
+func (p *PostGISDB) Connect(ctx context.Context, config PostGISConfig) error
 ```
 
-### Change Log
+### Testing Strategy
+- Unit tests for each component
+- Integration tests for workflows
+- Benchmark tests for performance
+- Use testcontainers for PostGIS tests
 
-| Date | Version | Changes |
-|------|---------|---------|
-| 2025-09-17 | 1.0 | Initial development plan created |
-| 2025-09-17 | 2.0 | Refactored for PostGIS-centric professional BIM integration |
+### Error Handling
+- Graceful PostGIS → SQLite fallback
+- Detailed error messages for debugging
+- User-friendly error output in CLI
+
+## 🎯 Next Steps
+
+1. **Set up development environment**
+   - Install PostgreSQL/PostGIS locally or via Docker
+   - Prepare sample IFC files
+   - Configure IDE for Go development
+
+2. **Begin Task 1.2: PostGIS Implementation**
+   - Add PostgreSQL driver
+   - Create database connection
+   - Implement basic spatial queries
+
+3. **Validate approach with simple prototype**
+   - Test PostGIS connection
+   - Verify spatial query execution
+   - Confirm HybridDB switching works
 
 ---
 
-**Next Steps**: Continue with Task 1.2 (PostGIS Integration) to establish the spatial database foundation for professional BIM workflows.
+**Change Log**
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2025-09-17 | 1.0 | Initial development plan |
+| 2025-09-17 | 2.0 | PostGIS-centric refactor |
+| 2025-09-17 | 3.0 | Unified with gap analysis, detailed implementation steps |
+
+---
+
+**Critical Success Factor**: PostGIS implementation is the foundation. All other features depend on this spatial database core.

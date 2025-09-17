@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // MigrateFromOldStorage migrates data from the old complex storage system to the new coordinator

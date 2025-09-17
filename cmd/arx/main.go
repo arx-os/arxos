@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 var (
@@ -18,15 +18,21 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "arx",
-	Short: "ArxOS - Building File Converter",
-	Long: `ArxOS converts building files to the universal BIM text format.
+	Short: "ArxOS - Building Operating System",
+	Long: `ArxOS is a universal building operating system that manages building data
+with Git-like version control, spatial precision, and multi-interface support.
 
-Supported formats:
-  - IFC (Industry Foundation Classes)
-  - PDF (Floor plans, as-builts)
+Core features:
+  • Import/Export - Convert between PDF, IFC, and BIM formats
+  • Repository Management - Git-like version control for buildings
+  • Query & Search - Powerful database queries across all equipment
+  • CRUD Operations - Direct manipulation of building components
+  • File Monitoring - Auto-import with directory watching
+  • REST API - HTTP server for web and mobile clients
+  • Universal Addressing - Access any component with paths like:
+    ARXOS-001/3/A/301/E/OUTLET_01
 
-Convert any building file to .bim.txt format for version control,
-analysis, and integration with building management systems.`,
+For detailed help on any command, use: arx <command> --help`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
@@ -50,9 +56,39 @@ func main() {
 		logger.SetLevel(logger.INFO)
 	}
 
-	// Add only essential commands
+	// Wire all commands
 	rootCmd.AddCommand(
+		// System management
+		installCmd,
+
+		// Repository management
+		repoCmd,
+
+		// Import/Export
+		importCmd,
+		exportCmd,
 		convertCmd,
+
+		// Data operations
+		queryCmd,
+
+		// CRUD operations
+		addCmd,
+		getCmd,
+		updateCmd,
+		removeCmd,
+		listCmd,
+		traceCmd,
+
+		// Services
+		watchCmd,
+		serveCmd,
+
+		// Visualization
+		visualizeCmd,
+		reportCmd,
+
+		// Utility
 		versionCmd,
 	)
 

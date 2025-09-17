@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/telemetry"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/telemetry"
 )
 
 // contextKey is a type for context keys

@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/services"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/services"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // TestServerHealth tests the health endpoint

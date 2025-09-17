@@ -3,8 +3,8 @@ package database
 import (
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/spatial"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // SpatialDB defines the interface for spatial database operations

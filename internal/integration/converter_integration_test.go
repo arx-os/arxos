@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joelpate/arxos/internal/converter"
+	"github.com/arx-os/arxos/internal/converter"
 )
 
 // TestConverterIntegration tests the complete conversion pipeline

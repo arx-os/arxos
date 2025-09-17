@@ -3,7 +3,7 @@ package layers
 import (
 	"testing"
 	
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 func TestLayerManager(t *testing.T) {

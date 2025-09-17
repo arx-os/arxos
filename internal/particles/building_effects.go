@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 	
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // BuildingEffects provides particle effects for building systems

@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 	
-	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // contextKey is a custom type for context keys to avoid collisions

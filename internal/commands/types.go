@@ -9,13 +9,16 @@ type InitOptions struct {
 
 // ImportOptions defines options for the import command
 type ImportOptions struct {
-	InputFile    string
-	Format       string
-	BuildingID   string
-	BuildingName string
-	ToDatabase   bool
-	ToBIM        bool
-	OutputFile   string
+	InputFile      string
+	Format         string
+	BuildingID     string
+	BuildingName   string
+	ToDatabase     bool
+	ToBIM          bool
+	OutputFile     string
+	ValidateOnly   bool // Only validate, don't save
+	MergeExisting  bool // Merge with existing data
+	EnhanceSpatial bool // Enhance with spatial data
 }
 
 // ExportOptions defines options for the export command
@@ -26,6 +29,17 @@ type ExportOptions struct {
 	IncludeHistory    bool
 	SimulateBeforeExp bool
 	OutputFile        string
+	Template          string // Report template
+	Filters           ExportFilters
+	Verbose           bool
+}
+
+// ExportFilters for filtering export data
+type ExportFilters struct {
+	IncludeTypes []string
+	ExcludeTypes []string
+	Floors       []string
+	Systems      []string
 }
 
 // SimulateOptions defines options for the simulate command
@@ -38,10 +52,18 @@ type SimulateOptions struct {
 
 // QueryOptions defines options for the query command
 type QueryOptions struct {
-	BuildingID string
+	Building   string // Building ID filter
 	Status     string
 	Type       string
 	Floor      int
+	System     string // System filter
+	Room       string // Room filter
+	SQL        string // Raw SQL query
+	Output     string // Output format
+	Limit      int    // Max results
+	Offset     int    // Result offset
+	Count      bool   // Count only
+	Fields     []string // Fields to display
 	Spatial    string
 	Format     string
 	OutputFile string

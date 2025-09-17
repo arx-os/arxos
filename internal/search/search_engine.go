@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // SearchEngine provides fast, real-time search capabilities

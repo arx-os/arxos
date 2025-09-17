@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 	
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // UniversalRenderer adapts to any floor plan layout

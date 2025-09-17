@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/storage"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/storage"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // SyncService handles synchronization between local and cloud storage

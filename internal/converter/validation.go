@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // ValidationConfig holds file validation parameters

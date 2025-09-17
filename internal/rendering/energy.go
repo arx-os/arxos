@@ -3,7 +3,7 @@ package rendering
 import (
 	"math"
 	
-	"github.com/joelpate/arxos/internal/energy"
+	"github.com/arx-os/arxos/internal/energy"
 )
 
 // EnergyLayer visualizes energy flow through the building

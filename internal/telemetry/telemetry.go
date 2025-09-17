@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/config"
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/config"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Collector collects and sends telemetry data

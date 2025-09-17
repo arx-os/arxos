@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // JSONMigrator handles migration from JSON files to SQLite database

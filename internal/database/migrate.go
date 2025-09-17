@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Migration represents a database migration

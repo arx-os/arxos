@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/search"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/search"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // Handler wraps the API services and templates

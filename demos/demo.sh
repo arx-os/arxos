@@ -248,7 +248,7 @@ echo "  • See commit history: arx repo log"
 echo "  • Query equipment: arx query --help"
 echo "  • Explore the API: arx serve (starts on port 8080)"
 echo ""
-echo -e "${GREEN}Visit https://github.com/joelpate/arxos for more information${NC}"
+echo -e "${GREEN}Visit https://github.com/arx-os/arxos for more information${NC}"
 
 # Clean up temp dir
 rm -rf "$DEMO_DIR"

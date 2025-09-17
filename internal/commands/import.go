@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/joelpate/arxos/internal/bim"
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/importer"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/bim"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/converter"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // ExecuteImport handles the import command
@@ -30,8 +30,8 @@ func ExecuteImport(opts ImportOptions) error {
 }
 
 func importPDF(ctx context.Context, opts ImportOptions) error {
-	// Use existing PDF importer
-	extractor := importer.NewSimplePDFExtractor()
+	// Use existing PDF converter's extractor
+	extractor := converter.NewSimplePDFExtractor()
 
 	file, err := os.Open(opts.InputFile)
 	if err != nil {

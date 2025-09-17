@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // ExampleUsage demonstrates how to use the new StorageCoordinator

@@ -69,7 +69,7 @@ lidar/
 ### Basic Point Cloud Processing
 
 ```go
-import "github.com/joelpate/arxos/internal/lidar"
+import "github.com/arx-os/arxos/internal/lidar"
 
 // Create pipeline
 pipeline := lidar.NewPipeline()

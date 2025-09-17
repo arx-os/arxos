@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // SVGRenderer generates SVG visualizations for floor plans

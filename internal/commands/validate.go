@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/joelpate/arxos/internal/bim"
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/bim"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // ExecuteValidate handles BIM file validation

@@ -8,10 +8,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/joelpate/arxos/internal/connections"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/connections"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // Predictor analyzes equipment health and predicts maintenance needs

@@ -5,19 +5,21 @@ package api
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Config holds configuration for the API server
 type Config struct {
 	CORS      CORSConfig      `json:"cors"`
 	RateLimit RateLimitConfig `json:"rate_limit"`
+	TLS       TLSConfig       `json:"tls"`
 }
 
 // CORSConfig configures Cross-Origin Resource Sharing
@@ -34,6 +36,16 @@ type RateLimitConfig struct {
 	BurstSize         int           `json:"burst_size"`
 	CleanupInterval   time.Duration `json:"cleanup_interval"`
 	ClientTTL         time.Duration `json:"client_ttl"`
+}
+
+// TLSConfig configures TLS/HTTPS settings
+type TLSConfig struct {
+	Enabled      bool     `json:"enabled"`
+	CertFile     string   `json:"cert_file"`
+	KeyFile      string   `json:"key_file"`
+	AutoCert     bool     `json:"auto_cert"`
+	AutoCertDomains []string `json:"auto_cert_domains"`
+	MinVersion   uint16   `json:"min_version"`
 }
 
 // Server represents the API server
@@ -68,6 +80,10 @@ func DefaultConfig() *Config {
 			BurstSize:         10,
 			CleanupInterval:   1 * time.Minute,
 			ClientTTL:         5 * time.Minute,
+		},
+		TLS: TLSConfig{
+			Enabled:    false,
+			MinVersion: 0x0303, // TLS 1.2
 		},
 	}
 }
@@ -150,9 +166,56 @@ func (s *Server) Start() error {
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-	
+
 	logger.Info("API server starting on %s", s.addr)
 	return s.server.ListenAndServe()
+}
+
+// StartTLS starts the API server with TLS/HTTPS
+func (s *Server) StartTLS(certFile, keyFile string) error {
+	s.server = &http.Server{
+		Addr:         s.addr,
+		Handler:      s.Routes(),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Configure TLS
+	if s.config.TLS.MinVersion > 0 {
+		s.server.TLSConfig = &tls.Config{
+			MinVersion: s.config.TLS.MinVersion,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			},
+			PreferServerCipherSuites: true,
+		}
+	}
+
+	logger.Info("API server starting on %s with TLS", s.addr)
+	return s.server.ListenAndServeTLS(certFile, keyFile)
+}
+
+// StartWithConfig starts the server based on configuration
+func (s *Server) StartWithConfig() error {
+	if s.config.TLS.Enabled {
+		if s.config.TLS.AutoCert {
+			return s.StartAutoCert()
+		}
+		return s.StartTLS(s.config.TLS.CertFile, s.config.TLS.KeyFile)
+	}
+	return s.Start()
+}
+
+// StartAutoCert starts the server with automatic certificate management
+func (s *Server) StartAutoCert() error {
+	// This would use Let's Encrypt or similar
+	// For now, return an error indicating it's not implemented
+	return fmt.Errorf("auto-cert not yet implemented")
 }
 
 // Stop gracefully stops the server

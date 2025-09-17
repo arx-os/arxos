@@ -5,7 +5,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // FloorRenderer converts floor plan data to ASCII representation

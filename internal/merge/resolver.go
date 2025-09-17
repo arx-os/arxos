@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // ResolutionMethod defines how to resolve conflicts

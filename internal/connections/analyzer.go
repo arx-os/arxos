@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // Analyzer provides intelligent analysis of equipment connections

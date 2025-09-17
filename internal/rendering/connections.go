@@ -4,8 +4,8 @@ import (
 	"math"
 	"sort"
 
-	"github.com/joelpate/arxos/internal/connections"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/connections"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // ConnectionLayer renders wiring, piping, and other connections between equipment

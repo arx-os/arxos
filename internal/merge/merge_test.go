@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 func TestSmartMerger_MergeEquipmentData(t *testing.T) {

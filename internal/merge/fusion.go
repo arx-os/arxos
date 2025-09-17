@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/lidar"
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/lidar"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // DataFusion handles multi-source data fusion for building models

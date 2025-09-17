@@ -13,10 +13,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/bim"
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/bim"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // StorageCoordinator manages the multi-level data architecture for ArxOS

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/simulation"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/simulation"
 )
 
 // ExecuteSimulate runs simulations on a building

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // UpdateType represents the type of position update

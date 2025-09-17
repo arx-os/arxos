@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/bim"
+	"github.com/arx-os/arxos/internal/bim"
 )
 
 // SchematicRenderer renders building schematics for building managers

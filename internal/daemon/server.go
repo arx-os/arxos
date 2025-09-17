@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Server handles IPC communication with the daemon

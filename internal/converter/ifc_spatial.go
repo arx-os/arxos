@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/common/progress"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/progress"
 )
 
 // SpatialIFCConverter handles IFC files with proper spatial containment relationships

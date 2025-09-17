@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // GitIntegration provides Git operations for ArxOS repositories

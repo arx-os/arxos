@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 	
-	"github.com/joelpate/arxos/internal/config"
+	"github.com/arx-os/arxos/internal/config"
 )
 
 // Backend represents a storage backend interface

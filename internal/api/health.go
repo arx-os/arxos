@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // HealthStatus represents the health status of a component

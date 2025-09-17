@@ -66,7 +66,7 @@ Intelligent reconciliation of multiple data sources:
 ### Basic Coordinate Translation
 
 ```go
-import "github.com/joelpate/arxos/internal/spatial"
+import "github.com/arx-os/arxos/internal/spatial"
 
 // Create translator for a building
 translator := spatial.NewTranslator(buildingID)

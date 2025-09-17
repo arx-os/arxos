@@ -10,8 +10,8 @@ import (
 
 	_ "modernc.org/sqlite"
 	
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // SQLiteDB implements the DB interface using SQLite
@@ -1449,4 +1449,14 @@ func (s *SQLiteDB) DeleteExpiredPasswordResetTokens(ctx context.Context) error {
 	`
 	_, err := s.db.ExecContext(ctx, query, time.Now())
 	return err
+}
+
+// HasSpatialSupport returns false as SQLite doesn't have PostGIS
+func (s *SQLiteDB) HasSpatialSupport() bool {
+	return false
+}
+
+// GetSpatialDB returns an error as SQLite doesn't support spatial operations
+func (s *SQLiteDB) GetSpatialDB() (SpatialDB, error) {
+	return nil, fmt.Errorf("spatial operations not supported in SQLite mode")
 }

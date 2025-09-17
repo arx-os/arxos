@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Manager manages equipment connections and relationships

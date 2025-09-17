@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // DB represents the database interface for ArxOS

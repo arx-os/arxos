@@ -3,7 +3,7 @@ package spatial_test
 import (
 	"testing"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 	"github.com/stretchr/testify/assert"
 )
 

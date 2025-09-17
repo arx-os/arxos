@@ -1,6 +1,6 @@
 # ArxOS - Building Operating System
 
-[![CI/CD Pipeline](https://github.com/joelpate/arxos/actions/workflows/ci.yml/badge.svg)](https://github.com/joelpate/arxos/actions/workflows/ci.yml)
+[![CI/CD Pipeline](https://github.com/arx-os/arxos/actions/workflows/ci.yml/badge.svg)](https://github.com/arx-os/arxos/actions/workflows/ci.yml)
 [![Go Version](https://img.shields.io/badge/Go-1.21-blue.svg)](https://go.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
@@ -27,10 +27,10 @@ ARXOS-NA-US-NY-NYC-0001/3/A/301/E/OUTLET_02
 
 ```bash
 # Install from source
-go install github.com/joelpate/arxos/cmd/arx@latest
+go install github.com/arx-os/arxos/cmd/arx@latest
 
 # Or build locally
-git clone https://github.com/joelpate/arxos.git
+git clone https://github.com/arx-os/arxos.git
 cd arxos
 go build -o arx ./cmd/arx
 sudo mv arx /usr/local/bin/
@@ -412,7 +412,7 @@ WS     /api/v1/stream                 # Real-time updates
 
 ```bash
 # Clone repository
-git clone https://github.com/joelpate/arxos.git
+git clone https://github.com/arx-os/arxos.git
 cd arxos
 
 # Run tests

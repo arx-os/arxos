@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/lidar"
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/lidar"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // DataSource represents a source of spatial data

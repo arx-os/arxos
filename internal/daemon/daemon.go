@@ -12,11 +12,11 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/importer"
-	"github.com/joelpate/arxos/internal/common/state"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/state"
+	"github.com/arx-os/arxos/internal/converter"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // Daemon represents the ArxOS background service
@@ -65,6 +65,11 @@ type Statistics struct {
 	LastProcessedFile string
 	LastProcessedTime time.Time
 	mu               sync.RWMutex
+}
+
+// New creates a new daemon instance (alias for NewDaemon)
+func New(config *Config) (*Daemon, error) {
+	return NewDaemon(config)
 }
 
 // NewDaemon creates a new daemon instance
@@ -366,7 +371,7 @@ func (d *Daemon) importFile(ctx context.Context, filePath string) error {
 // importPDF imports a PDF file
 func (d *Daemon) importPDF(ctx context.Context, filePath string) error {
 	// Use existing PDF extraction logic
-	extractor := importer.NewSimplePDFExtractor()
+	extractor := converter.NewSimplePDFExtractor()
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -393,7 +398,7 @@ func (d *Daemon) importPDF(ctx context.Context, filePath string) error {
 	rooms := make([]*models.Room, 0, len(extractedData.Rooms))
 	for _, r := range extractedData.Rooms {
 		rooms = append(rooms, &models.Room{
-			ID:   r.ID,
+			ID:   r.Number,  // Use Number field from ExtractedRoom
 			Name: r.Name,
 		})
 	}

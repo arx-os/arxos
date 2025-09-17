@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Strategy defines the retry strategy

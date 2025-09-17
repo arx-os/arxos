@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // MergeVisualizer provides visualization for merge operations

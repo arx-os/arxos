@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Mode represents the operational mode of ArxOS

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/bim"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/bim"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // MockAuthService is a mock implementation of AuthService

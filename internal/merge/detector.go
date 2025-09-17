@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // ChangeDetector detects changes in equipment over time

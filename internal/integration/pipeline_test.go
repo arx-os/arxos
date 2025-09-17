@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/joelpate/arxos/internal/bim"
-	"github.com/joelpate/arxos/internal/commands"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/simulation"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/bim"
+	"github.com/arx-os/arxos/internal/commands"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/simulation"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // TestEndToEndPipeline tests the complete flow from PDF import to intelligent BIM export

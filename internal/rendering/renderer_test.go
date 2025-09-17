@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 	
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 

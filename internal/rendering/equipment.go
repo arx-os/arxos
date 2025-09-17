@@ -1,7 +1,7 @@
 package rendering
 
 import (
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // EquipmentLayer renders equipment placement and status

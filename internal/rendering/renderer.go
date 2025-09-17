@@ -6,8 +6,8 @@ import (
 	"math"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // Renderer provides 3D isometric ASCII rendering

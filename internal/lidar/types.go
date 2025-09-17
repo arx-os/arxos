@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // PointCloud represents a 3D point cloud

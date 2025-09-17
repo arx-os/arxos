@@ -8,8 +8,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // ExecuteQuery handles database queries
@@ -26,9 +26,9 @@ func ExecuteQuery(opts QueryOptions) error {
 	// Build query
 	var equipment []*models.Equipment
 
-	if opts.BuildingID != "" {
+	if opts.Building != "" {
 		// Query specific building
-		building, err := db.GetFloorPlan(ctx, opts.BuildingID)
+		building, err := db.GetFloorPlan(ctx, opts.Building)
 		if err != nil {
 			return fmt.Errorf("failed to load building: %w", err)
 		}

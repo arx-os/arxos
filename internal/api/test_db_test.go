@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // TestDB wraps a sql.DB to implement the database.DB interface for testing

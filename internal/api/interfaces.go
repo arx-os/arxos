@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // RequestInfo contains metadata about the HTTP request

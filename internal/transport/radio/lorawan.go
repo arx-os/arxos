@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // LoRaWANInterface implements RadioInterface for LoRaWAN devices

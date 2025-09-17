@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/converter"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/converter"
 )
 
 var convertCmd = &cobra.Command{
@@ -141,7 +141,7 @@ func runConvert(cmd *cobra.Command, args []string) error {
 }
 
 func runConvertList(cmd *cobra.Command, args []string) error {
-	fmt.Println("\nSupported File Formats for Conversion:\n")
+	fmt.Println("\nSupported File Formats for Conversion:")
 
 	formats := []struct {
 		name string
@@ -157,7 +157,7 @@ func runConvertList(cmd *cobra.Command, args []string) error {
 		fmt.Printf("               %s\n\n", f.desc)
 	}
 
-	fmt.Println("\nConversion Examples:\n")
+	fmt.Println("\nConversion Examples:")
 	fmt.Println("  arx convert floor_plan.pdf")
 	fmt.Println("  arx convert model.ifc building.bim.txt")
 	fmt.Println("  arx convert file.pdf --force")

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // Closer represents a resource that can be closed

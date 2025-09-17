@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/database"
 )
 
 // SpatialRenderer renders precise coordinate information for field technicians

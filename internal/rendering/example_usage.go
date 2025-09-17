@@ -3,8 +3,8 @@ package rendering
 import (
 	"context"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/storage"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/storage"
 )
 
 // ExampleConsolidatedRendering demonstrates the new consolidated rendering system

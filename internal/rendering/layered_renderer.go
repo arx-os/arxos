@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 	
-	"github.com/joelpate/arxos/internal/rendering/layers"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/rendering/layers"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // LayeredRenderer is a renderer that uses the layer system for composition

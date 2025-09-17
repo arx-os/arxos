@@ -1,7 +1,7 @@
 package rendering
 
 import (
-	"github.com/joelpate/arxos/internal/particles"
+	"github.com/arx-os/arxos/internal/particles"
 )
 
 // ParticleLayer renders dynamic particle effects

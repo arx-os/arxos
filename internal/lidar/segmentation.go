@@ -5,7 +5,7 @@ import (
 	"math"
 	"sort"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // Segmenter performs point cloud segmentation

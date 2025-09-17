@@ -3,8 +3,8 @@ package lidar_test
 import (
 	"testing"
 
-	"github.com/joelpate/arxos/internal/lidar"
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/lidar"
+	"github.com/arx-os/arxos/internal/spatial"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

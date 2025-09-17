@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joelpate/arxos/internal/api"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/middleware"
+	"github.com/arx-os/arxos/internal/api"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/middleware"
 	_ "modernc.org/sqlite"
 )
 

@@ -15,7 +15,7 @@ ArxOS is a Building Information Management System that treats buildings as code.
 
 ```bash
 # Clone the repository
-git clone https://github.com/joelpate/arxos
+git clone https://github.com/arx-os/arxos
 cd arxos
 
 # Build the CLI
@@ -268,7 +268,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install ArxOS
         run: |
-          go install github.com/joelpate/arxos/cmd/arx@latest
+          go install github.com/arx-os/arxos/cmd/arx@latest
       - name: Validate BIM
         run: |
           arx validate building.bim.txt
@@ -313,8 +313,8 @@ chmod -R 755 ~/.arxos
 
 ## Support
 
-- GitHub Issues: https://github.com/joelpate/arxos/issues
-- Documentation: https://github.com/joelpate/arxos/wiki
+- GitHub Issues: https://github.com/arx-os/arxos/issues
+- Documentation: https://github.com/arx-os/arxos/wiki
 - Examples: `/demos` directory in the repository
 
 ---

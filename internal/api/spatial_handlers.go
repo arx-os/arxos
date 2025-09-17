@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/joelpate/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/database"
 )
 
 // SpatialHandlers handles AR anchor and spatial endpoints

@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joelpate/arxos/internal/common/logger"
-	"github.com/joelpate/arxos/internal/database"
-	"github.com/joelpate/arxos/internal/middleware"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/middleware"
+	"github.com/arx-os/arxos/pkg/models"
 	"golang.org/x/crypto/bcrypt"
 )
 

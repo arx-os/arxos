@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/merge"
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/merge"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // SyncThresholds defines thresholds for triggering BIM sync

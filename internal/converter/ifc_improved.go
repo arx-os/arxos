@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/joelpate/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/common/logger"
 )
 
 // ImprovedIFCConverter handles IFC files with better entity parsing

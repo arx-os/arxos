@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // AnchorType represents the type of spatial anchor

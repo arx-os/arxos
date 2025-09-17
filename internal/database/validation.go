@@ -3,7 +3,7 @@ package database
 import (
 	"fmt"
 	
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // ValidateFloorPlan validates a floor plan before saving

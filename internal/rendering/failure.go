@@ -5,9 +5,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/joelpate/arxos/internal/connections"
-	"github.com/joelpate/arxos/internal/maintenance"
-	"github.com/joelpate/arxos/pkg/models"
+	"github.com/arx-os/arxos/internal/connections"
+	"github.com/arx-os/arxos/internal/maintenance"
+	"github.com/arx-os/arxos/pkg/models"
 )
 
 // FailureLayer visualizes failure propagation and risk zones

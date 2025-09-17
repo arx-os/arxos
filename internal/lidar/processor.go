@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/joelpate/arxos/internal/spatial"
+	"github.com/arx-os/arxos/internal/spatial"
 )
 
 // Processor handles point cloud processing operations

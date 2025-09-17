@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/arx-os/arxos/internal/commands"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/visualization/charts"
 	"github.com/arx-os/arxos/internal/visualization/core"
 	"github.com/arx-os/arxos/internal/visualization/export"
+	"github.com/spf13/cobra"
 )
 
 var queryCmd = &cobra.Command{
@@ -21,22 +21,22 @@ Supports filtering by building, floor, type, status, and custom SQL.`,
 }
 
 var (
-	queryBuilding   string
-	queryFloor      int
-	queryType       string
-	queryStatus     string
-	querySystem     string
-	queryRoom       string
-	querySQL        string
-	queryOutput     string
-	queryLimit      int
-	queryOffset     int
-	queryCount      bool
-	queryFields     []string
-	queryVisualize  string
-	queryGroupBy    string
-	queryMetric     string
-	queryExport     string
+	queryBuilding  string
+	queryFloor     int
+	queryType      string
+	queryStatus    string
+	querySystem    string
+	queryRoom      string
+	querySQL       string
+	queryOutput    string
+	queryLimit     int
+	queryOffset    int
+	queryCount     bool
+	queryFields    []string
+	queryVisualize string
+	queryGroupBy   string
+	queryMetric    string
+	queryExport    string
 )
 
 func init() {
@@ -84,7 +84,7 @@ func runQuery(cmd *cobra.Command, args []string) error {
 
 	// Validate output format
 	validFormats := []string{"table", "json", "csv"}
-	if !contains(validFormats, queryOutput) {
+	if !containsString(validFormats, queryOutput) {
 		return fmt.Errorf("invalid output format: %s (supported: %s)",
 			queryOutput, strings.Join(validFormats, ", "))
 	}
@@ -425,4 +425,14 @@ func generateSampleTimeSeries(points int) []float64 {
 		data[i] = base + float64(i%10)*2
 	}
 	return data
+}
+
+// containsString checks if a slice contains a string
+func containsString(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

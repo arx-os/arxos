@@ -156,14 +156,14 @@ func TestParseInvalidBIM(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "missing building name",
+			name: "missing building name",
 			content: `===============================================================================
 FILE_VERSION: 1.0.0
 ===============================================================================`,
 			wantErr: true,
 		},
 		{
-			name:    "missing file version",
+			name: "missing file version",
 			content: `===============================================================================
 BUILDING: Test
 ===============================================================================`,

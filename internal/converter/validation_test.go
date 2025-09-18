@@ -128,9 +128,9 @@ func TestFileValidator_UnsupportedExtension(t *testing.T) {
 func TestFileValidator_LargeFile(t *testing.T) {
 	// Create custom config with small size limit
 	config := &ValidationConfig{
-		MaxFileSizeMB:       1, // 1MB limit
-		SupportedExtensions: []string{".pdf"},
-		RequiredPermissions: 0444,
+		MaxFileSizeMB:           1, // 1MB limit
+		SupportedExtensions:     []string{".pdf"},
+		RequiredPermissions:     0444,
 		EnableContentValidation: false,
 	}
 

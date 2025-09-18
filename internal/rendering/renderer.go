@@ -12,15 +12,15 @@ import (
 
 // Renderer provides 3D isometric ASCII rendering
 type Renderer struct {
-	width      int
-	height     int
-	depth      int
-	viewAngle  float64 // Rotation angle for isometric view
-	tiltAngle  float64 // Tilt angle from horizontal
-	scale      float64
-	buffer     [][]rune
+	width       int
+	height      int
+	depth       int
+	viewAngle   float64 // Rotation angle for isometric view
+	tiltAngle   float64 // Tilt angle from horizontal
+	scale       float64
+	buffer      [][]rune
 	depthBuffer [][]float64
-	origin     Point3D
+	origin      Point3D
 }
 
 // Point3D represents a point in 3D space
@@ -37,26 +37,26 @@ type Point2D struct {
 type ViewMode string
 
 const (
-	ViewIsometric   ViewMode = "isometric"   // Classic 30-degree isometric
-	ViewDimetric    ViewMode = "dimetric"    // Two equal angles
-	ViewTrimetric   ViewMode = "trimetric"   // Three different angles
-	ViewTopDown     ViewMode = "topdown"     // Traditional 2D view
-	ViewFrontSide   ViewMode = "frontside"   // Front elevation
-	ViewRightSide   ViewMode = "rightside"   // Right elevation
+	ViewIsometric ViewMode = "isometric" // Classic 30-degree isometric
+	ViewDimetric  ViewMode = "dimetric"  // Two equal angles
+	ViewTrimetric ViewMode = "trimetric" // Three different angles
+	ViewTopDown   ViewMode = "topdown"   // Traditional 2D view
+	ViewFrontSide ViewMode = "frontside" // Front elevation
+	ViewRightSide ViewMode = "rightside" // Right elevation
 )
 
 // NewRenderer creates a new 3D isometric renderer
 func NewRenderer(width, height, depth int) *Renderer {
 	r := &Renderer{
-		width:      width,
-		height:     height,
-		depth:      depth,
-		viewAngle:  math.Pi / 6,  // 30 degrees for isometric
-		tiltAngle:  math.Pi / 6,  // 30 degrees tilt
-		scale:      1.0,
-		buffer:     make([][]rune, height),
+		width:       width,
+		height:      height,
+		depth:       depth,
+		viewAngle:   math.Pi / 6, // 30 degrees for isometric
+		tiltAngle:   math.Pi / 6, // 30 degrees tilt
+		scale:       1.0,
+		buffer:      make([][]rune, height),
 		depthBuffer: make([][]float64, height),
-		origin:     Point3D{X: float64(width) / 2, Y: float64(height) / 2, Z: 0},
+		origin:      Point3D{X: float64(width) / 2, Y: float64(height) / 2, Z: 0},
 	}
 
 	// Initialize buffers
@@ -76,17 +76,17 @@ func NewRenderer(width, height, depth int) *Renderer {
 func (r *Renderer) SetViewMode(mode ViewMode) {
 	switch mode {
 	case ViewIsometric:
-		r.viewAngle = math.Pi / 6  // 30 degrees
-		r.tiltAngle = math.Pi / 6  // 30 degrees
+		r.viewAngle = math.Pi / 6 // 30 degrees
+		r.tiltAngle = math.Pi / 6 // 30 degrees
 	case ViewDimetric:
-		r.viewAngle = math.Pi / 4  // 45 degrees
-		r.tiltAngle = math.Pi / 6  // 30 degrees
+		r.viewAngle = math.Pi / 4 // 45 degrees
+		r.tiltAngle = math.Pi / 6 // 30 degrees
 	case ViewTrimetric:
-		r.viewAngle = math.Pi / 5  // 36 degrees
-		r.tiltAngle = math.Pi / 4  // 45 degrees
+		r.viewAngle = math.Pi / 5 // 36 degrees
+		r.tiltAngle = math.Pi / 4 // 45 degrees
 	case ViewTopDown:
 		r.viewAngle = 0
-		r.tiltAngle = math.Pi / 2  // 90 degrees (looking straight down)
+		r.tiltAngle = math.Pi / 2 // 90 degrees (looking straight down)
 	case ViewFrontSide:
 		r.viewAngle = 0
 		r.tiltAngle = 0
@@ -260,7 +260,7 @@ func (r *Renderer) DrawRoom(room models.Room, floorZ float64) {
 	centerX := (room.Bounds.MinX + room.Bounds.MaxX) / 2
 	centerY := (room.Bounds.MinY + room.Bounds.MaxY) / 2
 	labelPoint := r.Project3DTo2D(Point3D{X: centerX, Y: floorZ + 1, Z: centerY})
-	
+
 	// Place room name
 	r.DrawText(int(labelPoint.X), int(labelPoint.Y), room.Name, floorZ)
 }
@@ -269,7 +269,7 @@ func (r *Renderer) DrawRoom(room models.Room, floorZ float64) {
 func (r *Renderer) DrawEquipment(equip models.Equipment, floorZ float64) {
 	// Different symbols for different equipment types
 	symbol := r.GetEquipmentSymbol(equip.Type)
-	
+
 	// Equipment is slightly above floor level
 	equipPoint := Point3D{
 		X: equip.Location.X,
@@ -279,7 +279,7 @@ func (r *Renderer) DrawEquipment(equip models.Equipment, floorZ float64) {
 
 	// Project to screen
 	screenPoint := r.Project3DTo2D(equipPoint)
-	
+
 	// Draw equipment with status indication
 	if equip.Status == models.StatusFailed {
 		symbol = '✗'
@@ -349,12 +349,12 @@ func (r *Renderer) DrawText(x, y int, text string, depth float64) {
 // Render returns the rendered ASCII output
 func (r *Renderer) Render() string {
 	var output strings.Builder
-	
+
 	for _, row := range r.buffer {
 		output.WriteString(string(row))
 		output.WriteRune('\n')
 	}
-	
+
 	return output.String()
 }
 
@@ -364,16 +364,16 @@ func (r *Renderer) RenderMultiFloor(floors []*models.FloorPlan, floorHeight floa
 
 	for i, floor := range floors {
 		floorZ := float64(i) * floorHeight
-		
+
 		// Draw this floor
 		for _, room := range floor.Rooms {
 			r.DrawRoom(*room, floorZ)
 		}
-		
+
 		for _, equip := range floor.Equipment {
 			r.DrawEquipment(*equip, floorZ)
 		}
-		
+
 		// Draw floor separator
 		if i > 0 {
 			r.DrawFloorSeparator(floorZ)
@@ -385,7 +385,7 @@ func (r *Renderer) RenderMultiFloor(floors []*models.FloorPlan, floorHeight floa
 func (r *Renderer) DrawFloorSeparator(floorZ float64) {
 	maxSize := 100.0
 	step := 5.0
-	
+
 	for x := 0.0; x <= maxSize; x += step {
 		for z := 0.0; z <= maxSize; z += step {
 			point := r.Project3DTo2D(Point3D{X: x, Y: floorZ, Z: z})
@@ -395,7 +395,6 @@ func (r *Renderer) DrawFloorSeparator(floorZ float64) {
 }
 
 // Utility functions
-
 
 // RotateView rotates the viewing angle
 func (r *Renderer) RotateView(deltaAngle float64) {

@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -299,7 +299,6 @@ func initializeHybridDatabase(ctx context.Context) error {
 
 	return nil
 }
-
 
 // ensureDirectories creates necessary directories
 func ensureDirectories() error {

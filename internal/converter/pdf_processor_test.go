@@ -14,18 +14,18 @@ func TestPDFProcessor_ParseEquipmentFromText(t *testing.T) {
 		expected int
 	}{
 		{
-			name: "HVAC equipment pattern",
-			text: "Equipment ID: HVAC-001: Air Handler Unit - Model AC500",
+			name:     "HVAC equipment pattern",
+			text:     "Equipment ID: HVAC-001: Air Handler Unit - Model AC500",
 			expected: 1,
 		},
 		{
-			name: "Panel with location pattern",
-			text: "Equipment ID: PANEL-001, Type: Electrical Panel, Location: Room 101",
+			name:     "Panel with location pattern",
+			text:     "Equipment ID: PANEL-001, Type: Electrical Panel, Location: Room 101",
 			expected: 1,
 		},
 		{
-			name: "Equipment schedule pattern",
-			text: "AHU-01  Air Handling Unit  Carrier-39M  2  HVAC",
+			name:     "Equipment schedule pattern",
+			text:     "AHU-01  Air Handling Unit  Carrier-39M  2  HVAC",
 			expected: 1,
 		},
 		{

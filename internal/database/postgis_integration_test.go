@@ -81,9 +81,9 @@ func TestSpatialOperations(t *testing.T) {
 	t.Run("StoreAndRetrieveEquipmentPosition", func(t *testing.T) {
 		equipmentID := fmt.Sprintf("TEST_EQ_%d", time.Now().UnixNano())
 		position := spatial.Point3D{
-			X: 1000.5,  // mm
-			Y: 2000.3,  // mm
-			Z: 3000.0,  // mm
+			X: 1000.5, // mm
+			Y: 2000.3, // mm
+			Z: 3000.0, // mm
 		}
 
 		// Store position

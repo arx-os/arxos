@@ -22,25 +22,25 @@ type ConnectionPool struct {
 
 // PoolConfig holds connection pool configuration
 type PoolConfig struct {
-	MaxOpenConns    int           // Maximum number of open connections
-	MaxIdleConns    int           // Maximum number of idle connections
-	ConnMaxLifetime time.Duration // Maximum lifetime of a connection
-	ConnMaxIdleTime time.Duration // Maximum idle time of a connection
+	MaxOpenConns        int           // Maximum number of open connections
+	MaxIdleConns        int           // Maximum number of idle connections
+	ConnMaxLifetime     time.Duration // Maximum lifetime of a connection
+	ConnMaxIdleTime     time.Duration // Maximum idle time of a connection
 	HealthCheckInterval time.Duration // Interval for health checks
 }
 
 // PoolStats tracks pool statistics
 type PoolStats struct {
-	OpenConnections  int
-	InUse            int
-	Idle             int
-	WaitCount        int64
-	WaitDuration     time.Duration
-	MaxIdleClosed    int64
+	OpenConnections   int
+	InUse             int
+	Idle              int
+	WaitCount         int64
+	WaitDuration      time.Duration
+	MaxIdleClosed     int64
 	MaxLifetimeClosed int64
-	TotalConnections int64
-	TotalRequests    int64
-	TotalErrors      int64
+	TotalConnections  int64
+	TotalRequests     int64
+	TotalErrors       int64
 }
 
 // DefaultPoolConfig returns default pool configuration
@@ -315,19 +315,19 @@ func (sc *StatementCache) Clear() {
 
 // ConnectionRetry implements retry logic for database operations
 type ConnectionRetry struct {
-	MaxRetries     int
-	RetryDelay     time.Duration
-	MaxRetryDelay  time.Duration
-	BackoffFactor  float64
+	MaxRetries    int
+	RetryDelay    time.Duration
+	MaxRetryDelay time.Duration
+	BackoffFactor float64
 }
 
 // DefaultRetryConfig returns default retry configuration
 func DefaultRetryConfig() ConnectionRetry {
 	return ConnectionRetry{
-		MaxRetries:     3,
-		RetryDelay:     100 * time.Millisecond,
-		MaxRetryDelay:  5 * time.Second,
-		BackoffFactor:  2.0,
+		MaxRetries:    3,
+		RetryDelay:    100 * time.Millisecond,
+		MaxRetryDelay: 5 * time.Second,
+		BackoffFactor: 2.0,
 	}
 }
 
@@ -394,10 +394,10 @@ func isRetryableError(err error) bool {
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) &&
 		(s == substr ||
-		 len(s) > len(substr) &&
-		 (s[:len(substr)] == substr ||
-		  s[len(s)-len(substr):] == substr ||
-		  len(substr) < len(s) && findSubstring(s, substr)))
+			len(s) > len(substr) &&
+				(s[:len(substr)] == substr ||
+					s[len(s)-len(substr):] == substr ||
+					len(substr) < len(s) && findSubstring(s, substr)))
 }
 
 // findSubstring searches for a substring

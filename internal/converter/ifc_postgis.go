@@ -97,7 +97,7 @@ func (c *ImprovedIFCConverter) extractSpatialData(entities map[string]*IFCEntity
 		// Extract position from various IFC entity types
 		switch entity.Type {
 		case "IFCBUILDINGELEMENTPROXY", "IFCFLOWSEGMENT", "IFCFLOWTERMINAL",
-			 "IFCDISTRIBUTIONELEMENT", "IFCFURNISHINGELEMENT", "IFCLIGHTFIXTURE":
+			"IFCDISTRIBUTIONELEMENT", "IFCFURNISHINGELEMENT", "IFCLIGHTFIXTURE":
 			// These typically have equipment
 			spatialEntity.Position = c.extractPosition(entity, entities)
 
@@ -320,7 +320,7 @@ func (c *ImprovedIFCConverter) processRooms(ctx context.Context, db database.DB,
 			if entity.Position != nil {
 				for _, floor := range floors {
 					if entity.Position.Z >= floor.Elevation*1000 &&
-					   entity.Position.Z < (floor.Elevation+4)*1000 { // Assume 4m floor height
+						entity.Position.Z < (floor.Elevation+4)*1000 { // Assume 4m floor height
 						// Store floor reference in room number or equipment metadata
 						room.Number = fmt.Sprintf("%d-%s", floor.Level, entity.ID)
 						break
@@ -345,13 +345,13 @@ func (c *ImprovedIFCConverter) processEquipment(ctx context.Context, db database
 	// Equipment-type IFC entities
 	equipmentTypes := map[string]string{
 		"IFCBUILDINGELEMENTPROXY": "building_element",
-		"IFCFLOWSEGMENT":         "pipe",
-		"IFCFLOWTERMINAL":        "terminal",
-		"IFCDISTRIBUTIONELEMENT": "distribution",
-		"IFCFURNISHINGELEMENT":   "furniture",
-		"IFCLIGHTFIXTURE":        "lighting",
-		"IFCELECTRICAPPLIANCE":   "electrical",
-		"IFCSANITARYTERMINAL":    "plumbing",
+		"IFCFLOWSEGMENT":          "pipe",
+		"IFCFLOWTERMINAL":         "terminal",
+		"IFCDISTRIBUTIONELEMENT":  "distribution",
+		"IFCFURNISHINGELEMENT":    "furniture",
+		"IFCLIGHTFIXTURE":         "lighting",
+		"IFCELECTRICAPPLIANCE":    "electrical",
+		"IFCSANITARYTERMINAL":     "plumbing",
 	}
 
 	for _, entity := range entities {
@@ -374,7 +374,7 @@ func (c *ImprovedIFCConverter) processEquipment(ctx context.Context, db database
 				// Determine floor
 				for _, floor := range floors {
 					if entity.Position.Z >= floor.Elevation*1000 &&
-					   entity.Position.Z < (floor.Elevation+4)*1000 {
+						entity.Position.Z < (floor.Elevation+4)*1000 {
 						eq.Location.Floor = fmt.Sprintf("%d", floor.Level)
 						break
 					}

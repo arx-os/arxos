@@ -7,50 +7,50 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/go-chi/chi/v5"
 )
 
 // APIVersion represents an API version
 type APIVersion struct {
-	Version     string    `json:"version"`
-	Status      string    `json:"status"` // "stable", "beta", "deprecated", "sunset"
-	Released    time.Time `json:"released"`
+	Version     string     `json:"version"`
+	Status      string     `json:"status"` // "stable", "beta", "deprecated", "sunset"
+	Released    time.Time  `json:"released"`
 	Deprecated  *time.Time `json:"deprecated,omitempty"`
 	Sunset      *time.Time `json:"sunset,omitempty"`
-	Description string    `json:"description"`
-	ChangesURL  string    `json:"changes_url,omitempty"`
+	Description string     `json:"description"`
+	ChangesURL  string     `json:"changes_url,omitempty"`
 }
 
 // VersionInfo contains version metadata
 type VersionInfo struct {
-	Current      string       `json:"current"`
-	Supported    []APIVersion `json:"supported"`
-	Latest       string       `json:"latest"`
+	Current      string        `json:"current"`
+	Supported    []APIVersion  `json:"supported"`
+	Latest       string        `json:"latest"`
 	Deprecations []Deprecation `json:"deprecations,omitempty"`
 }
 
 // Deprecation represents a deprecated API feature
 type Deprecation struct {
-	Feature     string     `json:"feature"`
-	Version     string     `json:"version"`
-	Deprecated  time.Time  `json:"deprecated"`
-	Sunset      time.Time  `json:"sunset"`
-	Replacement string     `json:"replacement,omitempty"`
-	Reason      string     `json:"reason"`
+	Feature     string    `json:"feature"`
+	Version     string    `json:"version"`
+	Deprecated  time.Time `json:"deprecated"`
+	Sunset      time.Time `json:"sunset"`
+	Replacement string    `json:"replacement,omitempty"`
+	Reason      string    `json:"reason"`
 }
 
 // VersionManager manages API versioning
 type VersionManager struct {
-	versions      map[string]APIVersion
-	deprecations  []Deprecation
+	versions       map[string]APIVersion
+	deprecations   []Deprecation
 	defaultVersion string
 }
 
 // NewVersionManager creates a new version manager
 func NewVersionManager() *VersionManager {
 	now := time.Now()
-	
+
 	versions := map[string]APIVersion{
 		"v1": {
 			Version:     "v1",
@@ -106,7 +106,7 @@ func (vm *VersionManager) GetSupportedVersions() []APIVersion {
 // GetVersionInfo returns comprehensive version information
 func (vm *VersionManager) GetVersionInfo() VersionInfo {
 	supported := vm.GetSupportedVersions()
-	
+
 	// Find latest stable version
 	latest := vm.defaultVersion
 	for _, v := range supported {
@@ -127,18 +127,18 @@ func (vm *VersionManager) GetVersionInfo() VersionInfo {
 func (vm *VersionManager) VersionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		version := vm.extractVersion(r)
-		
+
 		// Validate version
 		apiVersion, exists := vm.GetVersion(version)
 		if !exists {
-			vm.respondError(w, http.StatusBadRequest, 
+			vm.respondError(w, http.StatusBadRequest,
 				fmt.Sprintf("Unsupported API version: %s", version))
 			return
 		}
 
 		// Check if version is sunset
 		if apiVersion.Status == "sunset" {
-			vm.respondError(w, http.StatusGone, 
+			vm.respondError(w, http.StatusGone,
 				fmt.Sprintf("API version %s has been sunset", version))
 			return
 		}
@@ -205,7 +205,7 @@ func (vm *VersionManager) checkDeprecatedFeatures(w http.ResponseWriter, r *http
 			if dep.Replacement != "" {
 				w.Header().Set("Link", fmt.Sprintf("<%s>; rel=\"alternate\"", dep.Replacement))
 			}
-			
+
 			// Log deprecation usage for metrics
 			logger.Warn("Deprecated API feature used: %s by %s", dep.Feature, r.RemoteAddr)
 			break
@@ -218,11 +218,11 @@ func (vm *VersionManager) matchesPattern(path, pattern string) bool {
 	// Simple pattern matching - could be enhanced with regex
 	pathParts := strings.Split(path, "/")
 	patternParts := strings.Split(pattern, "/")
-	
+
 	if len(pathParts) != len(patternParts) {
 		return false
 	}
-	
+
 	for i, part := range patternParts {
 		if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") {
 			// Wildcard part - matches anything
@@ -232,7 +232,7 @@ func (vm *VersionManager) matchesPattern(path, pattern string) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -260,7 +260,7 @@ func (vm *VersionManager) respondError(w http.ResponseWriter, status int, messag
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"error": message,
+		"error":              message,
 		"supported_versions": vm.GetSupportedVersions(),
 	})
 }
@@ -276,13 +276,13 @@ func (vm *VersionManager) VersionInfoHandler() http.HandlerFunc {
 // CreateVersionedRouter creates a router with version-specific routes
 func CreateVersionedRouter(vm *VersionManager) chi.Router {
 	r := chi.NewRouter()
-	
+
 	// Add version middleware
 	r.Use(vm.VersionMiddleware)
-	
+
 	// Version info endpoint
 	r.Get("/versions", vm.VersionInfoHandler())
-	
+
 	// Version-specific route groups
 	r.Route("/api", func(r chi.Router) {
 		// v1 routes
@@ -294,7 +294,7 @@ func CreateVersionedRouter(vm *VersionManager) chi.Router {
 				})
 			})
 		})
-		
+
 		// v2 routes
 		r.Route("/v2", func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -305,7 +305,7 @@ func CreateVersionedRouter(vm *VersionManager) chi.Router {
 			})
 		})
 	})
-	
+
 	return r
 }
 
@@ -315,17 +315,17 @@ func (vm *VersionManager) GetRateLimitForVersion(version string) RateLimitConfig
 	case "v1":
 		return RateLimitConfig{
 			RequestsPerMinute: 100,
-			BurstSize:        200,
+			BurstSize:         200,
 		}
 	case "v2":
 		return RateLimitConfig{
 			RequestsPerMinute: 150, // Higher limits for newer version
-			BurstSize:        300,
+			BurstSize:         300,
 		}
 	default:
 		return RateLimitConfig{
 			RequestsPerMinute: 60, // Conservative for unknown versions
-			BurstSize:        100,
+			BurstSize:         100,
 		}
 	}
 }

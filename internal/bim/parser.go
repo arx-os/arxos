@@ -15,18 +15,18 @@ type Parser struct {
 	strict bool // If true, enforce all validation rules
 
 	// State during parsing
-	currentLine   int
-	currentFloor  *Floor
+	currentLine    int
+	currentFloor   *Floor
 	currentSection string
-	errors        []error
-	warnings      []string
+	errors         []error
+	warnings       []string
 }
 
 // NewParser creates a new BIM parser
 func NewParser() *Parser {
 	return &Parser{
-		strict: true,
-		errors: make([]error, 0),
+		strict:   true,
+		errors:   make([]error, 0),
 		warnings: make([]string, 0),
 	}
 }

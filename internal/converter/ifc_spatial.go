@@ -19,21 +19,21 @@ type SpatialIFCConverter struct {
 
 // SpatialElement represents an element in the spatial hierarchy
 type SpatialElement struct {
-	Entity        *IFCEntity
-	Children      []*SpatialElement
-	Parent        *SpatialElement
+	Entity            *IFCEntity
+	Children          []*SpatialElement
+	Parent            *SpatialElement
 	ContainedElements []*IFCEntity
-	Level         int // Depth in hierarchy (0=project, 1=site, 2=building, 3=storey, 4=space)
+	Level             int // Depth in hierarchy (0=project, 1=site, 2=building, 3=storey, 4=space)
 }
 
 // IFCRelationship represents relationships between IFC entities
 type IFCRelationship struct {
-	ID           string
-	Type         string
-	RelatingElement string  // Parent/container
+	ID              string
+	Type            string
+	RelatingElement string   // Parent/container
 	RelatedElements []string // Children/contained elements
-	Name         string
-	Description  string
+	Name            string
+	Description     string
 }
 
 // NewSpatialIFCConverter creates an enhanced IFC converter with spatial understanding
@@ -298,11 +298,11 @@ func (c *SpatialIFCConverter) buildSpatialHierarchy() {
 // getSpatialLevel returns the hierarchy level for a spatial type
 func (c *SpatialIFCConverter) getSpatialLevel(spatialType string) int {
 	levels := map[string]int{
-		"IFCPROJECT":       0,
-		"IFCSITE":          1,
-		"IFCBUILDING":      2,
+		"IFCPROJECT":        0,
+		"IFCSITE":           1,
+		"IFCBUILDING":       2,
 		"IFCBUILDINGSTOREY": 3,
-		"IFCSPACE":         4,
+		"IFCSPACE":          4,
 	}
 	return levels[spatialType]
 }
@@ -578,10 +578,10 @@ func (c *SpatialIFCConverter) extractRoomNumber(name string) string {
 	// Enhanced room number extraction patterns
 	patterns := []*regexp.Regexp{
 		regexp.MustCompile(`(?i)(?:room|office|suite)\s+([A-Z]?\d+[A-Z]?)(?:\s|$)`), // "Room 205A", "Office 101"
-		regexp.MustCompile(`(?i)(?:room|office|suite)\s+([A-Z]+)(?:\s|$)`),           // "Meeting Room Alpha"
-		regexp.MustCompile(`([A-Z]-?\d+[A-Z]?)`),                                     // "W-203", "15B"
-		regexp.MustCompile(`(\d+[A-Z])`),                                             // "205A"
-		regexp.MustCompile(`(\d+)`),                                                  // Basic numbers as fallback
+		regexp.MustCompile(`(?i)(?:room|office|suite)\s+([A-Z]+)(?:\s|$)`),          // "Meeting Room Alpha"
+		regexp.MustCompile(`([A-Z]-?\d+[A-Z]?)`),                                    // "W-203", "15B"
+		regexp.MustCompile(`(\d+[A-Z])`),                                            // "205A"
+		regexp.MustCompile(`(\d+)`),                                                 // Basic numbers as fallback
 	}
 
 	for _, pattern := range patterns {

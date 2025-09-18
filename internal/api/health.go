@@ -24,12 +24,12 @@ const (
 
 // HealthCheck represents a health check result
 type HealthCheck struct {
-	Status      HealthStatus           `json:"status"`
-	Timestamp   time.Time              `json:"timestamp"`
-	Version     string                 `json:"version"`
-	Uptime      string                 `json:"uptime"`
-	Checks      map[string]CheckResult `json:"checks"`
-	SystemInfo  SystemInfo             `json:"system_info"`
+	Status     HealthStatus           `json:"status"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Version    string                 `json:"version"`
+	Uptime     string                 `json:"uptime"`
+	Checks     map[string]CheckResult `json:"checks"`
+	SystemInfo SystemInfo             `json:"system_info"`
 }
 
 // CheckResult represents an individual check result
@@ -57,11 +57,11 @@ type ReadinessCheck struct {
 
 // HealthChecker performs health checks
 type HealthChecker struct {
-	db         *sql.DB
-	startTime  time.Time
-	version    string
-	checks     map[string]func(context.Context) CheckResult
-	mu         sync.RWMutex
+	db        *sql.DB
+	startTime time.Time
+	version   string
+	checks    map[string]func(context.Context) CheckResult
+	mu        sync.RWMutex
 }
 
 // NewHealthChecker creates a new health checker

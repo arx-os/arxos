@@ -135,8 +135,8 @@ func benchmarkIFCImport(b *testing.B, ctx context.Context, db *database.PostGISH
 
 	// Test different IFC file sizes
 	testCases := []struct {
-		name             string
-		floors           int
+		name              string
+		floors            int
 		equipmentPerFloor int
 	}{
 		{"Small", 2, 10},

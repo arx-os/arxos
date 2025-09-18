@@ -16,12 +16,12 @@ type Region struct {
 
 // LayerPriority defines standard z-indices for layers
 const (
-	LayerStructure    = 0   // Base floor plan
-	LayerEquipment    = 10  // Equipment placement
-	LayerConnections  = 20  // Wiring, piping
-	LayerParticles    = 30  // Dynamic particles
-	LayerEnergy       = 35  // Energy flow overlay
-	LayerFailure      = 40  // Failure zones
-	LayerAnnotations  = 50  // Text labels
-	LayerUI           = 100 // UI overlays
+	LayerStructure   = 0   // Base floor plan
+	LayerEquipment   = 10  // Equipment placement
+	LayerConnections = 20  // Wiring, piping
+	LayerParticles   = 30  // Dynamic particles
+	LayerEnergy      = 35  // Energy flow overlay
+	LayerFailure     = 40  // Failure zones
+	LayerAnnotations = 50  // Text labels
+	LayerUI          = 100 // UI overlays
 )

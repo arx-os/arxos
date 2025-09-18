@@ -20,15 +20,15 @@ type ImportOptions struct {
 	BuildingName string
 
 	// Processing options
-	ValidateOnly     bool // Only validate, don't save
-	SkipValidation   bool // Skip validation checks
-	EnhanceSpatial   bool // Enhance with spatial data
-	MergeExisting    bool // Merge with existing building data
+	ValidateOnly   bool // Only validate, don't save
+	SkipValidation bool // Skip validation checks
+	EnhanceSpatial bool // Enhance with spatial data
+	MergeExisting  bool // Merge with existing building data
 
 	// Storage targets
-	SaveToDatabase   bool
-	SaveToBIM        bool
-	OutputPath       string
+	SaveToDatabase bool
+	SaveToBIM      bool
+	OutputPath     string
 
 	// Progress callback
 	ProgressCallback func(stage string, percent int)
@@ -45,12 +45,12 @@ const (
 
 // ImportCapabilities describes what an importer can do
 type ImportCapabilities struct {
-	SupportsSpatial     bool
-	SupportsHierarchy   bool
-	SupportsMetadata    bool
-	SupportsConfidence  bool
-	SupportsStreaming   bool
-	MaxFileSize         int64 // max file size in bytes, 0 = no limit
+	SupportsSpatial    bool
+	SupportsHierarchy  bool
+	SupportsMetadata   bool
+	SupportsConfidence bool
+	SupportsStreaming  bool
+	MaxFileSize        int64 // max file size in bytes, 0 = no limit
 }
 
 // ImportPipeline is the main interface for importing building data

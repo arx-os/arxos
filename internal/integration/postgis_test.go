@@ -82,9 +82,9 @@ func testSpatialDataStorage(t *testing.T, ctx context.Context, db *database.Post
 	// Test data
 	equipmentID := fmt.Sprintf("TEST-EQUIP-%d", time.Now().Unix())
 	position := spatial.Point3D{
-		X: 5000.0,  // 5m in mm
-		Y: 3000.0,  // 3m in mm
-		Z: 2700.0,  // 2.7m in mm
+		X: 5000.0, // 5m in mm
+		Y: 3000.0, // 3m in mm
+		Z: 2700.0, // 2.7m in mm
 	}
 
 	// Store position

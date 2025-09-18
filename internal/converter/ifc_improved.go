@@ -35,13 +35,13 @@ func (c *ImprovedIFCConverter) CanConvert(filename string) bool {
 
 // IFCEntity represents a parsed IFC entity
 type IFCEntity struct {
-	ID         string
-	Type       string
-	GUID       string
-	Name       string
+	ID          string
+	Type        string
+	GUID        string
+	Name        string
 	Description string
-	Properties map[string]string
-	References []string
+	Properties  map[string]string
+	References  []string
 }
 
 func (c *ImprovedIFCConverter) ConvertToBIM(input io.Reader, output io.Writer) error {

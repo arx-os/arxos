@@ -30,19 +30,19 @@ func (s *StructureLayer) Render(viewport Viewport) [][]rune {
 			buffer[i][j] = ' '
 		}
 	}
-	
+
 	if s.floorPlan == nil || !s.visible {
 		return buffer
 	}
-	
+
 	// Render rooms
 	for _, room := range s.floorPlan.Rooms {
 		s.renderRoom(buffer, *room, viewport)
 	}
-	
+
 	// Render walls and connections between rooms
 	s.renderWalls(buffer, viewport)
-	
+
 	return buffer
 }
 
@@ -52,7 +52,7 @@ func (s *StructureLayer) renderRoom(buffer [][]rune, room models.Room, vp Viewpo
 	maxX := int((room.Bounds.MaxX - vp.X) * vp.Zoom)
 	minY := int((room.Bounds.MinY - vp.Y) * vp.Zoom)
 	maxY := int((room.Bounds.MaxY - vp.Y) * vp.Zoom)
-	
+
 	// Clip to viewport
 	if minX < 0 {
 		minX = 0
@@ -66,25 +66,25 @@ func (s *StructureLayer) renderRoom(buffer [][]rune, room models.Room, vp Viewpo
 	if maxY >= vp.Height {
 		maxY = vp.Height - 1
 	}
-	
+
 	// Skip if room is outside viewport
 	if minX >= vp.Width || maxX < 0 || minY >= vp.Height || maxY < 0 {
 		return
 	}
-	
+
 	// Draw room boundaries
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
 			if y < 0 || y >= vp.Height || x < 0 || x >= vp.Width {
 				continue
 			}
-			
+
 			// Determine wall character based on position
 			isTop := y == minY
 			isBottom := y == maxY
 			isLeft := x == minX
 			isRight := x == maxX
-			
+
 			if isTop && isLeft {
 				buffer[y][x] = '┌'
 			} else if isTop && isRight {
@@ -100,12 +100,12 @@ func (s *StructureLayer) renderRoom(buffer [][]rune, room models.Room, vp Viewpo
 			}
 		}
 	}
-	
+
 	// Add room label if space permits
 	if maxX-minX > len(room.Name)+2 && maxY-minY > 2 {
 		labelX := minX + (maxX-minX-len(room.Name))/2
 		labelY := minY + (maxY-minY)/2
-		
+
 		if labelY >= 0 && labelY < vp.Height {
 			for i, ch := range room.Name {
 				if labelX+i >= 0 && labelX+i < vp.Width {
@@ -119,7 +119,7 @@ func (s *StructureLayer) renderRoom(buffer [][]rune, room models.Room, vp Viewpo
 func (s *StructureLayer) renderWalls(buffer [][]rune, vp Viewport) {
 	// Render heavy walls for main structure
 	// This would be based on wall definitions in the floor plan
-	
+
 	// For now, we enhance existing walls with heavier characters
 	for y := 0; y < vp.Height; y++ {
 		for x := 0; x < vp.Width; x++ {
@@ -135,11 +135,11 @@ func (s *StructureLayer) isWallIntersection(buffer [][]rune, x, y int) bool {
 	if y >= len(buffer) || x >= len(buffer[y]) {
 		return false
 	}
-	
+
 	char := buffer[y][x]
-	return char == '─' || char == '│' || char == '┌' || char == '┐' || 
-	       char == '└' || char == '┘' || char == '├' || char == '┤' || 
-	       char == '┬' || char == '┴' || char == '┼'
+	return char == '─' || char == '│' || char == '┌' || char == '┐' ||
+		char == '└' || char == '┘' || char == '├' || char == '┤' ||
+		char == '┬' || char == '┴' || char == '┼'
 }
 
 func (s *StructureLayer) getIntersectionChar(buffer [][]rune, x, y int) rune {
@@ -148,7 +148,7 @@ func (s *StructureLayer) getIntersectionChar(buffer [][]rune, x, y int) rune {
 	hasBottom := y < len(buffer)-1 && s.isVerticalWall(buffer[y+1][x])
 	hasLeft := x > 0 && s.isHorizontalWall(buffer[y][x-1])
 	hasRight := x < len(buffer[y])-1 && s.isHorizontalWall(buffer[y][x+1])
-	
+
 	// Return appropriate intersection character
 	if hasTop && hasBottom && hasLeft && hasRight {
 		return '┼'
@@ -161,7 +161,7 @@ func (s *StructureLayer) getIntersectionChar(buffer [][]rune, x, y int) rune {
 	} else if hasBottom && hasLeft && hasRight {
 		return '┬'
 	}
-	
+
 	return buffer[y][x] // Keep original if no intersection
 }
 

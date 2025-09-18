@@ -24,15 +24,15 @@ func (m *Manager) AddLayer(layer Layer) error {
 	if layer == nil {
 		return fmt.Errorf("cannot add nil layer")
 	}
-	
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	name := layer.GetName()
 	if _, exists := m.layers[name]; exists {
 		return fmt.Errorf("layer %s already exists", name)
 	}
-	
+
 	m.layers[name] = layer
 	return nil
 }
@@ -41,11 +41,11 @@ func (m *Manager) AddLayer(layer Layer) error {
 func (m *Manager) RemoveLayer(name string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if _, exists := m.layers[name]; !exists {
 		return fmt.Errorf("layer %s not found", name)
 	}
-	
+
 	delete(m.layers, name)
 	return nil
 }
@@ -54,7 +54,7 @@ func (m *Manager) RemoveLayer(name string) error {
 func (m *Manager) GetLayer(name string) (Layer, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	layer, exists := m.layers[name]
 	return layer, exists
 }
@@ -63,17 +63,17 @@ func (m *Manager) GetLayer(name string) (Layer, bool) {
 func (m *Manager) GetLayers() []Layer {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	layers := make([]Layer, 0, len(m.layers))
 	for _, layer := range m.layers {
 		layers = append(layers, layer)
 	}
-	
+
 	// Sort by priority (lower priority renders first)
 	sort.Slice(layers, func(i, j int) bool {
 		return layers[i].GetPriority() < layers[j].GetPriority()
 	})
-	
+
 	return layers
 }
 
@@ -82,11 +82,11 @@ func (m *Manager) SetLayerVisible(name string, visible bool) error {
 	m.mu.RLock()
 	layer, exists := m.layers[name]
 	m.mu.RUnlock()
-	
+
 	if !exists {
 		return fmt.Errorf("layer %s not found", name)
 	}
-	
+
 	layer.SetVisible(visible)
 	return nil
 }
@@ -94,7 +94,7 @@ func (m *Manager) SetLayerVisible(name string, visible bool) error {
 // RenderAll renders all visible layers to the buffer
 func (m *Manager) RenderAll(buffer [][]rune, viewport Viewport) {
 	layers := m.GetLayers()
-	
+
 	for _, layer := range layers {
 		if layer.IsVisible() {
 			layer.Render(buffer, viewport)
@@ -106,7 +106,7 @@ func (m *Manager) RenderAll(buffer [][]rune, viewport Viewport) {
 func (m *Manager) UpdateAll(deltaTime float64) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	for _, layer := range m.layers {
 		layer.Update(deltaTime)
 	}
@@ -116,7 +116,7 @@ func (m *Manager) UpdateAll(deltaTime float64) {
 func (m *Manager) Clear() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.layers = make(map[string]Layer)
 }
 
@@ -124,12 +124,12 @@ func (m *Manager) Clear() {
 func (m *Manager) GetLayerNames() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	names := make([]string, 0, len(m.layers))
 	for name := range m.layers {
 		names = append(names, name)
 	}
-	
+
 	sort.Strings(names)
 	return names
 }
@@ -138,16 +138,16 @@ func (m *Manager) GetLayerNames() []string {
 func (m *Manager) SetLayerPriority(name string, priority int) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	layer, exists := m.layers[name]
 	if !exists {
 		return fmt.Errorf("layer %s not found", name)
 	}
-	
+
 	// This would require the Layer interface to have a SetPriority method
 	// For now, we can't change priority after creation
 	_ = layer
 	_ = priority
-	
+
 	return fmt.Errorf("changing layer priority not yet implemented")
 }

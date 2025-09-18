@@ -62,10 +62,10 @@ func TestQueryBuilder_Build(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			qb := NewQueryBuilder(tt.opts)
 			query, args := qb.Build()
-			
+
 			assert.NotEmpty(t, query)
 			assert.Len(t, args, tt.wantArgs)
-			
+
 			// Verify query contains expected components
 			assert.Contains(t, query, "SELECT DISTINCT")
 			assert.Contains(t, query, "FROM equipment e")
@@ -76,20 +76,20 @@ func TestQueryBuilder_Build(t *testing.T) {
 
 func TestQueryBuilder_addFilters(t *testing.T) {
 	tests := []struct {
-		name      string
-		opts      QueryOptions
+		name       string
+		opts       QueryOptions
 		wantWheres int
 		wantArgs   int
 	}{
 		{
-			name:      "no filters",
-			opts:      QueryOptions{},
+			name:       "no filters",
+			opts:       QueryOptions{},
 			wantWheres: 0,
 			wantArgs:   0,
 		},
 		{
-			name: "building filter",
-			opts: QueryOptions{Building: "ARXOS-001"},
+			name:       "building filter",
+			opts:       QueryOptions{Building: "ARXOS-001"},
 			wantWheres: 1,
 			wantArgs:   2,
 		},
@@ -111,7 +111,7 @@ func TestQueryBuilder_addFilters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			qb := NewQueryBuilder(tt.opts)
 			qb.addFilters()
-			
+
 			assert.Len(t, qb.wheres, tt.wantWheres)
 			assert.Len(t, qb.args, tt.wantArgs)
 		})
@@ -216,10 +216,10 @@ func TestQueryResult(t *testing.T) {
 	// Test QueryResult structure
 	equipment := []*models.Equipment{
 		{
-			ID:     "EQ001",
-			Name:   "Test Equipment",
-			Type:   "outlet",
-			Status: "operational",
+			ID:       "EQ001",
+			Name:     "Test Equipment",
+			Type:     "outlet",
+			Status:   "operational",
 			Location: &models.Point{X: 10.5, Y: 20.3},
 			Metadata: map[string]interface{}{
 				"building_name": "Test Building",
@@ -245,7 +245,7 @@ func TestQueryResult(t *testing.T) {
 	assert.NotZero(t, result.QueryTime)
 	assert.NotZero(t, result.ExecutedAt)
 	assert.Len(t, result.Equipment, 1)
-	
+
 	// Test equipment data
 	eq := result.Equipment[0]
 	assert.Equal(t, "EQ001", eq.ID)

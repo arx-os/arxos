@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/common/progress"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
 // RealPDFConverter handles actual PDF files with text extraction
@@ -275,7 +275,6 @@ func (c *RealPDFConverter) extractRooms(text string) []map[string]string {
 		line = strings.ReplaceAll(line, "(", "")
 		line = regexp.MustCompile(`\s+`).ReplaceAllString(line, " ")
 		line = strings.TrimSpace(line)
-
 
 		// Look for room patterns (multiple formats)
 		patterns := []*regexp.Regexp{

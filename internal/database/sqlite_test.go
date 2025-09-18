@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-	
+
 	"github.com/arx-os/arxos/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,29 +15,29 @@ import (
 func setupTestDB(t *testing.T) (*SQLiteDB, string, func()) {
 	tempDir, err := os.MkdirTemp("", "arxos_db_test_*")
 	require.NoError(t, err)
-	
+
 	dbPath := filepath.Join(tempDir, "test.db")
 	config := NewConfig(dbPath)
 	db := NewSQLiteDB(config)
-	
+
 	ctx := context.Background()
 	err = db.Connect(ctx, dbPath)
 	require.NoError(t, err)
-	
+
 	cleanup := func() {
 		db.Close()
 		os.RemoveAll(tempDir)
 	}
-	
+
 	return db, dbPath, cleanup
 }
 
 func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 	db, _, cleanup := setupTestDB(t)
 	defer cleanup()
-	
+
 	ctx := context.Background()
-	
+
 	// Create test floor plan
 	now := time.Now()
 	plan := &models.FloorPlan{
@@ -56,7 +56,7 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 				},
 			},
 			{
-				ID:   "room2", 
+				ID:   "room2",
 				Name: "Room 2",
 				Bounds: models.Bounds{
 					MinX: 10, MinY: 0,
@@ -84,22 +84,22 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Save floor plan
 	err := db.SaveFloorPlan(ctx, plan)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, plan.ID, "Floor plan should have an ID after saving")
-	
+
 	// Load floor plan using the generated ID
 	loaded, err := db.GetFloorPlan(ctx, plan.ID)
 	assert.NoError(t, err)
 	assert.NotNil(t, loaded)
-	
+
 	// Verify basic properties
 	assert.Equal(t, plan.Name, loaded.Name)
 	assert.Equal(t, plan.Building, loaded.Building)
 	assert.Equal(t, plan.Level, loaded.Level)
-	
+
 	// Verify rooms
 	assert.Len(t, loaded.Rooms, 2)
 	room1Found := false
@@ -112,7 +112,7 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 		}
 	}
 	assert.True(t, room1Found, "Room 1 not found")
-	
+
 	// Verify equipment
 	assert.Len(t, loaded.Equipment, 2)
 	eq2Found := false
@@ -132,9 +132,9 @@ func TestSQLiteDB_SaveAndLoadFloorPlan(t *testing.T) {
 func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 	db, _, cleanup := setupTestDB(t)
 	defer cleanup()
-	
+
 	ctx := context.Background()
-	
+
 	// Create and save initial floor plan
 	plan := &models.FloorPlan{
 		ID:       "UpdateTest",
@@ -152,10 +152,10 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 			},
 		},
 	}
-	
+
 	err := db.SaveFloorPlan(ctx, plan)
 	require.NoError(t, err)
-	
+
 	// Update the floor plan
 	plan.Building = "Building B"
 	plan.Level = 2
@@ -179,14 +179,14 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 			Status:   models.StatusNormal,
 		},
 	}
-	
+
 	err = db.UpdateFloorPlan(ctx, plan)
 	assert.NoError(t, err)
-	
+
 	// Load and verify updates
 	loaded, err := db.GetFloorPlan(ctx, plan.ID)
 	require.NoError(t, err)
-	
+
 	assert.Equal(t, "Building B", loaded.Building)
 	assert.Equal(t, 2, loaded.Level)
 	assert.Len(t, loaded.Rooms, 1)
@@ -198,9 +198,9 @@ func TestSQLiteDB_UpdateFloorPlan(t *testing.T) {
 func TestSQLiteDB_ForeignKeyConstraints(t *testing.T) {
 	db, _, cleanup := setupTestDB(t)
 	defer cleanup()
-	
+
 	ctx := context.Background()
-	
+
 	// Test that equipment with invalid room_id is handled
 	plan := &models.FloorPlan{
 		ID:       "FKTest",
@@ -228,11 +228,11 @@ func TestSQLiteDB_ForeignKeyConstraints(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// SaveFloorPlanFixed should handle this gracefully
 	err := db.SaveFloorPlan(ctx, plan)
 	assert.NoError(t, err)
-	
+
 	// Load and check that equipment room_id was set to empty
 	loaded, err := db.GetFloorPlan(ctx, plan.ID)
 	require.NoError(t, err)
@@ -332,7 +332,7 @@ func TestValidateFloorPlan(t *testing.T) {
 			expectError: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateFloorPlan(tt.plan)

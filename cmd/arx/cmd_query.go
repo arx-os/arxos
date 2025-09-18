@@ -38,10 +38,10 @@ var (
 	queryMetric    string
 	queryExport    string
 	// Spatial query flags
-	queryNear      string
-	queryRadius    float64
-	queryWithin    string
-	queryContains  string
+	queryNear     string
+	queryRadius   float64
+	queryWithin   string
+	queryContains string
 )
 
 func init() {

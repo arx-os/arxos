@@ -47,11 +47,11 @@ type SpatialData struct {
 type RelationshipType string
 
 const (
-	RelationshipContains    RelationshipType = "CONTAINS"
-	RelationshipAggregates  RelationshipType = "AGGREGATES"
-	RelationshipConnects    RelationshipType = "CONNECTS"
-	RelationshipFills       RelationshipType = "FILLS"
-	RelationshipVoids       RelationshipType = "VOIDS"
+	RelationshipContains   RelationshipType = "CONTAINS"
+	RelationshipAggregates RelationshipType = "AGGREGATES"
+	RelationshipConnects   RelationshipType = "CONNECTS"
+	RelationshipFills      RelationshipType = "FILLS"
+	RelationshipVoids      RelationshipType = "VOIDS"
 )
 
 // EquipmentWithPosition combines equipment data with spatial position
@@ -59,7 +59,7 @@ type EquipmentWithPosition struct {
 	Equipment  *Equipment
 	Position   spatial.Point3D
 	Confidence spatial.ConfidenceLevel
-	ParentID   string // Room or floor ID
+	ParentID   string     // Room or floor ID
 	IFCEntity  *IFCEntity // Original IFC data
 }
 
@@ -277,7 +277,6 @@ func (adapter *IFCDatabaseAdapter) convertToModelFloorPlan(floor *Floor, buildin
 	}
 }
 
-
 // convertToModelRoom converts internal Room to models.Room
 func (adapter *IFCDatabaseAdapter) convertToModelRoom(room *Room, floorID string) *models.Room {
 	bounds := models.Bounds{}
@@ -299,9 +298,9 @@ func (adapter *IFCDatabaseAdapter) convertToModelEquipment(equipment *Equipment,
 	}
 
 	metadata := map[string]interface{}{
-		"ifc_id":      equipment.IFCId,
-		"ifc_type":    equipment.IFCType,
-		"category":    equipment.Category,
+		"ifc_id":   equipment.IFCId,
+		"ifc_type": equipment.IFCType,
+		"category": equipment.Category,
 	}
 
 	// Add properties if present
@@ -355,7 +354,6 @@ func (adapter *IFCDatabaseAdapter) storeFloorPlan(ctx context.Context, tx *sql.T
 		floorPlan.Description, floorPlan.Building, floorPlan.Level, floorPlan.Metadata)
 	return err
 }
-
 
 func (adapter *IFCDatabaseAdapter) storeRoom(ctx context.Context, tx *sql.Tx, room *models.Room) error {
 	// Rooms are stored as part of floor plan in ArxOS

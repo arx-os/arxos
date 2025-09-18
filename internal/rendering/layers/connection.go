@@ -6,12 +6,12 @@ import (
 
 // Connection represents a connection between pieces of equipment
 type Connection struct {
-	ID       string         `json:"id"`
-	Type     ConnectionType `json:"type"`
-	FromID   string         `json:"from_id"`   // Source equipment ID
-	ToID     string         `json:"to_id"`     // Destination equipment ID
-	Points   []models.Point `json:"points"`    // Path points for the connection
-	Status   ConnectionStatus `json:"status"`
+	ID     string           `json:"id"`
+	Type   ConnectionType   `json:"type"`
+	FromID string           `json:"from_id"` // Source equipment ID
+	ToID   string           `json:"to_id"`   // Destination equipment ID
+	Points []models.Point   `json:"points"`  // Path points for the connection
+	Status ConnectionStatus `json:"status"`
 }
 
 // ConnectionType defines the type of connection
@@ -47,10 +47,10 @@ type ConnectionLayer struct {
 
 // ConnectionStyle defines how connections are rendered
 type ConnectionStyle struct {
-	Char    rune
-	Active  rune
-	Failed  rune
-	Color   string // For future color support
+	Char   rune
+	Active rune
+	Failed rune
+	Color  string // For future color support
 }
 
 // Default connection styles
@@ -72,17 +72,17 @@ func NewConnectionLayer(connections []Connection, equipment []models.Equipment) 
 		showLabels:  false,
 		styleMap:    make(map[ConnectionType]ConnectionStyle),
 	}
-	
+
 	// Copy default styles
 	for k, v := range defaultConnectionStyles {
 		layer.styleMap[k] = v
 	}
-	
+
 	// Calculate bounds from connection points
 	if len(connections) > 0 {
 		minX, minY := float64(1e9), float64(1e9)
 		maxX, maxY := float64(-1e9), float64(-1e9)
-		
+
 		for _, conn := range connections {
 			for _, point := range conn.Points {
 				if point.X < minX {
@@ -99,7 +99,7 @@ func NewConnectionLayer(connections []Connection, equipment []models.Equipment) 
 				}
 			}
 		}
-		
+
 		layer.bounds = Bounds{
 			MinX: minX - 1,
 			MinY: minY - 1,
@@ -107,7 +107,7 @@ func NewConnectionLayer(connections []Connection, equipment []models.Equipment) 
 			MaxY: maxY + 1,
 		}
 	}
-	
+
 	return layer
 }
 
@@ -138,12 +138,12 @@ func (c *ConnectionLayer) renderConnection(buffer [][]rune, viewport Viewport, c
 	if len(conn.Points) < 2 {
 		return // Need at least 2 points to draw a connection
 	}
-	
+
 	style, exists := c.styleMap[conn.Type]
 	if !exists {
 		style = ConnectionStyle{Char: '·', Active: '●', Failed: '✗'}
 	}
-	
+
 	// Choose character based on connection status
 	char := style.Char
 	if conn.Status == ConnectionStatusFailed {
@@ -151,14 +151,14 @@ func (c *ConnectionLayer) renderConnection(buffer [][]rune, viewport Viewport, c
 	} else if conn.Status == ConnectionStatusActive {
 		char = style.Active
 	}
-	
+
 	// Draw lines between consecutive points
 	for i := 0; i < len(conn.Points)-1; i++ {
 		from := conn.Points[i]
 		to := conn.Points[i+1]
 		c.drawLine(buffer, viewport, from, to, char)
 	}
-	
+
 	// Draw connection label if enabled
 	if c.showLabels && conn.ID != "" {
 		// Place label at the midpoint of the first segment
@@ -179,7 +179,7 @@ func (c *ConnectionLayer) drawLine(buffer [][]rune, viewport Viewport, from, to 
 	y1 := int((from.Y - viewport.Y) * viewport.Zoom)
 	x2 := int((to.X - viewport.X) * viewport.Zoom)
 	y2 := int((to.Y - viewport.Y) * viewport.Zoom)
-	
+
 	// Use Bresenham's line algorithm for smooth lines
 	dx := abs(x2 - x1)
 	dy := abs(y2 - y1)
@@ -192,7 +192,7 @@ func (c *ConnectionLayer) drawLine(buffer [][]rune, viewport Viewport, from, to 
 		sy = -1
 	}
 	err := dx - dy
-	
+
 	x, y := x1, y1
 	for {
 		// Set character if within viewport
@@ -201,11 +201,11 @@ func (c *ConnectionLayer) drawLine(buffer [][]rune, viewport Viewport, from, to 
 				buffer[y][x] = char
 			}
 		}
-		
+
 		if x == x2 && y == y2 {
 			break
 		}
-		
+
 		e2 := 2 * err
 		if e2 > -dy {
 			err -= dy
@@ -229,11 +229,11 @@ func (c *ConnectionLayer) drawLabel(buffer [][]rune, viewport Viewport, x, y int
 			return // No space for label
 		}
 	}
-	
+
 	// Center the label on the connection
 	labelRunes := []rune(label)
 	startX := x - len(labelRunes)/2
-	
+
 	// Draw the label
 	for i, ch := range labelRunes {
 		labelX := startX + i
@@ -246,21 +246,21 @@ func (c *ConnectionLayer) drawLabel(buffer [][]rune, viewport Viewport, x, y int
 // GetConnectionAt returns the connection at the given world coordinates
 func (c *ConnectionLayer) GetConnectionAt(x, y float64) *Connection {
 	tolerance := 0.5 // How close to connection path to count as "at"
-	
+
 	for i := range c.connections {
 		conn := &c.connections[i]
-		
+
 		// Check if point is near any segment of the connection
 		for j := 0; j < len(conn.Points)-1; j++ {
 			from := conn.Points[j]
 			to := conn.Points[j+1]
-			
+
 			if c.pointNearLine(x, y, from.X, from.Y, to.X, to.Y, tolerance) {
 				return conn
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -271,19 +271,19 @@ func (c *ConnectionLayer) pointNearLine(px, py, x1, y1, x2, y2, tolerance float6
 	B := py - y1
 	C := x2 - x1
 	D := y2 - y1
-	
+
 	dot := A*C + B*D
 	lenSq := C*C + D*D
-	
+
 	if lenSq == 0 {
 		// Line is a point
 		dx := px - x1
 		dy := py - y1
 		return dx*dx+dy*dy <= tolerance*tolerance
 	}
-	
+
 	param := dot / lenSq
-	
+
 	var xx, yy float64
 	if param < 0 {
 		xx, yy = x1, y1
@@ -293,7 +293,7 @@ func (c *ConnectionLayer) pointNearLine(px, py, x1, y1, x2, y2, tolerance float6
 		xx = x1 + param*C
 		yy = y1 + param*D
 	}
-	
+
 	dx := px - xx
 	dy := py - yy
 	return dx*dx+dy*dy <= tolerance*tolerance

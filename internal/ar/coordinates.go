@@ -28,11 +28,11 @@ const (
 
 // ARTransform represents a transformation in AR space
 type ARTransform struct {
-	Position    ARPoint3D   `json:"position"`
-	Rotation    ARRotation  `json:"rotation"`
-	Scale       float64     `json:"scale"`
-	Timestamp   time.Time   `json:"timestamp"`
-	Confidence  float32     `json:"confidence"`
+	Position   ARPoint3D  `json:"position"`
+	Rotation   ARRotation `json:"rotation"`
+	Scale      float64    `json:"scale"`
+	Timestamp  time.Time  `json:"timestamp"`
+	Confidence float32    `json:"confidence"`
 }
 
 // ARPoint3D represents a point in AR coordinate space
@@ -171,13 +171,13 @@ const (
 
 // TrackingQuality provides information about AR tracking quality
 type TrackingQuality struct {
-	State            TrackingState `json:"state"`
-	Confidence       float32       `json:"confidence"`
-	LightEstimate    float32       `json:"light_estimate"`
-	PlaneCount       int           `json:"plane_count"`
-	FeatureCount     int           `json:"feature_count"`
-	LastUpdate       time.Time     `json:"last_update"`
-	DriftCorrection  ARPoint3D     `json:"drift_correction"`
+	State           TrackingState `json:"state"`
+	Confidence      float32       `json:"confidence"`
+	LightEstimate   float32       `json:"light_estimate"`
+	PlaneCount      int           `json:"plane_count"`
+	FeatureCount    int           `json:"feature_count"`
+	LastUpdate      time.Time     `json:"last_update"`
+	DriftCorrection ARPoint3D     `json:"drift_correction"`
 }
 
 // ARSession represents an active AR session

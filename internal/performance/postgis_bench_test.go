@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/spatial"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,7 +38,7 @@ func BenchmarkPostGISSpatialQueries(b *testing.B) {
 
 	// Benchmark proximity queries
 	b.Run("ProximityQuery_1m", func(b *testing.B) {
-		center := database.Point3D{X: 50, Y: 50, Z: 5}
+		center := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		radius := 1.0 // 1 meter
 
 		b.ResetTimer()
@@ -49,7 +50,7 @@ func BenchmarkPostGISSpatialQueries(b *testing.B) {
 	})
 
 	b.Run("ProximityQuery_10m", func(b *testing.B) {
-		center := database.Point3D{X: 50, Y: 50, Z: 5}
+		center := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		radius := 10.0 // 10 meters
 
 		b.ResetTimer()
@@ -61,7 +62,7 @@ func BenchmarkPostGISSpatialQueries(b *testing.B) {
 	})
 
 	b.Run("ProximityQuery_50m", func(b *testing.B) {
-		center := database.Point3D{X: 50, Y: 50, Z: 5}
+		center := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		radius := 50.0 // 50 meters
 
 		b.ResetTimer()
@@ -75,8 +76,8 @@ func BenchmarkPostGISSpatialQueries(b *testing.B) {
 	// Benchmark containment queries
 	b.Run("ContainmentQuery_SmallBox", func(b *testing.B) {
 		bounds := database.BoundingBox{
-			Min: database.Point3D{X: 40, Y: 40, Z: 0},
-			Max: database.Point3D{X: 60, Y: 60, Z: 10},
+			Min: spatial.Point3D{X: 40, Y: 40, Z: 0},
+			Max: spatial.Point3D{X: 60, Y: 60, Z: 10},
 		}
 
 		b.ResetTimer()
@@ -89,8 +90,8 @@ func BenchmarkPostGISSpatialQueries(b *testing.B) {
 
 	b.Run("ContainmentQuery_LargeBox", func(b *testing.B) {
 		bounds := database.BoundingBox{
-			Min: database.Point3D{X: 0, Y: 0, Z: 0},
-			Max: database.Point3D{X: 100, Y: 100, Z: 20},
+			Min: spatial.Point3D{X: 0, Y: 0, Z: 0},
+			Max: spatial.Point3D{X: 100, Y: 100, Z: 20},
 		}
 
 		b.ResetTimer()
@@ -116,7 +117,7 @@ func BenchmarkPostGISSpatialQueries(b *testing.B) {
 
 	// Benchmark nearest neighbor queries
 	b.Run("NearestNeighbor_5", func(b *testing.B) {
-		point := database.Point3D{X: 50, Y: 50, Z: 5}
+		point := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		limit := 5
 
 		b.ResetTimer()
@@ -128,7 +129,7 @@ func BenchmarkPostGISSpatialQueries(b *testing.B) {
 	})
 
 	b.Run("NearestNeighbor_50", func(b *testing.B) {
-		point := database.Point3D{X: 50, Y: 50, Z: 5}
+		point := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		limit := 50
 
 		b.ResetTimer()
@@ -233,7 +234,7 @@ func BenchmarkPostGISIndexEffectiveness(b *testing.B) {
 		// Ensure index exists
 		db.CreateSpatialIndex(ctx, "equipment", "location")
 
-		center := database.Point3D{X: 50, Y: 50, Z: 5}
+		center := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		radius := 10.0
 
 		b.ResetTimer()
@@ -250,7 +251,7 @@ func BenchmarkPostGISIndexEffectiveness(b *testing.B) {
 		db.DropSpatialIndex(ctx, "equipment", "location")
 		defer db.CreateSpatialIndex(ctx, "equipment", "location") // Restore
 
-		center := database.Point3D{X: 50, Y: 50, Z: 5}
+		center := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		radius := 10.0
 
 		b.ResetTimer()
@@ -278,7 +279,7 @@ func generateTestEquipment(b *testing.B, db *database.PostGISDB, count int) {
 			ID:   fmt.Sprintf("EQ_%06d", i),
 			Name: fmt.Sprintf("Equipment %d", i),
 			Type: randomType(),
-			Location: database.Point3D{
+			Location: spatial.Point3D{
 				X: rand.Float64() * 100,
 				Y: rand.Float64() * 100,
 				Z: rand.Float64() * 20,
@@ -314,7 +315,7 @@ func generateRandomEquipment(seed int) *database.SpatialEquipment {
 		ID:   fmt.Sprintf("EQ_%d_%d", time.Now().Unix(), seed),
 		Name: fmt.Sprintf("Equipment %d", seed),
 		Type: randomType(),
-		Location: database.Point3D{
+		Location: spatial.Point3D{
 			X: rand.Float64() * 100,
 			Y: rand.Float64() * 100,
 			Z: rand.Float64() * 20,
@@ -332,14 +333,14 @@ func randomType() string {
 
 // Performance test results tracking
 type PerformanceResult struct {
-	TestName      string
-	Operations    int
-	TotalTime     time.Duration
-	OpsPerSecond  float64
-	AvgLatency    time.Duration
-	P50Latency    time.Duration
-	P95Latency    time.Duration
-	P99Latency    time.Duration
+	TestName     string
+	Operations   int
+	TotalTime    time.Duration
+	OpsPerSecond float64
+	AvgLatency   time.Duration
+	P50Latency   time.Duration
+	P95Latency   time.Duration
+	P99Latency   time.Duration
 }
 
 // TestPostGISPerformanceTargets verifies performance meets targets
@@ -371,7 +372,7 @@ func TestPostGISPerformanceTargets(t *testing.T) {
 
 	// Test spatial query performance
 	t.Run("SpatialQueryTarget_50ms", func(t *testing.T) {
-		center := database.Point3D{X: 50, Y: 50, Z: 5}
+		center := spatial.Point3D{X: 50, Y: 50, Z: 5}
 		radius := 10.0
 
 		start := time.Now()

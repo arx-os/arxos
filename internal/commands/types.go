@@ -56,23 +56,23 @@ type QueryOptions struct {
 	Status     string
 	Type       string
 	Floor      int
-	System     string // System filter
-	Room       string // Room filter
-	SQL        string // Raw SQL query
-	Output     string // Output format
-	Limit      int    // Max results
-	Offset     int    // Result offset
-	Count      bool   // Count only
+	System     string   // System filter
+	Room       string   // Room filter
+	SQL        string   // Raw SQL query
+	Output     string   // Output format
+	Limit      int      // Max results
+	Offset     int      // Result offset
+	Count      bool     // Count only
 	Fields     []string // Fields to display
 	Spatial    string
 	Format     string
 	OutputFile string
 
 	// Spatial query parameters
-	Near      string  // Coordinates for proximity search (x,y,z)
-	Radius    float64 // Search radius in meters
-	Within    string  // Bounding box (minX,minY,minZ,maxX,maxY,maxZ)
-	Contains  string  // Point to check containment (x,y,z)
+	Near     string  // Coordinates for proximity search (x,y,z)
+	Radius   float64 // Search radius in meters
+	Within   string  // Bounding box (minX,minY,minZ,maxX,maxY,maxZ)
+	Contains string  // Point to check containment (x,y,z)
 }
 
 // SyncOptions defines options for the sync command

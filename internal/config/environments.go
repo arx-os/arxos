@@ -17,12 +17,12 @@ const (
 
 // EnvironmentConfig contains environment-specific settings
 type EnvironmentConfig struct {
-	Name        Environment
-	APIBaseURL  string
-	WebBaseURL  string
-	CORSOrigins []string
+	Name         Environment
+	APIBaseURL   string
+	WebBaseURL   string
+	CORSOrigins  []string
 	SecureCookie bool
-	Debug       bool
+	Debug        bool
 }
 
 // GetEnvironmentConfig returns configuration for the current environment

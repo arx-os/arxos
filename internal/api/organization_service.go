@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
+	"github.com/google/uuid"
 )
 
 // OrganizationServiceImpl implements the OrganizationService interface
@@ -37,14 +37,14 @@ func (s *OrganizationServiceImpl) GetOrganizationBySlug(ctx context.Context, slu
 	// For now, we'll use a query since we don't have a dedicated method
 	// In a real implementation, we'd add GetOrganizationBySlug to the database interface
 	query := `SELECT id, name, slug, plan, max_users, max_buildings, status, created_at, updated_at FROM organizations WHERE slug = ?`
-	
+
 	row := s.db.QueryRow(ctx, query, slug)
 	var org models.Organization
 	err := row.Scan(&org.ID, &org.Name, &org.Slug, &org.Plan, &org.MaxUsers, &org.MaxBuildings, &org.Status, &org.CreatedAt, &org.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &org, nil
 }
 
@@ -59,12 +59,12 @@ func (s *OrganizationServiceImpl) CreateOrganization(ctx context.Context, org *m
 	if org.ID == "" {
 		org.ID = uuid.New().String()
 	}
-	
+
 	// Set timestamps
 	now := time.Now()
 	org.CreatedAt = &now
 	org.UpdatedAt = &now
-	
+
 	// Set defaults
 	if org.Status == "" {
 		org.Status = "active"
@@ -78,19 +78,19 @@ func (s *OrganizationServiceImpl) CreateOrganization(ctx context.Context, org *m
 	if org.MaxBuildings == 0 {
 		org.MaxBuildings = 1 // Default for free plan
 	}
-	
+
 	// Create organization
 	if err := s.db.CreateOrganization(ctx, org); err != nil {
 		return fmt.Errorf("failed to create organization: %w", err)
 	}
-	
+
 	// Add owner as member
 	if err := s.db.AddOrganizationMember(ctx, org.ID, ownerID, string(models.RoleOwner)); err != nil {
 		logger.Error("Failed to add owner to organization %s: %v", org.ID, err)
 		// Note: In production, we'd want to rollback the organization creation
 		return fmt.Errorf("failed to add owner to organization: %w", err)
 	}
-	
+
 	logger.Info("Created organization %s (%s) with owner %s", org.Name, org.ID, ownerID)
 	return nil
 }
@@ -138,7 +138,7 @@ func (s *OrganizationServiceImpl) GetMemberRole(ctx context.Context, orgID, user
 		}
 		return nil, err
 	}
-	
+
 	return &member.Role, nil
 }
 
@@ -160,11 +160,11 @@ func (s *OrganizationServiceImpl) CreateInvitation(ctx context.Context, orgID, e
 		CreatedAt:      &now,
 		UpdatedAt:      &now,
 	}
-	
+
 	if err := s.db.CreateOrganizationInvitation(ctx, invitation); err != nil {
 		return nil, fmt.Errorf("failed to create invitation: %w", err)
 	}
-	
+
 	logger.Info("Created invitation for %s to join organization %s", email, orgID)
 	return invitation, nil
 }
@@ -174,7 +174,7 @@ func (s *OrganizationServiceImpl) AcceptInvitation(ctx context.Context, token st
 	if err := s.db.AcceptOrganizationInvitation(ctx, token, userID); err != nil {
 		return fmt.Errorf("failed to accept invitation: %w", err)
 	}
-	
+
 	logger.Info("User %s accepted organization invitation", userID)
 	return nil
 }
@@ -197,11 +197,11 @@ func (s *OrganizationServiceImpl) HasPermission(ctx context.Context, orgID, user
 	if err != nil {
 		return false, err
 	}
-	
+
 	if role == nil {
 		return false, nil // User is not a member
 	}
-	
+
 	// Check if the role has the required permission
 	permissions := role.GetPermissions()
 	for _, p := range permissions {
@@ -209,7 +209,7 @@ func (s *OrganizationServiceImpl) HasPermission(ctx context.Context, orgID, user
 			return true, nil
 		}
 	}
-	
+
 	return false, nil
 }
 
@@ -219,11 +219,11 @@ func (s *OrganizationServiceImpl) GetUserPermissions(ctx context.Context, orgID,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if role == nil {
 		return []models.Permission{}, nil // User is not a member
 	}
-	
+
 	return role.GetPermissions(), nil
 }
 
@@ -233,7 +233,7 @@ func (s *OrganizationServiceImpl) CanUserAccessOrganization(ctx context.Context,
 	if err != nil {
 		return false, err
 	}
-	
+
 	return role != nil, nil // User can access if they have any role
 }
 

@@ -19,8 +19,8 @@ type SpatialAnchor struct {
 	Z             float64
 	Floor         int
 	Rotation      Quaternion
-	Platform      string    // ARKit, ARCore
-	AnchorData    []byte    // Raw platform-specific data
+	Platform      string // ARKit, ARCore
+	AnchorData    []byte // Raw platform-specific data
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	CreatedBy     string

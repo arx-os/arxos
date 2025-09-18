@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/config"
 )
 
 // Collector collects and sends telemetry data
@@ -96,15 +96,15 @@ func InitializeExtended(cfg *config.TelemetryConfig) error {
 			ServiceName:     "arxos",
 			Environment:     "development",
 		}
-		
+
 		// Set defaults
 		obsConfig.Metrics.Enabled = true
 		obsConfig.Metrics.Endpoint = "/metrics"
 		obsConfig.Metrics.Port = 9090
-		
+
 		obsConfig.Tracing.Enabled = true
 		obsConfig.Tracing.SampleRate = 0.1
-		
+
 		obsConfig.Logging.Level = "info"
 		obsConfig.Logging.Format = "json"
 		obsConfig.Logging.CorrelationIDs = true
@@ -144,7 +144,7 @@ func Initialize(cfg *config.TelemetryConfig) {
 			logger.Debug("Telemetry disabled")
 			return
 		}
-		
+
 		globalCollector = &Collector{
 			config: cfg,
 			client: &http.Client{
@@ -153,11 +153,11 @@ func Initialize(cfg *config.TelemetryConfig) {
 			queue:    make([]Event, 0, 100),
 			shutdown: make(chan struct{}),
 		}
-		
+
 		// Start background sender
 		globalCollector.wg.Add(1)
 		go globalCollector.backgroundSender()
-		
+
 		logger.Debug("Telemetry initialized")
 	})
 }
@@ -176,7 +176,7 @@ func Track(eventName string, properties map[string]interface{}) {
 	if globalCollector == nil {
 		return
 	}
-	
+
 	event := Event{
 		Type:       "track",
 		Name:       eventName,
@@ -184,7 +184,7 @@ func Track(eventName string, properties map[string]interface{}) {
 		Properties: properties,
 		Context:    getContext(),
 	}
-	
+
 	globalCollector.enqueue(event)
 }
 
@@ -193,7 +193,7 @@ func Metric(metricName string, value float64, properties map[string]interface{})
 	if globalCollector == nil {
 		return
 	}
-	
+
 	event := Event{
 		Type:       "metric",
 		Name:       metricName,
@@ -204,7 +204,7 @@ func Metric(metricName string, value float64, properties map[string]interface{})
 		},
 		Context: getContext(),
 	}
-	
+
 	globalCollector.enqueue(event)
 }
 
@@ -213,12 +213,12 @@ func TrackError(errName string, err error, properties map[string]interface{}) {
 	if globalCollector == nil {
 		return
 	}
-	
+
 	if properties == nil {
 		properties = make(map[string]interface{})
 	}
 	properties["error_message"] = err.Error()
-	
+
 	event := Event{
 		Type:       "error",
 		Name:       errName,
@@ -226,7 +226,7 @@ func TrackError(errName string, err error, properties map[string]interface{}) {
 		Properties: properties,
 		Context:    getContext(),
 	}
-	
+
 	globalCollector.enqueue(event)
 }
 
@@ -235,14 +235,14 @@ func Command(cmdName string, args []string, duration time.Duration, success bool
 	if globalCollector == nil {
 		return
 	}
-	
+
 	properties := map[string]interface{}{
 		"command":  cmdName,
 		"args":     args,
 		"duration": duration.Milliseconds(),
 		"success":  success,
 	}
-	
+
 	Track("command_executed", properties)
 	Metric("command_duration_ms", float64(duration.Milliseconds()), properties)
 }
@@ -256,12 +256,12 @@ func (c *Collector) enqueue(event Event) {
 			return
 		}
 	}
-	
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.queue = append(c.queue, event)
-	
+
 	// Send immediately if queue is full
 	if len(c.queue) >= 100 {
 		go c.flush()
@@ -271,10 +271,10 @@ func (c *Collector) enqueue(event Event) {
 // backgroundSender periodically sends queued events
 func (c *Collector) backgroundSender() {
 	defer c.wg.Done()
-	
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -292,11 +292,11 @@ func (c *Collector) flush() {
 		c.mu.Unlock()
 		return
 	}
-	
+
 	events := c.queue
 	c.queue = make([]Event, 0, 100)
 	c.mu.Unlock()
-	
+
 	// Send events in batches
 	for i := 0; i < len(events); i += 50 {
 		end := i + 50
@@ -304,7 +304,7 @@ func (c *Collector) flush() {
 			end = len(events)
 		}
 		batch := events[i:end]
-		
+
 		if err := c.sendBatch(batch); err != nil {
 			if c.config.Debug {
 				logger.Error("Failed to send telemetry batch: %v", err)
@@ -319,34 +319,34 @@ func (c *Collector) sendBatch(events []Event) error {
 		"events":    events,
 		"timestamp": time.Now().Unix(),
 	}
-	
+
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal events: %w", err)
 	}
-	
+
 	req, err := http.NewRequest("POST", c.config.Endpoint+"/events", bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "ArxOS-Telemetry/1.0")
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	req = req.WithContext(ctx)
-	
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("telemetry endpoint returned status %d", resp.StatusCode)
 	}
-	
+
 	return nil
 }
 
@@ -355,7 +355,7 @@ func getContext() *Context {
 	if globalCollector == nil {
 		return nil
 	}
-	
+
 	return &Context{
 		SessionID:   getSessionID(),
 		AnonymousID: globalCollector.config.AnonymousID,
@@ -434,7 +434,7 @@ func (c *Counter) Flush() {
 	value := c.value
 	c.value = 0
 	c.mu.Unlock()
-	
+
 	if value > 0 {
 		Metric(c.name, value, c.properties)
 	}
@@ -483,30 +483,30 @@ func GetStructuredLogger() *StructuredLogger {
 func HTTPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Add correlation ID to context
 		ctx := AddCorrelationID(r.Context())
 		r = r.WithContext(ctx)
-		
+
 		// Start span if tracing is enabled
 		if extendedInstance != nil && extendedInstance.tracer != nil {
 			ctx, span := extendedInstance.tracer.StartSpan(ctx, fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path))
 			defer span.Finish()
-			
+
 			// Add request attributes to span
 			span.SetAttribute("http.method", r.Method)
 			span.SetAttribute("http.url", r.URL.String())
 			span.SetAttribute("http.user_agent", r.Header.Get("User-Agent"))
-			
+
 			r = r.WithContext(ctx)
 		}
-		
+
 		// Wrap response writer to capture status code
 		wrapped := &responseWriter{ResponseWriter: w}
-		
+
 		// Process request
 		next.ServeHTTP(wrapped, r)
-		
+
 		// Record metrics if metrics collector is available
 		if extendedInstance != nil && extendedInstance.metrics != nil {
 			duration := time.Since(start).Seconds()
@@ -515,13 +515,13 @@ func HTTPMiddleware(next http.Handler) http.Handler {
 				"path":   r.URL.Path,
 				"status": fmt.Sprintf("%d", wrapped.statusCode),
 			}
-			
+
 			extendedInstance.metrics.IncrementCounter("http_requests_total", tags)
 			extendedInstance.metrics.RecordHistogram("http_request_duration_seconds", duration, tags)
 		}
-		
+
 		// Log request with context
-		InfoWithContext(ctx, "HTTP %s %s %d %v", 
+		InfoWithContext(ctx, "HTTP %s %s %d %v",
 			r.Method, r.URL.Path, wrapped.statusCode, time.Since(start))
 	})
 }

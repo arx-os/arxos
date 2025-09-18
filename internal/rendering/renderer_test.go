@@ -4,26 +4,25 @@ import (
 	"strings"
 	"testing"
 	"time"
-	
+
 	"github.com/arx-os/arxos/pkg/models"
 )
-
 
 // Helper function to get equipment symbol as the layers do
 func getEquipmentSymbol(equipType string, status string) rune {
 	// Default equipment symbols (from layers/equipment.go)
 	symbolMap := map[string]rune{
 		"outlet": '●',
-		"switch": '▪', 
+		"switch": '▪',
 		"panel":  '▣',
 		"light":  '◊',
 	}
-	
+
 	symbol, exists := symbolMap[equipType]
 	if !exists {
 		symbol = '•' // Default symbol
 	}
-	
+
 	// Apply status indicator if needed
 	if status != models.StatusOperational {
 		switch status {
@@ -35,18 +34,18 @@ func getEquipmentSymbol(equipType string, status string) rune {
 			return '?'
 		}
 	}
-	
+
 	return symbol
 }
 
 func TestRendererCreation(t *testing.T) {
 	renderer := NewLayeredRenderer(80, 24)
-	
+
 	// Check that the renderer was created without error
 	if renderer == nil {
 		t.Error("Expected renderer to be created, got nil")
 	}
-	
+
 	// Test that renderer info can be retrieved
 	info := renderer.GetInfo()
 	if info == "" {
@@ -57,26 +56,25 @@ func TestRendererCreation(t *testing.T) {
 func TestRenderCompact(t *testing.T) {
 	plan := createTestFloorPlan()
 	renderer := NewLayeredRenderer(80, 24)
-	
+
 	// Use the new layered renderer API
 	err := renderer.RenderFloorPlan(plan)
 	if err != nil {
 		t.Fatalf("Failed to render floor plan: %v", err)
 	}
 	output := renderer.Render()
-	
-	
+
 	// Check that output contains expected elements for layered rendering
 	// Note: Room names may be partially overlapped by equipment symbols
 	expectedStrings := []string{
 		"2A", // Part of "Room 2A" that's visible
 		"2B", // Part of "Room 2B" that's visible
 		"ch", // Part of "Mech" that's visible
-		"●", // Outlet symbol
-		"✗", // Failed equipment symbol
-		"▣", // Panel symbol
+		"●",  // Outlet symbol
+		"✗",  // Failed equipment symbol
+		"▣",  // Panel symbol
 	}
-	
+
 	for _, expected := range expectedStrings {
 		if !strings.Contains(output, expected) {
 			t.Errorf("Output missing expected string: %s", expected)
@@ -107,7 +105,7 @@ func TestGetSymbol(t *testing.T) {
 			expected: "✗", // Updated to match layer implementation
 		},
 		{
-			name: "needs repair outlet", 
+			name: "needs repair outlet",
 			equip: models.Equipment{
 				Type:   "outlet",
 				Status: models.StatusDegraded,
@@ -139,7 +137,7 @@ func TestGetSymbol(t *testing.T) {
 			expected: "•", // Updated to match layer implementation
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Use our helper function that matches the layer implementation
@@ -153,39 +151,39 @@ func TestGetSymbol(t *testing.T) {
 
 func TestCreateGrid(t *testing.T) {
 	t.Skip("createGrid is a private method - functionality tested via Render")
-	/* 
-	renderer := NewRenderer(10, 5, 100)
-	grid := renderer.createGrid()
-	
-	if len(grid) != 5 {
-		t.Errorf("Expected grid height 5, got %d", len(grid))
-	}
-	
-	for i, row := range grid {
-		if len(row) != 10 {
-			t.Errorf("Expected row %d width 10, got %d", i, len(row))
+	/*
+		renderer := NewRenderer(10, 5, 100)
+		grid := renderer.createGrid()
+
+		if len(grid) != 5 {
+			t.Errorf("Expected grid height 5, got %d", len(grid))
 		}
-		
-		// Check all cells are initialized to space
-		for j, cell := range row {
-			if cell != ' ' {
-				t.Errorf("Cell [%d][%d] not initialized to space, got %c", i, j, cell)
+
+		for i, row := range grid {
+			if len(row) != 10 {
+				t.Errorf("Expected row %d width 10, got %d", i, len(row))
+			}
+
+			// Check all cells are initialized to space
+			for j, cell := range row {
+				if cell != ' ' {
+					t.Errorf("Cell [%d][%d] not initialized to space, got %c", i, j, cell)
+				}
 			}
 		}
-	}
 	*/
 }
 
 func TestRenderWithEquipment(t *testing.T) {
 	plan := createTestFloorPlan()
 	renderer := NewLayeredRenderer(80, 24)
-	
+
 	err := renderer.RenderFloorPlan(plan)
 	if err != nil {
 		t.Fatalf("Failed to render floor plan: %v", err)
 	}
 	output := renderer.Render()
-	
+
 	// The layered renderer produces clean ASCII output without headers/legends
 	// Check for room boundaries (box drawing characters)
 	boxChars := []string{"┌", "┐", "└", "┘", "─", "│"}
@@ -194,12 +192,12 @@ func TestRenderWithEquipment(t *testing.T) {
 			t.Errorf("Missing box drawing character: %s", char)
 		}
 	}
-	
+
 	// Check for equipment symbols
 	if !strings.Contains(output, "●") { // Outlet
 		t.Error("Missing outlet symbol")
 	}
-	
+
 	// Check for room names (may be partially overlapped)
 	if !strings.Contains(output, "2A") {
 		t.Error("Missing room identifier")
@@ -209,27 +207,27 @@ func TestRenderWithEquipment(t *testing.T) {
 func TestGridToString(t *testing.T) {
 	t.Skip("gridToString is a private method")
 	/*
-	renderer := NewRenderer(5, 3, 100)
-	grid := [][]rune{
-		{'┌', '─', '─', '─', '┐'},
-		{'│', ' ', '●', ' ', '│'},
-		{'└', '─', '─', '─', '┘'},
-	}
-	
-	output := renderer.gridToString(grid)
-	
-	// Check that grid is properly converted
-	if !strings.Contains(output, "┌───┐") {
-		t.Error("Top border not found in output")
-	}
-	
-	if !strings.Contains(output, "│ ● │") {
-		t.Error("Middle row with equipment not found in output")
-	}
-	
-	if !strings.Contains(output, "└───┘") {
-		t.Error("Bottom border not found in output")
-	}
+		renderer := NewRenderer(5, 3, 100)
+		grid := [][]rune{
+			{'┌', '─', '─', '─', '┐'},
+			{'│', ' ', '●', ' ', '│'},
+			{'└', '─', '─', '─', '┘'},
+		}
+
+		output := renderer.gridToString(grid)
+
+		// Check that grid is properly converted
+		if !strings.Contains(output, "┌───┐") {
+			t.Error("Top border not found in output")
+		}
+
+		if !strings.Contains(output, "│ ● │") {
+			t.Error("Middle row with equipment not found in output")
+		}
+
+		if !strings.Contains(output, "└───┘") {
+			t.Error("Bottom border not found in output")
+		}
 	*/
 }
 

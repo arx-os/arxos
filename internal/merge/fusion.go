@@ -12,12 +12,12 @@ import (
 
 // DataFusion handles multi-source data fusion for building models
 type DataFusion struct {
-	merger           *SmartMerger
-	resolver         *ConflictResolver
-	changeDetector   *ChangeDetector
+	merger            *SmartMerger
+	resolver          *ConflictResolver
+	changeDetector    *ChangeDetector
 	confidenceManager *spatial.ConfidenceManager
-	coverageTracker  *spatial.CoverageTracker
-	mu               sync.RWMutex
+	coverageTracker   *spatial.CoverageTracker
+	mu                sync.RWMutex
 }
 
 // NewDataFusion creates a new data fusion system
@@ -36,28 +36,28 @@ func NewDataFusion(
 
 // FusionResult represents the result of data fusion
 type FusionResult struct {
-	BuildingID      string                    `json:"building_id"`
-	Timestamp       time.Time                 `json:"timestamp"`
-	MergedEquipment []*MergedEquipment        `json:"merged_equipment"`
-	Changes         []Change                  `json:"changes"`
-	Conflicts       []Conflict                `json:"conflicts"`
-	Resolutions     []*ResolutionResult       `json:"resolutions"`
-	Coverage        float64                   `json:"coverage_percentage"`
-	ConfidenceScore float64                   `json:"overall_confidence"`
-	Statistics      FusionStatistics          `json:"statistics"`
+	BuildingID      string              `json:"building_id"`
+	Timestamp       time.Time           `json:"timestamp"`
+	MergedEquipment []*MergedEquipment  `json:"merged_equipment"`
+	Changes         []Change            `json:"changes"`
+	Conflicts       []Conflict          `json:"conflicts"`
+	Resolutions     []*ResolutionResult `json:"resolutions"`
+	Coverage        float64             `json:"coverage_percentage"`
+	ConfidenceScore float64             `json:"overall_confidence"`
+	Statistics      FusionStatistics    `json:"statistics"`
 }
 
 // FusionStatistics contains statistics about the fusion process
 type FusionStatistics struct {
-	TotalSources          int                              `json:"total_sources"`
-	SourceBreakdown       map[string]int                   `json:"source_breakdown"`
-	EquipmentProcessed    int                              `json:"equipment_processed"`
-	ConflictsDetected     int                              `json:"conflicts_detected"`
-	ConflictsResolved     int                              `json:"conflicts_resolved"`
-	ChangesDetected       int                              `json:"changes_detected"`
-	AverageConfidence     float64                          `json:"average_confidence"`
+	TotalSources           int                             `json:"total_sources"`
+	SourceBreakdown        map[string]int                  `json:"source_breakdown"`
+	EquipmentProcessed     int                             `json:"equipment_processed"`
+	ConflictsDetected      int                             `json:"conflicts_detected"`
+	ConflictsResolved      int                             `json:"conflicts_resolved"`
+	ChangesDetected        int                             `json:"changes_detected"`
+	AverageConfidence      float64                         `json:"average_confidence"`
 	ConfidenceDistribution map[spatial.ConfidenceLevel]int `json:"confidence_distribution"`
-	ProcessingTime        time.Duration                    `json:"processing_time"`
+	ProcessingTime         time.Duration                   `json:"processing_time"`
 }
 
 // FuseBuilding fuses all available data for a building
@@ -201,13 +201,13 @@ func (df *DataFusion) calculateStatistics(
 ) FusionStatistics {
 
 	stats := FusionStatistics{
-		TotalSources:       len(sources),
-		SourceBreakdown:    make(map[string]int),
-		EquipmentProcessed: len(result.MergedEquipment),
-		ConflictsDetected:  len(result.Conflicts),
-		ConflictsResolved:  len(result.Resolutions),
-		ChangesDetected:    len(result.Changes),
-		ProcessingTime:     processingTime,
+		TotalSources:           len(sources),
+		SourceBreakdown:        make(map[string]int),
+		EquipmentProcessed:     len(result.MergedEquipment),
+		ConflictsDetected:      len(result.Conflicts),
+		ConflictsResolved:      len(result.Resolutions),
+		ChangesDetected:        len(result.Changes),
+		ProcessingTime:         processingTime,
 		ConfidenceDistribution: make(map[spatial.ConfidenceLevel]int),
 	}
 
@@ -298,10 +298,10 @@ func (df *DataFusion) FusePartialScan(
 	}
 
 	return &PartialFusionResult{
-		FusionResult:     fusionResult,
+		FusionResult:      fusionResult,
 		IntegrationResult: integrationResult,
-		NewEquipment:     df.identifyNewEquipment(integrationResult.UnmatchedObjects),
-		RemovedEquipment: df.identifyRemovedEquipment(existingModel, fusionResult),
+		NewEquipment:      df.identifyNewEquipment(integrationResult.UnmatchedObjects),
+		RemovedEquipment:  df.identifyRemovedEquipment(existingModel, fusionResult),
 	}, nil
 }
 
@@ -403,9 +403,9 @@ func (df *DataFusion) GetStatistics() map[string]interface{} {
 	defer df.mu.RUnlock()
 
 	return map[string]interface{}{
-		"resolution_history":   df.resolver.GetHistory(),
-		"active_rules":         df.resolver.GetRules(),
-		"coverage_percentage":  df.coverageTracker.GetCoveragePercentage(),
-		"recent_changes":       df.changeDetector.GetRecentChanges(24 * time.Hour),
+		"resolution_history":  df.resolver.GetHistory(),
+		"active_rules":        df.resolver.GetRules(),
+		"coverage_percentage": df.coverageTracker.GetCoveragePercentage(),
+		"recent_changes":      df.changeDetector.GetRecentChanges(24 * time.Hour),
 	}
 }

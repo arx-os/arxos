@@ -22,30 +22,30 @@ type FloorPlan struct {
 
 // Room represents a space on the floor plan
 type Room struct {
-	ID        string     `json:"id"`
-	Name      string     `json:"name"`
-	Bounds    Bounds     `json:"bounds"`
-	Equipment []string   `json:"equipment_ids"` // References to Equipment.ID
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Bounds    Bounds   `json:"bounds"`
+	Equipment []string `json:"equipment_ids"` // References to Equipment.ID
 }
 
 // Equipment represents any marked item on the floor plan
 type Equipment struct {
-	ID         string            `json:"id"`
-	Name       string            `json:"name"`
-	Type       string            `json:"type"` // outlet, switch, panel, etc.
-	Path       string            `json:"path"` // Universal path: N/3/A/301/E
-	Location   *Point            `json:"location,omitempty"`
-	RoomID     string            `json:"room_id,omitempty"`
-	Status     string            `json:"status"`
-	Model      string            `json:"model,omitempty"`
-	Serial     string            `json:"serial,omitempty"`
-	Installed  *time.Time        `json:"installed,omitempty"`
-	Maintained *time.Time        `json:"maintained,omitempty"`
-	Notes      string            `json:"notes,omitempty"`
-	Tags       []string          `json:"tags,omitempty"`
+	ID         string                 `json:"id"`
+	Name       string                 `json:"name"`
+	Type       string                 `json:"type"` // outlet, switch, panel, etc.
+	Path       string                 `json:"path"` // Universal path: N/3/A/301/E
+	Location   *Point3D               `json:"location,omitempty"` // Use unified 3D coordinates
+	RoomID     string                 `json:"room_id,omitempty"`
+	Status     string                 `json:"status"`
+	Model      string                 `json:"model,omitempty"`
+	Serial     string                 `json:"serial,omitempty"`
+	Installed  *time.Time             `json:"installed,omitempty"`
+	Maintained *time.Time             `json:"maintained,omitempty"`
+	Notes      string                 `json:"notes,omitempty"`
+	Tags       []string               `json:"tags,omitempty"`
 	Metadata   map[string]interface{} `json:"metadata,omitempty"`
-	MarkedBy   string            `json:"marked_by,omitempty"`
-	MarkedAt   *time.Time        `json:"marked_at,omitempty"`
+	MarkedBy   string                 `json:"marked_by,omitempty"`
+	MarkedAt   *time.Time             `json:"marked_at,omitempty"`
 }
 
 // Standard equipment status values (matches BIM v2.0 spec)
@@ -59,32 +59,4 @@ const (
 	StatusUnknown     = "UNKNOWN"
 )
 
-// Point represents a 2D coordinate
-type Point struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-}
-
-// Bounds represents a rectangular area
-type Bounds struct {
-	MinX float64 `json:"min_x"`
-	MinY float64 `json:"min_y"`
-	MaxX float64 `json:"max_x"`
-	MaxY float64 `json:"max_y"`
-}
-
-// Contains checks if a point is within bounds
-func (b Bounds) Contains(p Point) bool {
-	return p.X >= b.MinX && p.X <= b.MaxX &&
-		   p.Y >= b.MinY && p.Y <= b.MaxY
-}
-
-// Width returns the width of the bounds
-func (b Bounds) Width() float64 {
-	return b.MaxX - b.MinX
-}
-
-// Height returns the height of the bounds
-func (b Bounds) Height() float64 {
-	return b.MaxY - b.MinY
-}
+// Note: Point3D, Point2D, Bounds, and BoundingBox types are defined in spatial.go

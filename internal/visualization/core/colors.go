@@ -26,12 +26,12 @@ const (
 
 // ColorScheme defines colors for different chart elements
 type ColorScheme struct {
-	Primary     Color
-	Secondary   Color
-	Success     Color
-	Warning     Color
-	Error       Color
-	Info        Color
+	Primary   Color
+	Secondary Color
+	Success   Color
+	Warning   Color
+	Error     Color
+	Info      Color
 
 	// Gradient colors for heatmaps
 	GradientLow  Color

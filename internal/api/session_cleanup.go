@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 )
 
 // SessionCleanup manages periodic cleanup of expired sessions
@@ -33,7 +33,7 @@ func (sc *SessionCleanup) Start(ctx context.Context) {
 	defer ticker.Stop()
 
 	logger.Info("Starting session cleanup service (interval: %v)", sc.interval)
-	
+
 	// Run initial cleanup
 	sc.cleanup(ctx)
 

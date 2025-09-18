@@ -12,42 +12,42 @@ type ErrorType string
 
 const (
 	// Database errors
-	ErrorTypeDatabase    ErrorType = "database"
-	ErrorTypeConnection  ErrorType = "connection"
-	ErrorTypeMigration   ErrorType = "migration"
-	ErrorTypeQuery       ErrorType = "query"
+	ErrorTypeDatabase   ErrorType = "database"
+	ErrorTypeConnection ErrorType = "connection"
+	ErrorTypeMigration  ErrorType = "migration"
+	ErrorTypeQuery      ErrorType = "query"
 
 	// File/IO errors
-	ErrorTypeFileIO      ErrorType = "file_io"
-	ErrorTypeImport      ErrorType = "import"
-	ErrorTypeExport      ErrorType = "export"
-	ErrorTypePermission  ErrorType = "permission"
+	ErrorTypeFileIO     ErrorType = "file_io"
+	ErrorTypeImport     ErrorType = "import"
+	ErrorTypeExport     ErrorType = "export"
+	ErrorTypePermission ErrorType = "permission"
 
 	// Configuration errors
-	ErrorTypeConfig      ErrorType = "config"
-	ErrorTypeValidation  ErrorType = "validation"
-	ErrorTypeAuth        ErrorType = "auth"
+	ErrorTypeConfig     ErrorType = "config"
+	ErrorTypeValidation ErrorType = "validation"
+	ErrorTypeAuth       ErrorType = "auth"
 
 	// Network errors
-	ErrorTypeNetwork     ErrorType = "network"
-	ErrorTypeTimeout     ErrorType = "timeout"
-	ErrorTypeAPI         ErrorType = "api"
+	ErrorTypeNetwork ErrorType = "network"
+	ErrorTypeTimeout ErrorType = "timeout"
+	ErrorTypeAPI     ErrorType = "api"
 
 	// Processing errors
-	ErrorTypeProcessing  ErrorType = "processing"
-	ErrorTypeConversion  ErrorType = "conversion"
-	ErrorTypeParsing     ErrorType = "parsing"
+	ErrorTypeProcessing ErrorType = "processing"
+	ErrorTypeConversion ErrorType = "conversion"
+	ErrorTypeParsing    ErrorType = "parsing"
 
 	// System errors
-	ErrorTypeSystem      ErrorType = "system"
-	ErrorTypeMemory      ErrorType = "memory"
-	ErrorTypeDisk        ErrorType = "disk"
+	ErrorTypeSystem ErrorType = "system"
+	ErrorTypeMemory ErrorType = "memory"
+	ErrorTypeDisk   ErrorType = "disk"
 
 	// Business logic errors
-	ErrorTypeBusiness    ErrorType = "business"
-	ErrorTypeNotFound    ErrorType = "not_found"
-	ErrorTypeExists      ErrorType = "exists"
-	ErrorTypeConstraint  ErrorType = "constraint"
+	ErrorTypeBusiness   ErrorType = "business"
+	ErrorTypeNotFound   ErrorType = "not_found"
+	ErrorTypeExists     ErrorType = "exists"
+	ErrorTypeConstraint ErrorType = "constraint"
 )
 
 // ArxError represents a comprehensive error in the ArxOS system
@@ -60,8 +60,8 @@ type ArxError struct {
 	Operation   string                 `json:"operation"`
 	Cause       error                  `json:"-"`
 	Context     map[string]interface{} `json:"context,omitempty"`
-	StackTrace  []string              `json:"stack_trace,omitempty"`
-	Recoverable bool                  `json:"recoverable"`
+	StackTrace  []string               `json:"stack_trace,omitempty"`
+	Recoverable bool                   `json:"recoverable"`
 }
 
 // Error implements the error interface

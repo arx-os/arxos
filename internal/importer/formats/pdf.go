@@ -18,9 +18,9 @@ import (
 
 // PDFImporter handles PDF file imports
 type PDFImporter struct {
-	extractor   TextExtractor
-	parser      FloorPlanParser
-	confidence  ConfidenceCalculator
+	extractor  TextExtractor
+	parser     FloorPlanParser
+	confidence ConfidenceCalculator
 }
 
 // NewPDFImporter creates a new PDF importer
@@ -81,13 +81,13 @@ func (p *PDFImporter) ImportToModel(ctx context.Context, input io.Reader, opts i
 
 	// Create building model
 	model := &building.BuildingModel{
-		ID:          opts.BuildingID,
-		Name:        opts.BuildingName,
-		Source:      building.DataSourcePDF,
-		ImportedAt:  time.Now(),
-		UpdatedAt:   time.Now(),
-		Properties:  make(map[string]interface{}),
-		Floors:      []building.Floor{},
+		ID:         opts.BuildingID,
+		Name:       opts.BuildingName,
+		Source:     building.DataSourcePDF,
+		ImportedAt: time.Now(),
+		UpdatedAt:  time.Now(),
+		Properties: make(map[string]interface{}),
+		Floors:     []building.Floor{},
 	}
 
 	// Add metadata
@@ -140,11 +140,11 @@ type ParsedFloor struct {
 
 // ParsedRoom represents a parsed room
 type ParsedRoom struct {
-	Number     string
-	Name       string
-	Type       string
-	Area       float64
-	Equipment  []string
+	Number    string
+	Name      string
+	Type      string
+	Area      float64
+	Equipment []string
 }
 
 // ParsedEquipment represents parsed equipment

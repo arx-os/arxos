@@ -45,7 +45,7 @@ func NewSMTPEmailService(config Config) EmailService {
 // SendPasswordReset sends a password reset email
 func (s *SMTPEmailService) SendPasswordReset(ctx context.Context, to, resetToken string) error {
 	resetURL := fmt.Sprintf("%s/reset-password?token=%s", s.config.BaseURL, resetToken)
-	
+
 	subject := "Reset Your ArxOS Password"
 	body := fmt.Sprintf(`
 		<html>
@@ -61,7 +61,7 @@ func (s *SMTPEmailService) SendPasswordReset(ctx context.Context, to, resetToken
 		</body>
 		</html>
 	`, resetURL)
-	
+
 	return s.sendEmail(ctx, to, subject, body)
 }
 
@@ -81,14 +81,14 @@ func (s *SMTPEmailService) SendWelcome(ctx context.Context, to, name string) err
 		</body>
 		</html>
 	`, name, s.config.BaseURL)
-	
+
 	return s.sendEmail(ctx, to, subject, body)
 }
 
 // SendInvitation sends an organization invitation email
 func (s *SMTPEmailService) SendInvitation(ctx context.Context, to, inviterName, orgName, inviteToken string) error {
 	inviteURL := fmt.Sprintf("%s/accept-invite?token=%s", s.config.BaseURL, inviteToken)
-	
+
 	subject := fmt.Sprintf("You've been invited to join %s on ArxOS", orgName)
 	body := fmt.Sprintf(`
 		<html>
@@ -103,14 +103,14 @@ func (s *SMTPEmailService) SendInvitation(ctx context.Context, to, inviterName, 
 		</body>
 		</html>
 	`, inviterName, orgName, inviteURL)
-	
+
 	return s.sendEmail(ctx, to, subject, body)
 }
 
 // sendEmail sends an email using SMTP
 func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, body string) error {
 	from := fmt.Sprintf("%s <%s>", s.config.FromName, s.config.FromEmail)
-	
+
 	// Build the email message
 	message := []string{
 		fmt.Sprintf("From: %s", from),
@@ -121,12 +121,12 @@ func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, body stri
 		"",
 		body,
 	}
-	
+
 	msg := []byte(strings.Join(message, "\r\n"))
-	
+
 	// Set up authentication
 	auth := smtp.PlainAuth("", s.config.SMTPUser, s.config.SMTPPassword, s.config.SMTPHost)
-	
+
 	// Send the email
 	addr := fmt.Sprintf("%s:%d", s.config.SMTPHost, s.config.SMTPPort)
 	err := smtp.SendMail(addr, auth, s.config.FromEmail, []string{to}, msg)
@@ -134,7 +134,7 @@ func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, body stri
 		logger.Error("Failed to send email to %s: %v", to, err)
 		return fmt.Errorf("failed to send email: %w", err)
 	}
-	
+
 	logger.Info("Email sent successfully to %s", to)
 	return nil
 }
@@ -243,16 +243,16 @@ func (et *EmailTemplates) RenderPasswordReset(data map[string]interface{}) (stri
 	</body>
 	</html>
 	`
-	
+
 	t, err := template.New("passwordReset").Parse(tmpl)
 	if err != nil {
 		return "", err
 	}
-	
+
 	var buf bytes.Buffer
 	if err := t.Execute(&buf, data); err != nil {
 		return "", err
 	}
-	
+
 	return buf.String(), nil
 }

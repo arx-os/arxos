@@ -299,20 +299,20 @@ type BoundsJSON struct {
 }
 
 type EquipmentListJSON struct {
-	Equipment       []EquipmentJSON   `json:"equipment"`
-	TotalCount      int               `json:"total_count"`
-	StatusBreakdown map[string]int    `json:"status_breakdown"`
-	TypeBreakdown   map[string]int    `json:"type_breakdown"`
-	ExportedAt      string            `json:"exported_at"`
+	Equipment       []EquipmentJSON `json:"equipment"`
+	TotalCount      int             `json:"total_count"`
+	StatusBreakdown map[string]int  `json:"status_breakdown"`
+	TypeBreakdown   map[string]int  `json:"type_breakdown"`
+	ExportedAt      string          `json:"exported_at"`
 }
 
 type StatisticsJSON struct {
-	FloorCount     int                `json:"floor_count"`
-	TotalRooms     int                `json:"total_rooms"`
-	TotalEquipment int                `json:"total_equipment"`
-	StatusCounts   map[string]int     `json:"status_counts"`
-	TypeCounts     map[string]int     `json:"type_counts"`
-	FloorBreakdown []FloorStatsJSON   `json:"floor_breakdown"`
+	FloorCount     int              `json:"floor_count"`
+	TotalRooms     int              `json:"total_rooms"`
+	TotalEquipment int              `json:"total_equipment"`
+	StatusCounts   map[string]int   `json:"status_counts"`
+	TypeCounts     map[string]int   `json:"type_counts"`
+	FloorBreakdown []FloorStatsJSON `json:"floor_breakdown"`
 }
 
 type FloorStatsJSON struct {

@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 )
 
 // Config holds configuration for the API server
@@ -40,12 +40,12 @@ type RateLimitConfig struct {
 
 // TLSConfig configures TLS/HTTPS settings
 type TLSConfig struct {
-	Enabled      bool     `json:"enabled"`
-	CertFile     string   `json:"cert_file"`
-	KeyFile      string   `json:"key_file"`
-	AutoCert     bool     `json:"auto_cert"`
+	Enabled         bool     `json:"enabled"`
+	CertFile        string   `json:"cert_file"`
+	KeyFile         string   `json:"key_file"`
+	AutoCert        bool     `json:"auto_cert"`
 	AutoCertDomains []string `json:"auto_cert_domains"`
-	MinVersion   uint16   `json:"min_version"`
+	MinVersion      uint16   `json:"min_version"`
 }
 
 // Server represents the API server
@@ -105,7 +105,7 @@ func NewServerWithConfig(addr string, services *Services, config *Config) *Serve
 		services: services,
 		router:   http.NewServeMux(),
 	}
-	
+
 	s.setupRoutes()
 	return s
 }
@@ -115,33 +115,33 @@ func (s *Server) setupRoutes() {
 	// Health endpoints
 	s.router.HandleFunc("/health", s.handleHealth)
 	s.router.HandleFunc("/ready", s.handleReady)
-	
+
 	// Auth endpoints
 	s.router.HandleFunc("/api/v1/auth/login", s.handleLogin)
 	s.router.HandleFunc("/api/v1/auth/logout", s.handleLogout)
 	s.router.HandleFunc("/api/v1/auth/register", s.handleRegister)
 	s.router.HandleFunc("/api/v1/auth/refresh", s.handleRefresh)
-	
+
 	// User endpoints
 	s.router.HandleFunc("/api/v1/users/me", s.handleGetCurrentUser)
 	s.router.HandleFunc("/api/v1/users", s.handleListUsers)
 	s.router.HandleFunc("/api/v1/users/", s.handleGetUser)
-	
+
 	// Building endpoints
 	s.router.HandleFunc("/api/v1/buildings", s.handleListBuildings)
 	s.router.HandleFunc("/api/v1/buildings/create", s.handleCreateBuilding)
 	s.router.HandleFunc("/api/v1/buildings/", s.handleBuildingOperations)
-	
+
 	// Equipment endpoints
 	s.router.HandleFunc("/api/v1/equipment", s.handleListEquipment)
 	s.router.HandleFunc("/api/v1/equipment/create", s.handleCreateEquipment)
 	s.router.HandleFunc("/api/v1/equipment/", s.handleEquipmentOperations)
-	
+
 	// Sync endpoints
 	s.router.HandleFunc("/api/v1/sync/push", s.handleSyncPush)
 	s.router.HandleFunc("/api/v1/sync/pull", s.handleSyncPull)
 	s.router.HandleFunc("/api/v1/sync/status", s.handleSyncStatus)
-	
+
 	// Upload endpoints
 	s.router.HandleFunc("/api/v1/upload/pdf", s.handlePDFUpload)
 	s.router.HandleFunc("/api/v1/upload/progress", s.handleUploadProgress)
@@ -237,10 +237,10 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
-	ready := s.services != nil && 
-		s.services.Auth != nil && 
+	ready := s.services != nil &&
+		s.services.Auth != nil &&
 		s.services.Building != nil
-	
+
 	if ready {
 		s.respondJSON(w, http.StatusOK, map[string]bool{"ready": true})
 	} else {
@@ -248,13 +248,12 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 // Response helpers
 
 func (s *Server) respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	
+
 	if data != nil {
 		if err := json.NewEncoder(w).Encode(data); err != nil {
 			logger.Error("Failed to encode JSON response: %v", err)

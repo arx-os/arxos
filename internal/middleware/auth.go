@@ -7,7 +7,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	
+
 	"github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 )
@@ -34,10 +34,10 @@ func NewAuthMiddleware(authService api.AuthService) *AuthMiddleware {
 	return &AuthMiddleware{
 		authService: authService,
 		publicPaths: map[string]bool{
-			"/health":              true,
-			"/ready":               true,
-			"/api/v1/":             true,
-			"/api/v1/auth/login":   true,
+			"/health":               true,
+			"/ready":                true,
+			"/api/v1/":              true,
+			"/api/v1/auth/login":    true,
 			"/api/v1/auth/register": true,
 		},
 	}
@@ -51,7 +51,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		
+
 		// Extract token from Authorization header
 		token := m.extractToken(r)
 		if token == "" {
@@ -60,13 +60,13 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 				token = cookie.Value
 			}
 		}
-		
+
 		if token == "" {
 			logger.Debug("No token provided for path: %s", r.URL.Path)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		
+
 		// Validate token
 		claims, err := m.authService.ValidateToken(r.Context(), token)
 		if err != nil {
@@ -74,7 +74,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		
+
 		// Add user info to context
 		ctx := context.WithValue(r.Context(), ClaimsContextKey, claims)
 		ctx = context.WithValue(ctx, UserContextKey, &api.User{
@@ -83,7 +83,7 @@ func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
 			Role:  claims.Role,
 			OrgID: claims.OrgID,
 		})
-		
+
 		// Continue with authenticated request
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -95,13 +95,13 @@ func (m *AuthMiddleware) extractToken(r *http.Request) string {
 	if authHeader == "" {
 		return ""
 	}
-	
+
 	// Check for Bearer token
 	parts := strings.SplitN(authHeader, " ", 2)
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
 		return ""
 	}
-	
+
 	return parts[1]
 }
 
@@ -111,12 +111,12 @@ func (m *AuthMiddleware) isPublicPath(path string) bool {
 	if m.publicPaths[path] {
 		return true
 	}
-	
+
 	// Check if it's a static file or web UI path (not API)
 	if !strings.HasPrefix(path, "/api/") {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -129,12 +129,12 @@ func RequireRole(role string) func(http.Handler) http.Handler {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-			
+
 			if claims.Role != role && claims.Role != "admin" {
 				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}

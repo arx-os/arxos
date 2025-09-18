@@ -9,12 +9,12 @@ import (
 
 // TreeNode represents a node in a tree structure
 type TreeNode struct {
-	Label      string
-	Value      interface{}
-	Status     string
-	Children   []*TreeNode
-	Expanded   bool
-	Metadata   map[string]string
+	Label    string
+	Value    interface{}
+	Status   string
+	Children []*TreeNode
+	Expanded bool
+	Metadata map[string]string
 }
 
 // TreeData represents hierarchical data for tree visualization
@@ -188,7 +188,7 @@ func RenderBuildingHierarchy(buildingID string) string {
 		Label:  buildingID,
 		Status: "operational",
 		Metadata: map[string]string{
-			"type":  "building",
+			"type":   "building",
 			"floors": "5",
 		},
 		Children: []*TreeNode{

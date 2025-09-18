@@ -28,11 +28,11 @@ type WorkItem struct {
 
 // WorkQueue manages work items
 type WorkQueue struct {
-	items    chan *WorkItem
-	size     int
-	closed   bool
-	mu       sync.RWMutex
-	pending  map[string]*WorkItem // Deduplication
+	items   chan *WorkItem
+	size    int
+	closed  bool
+	mu      sync.RWMutex
+	pending map[string]*WorkItem // Deduplication
 }
 
 // NewWorkQueue creates a new work queue
@@ -48,16 +48,16 @@ func NewWorkQueue(size int) *WorkQueue {
 func (q *WorkQueue) Add(item *WorkItem) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	
+
 	if q.closed {
 		return fmt.Errorf("queue is closed")
 	}
-	
+
 	// Generate ID if not set
 	if item.ID == "" {
 		item.ID = fmt.Sprintf("%s-%s-%d", item.Type, item.FilePath, time.Now().UnixNano())
 	}
-	
+
 	// Check for duplicate
 	if existing, exists := q.pending[item.FilePath]; exists {
 		// Update existing item if newer
@@ -67,7 +67,7 @@ func (q *WorkQueue) Add(item *WorkItem) error {
 		}
 		return nil // Don't add duplicate
 	}
-	
+
 	// Try to add to queue
 	select {
 	case q.items <- item:
@@ -94,7 +94,7 @@ func (q *WorkQueue) Size() int {
 func (q *WorkQueue) Close() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	
+
 	if !q.closed {
 		q.closed = true
 		close(q.items)

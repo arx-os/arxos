@@ -41,7 +41,7 @@ func (bs *BuildingService) CreateBuilding(ctx context.Context, building *models.
 	now := time.Now()
 	building.CreatedAt = &now
 	building.UpdatedAt = &now
-	
+
 	return bs.db.SaveFloorPlan(ctx, building)
 }
 
@@ -51,14 +51,14 @@ func (bs *BuildingService) UpdateBuilding(ctx context.Context, building *models.
 	if err != nil {
 		return fmt.Errorf("building not found: %w", err)
 	}
-	
+
 	// Update only allowed fields
 	existing.Name = building.Name
 	existing.Building = building.Building
 	existing.Level = building.Level
 	now := time.Now()
 	existing.UpdatedAt = &now
-	
+
 	return bs.db.SaveFloorPlan(ctx, existing)
 }
 
@@ -86,7 +86,7 @@ func (bs *BuildingService) ListEquipment(ctx context.Context, buildingID string,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert to pointer slice
 	var result []*models.Equipment
 	for i := range plan.Equipment {
@@ -107,7 +107,7 @@ func (bs *BuildingService) ListEquipment(ctx context.Context, buildingID string,
 		}
 		result = append(result, plan.Equipment[i])
 	}
-	
+
 	return result, nil
 }
 
@@ -116,7 +116,7 @@ func (bs *BuildingService) CreateEquipment(ctx context.Context, equipment *model
 	if equipment.ID == "" {
 		equipment.ID = fmt.Sprintf("eq_%d", time.Now().UnixNano())
 	}
-	
+
 	// Find the building and add equipment
 	// This would need to be properly implemented with building ID
 	return fmt.Errorf("not implemented: equipment must be associated with a building")
@@ -148,7 +148,7 @@ func (bs *BuildingService) ListRooms(ctx context.Context, buildingID string) ([]
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert to pointer slice
 	var result []*models.Room
 	for i := range plan.Rooms {
@@ -162,7 +162,7 @@ func (bs *BuildingService) CreateRoom(ctx context.Context, room *models.Room) er
 	if room.ID == "" {
 		room.ID = fmt.Sprintf("rm_%d", time.Now().UnixNano())
 	}
-	
+
 	// This would need to be properly implemented with building ID
 	return fmt.Errorf("not implemented: room must be associated with a building")
 }

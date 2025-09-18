@@ -14,9 +14,9 @@ const CurrentVersion = "1.0.0"
 type CoordinateSystem string
 
 const (
-	TopLeftOrigin     CoordinateSystem = "TOP_LEFT_ORIGIN"
-	BottomLeftOrigin  CoordinateSystem = "BOTTOM_LEFT_ORIGIN"
-	CenterOrigin      CoordinateSystem = "CENTER_ORIGIN"
+	TopLeftOrigin    CoordinateSystem = "TOP_LEFT_ORIGIN"
+	BottomLeftOrigin CoordinateSystem = "BOTTOM_LEFT_ORIGIN"
+	CenterOrigin     CoordinateSystem = "CENTER_ORIGIN"
 )
 
 // UnitSystem defines the measurement units
@@ -81,15 +81,15 @@ type Building struct {
 
 // Floor represents a single floor in the building
 type Floor struct {
-	Level      int               `json:"level"`
-	Name       string            `json:"name"`
-	Dimensions Dimensions        `json:"dimensions"`
-	GridScale  GridScale         `json:"grid_scale"`
-	Legend     map[rune]string   `json:"legend"`
-	Layout     []string          `json:"layout"` // ASCII art lines
-	Equipment  []Equipment       `json:"equipment"`
+	Level       int                             `json:"level"`
+	Name        string                          `json:"name"`
+	Dimensions  Dimensions                      `json:"dimensions"`
+	GridScale   GridScale                       `json:"grid_scale"`
+	Legend      map[rune]string                 `json:"legend"`
+	Layout      []string                        `json:"layout"` // ASCII art lines
+	Equipment   []Equipment                     `json:"equipment"`
 	Connections map[ConnectionType][]Connection `json:"connections"`
-	Issues     []Issue           `json:"issues"`
+	Issues      []Issue                         `json:"issues"`
 }
 
 // Dimensions represents floor dimensions
@@ -107,7 +107,7 @@ type GridScale struct {
 // Equipment represents a piece of equipment
 type Equipment struct {
 	ID           string            `json:"id"`
-	Type         string            `json:"type"`         // Hierarchical type (dot notation)
+	Type         string            `json:"type"` // Hierarchical type (dot notation)
 	Location     Location          `json:"location"`
 	Status       EquipmentStatus   `json:"status"`
 	Serial       string            `json:"serial,omitempty"`

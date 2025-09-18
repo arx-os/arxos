@@ -34,13 +34,13 @@ func NewSQLiteDB(config *Config) *SQLiteDB {
 func NewSQLiteDBFromPath(dbPath string) (*SQLiteDB, error) {
 	config := NewConfig(dbPath)
 	db := NewSQLiteDB(config)
-	
+
 	// Connect immediately
 	ctx := context.Background()
 	if err := db.Connect(ctx, dbPath); err != nil {
 		return nil, err
 	}
-	
+
 	return db, nil
 }
 
@@ -49,37 +49,37 @@ func (s *SQLiteDB) Connect(ctx context.Context, dbPath string) error {
 	if dbPath == "" {
 		dbPath = s.config.DatabasePath
 	}
-	
+
 	// Ensure absolute path
 	absPath, err := filepath.Abs(dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
-	
+
 	// Open database connection
 	db, err := sql.Open("sqlite", absPath+"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)")
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	
+
 	// Configure connection pool
 	db.SetMaxOpenConns(s.config.MaxOpenConns)
 	db.SetMaxIdleConns(s.config.MaxIdleConns)
 	db.SetConnMaxLifetime(s.config.MaxLifetime)
-	
+
 	// Test connection
 	if err := db.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
-	
+
 	s.db = db
-	
+
 	// Run migrations using embedded files
 	if err := RunMigrations(db, ""); err != nil {
 		logger.Warn("Failed to run migrations: %v", err)
 		// Continue anyway for backward compatibility
 	}
-	
+
 	logger.Info("Connected to SQLite database: %s", absPath)
 	return nil
 }
@@ -128,7 +128,7 @@ func (s *SQLiteDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPl
 		FROM floor_plans
 		WHERE id = ?
 	`
-	
+
 	var plan models.FloorPlan
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&plan.ID,
@@ -138,14 +138,14 @@ func (s *SQLiteDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPl
 		&plan.CreatedAt,
 		&plan.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get floor plan: %w", err)
 	}
-	
+
 	// Load rooms
 	rooms, err := s.GetRoomsByFloorPlan(ctx, id)
 	if err != nil {
@@ -153,14 +153,14 @@ func (s *SQLiteDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPl
 	}
 	// Rooms are now []*Room
 	plan.Rooms = rooms
-	
+
 	// Load equipment
 	equipment, err := s.GetEquipmentByFloorPlan(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	plan.Equipment = equipment
-	
+
 	return &plan, nil
 }
 
@@ -171,13 +171,13 @@ func (s *SQLiteDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, e
 		FROM floor_plans
 		ORDER BY building, level
 	`
-	
+
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query floor plans: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var plans []*models.FloorPlan
 	for rows.Next() {
 		var plan models.FloorPlan
@@ -192,16 +192,16 @@ func (s *SQLiteDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, e
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan floor plan: %w", err)
 		}
-		
+
 		// Load rooms and equipment for each plan
 		rooms, _ := s.GetRoomsByFloorPlan(ctx, plan.ID)
 		plan.Rooms = rooms
 		equipment, _ := s.GetEquipmentByFloorPlan(ctx, plan.ID)
 		plan.Equipment = equipment
-		
+
 		plans = append(plans, &plan)
 	}
-	
+
 	return plans, nil
 }
 
@@ -216,7 +216,7 @@ func (s *SQLiteDB) SaveFloorPlan(ctx context.Context, plan *models.FloorPlan) er
 			plan.Name = plan.ID
 		}
 	}
-	
+
 	// Validate floor plan before saving
 	if err := ValidateFloorPlan(plan); err != nil {
 		return fmt.Errorf("invalid floor plan: %w", err)
@@ -232,22 +232,22 @@ func (s *SQLiteDB) SaveFloorPlanOld(ctx context.Context, plan *models.FloorPlan)
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	// Generate ID if not set
 	if plan.Name == "" {
 		plan.Name = fmt.Sprintf("floor_%d", time.Now().Unix())
 	}
-	
+
 	// Insert floor plan
 	query := `
 		INSERT INTO floor_plans (id, name, building, level, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	
+
 	now := time.Now()
 	plan.CreatedAt = &now
 	plan.UpdatedAt = &now
-	
+
 	// Use plan.ID if available, otherwise use name
 	planID := plan.ID
 	if planID == "" {
@@ -265,7 +265,7 @@ func (s *SQLiteDB) SaveFloorPlanOld(ctx context.Context, plan *models.FloorPlan)
 	if err != nil {
 		return fmt.Errorf("failed to insert floor plan: %w", err)
 	}
-	
+
 	// Save rooms
 	for _, room := range plan.Rooms {
 		if err := s.saveRoomTx(ctx, tx, planID, room); err != nil {
@@ -279,7 +279,7 @@ func (s *SQLiteDB) SaveFloorPlanOld(ctx context.Context, plan *models.FloorPlan)
 			return err
 		}
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -300,16 +300,16 @@ func (s *SQLiteDB) UpdateFloorPlanOld(ctx context.Context, plan *models.FloorPla
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	query := `
 		UPDATE floor_plans 
 		SET name = ?, building = ?, level = ?, updated_at = ?
 		WHERE id = ?
 	`
-	
+
 	now := time.Now()
 	plan.UpdatedAt = &now
-	
+
 	_, err = tx.ExecContext(ctx, query,
 		plan.Name,
 		plan.Building,
@@ -320,7 +320,7 @@ func (s *SQLiteDB) UpdateFloorPlanOld(ctx context.Context, plan *models.FloorPla
 	if err != nil {
 		return fmt.Errorf("failed to update floor plan: %w", err)
 	}
-	
+
 	// Delete existing rooms and equipment
 	if _, err = tx.ExecContext(ctx, "DELETE FROM rooms WHERE floor_plan_id = ?", plan.Name); err != nil {
 		return err
@@ -328,7 +328,7 @@ func (s *SQLiteDB) UpdateFloorPlanOld(ctx context.Context, plan *models.FloorPla
 	if _, err = tx.ExecContext(ctx, "DELETE FROM equipment WHERE floor_plan_id = ?", plan.Name); err != nil {
 		return err
 	}
-	
+
 	// Re-save rooms and equipment
 	for _, room := range plan.Rooms {
 		if err := s.saveRoomTx(ctx, tx, plan.Name, room); err != nil {
@@ -341,7 +341,7 @@ func (s *SQLiteDB) UpdateFloorPlanOld(ctx context.Context, plan *models.FloorPla
 			return err
 		}
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -382,21 +382,22 @@ func (s *SQLiteDB) GetEquipment(ctx context.Context, id string) (*models.Equipme
 		&installDate,
 		&buildingID,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get equipment: %w", err)
 	}
-	
+
 	if roomID.Valid {
 		equipment.RoomID = roomID.String
 	}
 	if locationX.Valid || locationY.Valid {
-		equipment.Location = &models.Point{
+		equipment.Location = &models.Point3D{
 			X: locationX.Float64,
 			Y: locationY.Float64,
+			Z: 0, // Default to floor level
 		}
 	}
 	if installDate.Valid {
@@ -438,13 +439,13 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 		WHERE floor_id = ?
 		ORDER BY room_id, name
 	`
-	
+
 	rows, err := s.db.QueryContext(ctx, query, floorPlanID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query equipment: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var equipmentList []*models.Equipment
 	for rows.Next() {
 		var equipment models.Equipment
@@ -465,12 +466,12 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan equipment: %w", err)
 		}
-		
+
 		if roomID.Valid {
 			equipment.RoomID = roomID.String
 		}
 		if locationX.Valid || locationY.Valid {
-			equipment.Location = &models.Point{}
+			equipment.Location = &models.Point3D{Z: 0} // Default to floor level
 			if locationX.Valid {
 				equipment.Location.X = locationX.Float64
 			}
@@ -484,10 +485,10 @@ func (s *SQLiteDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID stri
 		if serial.Valid {
 			equipment.Serial = serial.String
 		}
-		
+
 		equipmentList = append(equipmentList, &equipment)
 	}
-	
+
 	return equipmentList, nil
 }
 
@@ -559,7 +560,7 @@ func (s *SQLiteDB) saveEquipmentTx(ctx context.Context, tx *sql.Tx, floorPlanID 
 		                      status, notes, marked_by, marked_at, floor_plan_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	// Handle nil Location
 	var locX, locY float64
 	if equipment.Location != nil {
@@ -588,7 +589,7 @@ func (s *SQLiteDB) saveEquipmentTx(ctx context.Context, tx *sql.Tx, floorPlanID 
 		equipment.MarkedAt,
 		floorPlanID,
 	)
-	
+
 	return err
 }
 
@@ -651,10 +652,10 @@ func (s *SQLiteDB) GetRoom(ctx context.Context, id string) (*models.Room, error)
 		FROM rooms
 		WHERE LOWER(id) = LOWER(?)
 	`
-	
+
 	var room models.Room
 	var floorPlanID string
-	
+
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&room.ID,
 		&room.Name,
@@ -664,14 +665,14 @@ func (s *SQLiteDB) GetRoom(ctx context.Context, id string) (*models.Room, error)
 		&room.Bounds.MaxY,
 		&floorPlanID,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get room: %w", err)
 	}
-	
+
 	// Get equipment IDs for this room
 	equipQuery := `SELECT id FROM equipment WHERE room_id = ?`
 	rows, err := s.db.QueryContext(ctx, equipQuery, room.ID)
@@ -679,7 +680,7 @@ func (s *SQLiteDB) GetRoom(ctx context.Context, id string) (*models.Room, error)
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var equipID string
 		if err := rows.Scan(&equipID); err != nil {
@@ -687,7 +688,7 @@ func (s *SQLiteDB) GetRoom(ctx context.Context, id string) (*models.Room, error)
 		}
 		room.Equipment = append(room.Equipment, equipID)
 	}
-	
+
 	return &room, nil
 }
 
@@ -699,13 +700,13 @@ func (s *SQLiteDB) GetRoomsByFloorPlan(ctx context.Context, floorPlanID string) 
 		WHERE floor_plan_id = ?
 		ORDER BY name
 	`
-	
+
 	rows, err := s.db.QueryContext(ctx, query, floorPlanID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query rooms: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var rooms []*models.Room
 	for rows.Next() {
 		var room models.Room
@@ -720,7 +721,7 @@ func (s *SQLiteDB) GetRoomsByFloorPlan(ctx context.Context, floorPlanID string) 
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan room: %w", err)
 		}
-		
+
 		// Get equipment IDs for this room
 		equipQuery := `SELECT id FROM equipment WHERE room_id = ?`
 		equipRows, err := s.db.QueryContext(ctx, equipQuery, room.ID)
@@ -733,10 +734,10 @@ func (s *SQLiteDB) GetRoomsByFloorPlan(ctx context.Context, floorPlanID string) 
 				}
 			}
 		}
-		
+
 		rooms = append(rooms, &room)
 	}
-	
+
 	return rooms, nil
 }
 
@@ -746,7 +747,7 @@ func (s *SQLiteDB) SaveRoom(ctx context.Context, room *models.Room) error {
 		INSERT INTO rooms (id, name, min_x, min_y, max_x, max_y, floor_plan_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		room.ID,
 		room.Name,
@@ -756,7 +757,7 @@ func (s *SQLiteDB) SaveRoom(ctx context.Context, room *models.Room) error {
 		room.Bounds.MaxY,
 		"", // floor_plan_id to be set separately
 	)
-	
+
 	return err
 }
 
@@ -766,7 +767,7 @@ func (s *SQLiteDB) saveRoomTx(ctx context.Context, tx *sql.Tx, floorPlanID strin
 		INSERT INTO rooms (id, name, min_x, min_y, max_x, max_y, floor_plan_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	_, err := tx.ExecContext(ctx, query,
 		room.ID,
 		room.Name,
@@ -776,7 +777,7 @@ func (s *SQLiteDB) saveRoomTx(ctx context.Context, tx *sql.Tx, floorPlanID strin
 		room.Bounds.MaxY,
 		floorPlanID,
 	)
-	
+
 	return err
 }
 
@@ -787,7 +788,7 @@ func (s *SQLiteDB) UpdateRoom(ctx context.Context, room *models.Room) error {
 		SET name = ?, min_x = ?, min_y = ?, max_x = ?, max_y = ?
 		WHERE LOWER(id) = LOWER(?)
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		room.Name,
 		room.Bounds.MinX,
@@ -796,7 +797,7 @@ func (s *SQLiteDB) UpdateRoom(ctx context.Context, room *models.Room) error {
 		room.Bounds.MaxY,
 		room.ID,
 	)
-	
+
 	return err
 }
 
@@ -813,7 +814,7 @@ func (s *SQLiteDB) Query(ctx context.Context, query string, args ...interface{})
 	if !strings.HasPrefix(strings.TrimSpace(strings.ToUpper(query)), "SELECT") {
 		return nil, ErrInvalidQuery
 	}
-	
+
 	return s.db.QueryContext(ctx, query, args...)
 }
 
@@ -837,28 +838,28 @@ func (s *SQLiteDB) GetUser(ctx context.Context, id string) (*models.User, error)
 		       created_at, updated_at, last_login_at
 		FROM users WHERE id = ?
 	`
-	
+
 	var user models.User
 	var lastLoginAt sql.NullTime
-	
+
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Email, &user.FullName, &user.PasswordHash,
 		&user.Avatar, &user.Phone, &user.Status,
 		&user.EmailVerified, &user.PhoneVerified, &user.MFAEnabled, &user.MFASecret,
 		&user.CreatedAt, &user.UpdatedAt, &lastLoginAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if lastLoginAt.Valid {
 		user.LastLogin = &lastLoginAt.Time
 	}
-	
+
 	return &user, nil
 }
 
@@ -870,28 +871,28 @@ func (s *SQLiteDB) GetUserByEmail(ctx context.Context, email string) (*models.Us
 		       created_at, updated_at, last_login_at
 		FROM users WHERE email = ?
 	`
-	
+
 	var user models.User
 	var lastLoginAt sql.NullTime
-	
+
 	err := s.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID, &user.Email, &user.FullName, &user.PasswordHash,
 		&user.Avatar, &user.Phone, &user.Status,
 		&user.EmailVerified, &user.PhoneVerified, &user.MFAEnabled, &user.MFASecret,
 		&user.CreatedAt, &user.UpdatedAt, &lastLoginAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if lastLoginAt.Valid {
 		user.LastLogin = &lastLoginAt.Time
 	}
-	
+
 	return &user, nil
 }
 
@@ -903,19 +904,19 @@ func (s *SQLiteDB) CreateUser(ctx context.Context, user *models.User) error {
 		                  created_at, updated_at, last_login_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	var lastLoginAt interface{}
 	if user.LastLogin != nil {
 		lastLoginAt = *user.LastLogin
 	}
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		user.ID, user.Email, user.FullName, user.PasswordHash,
 		user.Avatar, user.Phone, user.Status,
 		user.EmailVerified, user.PhoneVerified, user.MFAEnabled, user.MFASecret,
 		user.CreatedAt, user.UpdatedAt, lastLoginAt,
 	)
-	
+
 	return err
 }
 
@@ -928,18 +929,18 @@ func (s *SQLiteDB) UpdateUser(ctx context.Context, user *models.User) error {
 			updated_at = ?, last_login_at = ?
 		WHERE id = ?
 	`
-	
+
 	var lastLoginAt interface{}
 	if user.LastLogin != nil {
 		lastLoginAt = *user.LastLogin
 	}
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		user.FullName, user.PasswordHash, user.Avatar, user.Phone, user.Status,
 		user.EmailVerified, user.PhoneVerified, user.MFAEnabled, user.MFASecret,
 		user.UpdatedAt, lastLoginAt, user.ID,
 	)
-	
+
 	return err
 }
 
@@ -959,7 +960,7 @@ func (s *SQLiteDB) CreateSession(ctx context.Context, session *models.UserSessio
 		                          ip_address, user_agent, expires_at, created_at, last_access_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		session.ID, session.UserID, session.OrganizationID, session.Token, session.RefreshToken,
 		session.IPAddress, session.UserAgent, session.ExpiresAt, session.CreatedAt, session.LastAccessAt,
@@ -974,26 +975,26 @@ func (s *SQLiteDB) GetSession(ctx context.Context, token string) (*models.UserSe
 		       ip_address, user_agent, expires_at, created_at, last_access_at
 		FROM user_sessions WHERE token = ?
 	`
-	
+
 	var session models.UserSession
 	var orgID sql.NullString
-	
+
 	err := s.db.QueryRowContext(ctx, query, token).Scan(
 		&session.ID, &session.UserID, &orgID, &session.Token, &session.RefreshToken,
 		&session.IPAddress, &session.UserAgent, &session.ExpiresAt, &session.CreatedAt, &session.LastAccessAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if orgID.Valid {
 		session.OrganizationID = orgID.String
 	}
-	
+
 	return &session, nil
 }
 
@@ -1004,26 +1005,26 @@ func (s *SQLiteDB) GetSessionByRefreshToken(ctx context.Context, refreshToken st
 		       ip_address, user_agent, expires_at, created_at, last_access_at
 		FROM user_sessions WHERE refresh_token = ?
 	`
-	
+
 	var session models.UserSession
 	var orgID sql.NullString
-	
+
 	err := s.db.QueryRowContext(ctx, query, refreshToken).Scan(
 		&session.ID, &session.UserID, &orgID, &session.Token, &session.RefreshToken,
 		&session.IPAddress, &session.UserAgent, &session.ExpiresAt, &session.CreatedAt, &session.LastAccessAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if orgID.Valid {
 		session.OrganizationID = orgID.String
 	}
-	
+
 	return &session, nil
 }
 
@@ -1035,7 +1036,7 @@ func (s *SQLiteDB) UpdateSession(ctx context.Context, session *models.UserSessio
 		    expires_at = ?, last_access_at = ?
 		WHERE id = ?
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		session.OrganizationID, session.Token, session.RefreshToken,
 		session.ExpiresAt, session.LastAccessAt, session.ID,
@@ -1073,21 +1074,21 @@ func (s *SQLiteDB) GetOrganization(ctx context.Context, id string) (*models.Orga
 		       status, created_at, updated_at
 		FROM organizations WHERE id = ?
 	`
-	
+
 	var org models.Organization
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
-		&org.ID, &org.Name, &org.Slug, 
+		&org.ID, &org.Name, &org.Slug,
 		&org.Plan, &org.MaxUsers, &org.MaxBuildings,
 		&org.Status, &org.CreatedAt, &org.UpdatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &org, nil
 }
 
@@ -1101,18 +1102,18 @@ func (s *SQLiteDB) GetOrganizationsByUser(ctx context.Context, userID string) ([
 		JOIN organization_members om ON o.id = om.organization_id
 		WHERE om.user_id = ?
 	`
-	
+
 	rows, err := s.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var orgs []*models.Organization
 	for rows.Next() {
 		var org models.Organization
 		err := rows.Scan(
-			&org.ID, &org.Name, &org.Slug, 
+			&org.ID, &org.Name, &org.Slug,
 			&org.Plan, &org.MaxUsers, &org.MaxBuildings,
 			&org.Status, &org.CreatedAt, &org.UpdatedAt,
 		)
@@ -1121,7 +1122,7 @@ func (s *SQLiteDB) GetOrganizationsByUser(ctx context.Context, userID string) ([
 		}
 		orgs = append(orgs, &org)
 	}
-	
+
 	return orgs, nil
 }
 
@@ -1133,13 +1134,13 @@ func (s *SQLiteDB) CreateOrganization(ctx context.Context, org *models.Organizat
 		                          created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		org.ID, org.Name, org.Slug, org.Plan,
 		org.MaxUsers, org.MaxBuildings, org.Status,
 		org.CreatedAt, org.UpdatedAt,
 	)
-	
+
 	return err
 }
 
@@ -1151,13 +1152,13 @@ func (s *SQLiteDB) UpdateOrganization(ctx context.Context, org *models.Organizat
 			max_users = ?, max_buildings = ?, status = ?, updated_at = ?
 		WHERE id = ?
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		org.Name, org.Slug, org.Plan,
 		org.MaxUsers, org.MaxBuildings, org.Status, org.UpdatedAt,
 		org.ID,
 	)
-	
+
 	return err
 }
 
@@ -1176,7 +1177,7 @@ func (s *SQLiteDB) AddOrganizationMember(ctx context.Context, orgID, userID, rol
 		INSERT INTO organization_members (organization_id, user_id, role, joined_at)
 		VALUES (?, ?, ?, ?)
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query, orgID, userID, role, time.Now())
 	return err
 }
@@ -1194,7 +1195,7 @@ func (s *SQLiteDB) UpdateOrganizationMemberRole(ctx context.Context, orgID, user
 		UPDATE organization_members SET role = ? 
 		WHERE organization_id = ? AND user_id = ?
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query, role, orgID, userID)
 	return err
 }
@@ -1208,40 +1209,40 @@ func (s *SQLiteDB) GetOrganizationMembers(ctx context.Context, orgID string) ([]
 		JOIN users u ON om.user_id = u.id
 		WHERE om.organization_id = ?
 	`
-	
+
 	rows, err := s.db.QueryContext(ctx, query, orgID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var members []*models.OrganizationMember
 	for rows.Next() {
 		var member models.OrganizationMember
 		var joinedAt sql.NullTime
-		
+
 		// Initialize user if nil
 		if member.User == nil {
 			member.User = &models.User{}
 		}
-		
+
 		err := rows.Scan(
-			&member.UserID, &member.OrganizationID, &member.Role, 
+			&member.UserID, &member.OrganizationID, &member.Role,
 			&joinedAt,
 			&member.User.Email, &member.User.FullName, &member.User.Avatar,
 		)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if joinedAt.Valid {
 			member.JoinedAt = &joinedAt.Time
 		}
-		
+
 		member.User.ID = member.UserID
 		members = append(members, &member)
 	}
-	
+
 	return members, nil
 }
 
@@ -1254,30 +1255,30 @@ func (s *SQLiteDB) GetOrganizationMember(ctx context.Context, orgID, userID stri
 		JOIN users u ON om.user_id = u.id
 		WHERE om.organization_id = ? AND om.user_id = ?
 	`
-	
+
 	var member models.OrganizationMember
 	var joinedAt sql.NullTime
-	
+
 	// Initialize user
 	member.User = &models.User{}
-	
+
 	err := s.db.QueryRowContext(ctx, query, orgID, userID).Scan(
-		&member.UserID, &member.OrganizationID, &member.Role, 
+		&member.UserID, &member.OrganizationID, &member.Role,
 		&joinedAt,
 		&member.User.Email, &member.User.FullName, &member.User.Avatar,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if joinedAt.Valid {
 		member.JoinedAt = &joinedAt.Time
 	}
-	
+
 	member.User.ID = member.UserID
 	return &member, nil
 }
@@ -1291,12 +1292,12 @@ func (s *SQLiteDB) CreateOrganizationInvitation(ctx context.Context, invitation 
 		(id, organization_id, email, role, token, invited_by, expires_at, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
-	
+
 	_, err := s.db.ExecContext(ctx, query,
 		invitation.ID, invitation.OrganizationID, invitation.Email, invitation.Role,
 		invitation.Token, invitation.InvitedBy, invitation.ExpiresAt, invitation.CreatedAt,
 	)
-	
+
 	return err
 }
 
@@ -1306,26 +1307,26 @@ func (s *SQLiteDB) GetOrganizationInvitationByToken(ctx context.Context, token s
 		SELECT id, organization_id, email, role, token, invited_by, expires_at, accepted_at, created_at
 		FROM organization_invitations WHERE token = ?
 	`
-	
+
 	var invitation models.OrganizationInvitation
 	var acceptedAt sql.NullTime
-	
+
 	err := s.db.QueryRowContext(ctx, query, token).Scan(
 		&invitation.ID, &invitation.OrganizationID, &invitation.Email, &invitation.Role,
 		&invitation.Token, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt, &invitation.CreatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if acceptedAt.Valid {
 		invitation.AcceptedAt = &acceptedAt.Time
 	}
-	
+
 	return &invitation, nil
 }
 
@@ -1335,26 +1336,26 @@ func (s *SQLiteDB) GetOrganizationInvitation(ctx context.Context, id string) (*m
 		SELECT id, organization_id, email, role, token, invited_by, expires_at, accepted_at, created_at
 		FROM organization_invitations WHERE id = ?
 	`
-	
+
 	var invitation models.OrganizationInvitation
 	var acceptedAt sql.NullTime
-	
+
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&invitation.ID, &invitation.OrganizationID, &invitation.Email, &invitation.Role,
 		&invitation.Token, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt, &invitation.CreatedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if acceptedAt.Valid {
 		invitation.AcceptedAt = &acceptedAt.Time
 	}
-	
+
 	return &invitation, nil
 }
 
@@ -1366,18 +1367,18 @@ func (s *SQLiteDB) ListOrganizationInvitations(ctx context.Context, orgID string
 		WHERE organization_id = ? AND accepted_at IS NULL
 		ORDER BY created_at DESC
 	`
-	
+
 	rows, err := s.db.QueryContext(ctx, query, orgID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var invitations []*models.OrganizationInvitation
 	for rows.Next() {
 		var invitation models.OrganizationInvitation
 		var acceptedAt sql.NullTime
-		
+
 		err := rows.Scan(
 			&invitation.ID, &invitation.OrganizationID, &invitation.Email, &invitation.Role,
 			&invitation.Token, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt, &invitation.CreatedAt,
@@ -1385,14 +1386,14 @@ func (s *SQLiteDB) ListOrganizationInvitations(ctx context.Context, orgID string
 		if err != nil {
 			return nil, err
 		}
-		
+
 		if acceptedAt.Valid {
 			invitation.AcceptedAt = &acceptedAt.Time
 		}
-		
+
 		invitations = append(invitations, &invitation)
 	}
-	
+
 	return invitations, nil
 }
 
@@ -1403,37 +1404,37 @@ func (s *SQLiteDB) AcceptOrganizationInvitation(ctx context.Context, token, user
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	// Get invitation details
 	var invitation models.OrganizationInvitation
 	query := `
 		SELECT id, organization_id, email, role, invited_by, expires_at, accepted_at
 		FROM organization_invitations WHERE token = ?
 	`
-	
+
 	var acceptedAt sql.NullTime
 	err = tx.QueryRowContext(ctx, query, token).Scan(
-		&invitation.ID, &invitation.OrganizationID, &invitation.Email, 
+		&invitation.ID, &invitation.OrganizationID, &invitation.Email,
 		&invitation.Role, &invitation.InvitedBy, &invitation.ExpiresAt, &acceptedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return ErrNotFound
 	}
 	if err != nil {
 		return err
 	}
-	
+
 	// Check if already accepted
 	if acceptedAt.Valid {
 		return fmt.Errorf("invitation already accepted")
 	}
-	
+
 	// Check if expired
 	if time.Now().After(invitation.ExpiresAt) {
 		return fmt.Errorf("invitation expired")
 	}
-	
+
 	// Mark invitation as accepted
 	now := time.Now()
 	updateQuery := `UPDATE organization_invitations SET accepted_at = ? WHERE token = ?`
@@ -1441,7 +1442,7 @@ func (s *SQLiteDB) AcceptOrganizationInvitation(ctx context.Context, token, user
 	if err != nil {
 		return err
 	}
-	
+
 	// Add user to organization
 	memberQuery := `
 		INSERT INTO organization_members (organization_id, user_id, role, joined_at)
@@ -1451,7 +1452,7 @@ func (s *SQLiteDB) AcceptOrganizationInvitation(ctx context.Context, token, user
 	if err != nil {
 		return err
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -1483,7 +1484,7 @@ func (s *SQLiteDB) GetPasswordResetToken(ctx context.Context, token string) (*mo
 		FROM password_reset_tokens
 		WHERE token = ?
 	`
-	
+
 	var resetToken models.PasswordResetToken
 	err := s.db.QueryRowContext(ctx, query, token).Scan(
 		&resetToken.ID,
@@ -1494,14 +1495,14 @@ func (s *SQLiteDB) GetPasswordResetToken(ctx context.Context, token string) (*mo
 		&resetToken.CreatedAt,
 		&resetToken.UsedAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &resetToken, nil
 }
 

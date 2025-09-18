@@ -123,12 +123,12 @@ func (m *SmartMerger) MergeEquipmentData(
 
 // EquipmentData represents equipment from a single source
 type EquipmentData struct {
-	Source      DataSource      `json:"source"`
-	Position    spatial.Point3D `json:"position"`
-	Dimensions  Dimensions      `json:"dimensions"`
-	Type        string          `json:"type"`
-	Attributes  map[string]interface{} `json:"attributes"`
-	Confidence  spatial.ConfidenceLevel `json:"confidence"`
+	Source     DataSource              `json:"source"`
+	Position   spatial.Point3D         `json:"position"`
+	Dimensions Dimensions              `json:"dimensions"`
+	Type       string                  `json:"type"`
+	Attributes map[string]interface{}  `json:"attributes"`
+	Confidence spatial.ConfidenceLevel `json:"confidence"`
 }
 
 // Dimensions represents equipment dimensions

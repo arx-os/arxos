@@ -35,7 +35,7 @@ func (g *GitManager) Initialize() error {
 		if output, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("failed to initialize git repo: %w\n%s", err, output)
 		}
-		
+
 		// Set up initial .gitignore
 		gitignore := filepath.Join(g.repoPath, ".gitignore")
 		ignoreContent := `# Temporary files
@@ -54,7 +54,7 @@ Thumbs.db
 		if err := os.WriteFile(gitignore, []byte(ignoreContent), 0644); err != nil {
 			logger.Warn("Failed to create .gitignore: %v", err)
 		}
-		
+
 		// Make initial commit
 		if err := g.Add(".gitignore"); err != nil {
 			logger.Warn("Failed to add .gitignore: %v", err)
@@ -63,7 +63,7 @@ Thumbs.db
 			logger.Warn("Failed to make initial commit: %v", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -157,12 +157,12 @@ func (g *GitManager) CreateMarkupBranch(equipmentID string, user string) (string
 	// Generate branch name
 	timestamp := time.Now().Format("20060102-150405")
 	branchName := fmt.Sprintf("markup/%s/%s-%s", user, equipmentID, timestamp)
-	
+
 	// Create and switch to branch
 	if err := g.CreateBranch(branchName); err != nil {
 		return "", err
 	}
-	
+
 	logger.Info("Created markup branch: %s", branchName)
 	return branchName, nil
 }
@@ -173,20 +173,20 @@ func (g *GitManager) CommitFloorPlanChange(floorPlanFile string, message string)
 	if err := g.Add(floorPlanFile); err != nil {
 		return err
 	}
-	
+
 	// Commit with descriptive message
 	fullMessage := fmt.Sprintf("[ArxOS] %s\n\nAutomated commit from ArxOS terminal interface", message)
 	if err := g.Commit(fullMessage); err != nil {
 		return err
 	}
-	
+
 	logger.Info("Committed floor plan change: %s", message)
 	return nil
 }
 
 // MergeBranch merges a branch into the current branch
 func (g *GitManager) MergeBranch(branchName string) error {
-	cmd := exec.Command("git", "merge", branchName, "--no-ff", "-m", 
+	cmd := exec.Command("git", "merge", branchName, "--no-ff", "-m",
 		fmt.Sprintf("Merge markup branch '%s'", branchName))
 	cmd.Dir = g.repoPath
 	if output, err := cmd.CombinedOutput(); err != nil {

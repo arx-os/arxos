@@ -25,22 +25,22 @@ func NewAnalyzer(db database.DB) *Analyzer {
 
 // ImpactAnalysis analyzes the impact of equipment failure
 type ImpactAnalysis struct {
-	EquipmentID      string
-	DirectlyAffected []*models.Equipment
+	EquipmentID        string
+	DirectlyAffected   []*models.Equipment
 	IndirectlyAffected []*models.Equipment
-	TotalImpact      int
-	CriticalPath     bool
-	SystemsAffected  []ConnectionType
+	TotalImpact        int
+	CriticalPath       bool
+	SystemsAffected    []ConnectionType
 }
 
 // CircuitLoad represents load analysis for electrical circuits
 type CircuitLoad struct {
-	CircuitID    string
-	TotalLoad    float64
-	MaxCapacity  float64
-	LoadPercent  float64
-	Equipment    []*models.Equipment
-	Overloaded   bool
+	CircuitID   string
+	TotalLoad   float64
+	MaxCapacity float64
+	LoadPercent float64
+	Equipment   []*models.Equipment
+	Overloaded  bool
 }
 
 // AnalyzeImpact analyzes the impact of equipment failure
@@ -48,47 +48,47 @@ func (a *Analyzer) AnalyzeImpact(ctx context.Context, equipmentID string) (*Impa
 	analysis := &ImpactAnalysis{
 		EquipmentID: equipmentID,
 	}
-	
+
 	// Get directly connected downstream equipment
 	downstream, err := a.graph.Trace(ctx, equipmentID, Downstream, 1)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, result := range downstream {
 		if result.Level == 1 {
 			analysis.DirectlyAffected = append(analysis.DirectlyAffected, result.Equipment)
 		}
 	}
-	
+
 	// Get all downstream equipment (indirect impact)
 	allDownstream, err := a.graph.Trace(ctx, equipmentID, Downstream, 10)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, result := range allDownstream {
 		if result.Level > 1 {
 			analysis.IndirectlyAffected = append(analysis.IndirectlyAffected, result.Equipment)
 		}
 	}
-	
+
 	analysis.TotalImpact = len(analysis.DirectlyAffected) + len(analysis.IndirectlyAffected)
-	
+
 	// Identify affected systems
 	systemMap := make(map[ConnectionType]bool)
 	connections, _ := a.graph.GetConnections(ctx, equipmentID, Both)
 	for _, conn := range connections {
 		systemMap[conn.ConnectionType] = true
 	}
-	
+
 	for system := range systemMap {
 		analysis.SystemsAffected = append(analysis.SystemsAffected, system)
 	}
-	
+
 	// Check if this is on a critical path (no redundancy)
 	analysis.CriticalPath = a.isOnCriticalPath(ctx, equipmentID)
-	
+
 	return analysis, nil
 }
 
@@ -98,7 +98,7 @@ func (a *Analyzer) isOnCriticalPath(ctx context.Context, equipmentID string) boo
 	// For now, simplified: equipment with both upstream and downstream connections
 	upstream, _ := a.graph.GetConnections(ctx, equipmentID, Upstream)
 	downstream, _ := a.graph.GetConnections(ctx, equipmentID, Downstream)
-	
+
 	return len(upstream) > 0 && len(downstream) > 0
 }
 
@@ -108,15 +108,15 @@ func (a *Analyzer) AnalyzeCircuitLoad(ctx context.Context, circuitID string) (*C
 		CircuitID:   circuitID,
 		MaxCapacity: 20.0, // Default 20A circuit
 	}
-	
+
 	// Get all equipment on this circuit
 	components, err := a.graph.GetSystemComponents(ctx, circuitID, ConnectionPower)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	load.Equipment = components
-	
+
 	// Calculate total load (simplified)
 	for _, equip := range components {
 		// Estimate load based on equipment type
@@ -133,10 +133,10 @@ func (a *Analyzer) AnalyzeCircuitLoad(ctx context.Context, circuitID string) (*C
 			load.TotalLoad += 1.0 // Default 1A
 		}
 	}
-	
+
 	load.LoadPercent = (load.TotalLoad / load.MaxCapacity) * 100
 	load.Overloaded = load.LoadPercent > 80 // 80% threshold
-	
+
 	return load, nil
 }
 
@@ -144,16 +144,16 @@ func (a *Analyzer) AnalyzeCircuitLoad(ctx context.Context, circuitID string) (*C
 func (a *Analyzer) FindRedundantPaths(ctx context.Context, fromID, toID string) ([][]string, error) {
 	paths := [][]string{}
 	visited := make(map[string]bool)
-	
+
 	// DFS to find all paths
 	currentPath := []string{}
 	a.findAllPaths(ctx, fromID, toID, visited, currentPath, &paths)
-	
+
 	// Sort paths by length
 	sort.Slice(paths, func(i, j int) bool {
 		return len(paths[i]) < len(paths[j])
 	})
-	
+
 	return paths, nil
 }
 
@@ -166,13 +166,13 @@ func (a *Analyzer) findAllPaths(ctx context.Context, current, target string, vis
 		*paths = append(*paths, pathCopy)
 		return
 	}
-	
+
 	visited[current] = true
 	currentPath = append(currentPath, current)
-	
+
 	// Get all connections
 	connections, _ := a.graph.GetConnections(ctx, current, Both)
-	
+
 	for _, conn := range connections {
 		nextID := ""
 		if conn.FromID == current {
@@ -180,12 +180,12 @@ func (a *Analyzer) findAllPaths(ctx context.Context, current, target string, vis
 		} else {
 			nextID = conn.FromID
 		}
-		
+
 		if !visited[nextID] {
 			a.findAllPaths(ctx, nextID, target, visited, currentPath, paths)
 		}
 	}
-	
+
 	// Backtrack
 	visited[current] = false
 }
@@ -193,26 +193,26 @@ func (a *Analyzer) findAllPaths(ctx context.Context, current, target string, vis
 // FindFailurePoints finds single points of failure in the system
 func (a *Analyzer) FindFailurePoints(ctx context.Context, floorPlanID string) ([]*models.Equipment, error) {
 	failurePoints := []*models.Equipment{}
-	
+
 	// Get all equipment
 	query := `
 		SELECT DISTINCT e.id 
 		FROM equipment e
 		WHERE e.floor_plan_id = ?
 	`
-	
+
 	rows, err := a.db.Query(ctx, query, floorPlanID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var equipID string
 		if err := rows.Scan(&equipID); err != nil {
 			continue
 		}
-		
+
 		// Check if this is a single point of failure
 		if a.isSinglePointOfFailure(ctx, equipID) {
 			equipment, err := a.db.GetEquipment(ctx, equipID)
@@ -221,7 +221,7 @@ func (a *Analyzer) FindFailurePoints(ctx context.Context, floorPlanID string) ([
 			}
 		}
 	}
-	
+
 	return failurePoints, nil
 }
 
@@ -229,16 +229,16 @@ func (a *Analyzer) FindFailurePoints(ctx context.Context, floorPlanID string) ([
 func (a *Analyzer) isSinglePointOfFailure(ctx context.Context, equipmentID string) bool {
 	// Check if this equipment connects two separate groups
 	// If removing it would disconnect the graph, it's a failure point
-	
+
 	upstream, _ := a.graph.GetConnections(ctx, equipmentID, Upstream)
 	downstream, _ := a.graph.GetConnections(ctx, equipmentID, Downstream)
-	
+
 	// Simple heuristic: if it has multiple downstream with only one upstream
 	// or is the only connection between groups
 	if len(upstream) == 1 && len(downstream) > 2 {
 		return true
 	}
-	
+
 	// Check if it's a panel or main distribution point
 	equipment, err := a.db.GetEquipment(ctx, equipmentID)
 	if err == nil {
@@ -246,19 +246,19 @@ func (a *Analyzer) isSinglePointOfFailure(ctx context.Context, equipmentID strin
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 // SuggestConnections suggests potential connections based on proximity and type
 func (a *Analyzer) SuggestConnections(ctx context.Context, equipmentID string, maxDistance float64) ([]Connection, error) {
 	suggestions := []Connection{}
-	
+
 	equipment, err := a.db.GetEquipment(ctx, equipmentID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Find nearby equipment of compatible types
 	query := `
 		SELECT id, type, location_x, location_y,
@@ -269,7 +269,7 @@ func (a *Analyzer) SuggestConnections(ctx context.Context, equipmentID string, m
 		  AND SQRT(POWER(location_x - ?, 2) + POWER(location_y - ?, 2)) <= ?
 		ORDER BY distance
 	`
-	
+
 	rows, err := a.db.Query(ctx, query,
 		equipment.Location.X, equipment.Location.Y,
 		equipmentID,
@@ -281,15 +281,15 @@ func (a *Analyzer) SuggestConnections(ctx context.Context, equipmentID string, m
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var nearbyID, nearbyType string
 		var locX, locY, distance float64
-		
+
 		if err := rows.Scan(&nearbyID, &nearbyType, &locX, &locY, &distance); err != nil {
 			continue
 		}
-		
+
 		// Suggest connections based on equipment types
 		connType := a.suggestConnectionType(equipment.Type, nearbyType)
 		if connType != "" {
@@ -304,7 +304,7 @@ func (a *Analyzer) SuggestConnections(ctx context.Context, equipmentID string, m
 			})
 		}
 	}
-	
+
 	return suggestions, nil
 }
 
@@ -317,7 +317,7 @@ func (a *Analyzer) suggestConnectionType(type1, type2 string) ConnectionType {
 	if (type1 == "switch" && type2 == "panel") || (type1 == "panel" && type2 == "switch") {
 		return ConnectionPower
 	}
-	
+
 	// Data connections
 	if (type1 == "outlet" && type2 == "idf") || (type1 == "idf" && type2 == "outlet") {
 		return ConnectionData
@@ -325,19 +325,19 @@ func (a *Analyzer) suggestConnectionType(type1, type2 string) ConnectionType {
 	if (type1 == "switch" && type2 == "idf") || (type1 == "idf" && type2 == "switch") {
 		return ConnectionData
 	}
-	
+
 	// HVAC connections
 	if type1 == "thermostat" || type2 == "thermostat" {
 		return ConnectionHVAC
 	}
-	
+
 	return ""
 }
 
 // ValidateConnections validates all connections for consistency
 func (a *Analyzer) ValidateConnections(ctx context.Context) ([]string, error) {
 	errors := []string{}
-	
+
 	// Check for orphaned connections (equipment doesn't exist)
 	query := `
 		SELECT c.from_equipment_id, c.to_equipment_id, c.connection_type
@@ -346,13 +346,13 @@ func (a *Analyzer) ValidateConnections(ctx context.Context) ([]string, error) {
 		LEFT JOIN equipment e2 ON c.to_equipment_id = e2.id
 		WHERE e1.id IS NULL OR e2.id IS NULL
 	`
-	
+
 	rows, err := a.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var fromID, toID, connType string
 		if err := rows.Scan(&fromID, &toID, &connType); err != nil {
@@ -360,9 +360,9 @@ func (a *Analyzer) ValidateConnections(ctx context.Context) ([]string, error) {
 		}
 		errors = append(errors, fmt.Sprintf("Orphaned connection: %s -> %s (%s)", fromID, toID, connType))
 	}
-	
+
 	// Check for circular connections
 	// This would require more complex graph cycle detection
-	
+
 	return errors, nil
 }

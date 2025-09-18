@@ -96,9 +96,9 @@ func TestSmartMerger_MergeEquipmentData(t *testing.T) {
 					Confidence: spatial.ConfidenceHigh,
 					Timestamp:  time.Now(),
 					Data: map[string]interface{}{
-						"position": spatial.Point3D{X: 10, Y: 20, Z: 3},
+						"position":   spatial.Point3D{X: 10, Y: 20, Z: 3},
 						"dimensions": Dimensions{Length: 2, Width: 1, Height: 0.5},
-						"type":     "HVAC",
+						"type":       "HVAC",
 					},
 				},
 				{
@@ -107,9 +107,9 @@ func TestSmartMerger_MergeEquipmentData(t *testing.T) {
 					Confidence: spatial.ConfidenceHigh,
 					Timestamp:  time.Now(),
 					Data: map[string]interface{}{
-						"position": spatial.Point3D{X: 12, Y: 22, Z: 3},
+						"position":   spatial.Point3D{X: 12, Y: 22, Z: 3},
 						"dimensions": Dimensions{Length: 2.2, Width: 1.1, Height: 0.6},
-						"type":     "HVAC",
+						"type":       "HVAC",
 					},
 				},
 			},
@@ -374,9 +374,9 @@ func TestChangeDetector_DetectChanges(t *testing.T) {
 				Position:    spatial.Point3D{X: 10, Y: 20, Z: 3},
 				Dimensions:  Dimensions{Length: 2, Width: 1, Height: 0.5},
 				Attributes: map[string]interface{}{
-					"model":  "XYZ789",  // Changed
-					"status": "inactive", // Changed
-					"new_field": "value", // Added
+					"model":     "XYZ789",   // Changed
+					"status":    "inactive", // Changed
+					"new_field": "value",    // Added
 				},
 				Confidence: spatial.ConfidenceHigh,
 			},
@@ -387,7 +387,7 @@ func TestChangeDetector_DetectChanges(t *testing.T) {
 			newEquipment: &MergedEquipment{
 				EquipmentID: "equip1",
 				Type:        "HVAC",
-				Position:    spatial.Point3D{X: 10.05, Y: 20.05, Z: 3}, // Small change below threshold
+				Position:    spatial.Point3D{X: 10.05, Y: 20.05, Z: 3},             // Small change below threshold
 				Dimensions:  Dimensions{Length: 2.01, Width: 1.005, Height: 0.502}, // Small changes
 				Attributes:  oldEquipment.Attributes,
 				Confidence:  spatial.ConfidenceHigh,
@@ -575,7 +575,7 @@ func TestMergeVisualizer_GenerateVisualization(t *testing.T) {
 			name:   "Generate HTML visualization",
 			format: "html",
 			options: VisualizationOptions{
-				Format:        "html",
+				Format:         "html",
 				ShowStatistics: true,
 			},
 		},
@@ -583,7 +583,7 @@ func TestMergeVisualizer_GenerateVisualization(t *testing.T) {
 			name:   "Generate SVG visualization",
 			format: "svg",
 			options: VisualizationOptions{
-				Format:        "svg",
+				Format:         "svg",
 				ShowConfidence: true,
 			},
 		},
@@ -633,9 +633,9 @@ func TestMergeDiagnostics_Operations(t *testing.T) {
 		MergedEquipment: []*MergedEquipment{
 			{EquipmentID: "equip1"},
 		},
-		Conflicts: []Conflict{{ID: "c1"}},
+		Conflicts:   []Conflict{{ID: "c1"}},
 		Resolutions: []*ResolutionResult{{Method: MethodAutomatic}},
-		Changes: []Change{{ID: "ch1"}},
+		Changes:     []Change{{ID: "ch1"}},
 		Statistics: FusionStatistics{
 			SourceBreakdown: map[string]int{"lidar": 2, "manual": 1},
 		},

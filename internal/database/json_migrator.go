@@ -32,17 +32,17 @@ func (m *JSONMigrator) MigrateAll(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to read state directory: %w", err)
 	}
-	
+
 	successCount := 0
 	failCount := 0
-	
+
 	for _, file := range files {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
 			continue
 		}
-		
+
 		logger.Info("Migrating %s to database", file.Name())
-		
+
 		if err := m.MigrateFile(ctx, filepath.Join(m.stateDir, file.Name())); err != nil {
 			logger.Error("Failed to migrate %s: %v", file.Name(), err)
 			failCount++
@@ -50,13 +50,13 @@ func (m *JSONMigrator) MigrateAll(ctx context.Context) error {
 			successCount++
 		}
 	}
-	
+
 	logger.Info("Migration complete: %d succeeded, %d failed", successCount, failCount)
-	
+
 	if failCount > 0 {
 		return fmt.Errorf("migration completed with %d failures", failCount)
 	}
-	
+
 	return nil
 }
 
@@ -67,29 +67,29 @@ func (m *JSONMigrator) MigrateFile(ctx context.Context, jsonPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read JSON file: %w", err)
 	}
-	
+
 	// Parse JSON
 	var plan models.FloorPlan
 	if err := json.Unmarshal(data, &plan); err != nil {
 		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
-	
+
 	// Check if floor plan already exists
 	existingPlan, err := m.db.GetFloorPlan(ctx, plan.Name)
 	if err != nil && err != ErrNotFound {
 		return fmt.Errorf("failed to check existing floor plan: %w", err)
 	}
-	
+
 	if existingPlan != nil {
 		logger.Debug("Floor plan %s already exists in database, updating", plan.Name)
 		return m.db.UpdateFloorPlan(ctx, &plan)
 	}
-	
+
 	// Save to database
 	if err := m.db.SaveFloorPlan(ctx, &plan); err != nil {
 		return fmt.Errorf("failed to save floor plan to database: %w", err)
 	}
-	
+
 	logger.Info("Successfully migrated floor plan: %s", plan.Name)
 	return nil
 }
@@ -101,18 +101,18 @@ func (m *JSONMigrator) ExportToJSON(ctx context.Context, floorPlanID string, out
 	if err != nil {
 		return fmt.Errorf("failed to get floor plan: %w", err)
 	}
-	
+
 	// Convert to JSON
 	data, err := json.MarshalIndent(plan, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
-	
+
 	// Write to file
 	if err := ioutil.WriteFile(outputPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write JSON file: %w", err)
 	}
-	
+
 	logger.Info("Exported floor plan %s to %s", floorPlanID, outputPath)
 	return nil
 }
@@ -124,46 +124,46 @@ func (m *JSONMigrator) SyncJSONToDatabase(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to read state directory: %w", err)
 	}
-	
+
 	jsonPlans := make(map[string]*models.FloorPlan)
-	
+
 	// Load all JSON files
 	for _, file := range files {
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
 			continue
 		}
-		
+
 		data, err := ioutil.ReadFile(filepath.Join(m.stateDir, file.Name()))
 		if err != nil {
 			logger.Error("Failed to read %s: %v", file.Name(), err)
 			continue
 		}
-		
+
 		var plan models.FloorPlan
 		if err := json.Unmarshal(data, &plan); err != nil {
 			logger.Error("Failed to parse %s: %v", file.Name(), err)
 			continue
 		}
-		
+
 		jsonPlans[plan.Name] = &plan
 	}
-	
+
 	// Get all database plans
 	dbPlans, err := m.db.GetAllFloorPlans(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get database plans: %w", err)
 	}
-	
+
 	// Create a map for easy lookup
 	dbPlanMap := make(map[string]*models.FloorPlan)
 	for _, plan := range dbPlans {
 		dbPlanMap[plan.Name] = plan
 	}
-	
+
 	// Sync JSON to database
 	for name, jsonPlan := range jsonPlans {
 		dbPlan, exists := dbPlanMap[name]
-		
+
 		if !exists {
 			// Plan exists in JSON but not in database
 			logger.Info("Adding floor plan %s to database", name)
@@ -178,7 +178,7 @@ func (m *JSONMigrator) SyncJSONToDatabase(ctx context.Context) error {
 			}
 		}
 	}
-	
+
 	// Export database plans that don't exist in JSON
 	for name := range dbPlanMap {
 		if _, exists := jsonPlans[name]; !exists {
@@ -189,6 +189,6 @@ func (m *JSONMigrator) SyncJSONToDatabase(ctx context.Context) error {
 			}
 		}
 	}
-	
+
 	return nil
 }

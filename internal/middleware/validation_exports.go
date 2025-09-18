@@ -12,9 +12,9 @@ import (
 // NewValidationMiddleware creates a new validation middleware with custom options
 func NewValidationMiddleware(options ...ValidationOption) func(http.Handler) http.Handler {
 	config := &validationConfig{
-		maxRequestSize:  MaxRequestSize,
-		allowedMethods:  []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
-		requireAuth:     false,
+		maxRequestSize: MaxRequestSize,
+		allowedMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH"},
+		requireAuth:    false,
 	}
 
 	for _, opt := range options {
@@ -30,9 +30,9 @@ func NewValidationMiddleware(options ...ValidationOption) func(http.Handler) htt
 type ValidationOption func(*validationConfig)
 
 type validationConfig struct {
-	maxRequestSize  int64
-	allowedMethods  []string
-	requireAuth     bool
+	maxRequestSize int64
+	allowedMethods []string
+	requireAuth    bool
 }
 
 // WithMaxRequestSize sets the maximum request size

@@ -18,30 +18,30 @@ type Dashboard struct {
 
 // DashboardData represents data displayed on the dashboard
 type DashboardData struct {
-	ServiceName   string                       `json:"service_name"`
-	Environment   string                       `json:"environment"`
-	Timestamp     time.Time                    `json:"timestamp"`
-	Metrics       map[string]interface{}       `json:"metrics"`
-	RecentTraces  []*Span                      `json:"recent_traces"`
-	SystemInfo    SystemInfo                   `json:"system_info"`
-	Alerts        []Alert                      `json:"alerts"`
+	ServiceName  string                 `json:"service_name"`
+	Environment  string                 `json:"environment"`
+	Timestamp    time.Time              `json:"timestamp"`
+	Metrics      map[string]interface{} `json:"metrics"`
+	RecentTraces []*Span                `json:"recent_traces"`
+	SystemInfo   SystemInfo             `json:"system_info"`
+	Alerts       []Alert                `json:"alerts"`
 }
 
 // SystemInfo contains system information
 type SystemInfo struct {
-	Uptime        time.Duration `json:"uptime"`
-	MemoryUsage   int64         `json:"memory_usage"`
-	CPUUsage      float64       `json:"cpu_usage"`
-	GoroutineCount int          `json:"goroutine_count"`
+	Uptime         time.Duration `json:"uptime"`
+	MemoryUsage    int64         `json:"memory_usage"`
+	CPUUsage       float64       `json:"cpu_usage"`
+	GoroutineCount int           `json:"goroutine_count"`
 }
 
 // Alert represents a system alert
 type Alert struct {
-	ID          string    `json:"id"`
-	Level       string    `json:"level"`
-	Message     string    `json:"message"`
-	Timestamp   time.Time `json:"timestamp"`
-	Resolved    bool      `json:"resolved"`
+	ID        string    `json:"id"`
+	Level     string    `json:"level"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+	Resolved  bool      `json:"resolved"`
 }
 
 var dashboardHTML = `<!DOCTYPE html>
@@ -264,9 +264,9 @@ func (d *Dashboard) getSystemInfo() SystemInfo {
 	// This would typically use runtime metrics
 	return SystemInfo{
 		Uptime:         time.Since(time.Now().Add(-time.Hour)), // Placeholder
-		MemoryUsage:    128, // MB - placeholder
-		CPUUsage:       15.5, // % - placeholder
-		GoroutineCount: 45,   // placeholder
+		MemoryUsage:    128,                                    // MB - placeholder
+		CPUUsage:       15.5,                                   // % - placeholder
+		GoroutineCount: 45,                                     // placeholder
 	}
 }
 
@@ -278,7 +278,7 @@ func (d *Dashboard) getActiveAlerts() []Alert {
 	// Example alert logic
 	if extendedInstance != nil && extendedInstance.metrics != nil {
 		counters := extendedInstance.metrics.GetCounters()
-		
+
 		// Check for high error rates
 		for name, counter := range counters {
 			if name == "http_requests_total,status=500" && counter.Value > 10 {

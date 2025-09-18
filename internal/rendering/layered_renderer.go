@@ -3,18 +3,18 @@ package rendering
 import (
 	"fmt"
 	"strings"
-	
+
 	"github.com/arx-os/arxos/internal/rendering/layers"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
 // LayeredRenderer is a renderer that uses the layer system for composition
 type LayeredRenderer struct {
-	width       int
-	height      int
-	buffer      [][]rune
-	layerMgr    *layers.Manager
-	viewport    layers.Viewport
+	width    int
+	height   int
+	buffer   [][]rune
+	layerMgr *layers.Manager
+	viewport layers.Viewport
 }
 
 // NewLayeredRenderer creates a new layered renderer
@@ -33,12 +33,12 @@ func NewLayeredRenderer(width, height int) *LayeredRenderer {
 			Floor:  "",
 		},
 	}
-	
+
 	// Initialize buffer
 	for i := range r.buffer {
 		r.buffer[i] = make([]rune, width)
 	}
-	
+
 	r.Clear()
 	return r
 }
@@ -115,17 +115,17 @@ func (r *LayeredRenderer) Update(deltaTime float64) {
 func (r *LayeredRenderer) Render() string {
 	// Clear buffer
 	r.Clear()
-	
+
 	// Render all layers
 	r.layerMgr.RenderAll(r.buffer, r.viewport)
-	
+
 	// Convert buffer to string
 	var output strings.Builder
 	for _, row := range r.buffer {
 		output.WriteString(string(row))
 		output.WriteRune('\n')
 	}
-	
+
 	return output.String()
 }
 
@@ -134,16 +134,16 @@ func (r *LayeredRenderer) RenderFloorPlan(plan *models.FloorPlan) error {
 	if plan == nil {
 		return fmt.Errorf("floor plan is nil")
 	}
-	
+
 	// Clear existing layers
 	r.layerMgr.Clear()
-	
+
 	// Add structure layer
 	structureLayer := layers.NewStructureLayer(plan)
 	if err := r.AddLayer(structureLayer); err != nil {
 		return fmt.Errorf("failed to add structure layer: %w", err)
 	}
-	
+
 	// Add equipment layer
 	if len(plan.Equipment) > 0 {
 		equipmentLayer := layers.NewEquipmentLayer(plan.Equipment)
@@ -151,13 +151,13 @@ func (r *LayeredRenderer) RenderFloorPlan(plan *models.FloorPlan) error {
 			return fmt.Errorf("failed to add equipment layer: %w", err)
 		}
 	}
-	
+
 	// Note: Connection layer would be added here when connection data is available
 	// For now, connections are not part of the FloorPlan model
-	
+
 	// Set viewport to show the entire floor plan
 	r.FitToContent()
-	
+
 	return nil
 }
 
@@ -173,11 +173,11 @@ func (r *LayeredRenderer) FitToContent() {
 	if len(allLayers) == 0 {
 		return
 	}
-	
+
 	// Find the bounds of all content
 	minX, minY := float64(1e9), float64(1e9)
 	maxX, maxY := float64(-1e9), float64(-1e9)
-	
+
 	for _, layer := range allLayers {
 		bounds := layer.GetBounds()
 		if bounds.MinX < minX {
@@ -193,21 +193,21 @@ func (r *LayeredRenderer) FitToContent() {
 			maxY = bounds.MaxY
 		}
 	}
-	
+
 	// Calculate zoom to fit content
 	contentWidth := maxX - minX
 	contentHeight := maxY - minY
-	
+
 	if contentWidth > 0 && contentHeight > 0 {
-		zoomX := float64(r.width-4) / contentWidth   // Leave some margin
+		zoomX := float64(r.width-4) / contentWidth // Leave some margin
 		zoomY := float64(r.height-4) / contentHeight
-		
+
 		// Use the smaller zoom to ensure everything fits
 		zoom := zoomX
 		if zoomY < zoom {
 			zoom = zoomY
 		}
-		
+
 		// Limit zoom range
 		if zoom < 0.1 {
 			zoom = 0.1
@@ -215,7 +215,7 @@ func (r *LayeredRenderer) FitToContent() {
 		if zoom > 2.0 {
 			zoom = 2.0
 		}
-		
+
 		// Center the content
 		r.viewport.X = minX - 2/zoom // Small margin
 		r.viewport.Y = minY - 2/zoom
@@ -227,13 +227,13 @@ func (r *LayeredRenderer) FitToContent() {
 func (r *LayeredRenderer) GetInfo() string {
 	layerCount := len(r.layerMgr.GetLayerNames())
 	visibleCount := 0
-	
+
 	for _, layer := range r.layerMgr.GetLayers() {
 		if layer.IsVisible() {
 			visibleCount++
 		}
 	}
-	
+
 	return fmt.Sprintf("Viewport: (%.1f, %.1f) Zoom: %.1fx | Layers: %d visible / %d total",
 		r.viewport.X, r.viewport.Y, r.viewport.Zoom,
 		visibleCount, layerCount)

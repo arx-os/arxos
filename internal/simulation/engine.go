@@ -30,13 +30,13 @@ func NewEngine() *Engine {
 
 // Results contains all simulation outputs
 type Results struct {
-	Timestamp          time.Time
-	BuildingID         string
-	TotalEnergyFlow    float64
-	AverageEfficiency  float64
-	CriticalIssues     []Issue
-	Recommendations    []string
-	EquipmentAnalysis  map[string]*EquipmentSimulation
+	Timestamp         time.Time
+	BuildingID        string
+	TotalEnergyFlow   float64
+	AverageEfficiency float64
+	CriticalIssues    []Issue
+	Recommendations   []string
+	EquipmentAnalysis map[string]*EquipmentSimulation
 }
 
 // EquipmentSimulation contains simulation data for a single equipment
@@ -175,7 +175,7 @@ func (e *Engine) runMaintenancePrediction(building *models.FloorPlan, results *R
 		for _, eq := range building.Equipment {
 			// Simple maintenance prediction based on status
 			nextMaint := time.Now().Add(30 * 24 * time.Hour) // 30 days default
-			failProb := 0.1 // 10% base probability
+			failProb := 0.1                                  // 10% base probability
 
 			if eq.Status == models.StatusDegraded {
 				nextMaint = time.Now().Add(7 * 24 * time.Hour) // 7 days if degraded

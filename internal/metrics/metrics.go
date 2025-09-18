@@ -23,29 +23,29 @@ const (
 
 // Metric represents a single metric
 type Metric struct {
-	Name        string
-	Type        MetricType
-	Help        string
-	Labels      map[string]string
-	value       atomic.Value
-	histogram   *Histogram
-	mu          sync.RWMutex
+	Name      string
+	Type      MetricType
+	Help      string
+	Labels    map[string]string
+	value     atomic.Value
+	histogram *Histogram
+	mu        sync.RWMutex
 }
 
 // Histogram tracks distribution of values
 type Histogram struct {
-	buckets   []float64
-	counts    []uint64
-	sum       float64
-	count     uint64
-	mu        sync.Mutex
+	buckets []float64
+	counts  []uint64
+	sum     float64
+	count   uint64
+	mu      sync.Mutex
 }
 
 // Collector manages all metrics
 type Collector struct {
-	metrics    map[string]*Metric
-	mu         sync.RWMutex
-	startTime  time.Time
+	metrics   map[string]*Metric
+	mu        sync.RWMutex
+	startTime time.Time
 
 	// Pre-defined metrics
 	httpRequests      *Metric

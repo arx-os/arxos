@@ -180,12 +180,12 @@ func MigrateExistingData(ctx context.Context, buildingID string) error {
 
 // ImportMetrics tracks import performance
 type ImportMetrics struct {
-	Format        string
-	InputSize     int64
-	ProcessTime   float64
-	FloorCount    int
-	EquipmentCount int
-	Success       bool
+	Format          string
+	InputSize       int64
+	ProcessTime     float64
+	FloorCount      int
+	EquipmentCount  int
+	Success         bool
 	UsedNewPipeline bool
 }
 

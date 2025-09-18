@@ -282,9 +282,9 @@ func testSpatialIndexPerformance(t *testing.T, ctx context.Context, db *database
 	for i := 0; i < numEquipment; i++ {
 		equipID := fmt.Sprintf("PERF-%d-%d", baseTime, i)
 		position := spatial.Point3D{
-			X: float64(i%100) * 1000.0,  // Grid pattern
+			X: float64(i%100) * 1000.0, // Grid pattern
 			Y: float64(i/100) * 1000.0,
-			Z: float64((i%10)) * 3500.0,  // 10 floors
+			Z: float64((i % 10)) * 3500.0, // 10 floors
 		}
 
 		err := spatialDB.UpdateEquipmentPosition(
@@ -468,4 +468,3 @@ DATA;
 ENDSEC;
 END-ISO-10303-21;`
 }
-

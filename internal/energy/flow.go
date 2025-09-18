@@ -4,9 +4,9 @@ package energy
 import (
 	"fmt"
 	"math"
-	
-	"github.com/arx-os/arxos/internal/connections"
+
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/connections"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -68,7 +68,7 @@ func (fs *FlowSystem) AddNode(equipment *models.Equipment, isSource, isSink bool
 	if _, exists := fs.nodes[equipment.ID]; exists {
 		return fmt.Errorf("node %s already exists", equipment.ID)
 	}
-	
+
 	node := &FlowNode{
 		ID:        equipment.ID,
 		Equipment: equipment,
@@ -77,10 +77,10 @@ func (fs *FlowSystem) AddNode(equipment *models.Equipment, isSource, isSink bool
 		X:         equipment.Location.X,
 		Y:         equipment.Location.Y,
 	}
-	
+
 	// Set default values based on equipment type and flow type
 	fs.setNodeDefaults(node)
-	
+
 	fs.nodes[equipment.ID] = node
 	logger.Debug("Added flow node: %s (source=%v, sink=%v)", equipment.ID, isSource, isSink)
 	return nil
@@ -94,7 +94,7 @@ func (fs *FlowSystem) AddEdge(fromID, toID string, capacity, resistance float64)
 	if _, exists := fs.nodes[toID]; !exists {
 		return fmt.Errorf("target node %s not found", toID)
 	}
-	
+
 	edgeID := fmt.Sprintf("%s->%s", fromID, toID)
 	edge := &FlowEdge{
 		ID:         edgeID,
@@ -104,12 +104,12 @@ func (fs *FlowSystem) AddEdge(fromID, toID string, capacity, resistance float64)
 		Resistance: resistance,
 		Active:     true,
 	}
-	
+
 	// Calculate length from node positions
 	from := fs.nodes[fromID]
 	to := fs.nodes[toID]
 	edge.Length = fs.calculateDistance(from, to)
-	
+
 	fs.edges[edgeID] = edge
 	logger.Debug("Added flow edge: %s (cap=%.2f, res=%.2f)", edgeID, capacity, resistance)
 	return nil
@@ -124,7 +124,7 @@ func (fs *FlowSystem) Simulate() (*FlowResult, error) {
 		TotalLoss:  0,
 		Efficiency: 0,
 	}
-	
+
 	switch fs.flowType {
 	case FlowElectrical:
 		fs.simulateElectrical(result)
@@ -135,12 +135,12 @@ func (fs *FlowSystem) Simulate() (*FlowResult, error) {
 	default:
 		return nil, fmt.Errorf("unsupported flow type: %s", fs.flowType)
 	}
-	
+
 	// Calculate efficiency
 	if result.TotalFlow > 0 {
 		result.Efficiency = (result.TotalFlow - result.TotalLoss) / result.TotalFlow * 100
 	}
-	
+
 	return result, nil
 }
 
@@ -148,7 +148,7 @@ func (fs *FlowSystem) Simulate() (*FlowResult, error) {
 func (fs *FlowSystem) simulateElectrical(result *FlowResult) {
 	// Simplified DC power flow calculation
 	// In real implementation, would use Newton-Raphson or similar for AC
-	
+
 	// Find all sources and sinks
 	sources := []*FlowNode{}
 	sinks := []*FlowNode{}
@@ -161,37 +161,37 @@ func (fs *FlowSystem) simulateElectrical(result *FlowResult) {
 			sinks = append(sinks, node)
 		}
 	}
-	
+
 	// Simple voltage divider network simulation
 	for _, edge := range fs.edges {
 		from := fs.nodes[edge.FromNode]
 		to := fs.nodes[edge.ToNode]
-		
+
 		if from.IsSource && to.IsSink {
 			// Direct source to sink connection
 			voltageDrop := edge.Resistance * edge.Flow
 			current := (from.Potential - voltageDrop) / edge.Resistance
-			
+
 			// Apply Ohm's law: V = I * R
 			if current > edge.Capacity {
 				current = edge.Capacity // Limit to capacity
 			}
-			
+
 			edge.Flow = current
 			powerLoss := current * current * edge.Resistance // I²R losses
-			
+
 			// Update result
 			result.Edges[edge.ID] = EdgeState{
 				Flow:     current,
 				Loss:     powerLoss,
 				Utilized: (current / edge.Capacity) * 100,
 			}
-			
+
 			result.TotalFlow += current * from.Potential // Power = V * I
 			result.TotalLoss += powerLoss
 		}
 	}
-	
+
 	// Update node states
 	for _, node := range fs.nodes {
 		state := NodeState{
@@ -199,11 +199,11 @@ func (fs *FlowSystem) simulateElectrical(result *FlowResult) {
 			Flow:        node.Flow,
 			Utilization: 0,
 		}
-		
+
 		if node.Capacity > 0 {
 			state.Utilization = (node.Flow / node.Capacity) * 100
 		}
-		
+
 		result.Nodes[node.ID] = state
 	}
 }
@@ -211,22 +211,22 @@ func (fs *FlowSystem) simulateElectrical(result *FlowResult) {
 // simulateThermal implements heat flow simulation
 func (fs *FlowSystem) simulateThermal(result *FlowResult) {
 	// Simplified heat transfer using thermal resistance network
-	
+
 	// Set source temperatures (e.g., HVAC units)
 	for _, node := range fs.nodes {
 		if node.IsSource {
 			node.Potential = 72.0 // Target temperature in Fahrenheit
 		}
 	}
-	
+
 	// Heat flow calculation: Q = ΔT / R
 	for _, edge := range fs.edges {
 		from := fs.nodes[edge.FromNode]
 		to := fs.nodes[edge.ToNode]
-		
+
 		tempDiff := from.Potential - to.Potential
 		heatFlow := tempDiff / edge.Resistance
-		
+
 		if math.Abs(heatFlow) > edge.Capacity {
 			if heatFlow > 0 {
 				heatFlow = edge.Capacity
@@ -234,16 +234,16 @@ func (fs *FlowSystem) simulateThermal(result *FlowResult) {
 				heatFlow = -edge.Capacity
 			}
 		}
-		
+
 		edge.Flow = heatFlow
-		
+
 		// Update result
 		result.Edges[edge.ID] = EdgeState{
 			Flow:     heatFlow,
 			Loss:     math.Abs(heatFlow) * 0.1, // 10% heat loss assumption
 			Utilized: (math.Abs(heatFlow) / edge.Capacity) * 100,
 		}
-		
+
 		result.TotalFlow += math.Abs(heatFlow)
 		result.TotalLoss += math.Abs(heatFlow) * 0.1
 	}
@@ -252,36 +252,36 @@ func (fs *FlowSystem) simulateThermal(result *FlowResult) {
 // simulateFluid implements fluid flow simulation
 func (fs *FlowSystem) simulateFluid(result *FlowResult) {
 	// Simplified fluid flow using Bernoulli's equation
-	
+
 	// Set source pressures (e.g., pumps)
 	for _, node := range fs.nodes {
 		if node.IsSource {
 			node.Potential = 50.0 // PSI
 		}
 	}
-	
+
 	// Flow rate: Q = ΔP / R (simplified)
 	for _, edge := range fs.edges {
 		from := fs.nodes[edge.FromNode]
 		to := fs.nodes[edge.ToNode]
-		
+
 		pressureDiff := from.Potential - to.Potential
 		flowRate := pressureDiff / edge.Resistance
-		
+
 		if flowRate > edge.Capacity {
 			flowRate = edge.Capacity
 		}
-		
+
 		edge.Flow = flowRate
 		frictionLoss := flowRate * edge.Resistance * 0.05 // Friction losses
-		
+
 		// Update result
 		result.Edges[edge.ID] = EdgeState{
 			Flow:     flowRate,
 			Loss:     frictionLoss,
 			Utilized: (flowRate / edge.Capacity) * 100,
 		}
-		
+
 		result.TotalFlow += flowRate
 		result.TotalLoss += frictionLoss
 	}
@@ -293,7 +293,7 @@ func (fs *FlowSystem) setNodeDefaults(node *FlowNode) {
 	case FlowElectrical:
 		switch node.Equipment.Type {
 		case "panel":
-			node.Capacity = 200.0 // Amps
+			node.Capacity = 200.0  // Amps
 			node.Resistance = 0.01 // Ohms
 		case "outlet":
 			node.Capacity = 20.0
@@ -305,7 +305,7 @@ func (fs *FlowSystem) setNodeDefaults(node *FlowNode) {
 			node.Capacity = 10.0
 			node.Resistance = 1.0
 		}
-		
+
 	case FlowThermal:
 		switch node.Equipment.Type {
 		case "hvac":
@@ -318,7 +318,7 @@ func (fs *FlowSystem) setNodeDefaults(node *FlowNode) {
 			node.Capacity = 100.0
 			node.Resistance = 5.0
 		}
-		
+
 	case FlowFluid:
 		switch node.Equipment.Type {
 		case "pump":
@@ -347,7 +347,7 @@ func (fs *FlowSystem) GetFlowPath(fromID, toID string) ([]FlowPoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	points := make([]FlowPoint, 0, len(path))
 	for i := 0; i < len(path)-1; i++ {
 		edgeID := fmt.Sprintf("%s->%s", path[i], path[i+1])
@@ -361,7 +361,7 @@ func (fs *FlowSystem) GetFlowPath(fromID, toID string) ([]FlowPoint, error) {
 			})
 		}
 	}
-	
+
 	return points, nil
 }
 

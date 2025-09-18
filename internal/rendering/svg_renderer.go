@@ -55,7 +55,7 @@ func DefaultRenderOptions() *RenderOptions {
 // RenderFloorPlan generates an SVG visualization of a floor plan
 func (r *SVGRenderer) RenderFloorPlan(plan *models.FloorPlan, opts *RenderOptions) string {
 	logger.Debug("Starting SVG render for floor plan: %s", plan.Name)
-	
+
 	if opts == nil {
 		opts = DefaultRenderOptions()
 	}
@@ -64,7 +64,7 @@ func (r *SVGRenderer) RenderFloorPlan(plan *models.FloorPlan, opts *RenderOption
 	logger.Debug("Calculating bounds for %d rooms", len(plan.Rooms))
 	bounds := r.calculateBounds(plan)
 	logger.Debug("Bounds: MinX=%g, MinY=%g, MaxX=%g, MaxY=%g", bounds.MinX, bounds.MinY, bounds.MaxX, bounds.MaxY)
-	
+
 	scale := r.calculateScale(bounds, opts.Width, opts.Height)
 	logger.Debug("Scale factor: %g", scale)
 
@@ -72,42 +72,42 @@ func (r *SVGRenderer) RenderFloorPlan(plan *models.FloorPlan, opts *RenderOption
 	var svg strings.Builder
 	svg.WriteString(fmt.Sprintf(`<svg width="%g" height="%g" viewBox="0 0 %g %g" xmlns="http://www.w3.org/2000/svg">`,
 		opts.Width, opts.Height, opts.Width, opts.Height))
-	
+
 	// Add styles
 	svg.WriteString(r.renderStyles(opts.Theme))
-	
+
 	// Add definitions (patterns, markers, etc.)
 	svg.WriteString(r.renderDefs())
-	
+
 	// Background
 	svg.WriteString(fmt.Sprintf(`<rect width="%g" height="%g" class="svg-background"/>`, opts.Width, opts.Height))
-	
+
 	// Grid
 	if opts.ShowGrid {
 		svg.WriteString(r.renderGrid(opts.Width, opts.Height, opts.GridSize))
 	}
-	
+
 	// Main group with transform
 	svg.WriteString(fmt.Sprintf(`<g transform="translate(%g,%g) scale(%g,%g)">`,
 		r.padding, r.padding, scale, scale))
-	
+
 	// Render rooms
 	for _, room := range plan.Rooms {
 		svg.WriteString(r.renderRoom(room, opts.ShowLabels))
 	}
-	
+
 	// Render equipment
 	for _, equip := range plan.Equipment {
 		svg.WriteString(r.renderEquipment(equip, opts.ShowLabels))
 	}
-	
+
 	svg.WriteString(`</g>`)
-	
+
 	// Title and metadata
 	svg.WriteString(r.renderMetadata(plan))
-	
+
 	svg.WriteString(`</svg>`)
-	
+
 	return svg.String()
 }
 
@@ -173,10 +173,10 @@ func (r *SVGRenderer) renderGrid(width, height, gridSize float64) string {
 	if gridSize <= 0 {
 		gridSize = 20 // Default grid size
 	}
-	
+
 	var grid strings.Builder
 	grid.WriteString(`<g class="grid">`)
-	
+
 	// Vertical lines (with safety limit)
 	maxLines := int(width/gridSize) + 1
 	if maxLines > 1000 {
@@ -190,7 +190,7 @@ func (r *SVGRenderer) renderGrid(width, height, gridSize float64) string {
 		grid.WriteString(fmt.Sprintf(`<line x1="%g" y1="0" x2="%g" y2="%g" class="grid-line"/>`,
 			x, x, height))
 	}
-	
+
 	// Horizontal lines (with safety limit)
 	maxLines = int(height/gridSize) + 1
 	if maxLines > 1000 {
@@ -204,7 +204,7 @@ func (r *SVGRenderer) renderGrid(width, height, gridSize float64) string {
 		grid.WriteString(fmt.Sprintf(`<line x1="0" y1="%g" x2="%g" y2="%g" class="grid-line"/>`,
 			y, width, y))
 	}
-	
+
 	grid.WriteString(`</g>`)
 	return grid.String()
 }
@@ -212,13 +212,13 @@ func (r *SVGRenderer) renderGrid(width, height, gridSize float64) string {
 // renderRoom generates SVG for a room
 func (r *SVGRenderer) renderRoom(room *models.Room, showLabel bool) string {
 	var svg strings.Builder
-	
+
 	// Room rectangle
 	svg.WriteString(fmt.Sprintf(`<rect x="%g" y="%g" width="%g" height="%g" class="room" data-room-id="%s"/>`,
 		room.Bounds.MinX, room.Bounds.MinY,
 		room.Bounds.Width(), room.Bounds.Height(),
 		room.ID))
-	
+
 	// Room label
 	if showLabel && room.Name != "" {
 		centerX := room.Bounds.MinX + room.Bounds.Width()/2
@@ -226,14 +226,14 @@ func (r *SVGRenderer) renderRoom(room *models.Room, showLabel bool) string {
 		svg.WriteString(fmt.Sprintf(`<text x="%g" y="%g" text-anchor="middle" class="room-label">%s</text>`,
 			centerX, centerY, room.Name))
 	}
-	
+
 	return svg.String()
 }
 
 // renderEquipment generates SVG for equipment
 func (r *SVGRenderer) renderEquipment(equip *models.Equipment, showLabel bool) string {
 	var svg strings.Builder
-	
+
 	// Different shapes for different equipment types
 	switch equip.Type {
 	case "outlet":
@@ -250,13 +250,13 @@ func (r *SVGRenderer) renderEquipment(equip *models.Equipment, showLabel bool) s
 		svg.WriteString(fmt.Sprintf(`<circle cx="%g" cy="%g" r="4" class="equipment" data-equipment-id="%s"/>`,
 			equip.Location.X, equip.Location.Y, equip.ID))
 	}
-	
+
 	// Equipment label
 	if showLabel && equip.Name != "" {
 		svg.WriteString(fmt.Sprintf(`<text x="%g" y="%g" text-anchor="middle" class="equipment-label">%s</text>`,
 			equip.Location.X, equip.Location.Y+15, equip.Name))
 	}
-	
+
 	// Status indicator
 	if equip.Status == models.StatusFailed {
 		svg.WriteString(fmt.Sprintf(`<circle cx="%g" cy="%g" r="8" fill="none" stroke="red" stroke-width="2" opacity="0.5"/>`,
@@ -265,7 +265,7 @@ func (r *SVGRenderer) renderEquipment(equip *models.Equipment, showLabel bool) s
 		svg.WriteString(fmt.Sprintf(`<circle cx="%g" cy="%g" r="8" fill="none" stroke="orange" stroke-width="2" opacity="0.5"/>`,
 			equip.Location.X, equip.Location.Y))
 	}
-	
+
 	return svg.String()
 }
 
@@ -280,9 +280,9 @@ func (r *SVGRenderer) calculateBounds(plan *models.FloorPlan) models.Bounds {
 	if len(plan.Rooms) == 0 {
 		return models.Bounds{MinX: 0, MinY: 0, MaxX: 100, MaxY: 100}
 	}
-	
+
 	bounds := plan.Rooms[0].Bounds
-	
+
 	for _, room := range plan.Rooms[1:] {
 		if room.Bounds.MinX < bounds.MinX {
 			bounds.MinX = room.Bounds.MinX
@@ -297,7 +297,7 @@ func (r *SVGRenderer) calculateBounds(plan *models.FloorPlan) models.Bounds {
 			bounds.MaxY = room.Bounds.MaxY
 		}
 	}
-	
+
 	return bounds
 }
 
@@ -305,18 +305,18 @@ func (r *SVGRenderer) calculateBounds(plan *models.FloorPlan) models.Bounds {
 func (r *SVGRenderer) calculateScale(bounds models.Bounds, width, height float64) float64 {
 	availableWidth := width - 2*r.padding
 	availableHeight := height - 2*r.padding
-	
+
 	boundsWidth := bounds.Width()
 	boundsHeight := bounds.Height()
-	
+
 	// Prevent division by zero
 	if boundsWidth <= 0 || boundsHeight <= 0 {
 		return 1.0
 	}
-	
+
 	scaleX := availableWidth / boundsWidth
 	scaleY := availableHeight / boundsHeight
-	
+
 	// Use the smaller scale to ensure everything fits
 	if scaleX < scaleY {
 		return scaleX
@@ -335,7 +335,7 @@ func (r *SVGRenderer) RenderConnection(from, to models.Point, connectionType str
 	case "hvac":
 		color = "#00ff00"
 	}
-	
+
 	return fmt.Sprintf(`<line x1="%g" y1="%g" x2="%g" y2="%g" stroke="%s" stroke-width="1" stroke-dasharray="5,5" marker-end="url(#arrow)"/>`,
 		from.X, from.Y, to.X, to.Y, color)
 }

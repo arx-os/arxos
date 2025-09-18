@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 )
 
 // SessionManager handles session lifecycle management
@@ -36,7 +36,7 @@ func NewSessionManager(db database.DB, cleanupInterval, sessionTimeout time.Dura
 // Start begins the session cleanup routine
 func (sm *SessionManager) Start(ctx context.Context) {
 	logger.Info("Starting session manager with cleanup interval: %v", sm.cleanupInterval)
-	
+
 	ticker := time.NewTicker(sm.cleanupInterval)
 	defer ticker.Stop()
 
@@ -65,7 +65,7 @@ func (sm *SessionManager) Stop() {
 // cleanup removes expired sessions
 func (sm *SessionManager) cleanup(ctx context.Context) {
 	logger.Debug("Running session cleanup")
-	
+
 	// Create a new context with timeout for cleanup operation
 	cleanupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()

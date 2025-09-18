@@ -67,11 +67,11 @@ func (w *Writer) writeJSON(success bool, data interface{}, errorMsg string) erro
 		Command:   w.command,
 		Version:   "1.0.0",
 	}
-	
+
 	if errorMsg != "" {
 		wrapper.Error = errorMsg
 	}
-	
+
 	encoder := json.NewEncoder(w.writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(wrapper)
@@ -105,7 +105,7 @@ func WriteOutput(jsonFlag bool, command string, data interface{}) error {
 	return writer.WriteSuccess(data)
 }
 
-// Standard error helper  
+// Standard error helper
 func WriteError(jsonFlag bool, command string, err error) error {
 	writer := NewWriter(os.Stderr, GetFormat(jsonFlag), command)
 	return writer.WriteError(err)
@@ -119,13 +119,13 @@ type EquipmentList struct {
 
 // EquipmentSummary for JSON output
 type EquipmentSummary struct {
-	ID       string  `json:"id"`
-	Name     string  `json:"name"`
-	Type     string  `json:"type"`
-	Status   string  `json:"status"`
-	RoomID   string  `json:"room_id,omitempty"`
-	Location *Point  `json:"location,omitempty"`
-	Notes    string  `json:"notes,omitempty"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Status   string `json:"status"`
+	RoomID   string `json:"room_id,omitempty"`
+	Location *Point `json:"location,omitempty"`
+	Notes    string `json:"notes,omitempty"`
 }
 
 // Point for location data
@@ -146,27 +146,27 @@ type FloorPlanSummary struct {
 
 // StatusSummary for status command JSON output
 type StatusSummary struct {
-	FloorPlan        FloorPlanSummary           `json:"floor_plan"`
-	EquipmentSummary map[string]int             `json:"equipment_summary"`
-	FailedEquipment  []EquipmentSummary         `json:"failed_equipment,omitempty"`
-	NeedsRepair      []EquipmentSummary         `json:"needs_repair,omitempty"`
-	TotalEquipment   int                        `json:"total_equipment"`
+	FloorPlan        FloorPlanSummary   `json:"floor_plan"`
+	EquipmentSummary map[string]int     `json:"equipment_summary"`
+	FailedEquipment  []EquipmentSummary `json:"failed_equipment,omitempty"`
+	NeedsRepair      []EquipmentSummary `json:"needs_repair,omitempty"`
+	TotalEquipment   int                `json:"total_equipment"`
 }
 
 // TraceResult for trace command JSON output
 type TraceResult struct {
-	StartEquipment string              `json:"start_equipment"`
-	Direction      string              `json:"direction"`
-	MaxDepth       int                 `json:"max_depth"`
-	Results        []TraceStep         `json:"results"`
-	TotalFound     int                 `json:"total_found"`
+	StartEquipment string      `json:"start_equipment"`
+	Direction      string      `json:"direction"`
+	MaxDepth       int         `json:"max_depth"`
+	Results        []TraceStep `json:"results"`
+	TotalFound     int         `json:"total_found"`
 }
 
 // TraceStep represents one step in a trace
 type TraceStep struct {
-	Level       int              `json:"level"`
-	Equipment   EquipmentSummary `json:"equipment"`
-	Connection  string           `json:"connection_type,omitempty"`
+	Level      int              `json:"level"`
+	Equipment  EquipmentSummary `json:"equipment"`
+	Connection string           `json:"connection_type,omitempty"`
 }
 
 // QueryResult for query command JSON output
@@ -179,11 +179,11 @@ type QueryResult struct {
 
 // ImportResult for import command JSON output
 type ImportResult struct {
-	SourceFile      string           `json:"source_file"`
-	FloorPlan       FloorPlanSummary `json:"floor_plan"`
-	StateFile       string           `json:"state_file"`
-	ExtractionType  string           `json:"extraction_type"` // "standard", "ocr", "manual"
-	ProcessingTime  float64          `json:"processing_time_ms"`
+	SourceFile     string           `json:"source_file"`
+	FloorPlan      FloorPlanSummary `json:"floor_plan"`
+	StateFile      string           `json:"state_file"`
+	ExtractionType string           `json:"extraction_type"` // "standard", "ocr", "manual"
+	ProcessingTime float64          `json:"processing_time_ms"`
 }
 
 // ExportResult for export command JSON output
@@ -208,11 +208,11 @@ type ConnectionResult struct {
 
 // AnalysisResult for analyze command JSON output
 type AnalysisResult struct {
-	TargetEquipment     string              `json:"target_equipment"`
-	DirectlyAffected    []EquipmentSummary  `json:"directly_affected"`
-	IndirectlyAffected  []EquipmentSummary  `json:"indirectly_affected"`
-	TotalImpact         int                 `json:"total_impact"`
-	CriticalPath        bool                `json:"critical_path"`
-	SystemsAffected     []string            `json:"systems_affected"`
-	RiskLevel           string              `json:"risk_level"` // "low", "medium", "high", "critical"
+	TargetEquipment    string             `json:"target_equipment"`
+	DirectlyAffected   []EquipmentSummary `json:"directly_affected"`
+	IndirectlyAffected []EquipmentSummary `json:"indirectly_affected"`
+	TotalImpact        int                `json:"total_impact"`
+	CriticalPath       bool               `json:"critical_path"`
+	SystemsAffected    []string           `json:"systems_affected"`
+	RiskLevel          string             `json:"risk_level"` // "low", "medium", "high", "critical"
 }

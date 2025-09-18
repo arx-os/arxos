@@ -25,36 +25,36 @@ type FailureLayer struct {
 
 // FailureEvent represents a simulated or predicted equipment failure
 type FailureEvent struct {
-	EquipmentID      string              `json:"equipment_id"`
-	Position         models.Point        `json:"position"`
-	FailureType      FailureType         `json:"failure_type"`
-	Severity         FailureSeverity     `json:"severity"`
-	StartTime        time.Time           `json:"start_time"`
-	Duration         time.Duration       `json:"duration"`
-	AffectedSystems  []string            `json:"affected_systems"`
-	PropagationPath  []PropagationStep   `json:"propagation_path"`
-	RecoveryTime     time.Duration       `json:"recovery_time"`
-	Active           bool                `json:"active"`
+	EquipmentID     string            `json:"equipment_id"`
+	Position        models.Point      `json:"position"`
+	FailureType     FailureType       `json:"failure_type"`
+	Severity        FailureSeverity   `json:"severity"`
+	StartTime       time.Time         `json:"start_time"`
+	Duration        time.Duration     `json:"duration"`
+	AffectedSystems []string          `json:"affected_systems"`
+	PropagationPath []PropagationStep `json:"propagation_path"`
+	RecoveryTime    time.Duration     `json:"recovery_time"`
+	Active          bool              `json:"active"`
 }
 
 // PropagationStep represents how a failure spreads through the system
 type PropagationStep struct {
-	EquipmentID   string        `json:"equipment_id"`
-	Position      models.Point  `json:"position"`
-	Delay         time.Duration `json:"delay"`
-	ImpactLevel   float64       `json:"impact_level"` // 0-1
-	FailureMode   string        `json:"failure_mode"`
-	Probability   float64       `json:"probability"`
+	EquipmentID string        `json:"equipment_id"`
+	Position    models.Point  `json:"position"`
+	Delay       time.Duration `json:"delay"`
+	ImpactLevel float64       `json:"impact_level"` // 0-1
+	FailureMode string        `json:"failure_mode"`
+	Probability float64       `json:"probability"`
 }
 
 // RiskZone represents an area with elevated failure risk
 type RiskZone struct {
-	Center       models.Point    `json:"center"`
-	Radius       float64         `json:"radius"`
-	RiskLevel    RiskLevel       `json:"risk_level"`
-	FailureTypes []FailureType   `json:"failure_types"`
-	Equipment    []string        `json:"equipment_ids"`
-	LastUpdated  time.Time       `json:"last_updated"`
+	Center       models.Point  `json:"center"`
+	Radius       float64       `json:"radius"`
+	RiskLevel    RiskLevel     `json:"risk_level"`
+	FailureTypes []FailureType `json:"failure_types"`
+	Equipment    []string      `json:"equipment_ids"`
+	LastUpdated  time.Time     `json:"last_updated"`
 }
 
 // FailureType represents different types of failures
@@ -151,8 +151,8 @@ func (f *FailureLayer) renderRiskZone(buffer [][]rune, zone RiskZone, vp Viewpor
 	zoneChar := f.getRiskZoneCharacter(zone.RiskLevel)
 
 	// Render circular zone
-	for y := centerY - radius; y <= centerY + radius; y++ {
-		for x := centerX - radius; x <= centerX + radius; x++ {
+	for y := centerY - radius; y <= centerY+radius; y++ {
+		for x := centerX - radius; x <= centerX+radius; x++ {
 			// Check if point is within viewport
 			if x < 0 || x >= vp.Width || y < 0 || y >= vp.Height {
 				continue
@@ -420,7 +420,7 @@ func (f *FailureLayer) Update(dt float64) {
 	// Update active failures
 	for i := range f.failures {
 		failure := &f.failures[i]
-		
+
 		// Check if failure should end
 		if failure.Active && now.Sub(failure.StartTime) > failure.Duration {
 			failure.Active = false
@@ -490,7 +490,7 @@ func (f *FailureLayer) simulateRandomFailure() {
 func (f *FailureLayer) calculatePropagationPath(equipmentID string, failureType FailureType) []PropagationStep {
 	// Use connections manager to find propagation path
 	downstream := f.connManager.GetDownstream(equipmentID)
-	
+
 	var path []PropagationStep
 	for i, nextID := range downstream {
 		if i >= 5 { // Limit propagation depth
@@ -519,11 +519,11 @@ func (f *FailureLayer) getAffectedSystems(equipmentID string) []string {
 func (f *FailureLayer) getFailureDuration(severity FailureSeverity) time.Duration {
 	switch severity {
 	case SeverityCritical:
-		return time.Hour * 4  // 4 hours
+		return time.Hour * 4 // 4 hours
 	case SeverityMajor:
-		return time.Hour * 2  // 2 hours
+		return time.Hour * 2 // 2 hours
 	case SeverityModerate:
-		return time.Hour * 1  // 1 hour
+		return time.Hour * 1 // 1 hour
 	case SeverityMinor:
 		return time.Minute * 30 // 30 minutes
 	default:

@@ -12,11 +12,11 @@ import (
 
 // SearchEngine provides fast, real-time search capabilities
 type SearchEngine struct {
-	mu          sync.RWMutex
-	buildingIdx map[string]*models.FloorPlan
+	mu           sync.RWMutex
+	buildingIdx  map[string]*models.FloorPlan
 	equipmentIdx map[string]*models.Equipment
-	roomIdx     map[string]*models.Room
-	textIdx     map[string][]string // text -> [entity IDs]
+	roomIdx      map[string]*models.Room
+	textIdx      map[string][]string // text -> [entity IDs]
 }
 
 // NewSearchEngine creates a new search engine
@@ -44,8 +44,8 @@ type SearchResult struct {
 // SearchOptions configures search behavior
 type SearchOptions struct {
 	Query      string   `json:"query"`
-	Types      []string `json:"types"`      // Filter by entity types
-	Status     []string `json:"status"`     // Filter by status
+	Types      []string `json:"types"`       // Filter by entity types
+	Status     []string `json:"status"`      // Filter by status
 	BuildingID string   `json:"building_id"` // Filter by building
 	Limit      int      `json:"limit"`
 	Offset     int      `json:"offset"`
@@ -112,7 +112,7 @@ func (s *SearchEngine) tokenize(text string) []string {
 	// Convert to lowercase and split
 	text = strings.ToLower(text)
 	words := strings.Fields(text)
-	
+
 	tokens := make([]string, 0, len(words)*2)
 	for _, word := range words {
 		// Remove punctuation
@@ -125,7 +125,7 @@ func (s *SearchEngine) tokenize(text string) []string {
 			}
 		}
 	}
-	
+
 	return tokens
 }
 
@@ -139,7 +139,7 @@ func (s *SearchEngine) Search(ctx context.Context, opts SearchOptions) ([]Search
 	}
 
 	results := []SearchResult{}
-	
+
 	// Tokenize query
 	queryTokens := s.tokenize(opts.Query)
 	if len(queryTokens) == 0 {
@@ -171,7 +171,7 @@ func (s *SearchEngine) Search(ctx context.Context, opts SearchOptions) ([]Search
 				})
 			}
 		}
-		
+
 		// Check equipment
 		if equipment, ok := s.equipmentIdx[id]; ok {
 			if s.matchesFilters(opts, "equipment", equipment) {
@@ -186,7 +186,7 @@ func (s *SearchEngine) Search(ctx context.Context, opts SearchOptions) ([]Search
 				})
 			}
 		}
-		
+
 		// Check rooms
 		if room, ok := s.roomIdx[id]; ok {
 			if s.matchesFilters(opts, "room", nil) {
@@ -327,10 +327,10 @@ func (s *SearchEngine) Stats() map[string]int {
 	defer s.mu.RUnlock()
 
 	return map[string]int{
-		"buildings":    len(s.buildingIdx),
-		"equipment":    len(s.equipmentIdx),
-		"rooms":        len(s.roomIdx),
-		"text_tokens":  len(s.textIdx),
+		"buildings":   len(s.buildingIdx),
+		"equipment":   len(s.equipmentIdx),
+		"rooms":       len(s.roomIdx),
+		"text_tokens": len(s.textIdx),
 	}
 }
 

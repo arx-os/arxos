@@ -20,14 +20,14 @@ type ConnectionLayer struct {
 
 // ConnectionPath represents a rendered connection between equipment
 type ConnectionPath struct {
-	ID          string
-	Type        connections.ConnectionType
-	FromID      string
-	ToID        string
-	Points      []models.Point
-	Active      bool
-	Load        float64 // 0-1 representing current load/usage
-	Capacity    float64
+	ID       string
+	Type     connections.ConnectionType
+	FromID   string
+	ToID     string
+	Points   []models.Point
+	Active   bool
+	Load     float64 // 0-1 representing current load/usage
+	Capacity float64
 }
 
 // PathStyle defines how different connection types are rendered
@@ -252,12 +252,12 @@ func (c *ConnectionLayer) getDirectionalCharacter(baseChar rune, x1, y1, x2, y2 
 
 func (c *ConnectionLayer) bresenhamLine(x1, y1, x2, y2 int) []struct{ X, Y int } {
 	points := []struct{ X, Y int }{}
-	
+
 	dx := abs(x2 - x1)
 	dy := abs(y2 - y1)
-	
+
 	x, y := x1, y1
-	
+
 	var xInc, yInc int
 	if x1 < x2 {
 		xInc = 1
@@ -269,29 +269,29 @@ func (c *ConnectionLayer) bresenhamLine(x1, y1, x2, y2 int) []struct{ X, Y int }
 	} else {
 		yInc = -1
 	}
-	
+
 	error := dx - dy
-	
+
 	for {
 		points = append(points, struct{ X, Y int }{x, y})
-		
+
 		if x == x2 && y == y2 {
 			break
 		}
-		
+
 		error2 := 2 * error
-		
+
 		if error2 > -dy {
 			error -= dy
 			x += xInc
 		}
-		
+
 		if error2 < dx {
 			error += dx
 			y += yInc
 		}
 	}
-	
+
 	return points
 }
 
@@ -394,7 +394,7 @@ func (c *ConnectionLayer) HighlightConnection(connectionID string, highlight boo
 			for _, point := range c.connections[i].Points {
 				x := int(point.X)
 				y := int(point.Y)
-				c.dirty = append(c.dirty, Region{x-1, y-1, 3, 3})
+				c.dirty = append(c.dirty, Region{x - 1, y - 1, 3, 3})
 			}
 			break
 		}
@@ -409,7 +409,7 @@ func (c *ConnectionLayer) GetConnectionsAt(x, y int, vp Viewport, tolerance floa
 	queryPoint := models.Point{X: worldX, Y: worldY}
 
 	var nearbyConnections []ConnectionPath
-	
+
 	for _, conn := range c.connections {
 		if c.isPointNearPath(queryPoint, conn.Points, tolerance) {
 			nearbyConnections = append(nearbyConnections, conn)
@@ -432,15 +432,15 @@ func (c *ConnectionLayer) distanceToSegment(point, segStart, segEnd models.Point
 	// Calculate distance from point to line segment
 	dx := segEnd.X - segStart.X
 	dy := segEnd.Y - segStart.Y
-	
+
 	if dx == 0 && dy == 0 {
 		// Degenerate case: segment is a point
 		return c.distance(point, segStart)
 	}
-	
+
 	// Parameter t represents position along segment (0 = start, 1 = end)
 	t := ((point.X-segStart.X)*dx + (point.Y-segStart.Y)*dy) / (dx*dx + dy*dy)
-	
+
 	if t < 0 {
 		// Closest point is segment start
 		return c.distance(point, segStart)

@@ -12,41 +12,41 @@ import (
 
 // IFCSpatialExtractor extracts precise 3D coordinates and spatial data from IFC entities
 type IFCSpatialExtractor struct {
-	entities          map[string]*IFCEntity
-	placements        map[string]*IFCPlacement
-	representations   map[string]*IFCRepresentation
-	coordinateSystem  *IFCCoordinateSystem
+	entities         map[string]*IFCEntity
+	placements       map[string]*IFCPlacement
+	representations  map[string]*IFCRepresentation
+	coordinateSystem *IFCCoordinateSystem
 	unitScale        float64
 }
 
 // IFCPlacement represents object placement in 3D space
 type IFCPlacement struct {
-	ID               string
-	Type             string
-	Location         spatial.Point3D
-	RefDirection     *Vector3D
-	Axis             *Vector3D
-	RelativeTo       string // Reference to parent placement
-	TransformMatrix  Matrix4x4
+	ID              string
+	Type            string
+	Location        spatial.Point3D
+	RefDirection    *Vector3D
+	Axis            *Vector3D
+	RelativeTo      string // Reference to parent placement
+	TransformMatrix Matrix4x4
 }
 
 // IFCRepresentation contains geometric representation data
 type IFCRepresentation struct {
-	ID           string
-	Type         string
-	BoundingBox  *spatial.BoundingBox
-	Vertices     []spatial.Point3D
-	Faces        [][]int
+	ID          string
+	Type        string
+	BoundingBox *spatial.BoundingBox
+	Vertices    []spatial.Point3D
+	Faces       [][]int
 }
 
 // IFCCoordinateSystem defines the project coordinate system
 type IFCCoordinateSystem struct {
-	Origin      spatial.Point3D
-	XAxis       Vector3D
-	YAxis       Vector3D
-	ZAxis       Vector3D
-	Scale       float64
-	NorthAngle  float64 // Rotation from true north in radians
+	Origin     spatial.Point3D
+	XAxis      Vector3D
+	YAxis      Vector3D
+	ZAxis      Vector3D
+	Scale      float64
+	NorthAngle float64 // Rotation from true north in radians
 }
 
 // Vector3D represents a 3D vector

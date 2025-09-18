@@ -18,7 +18,7 @@ import (
 func TestAuthService_Login(t *testing.T) {
 	// Create password hash for testing
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte("correctpassword"), bcrypt.DefaultCost)
-	
+
 	tests := []struct {
 		name          string
 		email         string
@@ -88,12 +88,12 @@ func TestAuthService_Login(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := new(MockDB)
 			tt.setupMock(mockDB)
-			
+
 			authService := NewAuthService(mockDB)
 			ctx := context.Background()
-			
+
 			resp, err := authService.Login(ctx, tt.email, tt.password)
-			
+
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -102,7 +102,7 @@ func TestAuthService_Login(t *testing.T) {
 				require.NoError(t, err)
 				tt.checkResponse(t, resp)
 			}
-			
+
 			mockDB.AssertExpectations(t)
 		})
 	}
@@ -169,12 +169,12 @@ func TestAuthService_Register(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := new(MockDB)
 			tt.setupMock(mockDB)
-			
+
 			authService := NewAuthService(mockDB)
 			ctx := context.Background()
-			
+
 			user, err := authService.Register(ctx, tt.email, tt.password, tt.userName)
-			
+
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -183,7 +183,7 @@ func TestAuthService_Register(t *testing.T) {
 				require.NoError(t, err)
 				tt.checkResponse(t, user)
 			}
-			
+
 			mockDB.AssertExpectations(t)
 		})
 	}
@@ -204,7 +204,7 @@ func TestAuthService_ValidateToken(t *testing.T) {
 			setupMock: func(m *MockDB) {
 				session := createTestSession("test-user-id", "valid-token", "refresh-token")
 				user := createTestUser("test@example.com", "hash", true)
-				
+
 				m.On("GetSession", mock.Anything, "valid-token").
 					Return(session, nil)
 				m.On("UpdateSession", mock.Anything, mock.AnythingOfType("*models.UserSession")).
@@ -224,7 +224,7 @@ func TestAuthService_ValidateToken(t *testing.T) {
 			setupMock: func(m *MockDB) {
 				session := createTestSession("test-user-id", "expired-token", "refresh-token")
 				session.ExpiresAt = time.Now().Add(-1 * time.Hour) // Expired
-				
+
 				m.On("GetSession", mock.Anything, "expired-token").
 					Return(session, nil)
 				m.On("DeleteSession", mock.Anything, "session-id").
@@ -247,12 +247,12 @@ func TestAuthService_ValidateToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := new(MockDB)
 			tt.setupMock(mockDB)
-			
+
 			authService := NewAuthService(mockDB)
 			ctx := context.Background()
-			
+
 			claims, err := authService.ValidateToken(ctx, tt.token)
-			
+
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
@@ -261,7 +261,7 @@ func TestAuthService_ValidateToken(t *testing.T) {
 				require.NoError(t, err)
 				tt.checkClaims(t, claims)
 			}
-			
+
 			mockDB.AssertExpectations(t)
 		})
 	}
@@ -302,7 +302,7 @@ func TestAuthService_Logout(t *testing.T) {
 					ID:    "session-id",
 					Token: "error-token",
 				}
-				
+
 				m.On("GetSession", mock.Anything, "error-token").Return(session, nil)
 				m.On("DeleteSession", mock.Anything, "session-id").
 					Return(errors.New("database error"))
@@ -315,19 +315,19 @@ func TestAuthService_Logout(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := new(MockDB)
 			tt.setupMock(mockDB)
-			
+
 			authService := NewAuthService(mockDB)
 			ctx := context.Background()
-			
+
 			err := authService.Logout(ctx, tt.token)
-			
+
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				require.NoError(t, err)
 			}
-			
+
 			mockDB.AssertExpectations(t)
 		})
 	}
@@ -336,7 +336,7 @@ func TestAuthService_Logout(t *testing.T) {
 // TestAuthService_ChangePassword tests the ChangePassword method
 func TestAuthService_ChangePassword(t *testing.T) {
 	oldPasswordHash, _ := bcrypt.GenerateFromPassword([]byte("oldpassword"), bcrypt.DefaultCost)
-	
+
 	tests := []struct {
 		name          string
 		userID        string
@@ -387,19 +387,19 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := new(MockDB)
 			tt.setupMock(mockDB)
-			
+
 			authService := NewAuthService(mockDB)
 			ctx := context.Background()
-			
+
 			err := authService.ChangePassword(ctx, tt.userID, tt.oldPassword, tt.newPassword)
-			
+
 			if tt.expectedError != "" {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				require.NoError(t, err)
 			}
-			
+
 			mockDB.AssertExpectations(t)
 		})
 	}

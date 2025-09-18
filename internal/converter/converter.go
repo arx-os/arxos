@@ -27,11 +27,11 @@ func NewRegistry() *ConverterRegistry {
 	r := &ConverterRegistry{
 		converters: make(map[string]Converter),
 	}
-	
+
 	// Register working converters only
 	r.Register(NewImprovedIFCConverter())
 	r.Register(NewRealPDFConverter())
-	
+
 	return r
 }
 
@@ -84,16 +84,16 @@ func (r *ConverterRegistry) ConvertFile(inputPath, outputPath string) error {
 
 // Building represents the universal building data model
 type Building struct {
-	ID          string      `json:"id"`
-	GUID        string      `json:"guid"`        // Global Unique ID from IFC
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	Address     string      `json:"address"`
-	Project     string      `json:"project"`     // Project name for IFC
-	Metadata    Metadata    `json:"metadata"`
-	Floors      []Floor     `json:"floors"`
-	Systems     []System    `json:"systems"`
-	Documents   []Document  `json:"documents"`
+	ID          string     `json:"id"`
+	GUID        string     `json:"guid"` // Global Unique ID from IFC
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Address     string     `json:"address"`
+	Project     string     `json:"project"` // Project name for IFC
+	Metadata    Metadata   `json:"metadata"`
+	Floors      []Floor    `json:"floors"`
+	Systems     []System   `json:"systems"`
+	Documents   []Document `json:"documents"`
 }
 
 type Metadata struct {
@@ -106,35 +106,35 @@ type Metadata struct {
 }
 
 type Floor struct {
-	ID        string     `json:"id"`
-	GUID      string     `json:"guid"`      // Global Unique ID from IFC
-	IFCId     string     `json:"ifc_id"`    // Original IFC entity ID
-	Name      string     `json:"name"`
-	Level     int        `json:"level"`
-	Elevation float64    `json:"elevation"`
-	Area      float64    `json:"area"`
-	Height    float64    `json:"height"`
-	Rooms     []Room     `json:"rooms"`
+	ID        string  `json:"id"`
+	GUID      string  `json:"guid"`   // Global Unique ID from IFC
+	IFCId     string  `json:"ifc_id"` // Original IFC entity ID
+	Name      string  `json:"name"`
+	Level     int     `json:"level"`
+	Elevation float64 `json:"elevation"`
+	Area      float64 `json:"area"`
+	Height    float64 `json:"height"`
+	Rooms     []Room  `json:"rooms"`
 }
 
 type Room struct {
-	ID         string      `json:"id"`
-	GUID       string      `json:"guid"`       // Global Unique ID from IFC
-	IFCId      string      `json:"ifc_id"`     // Original IFC entity ID
-	Name       string      `json:"name"`
-	Number     string      `json:"number"`
-	Type       string      `json:"type"`
-	Area       float64     `json:"area"`
-	Occupancy  int         `json:"occupancy"`
-	Equipment  []Equipment `json:"equipment"`
-	Geometry   *Geometry   `json:"geometry,omitempty"`
+	ID        string      `json:"id"`
+	GUID      string      `json:"guid"`   // Global Unique ID from IFC
+	IFCId     string      `json:"ifc_id"` // Original IFC entity ID
+	Name      string      `json:"name"`
+	Number    string      `json:"number"`
+	Type      string      `json:"type"`
+	Area      float64     `json:"area"`
+	Occupancy int         `json:"occupancy"`
+	Equipment []Equipment `json:"equipment"`
+	Geometry  *Geometry   `json:"geometry,omitempty"`
 }
 
 type Equipment struct {
 	ID           string            `json:"id"`
-	GUID         string            `json:"guid"`         // Global Unique ID from IFC
-	IFCId        string            `json:"ifc_id"`       // Original IFC entity ID
-	IFCType      string            `json:"ifc_type"`     // Original IFC type
+	GUID         string            `json:"guid"`     // Global Unique ID from IFC
+	IFCId        string            `json:"ifc_id"`   // Original IFC entity ID
+	IFCType      string            `json:"ifc_type"` // Original IFC type
 	Tag          string            `json:"tag"`
 	Name         string            `json:"name"`
 	Type         string            `json:"type"`
@@ -150,29 +150,29 @@ type Equipment struct {
 }
 
 type System struct {
-	ID          string      `json:"id"`
-	Name        string      `json:"name"`
-	Type        string      `json:"type"`
-	Description string      `json:"description"`
-	Components  []string    `json:"components"` // Equipment IDs
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Components  []string `json:"components"` // Equipment IDs
 }
 
 type Document struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Type        string   `json:"type"`
-	Path        string   `json:"path"`
-	Format      string   `json:"format"`
-	Tags        []string `json:"tags"`
-	RelatedTo   []string `json:"related_to"` // Equipment/Room IDs
+	ID        string   `json:"id"`
+	Title     string   `json:"title"`
+	Type      string   `json:"type"`
+	Path      string   `json:"path"`
+	Format    string   `json:"format"`
+	Tags      []string `json:"tags"`
+	RelatedTo []string `json:"related_to"` // Equipment/Room IDs
 }
 
 type Location struct {
-	Floor  string  `json:"floor"`
-	Room   string  `json:"room"`
-	X      float64 `json:"x,omitempty"`
-	Y      float64 `json:"y,omitempty"`
-	Z      float64 `json:"z,omitempty"`
+	Floor string  `json:"floor"`
+	Room  string  `json:"room"`
+	X     float64 `json:"x,omitempty"`
+	Y     float64 `json:"y,omitempty"`
+	Z     float64 `json:"z,omitempty"`
 }
 
 type Geometry struct {
@@ -198,18 +198,18 @@ type GeoCoordinates struct {
 }
 
 type Point struct {
-	ID       string            `json:"id"`
-	Name     string            `json:"name"`
-	Type     string            `json:"type"` // sensor, setpoint, command, status
-	Unit     string            `json:"unit"`
-	Value    interface{}       `json:"value,omitempty"`
-	Tags     map[string]string `json:"tags,omitempty"` // Haystack tags
+	ID    string            `json:"id"`
+	Name  string            `json:"name"`
+	Type  string            `json:"type"` // sensor, setpoint, command, status
+	Unit  string            `json:"unit"`
+	Value interface{}       `json:"value,omitempty"`
+	Tags  map[string]string `json:"tags,omitempty"` // Haystack tags
 }
 
 // ToBIM converts the universal model to BIM text format
 func (b *Building) ToBIM() string {
 	var sb strings.Builder
-	
+
 	// Header
 	sb.WriteString("# ArxOS Building Information Model\n")
 	if b.ID != "" {
@@ -225,17 +225,17 @@ func (b *Building) ToBIM() string {
 		sb.WriteString(fmt.Sprintf("# Source: %s (%s)\n", b.Metadata.Source, b.Metadata.Format))
 	}
 	sb.WriteString("\n")
-	
+
 	// Floors
 	if len(b.Floors) > 0 {
 		sb.WriteString("## FLOORS\n")
 		for _, floor := range b.Floors {
-			sb.WriteString(fmt.Sprintf("FLOOR %s \"%s\" %.1f\n", 
+			sb.WriteString(fmt.Sprintf("FLOOR %s \"%s\" %.1f\n",
 				floor.ID, floor.Name, floor.Elevation))
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	// Rooms
 	if hasRooms(b) {
 		sb.WriteString("## ROOMS\n")
@@ -247,7 +247,7 @@ func (b *Building) ToBIM() string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	// Equipment
 	if hasEquipment(b) {
 		sb.WriteString("## EQUIPMENT\n")
@@ -261,7 +261,7 @@ func (b *Building) ToBIM() string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	// Systems
 	if len(b.Systems) > 0 {
 		sb.WriteString("## SYSTEMS\n")
@@ -273,16 +273,16 @@ func (b *Building) ToBIM() string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	// Documents
 	if len(b.Documents) > 0 {
 		sb.WriteString("## DOCUMENTS\n")
 		for _, doc := range b.Documents {
-			sb.WriteString(fmt.Sprintf("DOCUMENT \"%s\" %s %s\n", 
+			sb.WriteString(fmt.Sprintf("DOCUMENT \"%s\" %s %s\n",
 				doc.Title, doc.Type, doc.Path))
 		}
 	}
-	
+
 	return sb.String()
 }
 

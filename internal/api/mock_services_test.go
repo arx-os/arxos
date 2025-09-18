@@ -12,15 +12,15 @@ import (
 
 // MockAuthService is a mock implementation of AuthService
 type MockAuthService struct {
-	Users     map[string]*models.User
-	Sessions  map[string]*models.UserSession
+	Users      map[string]*models.User
+	Sessions   map[string]*models.UserSession
 	EnableAuth bool
 }
 
 func NewMockAuthService() *MockAuthService {
 	return &MockAuthService{
-		Users:     make(map[string]*models.User),
-		Sessions:  make(map[string]*models.UserSession),
+		Users:      make(map[string]*models.User),
+		Sessions:   make(map[string]*models.UserSession),
 		EnableAuth: false,
 	}
 }

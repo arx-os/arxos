@@ -274,10 +274,11 @@ func TestPostGISHybridDB(t *testing.T) {
 	pgConfig := getTestPostGISConfig()
 	sqliteConfig := NewConfig(":memory:")
 
-	hybrid := NewPostGISHybridDB(pgConfig, sqliteConfig)
+	hybrid, err := NewPostGISHybridDB(pgConfig)
+	require.NoError(t, err)
 
 	ctx := context.Background()
-	err := hybrid.Connect(ctx, ":memory:")
+	err = hybrid.Connect(ctx, ":memory:")
 	if err != nil {
 		t.Skipf("Cannot setup hybrid database: %v", err)
 	}

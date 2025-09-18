@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/api"
-	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/storage"
 	"github.com/arx-os/arxos/pkg/models"
 )
@@ -54,13 +54,13 @@ const (
 
 // SyncStatus tracks the status of a sync operation
 type SyncStatus struct {
-	BuildingID   string
-	LastSync     time.Time
-	InProgress   bool
-	PendingPush  int
-	PendingPull  int
-	Conflicts    []api.Conflict
-	Error        error
+	BuildingID  string
+	LastSync    time.Time
+	InProgress  bool
+	PendingPush int
+	PendingPull int
+	Conflicts   []api.Conflict
+	Error       error
 }
 
 // NewSyncService creates a new sync service
@@ -68,7 +68,7 @@ func NewSyncService(db database.DB, storage storage.Backend, workers int) *SyncS
 	if workers <= 0 {
 		workers = 4
 	}
-	
+
 	s := &SyncService{
 		db:           db,
 		storage:      storage,
@@ -77,31 +77,31 @@ func NewSyncService(db database.DB, storage storage.Backend, workers int) *SyncS
 		workers:      workers,
 		syncStatus:   make(map[string]*SyncStatus),
 	}
-	
+
 	// Start workers
 	for i := 0; i < workers; i++ {
 		go s.worker()
 	}
-	
+
 	return s
 }
 
 // PushBuilding pushes local changes to cloud
 func (s *SyncService) PushBuilding(ctx context.Context, buildingID string) error {
 	logger.Info("Starting push sync for building %s", buildingID)
-	
+
 	// Get local changes since last sync
 	status := s.getStatus(buildingID)
 	changes, err := s.getLocalChanges(ctx, buildingID, status.LastSync)
 	if err != nil {
 		return fmt.Errorf("failed to get local changes: %w", err)
 	}
-	
+
 	if len(changes) == 0 {
 		logger.Info("No changes to push for building %s", buildingID)
 		return nil
 	}
-	
+
 	// Create sync request
 	syncReq := api.SyncRequest{
 		BuildingID: buildingID,
@@ -112,24 +112,24 @@ func (s *SyncService) PushBuilding(ctx context.Context, buildingID string) error
 			"mode":   "push",
 		},
 	}
-	
+
 	// Serialize and push to storage
 	data, err := json.Marshal(syncReq)
 	if err != nil {
 		return fmt.Errorf("failed to marshal sync request: %w", err)
 	}
-	
+
 	key := fmt.Sprintf("sync/%s/push/%d.json", buildingID, time.Now().Unix())
 	if err := s.storage.Put(ctx, key, data); err != nil {
 		return fmt.Errorf("failed to push to storage: %w", err)
 	}
-	
+
 	// Update sync status
 	s.updateStatus(buildingID, func(status *SyncStatus) {
 		status.LastSync = time.Now()
 		status.PendingPush = 0
 	})
-	
+
 	logger.Info("Successfully pushed %d changes for building %s", len(changes), buildingID)
 	return nil
 }
@@ -137,56 +137,56 @@ func (s *SyncService) PushBuilding(ctx context.Context, buildingID string) error
 // PullBuilding pulls remote changes from cloud
 func (s *SyncService) PullBuilding(ctx context.Context, buildingID string) error {
 	logger.Info("Starting pull sync for building %s", buildingID)
-	
+
 	// Get remote changes since last sync
 	status := s.getStatus(buildingID)
 	changes, err := s.getRemoteChanges(ctx, buildingID, status.LastSync)
 	if err != nil {
 		return fmt.Errorf("failed to get remote changes: %w", err)
 	}
-	
+
 	if len(changes) == 0 {
 		logger.Info("No changes to pull for building %s", buildingID)
 		return nil
 	}
-	
+
 	// Apply remote changes
 	conflicts, err := s.applyRemoteChanges(ctx, buildingID, changes)
 	if err != nil {
 		return fmt.Errorf("failed to apply remote changes: %w", err)
 	}
-	
+
 	// Update sync status
 	s.updateStatus(buildingID, func(status *SyncStatus) {
 		status.LastSync = time.Now()
 		status.PendingPull = 0
 		status.Conflicts = conflicts
 	})
-	
+
 	if len(conflicts) > 0 {
 		logger.Warn("Pull completed with %d conflicts for building %s", len(conflicts), buildingID)
 	} else {
 		logger.Info("Successfully pulled %d changes for building %s", len(changes), buildingID)
 	}
-	
+
 	return nil
 }
 
 // SyncBuilding performs a full two-way sync
 func (s *SyncService) SyncBuilding(ctx context.Context, buildingID string) error {
 	logger.Info("Starting full sync for building %s", buildingID)
-	
+
 	// Pull first to get latest changes
 	if err := s.PullBuilding(ctx, buildingID); err != nil {
 		logger.Error("Pull failed during sync: %v", err)
 		// Continue with push even if pull fails
 	}
-	
+
 	// Then push local changes
 	if err := s.PushBuilding(ctx, buildingID); err != nil {
 		return fmt.Errorf("push failed during sync: %w", err)
 	}
-	
+
 	logger.Info("Full sync completed for building %s", buildingID)
 	return nil
 }
@@ -224,7 +224,7 @@ func (s *SyncService) worker() {
 	for task := range s.syncQueue {
 		ctx := context.Background()
 		var err error
-		
+
 		switch task.Type {
 		case SyncTypePush:
 			err = s.PushBuilding(ctx, task.BuildingID)
@@ -233,7 +233,7 @@ func (s *SyncService) worker() {
 		case SyncTypeFull:
 			err = s.SyncBuilding(ctx, task.BuildingID)
 		}
-		
+
 		if task.Callback != nil {
 			task.Callback(err)
 		}
@@ -243,14 +243,14 @@ func (s *SyncService) worker() {
 // getLocalChanges retrieves local changes since last sync
 func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, since time.Time) ([]api.Change, error) {
 	changes := []api.Change{}
-	
+
 	// Query database for changes
 	// This is a simplified implementation - real version would track changes in audit table
 	building, err := s.db.GetFloorPlan(ctx, buildingID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if building != nil && building.UpdatedAt.After(since) {
 		change := api.Change{
 			ID:        fmt.Sprintf("%s-%d", buildingID, time.Now().Unix()),
@@ -259,29 +259,29 @@ func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, si
 			EntityID:  buildingID,
 			Timestamp: *building.UpdatedAt,
 			Data: map[string]interface{}{
-				"name":        building.Name,
-				"rooms":       len(building.Rooms),
-				"equipment":   len(building.Equipment),
-				"level": building.Level,
+				"name":      building.Name,
+				"rooms":     len(building.Rooms),
+				"equipment": len(building.Equipment),
+				"level":     building.Level,
 			},
 		}
 		changes = append(changes, change)
 	}
-	
+
 	return changes, nil
 }
 
 // getRemoteChanges retrieves remote changes since last sync
 func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, since time.Time) ([]api.Change, error) {
 	changes := []api.Change{}
-	
+
 	// List sync files from storage
 	prefix := fmt.Sprintf("sync/%s/", buildingID)
 	keys, err := s.storage.List(ctx, prefix)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, key := range keys {
 		// Get sync data
 		data, err := s.storage.Get(ctx, key)
@@ -289,13 +289,13 @@ func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, s
 			logger.Warn("Failed to get sync data from %s: %v", key, err)
 			continue
 		}
-		
+
 		var syncReq api.SyncRequest
 		if err := json.Unmarshal(data, &syncReq); err != nil {
 			logger.Warn("Failed to unmarshal sync data from %s: %v", key, err)
 			continue
 		}
-		
+
 		// Add changes if they're newer than last sync
 		for _, change := range syncReq.Changes {
 			if change.Timestamp.After(since) {
@@ -303,14 +303,14 @@ func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, s
 			}
 		}
 	}
-	
+
 	return changes, nil
 }
 
 // applyRemoteChanges applies remote changes to local database
 func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string, changes []api.Change) ([]api.Conflict, error) {
 	conflicts := []api.Conflict{}
-	
+
 	for _, change := range changes {
 		switch change.Entity {
 		case "building":
@@ -336,7 +336,7 @@ func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string,
 			}
 		}
 	}
-	
+
 	return conflicts, nil
 }
 
@@ -347,11 +347,11 @@ func (s *SyncService) applyBuildingChange(ctx context.Context, change api.Change
 	if err != nil {
 		return err
 	}
-	
+
 	if building == nil && change.Type != "create" {
 		return fmt.Errorf("building not found: %s", change.EntityID)
 	}
-	
+
 	switch change.Type {
 	case "create":
 		// Create new building
@@ -359,7 +359,7 @@ func (s *SyncService) applyBuildingChange(ctx context.Context, change api.Change
 			Name: change.EntityID,
 		}
 		return s.db.SaveFloorPlan(ctx, newBuilding)
-		
+
 	case "update":
 		// Update existing building
 		if name, ok := change.Data["name"].(string); ok {
@@ -371,11 +371,11 @@ func (s *SyncService) applyBuildingChange(ctx context.Context, change api.Change
 		now := time.Now()
 		building.UpdatedAt = &now
 		return s.db.SaveFloorPlan(ctx, building)
-		
+
 	case "delete":
 		// Delete building
 		return s.db.DeleteFloorPlan(ctx, change.EntityID)
-		
+
 	default:
 		return fmt.Errorf("unknown change type: %s", change.Type)
 	}
@@ -400,7 +400,7 @@ func (s *SyncService) getStatus(buildingID string) *SyncStatus {
 	s.mu.RLock()
 	status, exists := s.syncStatus[buildingID]
 	s.mu.RUnlock()
-	
+
 	if !exists {
 		status = &SyncStatus{
 			BuildingID: buildingID,
@@ -410,7 +410,7 @@ func (s *SyncService) getStatus(buildingID string) *SyncStatus {
 		s.syncStatus[buildingID] = status
 		s.mu.Unlock()
 	}
-	
+
 	return status
 }
 
@@ -418,7 +418,7 @@ func (s *SyncService) getStatus(buildingID string) *SyncStatus {
 func (s *SyncService) updateStatus(buildingID string, update func(*SyncStatus)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	status, exists := s.syncStatus[buildingID]
 	if !exists {
 		status = &SyncStatus{
@@ -426,6 +426,6 @@ func (s *SyncService) updateStatus(buildingID string, update func(*SyncStatus)) 
 		}
 		s.syncStatus[buildingID] = status
 	}
-	
+
 	update(status)
 }

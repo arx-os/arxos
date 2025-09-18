@@ -17,13 +17,13 @@ import (
 // TestPipelineImport tests the full import pipeline
 func TestPipelineImport(t *testing.T) {
 	tests := []struct {
-		name            string
-		format          string
-		input           string
-		expectedFloors  int
-		expectedEquip   int
-		expectError     bool
-		validateOnly    bool
+		name           string
+		format         string
+		input          string
+		expectedFloors int
+		expectedEquip  int
+		expectError    bool
+		validateOnly   bool
 	}{
 		{
 			name:   "PDF with basic floor plan",
@@ -316,8 +316,8 @@ func TestEnhancers(t *testing.T) {
 			ID: "TEST-001",
 			Floors: []building.Floor{
 				{
-					ID: "floor1",
-					Rooms: []building.Room{{ID: "r1"}},
+					ID:        "floor1",
+					Rooms:     []building.Room{{ID: "r1"}},
 					Equipment: []building.Equipment{{ID: "e1"}},
 				},
 			},

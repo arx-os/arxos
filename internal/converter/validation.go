@@ -37,13 +37,13 @@ func DefaultValidationConfig() *ValidationConfig {
 
 // ValidationResult holds validation results and any issues found
 type ValidationResult struct {
-	IsValid      bool
-	FileSize     int64
-	Extension    string
-	ContentType  string
-	Issues       []string
-	Warnings     []string
-	Suggestions  []string
+	IsValid     bool
+	FileSize    int64
+	Extension   string
+	ContentType string
+	Issues      []string
+	Warnings    []string
+	Suggestions []string
 }
 
 // FileValidator provides comprehensive file validation
@@ -62,9 +62,9 @@ func NewFileValidator(config *ValidationConfig) *FileValidator {
 // ValidateFile performs comprehensive file validation
 func (v *FileValidator) ValidateFile(filePath string) (*ValidationResult, error) {
 	result := &ValidationResult{
-		IsValid: true,
-		Issues:  make([]string, 0),
-		Warnings: make([]string, 0),
+		IsValid:     true,
+		Issues:      make([]string, 0),
+		Warnings:    make([]string, 0),
 		Suggestions: make([]string, 0),
 	}
 

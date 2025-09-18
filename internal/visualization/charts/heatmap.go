@@ -288,7 +288,7 @@ func RenderEnergyHeatmap(buildingID string, hours int) string {
 			// Simulate energy usage pattern
 			baseUsage := 50.0
 			timeEffect := math.Sin(float64(h)*math.Pi/12) * 30 // Peak at noon
-			floorEffect := float64(floors-f) * 5                // Higher floors use less
+			floorEffect := float64(floors-f) * 5               // Higher floors use less
 			matrix[f][h] = baseUsage + timeEffect + floorEffect
 		}
 	}

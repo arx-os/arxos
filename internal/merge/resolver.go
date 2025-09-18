@@ -13,61 +13,61 @@ import (
 type ResolutionMethod string
 
 const (
-	MethodAutomatic   ResolutionMethod = "automatic"   // Resolve automatically based on rules
-	MethodManual      ResolutionMethod = "manual"      // Require manual intervention
+	MethodAutomatic   ResolutionMethod = "automatic"    // Resolve automatically based on rules
+	MethodManual      ResolutionMethod = "manual"       // Require manual intervention
 	MethodFieldVerify ResolutionMethod = "field_verify" // Require field verification
-	MethodIgnore      ResolutionMethod = "ignore"      // Ignore the conflict
+	MethodIgnore      ResolutionMethod = "ignore"       // Ignore the conflict
 )
 
 // ConflictResolver handles conflict resolution between data sources
 type ConflictResolver struct {
-	rules              []ResolutionRule
-	history            []ResolutionHistory
-	confidenceManager  *spatial.ConfidenceManager
-	defaultMethod      ResolutionMethod
+	rules                []ResolutionRule
+	history              []ResolutionHistory
+	confidenceManager    *spatial.ConfidenceManager
+	defaultMethod        ResolutionMethod
 	autoResolveThreshold float64 // Confidence threshold for automatic resolution
 }
 
 // ResolutionRule defines a rule for automatic conflict resolution
 type ResolutionRule struct {
-	ID          string           `json:"id"`
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	ConflictType string          `json:"conflict_type"` // "position", "dimension", "type"
-	Condition   RuleCondition    `json:"condition"`
-	Action      ResolutionAction `json:"action"`
-	Priority    int              `json:"priority"` // Higher priority rules are evaluated first
-	Enabled     bool             `json:"enabled"`
+	ID           string           `json:"id"`
+	Name         string           `json:"name"`
+	Description  string           `json:"description"`
+	ConflictType string           `json:"conflict_type"` // "position", "dimension", "type"
+	Condition    RuleCondition    `json:"condition"`
+	Action       ResolutionAction `json:"action"`
+	Priority     int              `json:"priority"` // Higher priority rules are evaluated first
+	Enabled      bool             `json:"enabled"`
 }
 
 // RuleCondition defines when a rule applies
 type RuleCondition struct {
-	MinDifference      float64                 `json:"min_difference,omitempty"`
-	MaxDifference      float64                 `json:"max_difference,omitempty"`
-	SourceTypes        []string                `json:"source_types,omitempty"`
-	MinConfidence      spatial.ConfidenceLevel `json:"min_confidence,omitempty"`
-	TimeDifferenceHours float64                `json:"time_difference_hours,omitempty"`
+	MinDifference       float64                 `json:"min_difference,omitempty"`
+	MaxDifference       float64                 `json:"max_difference,omitempty"`
+	SourceTypes         []string                `json:"source_types,omitempty"`
+	MinConfidence       spatial.ConfidenceLevel `json:"min_confidence,omitempty"`
+	TimeDifferenceHours float64                 `json:"time_difference_hours,omitempty"`
 }
 
 // ResolutionAction defines what action to take
 type ResolutionAction struct {
-	Method         ResolutionMethod `json:"method"`
-	PreferSource   string           `json:"prefer_source,omitempty"` // "highest_confidence", "most_recent", "lidar", etc.
-	UseAverage     bool             `json:"use_average,omitempty"`
-	NotifyUser     bool             `json:"notify_user"`
-	RequireApproval bool            `json:"require_approval"`
+	Method          ResolutionMethod `json:"method"`
+	PreferSource    string           `json:"prefer_source,omitempty"` // "highest_confidence", "most_recent", "lidar", etc.
+	UseAverage      bool             `json:"use_average,omitempty"`
+	NotifyUser      bool             `json:"notify_user"`
+	RequireApproval bool             `json:"require_approval"`
 }
 
 // ResolutionHistory tracks resolution decisions
 type ResolutionHistory struct {
-	ID           string           `json:"id"`
-	Conflict     Conflict         `json:"conflict"`
-	Method       ResolutionMethod `json:"method"`
-	RuleApplied  *ResolutionRule  `json:"rule_applied,omitempty"`
-	Resolution   interface{}      `json:"resolution"`
-	ResolvedBy   string           `json:"resolved_by"` // "system" or user ID
-	Timestamp    time.Time        `json:"timestamp"`
-	Notes        string           `json:"notes,omitempty"`
+	ID          string           `json:"id"`
+	Conflict    Conflict         `json:"conflict"`
+	Method      ResolutionMethod `json:"method"`
+	RuleApplied *ResolutionRule  `json:"rule_applied,omitempty"`
+	Resolution  interface{}      `json:"resolution"`
+	ResolvedBy  string           `json:"resolved_by"` // "system" or user ID
+	Timestamp   time.Time        `json:"timestamp"`
+	Notes       string           `json:"notes,omitempty"`
 }
 
 // NewConflictResolver creates a new conflict resolver
@@ -204,12 +204,12 @@ func (r *ConflictResolver) ResolveConflict(conflict Conflict) (*ResolutionResult
 
 // ResolutionResult represents the result of conflict resolution
 type ResolutionResult struct {
-	Method       ResolutionMethod `json:"method"`
-	ResolvedValue interface{}     `json:"resolved_value"`
-	Confidence   spatial.ConfidenceLevel `json:"confidence"`
-	RuleApplied  *ResolutionRule  `json:"rule_applied,omitempty"`
-	RequiresAction bool            `json:"requires_action"`
-	ActionRequired string          `json:"action_required,omitempty"`
+	Method         ResolutionMethod        `json:"method"`
+	ResolvedValue  interface{}             `json:"resolved_value"`
+	Confidence     spatial.ConfidenceLevel `json:"confidence"`
+	RuleApplied    *ResolutionRule         `json:"rule_applied,omitempty"`
+	RequiresAction bool                    `json:"requires_action"`
+	ActionRequired string                  `json:"action_required,omitempty"`
 }
 
 // findApplicableRule finds the first applicable rule for a conflict

@@ -8,7 +8,7 @@ import (
 	"math"
 	"sort"
 	"strings"
-	
+
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -21,19 +21,19 @@ type UniversalRenderer struct {
 // NewUniversalRenderer creates a renderer that works with any floor plan
 func NewUniversalRenderer() *UniversalRenderer {
 	return &UniversalRenderer{
-		Width:  80,  // Standard terminal width
-		Height: 24,  // Standard terminal height
+		Width:  80, // Standard terminal width
+		Height: 24, // Standard terminal height
 	}
 }
 
 // RenderAny creates ASCII art for any floor plan
 func (r *UniversalRenderer) RenderAny(plan *models.FloorPlan) string {
 	var sb strings.Builder
-	
+
 	// Header
 	sb.WriteString(fmt.Sprintf("%s - %s\n", plan.Building, plan.Name))
 	sb.WriteString(strings.Repeat("═", 60) + "\n\n")
-	
+
 	// Determine the rendering strategy based on what we have
 	if len(plan.Rooms) > 0 {
 		// We have rooms - render room-based layout
@@ -45,13 +45,13 @@ func (r *UniversalRenderer) RenderAny(plan *models.FloorPlan) string {
 		// Empty plan - show instructions
 		sb.WriteString(r.renderEmptyPlan())
 	}
-	
+
 	// Legend
 	sb.WriteString("\n" + r.renderLegend(plan))
-	
+
 	// Status summary
 	sb.WriteString("\n" + r.renderStatusSummary(plan))
-	
+
 	return sb.String()
 }
 
@@ -59,12 +59,12 @@ func (r *UniversalRenderer) RenderAny(plan *models.FloorPlan) string {
 func (r *UniversalRenderer) renderRoomLayout(plan *models.FloorPlan) string {
 	// Find the bounds of all rooms
 	minX, minY, maxX, maxY := r.findBounds(plan)
-	
+
 	// Create scaling factors
 	scaleX := float64(r.Width-4) / (maxX - minX)
 	scaleY := float64(r.Height-10) / (maxY - minY) // Leave room for header/legend
 	scale := math.Min(scaleX, scaleY)
-	
+
 	// Create grid
 	grid := make([][]rune, r.Height-10)
 	for i := range grid {
@@ -73,17 +73,17 @@ func (r *UniversalRenderer) renderRoomLayout(plan *models.FloorPlan) string {
 			grid[i][j] = ' '
 		}
 	}
-	
+
 	// Draw rooms
 	for _, room := range plan.Rooms {
 		r.drawRoom(grid, *room, minX, minY, scale)
 	}
-	
+
 	// Place equipment
 	for _, equip := range plan.Equipment {
 		r.placeEquipment(grid, *equip, minX, minY, scale)
 	}
-	
+
 	// Convert grid to string
 	return r.gridToString(grid)
 }
@@ -91,22 +91,22 @@ func (r *UniversalRenderer) renderRoomLayout(plan *models.FloorPlan) string {
 // renderEquipmentGrid creates a grid layout for equipment only
 func (r *UniversalRenderer) renderEquipmentGrid(plan *models.FloorPlan) string {
 	var sb strings.Builder
-	
+
 	// Sort equipment by type
 	equipByType := make(map[string][]models.Equipment)
 	for _, equip := range plan.Equipment {
 		equipByType[equip.Type] = append(equipByType[equip.Type], *equip)
 	}
-	
+
 	// Create sections for each type
 	for eqType, equipment := range equipByType {
 		if len(equipment) == 0 {
 			continue
 		}
-		
+
 		sb.WriteString(fmt.Sprintf("%s:\n", strings.ToUpper(eqType)))
 		sb.WriteString(strings.Repeat("-", 40) + "\n")
-		
+
 		// List equipment in columns
 		cols := 3
 		for i := 0; i < len(equipment); i += cols {
@@ -120,7 +120,7 @@ func (r *UniversalRenderer) renderEquipmentGrid(plan *models.FloorPlan) string {
 		}
 		sb.WriteString("\n")
 	}
-	
+
 	return sb.String()
 }
 
@@ -144,10 +144,10 @@ func (r *UniversalRenderer) findBounds(plan *models.FloorPlan) (minX, minY, maxX
 	if len(plan.Rooms) == 0 && len(plan.Equipment) == 0 {
 		return 0, 0, 100, 50
 	}
-	
+
 	minX, minY = math.MaxFloat64, math.MaxFloat64
 	maxX, maxY = -math.MaxFloat64, -math.MaxFloat64
-	
+
 	// Check rooms
 	for _, room := range plan.Rooms {
 		minX = math.Min(minX, room.Bounds.MinX)
@@ -155,7 +155,7 @@ func (r *UniversalRenderer) findBounds(plan *models.FloorPlan) (minX, minY, maxX
 		maxX = math.Max(maxX, room.Bounds.MaxX)
 		maxY = math.Max(maxY, room.Bounds.MaxY)
 	}
-	
+
 	// Check equipment if no rooms
 	if len(plan.Rooms) == 0 {
 		for _, equip := range plan.Equipment {
@@ -165,7 +165,7 @@ func (r *UniversalRenderer) findBounds(plan *models.FloorPlan) (minX, minY, maxX
 			maxY = math.Max(maxY, equip.Location.Y+5)
 		}
 	}
-	
+
 	// Add padding
 	padding := 5.0
 	return minX - padding, minY - padding, maxX + padding, maxY + padding
@@ -178,13 +178,13 @@ func (r *UniversalRenderer) drawRoom(grid [][]rune, room models.Room, minX, minY
 	y1 := int((room.Bounds.MinY - minY) * scale)
 	x2 := int((room.Bounds.MaxX - minX) * scale)
 	y2 := int((room.Bounds.MaxY - minY) * scale)
-	
+
 	// Ensure within grid bounds
 	x1 = r.clamp(x1, 0, r.Width-1)
 	y1 = r.clamp(y1, 0, len(grid)-1)
 	x2 = r.clamp(x2, 0, r.Width-1)
 	y2 = r.clamp(y2, 0, len(grid)-1)
-	
+
 	// Draw room borders
 	for x := x1; x <= x2; x++ {
 		if y1 >= 0 && y1 < len(grid) && x >= 0 && x < len(grid[y1]) {
@@ -198,7 +198,7 @@ func (r *UniversalRenderer) drawRoom(grid [][]rune, room models.Room, minX, minY
 			}
 		}
 	}
-	
+
 	for y := y1; y <= y2; y++ {
 		if y >= 0 && y < len(grid) {
 			if x1 >= 0 && x1 < len(grid[y]) && grid[y][x1] == ' ' {
@@ -209,7 +209,7 @@ func (r *UniversalRenderer) drawRoom(grid [][]rune, room models.Room, minX, minY
 			}
 		}
 	}
-	
+
 	// Draw corners
 	if y1 >= 0 && y1 < len(grid) {
 		if x1 >= 0 && x1 < len(grid[y1]) {
@@ -227,7 +227,7 @@ func (r *UniversalRenderer) drawRoom(grid [][]rune, room models.Room, minX, minY
 			grid[y2][x2] = '┘'
 		}
 	}
-	
+
 	// Add room name (if space permits)
 	if x2-x1 > len(room.Name)+2 && y2-y1 > 2 {
 		nameY := (y1 + y2) / 2
@@ -245,7 +245,7 @@ func (r *UniversalRenderer) placeEquipment(grid [][]rune, equip models.Equipment
 	// Convert position to grid coordinates
 	x := int((equip.Location.X - minX) * scale)
 	y := int((equip.Location.Y - minY) * scale)
-	
+
 	// Ensure within bounds
 	if y >= 0 && y < len(grid) && x >= 0 && x < len(grid[y]) {
 		// Don't overwrite room borders
@@ -263,7 +263,7 @@ func (r *UniversalRenderer) getSymbol(equip models.Equipment) string {
 	} else if equip.Status == models.StatusDegraded {
 		return "⚠"
 	}
-	
+
 	// Type-specific symbols
 	switch equip.Type {
 	case "mdf":
@@ -311,31 +311,31 @@ func (r *UniversalRenderer) renderLegend(plan *models.FloorPlan) string {
 	for _, equip := range plan.Equipment {
 		types[equip.Type] = true
 	}
-	
+
 	if len(types) == 0 {
 		return ""
 	}
-	
+
 	var sb strings.Builder
 	sb.WriteString("Legend:\n")
-	
+
 	// Show symbols for present equipment types
 	typeList := make([]string, 0, len(types))
 	for t := range types {
 		typeList = append(typeList, t)
 	}
 	sort.Strings(typeList)
-	
+
 	for _, t := range typeList {
 		sample := models.Equipment{Type: t, Status: models.StatusOperational}
 		symbol := r.getSymbol(sample)
 		sb.WriteString(fmt.Sprintf("  %s %s\n", symbol, t))
 	}
-	
+
 	// Status indicators
 	sb.WriteString("\nStatus:\n")
 	sb.WriteString("  ✓ Normal   ⚠ Needs Repair   ✗ Failed\n")
-	
+
 	return sb.String()
 }
 
@@ -344,16 +344,16 @@ func (r *UniversalRenderer) renderStatusSummary(plan *models.FloorPlan) string {
 	if len(plan.Equipment) == 0 {
 		return ""
 	}
-	
+
 	// Count by status
 	statusCount := make(map[string]int)
 	for _, equip := range plan.Equipment {
 		statusCount[equip.Status]++
 	}
-	
+
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Total Equipment: %d\n", len(plan.Equipment)))
-	
+
 	if statusCount[models.StatusOperational] > 0 {
 		sb.WriteString(fmt.Sprintf("  Normal: %d\n", statusCount[models.StatusOperational]))
 	}
@@ -363,7 +363,7 @@ func (r *UniversalRenderer) renderStatusSummary(plan *models.FloorPlan) string {
 	if statusCount[models.StatusFailed] > 0 {
 		sb.WriteString(fmt.Sprintf("  ✗ Failed: %d\n", statusCount[models.StatusFailed]))
 	}
-	
+
 	return sb.String()
 }
 

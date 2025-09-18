@@ -13,31 +13,31 @@ func TestBoundsContains(t *testing.T) {
 		expected bool
 	}{
 		{
-			name: "point inside bounds",
-			bounds: Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
-			point: Point{X: 5, Y: 5},
+			name:     "point inside bounds",
+			bounds:   Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
+			point:    Point{X: 5, Y: 5},
 			expected: true,
 		},
 		{
-			name: "point on edge",
-			bounds: Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
-			point: Point{X: 0, Y: 0},
+			name:     "point on edge",
+			bounds:   Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
+			point:    Point{X: 0, Y: 0},
 			expected: true,
 		},
 		{
-			name: "point outside bounds",
-			bounds: Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
-			point: Point{X: 15, Y: 15},
+			name:     "point outside bounds",
+			bounds:   Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
+			point:    Point{X: 15, Y: 15},
 			expected: false,
 		},
 		{
-			name: "point partially outside",
-			bounds: Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
-			point: Point{X: 5, Y: 15},
+			name:     "point partially outside",
+			bounds:   Bounds{MinX: 0, MinY: 0, MaxX: 10, MaxY: 10},
+			point:    Point{X: 5, Y: 15},
 			expected: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.bounds.Contains(tt.point)
@@ -50,12 +50,12 @@ func TestBoundsContains(t *testing.T) {
 
 func TestBoundsDimensions(t *testing.T) {
 	bounds := Bounds{MinX: 10, MinY: 20, MaxX: 50, MaxY: 80}
-	
+
 	expectedWidth := 40.0
 	if width := bounds.Width(); width != expectedWidth {
 		t.Errorf("Width() = %v, want %v", width, expectedWidth)
 	}
-	
+
 	expectedHeight := 60.0
 	if height := bounds.Height(); height != expectedHeight {
 		t.Errorf("Height() = %v, want %v", height, expectedHeight)
@@ -69,7 +69,7 @@ func TestEquipmentStatus(t *testing.T) {
 		Type:   "outlet",
 		Status: StatusOperational,
 	}
-	
+
 	// Test status values
 	statuses := []string{
 		StatusOperational,
@@ -77,7 +77,7 @@ func TestEquipmentStatus(t *testing.T) {
 		StatusFailed,
 		StatusUnknown,
 	}
-	
+
 	for _, status := range statuses {
 		equipment.Status = status
 		if equipment.Status != status {
@@ -88,7 +88,7 @@ func TestEquipmentStatus(t *testing.T) {
 
 func TestFloorPlanCreation(t *testing.T) {
 	now := time.Now()
-	
+
 	plan := FloorPlan{
 		Name:      "Test Floor",
 		Building:  "Test Building",
@@ -97,9 +97,9 @@ func TestFloorPlanCreation(t *testing.T) {
 		UpdatedAt: &now,
 		Rooms: []*Room{
 			{
-				ID:   "room_1",
-				Name: "Room 1",
-				Bounds: Bounds{MinX: 0, MinY: 0, MaxX: 100, MaxY: 100},
+				ID:        "room_1",
+				Name:      "Room 1",
+				Bounds:    Bounds{MinX: 0, MinY: 0, MaxX: 100, MaxY: 100},
 				Equipment: []string{"equip_1", "equip_2"},
 			},
 		},
@@ -108,7 +108,7 @@ func TestFloorPlanCreation(t *testing.T) {
 				ID:       "equip_1",
 				Name:     "Outlet 1",
 				Type:     "outlet",
-				Location: &Point{X: 50, Y: 50},
+				Location: &Point3D{X: 50, Y: 50, Z: 0},
 				RoomID:   "room_1",
 				Status:   StatusOperational,
 			},
@@ -116,27 +116,27 @@ func TestFloorPlanCreation(t *testing.T) {
 				ID:       "equip_2",
 				Name:     "Switch 1",
 				Type:     "switch",
-				Location: &Point{X: 30, Y: 30},
+				Location: &Point3D{X: 30, Y: 30, Z: 0},
 				RoomID:   "room_1",
 				Status:   StatusDegraded,
 			},
 		},
 	}
-	
+
 	if len(plan.Rooms) != 1 {
 		t.Errorf("Expected 1 room, got %d", len(plan.Rooms))
 	}
-	
+
 	if len(plan.Equipment) != 2 {
 		t.Errorf("Expected 2 equipment items, got %d", len(plan.Equipment))
 	}
-	
+
 	// Verify equipment is in correct room
 	room := plan.Rooms[0]
 	if len(room.Equipment) != 2 {
 		t.Errorf("Expected 2 equipment IDs in room, got %d", len(room.Equipment))
 	}
-	
+
 	// Verify equipment references
 	for _, equipID := range room.Equipment {
 		found := false
@@ -144,7 +144,7 @@ func TestFloorPlanCreation(t *testing.T) {
 			if equip.ID == equipID {
 				found = true
 				if equip.RoomID != room.ID {
-					t.Errorf("Equipment %s has wrong room ID: got %s, want %s", 
+					t.Errorf("Equipment %s has wrong room ID: got %s, want %s",
 						equipID, equip.RoomID, room.ID)
 				}
 				break

@@ -19,7 +19,7 @@ func NewClient(socketPath string) *Client {
 	if socketPath == "" {
 		socketPath = "/tmp/arxos.sock"
 	}
-	
+
 	return &Client{
 		socketPath: socketPath,
 		timeout:    5 * time.Second,
@@ -44,18 +44,18 @@ func (c *Client) SendCommand(command string, args map[string]interface{}) (*Resp
 		return nil, fmt.Errorf("failed to connect to daemon: %w", err)
 	}
 	defer conn.Close()
-	
+
 	// Send request
 	req := Request{
 		Command: command,
 		Args:    args,
 	}
-	
+
 	encoder := json.NewEncoder(conn)
 	if err := encoder.Encode(req); err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	
+
 	// Read response
 	conn.SetReadDeadline(time.Now().Add(c.timeout))
 	scanner := bufio.NewScanner(conn)
@@ -65,12 +65,12 @@ func (c *Client) SendCommand(command string, args map[string]interface{}) (*Resp
 		}
 		return nil, fmt.Errorf("no response from daemon")
 	}
-	
+
 	var resp Response
 	if err := json.Unmarshal(scanner.Bytes(), &resp); err != nil {
 		return nil, fmt.Errorf("failed to parse response: %w", err)
 	}
-	
+
 	return &resp, nil
 }
 

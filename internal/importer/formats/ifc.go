@@ -36,9 +36,9 @@ func (i *IFCImporter) GetFormat() string {
 // GetCapabilities returns importer capabilities
 func (i *IFCImporter) GetCapabilities() importer.ImportCapabilities {
 	return importer.ImportCapabilities{
-		SupportsSpatial:    true,  // IFC has precise 3D coordinates
-		SupportsHierarchy:  true,  // Full building hierarchy
-		SupportsMetadata:   true,  // Rich metadata
+		SupportsSpatial:    true, // IFC has precise 3D coordinates
+		SupportsHierarchy:  true, // Full building hierarchy
+		SupportsMetadata:   true, // Rich metadata
 		SupportsConfidence: true,
 		SupportsStreaming:  false,
 		MaxFileSize:        500 * 1024 * 1024, // 500MB limit
@@ -159,11 +159,11 @@ type IFCBuilding struct {
 
 // IFCStorey represents a building storey
 type IFCStorey struct {
-	ID          string
-	Name        string
-	Elevation   float64
-	Height      float64
-	Position    Point3D
+	ID        string
+	Name      string
+	Elevation float64
+	Height    float64
+	Position  Point3D
 }
 
 // IFCSpace represents a space/room
@@ -180,16 +180,16 @@ type IFCSpace struct {
 
 // IFCElement represents a building element (equipment, furniture, etc.)
 type IFCElement struct {
-	ID           string
-	Name         string
-	Type         string
-	ObjectType   string
-	StoreyID     string
-	SpaceID      string
-	Position     Point3D
-	Dimensions   Size3D
-	Properties   map[string]string
-	Connections  []string
+	ID          string
+	Name        string
+	Type        string
+	ObjectType  string
+	StoreyID    string
+	SpaceID     string
+	Position    Point3D
+	Dimensions  Size3D
+	Properties  map[string]string
+	Connections []string
 }
 
 // IFCSystem represents a building system

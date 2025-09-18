@@ -49,10 +49,10 @@ func NewServer(daemon *Daemon, socketPath string) *Server {
 // Start starts the IPC server
 func (s *Server) Start(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	
+
 	// Remove existing socket file
 	os.Remove(s.socketPath)
-	
+
 	// Create Unix domain socket
 	listener, err := net.Listen("unix", s.socketPath)
 	if err != nil {
@@ -60,15 +60,15 @@ func (s *Server) Start(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 	s.listener = listener
-	
+
 	// Set permissions for socket
 	os.Chmod(s.socketPath, 0666)
-	
+
 	logger.Info("IPC server listening on %s", s.socketPath)
-	
+
 	// Accept connections
 	go s.acceptConnections(ctx)
-	
+
 	// Wait for context cancellation
 	<-ctx.Done()
 	s.Stop()
@@ -78,17 +78,17 @@ func (s *Server) Start(ctx context.Context, wg *sync.WaitGroup) {
 func (s *Server) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// Close all client connections
 	for conn := range s.clients {
 		conn.Close()
 	}
-	
+
 	// Close listener
 	if s.listener != nil {
 		s.listener.Close()
 	}
-	
+
 	// Remove socket file
 	os.Remove(s.socketPath)
 }
@@ -110,12 +110,12 @@ func (s *Server) acceptConnections(ctx context.Context) {
 				continue
 			}
 		}
-		
+
 		// Register client
 		s.mu.Lock()
 		s.clients[conn] = true
 		s.mu.Unlock()
-		
+
 		// Handle client in goroutine
 		go s.handleClient(ctx, conn)
 	}
@@ -130,17 +130,17 @@ func (s *Server) handleClient(ctx context.Context, conn net.Conn) {
 		s.mu.Unlock()
 		conn.Close()
 	}()
-	
+
 	scanner := bufio.NewScanner(conn)
 	encoder := json.NewEncoder(conn)
-	
+
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 		}
-		
+
 		// Parse request
 		var req Request
 		if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
@@ -150,10 +150,10 @@ func (s *Server) handleClient(ctx context.Context, conn net.Conn) {
 			})
 			continue
 		}
-		
+
 		// Process request
 		resp := s.processRequest(ctx, &req)
-		
+
 		// Send response
 		if err := encoder.Encode(resp); err != nil {
 			logger.Error("Failed to send response: %v", err)
@@ -167,41 +167,41 @@ func (s *Server) processRequest(ctx context.Context, req *Request) *Response {
 	switch strings.ToLower(req.Command) {
 	case "status":
 		return s.handleStatus()
-	
+
 	case "stats":
 		return s.handleStats()
-	
+
 	case "reload":
 		return s.handleReload()
-	
+
 	case "add-watch":
 		return s.handleAddWatch(req.Args)
-	
+
 	case "remove-watch":
 		return s.handleRemoveWatch(req.Args)
-	
+
 	case "import":
 		return s.handleImport(req.Args)
-	
+
 	case "sync":
 		return s.handleSync()
-	
+
 	case "queue-status":
 		return s.handleQueueStatus()
-	
+
 	case "ping":
 		return &Response{
 			Success: true,
 			Message: "pong",
 		}
-	
+
 	case "shutdown":
 		go s.daemon.Stop()
 		return &Response{
 			Success: true,
 			Message: "Daemon shutting down",
 		}
-	
+
 	default:
 		return &Response{
 			Success: false,
@@ -213,7 +213,7 @@ func (s *Server) processRequest(ctx context.Context, req *Request) *Response {
 // handleStatus returns daemon status
 func (s *Server) handleStatus() *Response {
 	status := s.daemon.GetStatus()
-	
+
 	return &Response{
 		Success: true,
 		Data:    status,
@@ -223,16 +223,16 @@ func (s *Server) handleStatus() *Response {
 // handleStats returns daemon statistics
 func (s *Server) handleStats() *Response {
 	stats := s.daemon.GetStats()
-	
+
 	return &Response{
 		Success: true,
 		Data: map[string]interface{}{
-			"start_time":         stats.StartTime.Format("2006-01-02T15:04:05Z07:00"),
-			"files_processed":    stats.FilesProcessed,
-			"import_successes":   stats.ImportSuccesses,
-			"import_failures":    stats.ImportFailures,
-			"last_processed":     stats.LastProcessedFile,
-			"last_processed_at":  stats.LastProcessedTime.Format("2006-01-02T15:04:05Z07:00"),
+			"start_time":        stats.StartTime.Format("2006-01-02T15:04:05Z07:00"),
+			"files_processed":   stats.FilesProcessed,
+			"import_successes":  stats.ImportSuccesses,
+			"import_failures":   stats.ImportFailures,
+			"last_processed":    stats.LastProcessedFile,
+			"last_processed_at": stats.LastProcessedTime.Format("2006-01-02T15:04:05Z07:00"),
 		},
 	}
 }
@@ -255,14 +255,14 @@ func (s *Server) handleAddWatch(args map[string]interface{}) *Response {
 			Error:   "Directory not specified",
 		}
 	}
-	
+
 	if err := s.daemon.addWatchDir(dir); err != nil {
 		return &Response{
 			Success: false,
 			Error:   err.Error(),
 		}
 	}
-	
+
 	return &Response{
 		Success: true,
 		Message: fmt.Sprintf("Now watching: %s", dir),
@@ -278,14 +278,14 @@ func (s *Server) handleRemoveWatch(args map[string]interface{}) *Response {
 			Error:   "Directory not specified",
 		}
 	}
-	
+
 	if err := s.daemon.watcher.Remove(dir); err != nil {
 		return &Response{
 			Success: false,
 			Error:   err.Error(),
 		}
 	}
-	
+
 	return &Response{
 		Success: true,
 		Message: fmt.Sprintf("Stopped watching: %s", dir),
@@ -301,21 +301,21 @@ func (s *Server) handleImport(args map[string]interface{}) *Response {
 			Error:   "File not specified",
 		}
 	}
-	
+
 	// Queue import work
 	item := &WorkItem{
 		Type:      WorkTypeImport,
 		FilePath:  file,
 		Timestamp: time.Now(),
 	}
-	
+
 	if err := s.daemon.queue.Add(item); err != nil {
 		return &Response{
 			Success: false,
 			Error:   err.Error(),
 		}
 	}
-	
+
 	return &Response{
 		Success: true,
 		Message: fmt.Sprintf("Queued import for: %s", file),
@@ -325,14 +325,14 @@ func (s *Server) handleImport(args map[string]interface{}) *Response {
 // handleSync triggers a sync operation
 func (s *Server) handleSync() *Response {
 	ctx := context.Background()
-	
+
 	if err := s.daemon.syncDatabase(ctx); err != nil {
 		return &Response{
 			Success: false,
 			Error:   err.Error(),
 		}
 	}
-	
+
 	return &Response{
 		Success: true,
 		Message: "Sync completed successfully",

@@ -7,10 +7,10 @@ import (
 // EquipmentLayer renders equipment and fixtures
 type EquipmentLayer struct {
 	*BaseLayer
-	equipment    []*models.Equipment
-	showLabels   bool
-	highlightID  string // Equipment ID to highlight
-	symbolMap    map[string]rune
+	equipment   []*models.Equipment
+	showLabels  bool
+	highlightID string // Equipment ID to highlight
+	symbolMap   map[string]rune
 }
 
 // Default equipment symbols
@@ -39,10 +39,10 @@ var defaultEquipmentSymbols = map[string]rune{
 
 // Status indicators
 const (
-	StatusOperationalChar  = ' ' // No special indicator
-	StatusFailedChar  = '✗'
-	StatusWarningChar = '⚠'
-	StatusUnknownChar = '?'
+	StatusOperationalChar = ' ' // No special indicator
+	StatusFailedChar      = '✗'
+	StatusWarningChar     = '⚠'
+	StatusUnknownChar     = '?'
 )
 
 // NewEquipmentLayer creates a new equipment layer
@@ -53,17 +53,17 @@ func NewEquipmentLayer(equipment []*models.Equipment) *EquipmentLayer {
 		showLabels: false,
 		symbolMap:  make(map[string]rune),
 	}
-	
+
 	// Copy default symbols
 	for k, v := range defaultEquipmentSymbols {
 		layer.symbolMap[k] = v
 	}
-	
+
 	// Calculate bounds from equipment positions
 	if len(equipment) > 0 {
 		minX, minY := float64(1e9), float64(1e9)
 		maxX, maxY := float64(-1e9), float64(-1e9)
-		
+
 		for _, equip := range equipment {
 			if equip.Location.X < minX {
 				minX = equip.Location.X
@@ -78,7 +78,7 @@ func NewEquipmentLayer(equipment []*models.Equipment) *EquipmentLayer {
 				maxY = equip.Location.Y
 			}
 		}
-		
+
 		layer.bounds = Bounds{
 			MinX: minX - 1,
 			MinY: minY - 1,
@@ -86,7 +86,7 @@ func NewEquipmentLayer(equipment []*models.Equipment) *EquipmentLayer {
 			MaxY: maxY + 1,
 		}
 	}
-	
+
 	return layer
 }
 
@@ -122,19 +122,19 @@ func (e *EquipmentLayer) renderEquipment(buffer [][]rune, viewport Viewport, equ
 	// Convert world coordinates to screen coordinates
 	screenX := int((equip.Location.X - viewport.X) * viewport.Zoom)
 	screenY := int((equip.Location.Y - viewport.Y) * viewport.Zoom)
-	
+
 	// Check if equipment is in viewport
 	if screenX < 0 || screenX >= viewport.Width ||
 		screenY < 0 || screenY >= viewport.Height {
 		return
 	}
-	
+
 	// Get the base symbol for this equipment type
 	symbol, exists := e.symbolMap[equip.Type]
 	if !exists {
 		symbol = '•' // Default symbol
 	}
-	
+
 	// Apply status indicator if needed
 	if equip.Status != models.StatusOperational {
 		statusChar := e.getStatusChar(equip.Status)
@@ -147,18 +147,18 @@ func (e *EquipmentLayer) renderEquipment(buffer [][]rune, viewport Viewport, equ
 			}
 		}
 	}
-	
+
 	// Highlight if this is the highlighted equipment
 	if equip.ID == e.highlightID {
 		// Draw highlight box around equipment
 		e.drawHighlight(buffer, screenX, screenY)
 	}
-	
+
 	// Set the equipment symbol
 	if screenY >= 0 && screenY < len(buffer) && screenX >= 0 && screenX < len(buffer[screenY]) {
 		buffer[screenY][screenX] = symbol
 	}
-	
+
 	// Draw label if enabled
 	if e.showLabels && equip.Name != "" {
 		e.drawLabel(buffer, viewport, screenX, screenY, equip.Name)
@@ -201,11 +201,11 @@ func (e *EquipmentLayer) drawLabel(buffer [][]rune, viewport Viewport, x, y int,
 			return // No space for label
 		}
 	}
-	
+
 	// Center the label on the equipment
 	labelRunes := []rune(label)
 	startX := x - len(labelRunes)/2
-	
+
 	// Draw the label
 	for i, ch := range labelRunes {
 		labelX := startX + i
@@ -218,7 +218,7 @@ func (e *EquipmentLayer) drawLabel(buffer [][]rune, viewport Viewport, x, y int,
 // GetEquipmentAt returns the equipment at the given world coordinates
 func (e *EquipmentLayer) GetEquipmentAt(x, y float64) *models.Equipment {
 	tolerance := 0.5 // How close to equipment position to count as "at"
-	
+
 	for _, equip := range e.equipment {
 		dx := equip.Location.X - x
 		dy := equip.Location.Y - y
@@ -226,7 +226,7 @@ func (e *EquipmentLayer) GetEquipmentAt(x, y float64) *models.Equipment {
 			return equip
 		}
 	}
-	
+
 	return nil
 }
 

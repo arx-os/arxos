@@ -13,21 +13,21 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	config := Default()
-	
+
 	assert.Equal(t, ModeLocal, config.Mode)
 	assert.Equal(t, "0.1.0", config.Version)
 	assert.NotEmpty(t, config.StateDir)
 	assert.NotEmpty(t, config.CacheDir)
-	
+
 	assert.False(t, config.Cloud.Enabled)
 	assert.Equal(t, "https://api.arxos.io", config.Cloud.BaseURL)
-	
+
 	assert.Equal(t, "local", config.Storage.Backend)
 	assert.NotEmpty(t, config.Storage.LocalPath)
-	
+
 	assert.Equal(t, 30*time.Second, config.API.Timeout)
 	assert.Equal(t, 3, config.API.RetryAttempts)
-	
+
 	assert.False(t, config.Telemetry.Enabled)
 	assert.False(t, config.Features.CloudSync)
 	assert.True(t, config.Features.OfflineMode)
@@ -36,17 +36,17 @@ func TestDefaultConfig(t *testing.T) {
 func TestLoadFromFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "test-config.json")
-	
+
 	testConfig := &Config{
 		Mode:     ModeCloud,
 		Version:  "1.0.0",
 		StateDir: "/test/state",
 		CacheDir: "/test/cache",
 		Cloud: CloudConfig{
-			Enabled:  true,
-			BaseURL:  "https://test.arxos.io",
-			APIKey:   "test-key-123",
-			OrgID:    "org-456",
+			Enabled: true,
+			BaseURL: "https://test.arxos.io",
+			APIKey:  "test-key-123",
+			OrgID:   "org-456",
 		},
 		Storage: StorageConfig{
 			Backend:     "s3",
@@ -58,18 +58,18 @@ func TestLoadFromFile(t *testing.T) {
 			AIIntegration: true,
 		},
 	}
-	
+
 	// Write test config to file
 	data, err := json.Marshal(testConfig)
 	require.NoError(t, err)
 	err = os.WriteFile(configPath, data, 0644)
 	require.NoError(t, err)
-	
+
 	// Load config from file
 	config := Default()
 	err = config.LoadFromFile(configPath)
 	require.NoError(t, err)
-	
+
 	assert.Equal(t, ModeCloud, config.Mode)
 	assert.Equal(t, "1.0.0", config.Version)
 	assert.Equal(t, "/test/state", config.StateDir)
@@ -94,7 +94,7 @@ func TestLoadFromEnv(t *testing.T) {
 	os.Setenv("ARXOS_CLOUD_SYNC", "true")
 	os.Setenv("ARXOS_AI_ENABLED", "true")
 	os.Setenv("ARXOS_TELEMETRY", "true")
-	
+
 	defer func() {
 		// Clean up environment variables
 		os.Unsetenv("ARXOS_MODE")
@@ -108,10 +108,10 @@ func TestLoadFromEnv(t *testing.T) {
 		os.Unsetenv("ARXOS_AI_ENABLED")
 		os.Unsetenv("ARXOS_TELEMETRY")
 	}()
-	
+
 	config := Default()
 	config.LoadFromEnv()
-	
+
 	assert.Equal(t, ModeCloud, config.Mode)
 	assert.Equal(t, "https://env.arxos.io", config.Cloud.BaseURL)
 	assert.Equal(t, "env-key-789", config.Cloud.APIKey)
@@ -147,7 +147,7 @@ func TestValidate(t *testing.T) {
 					APIKey:  "test-key",
 				},
 				Storage: StorageConfig{
-					Backend: "s3",
+					Backend:     "s3",
 					CloudBucket: "test-bucket",
 				},
 			},
@@ -156,7 +156,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "invalid mode",
 			config: &Config{
-				Mode: "invalid",
+				Mode:    "invalid",
 				Storage: StorageConfig{Backend: "local"},
 			},
 			wantErr: true,
@@ -199,7 +199,7 @@ func TestValidate(t *testing.T) {
 			errMsg:  "cloud bucket required",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate()
@@ -217,7 +217,7 @@ func TestValidate(t *testing.T) {
 
 func TestEnsureDirectories(t *testing.T) {
 	tmpDir := t.TempDir()
-	
+
 	config := &Config{
 		StateDir: filepath.Join(tmpDir, "state"),
 		CacheDir: filepath.Join(tmpDir, "cache"),
@@ -225,10 +225,10 @@ func TestEnsureDirectories(t *testing.T) {
 			LocalPath: filepath.Join(tmpDir, "data"),
 		},
 	}
-	
+
 	err := config.EnsureDirectories()
 	require.NoError(t, err)
-	
+
 	// Check directories were created
 	assert.DirExists(t, config.StateDir)
 	assert.DirExists(t, config.CacheDir)
@@ -238,7 +238,7 @@ func TestEnsureDirectories(t *testing.T) {
 func TestSaveConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "saved-config.json")
-	
+
 	config := &Config{
 		Mode:     ModeCloud,
 		Version:  "1.0.0",
@@ -256,22 +256,22 @@ func TestSaveConfig(t *testing.T) {
 			},
 		},
 	}
-	
+
 	err := config.Save(configPath)
 	require.NoError(t, err)
-	
+
 	// Load saved config
 	data, err := os.ReadFile(configPath)
 	require.NoError(t, err)
-	
+
 	var savedConfig Config
 	err = json.Unmarshal(data, &savedConfig)
 	require.NoError(t, err)
-	
+
 	// Check sensitive data was masked
 	assert.Equal(t, "********5678", savedConfig.Cloud.APIKey)
 	assert.Nil(t, savedConfig.Storage.Credentials)
-	
+
 	// Check other data was preserved
 	assert.Equal(t, ModeCloud, savedConfig.Mode)
 	assert.Equal(t, "1.0.0", savedConfig.Version)
@@ -290,7 +290,7 @@ func TestIsCloudEnabled(t *testing.T) {
 		{"hybrid mode", ModeHybrid, false, true},
 		{"local with cloud enabled", ModeLocal, true, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := &Config{
@@ -316,7 +316,7 @@ func TestIsOfflineMode(t *testing.T) {
 		{"hybrid online", ModeHybrid, false, false},
 		{"hybrid offline", ModeHybrid, true, true},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config := &Config{
@@ -336,18 +336,18 @@ func TestGetConfigPath(t *testing.T) {
 	path := GetConfigPath()
 	assert.Equal(t, "/custom/path/config.json", path)
 	os.Unsetenv("ARXOS_CONFIG")
-	
+
 	// Test with current directory file
 	tmpDir := t.TempDir()
 	oldWd, _ := os.Getwd()
 	os.Chdir(tmpDir)
 	defer os.Chdir(oldWd)
-	
+
 	// Create arxos.json in current directory
 	os.WriteFile("arxos.json", []byte("{}"), 0644)
 	path = GetConfigPath()
 	assert.Equal(t, "arxos.json", path)
-	
+
 	// Test default path
 	os.Remove("arxos.json")
 	path = GetConfigPath()

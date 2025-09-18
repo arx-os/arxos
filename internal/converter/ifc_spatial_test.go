@@ -37,7 +37,7 @@ func TestSpatialIFCConverter_ParseSpatialHierarchy(t *testing.T) {
 	spatialTypes := make(map[string]int)
 	for _, entity := range converter.entities {
 		if entity.Type == "IFCPROJECT" || entity.Type == "IFCBUILDING" ||
-		   entity.Type == "IFCBUILDINGSTOREY" || entity.Type == "IFCSPACE" {
+			entity.Type == "IFCBUILDINGSTOREY" || entity.Type == "IFCSPACE" {
 			spatialCount++
 			spatialTypes[entity.Type]++
 		}
@@ -350,7 +350,7 @@ func TestSpatialIFCConverter_ExtractRoomNumber(t *testing.T) {
 	converter := NewSpatialIFCConverter()
 
 	tests := []struct {
-		roomName     string
+		roomName       string
 		expectedNumber string
 	}{
 		{"Office 101", "101"},

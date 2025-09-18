@@ -25,7 +25,7 @@ const (
 
 // Config defines retry configuration
 type Config struct {
-	MaxAttempts int
+	MaxAttempts  int
 	InitialDelay time.Duration
 	MaxDelay     time.Duration
 	Multiplier   float64
@@ -52,9 +52,9 @@ type Operation func(context.Context) error
 
 // Result contains the result of a retry operation
 type Result struct {
-	Attempts int
+	Attempts  int
 	LastError error
-	Success  bool
+	Success   bool
 }
 
 // Error types
@@ -361,11 +361,11 @@ func containsIgnoreCase(s, substr string) bool {
 
 // CircuitBreaker provides circuit breaker functionality
 type CircuitBreaker struct {
-	maxFailures      int
-	resetTimeout     time.Duration
+	maxFailures         int
+	resetTimeout        time.Duration
 	consecutiveFailures int
-	lastFailureTime  time.Time
-	state            CircuitState
+	lastFailureTime     time.Time
+	state               CircuitState
 }
 
 // CircuitState represents the state of the circuit breaker

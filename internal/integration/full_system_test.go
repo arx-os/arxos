@@ -184,7 +184,7 @@ Equipment:
 		// as the commands use hardcoded database paths
 		opts := commands.ImportOptions{
 			InputFile:    testFile,
-			Format:       "pdf", // Uses text extractor
+			Format:       "pdf",             // Uses text extractor
 			BuildingID:   "TEST-IMPORT-002", // Different ID to avoid conflicts
 			BuildingName: "Test Import Building",
 			ToDatabase:   false, // Skip database for now

@@ -2,10 +2,10 @@ package models
 
 // User status constants
 const (
-	UserStatusActive   = "active"
-	UserStatusInactive = "inactive"
+	UserStatusActive    = "active"
+	UserStatusInactive  = "inactive"
 	UserStatusSuspended = "suspended"
-	UserStatusPending  = "pending"
+	UserStatusPending   = "pending"
 )
 
 // User role constants

@@ -21,7 +21,7 @@ type Span struct {
 	TraceID    string                 `json:"trace_id"`
 	SpanID     string                 `json:"span_id"`
 	ParentID   string                 `json:"parent_id,omitempty"`
-	name       string                 `json:"name"`
+	Name       string                 `json:"name"`
 	StartTime  time.Time              `json:"start_time"`
 	EndTime    *time.Time             `json:"end_time,omitempty"`
 	Duration   *time.Duration         `json:"duration,omitempty"`
@@ -85,7 +85,7 @@ func (t *Tracer) StartSpan(ctx context.Context, name string) (context.Context, *
 		TraceID:    traceID,
 		SpanID:     spanID,
 		ParentID:   parentID,
-		name:       name,
+		Name:       name,
 		StartTime:  time.Now(),
 		Attributes: make(map[string]interface{}),
 		Events:     make([]SpanEvent, 0),
@@ -131,7 +131,7 @@ func (s *Span) SetAttribute(key string, value interface{}) {
 func (s *Span) AddEvent(name string, attributes map[string]interface{}) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	event := SpanEvent{
 		Name:       name,
 		Timestamp:  time.Now(),
@@ -144,7 +144,7 @@ func (s *Span) AddEvent(name string, attributes map[string]interface{}) {
 func (s *Span) SetStatus(code SpanStatusCode, message string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.Status = SpanStatus{
 		Code:    code,
 		Message: message,
@@ -164,11 +164,11 @@ func (s *Span) RecordError(err error) {
 func (s *Span) Finish() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.EndTime != nil {
 		return // Already finished
 	}
-	
+
 	endTime := time.Now()
 	s.EndTime = &endTime
 	duration := endTime.Sub(s.StartTime)
@@ -176,11 +176,11 @@ func (s *Span) Finish() {
 
 	// Record span duration as metric
 	Metric("span_duration_seconds", duration.Seconds(), map[string]interface{}{
-		"span_name": s.name,
+		"span_name": s.Name,
 		"trace_id":  s.TraceID,
 	})
 
-	logger.Debug("Span finished: %s (trace: %s, duration: %v)", s.name, s.TraceID, duration)
+	logger.Debug("Span finished: %s (trace: %s, duration: %v)", s.Name, s.TraceID, duration)
 }
 
 // SpanFromContext extracts a span from context

@@ -32,18 +32,18 @@ const (
 
 // SpatialAnchor represents a persistent AR anchor
 type SpatialAnchor struct {
-	ID              string          `json:"id"`
-	Type            AnchorType      `json:"type"`
-	State           AnchorState     `json:"state"`
-	ARPosition      ARPoint3D       `json:"ar_position"`
-	WorldPosition   spatial.Point3D `json:"world_position"`
-	Rotation        ARRotation      `json:"rotation"`
-	CreatedBy       string          `json:"created_by"`
-	CreatedAt       time.Time       `json:"created_at"`
-	LastSeen        time.Time       `json:"last_seen"`
-	UpdateCount     int             `json:"update_count"`
-	Confidence      float32         `json:"confidence"`
-	DriftCorrection ARPoint3D       `json:"drift_correction"`
+	ID              string                 `json:"id"`
+	Type            AnchorType             `json:"type"`
+	State           AnchorState            `json:"state"`
+	ARPosition      ARPoint3D              `json:"ar_position"`
+	WorldPosition   spatial.Point3D        `json:"world_position"`
+	Rotation        ARRotation             `json:"rotation"`
+	CreatedBy       string                 `json:"created_by"`
+	CreatedAt       time.Time              `json:"created_at"`
+	LastSeen        time.Time              `json:"last_seen"`
+	UpdateCount     int                    `json:"update_count"`
+	Confidence      float32                `json:"confidence"`
+	DriftCorrection ARPoint3D              `json:"drift_correction"`
 	Metadata        map[string]interface{} `json:"metadata"`
 }
 

@@ -30,12 +30,12 @@ func NewUserService(auth AuthService) UserService {
 func (s *UserServiceImpl) GetUser(ctx context.Context, userID string) (*User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	user, exists := s.users[userID]
 	if !exists {
 		return nil, fmt.Errorf("user not found: %s", userID)
 	}
-	
+
 	// Return copy without password hash
 	userCopy := *user
 	userCopy.PasswordHash = ""
@@ -46,7 +46,7 @@ func (s *UserServiceImpl) GetUser(ctx context.Context, userID string) (*User, er
 func (s *UserServiceImpl) ListUsers(ctx context.Context, filter UserFilter) ([]*User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	var users []*User
 	for _, user := range s.users {
 		// Apply filters
@@ -59,13 +59,13 @@ func (s *UserServiceImpl) ListUsers(ctx context.Context, filter UserFilter) ([]*
 		if filter.Active != nil && user.Active != *filter.Active {
 			continue
 		}
-		
+
 		// Create copy without password hash
 		userCopy := *user
 		userCopy.PasswordHash = ""
 		users = append(users, &userCopy)
 	}
-	
+
 	return users, nil
 }
 
@@ -80,13 +80,13 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest)
 		}
 	}
 	s.mu.RUnlock()
-	
+
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
-	
+
 	// Create user
 	user := &User{
 		ID:           generateID(),
@@ -100,7 +100,7 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest)
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	
+
 	// Validate role
 	if user.Role == "" {
 		user.Role = "user"
@@ -108,14 +108,14 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest)
 	if user.Role != "admin" && user.Role != "user" && user.Role != "viewer" {
 		return nil, fmt.Errorf("invalid role: %s", user.Role)
 	}
-	
+
 	// Store user
 	s.mu.Lock()
 	s.users[user.ID] = user
 	s.mu.Unlock()
-	
+
 	logger.Info("Created user: %s (%s)", user.Email, user.ID)
-	
+
 	// Return copy without password hash
 	userCopy := *user
 	userCopy.PasswordHash = ""
@@ -126,12 +126,12 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, req CreateUserRequest)
 func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, updates UserUpdate) (*User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	user, exists := s.users[userID]
 	if !exists {
 		return nil, fmt.Errorf("user not found: %s", userID)
 	}
-	
+
 	// Apply updates
 	if updates.Name != nil {
 		user.Name = *updates.Name
@@ -167,11 +167,11 @@ func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, updates
 		}
 		user.PasswordHash = string(hashedPassword)
 	}
-	
+
 	user.UpdatedAt = time.Now()
-	
+
 	logger.Info("Updated user: %s (%s)", user.Email, user.ID)
-	
+
 	// Return copy without password hash
 	userCopy := *user
 	userCopy.PasswordHash = ""
@@ -182,14 +182,14 @@ func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, updates
 func (s *UserServiceImpl) DeleteUser(ctx context.Context, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	user, exists := s.users[userID]
 	if !exists {
 		return fmt.Errorf("user not found: %s", userID)
 	}
-	
+
 	delete(s.users, userID)
-	
+
 	logger.Info("Deleted user: %s (%s)", user.Email, userID)
 	return nil
 }
@@ -198,7 +198,7 @@ func (s *UserServiceImpl) DeleteUser(ctx context.Context, userID string) error {
 func (s *UserServiceImpl) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	for _, user := range s.users {
 		if user.Email == email {
 			// Return copy without password hash
@@ -207,7 +207,7 @@ func (s *UserServiceImpl) GetUserByEmail(ctx context.Context, email string) (*Us
 			return &userCopy, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("user not found with email: %s", email)
 }
 
@@ -215,15 +215,15 @@ func (s *UserServiceImpl) GetUserByEmail(ctx context.Context, email string) (*Us
 func (s *UserServiceImpl) GetUserPermissions(ctx context.Context, userID string) ([]string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	user, exists := s.users[userID]
 	if !exists {
 		return nil, fmt.Errorf("user not found: %s", userID)
 	}
-	
+
 	// Combine role-based and explicit permissions
 	permissions := make([]string, 0)
-	
+
 	// Add role-based permissions
 	switch user.Role {
 	case "admin":
@@ -233,10 +233,10 @@ func (s *UserServiceImpl) GetUserPermissions(ctx context.Context, userID string)
 	case "viewer":
 		permissions = append(permissions, "read:*")
 	}
-	
+
 	// Add explicit permissions
 	permissions = append(permissions, user.Permissions...)
-	
+
 	return permissions, nil
 }
 
@@ -244,12 +244,12 @@ func (s *UserServiceImpl) GetUserPermissions(ctx context.Context, userID string)
 func (s *UserServiceImpl) UpdateUserActivity(ctx context.Context, userID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	user, exists := s.users[userID]
 	if !exists {
 		return fmt.Errorf("user not found: %s", userID)
 	}
-	
+
 	user.LastActivityAt = time.Now()
 	return nil
 }

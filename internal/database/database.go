@@ -24,35 +24,35 @@ type DB interface {
 	// Spatial support detection
 	HasSpatialSupport() bool
 	GetSpatialDB() (SpatialDB, error)
-	
+
 	// Floor plan operations
 	GetFloorPlan(ctx context.Context, id string) (*models.FloorPlan, error)
 	GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, error)
 	SaveFloorPlan(ctx context.Context, plan *models.FloorPlan) error
 	UpdateFloorPlan(ctx context.Context, plan *models.FloorPlan) error
 	DeleteFloorPlan(ctx context.Context, id string) error
-	
+
 	// Equipment operations
 	GetEquipment(ctx context.Context, id string) (*models.Equipment, error)
 	GetEquipmentByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Equipment, error)
 	SaveEquipment(ctx context.Context, equipment *models.Equipment) error
 	UpdateEquipment(ctx context.Context, equipment *models.Equipment) error
 	DeleteEquipment(ctx context.Context, id string) error
-	
+
 	// Room operations
 	GetRoom(ctx context.Context, id string) (*models.Room, error)
 	GetRoomsByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Room, error)
 	SaveRoom(ctx context.Context, room *models.Room) error
 	UpdateRoom(ctx context.Context, room *models.Room) error
 	DeleteRoom(ctx context.Context, id string) error
-	
+
 	// User operations
 	GetUser(ctx context.Context, id string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) error
 	UpdateUser(ctx context.Context, user *models.User) error
 	DeleteUser(ctx context.Context, id string) error
-	
+
 	// Session operations
 	CreateSession(ctx context.Context, session *models.UserSession) error
 	GetSession(ctx context.Context, token string) (*models.UserSession, error)
@@ -61,27 +61,27 @@ type DB interface {
 	DeleteSession(ctx context.Context, id string) error
 	DeleteExpiredSessions(ctx context.Context) error
 	DeleteUserSessions(ctx context.Context, userID string) error
-	
+
 	// Password reset operations
 	CreatePasswordResetToken(ctx context.Context, token *models.PasswordResetToken) error
 	GetPasswordResetToken(ctx context.Context, token string) (*models.PasswordResetToken, error)
 	MarkPasswordResetTokenUsed(ctx context.Context, token string) error
 	DeleteExpiredPasswordResetTokens(ctx context.Context) error
-	
-	// Organization operations  
+
+	// Organization operations
 	GetOrganization(ctx context.Context, id string) (*models.Organization, error)
 	GetOrganizationsByUser(ctx context.Context, userID string) ([]*models.Organization, error)
 	CreateOrganization(ctx context.Context, org *models.Organization) error
 	UpdateOrganization(ctx context.Context, org *models.Organization) error
 	DeleteOrganization(ctx context.Context, id string) error
-	
+
 	// Organization member operations
 	AddOrganizationMember(ctx context.Context, orgID, userID, role string) error
 	RemoveOrganizationMember(ctx context.Context, orgID, userID string) error
 	UpdateOrganizationMemberRole(ctx context.Context, orgID, userID, role string) error
 	GetOrganizationMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error)
 	GetOrganizationMember(ctx context.Context, orgID, userID string) (*models.OrganizationMember, error)
-	
+
 	// Organization invitation operations
 	CreateOrganizationInvitation(ctx context.Context, invitation *models.OrganizationInvitation) error
 	GetOrganizationInvitationByToken(ctx context.Context, token string) (*models.OrganizationInvitation, error)
@@ -89,12 +89,12 @@ type DB interface {
 	ListOrganizationInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error)
 	AcceptOrganizationInvitation(ctx context.Context, token, userID string) error
 	RevokeOrganizationInvitation(ctx context.Context, id string) error
-	
+
 	// Query operations
 	Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row
 	Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	
+
 	// Migration operations
 	Migrate(ctx context.Context) error
 	GetVersion(ctx context.Context) (int, error)
@@ -126,16 +126,16 @@ type QueryResult struct {
 
 // Change represents a change in the database for audit purposes
 type Change struct {
-	ID          string
-	ObjectID    string
-	ObjectType  string
-	Operation   string // create, update, delete
-	OldValue    string // JSON
-	NewValue    string // JSON
-	Timestamp   time.Time
-	User        string
-	Branch      string
-	CommitHash  string
+	ID         string
+	ObjectID   string
+	ObjectType string
+	Operation  string // create, update, delete
+	OldValue   string // JSON
+	NewValue   string // JSON
+	Timestamp  time.Time
+	User       string
+	Branch     string
+	CommitHash string
 }
 
 // Conflict represents a merge conflict between data sources

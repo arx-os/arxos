@@ -123,10 +123,10 @@ func TestStatusCompression(t *testing.T) {
 	transport := NewRadioTransport(RadioConfig{})
 
 	args := map[string]interface{}{
-		"status":     "OPERATIONAL",
-		"backup":     "DEGRADED",
-		"emergency":  "FAILED",
-		"test":       "UNKNOWN",
+		"status":    "OPERATIONAL",
+		"backup":    "DEGRADED",
+		"emergency": "FAILED",
+		"test":      "UNKNOWN",
 	}
 
 	compressed := transport.compressArgs(args)
@@ -201,7 +201,7 @@ func TestRetryLogic(t *testing.T) {
 		MaxRetries: 3,
 		AckTimeout: 100 * time.Millisecond,
 	})
-	transport.interface = mockInterface
+	transport.radioInterface = mockInterface
 
 	data := []byte("test data")
 	response, err := transport.transmitWithRetry(data)

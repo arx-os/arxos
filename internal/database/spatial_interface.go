@@ -67,10 +67,10 @@ type ConfidenceRecord struct {
 	EquipmentID string `json:"equipment_id"`
 
 	// Position confidence
-	PositionConfidence   spatial.ConfidenceLevel `json:"position_confidence"`
-	PositionSource       string                  `json:"position_source"`
-	PositionUpdated      time.Time               `json:"position_updated"`
-	PositionAccuracy     float64                 `json:"position_accuracy"`
+	PositionConfidence spatial.ConfidenceLevel `json:"position_confidence"`
+	PositionSource     string                  `json:"position_source"`
+	PositionUpdated    time.Time               `json:"position_updated"`
+	PositionAccuracy   float64                 `json:"position_accuracy"`
 
 	// Semantic confidence
 	SemanticConfidence   spatial.ConfidenceLevel `json:"semantic_confidence"`
@@ -79,9 +79,9 @@ type ConfidenceRecord struct {
 	SemanticCompleteness float64                 `json:"semantic_completeness"`
 
 	// Verification
-	LastFieldVerified *time.Time             `json:"last_field_verified,omitempty"`
-	VerificationCount int                    `json:"verification_count"`
-	VerificationHistory []VerificationEvent   `json:"verification_history,omitempty"`
+	LastFieldVerified   *time.Time          `json:"last_field_verified,omitempty"`
+	VerificationCount   int                 `json:"verification_count"`
+	VerificationHistory []VerificationEvent `json:"verification_history,omitempty"`
 }
 
 // VerificationEvent represents a single verification event
@@ -94,12 +94,12 @@ type VerificationEvent struct {
 
 // SpatialDBStats provides statistics about the spatial database
 type SpatialDBStats struct {
-	TotalEquipment       int     `json:"total_equipment"`
-	EquipmentWithSpatial int     `json:"equipment_with_spatial"`
-	TotalScans           int     `json:"total_scans"`
-	TotalPointClouds     int     `json:"total_point_clouds"`
-	TotalPoints          int64   `json:"total_points"`
-	AverageCoverage      float64 `json:"average_coverage"`
+	TotalEquipment       int        `json:"total_equipment"`
+	EquipmentWithSpatial int        `json:"equipment_with_spatial"`
+	TotalScans           int        `json:"total_scans"`
+	TotalPointClouds     int        `json:"total_point_clouds"`
+	TotalPoints          int64      `json:"total_points"`
+	AverageCoverage      float64    `json:"average_coverage"`
 	LastScanDate         *time.Time `json:"last_scan_date,omitempty"`
 }
 

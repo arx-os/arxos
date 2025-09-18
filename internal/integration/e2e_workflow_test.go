@@ -43,7 +43,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	t.Run("IFC_Export_Simulation", func(t *testing.T) {
 		ifcContent := generateTestIFC()
 		ifcPath := filepath.Join(tempDir, "bim_files", "test_building.ifc")
-		
+
 		err := ioutil.WriteFile(ifcPath, []byte(ifcContent), 0644)
 		require.NoError(t, err)
 		t.Logf("Created IFC file: %s", ifcPath)
@@ -74,7 +74,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		dbPath := filepath.Join(tempDir, ".arxos", "test.db")
 		dbConfig := database.NewConfig(dbPath)
 		db := database.NewSQLiteDB(dbConfig)
-		
+
 		err := db.Connect(ctx, dbPath)
 		require.NoError(t, err)
 		defer db.Close()
@@ -110,14 +110,14 @@ func TestEndToEndWorkflow(t *testing.T) {
 		t.Run("BIM_Export", func(t *testing.T) {
 			generator := exporter.NewBIMGenerator()
 			bimPath := filepath.Join(exportDir, "building.bim.txt")
-			
+
 			file, err := os.Create(bimPath)
 			require.NoError(t, err)
 			defer file.Close()
 
 			err = generator.GenerateFromFloorPlans(floorPlans, file)
 			require.NoError(t, err)
-			
+
 			// Verify file was created
 			info, err := os.Stat(bimPath)
 			require.NoError(t, err)
@@ -129,7 +129,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		t.Run("CSV_Export", func(t *testing.T) {
 			exporter := exporter.NewCSVExporter()
 			csvPath := filepath.Join(exportDir, "equipment.csv")
-			
+
 			file, err := os.Create(csvPath)
 			require.NoError(t, err)
 			defer file.Close()
@@ -141,7 +141,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 
 			err = exporter.ExportEquipment(allEquipment, file)
 			require.NoError(t, err)
-			
+
 			info, err := os.Stat(csvPath)
 			require.NoError(t, err)
 			assert.Greater(t, info.Size(), int64(0))
@@ -152,14 +152,14 @@ func TestEndToEndWorkflow(t *testing.T) {
 		t.Run("JSON_Export", func(t *testing.T) {
 			exporter := exporter.NewJSONExporter()
 			jsonPath := filepath.Join(exportDir, "building.json")
-			
+
 			file, err := os.Create(jsonPath)
 			require.NoError(t, err)
 			defer file.Close()
 
 			err = exporter.ExportBuilding(floorPlans, file)
 			require.NoError(t, err)
-			
+
 			info, err := os.Stat(jsonPath)
 			require.NoError(t, err)
 			assert.Greater(t, info.Size(), int64(0))
@@ -191,7 +191,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 	// Step 7: Verify complete workflow
 	t.Run("Workflow_Verification", func(t *testing.T) {
 		exportDir := filepath.Join(tempDir, "exports")
-		
+
 		// Check all expected files exist
 		expectedFiles := []string{
 			"building.bim.txt",

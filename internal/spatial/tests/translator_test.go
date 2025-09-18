@@ -294,7 +294,7 @@ func TestTransform(t *testing.T) {
 	t.Run("Apply transform", func(t *testing.T) {
 		transform := spatial.Transform{
 			Translation: spatial.NewPoint3D(10, 20, 30),
-			Rotation:    [3]float64{0, 0, 0}, // No rotation for simplicity
+			Rotation:    spatial.NewRotation3D(0, 0, 0), // No rotation for simplicity
 			Scale:       2.0,
 		}
 

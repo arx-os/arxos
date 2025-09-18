@@ -33,9 +33,9 @@ func TestARCoordinateConverter(t *testing.T) {
 	// ARKit: +Y is up, +Z is toward viewer
 	// World: +Z is up, +Y is north
 	expectedWorld := spatial.Point3D{
-		X: 101,  // 100 + 1
-		Y: 203,  // 200 + 3 (AR's -Z becomes world's +Y)
-		Z: 12,   // 10 + 2 (AR's +Y becomes world's +Z)
+		X: 101, // 100 + 1
+		Y: 203, // 200 + 3 (AR's -Z becomes world's +Y)
+		Z: 12,  // 10 + 2 (AR's +Y becomes world's +Z)
 	}
 
 	tolerance := 0.001
@@ -200,7 +200,7 @@ func TestSyncEngine(t *testing.T) {
 		Timestamp:   time.Now(),
 		Confidence:  0.9,
 		Attributes: map[string]interface{}{
-			"type": "HVAC",
+			"type":  "HVAC",
 			"model": "XYZ123",
 		},
 	}

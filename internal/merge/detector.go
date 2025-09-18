@@ -10,45 +10,45 @@ import (
 
 // ChangeDetector detects changes in equipment over time
 type ChangeDetector struct {
-	history          []Change
-	thresholds       ChangeThresholds
-	trackingEnabled  bool
-	maxHistorySize   int
+	history         []Change
+	thresholds      ChangeThresholds
+	trackingEnabled bool
+	maxHistorySize  int
 }
 
 // Change represents a detected change in equipment
 type Change struct {
-	ID           string          `json:"id"`
-	EquipmentID  string          `json:"equipment_id"`
-	Type         ChangeType      `json:"type"`
-	Field        string          `json:"field"` // Which field changed
-	OldValue     interface{}     `json:"old_value"`
-	NewValue     interface{}     `json:"new_value"`
-	Magnitude    float64         `json:"magnitude"` // Magnitude of change
-	Timestamp    time.Time       `json:"timestamp"`
-	Source       string          `json:"source"` // Source that detected the change
-	Confidence   spatial.ConfidenceLevel `json:"confidence"`
-	Verified     bool            `json:"verified"`
-	ActionTaken  string          `json:"action_taken,omitempty"`
+	ID          string                  `json:"id"`
+	EquipmentID string                  `json:"equipment_id"`
+	Type        ChangeType              `json:"type"`
+	Field       string                  `json:"field"` // Which field changed
+	OldValue    interface{}             `json:"old_value"`
+	NewValue    interface{}             `json:"new_value"`
+	Magnitude   float64                 `json:"magnitude"` // Magnitude of change
+	Timestamp   time.Time               `json:"timestamp"`
+	Source      string                  `json:"source"` // Source that detected the change
+	Confidence  spatial.ConfidenceLevel `json:"confidence"`
+	Verified    bool                    `json:"verified"`
+	ActionTaken string                  `json:"action_taken,omitempty"`
 }
 
 // ChangeType represents the type of change
 type ChangeType string
 
 const (
-	ChangeTypePosition   ChangeType = "position"
-	ChangeTypeDimension  ChangeType = "dimension"
-	ChangeTypeType       ChangeType = "type"
-	ChangeTypeAdded      ChangeType = "added"
-	ChangeTypeRemoved    ChangeType = "removed"
-	ChangeTypeAttribute  ChangeType = "attribute"
+	ChangeTypePosition  ChangeType = "position"
+	ChangeTypeDimension ChangeType = "dimension"
+	ChangeTypeType      ChangeType = "type"
+	ChangeTypeAdded     ChangeType = "added"
+	ChangeTypeRemoved   ChangeType = "removed"
+	ChangeTypeAttribute ChangeType = "attribute"
 )
 
 // ChangeThresholds defines thresholds for change detection
 type ChangeThresholds struct {
-	PositionThreshold  float64 `json:"position_threshold"` // meters
-	DimensionThreshold float64 `json:"dimension_threshold"` // percentage
-	TimeWindow         time.Duration `json:"time_window"` // Time window for related changes
+	PositionThreshold  float64       `json:"position_threshold"`  // meters
+	DimensionThreshold float64       `json:"dimension_threshold"` // percentage
+	TimeWindow         time.Duration `json:"time_window"`         // Time window for related changes
 }
 
 // NewChangeDetector creates a new change detector
@@ -58,7 +58,7 @@ func NewChangeDetector() *ChangeDetector {
 		trackingEnabled: true,
 		maxHistorySize:  10000,
 		thresholds: ChangeThresholds{
-			PositionThreshold:  0.1, // 10cm
+			PositionThreshold:  0.1,  // 10cm
 			DimensionThreshold: 0.05, // 5%
 			TimeWindow:         24 * time.Hour,
 		},
@@ -407,8 +407,8 @@ func (cd *ChangeDetector) VerifyChange(changeID string, verified bool, action st
 // GetStatistics returns change detection statistics
 func (cd *ChangeDetector) GetStatistics() ChangeStatistics {
 	stats := ChangeStatistics{
-		TotalChanges: len(cd.history),
-		ChangesByType: make(map[ChangeType]int),
+		TotalChanges:    len(cd.history),
+		ChangesByType:   make(map[ChangeType]int),
 		VerifiedChanges: 0,
 	}
 

@@ -23,11 +23,11 @@ type SyncThresholds struct {
 // DefaultSyncThresholds returns default sync thresholds
 func DefaultSyncThresholds() SyncThresholds {
 	return SyncThresholds{
-		PositionThreshold:  0.3,               // 30cm movement
-		RotationThreshold:  15.0,              // 15 degrees rotation
-		TimeThreshold:      5 * time.Minute,   // sync at least every 5 minutes
-		BatchSize:          50,                // max 50 changes per batch
-		ConfidenceRequired: 0.7,               // 70% confidence minimum
+		PositionThreshold:  0.3,             // 30cm movement
+		RotationThreshold:  15.0,            // 15 degrees rotation
+		TimeThreshold:      5 * time.Minute, // sync at least every 5 minutes
+		BatchSize:          50,              // max 50 changes per batch
+		ConfidenceRequired: 0.7,             // 70% confidence minimum
 	}
 }
 
@@ -35,43 +35,43 @@ func DefaultSyncThresholds() SyncThresholds {
 type ChangeType string
 
 const (
-	ChangeTypeMove     ChangeType = "move"
-	ChangeTypeRotate   ChangeType = "rotate"
-	ChangeTypeAdd      ChangeType = "add"
-	ChangeTypeRemove   ChangeType = "remove"
-	ChangeTypeModify   ChangeType = "modify"
+	ChangeTypeMove   ChangeType = "move"
+	ChangeTypeRotate ChangeType = "rotate"
+	ChangeTypeAdd    ChangeType = "add"
+	ChangeTypeRemove ChangeType = "remove"
+	ChangeTypeModify ChangeType = "modify"
 )
 
 // ARChange represents a change made in AR
 type ARChange struct {
-	ID            string          `json:"id"`
-	SessionID     string          `json:"session_id"`
-	EquipmentID   string          `json:"equipment_id"`
-	Type          ChangeType      `json:"type"`
-	OldPosition   spatial.Point3D `json:"old_position,omitempty"`
-	NewPosition   spatial.Point3D `json:"new_position,omitempty"`
-	OldRotation   ARRotation      `json:"old_rotation,omitempty"`
-	NewRotation   ARRotation      `json:"new_rotation,omitempty"`
-	Attributes    map[string]interface{} `json:"attributes,omitempty"`
-	Timestamp     time.Time       `json:"timestamp"`
-	Confidence    float32         `json:"confidence"`
-	Applied       bool            `json:"applied"`
-	Rejected      bool            `json:"rejected"`
-	RejectionReason string        `json:"rejection_reason,omitempty"`
+	ID              string                 `json:"id"`
+	SessionID       string                 `json:"session_id"`
+	EquipmentID     string                 `json:"equipment_id"`
+	Type            ChangeType             `json:"type"`
+	OldPosition     spatial.Point3D        `json:"old_position,omitempty"`
+	NewPosition     spatial.Point3D        `json:"new_position,omitempty"`
+	OldRotation     ARRotation             `json:"old_rotation,omitempty"`
+	NewRotation     ARRotation             `json:"new_rotation,omitempty"`
+	Attributes      map[string]interface{} `json:"attributes,omitempty"`
+	Timestamp       time.Time              `json:"timestamp"`
+	Confidence      float32                `json:"confidence"`
+	Applied         bool                   `json:"applied"`
+	Rejected        bool                   `json:"rejected"`
+	RejectionReason string                 `json:"rejection_reason,omitempty"`
 }
 
 // SyncEngine handles threshold-based BIM synchronization
 type SyncEngine struct {
-	thresholds      SyncThresholds
-	changeQueue     *ChangeQueue
-	changeDetector  *merge.ChangeDetector
+	thresholds       SyncThresholds
+	changeQueue      *ChangeQueue
+	changeDetector   *merge.ChangeDetector
 	conflictResolver *merge.ConflictResolver
-	bimUpdater      BIMUpdater
-	sessions        map[string]*ARSession
-	lastSync        map[string]time.Time
-	mu              sync.RWMutex
-	ctx             context.Context
-	cancel          context.CancelFunc
+	bimUpdater       BIMUpdater
+	sessions         map[string]*ARSession
+	lastSync         map[string]time.Time
+	mu               sync.RWMutex
+	ctx              context.Context
+	cancel           context.CancelFunc
 }
 
 // BIMUpdater interface for updating BIM data
@@ -387,7 +387,7 @@ func (se *SyncEngine) resolveConflicts(conflicts []ChangeConflict) ([]*ARChange,
 		best := conflict.Changes[0]
 		for _, change := range conflict.Changes[1:] {
 			if change.Timestamp.After(best.Timestamp) &&
-			   change.Confidence >= best.Confidence {
+				change.Confidence >= best.Confidence {
 				best = change
 			}
 		}
@@ -582,12 +582,12 @@ func (m *MockBIMUpdater) GetUpdates() []map[string]interface{} {
 
 // SyncStatus represents the status of sync operations
 type SyncStatus struct {
-	SessionID       string        `json:"session_id"`
-	LastSync        time.Time     `json:"last_sync"`
-	PendingChanges  int           `json:"pending_changes"`
-	AppliedChanges  int           `json:"applied_changes"`
-	RejectedChanges int           `json:"rejected_changes"`
-	NextSync        time.Time     `json:"next_sync"`
+	SessionID       string    `json:"session_id"`
+	LastSync        time.Time `json:"last_sync"`
+	PendingChanges  int       `json:"pending_changes"`
+	AppliedChanges  int       `json:"applied_changes"`
+	RejectedChanges int       `json:"rejected_changes"`
+	NextSync        time.Time `json:"next_sync"`
 }
 
 // GetSyncStatus returns sync status for a session
@@ -625,4 +625,3 @@ func (se *SyncEngine) GetSyncStatus(sessionID string) (*SyncStatus, error) {
 func (se *SyncEngine) Close() {
 	se.cancel()
 }
-

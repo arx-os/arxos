@@ -160,11 +160,11 @@ func createTestUser(email string, password string, active bool) *models.User {
 	return &models.User{
 		ID:           "test-user-id",
 		Email:        email,
-		FullName:     "Test User",  // Changed from Name to FullName
-		PasswordHash: password, // In tests, we'll use plain password for simplicity
+		FullName:     "Test User", // Changed from Name to FullName
+		PasswordHash: password,    // In tests, we'll use plain password for simplicity
 		Status:       status,
-		CreatedAt:    &now,  // Changed to pointer
-		UpdatedAt:    &now,  // Changed to pointer
+		CreatedAt:    &now, // Changed to pointer
+		UpdatedAt:    &now, // Changed to pointer
 	}
 }
 

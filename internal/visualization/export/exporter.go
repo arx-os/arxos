@@ -22,13 +22,13 @@ const (
 
 // Options for exporting visualizations
 type Options struct {
-	Format     Format
-	FilePath   string
-	Append     bool
-	Timestamp  bool
-	Metadata   map[string]string
-	StripANSI  bool
-	WrapWidth  int
+	Format    Format
+	FilePath  string
+	Append    bool
+	Timestamp bool
+	Metadata  map[string]string
+	StripANSI bool
+	WrapWidth int
 }
 
 // Exporter handles saving visualizations to files

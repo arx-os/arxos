@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -81,10 +81,10 @@ func main() {
 			INSERT INTO rooms (id, name, min_x, min_y, max_x, max_y, floor_plan_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?)
 		`
-		_, err := db.Exec(ctx, query, room.ID, room.Name, 
-			room.Bounds.MinX, room.Bounds.MinY, 
+		_, err := db.Exec(ctx, query, room.ID, room.Name,
+			room.Bounds.MinX, room.Bounds.MinY,
 			room.Bounds.MaxX, room.Bounds.MaxY, floorPlanID)
-		
+
 		if err != nil {
 			log.Printf("Failed to create room %s: %v", room.Name, err)
 		} else {
@@ -98,28 +98,28 @@ func main() {
 			ID:       uuid.New().String(),
 			Name:     "Switch-01",
 			Type:     "switch",
-			Location: &models.Point{X: 100, Y: 80},
+			Location: &models.Point3D{X: 100, Y: 80, Z: 0},
 			Status:   models.StatusNormal,
 		},
 		{
 			ID:       uuid.New().String(),
 			Name:     "Outlet-01",
 			Type:     "outlet",
-			Location: &models.Point{X: 280, Y: 80},
+			Location: &models.Point3D{X: 280, Y: 80, Z: 0},
 			Status:   models.StatusNormal,
 		},
 		{
 			ID:       uuid.New().String(),
 			Name:     "Panel-100",
 			Type:     "panel",
-			Location: &models.Point{X: 80, Y: 200},
+			Location: &models.Point3D{X: 80, Y: 200, Z: 0},
 			Status:   models.StatusOffline,
 		},
 		{
 			ID:       uuid.New().String(),
 			Name:     "Outlet-02",
 			Type:     "outlet",
-			Location: &models.Point{X: 250, Y: 200},
+			Location: &models.Point3D{X: 250, Y: 200, Z: 0},
 			Status:   models.StatusFailed,
 		},
 	}
@@ -129,9 +129,9 @@ func main() {
 			INSERT INTO equipment (id, name, type, location_x, location_y, status, floor_plan_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?)
 		`
-		_, err := db.Exec(ctx, query, eq.ID, eq.Name, eq.Type, 
+		_, err := db.Exec(ctx, query, eq.ID, eq.Name, eq.Type,
 			eq.Location.X, eq.Location.Y, eq.Status, floorPlanID)
-		
+
 		if err != nil {
 			log.Printf("Failed to create equipment %s: %v", eq.Name, err)
 		} else {
@@ -157,7 +157,7 @@ func main() {
 		log.Printf("Failed to create organization (may already exist): %v", err)
 	} else {
 		fmt.Println("Created organization:", orgID)
-		
+
 		// Add admin user to organization
 		if err := db.AddOrganizationMember(ctx, orgID, "admin", string(models.RoleOwner)); err != nil {
 			log.Printf("Failed to add admin to organization: %v", err)

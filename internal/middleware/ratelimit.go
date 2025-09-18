@@ -46,10 +46,10 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get client identifier (IP address)
 		clientID := rl.getClientID(r)
-		
+
 		// Get or create visitor
 		limiter := rl.getVisitor(clientID)
-		
+
 		// Check rate limit
 		if !limiter.Allow() {
 			rl.handleRateLimitExceeded(w, r)
@@ -72,7 +72,7 @@ func (rl *RateLimiter) MiddlewareWithCustomLimits(pathLimits map[string]RateLimi
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Check if path has custom limit
 			for path, limiter := range pathLimiters {
-				if r.URL.Path == path || (len(path) > 0 && path[len(path)-1] == '/' && 
+				if r.URL.Path == path || (len(path) > 0 && path[len(path)-1] == '/' &&
 					len(r.URL.Path) >= len(path) && r.URL.Path[:len(path)] == path) {
 					limiter.Middleware(next).ServeHTTP(w, r)
 					return
@@ -94,7 +94,7 @@ func (rl *RateLimiter) getClientID(r *http.Request) string {
 	if ip := r.Header.Get("X-Real-IP"); ip != "" {
 		return ip
 	}
-	
+
 	// Fall back to remote address
 	return r.RemoteAddr
 }
@@ -144,7 +144,7 @@ func (rl *RateLimiter) handleRateLimitExceeded(w http.ResponseWriter, r *http.Re
 	w.Header().Set("X-RateLimit-Remaining", "0")
 	w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", time.Now().Add(time.Second).Unix()))
 	w.Header().Set("Retry-After", "1")
-	
+
 	w.WriteHeader(http.StatusTooManyRequests)
 	w.Write([]byte(`{"error":"Rate limit exceeded. Please try again later."}`))
 }
@@ -162,20 +162,20 @@ type RateLimit struct {
 
 // DefaultRateLimits provides sensible defaults for different endpoints
 var DefaultRateLimits = map[string]RateLimit{
-	"/api/v1/auth/login":    {RPS: 5, Burst: 10},   // Strict limit for login
-	"/api/v1/auth/register": {RPS: 2, Burst: 5},    // Strict limit for registration
-	"/api/v1/auth/refresh":  {RPS: 10, Burst: 20},  // Moderate limit for refresh
-	"/api/v1/upload/":       {RPS: 1, Burst: 3},    // Strict limit for uploads
-	"/api/v1/":              {RPS: 100, Burst: 200}, // General API limit
+	"/api/v1/auth/login":    {RPS: 5, Burst: 10},      // Strict limit for login
+	"/api/v1/auth/register": {RPS: 2, Burst: 5},       // Strict limit for registration
+	"/api/v1/auth/refresh":  {RPS: 10, Burst: 20},     // Moderate limit for refresh
+	"/api/v1/upload/":       {RPS: 1, Burst: 3},       // Strict limit for uploads
+	"/api/v1/":              {RPS: 100, Burst: 200},   // General API limit
 	"/health":               {RPS: 1000, Burst: 1000}, // High limit for health checks
 }
 
 // IPBasedRateLimiter provides more sophisticated rate limiting with IP reputation
 type IPBasedRateLimiter struct {
 	*RateLimiter
-	blacklist   map[string]time.Time
-	blacklistMu sync.RWMutex
-	reputation  map[string]int // Track reputation score
+	blacklist    map[string]time.Time
+	blacklistMu  sync.RWMutex
+	reputation   map[string]int // Track reputation score
 	reputationMu sync.RWMutex
 }
 
@@ -192,7 +192,7 @@ func NewIPBasedRateLimiter(rps float64, burst int) *IPBasedRateLimiter {
 func (irl *IPBasedRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		clientID := irl.getClientID(r)
-		
+
 		// Check if IP is blacklisted
 		if irl.isBlacklisted(clientID) {
 			w.WriteHeader(http.StatusForbidden)
@@ -205,19 +205,19 @@ func (irl *IPBasedRateLimiter) Middleware(next http.Handler) http.Handler {
 		if !limiter.Allow() {
 			// Decrease reputation on rate limit violation
 			irl.decreaseReputation(clientID)
-			
+
 			// Auto-blacklist if reputation is too low
 			if irl.getReputation(clientID) < -10 {
 				irl.blacklistIP(clientID, 1*time.Hour)
 			}
-			
+
 			irl.handleRateLimitExceeded(w, r)
 			return
 		}
 
 		// Increase reputation for good behavior
 		irl.increaseReputation(clientID)
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -225,11 +225,11 @@ func (irl *IPBasedRateLimiter) Middleware(next http.Handler) http.Handler {
 // getVisitorWithReputation adjusts rate limit based on IP reputation
 func (irl *IPBasedRateLimiter) getVisitorWithReputation(clientID string) *rate.Limiter {
 	reputation := irl.getReputation(clientID)
-	
+
 	// Adjust rate based on reputation
 	adjustedRate := irl.rate
 	adjustedBurst := irl.burst
-	
+
 	if reputation < 0 {
 		// Reduce rate for bad reputation
 		adjustedRate = adjustedRate / 2
@@ -239,7 +239,7 @@ func (irl *IPBasedRateLimiter) getVisitorWithReputation(clientID string) *rate.L
 		adjustedRate = adjustedRate * 1.5
 		adjustedBurst = int(float64(adjustedBurst) * 1.5)
 	}
-	
+
 	irl.mu.RLock()
 	v, exists := irl.visitors[clientID]
 	irl.mu.RUnlock()
@@ -266,7 +266,7 @@ func (irl *IPBasedRateLimiter) getVisitorWithReputation(clientID string) *rate.L
 func (irl *IPBasedRateLimiter) isBlacklisted(clientID string) bool {
 	irl.blacklistMu.RLock()
 	defer irl.blacklistMu.RUnlock()
-	
+
 	if expiry, exists := irl.blacklist[clientID]; exists {
 		if time.Now().Before(expiry) {
 			return true
@@ -295,7 +295,7 @@ func (irl *IPBasedRateLimiter) getReputation(clientID string) int {
 func (irl *IPBasedRateLimiter) increaseReputation(clientID string) {
 	irl.reputationMu.Lock()
 	defer irl.reputationMu.Unlock()
-	
+
 	if irl.reputation[clientID] < 100 {
 		irl.reputation[clientID]++
 	}
@@ -305,6 +305,6 @@ func (irl *IPBasedRateLimiter) increaseReputation(clientID string) {
 func (irl *IPBasedRateLimiter) decreaseReputation(clientID string) {
 	irl.reputationMu.Lock()
 	defer irl.reputationMu.Unlock()
-	
+
 	irl.reputation[clientID]--
 }

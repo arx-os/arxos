@@ -9,8 +9,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -34,9 +34,9 @@ func ExecuteQuery(opts QueryOptions) error {
 	// Build and execute query
 	queryBuilder := NewQueryBuilder(opts)
 	query, args := queryBuilder.Build()
-	
+
 	logger.Debug("Executing query: %s with args: %v", query, args)
-	
+
 	// Execute query based on count flag
 	if opts.Count {
 		count, err := executeCountQuery(ctx, db, query, args)
@@ -112,7 +112,7 @@ func (qb *QueryBuilder) Build() (string, []interface{}) {
 	if qb.opts.Limit > 0 {
 		query += " LIMIT ?"
 		qb.args = append(qb.args, qb.opts.Limit)
-		
+
 		if qb.opts.Offset > 0 {
 			query += " OFFSET ?"
 			qb.args = append(qb.args, qb.opts.Offset)
@@ -164,10 +164,10 @@ func (qb *QueryBuilder) addFilters() {
 	if qb.opts.SQL != "" {
 		// Basic SQL injection protection - only allow SELECT-like conditions
 		sqlLower := strings.ToLower(strings.TrimSpace(qb.opts.SQL))
-		if !strings.Contains(sqlLower, "drop") && 
-		   !strings.Contains(sqlLower, "delete") && 
-		   !strings.Contains(sqlLower, "insert") && 
-		   !strings.Contains(sqlLower, "update") {
+		if !strings.Contains(sqlLower, "drop") &&
+			!strings.Contains(sqlLower, "delete") &&
+			!strings.Contains(sqlLower, "insert") &&
+			!strings.Contains(sqlLower, "update") {
 			qb.wheres = append(qb.wheres, "("+qb.opts.SQL+")")
 		}
 	}
@@ -175,48 +175,48 @@ func (qb *QueryBuilder) addFilters() {
 
 // QueryResult holds query results and metadata
 type QueryResult struct {
-	Equipment    []*models.Equipment `json:"equipment"`
-	Total        int                 `json:"total"`
-	Count        int                 `json:"count"`
-	Offset       int                 `json:"offset"`
-	Limit        int                 `json:"limit"`
-	QueryTime    time.Duration       `json:"query_time"`
-	ExecutedAt   time.Time           `json:"executed_at"`
+	Equipment  []*models.Equipment `json:"equipment"`
+	Total      int                 `json:"total"`
+	Count      int                 `json:"count"`
+	Offset     int                 `json:"offset"`
+	Limit      int                 `json:"limit"`
+	QueryTime  time.Duration       `json:"query_time"`
+	ExecutedAt time.Time           `json:"executed_at"`
 }
 
 // executeCountQuery executes a count query and returns the result
 func executeCountQuery(ctx context.Context, db *database.SQLiteDB, query string, args []interface{}) (int, error) {
 	// Convert SELECT query to COUNT query
 	countQuery := strings.Replace(query, "SELECT DISTINCT", "SELECT COUNT(DISTINCT", 1)
-	
+
 	// Find the FROM clause and wrap everything before it
 	fromIndex := strings.Index(strings.ToUpper(countQuery), "FROM")
 	if fromIndex == -1 {
 		return 0, fmt.Errorf("invalid query: no FROM clause found")
 	}
-	
+
 	// Rebuild as count query
 	countQuery = "SELECT COUNT(*) FROM (" + query + ") as count_query"
-	
+
 	var count int
 	row := db.QueryRow(ctx, countQuery, args...)
 	if err := row.Scan(&count); err != nil {
 		return 0, fmt.Errorf("failed to scan count result: %w", err)
 	}
-	
+
 	return count, nil
 }
 
 // executeEquipmentQuery executes the equipment query and returns results
 func executeEquipmentQuery(ctx context.Context, db *database.SQLiteDB, query string, args []interface{}, opts QueryOptions) (*QueryResult, error) {
 	start := time.Now()
-	
+
 	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var equipment []*models.Equipment
 	for rows.Next() {
 		eq, err := scanEquipmentRow(rows)
@@ -225,13 +225,13 @@ func executeEquipmentQuery(ctx context.Context, db *database.SQLiteDB, query str
 		}
 		equipment = append(equipment, eq)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
-	
+
 	queryTime := time.Since(start)
-	
+
 	result := &QueryResult{
 		Equipment:  equipment,
 		Count:      len(equipment),
@@ -240,7 +240,7 @@ func executeEquipmentQuery(ctx context.Context, db *database.SQLiteDB, query str
 		QueryTime:  queryTime,
 		ExecutedAt: time.Now(),
 	}
-	
+
 	// Get total count if pagination is used
 	if opts.Limit > 0 {
 		totalCount, err := executeCountQuery(ctx, db, query, args)
@@ -253,7 +253,7 @@ func executeEquipmentQuery(ctx context.Context, db *database.SQLiteDB, query str
 	} else {
 		result.Total = len(equipment)
 	}
-	
+
 	return result, nil
 }
 
@@ -264,15 +264,15 @@ func scanEquipmentRow(rows interface{ Scan(...interface{}) error }) (*models.Equ
 	var floorLevel *int
 	var floorName, roomNumber, roomName, buildingName, buildingID *string
 	var installationDate *time.Time
-	
+
 	err := rows.Scan(
 		&eq.ID,
-		&eq.Path,           // equipment_tag maps to Path
+		&eq.Path, // equipment_tag maps to Path
 		&eq.Name,
 		&eq.Type,
 		&eq.Status,
 		&eq.Model,
-		&eq.Model,          // manufacturer -> model for now
+		&eq.Model, // manufacturer -> model for now
 		&eq.Serial,
 		&installationDate,
 		&locationX,
@@ -285,24 +285,25 @@ func scanEquipmentRow(rows interface{ Scan(...interface{}) error }) (*models.Equ
 		&buildingName,
 		&buildingID,
 	)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Set location if coordinates exist
 	if locationX != nil && locationY != nil {
-		eq.Location = &models.Point{
+		eq.Location = &models.Point3D{
 			X: *locationX,
 			Y: *locationY,
+			Z: 0, // Default to floor level
 		}
 	}
-	
+
 	// Set installation date
 	if installationDate != nil {
 		eq.Installed = installationDate
 	}
-	
+
 	// Build metadata with additional info
 	eq.Metadata = make(map[string]interface{})
 	if floorLevel != nil {
@@ -326,7 +327,7 @@ func scanEquipmentRow(rows interface{ Scan(...interface{}) error }) (*models.Equ
 	if locationZ != nil {
 		eq.Metadata["location_z"] = *locationZ
 	}
-	
+
 	return &eq, nil
 }
 
@@ -355,24 +356,24 @@ func outputTable(equipment []*models.Equipment, outputFile string) error {
 		if eq.Location != nil {
 			location = fmt.Sprintf("%.1f,%.1f", eq.Location.X, eq.Location.Y)
 		}
-		
+
 		// Building info from metadata
 		building := getStringFromMetadata(eq.Metadata, "building_name", "N/A")
 		floor := getStringFromMetadata(eq.Metadata, "floor_level", "N/A")
 		room := getStringFromMetadata(eq.Metadata, "room_number", "N/A")
-		
+
 		// Truncate long names for better table formatting
 		name := eq.Name
 		if len(name) > 20 {
 			name = name[:17] + "..."
 		}
-		
+
 		eqType := eq.Type
 		if len(eqType) > 15 {
 			eqType = eqType[:12] + "..."
 		}
-		
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", 
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 			eq.ID, name, eqType, eq.Status, building, floor, room, location)
 	}
 
@@ -384,7 +385,7 @@ func getStringFromMetadata(metadata map[string]interface{}, key, defaultValue st
 	if metadata == nil {
 		return defaultValue
 	}
-	
+
 	if value, exists := metadata[key]; exists {
 		if strValue, ok := value.(string); ok {
 			return strValue
@@ -397,7 +398,7 @@ func getStringFromMetadata(metadata map[string]interface{}, key, defaultValue st
 			return fmt.Sprintf("%.0f", floatValue)
 		}
 	}
-	
+
 	return defaultValue
 }
 
@@ -439,18 +440,18 @@ func outputCSV(equipment []*models.Equipment, outputFile string) error {
 			locationX = fmt.Sprintf("%.3f", eq.Location.X)
 			locationY = fmt.Sprintf("%.3f", eq.Location.Y)
 		}
-		
+
 		// Building info from metadata
 		building := getStringFromMetadata(eq.Metadata, "building_name", "")
 		floor := getStringFromMetadata(eq.Metadata, "floor_level", "")
 		room := getStringFromMetadata(eq.Metadata, "room_number", "")
-		
+
 		// Installation date
 		installed := ""
 		if eq.Installed != nil {
 			installed = eq.Installed.Format("2006-01-02")
 		}
-		
+
 		// Escape CSV fields that might contain commas or quotes
 		fields := []string{
 			csvEscape(eq.ID),
@@ -466,7 +467,7 @@ func outputCSV(equipment []*models.Equipment, outputFile string) error {
 			csvEscape(eq.Serial),
 			csvEscape(installed),
 		}
-		
+
 		fmt.Fprintf(output, "%s\n", strings.Join(fields, ","))
 	}
 
@@ -478,12 +479,12 @@ func csvEscape(field string) string {
 	if field == "" {
 		return ""
 	}
-	
+
 	// If field contains comma, newline, or quote, wrap in quotes and escape quotes
 	if strings.Contains(field, ",") || strings.Contains(field, "\n") || strings.Contains(field, "\"") {
 		field = strings.ReplaceAll(field, "\"", "\"\"")
 		return "\"" + field + "\""
 	}
-	
+
 	return field
 }

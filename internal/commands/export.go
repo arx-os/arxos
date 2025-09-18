@@ -152,11 +152,11 @@ func enrichBIMWithIntelligence(building *bim.SimpleBuilding, results *simulation
 			}
 
 			eq.Extensions["intelligence"] = map[string]interface{}{
-				"energy_flow":          eqSim.EnergyFlow,
-				"particle_load":        eqSim.ParticleLoad,
-				"maintenance_due":      eqSim.NextMaintenance,
-				"failure_probability":  eqSim.FailureProbability,
-				"efficiency_score":     eqSim.EfficiencyScore,
+				"energy_flow":         eqSim.EnergyFlow,
+				"particle_load":       eqSim.ParticleLoad,
+				"maintenance_due":     eqSim.NextMaintenance,
+				"failure_probability": eqSim.FailureProbability,
+				"efficiency_score":    eqSim.EfficiencyScore,
 			}
 
 			// Update status based on simulation
@@ -174,11 +174,11 @@ func enrichBIMWithIntelligence(building *bim.SimpleBuilding, results *simulation
 	}
 
 	building.Metadata["simulation_results"] = map[string]interface{}{
-		"timestamp":           results.Timestamp,
-		"total_energy_flow":   results.TotalEnergyFlow,
-		"average_efficiency":  results.AverageEfficiency,
-		"critical_issues":     results.CriticalIssues,
-		"recommendations":     results.Recommendations,
+		"timestamp":          results.Timestamp,
+		"total_energy_flow":  results.TotalEnergyFlow,
+		"average_efficiency": results.AverageEfficiency,
+		"critical_issues":    results.CriticalIssues,
+		"recommendations":    results.Recommendations,
 	}
 }
 

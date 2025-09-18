@@ -22,14 +22,14 @@ type BuildingService interface {
 	CreateBuilding(ctx context.Context, building *models.FloorPlan) error
 	UpdateBuilding(ctx context.Context, building *models.FloorPlan) error
 	DeleteBuilding(ctx context.Context, id string) error
-	
+
 	// Equipment operations
 	GetEquipment(ctx context.Context, id string) (*models.Equipment, error)
 	ListEquipment(ctx context.Context, buildingID string, filters map[string]interface{}) ([]*models.Equipment, error)
 	CreateEquipment(ctx context.Context, equipment *models.Equipment) error
 	UpdateEquipment(ctx context.Context, equipment *models.Equipment) error
 	DeleteEquipment(ctx context.Context, id string) error
-	
+
 	// Room operations
 	GetRoom(ctx context.Context, id string) (*models.Room, error)
 	ListRooms(ctx context.Context, buildingID string) ([]*models.Room, error)
@@ -85,12 +85,12 @@ type AuthService interface {
 	Login(ctx context.Context, email, password string) (*AuthResponse, error)
 	Logout(ctx context.Context, token string) error
 	Register(ctx context.Context, email, password, name string) (*User, error)
-	
+
 	// Token operations
 	ValidateToken(ctx context.Context, token string) (*TokenClaims, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*AuthResponse, error)
 	RevokeToken(ctx context.Context, token string) error
-	
+
 	// Password operations
 	ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error
 	ResetPassword(ctx context.Context, email string) error
@@ -106,20 +106,20 @@ type OrganizationService interface {
 	CreateOrganization(ctx context.Context, org *models.Organization, ownerID string) error
 	UpdateOrganization(ctx context.Context, org *models.Organization) error
 	DeleteOrganization(ctx context.Context, id string) error
-	
+
 	// Member management
 	AddMember(ctx context.Context, orgID, userID string, role models.Role) error
 	RemoveMember(ctx context.Context, orgID, userID string) error
 	UpdateMemberRole(ctx context.Context, orgID, userID string, role models.Role) error
 	GetMembers(ctx context.Context, orgID string) ([]*models.OrganizationMember, error)
 	GetMemberRole(ctx context.Context, orgID, userID string) (*models.Role, error)
-	
+
 	// Invitation management
 	CreateInvitation(ctx context.Context, orgID, email string, role models.Role, invitedBy string) (*models.OrganizationInvitation, error)
 	AcceptInvitation(ctx context.Context, token string, userID string) error
 	RevokeInvitation(ctx context.Context, invitationID string) error
 	ListPendingInvitations(ctx context.Context, orgID string) ([]*models.OrganizationInvitation, error)
-	
+
 	// Permission and access control
 	HasPermission(ctx context.Context, orgID, userID string, permission models.Permission) (bool, error)
 	GetUserPermissions(ctx context.Context, orgID, userID string) ([]models.Permission, error)
@@ -133,7 +133,7 @@ type StorageService interface {
 	DownloadFile(ctx context.Context, key string) ([]byte, error)
 	DeleteFile(ctx context.Context, key string) error
 	ListFiles(ctx context.Context, prefix string) ([]string, error)
-	
+
 	// URL generation
 	GenerateUploadURL(ctx context.Context, key string, expiry time.Duration) (string, error)
 	GenerateDownloadURL(ctx context.Context, key string, expiry time.Duration) (string, error)
@@ -157,14 +157,14 @@ type User struct {
 
 // Organization represents an organization
 type Organization struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Plan        string    `json:"plan"` // free, starter, professional, enterprise
-	Active      bool      `json:"active"`
+	ID          string      `json:"id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Plan        string      `json:"plan"` // free, starter, professional, enterprise
+	Active      bool        `json:"active"`
 	Settings    OrgSettings `json:"settings"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
 }
 
 // OrgSettings contains organization-specific settings
@@ -177,11 +177,11 @@ type OrgSettings struct {
 
 // AuthResponse contains authentication response data
 type AuthResponse struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token"`
-	TokenType    string    `json:"token_type"`
-	ExpiresIn    int       `json:"expires_in"`
-	User         *User     `json:"user"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	User         *User  `json:"user"`
 }
 
 // TokenClaims contains JWT token claims
@@ -213,13 +213,13 @@ type SyncResponse struct {
 
 // Change represents a data change
 type Change struct {
-	ID         string                 `json:"id"`
-	Type       string                 `json:"type"` // create, update, delete
-	Entity     string                 `json:"entity"` // building, equipment, room
-	EntityID   string                 `json:"entity_id"`
-	Data       map[string]interface{} `json:"data"`
-	Timestamp  time.Time              `json:"timestamp"`
-	UserID     string                 `json:"user_id"`
+	ID        string                 `json:"id"`
+	Type      string                 `json:"type"`   // create, update, delete
+	Entity    string                 `json:"entity"` // building, equipment, room
+	EntityID  string                 `json:"entity_id"`
+	Data      map[string]interface{} `json:"data"`
+	Timestamp time.Time              `json:"timestamp"`
+	UserID    string                 `json:"user_id"`
 }
 
 // Conflict represents a sync conflict

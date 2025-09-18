@@ -7,8 +7,8 @@ import (
 
 func TestBuilding_Validate(t *testing.T) {
 	tests := []struct {
-		name        string
-		building    Building
+		name         string
+		building     Building
 		expectIssues int
 	}{
 		{

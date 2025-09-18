@@ -262,11 +262,11 @@ func outputSpatialTable(results []*database.SpatialEquipment) error {
 func outputSpatialJSON(results []*database.SpatialEquipment) error {
 	// Create a simplified JSON structure
 	type JSONResult struct {
-		ID         string                   `json:"id"`
-		Position   *spatial.Point3D         `json:"position,omitempty"`
-		Distance   float64                  `json:"distance,omitempty"`
-		Confidence string                   `json:"confidence,omitempty"`
-		Metadata   map[string]interface{}   `json:"metadata,omitempty"`
+		ID         string                 `json:"id"`
+		Position   *spatial.Point3D       `json:"position,omitempty"`
+		Distance   float64                `json:"distance,omitempty"`
+		Confidence string                 `json:"confidence,omitempty"`
+		Metadata   map[string]interface{} `json:"metadata,omitempty"`
 	}
 
 	jsonResults := make([]JSONResult, 0, len(results))

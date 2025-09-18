@@ -23,27 +23,27 @@ type EquipmentMetrics struct {
 
 // MetricDataPoint represents a single measurement at a point in time
 type MetricDataPoint struct {
-	Timestamp   time.Time         `json:"timestamp"`
-	MetricName  string            `json:"metric_name"`
-	Value       float64           `json:"value"`
-	Unit        string            `json:"unit"`
-	Source      string            `json:"source"` // energy, connection, sensor, etc.
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	Timestamp  time.Time         `json:"timestamp"`
+	MetricName string            `json:"metric_name"`
+	Value      float64           `json:"value"`
+	Unit       string            `json:"unit"`
+	Source     string            `json:"source"` // energy, connection, sensor, etc.
+	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
 // TrendAnalysis contains statistical analysis of a metric over time
 type TrendAnalysis struct {
-	MetricName       string        `json:"metric_name"`
-	Direction        TrendDirection `json:"direction"`
-	Slope            float64       `json:"slope"`           // Rate of change
-	Confidence       float64       `json:"confidence"`      // 0-1
-	RSquared         float64       `json:"r_squared"`       // Correlation coefficient
-	StandardDev      float64       `json:"standard_dev"`    // Variability
-	Mean             float64       `json:"mean"`
-	RecentChange     float64       `json:"recent_change"`   // % change in last period
-	PredictedValue   float64       `json:"predicted_value"` // Next expected value
-	AnalysisWindow   time.Duration `json:"analysis_window"`
-	LastAnalyzed     time.Time     `json:"last_analyzed"`
+	MetricName     string         `json:"metric_name"`
+	Direction      TrendDirection `json:"direction"`
+	Slope          float64        `json:"slope"`        // Rate of change
+	Confidence     float64        `json:"confidence"`   // 0-1
+	RSquared       float64        `json:"r_squared"`    // Correlation coefficient
+	StandardDev    float64        `json:"standard_dev"` // Variability
+	Mean           float64        `json:"mean"`
+	RecentChange   float64        `json:"recent_change"`   // % change in last period
+	PredictedValue float64        `json:"predicted_value"` // Next expected value
+	AnalysisWindow time.Duration  `json:"analysis_window"`
+	LastAnalyzed   time.Time      `json:"last_analyzed"`
 }
 
 // TrendDirection indicates the direction of change over time
@@ -189,13 +189,13 @@ type PatternAnalysis struct {
 
 // Pattern represents a detected behavioral pattern
 type Pattern struct {
-	Type        PatternType `json:"type"`
-	Description string      `json:"description"`
-	Confidence  float64     `json:"confidence"`
-	MetricName  string      `json:"metric_name"`
-	StartTime   time.Time   `json:"start_time"`
-	EndTime     time.Time   `json:"end_time"`
-	Severity    string      `json:"severity"`
+	Type        PatternType            `json:"type"`
+	Description string                 `json:"description"`
+	Confidence  float64                `json:"confidence"`
+	MetricName  string                 `json:"metric_name"`
+	StartTime   time.Time              `json:"start_time"`
+	EndTime     time.Time              `json:"end_time"`
+	Severity    string                 `json:"severity"`
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -295,13 +295,13 @@ func (mh *MetricsHistory) calculateStandardDev(values []float64, mean float64) f
 	if len(values) <= 1 {
 		return 0
 	}
-	
+
 	sumSquares := 0.0
 	for _, v := range values {
 		diff := v - mean
 		sumSquares += diff * diff
 	}
-	
+
 	variance := sumSquares / float64(len(values)-1)
 	return variance // Return variance for simplicity, square root would be std dev
 }
@@ -328,7 +328,7 @@ func (mh *MetricsHistory) linearRegression(values []float64, timestamps []time.T
 	for i := 0; i < n; i++ {
 		xDiff := x[i] - xMean
 		yDiff := values[i] - yMean
-		
+
 		numerator += xDiff * yDiff
 		xDenominator += xDiff * xDiff
 		yDenominator += yDiff * yDiff
@@ -339,7 +339,7 @@ func (mh *MetricsHistory) linearRegression(values []float64, timestamps []time.T
 	}
 
 	slope = numerator / xDenominator
-	
+
 	// Calculate R-squared
 	if yDenominator > 0 {
 		correlation := numerator / (xDenominator * yDenominator)
@@ -360,7 +360,7 @@ func (mh *MetricsHistory) determineTrendDirection(slope, standardDev, confidence
 	}
 
 	threshold := standardDev * 0.1 // Adjust threshold based on variability
-	
+
 	if slope > threshold {
 		return TrendIncreasing
 	} else if slope < -threshold {
@@ -472,7 +472,7 @@ func (mh *MetricsHistory) detectDegradationPatterns(analysis *PatternAnalysis, m
 func (mh *MetricsHistory) detectUsagePatterns(analysis *PatternAnalysis, metrics *EquipmentMetrics) {
 	// Look for usage-related metrics
 	usageMetrics := []string{"usage_hours", "operational_hours", "load_factor"}
-	
+
 	for _, metricName := range usageMetrics {
 		if trend, exists := metrics.Trends[metricName]; exists {
 			if trend.Direction == TrendIncreasing && trend.RecentChange > 30 {
@@ -494,7 +494,7 @@ func (mh *MetricsHistory) detectDailyCycle(dataPoints []MetricDataPoint) bool {
 	// Simple daily cycle detection
 	// Group by hour of day and check for consistent patterns
 	hourlyAverages := make(map[int][]float64)
-	
+
 	for _, dp := range dataPoints {
 		hour := dp.Timestamp.Hour()
 		hourlyAverages[hour] = append(hourlyAverages[hour], dp.Value)

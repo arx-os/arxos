@@ -133,8 +133,8 @@ IDF 103A - Telecom Closet`,
 			},
 		},
 		{
-			name: "No rooms",
-			text: "Building Information\nNo room data here",
+			name:     "No rooms",
+			text:     "Building Information\nNo room data here",
 			expected: []map[string]string{},
 		},
 	}

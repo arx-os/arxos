@@ -20,39 +20,39 @@ type User struct {
 	UpdatedAt    *time.Time `json:"updated_at" db:"updated_at"`
 
 	// MFA
-	MFAEnabled   bool   `json:"mfa_enabled" db:"mfa_enabled"`
-	MFASecret    string `json:"-" db:"mfa_secret"`
+	MFAEnabled bool   `json:"mfa_enabled" db:"mfa_enabled"`
+	MFASecret  string `json:"-" db:"mfa_secret"`
 
 	// Email verification
-	EmailVerified bool      `json:"email_verified" db:"email_verified"`
-	PhoneVerified bool      `json:"phone_verified" db:"phone_verified"`
+	EmailVerified bool `json:"email_verified" db:"email_verified"`
+	PhoneVerified bool `json:"phone_verified" db:"phone_verified"`
 
 	// Organization context (not stored in user table)
-	CurrentOrgID string                `json:"current_org_id,omitempty"`
-	Organizations []OrganizationMember  `json:"organizations,omitempty"`
+	CurrentOrgID  string               `json:"current_org_id,omitempty"`
+	Organizations []OrganizationMember `json:"organizations,omitempty"`
 }
 
 // UserPreferences stores user-specific preferences
 type UserPreferences struct {
-	UserID          string `json:"user_id" db:"user_id"`
-	Theme           string `json:"theme" db:"theme"` // light, dark, auto
-	Language        string `json:"language" db:"language"`
-	TimeZone        string `json:"timezone" db:"timezone"`
-	DateFormat      string `json:"date_format" db:"date_format"`
-	EmailNotifications bool `json:"email_notifications" db:"email_notifications"`
-	PushNotifications  bool `json:"push_notifications" db:"push_notifications"`
-	DefaultOrgID    string `json:"default_org_id" db:"default_org_id"`
+	UserID             string `json:"user_id" db:"user_id"`
+	Theme              string `json:"theme" db:"theme"` // light, dark, auto
+	Language           string `json:"language" db:"language"`
+	TimeZone           string `json:"timezone" db:"timezone"`
+	DateFormat         string `json:"date_format" db:"date_format"`
+	EmailNotifications bool   `json:"email_notifications" db:"email_notifications"`
+	PushNotifications  bool   `json:"push_notifications" db:"push_notifications"`
+	DefaultOrgID       string `json:"default_org_id" db:"default_org_id"`
 }
 
 // EmailVerification represents an email verification token
 type EmailVerification struct {
-	ID        string    `json:"id" db:"id"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	Email     string    `json:"email" db:"email"`
-	Token     string    `json:"-" db:"token"`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
+	ID         string     `json:"id" db:"id"`
+	UserID     string     `json:"user_id" db:"user_id"`
+	Email      string     `json:"email" db:"email"`
+	Token      string     `json:"-" db:"token"`
+	ExpiresAt  time.Time  `json:"expires_at" db:"expires_at"`
 	VerifiedAt *time.Time `json:"verified_at,omitempty" db:"verified_at"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
 }
 
 // IsActive checks if the user account is active

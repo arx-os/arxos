@@ -34,15 +34,15 @@ type DataSet interface {
 
 // RenderOptions configures how data is rendered
 type RenderOptions struct {
-	Width        int
-	Height       int
-	ColorScheme  ColorScheme
-	SymbolSet    SymbolSet
-	Title        string
-	ShowLegend   bool
-	ShowAxes     bool
-	ShowValues   bool
-	Interactive  bool
+	Width       int
+	Height      int
+	ColorScheme ColorScheme
+	SymbolSet   SymbolSet
+	Title       string
+	ShowLegend  bool
+	ShowAxes    bool
+	ShowValues  bool
+	Interactive bool
 }
 
 // TerminalRenderer implements the Renderer interface

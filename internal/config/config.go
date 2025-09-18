@@ -29,14 +29,14 @@ const (
 // Config represents the complete ArxOS configuration
 type Config struct {
 	// Core settings
-	Mode      Mode   `json:"mode"`
-	Version   string `json:"version"`
-	StateDir  string `json:"state_dir"`
-	CacheDir  string `json:"cache_dir"`
-	
+	Mode     Mode   `json:"mode"`
+	Version  string `json:"version"`
+	StateDir string `json:"state_dir"`
+	CacheDir string `json:"cache_dir"`
+
 	// Cloud settings
 	Cloud CloudConfig `json:"cloud"`
-	
+
 	// Storage settings
 	Storage StorageConfig `json:"storage"`
 
@@ -46,10 +46,10 @@ type Config struct {
 
 	// API settings
 	API APIConfig `json:"api"`
-	
+
 	// Telemetry settings
 	Telemetry TelemetryConfig `json:"telemetry"`
-	
+
 	// Feature flags
 	Features FeatureFlags `json:"features"`
 
@@ -59,34 +59,34 @@ type Config struct {
 
 // CloudConfig contains cloud-specific configuration
 type CloudConfig struct {
-	Enabled     bool   `json:"enabled"`
-	BaseURL     string `json:"base_url"`
-	APIKey      string `json:"-"` // Never serialize API keys
-	OrgID       string `json:"org_id"`
-	SyncEnabled bool   `json:"sync_enabled"`
+	Enabled      bool          `json:"enabled"`
+	BaseURL      string        `json:"base_url"`
+	APIKey       string        `json:"-"` // Never serialize API keys
+	OrgID        string        `json:"org_id"`
+	SyncEnabled  bool          `json:"sync_enabled"`
 	SyncInterval time.Duration `json:"sync_interval"`
 }
 
 // StorageConfig defines storage backend configuration
 type StorageConfig struct {
-	Backend      string            `json:"backend"` // local, s3, gcs, azure
-	LocalPath    string            `json:"local_path"`
-	CloudBucket  string            `json:"cloud_bucket"`
-	CloudRegion  string            `json:"cloud_region"`
-	CloudPrefix  string            `json:"cloud_prefix"`
-	Credentials  map[string]string `json:"-"` // Sensitive, not serialized
+	Backend     string            `json:"backend"` // local, s3, gcs, azure
+	LocalPath   string            `json:"local_path"`
+	CloudBucket string            `json:"cloud_bucket"`
+	CloudRegion string            `json:"cloud_region"`
+	CloudPrefix string            `json:"cloud_prefix"`
+	Credentials map[string]string `json:"-"` // Sensitive, not serialized
 }
 
 // DatabaseConfig defines database configuration
 type DatabaseConfig struct {
-	Type           string        `json:"type"`   // sqlite, postgres, hybrid
-	Path           string        `json:"path"`   // For SQLite
-	Driver         string        `json:"driver"` // Legacy field, maps to Type
-	DataSourceName string        `json:"-"`      // Never serialize connection strings
-	MaxOpenConns   int           `json:"max_open_conns"`
-	MaxConnections int           `json:"max_connections"` // Alias for MaxOpenConns
-	MaxIdleConns   int           `json:"max_idle_conns"`
-	ConnLifetime   time.Duration `json:"conn_lifetime"`
+	Type            string        `json:"type"`   // sqlite, postgres, hybrid
+	Path            string        `json:"path"`   // For SQLite
+	Driver          string        `json:"driver"` // Legacy field, maps to Type
+	DataSourceName  string        `json:"-"`      // Never serialize connection strings
+	MaxOpenConns    int           `json:"max_open_conns"`
+	MaxConnections  int           `json:"max_connections"` // Alias for MaxOpenConns
+	MaxIdleConns    int           `json:"max_idle_conns"`
+	ConnLifetime    time.Duration `json:"conn_lifetime"`
 	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"` // Alias for ConnLifetime
 	MigrationsPath  string        `json:"migrations_path"`
 	AutoMigrate     bool          `json:"auto_migrate"`
@@ -106,28 +106,28 @@ type PostGISConfig struct {
 // APIConfig contains API client configuration
 type APIConfig struct {
 	Timeout       time.Duration `json:"timeout"`
-	RetryAttempts int          `json:"retry_attempts"`
+	RetryAttempts int           `json:"retry_attempts"`
 	RetryDelay    time.Duration `json:"retry_delay"`
 	UserAgent     string        `json:"user_agent"`
 }
 
 // TelemetryConfig controls metrics and analytics
 type TelemetryConfig struct {
-	Enabled       bool   `json:"enabled"`
-	Endpoint      string `json:"endpoint"`
-	SampleRate    float64 `json:"sample_rate"`
-	Debug         bool   `json:"debug"`
-	AnonymousID   string `json:"anonymous_id"`
+	Enabled     bool    `json:"enabled"`
+	Endpoint    string  `json:"endpoint"`
+	SampleRate  float64 `json:"sample_rate"`
+	Debug       bool    `json:"debug"`
+	AnonymousID string  `json:"anonymous_id"`
 }
 
 // FeatureFlags controls feature availability
 type FeatureFlags struct {
-	CloudSync        bool `json:"cloud_sync"`
-	AIIntegration    bool `json:"ai_integration"`
-	OfflineMode      bool `json:"offline_mode"`
-	BetaFeatures     bool `json:"beta_features"`
-	Analytics        bool `json:"analytics"`
-	AutoUpdate       bool `json:"auto_update"`
+	CloudSync     bool `json:"cloud_sync"`
+	AIIntegration bool `json:"ai_integration"`
+	OfflineMode   bool `json:"offline_mode"`
+	BetaFeatures  bool `json:"beta_features"`
+	Analytics     bool `json:"analytics"`
+	AutoUpdate    bool `json:"auto_update"`
 }
 
 // SecurityConfig contains security-related settings
@@ -145,43 +145,42 @@ type SecurityConfig struct {
 	BcryptCost         int           `json:"bcrypt_cost"`
 }
 
-
 // Default returns a default configuration for local mode
 func Default() *Config {
 	homeDir, _ := os.UserHomeDir()
-	
+
 	return &Config{
 		Mode:     ModeLocal,
 		Version:  "0.1.0",
 		StateDir: filepath.Join(homeDir, ".arxos"),
 		CacheDir: filepath.Join(homeDir, ".arxos", "cache"),
-		
+
 		Cloud: CloudConfig{
 			Enabled:      false,
 			BaseURL:      "https://api.arxos.io",
 			SyncEnabled:  false,
 			SyncInterval: 5 * time.Minute,
 		},
-		
+
 		Storage: StorageConfig{
 			Backend:   "local",
 			LocalPath: filepath.Join(homeDir, ".arxos", "data"),
 		},
-		
+
 		API: APIConfig{
 			Timeout:       30 * time.Second,
 			RetryAttempts: 3,
 			RetryDelay:    1 * time.Second,
 			UserAgent:     "ArxOS-CLI/0.1.0",
 		},
-		
+
 		Telemetry: TelemetryConfig{
 			Enabled:    false,
 			Endpoint:   "https://telemetry.arxos.io",
 			SampleRate: 0.1,
 			Debug:      false,
 		},
-		
+
 		Features: FeatureFlags{
 			CloudSync:     false,
 			AIIntegration: false,
@@ -231,27 +230,27 @@ func Default() *Config {
 // Load loads configuration from file or environment
 func Load(configPath string) (*Config, error) {
 	config := Default()
-	
+
 	// Load from file if it exists
 	if configPath != "" {
 		if err := config.LoadFromFile(configPath); err != nil {
 			logger.Warn("Failed to load config file, using defaults: %v", err)
 		}
 	}
-	
+
 	// Override with environment variables
 	config.LoadFromEnv()
-	
+
 	// Validate configuration
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
-	
+
 	// Ensure directories exist
 	if err := config.EnsureDirectories(); err != nil {
 		return nil, fmt.Errorf("failed to create directories: %w", err)
 	}
-	
+
 	return config, nil
 }
 
@@ -261,11 +260,11 @@ func (c *Config) LoadFromFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read config file: %w", err)
 	}
-	
+
 	if err := json.Unmarshal(data, c); err != nil {
 		return fmt.Errorf("failed to parse config file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -275,7 +274,7 @@ func (c *Config) LoadFromEnv() {
 	if mode := os.Getenv("ARXOS_MODE"); mode != "" {
 		c.Mode = Mode(mode)
 	}
-	
+
 	// Cloud settings
 	if url := os.Getenv("ARXOS_CLOUD_URL"); url != "" {
 		c.Cloud.BaseURL = url
@@ -286,7 +285,7 @@ func (c *Config) LoadFromEnv() {
 	if org := os.Getenv("ARXOS_ORG_ID"); org != "" {
 		c.Cloud.OrgID = org
 	}
-	
+
 	// Storage settings
 	if backend := os.Getenv("ARXOS_STORAGE_BACKEND"); backend != "" {
 		c.Storage.Backend = backend
@@ -297,7 +296,7 @@ func (c *Config) LoadFromEnv() {
 	if region := os.Getenv("ARXOS_STORAGE_REGION"); region != "" {
 		c.Storage.CloudRegion = region
 	}
-	
+
 	// Feature flags
 	if enabled := os.Getenv("ARXOS_CLOUD_SYNC"); enabled == "true" {
 		c.Features.CloudSync = true
@@ -309,7 +308,7 @@ func (c *Config) LoadFromEnv() {
 	if enabled := os.Getenv("ARXOS_TELEMETRY"); enabled == "true" {
 		c.Telemetry.Enabled = true
 	}
-	
+
 	// Storage credentials from environment
 	c.Storage.Credentials = make(map[string]string)
 	if key := os.Getenv("AWS_ACCESS_KEY_ID"); key != "" {
@@ -414,7 +413,7 @@ func (c *Config) Validate() error {
 	default:
 		return fmt.Errorf("invalid mode: %s", c.Mode)
 	}
-	
+
 	// Validate cloud configuration if enabled
 	if c.Cloud.Enabled || c.Mode == ModeCloud {
 		if c.Cloud.BaseURL == "" {
@@ -424,7 +423,7 @@ func (c *Config) Validate() error {
 			logger.Warn("No API key configured for cloud mode")
 		}
 	}
-	
+
 	// Validate storage backend
 	switch c.Storage.Backend {
 	case "local", "s3", "gcs", "azure":
@@ -432,7 +431,7 @@ func (c *Config) Validate() error {
 	default:
 		return fmt.Errorf("invalid storage backend: %s", c.Storage.Backend)
 	}
-	
+
 	// Validate storage configuration for cloud backends
 	if c.Storage.Backend != "local" {
 		if c.Storage.CloudBucket == "" {
@@ -502,7 +501,7 @@ func (c *Config) EnsureDirectories() error {
 		c.CacheDir,
 		c.Storage.LocalPath,
 	}
-	
+
 	for _, dir := range dirs {
 		if dir == "" {
 			continue
@@ -511,7 +510,7 @@ func (c *Config) EnsureDirectories() error {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -520,20 +519,20 @@ func (c *Config) Save(path string) error {
 	// Don't save sensitive data
 	configCopy := *c
 	configCopy.Storage.Credentials = nil
-	configCopy.Cloud.APIKey = "" // Never save API keys
-	configCopy.Security.JWTSecret = "" // Never save JWT secrets
-	configCopy.Security.TLSKeyPath = "" // Never save TLS key paths
+	configCopy.Cloud.APIKey = ""            // Never save API keys
+	configCopy.Security.JWTSecret = ""      // Never save JWT secrets
+	configCopy.Security.TLSKeyPath = ""     // Never save TLS key paths
 	configCopy.Database.DataSourceName = "" // Never save connection strings
-	
+
 	data, err := json.MarshalIndent(configCopy, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	
+
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
-	
+
 	return nil
 }
 

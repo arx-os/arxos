@@ -15,7 +15,7 @@ func TestLogLevel_Constants(t *testing.T) {
 	assert.Equal(t, 1, int(INFO))
 	assert.Equal(t, 2, int(WARN))
 	assert.Equal(t, 3, int(ERROR))
-	
+
 	// Verify ordering for filtering
 	assert.True(t, DEBUG < INFO)
 	assert.True(t, INFO < WARN)
@@ -64,16 +64,16 @@ func TestLogger_LevelFiltering(t *testing.T) {
 
 	// Test that only messages at or above the level are logged
 	logger.Debug("debug message")
-	logger.Info("info message") 
+	logger.Info("info message")
 	logger.Warn("warn message")
 	logger.Error("error message")
 
 	output := buf.String()
-	
+
 	// Should not contain debug or info
 	assert.NotContains(t, output, "debug message")
 	assert.NotContains(t, output, "info message")
-	
+
 	// Should contain warn and error
 	assert.Contains(t, output, "warn message")
 	assert.Contains(t, output, "error message")
@@ -181,7 +181,7 @@ func TestGlobalFunctions(t *testing.T) {
 
 	// Send some log messages
 	Debug("debug test %d", 1)
-	Info("info test %d", 2)  
+	Info("info test %d", 2)
 	Warn("warn test %d", 3)
 	Error("error test %d", 4)
 
@@ -210,7 +210,7 @@ func TestGlobalFunctions_WithFiltering(t *testing.T) {
 	// Send messages at different levels
 	Debug("debug message")
 	Info("info message")
-	Warn("warn message") 
+	Warn("warn message")
 	Error("error message")
 
 	output := buf.String()
@@ -242,7 +242,7 @@ func TestLogger_SpecialCharacters(t *testing.T) {
 	output := buf.String()
 	assert.Contains(t, output, "message with\nnewline and\ttab")
 
-	// Test with format characters  
+	// Test with format characters
 	buf.Reset()
 	logger.Info("100%% complete")
 	output = buf.String()
@@ -315,7 +315,7 @@ func TestLogger_OutputCallerInfo(t *testing.T) {
 
 	logger.Info("test message")
 	output := buf.String()
-	
+
 	// Should contain filename and line number
 	assert.Contains(t, output, "logger_test.go:")
 	assert.Contains(t, output, "[INFO] test message")

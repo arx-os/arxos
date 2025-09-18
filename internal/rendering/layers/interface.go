@@ -1,29 +1,28 @@
 // Package layers provides the layer abstraction for the ABIM rendering system
 package layers
 
-
 // Layer represents a rendering layer in the ABIM system
 type Layer interface {
 	// GetName returns the unique name of this layer
 	GetName() string
-	
+
 	// GetPriority returns the rendering priority (lower renders first)
 	GetPriority() int
-	
+
 	// IsVisible returns whether this layer should be rendered
 	IsVisible() bool
-	
+
 	// SetVisible sets the visibility of this layer
 	SetVisible(visible bool)
-	
+
 	// Render renders this layer to the provided buffer
 	// The buffer is a 2D grid of runes that the layer can modify
 	Render(buffer [][]rune, viewport Viewport)
-	
+
 	// Update updates the layer state (for animations, etc.)
 	// deltaTime is in seconds
 	Update(deltaTime float64)
-	
+
 	// GetBounds returns the bounding box of content in this layer
 	GetBounds() Bounds
 }
@@ -46,36 +45,36 @@ type Bounds struct {
 type LayerManager interface {
 	// AddLayer adds a new layer to the manager
 	AddLayer(layer Layer) error
-	
+
 	// RemoveLayer removes a layer by name
 	RemoveLayer(name string) error
-	
+
 	// GetLayer returns a layer by name
 	GetLayer(name string) (Layer, bool)
-	
+
 	// GetLayers returns all layers sorted by priority
 	GetLayers() []Layer
-	
+
 	// SetLayerVisible sets the visibility of a layer
 	SetLayerVisible(name string, visible bool) error
-	
+
 	// RenderAll renders all visible layers to the buffer
 	RenderAll(buffer [][]rune, viewport Viewport)
-	
+
 	// UpdateAll updates all layers
 	UpdateAll(deltaTime float64)
 }
 
 // Priority constants for standard layers
 const (
-	PriorityBackground = 0    // Background/grid layer
-	PriorityStructure  = 10   // Walls, rooms, doors
-	PriorityEquipment  = 20   // Equipment and fixtures
-	PriorityConnection = 30   // Wiring, pipes, etc.
-	PriorityOverlay    = 40   // Temperature, energy flow
-	PriorityFailure    = 50   // Failure indicators
-	PriorityParticle   = 60   // Particle effects
-	PriorityUI         = 100  // UI elements, labels
+	PriorityBackground = 0   // Background/grid layer
+	PriorityStructure  = 10  // Walls, rooms, doors
+	PriorityEquipment  = 20  // Equipment and fixtures
+	PriorityConnection = 30  // Wiring, pipes, etc.
+	PriorityOverlay    = 40  // Temperature, energy flow
+	PriorityFailure    = 50  // Failure indicators
+	PriorityParticle   = 60  // Particle effects
+	PriorityUI         = 100 // UI elements, labels
 )
 
 // BaseLayer provides common functionality for all layers

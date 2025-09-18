@@ -32,7 +32,7 @@ type PerformanceConfig struct {
 // DefaultPerformanceConfig returns sensible defaults
 func DefaultPerformanceConfig() *PerformanceConfig {
 	return &PerformanceConfig{
-		MaxMemoryMB:     500, // 500MB limit
+		MaxMemoryMB:     500,       // 500MB limit
 		BufferSize:      64 * 1024, // 64KB buffer
 		MaxGoroutines:   runtime.NumCPU(),
 		EnableProfiling: false,
@@ -41,15 +41,15 @@ func DefaultPerformanceConfig() *PerformanceConfig {
 
 // PerformanceMetrics tracks conversion performance
 type PerformanceMetrics struct {
-	StartTime         time.Time
-	EndTime           time.Time
-	Duration          time.Duration
-	MemoryUsageBytes  int64
-	PeakMemoryBytes   int64
-	LinesProcessed    int
-	RoomsExtracted    int
+	StartTime          time.Time
+	EndTime            time.Time
+	Duration           time.Duration
+	MemoryUsageBytes   int64
+	PeakMemoryBytes    int64
+	LinesProcessed     int
+	RoomsExtracted     int
 	EquipmentExtracted int
-	ErrorsEncountered int
+	ErrorsEncountered  int
 }
 
 // String returns a formatted performance report
@@ -87,8 +87,8 @@ func NewStreamingPDFConverter(config *PerformanceConfig) *StreamingPDFConverter 
 
 	return &StreamingPDFConverter{
 		RealPDFConverter: NewRealPDFConverter(),
-		config:          config,
-		metrics:         &PerformanceMetrics{},
+		config:           config,
+		metrics:          &PerformanceMetrics{},
 	}
 }
 

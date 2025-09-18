@@ -61,10 +61,10 @@ func (l *LoRaWANInterface) Open(device string, baudRate int) error {
 // initialize sends initialization AT commands to the LoRaWAN module
 func (l *LoRaWANInterface) initialize() error {
 	commands := []string{
-		"AT",           // Test command
-		"AT+RESET",     // Reset module
-		"AT+MODE=1",    // Set to LoRaWAN mode
-		"AT+CLASS=A",   // Set device class
+		"AT",              // Test command
+		"AT+RESET",        // Reset module
+		"AT+MODE=1",       // Set to LoRaWAN mode
+		"AT+CLASS=A",      // Set device class
 		"AT+REGION=US915", // Set region
 	}
 
@@ -251,9 +251,9 @@ func (l *LoRaWANInterface) SetCredentials(deviceEUI, appEUI, appKey string) {
 // GetStatus returns current LoRaWAN status
 func (l *LoRaWANInterface) GetStatus() (map[string]interface{}, error) {
 	status := map[string]interface{}{
-		"joined": l.joinStatus,
+		"joined":     l.joinStatus,
 		"device_eui": l.deviceEUI,
-		"app_eui": l.appEUI,
+		"app_eui":    l.appEUI,
 	}
 
 	// Get additional status from module

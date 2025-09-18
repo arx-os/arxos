@@ -14,42 +14,42 @@ import (
 type UpdateType string
 
 const (
-	UpdateTypePosition   UpdateType = "position"
-	UpdateTypeRotation   UpdateType = "rotation"
-	UpdateTypeInteract   UpdateType = "interact"
-	UpdateTypeGesture    UpdateType = "gesture"
-	UpdateTypeAnchor     UpdateType = "anchor"
-	UpdateTypeTracking   UpdateType = "tracking"
+	UpdateTypePosition UpdateType = "position"
+	UpdateTypeRotation UpdateType = "rotation"
+	UpdateTypeInteract UpdateType = "interact"
+	UpdateTypeGesture  UpdateType = "gesture"
+	UpdateTypeAnchor   UpdateType = "anchor"
+	UpdateTypeTracking UpdateType = "tracking"
 )
 
 // PositionUpdate represents a real-time position update from AR device
 type PositionUpdate struct {
-	ID           string          `json:"id"`
-	SessionID    string          `json:"session_id"`
-	DeviceID     string          `json:"device_id"`
-	Type         UpdateType      `json:"type"`
-	ARPosition   ARPoint3D       `json:"ar_position"`
-	WorldPosition spatial.Point3D `json:"world_position,omitempty"`
-	Rotation     ARRotation      `json:"rotation"`
-	Timestamp    time.Time       `json:"timestamp"`
-	Sequence     uint64          `json:"sequence"`
-	Confidence   float32         `json:"confidence"`
-	Metadata     map[string]interface{} `json:"metadata,omitempty"`
+	ID            string                 `json:"id"`
+	SessionID     string                 `json:"session_id"`
+	DeviceID      string                 `json:"device_id"`
+	Type          UpdateType             `json:"type"`
+	ARPosition    ARPoint3D              `json:"ar_position"`
+	WorldPosition spatial.Point3D        `json:"world_position,omitempty"`
+	Rotation      ARRotation             `json:"rotation"`
+	Timestamp     time.Time              `json:"timestamp"`
+	Sequence      uint64                 `json:"sequence"`
+	Confidence    float32                `json:"confidence"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // UpdateStream manages real-time position update streaming
 type UpdateStream struct {
-	id            string
-	sessionID     string
-	subscribers   map[string]UpdateSubscriber
-	buffer        *UpdateBuffer
-	interpolator  *PositionInterpolator
-	predictor     *PositionPredictor
-	converter     *ARCoordinateConverter
-	sequence      uint64
-	mu            sync.RWMutex
-	ctx           context.Context
-	cancel        context.CancelFunc
+	id           string
+	sessionID    string
+	subscribers  map[string]UpdateSubscriber
+	buffer       *UpdateBuffer
+	interpolator *PositionInterpolator
+	predictor    *PositionPredictor
+	converter    *ARCoordinateConverter
+	sequence     uint64
+	mu           sync.RWMutex
+	ctx          context.Context
+	cancel       context.CancelFunc
 }
 
 // UpdateSubscriber interface for update consumers
@@ -61,11 +61,11 @@ type UpdateSubscriber interface {
 
 // UpdateBuffer buffers updates for batch processing
 type UpdateBuffer struct {
-	updates      []*PositionUpdate
-	maxSize      int
+	updates       []*PositionUpdate
+	maxSize       int
 	flushInterval time.Duration
-	mu           sync.Mutex
-	lastFlush    time.Time
+	mu            sync.Mutex
+	lastFlush     time.Time
 }
 
 // NewUpdateStream creates a new update stream
@@ -278,9 +278,9 @@ func (b *UpdateBuffer) Flush() []*PositionUpdate {
 
 // PositionInterpolator handles position interpolation
 type PositionInterpolator struct {
-	history      []*PositionUpdate
-	maxHistory   int
-	mu           sync.RWMutex
+	history    []*PositionUpdate
+	maxHistory int
+	mu         sync.RWMutex
 }
 
 // NewPositionInterpolator creates a new position interpolator
@@ -467,9 +467,9 @@ func (pp *PositionPredictor) PredictPosition(futureTime time.Duration) (ARPoint3
 
 // StreamManager manages multiple update streams
 type StreamManager struct {
-	streams   map[string]*UpdateStream
-	sessions  map[string]*ARSession
-	mu        sync.RWMutex
+	streams  map[string]*UpdateStream
+	sessions map[string]*ARSession
+	mu       sync.RWMutex
 }
 
 // NewStreamManager creates a new stream manager

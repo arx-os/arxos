@@ -9,12 +9,12 @@ import (
 
 // Tracker tracks progress of operations
 type Tracker struct {
-	total    int
-	current  int
-	label    string
-	started  time.Time
-	mu       sync.Mutex
-	silent   bool
+	total   int
+	current int
+	label   string
+	started time.Time
+	mu      sync.Mutex
+	silent  bool
 }
 
 // New creates a new progress tracker

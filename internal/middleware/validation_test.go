@@ -157,7 +157,7 @@ func TestValidateJSON(t *testing.T) {
 		errMsg   string
 	}{
 		{
-			"Valid JSON", 
+			"Valid JSON",
 			`{"name":"John","email":"john@example.com","age":30}`,
 			&TestStruct{},
 			false,
@@ -181,7 +181,7 @@ func TestValidateJSON(t *testing.T) {
 			"Type mismatch",
 			`{"name":"John","email":"john@example.com","age":"thirty"}`,
 			&TestStruct{},
-			false,  // ValidateJSON only checks syntax, not types
+			false, // ValidateJSON only checks syntax, not types
 			"",
 		},
 		{
@@ -231,4 +231,3 @@ func TestSanitizeString(t *testing.T) {
 		})
 	}
 }
-

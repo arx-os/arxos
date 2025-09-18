@@ -2,7 +2,7 @@ package rendering
 
 import (
 	"math"
-	
+
 	"github.com/arx-os/arxos/internal/energy"
 )
 
@@ -37,31 +37,31 @@ func (e *EnergyLayer) Render(viewport Viewport) [][]rune {
 			buffer[i][j] = ' '
 		}
 	}
-	
+
 	if !e.visible || e.flowResult == nil {
 		return buffer
 	}
-	
+
 	// Render flow edges
 	for edgeID, state := range e.flowResult.Edges {
 		e.renderFlowEdge(buffer, edgeID, state, viewport)
 	}
-	
+
 	// Render flow intensity at nodes
 	for nodeID, state := range e.flowResult.Nodes {
 		e.renderFlowNode(buffer, nodeID, state, viewport)
 	}
-	
+
 	return buffer
 }
 
 func (e *EnergyLayer) renderFlowEdge(buffer [][]rune, edgeID string, state energy.EdgeState, vp Viewport) {
 	// Parse edge ID to get from and to nodes
 	// Edge ID format: "nodeA->nodeB"
-	
+
 	// For visualization, we'll show flow intensity using different characters
 	_ = e.getFlowCharacter(state.Flow, state.Utilized)
-	
+
 	// In a real implementation, we'd trace the path between nodes
 	// For now, we'll just mark flow intensity indicators
 }
@@ -69,10 +69,10 @@ func (e *EnergyLayer) renderFlowEdge(buffer [][]rune, edgeID string, state energ
 func (e *EnergyLayer) renderFlowNode(buffer [][]rune, nodeID string, state energy.NodeState, vp Viewport) {
 	// This would get the actual node position from the flow system
 	// For now, using placeholder logic
-	
+
 	// Render based on utilization
 	_ = e.getNodeCharacter(state.Utilization)
-	
+
 	// Place character at node position (would need actual coordinates)
 	// Placeholder for demonstration
 }
@@ -111,7 +111,7 @@ func (e *EnergyLayer) getFlowCharacter(flow, utilization float64) rune {
 		// Minimal flow
 		return '‧'
 	}
-	
+
 	return ' '
 }
 
@@ -126,7 +126,7 @@ func (e *EnergyLayer) getNodeCharacter(utilization float64) rune {
 			return '○' // Low load
 		}
 		return '◌' // No load
-		
+
 	case energy.FlowThermal:
 		if utilization > 75 {
 			return '🔥' // Hot
@@ -136,7 +136,7 @@ func (e *EnergyLayer) getNodeCharacter(utilization float64) rune {
 			return '≈' // Cool
 		}
 		return '❄' // Cold
-		
+
 	case energy.FlowFluid:
 		if utilization > 75 {
 			return '💧' // High flow
@@ -147,14 +147,14 @@ func (e *EnergyLayer) getNodeCharacter(utilization float64) rune {
 		}
 		return '○' // No flow
 	}
-	
+
 	return '?'
 }
 
 // Update advances the energy flow animation
 func (e *EnergyLayer) Update(dt float64) {
 	e.animFrame++
-	
+
 	// Re-run simulation periodically (every 30 frames = 1 second at 30 FPS)
 	if e.animFrame%30 == 0 {
 		if result, err := e.flowSystem.Simulate(); err == nil {
@@ -207,7 +207,7 @@ func (e *EnergyLayer) RunSimulation() error {
 	if err != nil {
 		return err
 	}
-	
+
 	e.flowResult = result
 	e.markDirty()
 	return nil
@@ -243,12 +243,12 @@ func (e *EnergyLayer) RenderFlowPath(buffer [][]rune, points []energy.FlowPoint,
 		// Convert world coordinates to viewport
 		x := int((point.X - vp.X) * vp.Zoom)
 		y := int((point.Y - vp.Y) * vp.Zoom)
-		
+
 		// Skip if outside viewport
 		if x < 0 || x >= vp.Width || y < 0 || y >= vp.Height {
 			continue
 		}
-		
+
 		// Choose character based on flow direction and animation frame
 		char := e.getDirectionalFlowChar(point.Direction, point.Intensity, i)
 		buffer[y][x] = char
@@ -261,12 +261,12 @@ func (e *EnergyLayer) getDirectionalFlowChar(direction, intensity float64, offse
 	if angle < 0 {
 		angle += 2 * math.Pi
 	}
-	
-	octant := int(angle / (math.Pi / 4)) % 8
-	
+
+	octant := int(angle/(math.Pi/4)) % 8
+
 	// Animated based on frame and offset
 	animOffset := (e.animFrame + offset) % 3
-	
+
 	// High intensity flow
 	if intensity > 0.7 {
 		switch octant {
@@ -290,7 +290,7 @@ func (e *EnergyLayer) getDirectionalFlowChar(direction, intensity float64, offse
 			return '╝'
 		}
 	}
-	
+
 	// Low intensity flow
 	switch octant {
 	case 0: // East
@@ -310,6 +310,6 @@ func (e *EnergyLayer) getDirectionalFlowChar(direction, intensity float64, offse
 	case 7: // Southeast
 		return '↘'
 	}
-	
+
 	return '·'
 }

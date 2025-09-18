@@ -21,13 +21,13 @@ func NewLocalBackend(basePath string) (*LocalBackend, error) {
 	if err := os.MkdirAll(basePath, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create base path: %w", err)
 	}
-	
+
 	// Convert to absolute path
 	absPath, err := filepath.Abs(basePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path: %w", err)
 	}
-	
+
 	return &LocalBackend{
 		basePath: absPath,
 	}, nil
@@ -58,7 +58,7 @@ func (l *LocalBackend) IsAvailable(ctx context.Context) bool {
 // Get retrieves data from local storage
 func (l *LocalBackend) Get(ctx context.Context, key string) ([]byte, error) {
 	path := l.keyToPath(key)
-	
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -66,55 +66,55 @@ func (l *LocalBackend) Get(ctx context.Context, key string) ([]byte, error) {
 		}
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
-	
+
 	return data, nil
 }
 
 // Put stores data to local storage
 func (l *LocalBackend) Put(ctx context.Context, key string, data []byte) error {
 	path := l.keyToPath(key)
-	
+
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	
+
 	// Write file atomically
 	tmpPath := path + ".tmp"
 	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
-	
+
 	if err := os.Rename(tmpPath, path); err != nil {
 		os.Remove(tmpPath)
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
-	
+
 	return nil
 }
 
 // Delete removes data from local storage
 func (l *LocalBackend) Delete(ctx context.Context, key string) error {
 	path := l.keyToPath(key)
-	
+
 	if err := os.Remove(path); err != nil {
 		if os.IsNotExist(err) {
 			return nil // Already deleted
 		}
 		return fmt.Errorf("failed to delete file: %w", err)
 	}
-	
+
 	// Try to remove empty parent directories
 	l.cleanEmptyDirs(filepath.Dir(path))
-	
+
 	return nil
 }
 
 // Exists checks if a key exists in local storage
 func (l *LocalBackend) Exists(ctx context.Context, key string) (bool, error) {
 	path := l.keyToPath(key)
-	
+
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -122,14 +122,14 @@ func (l *LocalBackend) Exists(ctx context.Context, key string) (bool, error) {
 		}
 		return false, fmt.Errorf("failed to stat file: %w", err)
 	}
-	
+
 	return true, nil
 }
 
 // GetReader returns a reader for the specified key
 func (l *LocalBackend) GetReader(ctx context.Context, key string) (io.ReadCloser, error) {
 	path := l.keyToPath(key)
-	
+
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -137,20 +137,20 @@ func (l *LocalBackend) GetReader(ctx context.Context, key string) (io.ReadCloser
 		}
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	
+
 	return file, nil
 }
 
 // PutReader stores data from a reader to local storage
 func (l *LocalBackend) PutReader(ctx context.Context, key string, reader io.Reader, size int64) error {
 	path := l.keyToPath(key)
-	
+
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	
+
 	// Write to temporary file first
 	tmpPath := path + ".tmp"
 	file, err := os.Create(tmpPath)
@@ -158,36 +158,36 @@ func (l *LocalBackend) PutReader(ctx context.Context, key string, reader io.Read
 		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
-	
+
 	// Copy data from reader
 	written, err := io.Copy(file, reader)
 	if err != nil {
 		os.Remove(tmpPath)
 		return fmt.Errorf("failed to write data: %w", err)
 	}
-	
+
 	// Verify size if provided
 	if size > 0 && written != size {
 		os.Remove(tmpPath)
 		return fmt.Errorf("size mismatch: expected %d, got %d", size, written)
 	}
-	
+
 	// Close file before renaming
 	file.Close()
-	
+
 	// Atomic rename
 	if err := os.Rename(tmpPath, path); err != nil {
 		os.Remove(tmpPath)
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
-	
+
 	return nil
 }
 
 // GetMetadata retrieves metadata for a key
 func (l *LocalBackend) GetMetadata(ctx context.Context, key string) (*Metadata, error) {
 	path := l.keyToPath(key)
-	
+
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -195,7 +195,7 @@ func (l *LocalBackend) GetMetadata(ctx context.Context, key string) (*Metadata, 
 		}
 		return nil, fmt.Errorf("failed to stat file: %w", err)
 	}
-	
+
 	return &Metadata{
 		Key:          key,
 		Size:         info.Size(),
@@ -208,7 +208,7 @@ func (l *LocalBackend) GetMetadata(ctx context.Context, key string) (*Metadata, 
 // SetMetadata sets metadata for a key (limited support for local storage)
 func (l *LocalBackend) SetMetadata(ctx context.Context, key string, metadata *Metadata) error {
 	path := l.keyToPath(key)
-	
+
 	// Check if file exists
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -216,21 +216,21 @@ func (l *LocalBackend) SetMetadata(ctx context.Context, key string, metadata *Me
 		}
 		return fmt.Errorf("failed to stat file: %w", err)
 	}
-	
+
 	// For local storage, we can only update modification time
 	if !metadata.LastModified.IsZero() {
 		if err := os.Chtimes(path, time.Now(), metadata.LastModified); err != nil {
 			return fmt.Errorf("failed to update times: %w", err)
 		}
 	}
-	
+
 	// Store extended metadata in a sidecar file if needed
 	if len(metadata.Metadata) > 0 {
 		// metaPath := path + ".meta"
 		// TODO: Implementation for metadata storage would go here
 		// For now, we'll skip this as it's not critical
 	}
-	
+
 	return nil
 }
 
@@ -239,22 +239,22 @@ func (l *LocalBackend) List(ctx context.Context, prefix string) ([]string, error
 	var keys []string
 	prefixPath := l.keyToPath(prefix)
 	baseLen := len(l.basePath) + 1 // +1 for the separator
-	
+
 	err := filepath.Walk(l.basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors
 		}
-		
+
 		// Skip directories and hidden files
 		if info.IsDir() || strings.HasPrefix(info.Name(), ".") {
 			return nil
 		}
-		
+
 		// Skip metadata files
 		if strings.HasSuffix(path, ".meta") || strings.HasSuffix(path, ".tmp") {
 			return nil
 		}
-		
+
 		// Check if path matches prefix
 		if strings.HasPrefix(path, prefixPath) {
 			// Convert path back to key
@@ -263,14 +263,14 @@ func (l *LocalBackend) List(ctx context.Context, prefix string) ([]string, error
 				keys = append(keys, key)
 			}
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}
-	
+
 	return keys, nil
 }
 
@@ -278,22 +278,22 @@ func (l *LocalBackend) List(ctx context.Context, prefix string) ([]string, error
 func (l *LocalBackend) ListWithMetadata(ctx context.Context, prefix string) ([]*Object, error) {
 	var objects []*Object
 	prefixPath := l.keyToPath(prefix)
-	
+
 	err := filepath.Walk(l.basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors
 		}
-		
+
 		// Skip directories and hidden files
 		if info.IsDir() || strings.HasPrefix(info.Name(), ".") {
 			return nil
 		}
-		
+
 		// Skip metadata files
 		if strings.HasSuffix(path, ".meta") || strings.HasSuffix(path, ".tmp") {
 			return nil
 		}
-		
+
 		// Check if path matches prefix
 		if strings.HasPrefix(path, prefixPath) {
 			key := l.pathToKey(path)
@@ -303,14 +303,14 @@ func (l *LocalBackend) ListWithMetadata(ctx context.Context, prefix string) ([]*
 				Modified: info.ModTime(),
 			})
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}
-	
+
 	return objects, nil
 }
 
@@ -319,7 +319,7 @@ func (l *LocalBackend) keyToPath(key string) string {
 	// Sanitize key to prevent directory traversal
 	key = strings.ReplaceAll(key, "..", "")
 	key = strings.TrimPrefix(key, "/")
-	
+
 	// Convert forward slashes to OS-specific separators
 	parts := strings.Split(key, "/")
 	return filepath.Join(append([]string{l.basePath}, parts...)...)
@@ -332,7 +332,7 @@ func (l *LocalBackend) pathToKey(path string) string {
 	if err != nil {
 		return path
 	}
-	
+
 	// Convert OS-specific separators to forward slashes
 	return strings.ReplaceAll(rel, string(filepath.Separator), "/")
 }
@@ -343,13 +343,13 @@ func (l *LocalBackend) cleanEmptyDirs(dir string) {
 	if dir == l.basePath || !strings.HasPrefix(dir, l.basePath) {
 		return
 	}
-	
+
 	// Check if directory is empty
 	entries, err := os.ReadDir(dir)
 	if err != nil || len(entries) > 0 {
 		return
 	}
-	
+
 	// Remove empty directory
 	if err := os.Remove(dir); err == nil {
 		// Recursively clean parent

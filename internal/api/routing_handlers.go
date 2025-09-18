@@ -13,7 +13,7 @@ func (s *Server) handleBuildingOperations(w http.ResponseWriter, r *http.Request
 		s.respondError(w, http.StatusBadRequest, "Building ID required")
 		return
 	}
-	
+
 	switch r.Method {
 	case http.MethodGet:
 		s.handleGetBuilding(w, r)
@@ -34,7 +34,7 @@ func (s *Server) handleEquipmentOperations(w http.ResponseWriter, r *http.Reques
 		s.respondError(w, http.StatusBadRequest, "Equipment ID required")
 		return
 	}
-	
+
 	switch r.Method {
 	case http.MethodGet:
 		s.handleGetEquipment(w, r)
@@ -62,13 +62,13 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		s.respondError(w, http.StatusBadRequest, "Search query required")
 		return
 	}
-	
+
 	// Implementation would search across buildings, equipment, etc.
 	results := map[string]interface{}{
-		"query": query,
+		"query":   query,
 		"results": []interface{}{},
 	}
-	
+
 	s.respondJSON(w, http.StatusOK, results)
 }
 
@@ -78,7 +78,7 @@ func (s *Server) handlePDFUpload(w http.ResponseWriter, r *http.Request) {
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	// Implementation delegated to upload_handler.go
 	s.handleUpload(w, r)
 }
@@ -90,12 +90,12 @@ func (s *Server) handleUploadProgress(w http.ResponseWriter, r *http.Request) {
 		s.respondError(w, http.StatusBadRequest, "Upload ID required")
 		return
 	}
-	
+
 	// Return progress information
 	s.respondJSON(w, http.StatusOK, map[string]interface{}{
 		"upload_id": uploadID,
-		"progress": 100,
-		"status": "completed",
+		"progress":  100,
+		"status":    "completed",
 	})
 }
 
@@ -105,25 +105,25 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	
+
 	// Parse multipart form
 	err := r.ParseMultipartForm(32 << 20) // 32MB max
 	if err != nil {
 		s.respondError(w, http.StatusBadRequest, "Failed to parse form data")
 		return
 	}
-	
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		s.respondError(w, http.StatusBadRequest, "Failed to get file")
 		return
 	}
 	defer file.Close()
-	
+
 	// Process the uploaded file
 	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"message": "File uploaded successfully",
+		"message":  "File uploaded successfully",
 		"filename": header.Filename,
-		"size": header.Size,
+		"size":     header.Size,
 	})
 }

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/pkg/models"
+	"github.com/gdamore/tcell/v2"
 )
 
 // InteractiveViewer provides interactive 3D viewing with keyboard controls

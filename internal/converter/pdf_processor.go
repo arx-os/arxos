@@ -23,11 +23,11 @@ type PDFProcessor struct {
 
 // PDFConfig contains configuration for PDF processing
 type PDFConfig struct {
-	EnableOCR          bool
-	ExtractTables      bool
-	ExtractImages      bool
-	PageLimit          int
-	TextConfidenceMin  float64
+	EnableOCR         bool
+	ExtractTables     bool
+	ExtractImages     bool
+	PageLimit         int
+	TextConfidenceMin float64
 }
 
 // NewPDFProcessor creates a new PDF processor
@@ -100,8 +100,8 @@ func (p *PDFProcessor) ProcessFile(pdfPath string) (*Building, error) {
 		// Add equipment to a default room
 		if len(floor.Rooms) == 0 {
 			floor.Rooms = append(floor.Rooms, Room{
-				ID:   fmt.Sprintf("ROOM_%d_1", floorNum),
-				Name: "Equipment Room",
+				ID:        fmt.Sprintf("ROOM_%d_1", floorNum),
+				Name:      "Equipment Room",
 				Equipment: []Equipment{},
 			})
 		}
@@ -185,7 +185,7 @@ func (p *PDFProcessor) parseEquipmentFromText(text string) []*Equipment {
 
 	// Common equipment patterns
 	patterns := []struct {
-		regex   *regexp.Regexp
+		regex     *regexp.Regexp
 		extractor func([]string) *Equipment
 	}{
 		{

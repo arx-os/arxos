@@ -95,16 +95,16 @@ func TestFloorRenderer_RenderFromFloorPlan(t *testing.T) {
 
 func TestFloorRenderer_DrawRectangle(t *testing.T) {
 	renderer := NewFloorRenderer(20, 10)
-	
+
 	// Draw a rectangle
 	renderer.drawRectangle(2, 2, 10, 6)
-	
+
 	// Check corners
 	assert.Equal(t, CharCornerTL, renderer.getChar(2, 2))
 	assert.Equal(t, CharCornerTR, renderer.getChar(10, 2))
 	assert.Equal(t, CharCornerBL, renderer.getChar(2, 6))
 	assert.Equal(t, CharCornerBR, renderer.getChar(10, 6))
-	
+
 	// Check walls
 	assert.Equal(t, CharWallHorizontal, renderer.getChar(5, 2))
 	assert.Equal(t, CharWallHorizontal, renderer.getChar(5, 6))
@@ -114,7 +114,7 @@ func TestFloorRenderer_DrawRectangle(t *testing.T) {
 
 func TestFloorRenderer_GetEquipmentChar(t *testing.T) {
 	renderer := NewFloorRenderer(10, 10)
-	
+
 	tests := []struct {
 		equipType string
 		expected  rune
@@ -131,7 +131,7 @@ func TestFloorRenderer_GetEquipmentChar(t *testing.T) {
 		{"wifi", CharAccessPoint},
 		{"unknown", CharEquipmentOther},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.equipType, func(t *testing.T) {
 			char := renderer.getEquipmentChar(tt.equipType)
@@ -142,21 +142,21 @@ func TestFloorRenderer_GetEquipmentChar(t *testing.T) {
 
 func TestFloorRenderer_EmptyFloorPlan(t *testing.T) {
 	renderer := NewFloorRenderer(40, 20)
-	
+
 	// Render empty floor plan
 	plan := &models.FloorPlan{
-		ID:       "empty",
-		Name:     "Empty Floor",
-		Building: "Test",
-		Level:    1,
-		Rooms:    []*models.Room{},
+		ID:        "empty",
+		Name:      "Empty Floor",
+		Building:  "Test",
+		Level:     1,
+		Rooms:     []*models.Room{},
 		Equipment: []*models.Equipment{},
 	}
-	
+
 	output, err := renderer.RenderFromFloorPlan(plan)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, output)
-	
+
 	// Should still have structure
 	assert.Contains(t, output, "FLOOR PLAN")
 	assert.Contains(t, output, "LEGEND")
@@ -167,14 +167,14 @@ func TestFloorRenderer_EmptyFloorPlan(t *testing.T) {
 func TestFloorRenderer_LargeFloorPlan(t *testing.T) {
 	// Test with many rooms and equipment
 	plan := &models.FloorPlan{
-		ID:       "large",
-		Name:     "Large Floor",
-		Building: "Big Building",
-		Level:    1,
-		Rooms:    make([]*models.Room, 0),
+		ID:        "large",
+		Name:      "Large Floor",
+		Building:  "Big Building",
+		Level:     1,
+		Rooms:     make([]*models.Room, 0),
 		Equipment: make([]*models.Equipment, 0),
 	}
-	
+
 	// Add 10 rooms
 	for i := 0; i < 10; i++ {
 		room := &models.Room{
@@ -189,7 +189,7 @@ func TestFloorRenderer_LargeFloorPlan(t *testing.T) {
 		}
 		plan.Rooms = append(plan.Rooms, room)
 	}
-	
+
 	// Add 20 equipment items
 	for i := 0; i < 20; i++ {
 		equip := &models.Equipment{
@@ -204,10 +204,10 @@ func TestFloorRenderer_LargeFloorPlan(t *testing.T) {
 		}
 		plan.Equipment = append(plan.Equipment, equip)
 	}
-	
+
 	renderer := NewFloorRenderer(120, 40)
 	output, err := renderer.RenderFromFloorPlan(plan)
-	
+
 	assert.NoError(t, err)
 	assert.NotEmpty(t, output)
 	assert.Contains(t, output, "Rooms: 10")
@@ -216,7 +216,7 @@ func TestFloorRenderer_LargeFloorPlan(t *testing.T) {
 
 func TestFloorRenderer_ScaleCalculation(t *testing.T) {
 	renderer := NewFloorRenderer(40, 20)
-	
+
 	// Test with a floor plan that needs scaling
 	plan := &models.FloorPlan{
 		ID: "scale-test",
@@ -233,12 +233,12 @@ func TestFloorRenderer_ScaleCalculation(t *testing.T) {
 			},
 		},
 	}
-	
+
 	renderer.calculateScaleFromModel(plan)
-	
+
 	// Scale should be less than 1 to fit
 	assert.Less(t, renderer.scale, 1.0)
-	
+
 	// Render should not panic
 	output, err := renderer.RenderFromFloorPlan(plan)
 	assert.NoError(t, err)

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/visualization/export"
+	"github.com/spf13/cobra"
 )
 
 var reportCmd = &cobra.Command{

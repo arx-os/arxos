@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"time"
-	
+
 	"github.com/arx-os/arxos/internal/config"
 )
 
@@ -16,19 +16,19 @@ type Backend interface {
 	Put(ctx context.Context, key string, data []byte) error
 	Delete(ctx context.Context, key string) error
 	Exists(ctx context.Context, key string) (bool, error)
-	
+
 	// Streaming operations
 	GetReader(ctx context.Context, key string) (io.ReadCloser, error)
 	PutReader(ctx context.Context, key string, reader io.Reader, size int64) error
-	
+
 	// Metadata operations
 	GetMetadata(ctx context.Context, key string) (*Metadata, error)
 	SetMetadata(ctx context.Context, key string, metadata *Metadata) error
-	
+
 	// Listing operations
 	List(ctx context.Context, prefix string) ([]string, error)
 	ListWithMetadata(ctx context.Context, prefix string) ([]*Object, error)
-	
+
 	// Backend info
 	Type() string
 	IsAvailable(ctx context.Context) bool
@@ -54,10 +54,10 @@ type Object struct {
 
 // Manager manages multiple storage backends
 type Manager struct {
-	primary   Backend
-	fallback  Backend
-	cache     Backend
-	config    *Config
+	primary  Backend
+	fallback Backend
+	cache    Backend
+	config   *Config
 }
 
 // Config contains storage manager configuration
@@ -77,7 +77,7 @@ func NewManager(primary Backend, config *Config) *Manager {
 			RetryDelay:    1 * time.Second,
 		}
 	}
-	
+
 	return &Manager{
 		primary: primary,
 		config:  config,
@@ -102,7 +102,7 @@ func (m *Manager) Get(ctx context.Context, key string) ([]byte, error) {
 			return data, nil
 		}
 	}
-	
+
 	// Try primary backend
 	data, err := m.primary.Get(ctx, key)
 	if err == nil {
@@ -112,7 +112,7 @@ func (m *Manager) Get(ctx context.Context, key string) ([]byte, error) {
 		}
 		return data, nil
 	}
-	
+
 	// Try fallback if primary fails
 	if m.fallback != nil && m.config.EnableFallback {
 		data, err = m.fallback.Get(ctx, key)
@@ -128,14 +128,14 @@ func (m *Manager) Get(ctx context.Context, key string) ([]byte, error) {
 			return data, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("failed to get %s: %w", key, err)
 }
 
 // Put stores data to storage with retry support
 func (m *Manager) Put(ctx context.Context, key string, data []byte) error {
 	var lastErr error
-	
+
 	// Retry logic for primary backend
 	for i := 0; i < m.config.RetryAttempts; i++ {
 		if err := m.primary.Put(ctx, key, data); err == nil {
@@ -143,12 +143,12 @@ func (m *Manager) Put(ctx context.Context, key string, data []byte) error {
 			if m.cache != nil && m.config.EnableCache {
 				_ = m.cache.Put(ctx, key, data)
 			}
-			
+
 			// Sync to fallback if enabled
 			if m.fallback != nil && m.config.SyncEnabled {
 				_ = m.fallback.Put(ctx, key, data)
 			}
-			
+
 			return nil
 		} else {
 			lastErr = err
@@ -157,14 +157,14 @@ func (m *Manager) Put(ctx context.Context, key string, data []byte) error {
 			}
 		}
 	}
-	
+
 	// If primary fails, try fallback
 	if m.fallback != nil && m.config.EnableFallback {
 		if err := m.fallback.Put(ctx, key, data); err == nil {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("failed to put %s after %d attempts: %w", key, m.config.RetryAttempts, lastErr)
 }
 
@@ -174,17 +174,17 @@ func (m *Manager) Delete(ctx context.Context, key string) error {
 	if m.cache != nil {
 		_ = m.cache.Delete(ctx, key)
 	}
-	
+
 	// Delete from primary
 	if err := m.primary.Delete(ctx, key); err != nil {
 		return err
 	}
-	
+
 	// Delete from fallback if sync is enabled
 	if m.fallback != nil && m.config.SyncEnabled {
 		_ = m.fallback.Delete(ctx, key)
 	}
-	
+
 	return nil
 }
 
@@ -196,17 +196,17 @@ func (m *Manager) Exists(ctx context.Context, key string) (bool, error) {
 			return true, nil
 		}
 	}
-	
+
 	// Check primary
 	if exists, err := m.primary.Exists(ctx, key); err == nil {
 		return exists, nil
 	}
-	
+
 	// Check fallback
 	if m.fallback != nil && m.config.EnableFallback {
 		return m.fallback.Exists(ctx, key)
 	}
-	
+
 	return false, nil
 }
 
@@ -217,12 +217,12 @@ func (m *Manager) GetReader(ctx context.Context, key string) (io.ReadCloser, err
 	if err == nil {
 		return reader, nil
 	}
-	
+
 	// Try fallback
 	if m.fallback != nil && m.config.EnableFallback {
 		return m.fallback.GetReader(ctx, key)
 	}
-	
+
 	return nil, fmt.Errorf("failed to get reader for %s: %w", key, err)
 }
 
@@ -235,23 +235,23 @@ func (m *Manager) PutReader(ctx context.Context, key string, reader io.Reader, s
 		if err != nil {
 			return fmt.Errorf("failed to read data: %w", err)
 		}
-		
+
 		// Write to primary
 		if err := m.primary.Put(ctx, key, data); err != nil {
 			return err
 		}
-		
+
 		// Write to fallback
 		_ = m.fallback.Put(ctx, key, data)
-		
+
 		// Update cache
 		if m.cache != nil && m.config.EnableCache {
 			_ = m.cache.Put(ctx, key, data)
 		}
-		
+
 		return nil
 	}
-	
+
 	// Single backend - stream directly
 	return m.primary.PutReader(ctx, key, reader, size)
 }
@@ -264,7 +264,7 @@ func (m *Manager) List(ctx context.Context, prefix string) ([]string, error) {
 		// Try fallback
 		return m.fallback.List(ctx, prefix)
 	}
-	
+
 	return keys, err
 }
 
@@ -276,7 +276,7 @@ func (m *Manager) ListWithMetadata(ctx context.Context, prefix string) ([]*Objec
 		// Try fallback
 		return m.fallback.ListWithMetadata(ctx, prefix)
 	}
-	
+
 	return objects, err
 }
 
@@ -285,29 +285,29 @@ func (m *Manager) Sync(ctx context.Context, prefix string) error {
 	if m.fallback == nil || !m.config.SyncEnabled {
 		return fmt.Errorf("sync not enabled or no fallback configured")
 	}
-	
+
 	// Get list from both backends
 	primaryKeys, err := m.primary.List(ctx, prefix)
 	if err != nil {
 		return fmt.Errorf("failed to list primary: %w", err)
 	}
-	
+
 	fallbackKeys, err := m.fallback.List(ctx, prefix)
 	if err != nil {
 		return fmt.Errorf("failed to list fallback: %w", err)
 	}
-	
+
 	// Create maps for efficient lookup
 	primaryMap := make(map[string]bool)
 	for _, key := range primaryKeys {
 		primaryMap[key] = true
 	}
-	
+
 	fallbackMap := make(map[string]bool)
 	for _, key := range fallbackKeys {
 		fallbackMap[key] = true
 	}
-	
+
 	// Sync missing keys to primary
 	for _, key := range fallbackKeys {
 		if !primaryMap[key] {
@@ -317,7 +317,7 @@ func (m *Manager) Sync(ctx context.Context, prefix string) error {
 			}
 		}
 	}
-	
+
 	// Sync missing keys to fallback
 	for _, key := range primaryKeys {
 		if !fallbackMap[key] {
@@ -327,7 +327,7 @@ func (m *Manager) Sync(ctx context.Context, prefix string) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -336,15 +336,15 @@ func (m *Manager) HealthCheck(ctx context.Context) error {
 	if !m.primary.IsAvailable(ctx) {
 		return fmt.Errorf("primary backend %s is not available", m.primary.Type())
 	}
-	
+
 	if m.fallback != nil && !m.fallback.IsAvailable(ctx) {
 		return fmt.Errorf("fallback backend %s is not available", m.fallback.Type())
 	}
-	
+
 	if m.cache != nil && !m.cache.IsAvailable(ctx) {
 		return fmt.Errorf("cache backend %s is not available", m.cache.Type())
 	}
-	
+
 	return nil
 }
 

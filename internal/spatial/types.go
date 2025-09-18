@@ -1,68 +1,35 @@
 package spatial
 
 import (
-	"fmt"
 	"math"
 	"time"
+
+	"github.com/arx-os/arxos/pkg/models"
 )
 
-// Point3D represents a point in 3D space
-type Point3D struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-	Z float64 `json:"z"`
-}
+// Type aliases for public API types - ensures internal and public APIs stay synchronized
+type Point3D = models.Point3D
+type Point2D = models.Point2D
+type BoundingBox = models.BoundingBox
+type ConfidenceLevel = models.ConfidenceLevel
 
-// NewPoint3D creates a new 3D point
-func NewPoint3D(x, y, z float64) Point3D {
-	return Point3D{X: x, Y: y, Z: z}
-}
+// Re-export public constructors for convenience
+var (
+	NewPoint3D = models.NewPoint3D
+	NewPoint2D = models.NewPoint2D
+	NewBoundingBox = models.NewBoundingBox
+)
 
-// DistanceTo calculates the Euclidean distance to another point
-func (p Point3D) DistanceTo(other Point3D) float64 {
-	dx := p.X - other.X
-	dy := p.Y - other.Y
-	dz := p.Z - other.Z
-	return math.Sqrt(dx*dx + dy*dy + dz*dz)
-}
+// Re-export confidence level constants
+const (
+	ConfidenceUnknown = models.ConfidenceUnknown
+	ConfidenceLow     = models.ConfidenceLow
+	ConfidenceMedium  = models.ConfidenceMedium
+	ConfidenceHigh    = models.ConfidenceHigh
+	ConfidencePrecise = models.ConfidencePrecise
+)
 
-// Add adds another point to this point
-func (p Point3D) Add(other Point3D) Point3D {
-	return Point3D{
-		X: p.X + other.X,
-		Y: p.Y + other.Y,
-		Z: p.Z + other.Z,
-	}
-}
-
-// Sub subtracts another point from this point
-func (p Point3D) Sub(other Point3D) Point3D {
-	return Point3D{
-		X: p.X - other.X,
-		Y: p.Y - other.Y,
-		Z: p.Z - other.Z,
-	}
-}
-
-// Scale multiplies the point by a scalar
-func (p Point3D) Scale(factor float64) Point3D {
-	return Point3D{
-		X: p.X * factor,
-		Y: p.Y * factor,
-		Z: p.Z * factor,
-	}
-}
-
-// String returns a string representation
-func (p Point3D) String() string {
-	return fmt.Sprintf("(%.3f, %.3f, %.3f)", p.X, p.Y, p.Z)
-}
-
-// Point2D represents a point in 2D space
-type Point2D struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
-}
+// Note: Basic Point3D methods (DistanceTo, Add, Sub, Scale, etc.) are defined in pkg/models/spatial.go
 
 // GridCoordinate represents a position in the grid-based system
 type GridCoordinate struct {
@@ -71,40 +38,7 @@ type GridCoordinate struct {
 	Floor int `json:"floor"`
 }
 
-// BoundingBox represents a 3D bounding box
-type BoundingBox struct {
-	Min Point3D `json:"min"`
-	Max Point3D `json:"max"`
-}
-
-// NewBoundingBox creates a bounding box from min and max points
-func NewBoundingBox(min, max Point3D) BoundingBox {
-	return BoundingBox{Min: min, Max: max}
-}
-
-// Contains checks if a point is inside the bounding box
-func (b BoundingBox) Contains(p Point3D) bool {
-	return p.X >= b.Min.X && p.X <= b.Max.X &&
-		p.Y >= b.Min.Y && p.Y <= b.Max.Y &&
-		p.Z >= b.Min.Z && p.Z <= b.Max.Z
-}
-
-// Volume calculates the volume of the bounding box
-func (b BoundingBox) Volume() float64 {
-	dx := b.Max.X - b.Min.X
-	dy := b.Max.Y - b.Min.Y
-	dz := b.Max.Z - b.Min.Z
-	return dx * dy * dz
-}
-
-// Center returns the center point of the bounding box
-func (b BoundingBox) Center() Point3D {
-	return Point3D{
-		X: (b.Min.X + b.Max.X) / 2,
-		Y: (b.Min.Y + b.Max.Y) / 2,
-		Z: (b.Min.Z + b.Max.Z) / 2,
-	}
-}
+// Note: BoundingBox type and methods are defined in pkg/models/spatial.go
 
 // GPSCoordinate represents a GPS location
 type GPSCoordinate struct {
@@ -115,10 +49,10 @@ type GPSCoordinate struct {
 
 // Transform represents a 3D transformation matrix
 type Transform struct {
-	Origin      GPSCoordinate `json:"origin"`      // GPS origin for building
+	Origin      GPSCoordinate `json:"origin"` // GPS origin for building
 	Translation Point3D       `json:"translation"`
-	Rotation    float64       `json:"rotation"`    // Single rotation angle in degrees
-	GridScale   float64       `json:"grid_scale"`  // Meters per grid unit
+	Rotation    float64       `json:"rotation"`     // Single rotation angle in degrees
+	GridScale   float64       `json:"grid_scale"`   // Meters per grid unit
 	FloorHeight float64       `json:"floor_height"` // Meters between floors
 	Scale       float64       `json:"scale"`
 }
@@ -148,39 +82,27 @@ func (t Transform) applyRotation(p Point3D) Point3D {
 	return Point3D{X: x, Y: y, Z: p.Z}
 }
 
-// ConfidenceLevel represents the confidence in spatial data
-type ConfidenceLevel int
+// NewRotation3D creates a rotation value (for backward compatibility)
+// In the current implementation, we use single angle rotation
+func NewRotation3D(x, y, z float64) float64 {
+	// For now, use Z rotation only (most common for building orientation)
+	return z
+}
 
+// Note: ConfidenceLevel type and constants are defined in pkg/models/spatial.go
+
+// Legacy confidence constants for backward compatibility
 const (
-	CONFIDENCE_ESTIMATED ConfidenceLevel = iota // PDF/IFC without verification
-	CONFIDENCE_LOW                              // Automated detection
-	CONFIDENCE_MEDIUM                           // Partial verification
-	CONFIDENCE_HIGH                             // LiDAR or AR verified
+	CONFIDENCE_ESTIMATED = ConfidenceUnknown // PDF/IFC without verification
+	CONFIDENCE_LOW       = ConfidenceLow     // Automated detection
+	CONFIDENCE_MEDIUM    = ConfidenceMedium  // Partial verification
+	CONFIDENCE_HIGH      = ConfidenceHigh    // LiDAR or AR verified
 )
 
 // Alias names for backwards compatibility
 const (
 	ConfidenceEstimated = CONFIDENCE_ESTIMATED
-	ConfidenceLow       = CONFIDENCE_LOW
-	ConfidenceMedium    = CONFIDENCE_MEDIUM
-	ConfidenceHigh      = CONFIDENCE_HIGH
 )
-
-// String returns the string representation of confidence level
-func (c ConfidenceLevel) String() string {
-	switch c {
-	case ConfidenceEstimated:
-		return "ESTIMATED"
-	case ConfidenceLow:
-		return "LOW"
-	case ConfidenceMedium:
-		return "MEDIUM"
-	case ConfidenceHigh:
-		return "HIGH"
-	default:
-		return "UNKNOWN"
-	}
-}
 
 // SpatialMetadata contains spatial information for equipment
 type SpatialMetadata struct {
@@ -213,7 +135,7 @@ type ScannedRegion struct {
 	BuildingID   string        `json:"building_id"`
 	Floor        int           `json:"floor"`
 	Region       SpatialExtent `json:"region"`
-	Boundary     SpatialExtent `json:"boundary"`     // Simplified boundary for PostGIS
+	Boundary     SpatialExtent `json:"boundary"` // Simplified boundary for PostGIS
 	ScanDate     time.Time     `json:"scan_date"`
 	ScanType     string        `json:"scan_type"`     // "lidar", "photogrammetry", "ar_verify"
 	PointDensity float64       `json:"point_density"` // points per square meter

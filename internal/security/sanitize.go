@@ -58,12 +58,12 @@ func (s *Sanitizer) SanitizeHTML(input string) string {
 func (s *Sanitizer) SanitizeSQL(input string) string {
 	// Remove or escape SQL special characters
 	replacements := map[string]string{
-		"'":  "''",
-		`"`:  `""`,
-		"\\":  "\\\\",
-		"\n": " ",
-		"\r": " ",
-		"\t": " ",
+		"'":    "''",
+		`"`:    `""`,
+		"\\":   "\\\\",
+		"\n":   " ",
+		"\r":   " ",
+		"\t":   " ",
 		"\x00": "",
 	}
 
@@ -282,7 +282,7 @@ func (e ValidationError) Error() string {
 
 // XSSProtector provides XSS protection
 type XSSProtector struct {
-	allowedTags []string
+	allowedTags  []string
 	allowedAttrs map[string][]string
 }
 

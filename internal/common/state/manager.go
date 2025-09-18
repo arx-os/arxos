@@ -8,18 +8,18 @@ import (
 	"strings"
 	"sync"
 	"time"
-	
+
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
 // Manager handles the application state and persistence
 type Manager struct {
-	mu           sync.RWMutex
-	currentPlan  *models.FloorPlan
-	stateDir     string
-	currentFile  string
-	dirty        bool
+	mu          sync.RWMutex
+	currentPlan *models.FloorPlan
+	stateDir    string
+	currentFile string
+	dirty       bool
 }
 
 // NewManager creates a new state manager
@@ -28,7 +28,7 @@ func NewManager(stateDir string) (*Manager, error) {
 	if err := os.MkdirAll(stateDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create state directory: %w", err)
 	}
-	
+
 	return &Manager{
 		stateDir: stateDir,
 	}, nil
@@ -38,9 +38,9 @@ func NewManager(stateDir string) (*Manager, error) {
 func (m *Manager) LoadFloorPlan(filename string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	filepath := filepath.Join(m.stateDir, filename)
-	
+
 	data, err := os.ReadFile(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -59,16 +59,16 @@ func (m *Manager) LoadFloorPlan(filename string) error {
 		}
 		return fmt.Errorf("failed to read floor plan: %w", err)
 	}
-	
+
 	var plan models.FloorPlan
 	if err := json.Unmarshal(data, &plan); err != nil {
 		return fmt.Errorf("failed to parse floor plan: %w", err)
 	}
-	
+
 	m.currentPlan = &plan
 	m.currentFile = filename
 	m.dirty = false
-	
+
 	logger.Info("Loaded floor plan: %s", filename)
 	return nil
 }
@@ -77,36 +77,36 @@ func (m *Manager) LoadFloorPlan(filename string) error {
 func (m *Manager) SaveFloorPlan() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.currentPlan == nil {
 		return fmt.Errorf("no floor plan loaded")
 	}
-	
+
 	if m.currentFile == "" {
 		return fmt.Errorf("no file specified")
 	}
-	
+
 	now := time.Now()
 	m.currentPlan.UpdatedAt = &now
-	
+
 	data, err := json.MarshalIndent(m.currentPlan, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to serialize floor plan: %w", err)
 	}
-	
+
 	filepath := filepath.Join(m.stateDir, m.currentFile)
-	
+
 	// Write to temp file first, then rename (atomic operation)
 	tempFile := filepath + ".tmp"
 	if err := os.WriteFile(tempFile, data, 0644); err != nil {
 		return fmt.Errorf("failed to write floor plan: %w", err)
 	}
-	
+
 	if err := os.Rename(tempFile, filepath); err != nil {
 		os.Remove(tempFile) // Clean up temp file
 		return fmt.Errorf("failed to save floor plan: %w", err)
 	}
-	
+
 	m.dirty = false
 	logger.Info("Saved floor plan: %s", m.currentFile)
 	return nil
@@ -131,26 +131,26 @@ func (m *Manager) SetFloorPlan(plan *models.FloorPlan) {
 func (m *Manager) MarkEquipment(equipmentID string, status string, notes string, user string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.currentPlan == nil {
 		return fmt.Errorf("no floor plan loaded")
 	}
-	
+
 	// Find the equipment (case-insensitive search)
 	var equipment *models.Equipment
 	equipmentIDLower := strings.ToLower(equipmentID)
 	for i := range m.currentPlan.Equipment {
-		if strings.ToLower(m.currentPlan.Equipment[i].ID) == equipmentIDLower || 
-		   strings.ToLower(m.currentPlan.Equipment[i].Name) == equipmentIDLower {
+		if strings.ToLower(m.currentPlan.Equipment[i].ID) == equipmentIDLower ||
+			strings.ToLower(m.currentPlan.Equipment[i].Name) == equipmentIDLower {
 			equipment = m.currentPlan.Equipment[i]
 			break
 		}
 	}
-	
+
 	if equipment == nil {
 		return fmt.Errorf("equipment not found: %s", equipmentID)
 	}
-	
+
 	// Update equipment
 	oldStatus := equipment.Status
 	equipment.Status = status
@@ -160,12 +160,12 @@ func (m *Manager) MarkEquipment(equipmentID string, status string, notes string,
 	equipment.MarkedBy = user
 	now := time.Now()
 	equipment.MarkedAt = &now
-	
+
 	m.dirty = true
-	
-	logger.Info("Marked equipment %s: %s -> %s (by %s)", 
+
+	logger.Info("Marked equipment %s: %s -> %s (by %s)",
 		equipmentID, oldStatus, status, user)
-	
+
 	return nil
 }
 
@@ -173,42 +173,42 @@ func (m *Manager) MarkEquipment(equipmentID string, status string, notes string,
 func (m *Manager) AddEquipment(name, eqType, roomID string, x, y float64, notes string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.currentPlan == nil {
 		return fmt.Errorf("no floor plan loaded")
 	}
-	
+
 	// Generate ID from name
 	equipmentID := strings.ToLower(name)
 	equipmentID = strings.ReplaceAll(equipmentID, " ", "_")
 	equipmentID = strings.ReplaceAll(equipmentID, "-", "_")
-	
+
 	// Check for duplicate ID
 	for _, e := range m.currentPlan.Equipment {
 		if strings.EqualFold(e.ID, equipmentID) {
 			return fmt.Errorf("equipment with ID %s already exists", equipmentID)
 		}
 	}
-	
+
 	equipment := &models.Equipment{
 		ID:       equipmentID,
 		Name:     name,
 		Type:     eqType,
-		Location: &models.Point{X: x, Y: y},
+		Location: &models.Point3D{X: x, Y: y, Z: 0},
 		RoomID:   roomID,
 		Status:   models.StatusOperational,
 		Notes:    notes,
 	}
 
 	m.currentPlan.Equipment = append(m.currentPlan.Equipment, equipment)
-	
+
 	// Add to room if specified
 	if roomID != "" {
 		roomFound := false
 		for i := range m.currentPlan.Rooms {
 			if strings.EqualFold(m.currentPlan.Rooms[i].ID, roomID) {
 				m.currentPlan.Rooms[i].Equipment = append(
-					m.currentPlan.Rooms[i].Equipment, 
+					m.currentPlan.Rooms[i].Equipment,
 					equipmentID,
 				)
 				roomFound = true
@@ -219,10 +219,10 @@ func (m *Manager) AddEquipment(name, eqType, roomID string, x, y float64, notes 
 			return fmt.Errorf("room %s not found", roomID)
 		}
 	}
-	
+
 	m.dirty = true
 	logger.Info("Added equipment: %s", equipment.ID)
-	
+
 	return nil
 }
 
@@ -230,11 +230,11 @@ func (m *Manager) AddEquipment(name, eqType, roomID string, x, y float64, notes 
 func (m *Manager) RemoveEquipment(equipmentID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.currentPlan == nil {
 		return fmt.Errorf("no floor plan loaded")
 	}
-	
+
 	// Find and remove equipment
 	found := false
 	var removedEquip *models.Equipment
@@ -254,7 +254,7 @@ func (m *Manager) RemoveEquipment(equipmentID string) error {
 	}
 
 	m.currentPlan.Equipment = newEquipment
-	
+
 	// Remove from room if it was in one
 	if removedEquip.RoomID != "" {
 		for i := range m.currentPlan.Rooms {
@@ -270,10 +270,10 @@ func (m *Manager) RemoveEquipment(equipmentID string) error {
 			}
 		}
 	}
-	
+
 	m.dirty = true
 	logger.Info("Removed equipment: %s", equipmentID)
-	
+
 	return nil
 }
 
@@ -281,23 +281,23 @@ func (m *Manager) RemoveEquipment(equipmentID string) error {
 func (m *Manager) CreateRoom(name string, minX, minY, maxX, maxY float64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	if m.currentPlan == nil {
 		return fmt.Errorf("no floor plan loaded")
 	}
-	
+
 	// Generate ID from name
 	roomID := strings.ToLower(name)
 	roomID = strings.ReplaceAll(roomID, " ", "_")
 	roomID = strings.ReplaceAll(roomID, "-", "_")
-	
+
 	// Check for duplicate ID
 	for _, r := range m.currentPlan.Rooms {
 		if strings.EqualFold(r.ID, roomID) {
 			return fmt.Errorf("room with ID %s already exists", roomID)
 		}
 	}
-	
+
 	room := &models.Room{
 		ID:   roomID,
 		Name: name,
@@ -311,10 +311,10 @@ func (m *Manager) CreateRoom(name string, minX, minY, maxX, maxY float64) error 
 	}
 
 	m.currentPlan.Rooms = append(m.currentPlan.Rooms, room)
-	
+
 	m.dirty = true
 	logger.Info("Created room: %s", room.ID)
-	
+
 	return nil
 }
 
@@ -322,22 +322,22 @@ func (m *Manager) CreateRoom(name string, minX, minY, maxX, maxY float64) error 
 func (m *Manager) FindEquipment(query string) []models.Equipment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if m.currentPlan == nil {
 		return nil
 	}
-	
+
 	var results []models.Equipment
 
 	for _, equip := range m.currentPlan.Equipment {
 		// Match by ID, name, or type
 		if equip.ID == query ||
-		   equip.Name == query ||
-		   equip.Type == query {
+			equip.Name == query ||
+			equip.Type == query {
 			results = append(results, *equip)
 		}
 	}
-	
+
 	return results
 }
 
@@ -345,11 +345,11 @@ func (m *Manager) FindEquipment(query string) []models.Equipment {
 func (m *Manager) GetEquipmentByStatus(status string) []*models.Equipment {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if m.currentPlan == nil {
 		return nil
 	}
-	
+
 	var results []*models.Equipment
 
 	for _, equip := range m.currentPlan.Equipment {
@@ -365,17 +365,17 @@ func (m *Manager) GetEquipmentByStatus(status string) []*models.Equipment {
 func (m *Manager) GetRoom(roomID string) *models.Room {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if m.currentPlan == nil {
 		return nil
 	}
-	
+
 	for _, room := range m.currentPlan.Rooms {
 		if room.ID == roomID || room.Name == roomID {
 			return room
 		}
 	}
-	
+
 	return nil
 }
 
@@ -392,14 +392,14 @@ func (m *Manager) ListFloorPlans() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read state directory: %w", err)
 	}
-	
+
 	var plans []string
 	for _, entry := range entries {
 		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
 			plans = append(plans, entry.Name())
 		}
 	}
-	
+
 	return plans, nil
 }
 
@@ -407,11 +407,11 @@ func (m *Manager) ListFloorPlans() ([]string, error) {
 func (m *Manager) ExportForGit() (map[string]interface{}, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	if m.currentPlan == nil {
 		return nil, fmt.Errorf("no floor plan loaded")
 	}
-	
+
 	// Create a simplified export for Git commits
 	export := map[string]interface{}{
 		"building": m.currentPlan.Building,
@@ -425,7 +425,7 @@ func (m *Manager) ExportForGit() (map[string]interface{}, error) {
 		},
 		"changes": []string{},
 	}
-	
+
 	// Count equipment by status
 	for _, equip := range m.currentPlan.Equipment {
 		switch equip.Status {
@@ -435,6 +435,6 @@ func (m *Manager) ExportForGit() (map[string]interface{}, error) {
 			export["summary"].(map[string]int)["failed"]++
 		}
 	}
-	
+
 	return export, nil
 }

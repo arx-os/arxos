@@ -88,7 +88,7 @@ func (bc *BarChart) Render(data *BarData, options core.RenderOptions) string {
 
 	// Calculate dimensions
 	labelWidth := bc.calculateLabelWidth(data.Items)
-	valueWidth := 10 // Space for value display
+	valueWidth := 10                                        // Space for value display
 	barWidth := options.Width - labelWidth - valueWidth - 4 // Margins and spacing
 
 	if barWidth < 10 {

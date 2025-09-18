@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/spatial"
 	"github.com/arx-os/arxos/pkg/models"
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
 // PostGISConfig holds configuration for PostGIS database
@@ -313,10 +313,10 @@ func (p *PostGISDB) GetEquipmentPosition(equipmentID string) (*SpatialEquipment,
 			ID: equipmentID,
 		},
 		SpatialData: &spatial.SpatialMetadata{
-			Position: spatial.Point3D{X: x, Y: y, Z: z},
+			Position:           spatial.Point3D{X: x, Y: y, Z: z},
 			PositionConfidence: spatial.ConfidenceLevel(confidence),
-			LastUpdated: updatedAt,
-			Source: source,
+			LastUpdated:        updatedAt,
+			Source:             source,
 		},
 	}
 
@@ -365,11 +365,11 @@ func (p *PostGISDB) QueryBySpatialProximity(center spatial.Point3D, radiusMeters
 				ID: equipmentID,
 			},
 			SpatialData: &spatial.SpatialMetadata{
-				Position: spatial.Point3D{X: x, Y: y, Z: z},
+				Position:           spatial.Point3D{X: x, Y: y, Z: z},
 				PositionConfidence: spatial.ConfidenceLevel(confidence),
-				LastUpdated: updatedAt,
-				Source: source,
-				DistanceFromQuery: distance,
+				LastUpdated:        updatedAt,
+				Source:             source,
+				DistanceFromQuery:  distance,
 			},
 		}
 		results = append(results, result)
@@ -426,10 +426,10 @@ func (p *PostGISDB) QueryByBoundingBox(bbox spatial.BoundingBox) ([]*SpatialEqui
 				ID: equipmentID,
 			},
 			SpatialData: &spatial.SpatialMetadata{
-				Position: spatial.Point3D{X: x, Y: y, Z: z},
+				Position:           spatial.Point3D{X: x, Y: y, Z: z},
 				PositionConfidence: spatial.ConfidenceLevel(confidence),
-				LastUpdated: updatedAt,
-				Source: source,
+				LastUpdated:        updatedAt,
+				Source:             source,
 			},
 		}
 		results = append(results, result)
@@ -483,10 +483,10 @@ func (p *PostGISDB) GetEquipmentInRoom(buildingID string, floor int, roomBounds 
 				ID: equipmentID,
 			},
 			SpatialData: &spatial.SpatialMetadata{
-				Position: spatial.Point3D{X: x, Y: y, Z: z},
+				Position:           spatial.Point3D{X: x, Y: y, Z: z},
 				PositionConfidence: spatial.ConfidenceLevel(confidence),
-				LastUpdated: updatedAt,
-				Source: source,
+				LastUpdated:        updatedAt,
+				Source:             source,
 			},
 		}
 		results = append(results, result)
@@ -703,10 +703,10 @@ func (p *PostGISDB) QueryByConfidence(minConfidence spatial.ConfidenceLevel) ([]
 				ID: equipmentID,
 			},
 			SpatialData: &spatial.SpatialMetadata{
-				Position: spatial.Point3D{X: x, Y: y, Z: z},
+				Position:           spatial.Point3D{X: x, Y: y, Z: z},
 				PositionConfidence: spatial.ConfidenceLevel(confidence),
-				LastUpdated: updatedAt,
-				Source: source,
+				LastUpdated:        updatedAt,
+				Source:             source,
 			},
 		}
 		results = append(results, result)
@@ -815,11 +815,11 @@ func (p *PostGISDB) FindNearestEquipment(position spatial.Point3D, equipmentType
 			ID: equipmentID,
 		},
 		SpatialData: &spatial.SpatialMetadata{
-			Position: spatial.Point3D{X: x, Y: y, Z: z},
+			Position:           spatial.Point3D{X: x, Y: y, Z: z},
 			PositionConfidence: spatial.ConfidenceLevel(confidence),
-			LastUpdated: updatedAt,
-			Source: source,
-			DistanceFromQuery: distance,
+			LastUpdated:        updatedAt,
+			Source:             source,
+			DistanceFromQuery:  distance,
 		},
 	}
 

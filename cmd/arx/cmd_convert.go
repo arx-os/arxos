@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/converter"
+	"github.com/spf13/cobra"
 )
 
 var convertCmd = &cobra.Command{
@@ -33,8 +33,8 @@ var convertListCmd = &cobra.Command{
 }
 
 var (
-	convertForce  bool
-	convertMerge  bool
+	convertForce bool
+	convertMerge bool
 )
 
 func init() {

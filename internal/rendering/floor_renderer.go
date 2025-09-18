@@ -10,13 +10,13 @@ import (
 
 // FloorRenderer converts floor plan data to ASCII representation
 type FloorRenderer struct {
-	width      int
-	height     int
-	scale      float64
-	grid       [][]rune
-	legend     map[rune]string
-	equipment  map[string]*models.Equipment
-	rooms      map[string]*models.Room
+	width     int
+	height    int
+	scale     float64
+	grid      [][]rune
+	legend    map[rune]string
+	equipment map[string]*models.Equipment
+	rooms     map[string]*models.Room
 }
 
 // ASCII characters for different elements
@@ -36,7 +36,7 @@ const (
 	CharWindow         = '░'
 	CharSpace          = ' '
 	CharFloor          = '·'
-	
+
 	// Equipment markers
 	CharOutlet         = 'o'
 	CharSwitch         = 's'
@@ -68,7 +68,7 @@ func NewFloorRenderer(width, height int) *FloorRenderer {
 
 	// Initialize grid
 	fr.initGrid()
-	
+
 	// Setup default legend
 	fr.setupLegend()
 
@@ -145,7 +145,7 @@ func (fr *FloorRenderer) RenderFromFloorPlan(plan *models.FloorPlan) (string, er
 	if err != nil {
 		return "", fmt.Errorf("failed to render with layer system: %w", err)
 	}
-	
+
 	coreOutput := layeredRenderer.Render()
 
 	// Wrap with the traditional formatted output
@@ -159,10 +159,10 @@ func (fr *FloorRenderer) calculateScale(floorPlan *models.FloorPlan) {
 		fr.scale = 1.0
 		return
 	}
-	
+
 	minX, minY := floorPlan.Rooms[0].Bounds.MinX, floorPlan.Rooms[0].Bounds.MinY
 	maxX, maxY := floorPlan.Rooms[0].Bounds.MaxX, floorPlan.Rooms[0].Bounds.MaxY
-	
+
 	for _, room := range floorPlan.Rooms {
 		if room.Bounds.MinX < minX {
 			minX = room.Bounds.MinX
@@ -177,10 +177,10 @@ func (fr *FloorRenderer) calculateScale(floorPlan *models.FloorPlan) {
 			maxY = room.Bounds.MaxY
 		}
 	}
-	
+
 	width := maxX - minX
 	height := maxY - minY
-	
+
 	if width == 0 || height == 0 {
 		fr.scale = 1.0
 		return
@@ -229,10 +229,10 @@ func (fr *FloorRenderer) renderWall(x1, y1, x2, y2 int) {
 
 // renderRoom renders a room boundary
 func (fr *FloorRenderer) renderRoom(room models.Room) {
-	x1 := int(room.Bounds.MinX * fr.scale) + 2
-	y1 := int(room.Bounds.MinY * fr.scale) + 2
-	x2 := int(room.Bounds.MaxX * fr.scale) + 2
-	y2 := int(room.Bounds.MaxY * fr.scale) + 2
+	x1 := int(room.Bounds.MinX*fr.scale) + 2
+	y1 := int(room.Bounds.MinY*fr.scale) + 2
+	x2 := int(room.Bounds.MaxX*fr.scale) + 2
+	y2 := int(room.Bounds.MaxY*fr.scale) + 2
 
 	// Draw room rectangle
 	fr.drawRectangle(x1, y1, x2, y2)
@@ -249,10 +249,10 @@ func (fr *FloorRenderer) renderRoom(room models.Room) {
 
 // renderRoomModel renders a room from the model
 func (fr *FloorRenderer) renderRoomModel(room *models.Room) {
-	x1 := int(room.Bounds.MinX * fr.scale) + 2
-	y1 := int(room.Bounds.MinY * fr.scale) + 2
-	x2 := int(room.Bounds.MaxX * fr.scale) + 2
-	y2 := int(room.Bounds.MaxY * fr.scale) + 2
+	x1 := int(room.Bounds.MinX*fr.scale) + 2
+	y1 := int(room.Bounds.MinY*fr.scale) + 2
+	x2 := int(room.Bounds.MaxX*fr.scale) + 2
+	y2 := int(room.Bounds.MaxY*fr.scale) + 2
 
 	fr.drawRectangle(x1, y1, x2, y2)
 
@@ -270,8 +270,8 @@ func (fr *FloorRenderer) renderRoomModel(room *models.Room) {
 
 // renderEquipment renders equipment marker
 func (fr *FloorRenderer) renderEquipment(equip models.Equipment) {
-	x := int(equip.Location.X * fr.scale) + 2
-	y := int(equip.Location.Y * fr.scale) + 2
+	x := int(equip.Location.X*fr.scale) + 2
+	y := int(equip.Location.Y*fr.scale) + 2
 
 	char := fr.getEquipmentChar(equip.Type)
 	fr.setChar(x, y, char)
@@ -279,12 +279,12 @@ func (fr *FloorRenderer) renderEquipment(equip models.Equipment) {
 
 // renderEquipmentModel renders equipment from model
 func (fr *FloorRenderer) renderEquipmentModel(equip *models.Equipment) {
-	x := int(equip.Location.X * fr.scale) + 2
-	y := int(equip.Location.Y * fr.scale) + 2
+	x := int(equip.Location.X*fr.scale) + 2
+	y := int(equip.Location.Y*fr.scale) + 2
 
 	char := fr.getEquipmentChar(equip.Type)
 	fr.setChar(x, y, char)
-	
+
 	fr.equipment[equip.ID] = equip
 }
 
@@ -372,8 +372,8 @@ func (fr *FloorRenderer) addRoomLabels(rooms []models.Room) {
 		}
 
 		// Calculate center of room
-		centerX := int((room.Bounds.MinX + room.Bounds.MaxX) / 2 * fr.scale) + 2
-		centerY := int((room.Bounds.MinY + room.Bounds.MaxY) / 2 * fr.scale) + 2
+		centerX := int((room.Bounds.MinX+room.Bounds.MaxX)/2*fr.scale) + 2
+		centerY := int((room.Bounds.MinY+room.Bounds.MaxY)/2*fr.scale) + 2
 
 		// Place label (truncate if necessary)
 		label := room.Name
@@ -399,8 +399,8 @@ func (fr *FloorRenderer) addRoomLabelsFromModel(rooms []models.Room) {
 			continue
 		}
 
-		centerX := int((room.Bounds.MinX + room.Bounds.MaxX) / 2 * fr.scale) + 2
-		centerY := int((room.Bounds.MinY + room.Bounds.MaxY) / 2 * fr.scale) + 2
+		centerX := int((room.Bounds.MinX+room.Bounds.MaxX)/2*fr.scale) + 2
+		centerY := int((room.Bounds.MinY+room.Bounds.MaxY)/2*fr.scale) + 2
 
 		label := room.Name
 		if len(label) > 10 {
@@ -457,7 +457,7 @@ func (fr *FloorRenderer) generateOutput() string {
 
 	// Add legend
 	sb.WriteString("║ LEGEND:" + strings.Repeat(" ", fr.width-10) + "║\n")
-	
+
 	usedChars := make(map[rune]bool)
 	for y := 0; y < fr.height; y++ {
 		for x := 0; x < fr.width; x++ {
@@ -515,7 +515,7 @@ func (fr *FloorRenderer) generateFormattedOutput(plan *models.FloorPlan, coreOut
 		if len(line) > fr.width-2 {
 			line = line[:fr.width-2]
 		}
-		
+
 		// Center the line within the frame
 		leftPad := (fr.width - 2 - len(line)) / 2
 		rightPad := fr.width - 2 - leftPad - len(line)
@@ -565,8 +565,8 @@ func (fr *FloorRenderer) GetEquipmentAt(x, y int) *models.Equipment {
 // HighlightEquipment highlights specific equipment on the floor plan
 func (fr *FloorRenderer) HighlightEquipment(equipmentID string, highlightChar rune) {
 	if equip, exists := fr.equipment[equipmentID]; exists {
-		x := int(equip.Location.X * fr.scale) + 2
-		y := int(equip.Location.Y * fr.scale) + 2
+		x := int(equip.Location.X*fr.scale) + 2
+		y := int(equip.Location.Y*fr.scale) + 2
 		fr.setChar(x, y, highlightChar)
 	}
 }

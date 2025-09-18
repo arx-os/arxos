@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -16,11 +16,11 @@ type DatabaseIndexer struct {
 	engine *SearchEngine
 	db     database.DB
 	mu     sync.RWMutex
-	
+
 	// Index refresh settings
 	refreshInterval time.Duration
-	stopChan       chan struct{}
-	running        bool
+	stopChan        chan struct{}
+	running         bool
 }
 
 // NewDatabaseIndexer creates a new database-backed search indexer
@@ -28,12 +28,12 @@ func NewDatabaseIndexer(db database.DB, refreshInterval time.Duration) *Database
 	if refreshInterval == 0 {
 		refreshInterval = 5 * time.Minute
 	}
-	
+
 	return &DatabaseIndexer{
 		engine:          NewSearchEngine(),
 		db:              db,
 		refreshInterval: refreshInterval,
-		stopChan:       make(chan struct{}),
+		stopChan:        make(chan struct{}),
 	}
 }
 
@@ -41,22 +41,22 @@ func NewDatabaseIndexer(db database.DB, refreshInterval time.Duration) *Database
 func (idx *DatabaseIndexer) Start(ctx context.Context) error {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
-	
+
 	if idx.running {
 		return fmt.Errorf("indexer already running")
 	}
-	
+
 	// Initial index build
 	if err := idx.rebuildIndex(ctx); err != nil {
 		return fmt.Errorf("failed to build initial index: %w", err)
 	}
-	
+
 	// Start background refresh
 	go idx.backgroundRefresh()
-	
+
 	idx.running = true
 	logger.Info("Search indexer started with %v refresh interval", idx.refreshInterval)
-	
+
 	return nil
 }
 
@@ -64,11 +64,11 @@ func (idx *DatabaseIndexer) Start(ctx context.Context) error {
 func (idx *DatabaseIndexer) Stop() {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
-	
+
 	if !idx.running {
 		return
 	}
-	
+
 	close(idx.stopChan)
 	idx.running = false
 	logger.Info("Search indexer stopped")
@@ -78,7 +78,7 @@ func (idx *DatabaseIndexer) Stop() {
 func (idx *DatabaseIndexer) backgroundRefresh() {
 	ticker := time.NewTicker(idx.refreshInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -87,7 +87,7 @@ func (idx *DatabaseIndexer) backgroundRefresh() {
 				logger.Error("Failed to refresh search index: %v", err)
 			}
 			cancel()
-			
+
 		case <-idx.stopChan:
 			return
 		}
@@ -98,21 +98,21 @@ func (idx *DatabaseIndexer) backgroundRefresh() {
 func (idx *DatabaseIndexer) rebuildIndex(ctx context.Context) error {
 	logger.Debug("Rebuilding search index...")
 	startTime := time.Now()
-	
+
 	// Clear existing index
 	idx.engine.Clear()
-	
+
 	// Index all floor plans
 	floorPlans, err := idx.db.GetAllFloorPlans(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get floor plans: %w", err)
 	}
-	
+
 	for _, fp := range floorPlans {
 		if err := idx.engine.Index(ctx, "building", fp.ID, fp); err != nil {
 			logger.Error("Failed to index floor plan %s: %v", fp.ID, err)
 		}
-		
+
 		// Index rooms
 		for _, room := range fp.Rooms {
 			if err := idx.engine.Index(ctx, "room", room.ID, room); err != nil {
@@ -127,12 +127,12 @@ func (idx *DatabaseIndexer) rebuildIndex(ctx context.Context) error {
 			}
 		}
 	}
-	
+
 	stats := idx.engine.Stats()
 	logger.Info("Search index rebuilt in %v: %d buildings, %d rooms, %d equipment, %d tokens",
-		time.Since(startTime), stats["buildings"], stats["rooms"], 
+		time.Since(startTime), stats["buildings"], stats["rooms"],
 		stats["equipment"], stats["text_tokens"])
-	
+
 	return nil
 }
 
@@ -151,7 +151,7 @@ func (idx *DatabaseIndexer) IndexFloorPlan(ctx context.Context, fp *models.Floor
 	if err := idx.engine.Index(ctx, "building", fp.ID, fp); err != nil {
 		return err
 	}
-	
+
 	// Index associated rooms
 	for _, room := range fp.Rooms {
 		if err := idx.engine.Index(ctx, "room", room.ID, room); err != nil {
@@ -165,7 +165,7 @@ func (idx *DatabaseIndexer) IndexFloorPlan(ctx context.Context, fp *models.Floor
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -182,10 +182,10 @@ func (idx *DatabaseIndexer) IndexRoom(ctx context.Context, room *models.Room) er
 // Stats returns indexer statistics
 func (idx *DatabaseIndexer) Stats() map[string]interface{} {
 	engineStats := idx.engine.Stats()
-	
+
 	return map[string]interface{}{
 		"engine_stats":     engineStats,
 		"refresh_interval": idx.refreshInterval,
-		"running":         idx.running,
+		"running":          idx.running,
 	}
 }

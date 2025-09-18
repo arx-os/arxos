@@ -26,9 +26,9 @@ func (c *IFCConverter) GetDescription() string {
 
 func (c *IFCConverter) CanConvert(filename string) bool {
 	lower := strings.ToLower(filename)
-	return strings.HasSuffix(lower, ".ifc") || 
-	       strings.HasSuffix(lower, ".ifcxml") ||
-	       strings.HasSuffix(lower, ".ifczip")
+	return strings.HasSuffix(lower, ".ifc") ||
+		strings.HasSuffix(lower, ".ifcxml") ||
+		strings.HasSuffix(lower, ".ifczip")
 }
 
 func (c *IFCConverter) ConvertToBIM(input io.Reader, output io.Writer) error {
@@ -47,7 +47,7 @@ func (c *IFCConverter) ConvertToBIM(input io.Reader, output io.Writer) error {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		// Parse IFC entities
 		if strings.HasPrefix(line, "#") {
 			// Extract entity ID
@@ -55,24 +55,24 @@ func (c *IFCConverter) ConvertToBIM(input io.Reader, output io.Writer) error {
 			if len(parts) == 2 {
 				currentID = strings.TrimSpace(parts[0])
 				entityData := strings.TrimSpace(parts[1])
-				
+
 				// Parse entity type and properties
 				if match := regexp.MustCompile(`^(\w+)\((.*)\);?$`).FindStringSubmatch(entityData); match != nil {
 					entityType := match[1]
 					properties := parseIFCProperties(match[2])
-					
+
 					if ifcObjects[entityType] == nil {
 						ifcObjects[entityType] = make(map[string]string)
 					}
 					ifcObjects[entityType][currentID] = properties
-					
+
 					// Process based on entity type
 					switch entityType {
 					case "IFCBUILDING":
 						if name := extractIFCString(properties); name != "" {
 							building.Name = name
 						}
-						
+
 					case "IFCBUILDINGSTOREY":
 						floor := Floor{
 							ID:    fmt.Sprintf("%d", len(building.Floors)+1),
@@ -80,14 +80,14 @@ func (c *IFCConverter) ConvertToBIM(input io.Reader, output io.Writer) error {
 							Level: len(building.Floors),
 							Rooms: make([]Room, 0),
 						}
-						
+
 						// Extract elevation if available
 						if elev := extractIFCNumber(properties); elev != 0 {
 							floor.Elevation = elev
 						}
-						
+
 						building.Floors = append(building.Floors, floor)
-						
+
 					case "IFCSPACE":
 						if len(building.Floors) > 0 {
 							room := Room{
@@ -99,14 +99,14 @@ func (c *IFCConverter) ConvertToBIM(input io.Reader, output io.Writer) error {
 							building.Floors[len(building.Floors)-1].Rooms = append(
 								building.Floors[len(building.Floors)-1].Rooms, room)
 						}
-						
+
 					case "IFCBUILDINGELEMENTPROXY", "IFCFURNISHINGELEMENT",
-					     "IFCDISTRIBUTIONELEMENT", "IFCFLOWTERMINAL", "IFCFLOWCONTROLLER":
+						"IFCDISTRIBUTIONELEMENT", "IFCFLOWTERMINAL", "IFCFLOWCONTROLLER":
 						// These are equipment
 						name := extractIFCString(properties)
 						if name != "" {
 							if len(building.Floors) > 0 &&
-							   len(building.Floors[len(building.Floors)-1].Rooms) > 0 {
+								len(building.Floors[len(building.Floors)-1].Rooms) > 0 {
 								eq := Equipment{
 									ID:     currentID,
 									Tag:    name,
@@ -137,7 +137,7 @@ func (c *IFCConverter) ConvertFromBIM(input io.Reader, output io.Writer) error {
 	// Generate IFC from BIM
 	// This would create a compliant IFC file
 	// For now, we'll create a simplified IFC structure
-	
+
 	fmt.Fprintln(output, "ISO-10303-21;")
 	fmt.Fprintln(output, "HEADER;")
 	fmt.Fprintln(output, "FILE_DESCRIPTION(('ArxOS Export'),'2;1');")
@@ -145,10 +145,10 @@ func (c *IFCConverter) ConvertFromBIM(input io.Reader, output io.Writer) error {
 	fmt.Fprintln(output, "FILE_SCHEMA(('IFC4'));")
 	fmt.Fprintln(output, "ENDSEC;")
 	fmt.Fprintln(output, "DATA;")
-	
+
 	// Parse BIM and generate IFC entities
 	// ... (simplified for now)
-	
+
 	fmt.Fprintln(output, "ENDSEC;")
 	fmt.Fprintln(output, "END-ISO-10303-21;")
 

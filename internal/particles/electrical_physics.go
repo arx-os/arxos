@@ -19,11 +19,11 @@ type ElectricalParticle struct {
 // ElectricalSystem simulates real electrical physics
 type ElectricalSystem struct {
 	*System
-	SourceVoltage float64              // Supply voltage (e.g., 120V, 240V)
-	TotalCurrent  float64              // Total system current
+	SourceVoltage float64               // Supply voltage (e.g., 120V, 240V)
+	TotalCurrent  float64               // Total system current
 	Components    []ElectricalComponent // Resistors, loads, etc.
 	Conductors    []Conductor           // Wires and paths
-	GroundPlane   float64              // Y-position of ground
+	GroundPlane   float64               // Y-position of ground
 }
 
 // ElectricalComponent represents a load or element in the circuit
@@ -45,7 +45,7 @@ const (
 	ComponentOutlet
 	ComponentBreaker
 	ComponentPanel
-	ComponentLoad      // Light, motor, etc.
+	ComponentLoad // Light, motor, etc.
 	ComponentGround
 	ComponentTransformer
 )
@@ -75,7 +75,7 @@ func NewElectricalSystem(width, height int, voltage float64) *ElectricalSystem {
 func (es *ElectricalSystem) CalculateOhmsLaw() {
 	// Calculate total circuit resistance
 	totalResistance := es.calculateTotalResistance()
-	
+
 	// Apply Ohm's Law: I = V / R
 	if totalResistance > 0 {
 		es.TotalCurrent = es.SourceVoltage / totalResistance
@@ -88,7 +88,7 @@ func (es *ElectricalSystem) CalculateOhmsLaw() {
 // calculateTotalResistance sums resistance through the circuit path
 func (es *ElectricalSystem) calculateTotalResistance() float64 {
 	resistance := 0.1 // Minimal wire resistance
-	
+
 	// Add component resistances (series circuit for simplicity)
 	for _, comp := range es.Components {
 		if !comp.IsFault {
@@ -98,12 +98,12 @@ func (es *ElectricalSystem) calculateTotalResistance() float64 {
 			return 0.001
 		}
 	}
-	
+
 	// Add conductor resistance based on length and gauge
 	for _, conductor := range es.Conductors {
 		resistance += es.calculateWireResistance(conductor)
 	}
-	
+
 	return resistance
 }
 
@@ -113,17 +113,17 @@ func (es *ElectricalSystem) calculateWireResistance(c Conductor) float64 {
 	// R = ρ * L / A where ρ is resistivity
 	resistancePerMeter := map[int]float64{
 		10: 0.00328, // 10 AWG
-		12: 0.00521, // 12 AWG  
+		12: 0.00521, // 12 AWG
 		14: 0.00829, // 14 AWG (typical 15A circuit)
 		16: 0.0132,  // 16 AWG
 		18: 0.0210,  // 18 AWG
 	}
-	
+
 	rpm, exists := resistancePerMeter[c.Gauge]
 	if !exists {
 		rpm = 0.00829 // Default to 14 AWG
 	}
-	
+
 	return rpm * c.Length
 }
 
@@ -137,16 +137,16 @@ func (es *ElectricalSystem) CalculateVoltageDrop(conductor Conductor, current fl
 // SimulateCurrentFlow creates particles following electrical physics
 func (es *ElectricalSystem) SimulateCurrentFlow() {
 	es.CalculateOhmsLaw()
-	
+
 	// Particle density based on current magnitude
 	particleRate := math.Min(es.TotalCurrent/10, 20) // Scale for visualization
-	
+
 	// Find electrical paths
 	for _, conductor := range es.Conductors {
 		// Calculate local voltage considering drops
 		voltageDrop := es.CalculateVoltageDrop(conductor, es.TotalCurrent)
 		localVoltage := es.SourceVoltage - voltageDrop
-		
+
 		// Spawn particles along conductor
 		steps := int(conductor.Length * 10)
 		for i := 0; i < steps; i++ {
@@ -154,7 +154,7 @@ func (es *ElectricalSystem) SimulateCurrentFlow() {
 				t := float64(i) / float64(steps)
 				x := conductor.StartX + t*(conductor.EndX-conductor.StartX)
 				y := conductor.StartY + t*(conductor.EndY-conductor.StartY)
-				
+
 				p := es.createElectricalParticle(x, y, localVoltage, es.TotalCurrent)
 				es.Particles = append(es.Particles, p)
 			}
@@ -167,27 +167,27 @@ func (es *ElectricalSystem) createElectricalParticle(x, y, voltage, current floa
 	// Particle speed proportional to current (drift velocity)
 	// Real electron drift is slow (~mm/s) but we scale for visualization
 	speed := math.Min(current*2, 10)
-	
+
 	// Particle intensity based on power (P = V * I)
 	power := voltage * current
 	intensity := math.Min(power/100, 1.0)
-	
+
 	// Character based on voltage level
 	var char rune
 	switch {
 	case voltage > 200:
 		char = '⚡' // High voltage
 	case voltage > 100:
-		char = '±'  // Standard voltage
+		char = '±' // Standard voltage
 	case voltage > 50:
-		char = '∓'  // Reduced voltage
+		char = '∓' // Reduced voltage
 	default:
-		char = '·'  // Low voltage
+		char = '·' // Low voltage
 	}
-	
+
 	// Add thermal effects from resistance (I²R heating)
 	heat := current * current * 0.01 // Simplified heating
-	
+
 	return Particle{
 		X:            x,
 		Y:            y,
@@ -205,7 +205,7 @@ func (es *ElectricalSystem) createElectricalParticle(x, y, voltage, current floa
 // DetectFaults identifies electrical problems
 func (es *ElectricalSystem) DetectFaults() []string {
 	var faults []string
-	
+
 	// Check for overcurrent
 	for _, conductor := range es.Conductors {
 		if es.TotalCurrent > conductor.Ampacity {
@@ -216,7 +216,7 @@ func (es *ElectricalSystem) DetectFaults() []string {
 			faults = append(faults, msg)
 		}
 	}
-	
+
 	// Check voltage drop (NEC recommends < 3% for branch circuits)
 	totalDrop := 0.0
 	for _, conductor := range es.Conductors {
@@ -229,7 +229,7 @@ func (es *ElectricalSystem) DetectFaults() []string {
 			totalDrop, dropPercent)
 		faults = append(faults, msg)
 	}
-	
+
 	// Check for ground faults
 	for _, comp := range es.Components {
 		if comp.IsFault {
@@ -237,7 +237,7 @@ func (es *ElectricalSystem) DetectFaults() []string {
 			faults = append(faults, msg)
 		}
 	}
-	
+
 	return faults
 }
 
@@ -253,14 +253,14 @@ func (es *ElectricalSystem) AddCircuitBreaker(x, y float64, rating float64) {
 		Name:       "Breaker",
 		IsFault:    false,
 	}
-	
+
 	// Check if breaker should trip
 	if es.TotalCurrent > rating {
 		breaker.Resistance = 1e6 // Very high resistance when tripped
 		breaker.IsFault = true
 		breaker.Name = "Breaker (TRIPPED)"
 	}
-	
+
 	es.Components = append(es.Components, breaker)
 }
 

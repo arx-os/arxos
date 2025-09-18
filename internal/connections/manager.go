@@ -3,9 +3,9 @@ package connections
 import (
 	"context"
 	"fmt"
-	
-	"github.com/arx-os/arxos/internal/database"
+
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
 )
 
 // Manager manages equipment connections and relationships
@@ -30,7 +30,7 @@ func (m *Manager) GetDownstream(equipmentID string) []string {
 		logger.Error("Failed to get downstream connections: %v", err)
 		return []string{}
 	}
-	
+
 	ids := make([]string, 0, len(connections))
 	for _, conn := range connections {
 		ids = append(ids, conn.ToID)
@@ -46,7 +46,7 @@ func (m *Manager) GetUpstream(equipmentID string) []string {
 		logger.Error("Failed to get upstream connections: %v", err)
 		return []string{}
 	}
-	
+
 	ids := make([]string, 0, len(connections))
 	for _, conn := range connections {
 		ids = append(ids, conn.FromID)
@@ -92,7 +92,7 @@ func (m *Manager) TraceCircuit(sourceID string) ([]string, error) {
 	path := []string{sourceID}
 	visited := make(map[string]bool)
 	visited[sourceID] = true
-	
+
 	var trace func(id string)
 	trace = func(id string) {
 		downstream := m.GetDownstream(id)
@@ -104,7 +104,7 @@ func (m *Manager) TraceCircuit(sourceID string) ([]string, error) {
 			}
 		}
 	}
-	
+
 	trace(sourceID)
 	return path, nil
 }
@@ -115,20 +115,20 @@ func (m *Manager) FindPath(fromID, toID string) ([]string, error) {
 	queue := [][]string{{fromID}}
 	visited := make(map[string]bool)
 	visited[fromID] = true
-	
+
 	for len(queue) > 0 {
 		path := queue[0]
 		queue = queue[1:]
-		
+
 		current := path[len(path)-1]
 		if current == toID {
 			return path, nil
 		}
-		
+
 		// Check all connections
 		downstream := m.GetDownstream(current)
 		upstream := m.GetUpstream(current)
-		
+
 		neighbors := append(downstream, upstream...)
 		for _, next := range neighbors {
 			if !visited[next] {
@@ -139,7 +139,7 @@ func (m *Manager) FindPath(fromID, toID string) ([]string, error) {
 			}
 		}
 	}
-	
+
 	return nil, fmt.Errorf("no path found from %s to %s", fromID, toID)
 }
 
@@ -152,21 +152,21 @@ type ConnectionPoint struct {
 func (m *Manager) GetConnectionPath(connectionID string) ([]ConnectionPoint, error) {
 	// For now, generate a simple path based on equipment positions
 	// In a real implementation, this would query stored path data
-	
+
 	// Parse connection ID to get from/to equipment
 	// Assuming format "fromID->toID" or similar
 	parts := []string{connectionID} // Simplified for now
 	if len(parts) < 2 {
 		return nil, fmt.Errorf("invalid connection ID format")
 	}
-	
+
 	// Get equipment positions (this is a simplified implementation)
 	// In reality, we'd need to access equipment data or have stored path points
 	points := []ConnectionPoint{
 		{X: 0, Y: 0},   // Start point
 		{X: 10, Y: 10}, // End point
 	}
-	
+
 	return points, nil
 }
 
@@ -187,11 +187,11 @@ func (m *Manager) GetStatistics() ConnectionStatistics {
 		logger.Warn("Failed to get connections for statistics: %v", err)
 		return ConnectionStatistics{}
 	}
-	
+
 	total := len(connections)
 	active := 0
 	failed := 0
-	
+
 	// Count active and failed connections
 	for _, conn := range connections {
 		if conn.IsActive {
@@ -200,18 +200,18 @@ func (m *Manager) GetStatistics() ConnectionStatistics {
 			failed++
 		}
 	}
-	
+
 	// Calculate error rate
 	errorRate := 0.0
 	if total > 0 {
 		errorRate = (float64(failed) / float64(total)) * 100
 	}
-	
+
 	return ConnectionStatistics{
 		TotalConnections:  total,
 		ActiveConnections: active,
 		FailedConnections: failed,
-		AverageLatency:    2.5,  // Mock latency in ms
+		AverageLatency:    2.5,   // Mock latency in ms
 		ThroughputMbps:    125.0, // Mock throughput
 		ErrorRate:         errorRate,
 	}

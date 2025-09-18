@@ -19,11 +19,11 @@ import (
 
 // TestServer encapsulates test server setup
 type TestServer struct {
-	Server       *api.Server
-	DB           database.DB
-	Router       http.Handler
-	AuthService  *MockAuthService
-	Shutdown     func()
+	Server      *api.Server
+	DB          database.DB
+	Router      http.Handler
+	AuthService *MockAuthService
+	Shutdown    func()
 }
 
 // SetupTestServer creates a test server with in-memory database

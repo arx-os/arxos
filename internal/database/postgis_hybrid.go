@@ -15,9 +15,9 @@ import (
 
 // PostGISHybridDB combines PostGIS spatial operations with SQLite for regular data
 type PostGISHybridDB struct {
-	*PostGISDB                // Spatial operations
-	sqliteDB    *SQLiteDB     // Regular database operations
-	connected   bool
+	*PostGISDB           // Spatial operations
+	sqliteDB   *SQLiteDB // Regular database operations
+	connected  bool
 }
 
 // NewPostGISHybridDB creates a new PostGIS hybrid database

@@ -76,7 +76,7 @@ func (mc *MetricsCollector) IncrementCounter(name string, tags map[string]string
 // IncrementCounterBy increments a counter metric by a specific value
 func (mc *MetricsCollector) incrementCounterBy(name string, value float64, tags map[string]string) {
 	key := mc.getMetricKey(name, tags)
-	
+
 	mc.mu.Lock()
 	counter, exists := mc.counters[key]
 	if !exists {
@@ -96,7 +96,7 @@ func (mc *MetricsCollector) incrementCounterBy(name string, value float64, tags 
 // RecordGauge records a gauge metric
 func (mc *MetricsCollector) RecordGauge(name string, value float64, tags map[string]string) {
 	key := mc.getMetricKey(name, tags)
-	
+
 	mc.mu.Lock()
 	gauge, exists := mc.gauges[key]
 	if !exists {
@@ -117,7 +117,7 @@ func (mc *MetricsCollector) RecordGauge(name string, value float64, tags map[str
 // RecordHistogram records a histogram metric
 func (mc *MetricsCollector) RecordHistogram(name string, value float64, tags map[string]string) {
 	key := mc.getMetricKey(name, tags)
-	
+
 	mc.mu.Lock()
 	histo, exists := mc.histos[key]
 	if !exists {
@@ -160,7 +160,7 @@ func (mc *MetricsCollector) RecordHistogram(name string, value float64, tags map
 func (mc *MetricsCollector) GetCounters() map[string]*CounterMetric {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	result := make(map[string]*CounterMetric)
 	for k, v := range mc.counters {
 		result[k] = v
@@ -172,7 +172,7 @@ func (mc *MetricsCollector) GetCounters() map[string]*CounterMetric {
 func (mc *MetricsCollector) GetGauges() map[string]*GaugeMetric {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	result := make(map[string]*GaugeMetric)
 	for k, v := range mc.gauges {
 		result[k] = v
@@ -184,7 +184,7 @@ func (mc *MetricsCollector) GetGauges() map[string]*GaugeMetric {
 func (mc *MetricsCollector) GetHistograms() map[string]*HistogramMetric {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	
+
 	result := make(map[string]*HistogramMetric)
 	for k, v := range mc.histos {
 		result[k] = v
@@ -228,7 +228,7 @@ func (mc *MetricsCollector) handleMetrics(w http.ResponseWriter, r *http.Request
 	}
 
 	format := r.URL.Query().Get("format")
-	
+
 	switch format {
 	case "prometheus":
 		mc.handlePrometheusMetrics(w, r)
@@ -240,9 +240,9 @@ func (mc *MetricsCollector) handleMetrics(w http.ResponseWriter, r *http.Request
 // handleJSONMetrics returns metrics in JSON format
 func (mc *MetricsCollector) handleJSONMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics := map[string]interface{}{
-		"timestamp": time.Now().Unix(),
-		"counters":  mc.GetCounters(),
-		"gauges":    mc.GetGauges(),
+		"timestamp":  time.Now().Unix(),
+		"counters":   mc.GetCounters(),
+		"gauges":     mc.GetGauges(),
 		"histograms": mc.GetHistograms(),
 	}
 
@@ -253,7 +253,7 @@ func (mc *MetricsCollector) handleJSONMetrics(w http.ResponseWriter, r *http.Req
 // handlePrometheusMetrics returns metrics in Prometheus format
 func (mc *MetricsCollector) handlePrometheusMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
-	
+
 	// Write counters
 	for _, counter := range mc.GetCounters() {
 		counter.mu.RLock()
@@ -274,14 +274,14 @@ func (mc *MetricsCollector) handlePrometheusMetrics(w http.ResponseWriter, r *ht
 	for _, histo := range mc.GetHistograms() {
 		histo.mu.RLock()
 		fmt.Fprintf(w, "# TYPE %s histogram\n", histo.Name)
-		
+
 		// Write buckets
 		var buckets []float64
 		for bucket := range histo.Buckets {
 			buckets = append(buckets, bucket)
 		}
 		sort.Float64s(buckets)
-		
+
 		for _, bucket := range buckets {
 			tags := make(map[string]string)
 			for k, v := range histo.Tags {
@@ -290,7 +290,7 @@ func (mc *MetricsCollector) handlePrometheusMetrics(w http.ResponseWriter, r *ht
 			tags["le"] = fmt.Sprintf("%.3f", bucket)
 			fmt.Fprintf(w, "%s_bucket%s %d\n", histo.Name, mc.formatTags(tags), histo.Buckets[bucket])
 		}
-		
+
 		// Write count and sum
 		fmt.Fprintf(w, "%s_count%s %d\n", histo.Name, mc.formatTags(histo.Tags), histo.Count)
 		fmt.Fprintf(w, "%s_sum%s %.6f\n", histo.Name, mc.formatTags(histo.Tags), histo.Sum)

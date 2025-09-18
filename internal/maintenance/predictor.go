@@ -8,9 +8,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/connections"
 	"github.com/arx-os/arxos/internal/database"
-	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -32,16 +32,16 @@ func NewPredictor(db database.DB, connManager *connections.Manager) *Predictor {
 
 // MaintenanceAlert represents a predicted maintenance requirement
 type MaintenanceAlert struct {
-	EquipmentID     string                `json:"equipment_id"`
-	EquipmentName   string                `json:"equipment_name"`
-	AlertType       MaintenanceAlertType  `json:"alert_type"`
-	Severity        AlertSeverity         `json:"severity"`
-	PredictedDate   time.Time             `json:"predicted_date"`
-	Confidence      float64               `json:"confidence"`
-	Description     string                `json:"description"`
-	Recommendations []string              `json:"recommendations"`
+	EquipmentID     string                 `json:"equipment_id"`
+	EquipmentName   string                 `json:"equipment_name"`
+	AlertType       MaintenanceAlertType   `json:"alert_type"`
+	Severity        AlertSeverity          `json:"severity"`
+	PredictedDate   time.Time              `json:"predicted_date"`
+	Confidence      float64                `json:"confidence"`
+	Description     string                 `json:"description"`
+	Recommendations []string               `json:"recommendations"`
 	Indicators      []MaintenanceIndicator `json:"indicators"`
-	EstimatedCost   float64               `json:"estimated_cost"`
+	EstimatedCost   float64                `json:"estimated_cost"`
 }
 
 // MaintenanceAlertType represents the type of maintenance needed
@@ -76,16 +76,16 @@ type MaintenanceIndicator struct {
 
 // EquipmentHealth represents the current health status of equipment
 type EquipmentHealth struct {
-	EquipmentID          string                  `json:"equipment_id"`
-	OverallScore         float64                 `json:"overall_score"` // 0-100
-	HealthStatus         HealthStatus            `json:"health_status"`
-	LastMaintenanceDate  *time.Time              `json:"last_maintenance_date"`
-	NextScheduledDate    *time.Time              `json:"next_scheduled_date"`
-	OperationalHours     float64                 `json:"operational_hours"`
-	EfficiencyRating     float64                 `json:"efficiency_rating"`
-	FailureProbability   float64                 `json:"failure_probability"`
-	Indicators           []MaintenanceIndicator  `json:"indicators"`
-	MaintenanceHistory   []MaintenanceRecord     `json:"maintenance_history"`
+	EquipmentID         string                 `json:"equipment_id"`
+	OverallScore        float64                `json:"overall_score"` // 0-100
+	HealthStatus        HealthStatus           `json:"health_status"`
+	LastMaintenanceDate *time.Time             `json:"last_maintenance_date"`
+	NextScheduledDate   *time.Time             `json:"next_scheduled_date"`
+	OperationalHours    float64                `json:"operational_hours"`
+	EfficiencyRating    float64                `json:"efficiency_rating"`
+	FailureProbability  float64                `json:"failure_probability"`
+	Indicators          []MaintenanceIndicator `json:"indicators"`
+	MaintenanceHistory  []MaintenanceRecord    `json:"maintenance_history"`
 }
 
 // HealthStatus represents the overall health of equipment
@@ -181,10 +181,10 @@ func (p *Predictor) AnalyzeSystemWidePatterns(ctx context.Context) (*SystemAnaly
 	}
 
 	analysis := &SystemAnalysis{
-		TotalEquipment:    0,
+		TotalEquipment:     0,
 		HealthDistribution: make(map[HealthStatus]int),
-		SystemInsights:    []SystemInsight{},
-		Recommendations:   []string{},
+		SystemInsights:     []SystemInsight{},
+		Recommendations:    []string{},
 	}
 
 	var allEquipment []*models.Equipment
@@ -220,23 +220,23 @@ func (p *Predictor) AnalyzeSystemWidePatterns(ctx context.Context) (*SystemAnaly
 
 // SystemAnalysis represents system-wide maintenance patterns
 type SystemAnalysis struct {
-	TotalEquipment       int                    `json:"total_equipment"`
-	AverageHealthScore   float64                `json:"average_health_score"`
-	HealthVariance       float64                `json:"health_variance"`
-	HealthDistribution   map[HealthStatus]int   `json:"health_distribution"`
-	SystemInsights       []SystemInsight        `json:"system_insights"`
-	Recommendations      []string               `json:"recommendations"`
-	PredictedDowntime    time.Duration          `json:"predicted_downtime"`
-	EstimatedMaintenanceCost float64           `json:"estimated_maintenance_cost"`
+	TotalEquipment           int                  `json:"total_equipment"`
+	AverageHealthScore       float64              `json:"average_health_score"`
+	HealthVariance           float64              `json:"health_variance"`
+	HealthDistribution       map[HealthStatus]int `json:"health_distribution"`
+	SystemInsights           []SystemInsight      `json:"system_insights"`
+	Recommendations          []string             `json:"recommendations"`
+	PredictedDowntime        time.Duration        `json:"predicted_downtime"`
+	EstimatedMaintenanceCost float64              `json:"estimated_maintenance_cost"`
 }
 
 // SystemInsight represents a system-wide pattern or insight
 type SystemInsight struct {
-	Category    string    `json:"category"`
-	Description string    `json:"description"`
-	Impact      string    `json:"impact"`
-	Confidence  float64   `json:"confidence"`
-	Equipment   []string  `json:"affected_equipment"`
+	Category    string   `json:"category"`
+	Description string   `json:"description"`
+	Impact      string   `json:"impact"`
+	Confidence  float64  `json:"confidence"`
+	Equipment   []string `json:"affected_equipment"`
 }
 
 // Private methods for health analysis
@@ -271,7 +271,7 @@ func (p *Predictor) analyzeElectricalHealth(health *EquipmentHealth, equipment *
 func (p *Predictor) analyzeUsagePatterns(health *EquipmentHealth, equipment *models.Equipment) {
 	// Simulate usage pattern analysis
 	baseHours := 8760.0 // Hours in a year
-	
+
 	switch equipment.Type {
 	case "hvac":
 		health.OperationalHours = baseHours * 0.6 // HVAC runs ~60% of time
@@ -321,7 +321,7 @@ func (p *Predictor) analyzeConnectionHealth(health *EquipmentHealth, equipment *
 	// Analyze connection quality and patterns
 	downstream := p.connManager.GetDownstream(equipment.ID)
 	upstream := p.connManager.GetUpstream(equipment.ID)
-	
+
 	connectionLoad := float64(len(downstream) + len(upstream))
 	health.Indicators = append(health.Indicators, MaintenanceIndicator{
 		Name:        "Connection Load",
@@ -361,7 +361,7 @@ func (p *Predictor) calculateOverallScore(health *EquipmentHealth) float64 {
 	}
 
 	score := totalScore / weights
-	
+
 	// Factor in efficiency rating
 	if health.EfficiencyRating > 0 {
 		score = (score + health.EfficiencyRating) / 2
@@ -388,7 +388,7 @@ func (p *Predictor) determineHealthStatus(score float64) HealthStatus {
 func (p *Predictor) calculateFailureProbability(health *EquipmentHealth) float64 {
 	// Simple failure probability based on health score
 	baseFailureRate := (100.0 - health.OverallScore) / 100.0
-	
+
 	// Adjust based on operational hours
 	if health.OperationalHours > 8000 { // More than typical year
 		baseFailureRate *= 1.2
@@ -399,7 +399,7 @@ func (p *Predictor) calculateFailureProbability(health *EquipmentHealth) float64
 
 func (p *Predictor) estimateMaintenanceDates(health *EquipmentHealth, equipment *models.Equipment) {
 	now := time.Now()
-	
+
 	// Estimate next scheduled maintenance based on equipment type
 	var maintenanceInterval time.Duration
 	switch equipment.Type {
@@ -448,15 +448,15 @@ func (p *Predictor) generateAlertsFromHealth(equipment *models.Equipment, health
 	if health.FailureProbability > 0.3 {
 		daysUntilMaintenance := int((1.0 - health.FailureProbability) * 30)
 		alerts = append(alerts, MaintenanceAlert{
-			EquipmentID:   equipment.ID,
-			EquipmentName: equipment.Name,
-			AlertType:     AlertTypePredictive,
-			Severity:      p.getSeverityFromProbability(health.FailureProbability),
-			PredictedDate: time.Now().Add(time.Duration(daysUntilMaintenance) * 24 * time.Hour),
-			Confidence:    health.FailureProbability,
-			Description:   fmt.Sprintf("Equipment showing signs of degradation (%.1f%% failure probability)", health.FailureProbability*100),
+			EquipmentID:     equipment.ID,
+			EquipmentName:   equipment.Name,
+			AlertType:       AlertTypePredictive,
+			Severity:        p.getSeverityFromProbability(health.FailureProbability),
+			PredictedDate:   time.Now().Add(time.Duration(daysUntilMaintenance) * 24 * time.Hour),
+			Confidence:      health.FailureProbability,
+			Description:     fmt.Sprintf("Equipment showing signs of degradation (%.1f%% failure probability)", health.FailureProbability*100),
 			Recommendations: p.getRecommendationsForEquipment(equipment),
-			EstimatedCost: p.estimateMaintenanceCost(equipment, AlertTypePredictive),
+			EstimatedCost:   p.estimateMaintenanceCost(equipment, AlertTypePredictive),
 		})
 	}
 
@@ -524,7 +524,7 @@ func (p *Predictor) createIndicatorAlert(equipment *models.Equipment, indicator 
 		Severity:      SeverityMedium,
 		PredictedDate: time.Now().Add(7 * 24 * time.Hour), // Next week
 		Confidence:    0.8,
-		Description:   fmt.Sprintf("%s exceeds threshold: %.2f %s (limit: %.2f %s)", 
+		Description: fmt.Sprintf("%s exceeds threshold: %.2f %s (limit: %.2f %s)",
 			indicator.Name, indicator.Value, indicator.Unit, indicator.Threshold, indicator.Unit),
 		Recommendations: []string{
 			fmt.Sprintf("Address %s issue", indicator.Name),
@@ -585,7 +585,7 @@ func (p *Predictor) generateSystemInsights(analysis *SystemAnalysis, equipment [
 			Impact:      "High risk of system failures and downtime",
 			Confidence:  0.95,
 		})
-		
+
 		analysis.Recommendations = append(analysis.Recommendations,
 			"Prioritize maintenance for critical equipment",
 			"Consider emergency maintenance budget allocation",
@@ -663,7 +663,7 @@ func (p *Predictor) GetScheduledMaintenanceCount(ctx context.Context) (int, erro
 	if err != nil {
 		return 0, fmt.Errorf("failed to get floor plans: %w", err)
 	}
-	
+
 	var equipment []*models.Equipment
 	for _, plan := range plans {
 		planEquipment, err := p.db.GetEquipmentByFloorPlan(ctx, plan.Name)
@@ -672,22 +672,22 @@ func (p *Predictor) GetScheduledMaintenanceCount(ctx context.Context) (int, erro
 		}
 		equipment = append(equipment, planEquipment...)
 	}
-	
+
 	scheduledCount := 0
 	currentTime := time.Now()
-	
+
 	// Count equipment that needs maintenance within next 30 days
 	for _, eq := range equipment {
 		health, err := p.AnalyzeEquipmentHealth(ctx, eq.ID)
 		if err != nil {
 			continue
 		}
-		
+
 		// Equipment with low health scores or high failure probability needs maintenance
 		if health.OverallScore < 60 || health.FailureProbability > 0.3 {
 			scheduledCount++
 		}
-		
+
 		// Also count equipment that hasn't been maintained in a long time
 		if eq.MarkedAt != nil {
 			daysSinceCreation := currentTime.Sub(*eq.MarkedAt).Hours() / 24
@@ -696,7 +696,7 @@ func (p *Predictor) GetScheduledMaintenanceCount(ctx context.Context) (int, erro
 			}
 		}
 	}
-	
+
 	return scheduledCount, nil
 }
 
@@ -708,7 +708,7 @@ func (p *Predictor) GetOverdueMaintenanceCount(ctx context.Context) (int, error)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get floor plans: %w", err)
 	}
-	
+
 	var equipment []*models.Equipment
 	for _, plan := range plans {
 		planEquipment, err := p.db.GetEquipmentByFloorPlan(ctx, plan.Name)
@@ -717,21 +717,21 @@ func (p *Predictor) GetOverdueMaintenanceCount(ctx context.Context) (int, error)
 		}
 		equipment = append(equipment, planEquipment...)
 	}
-	
+
 	overdueCount := 0
 	currentTime := time.Now()
-	
+
 	for _, eq := range equipment {
 		health, err := p.AnalyzeEquipmentHealth(ctx, eq.ID)
 		if err != nil {
 			continue
 		}
-		
+
 		// Equipment with critical health scores is overdue for maintenance
 		if health.OverallScore < 30 || health.FailureProbability > 0.7 {
 			overdueCount++
 		}
-		
+
 		// Also count equipment that hasn't been maintained in a very long time
 		if eq.MarkedAt != nil {
 			daysSinceCreation := currentTime.Sub(*eq.MarkedAt).Hours() / 24
@@ -740,6 +740,6 @@ func (p *Predictor) GetOverdueMaintenanceCount(ctx context.Context) (int, error)
 			}
 		}
 	}
-	
+
 	return overdueCount, nil
 }

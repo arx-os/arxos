@@ -4,8 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/config"
+	"github.com/arx-os/arxos/internal/errors"
 	"github.com/arx-os/arxos/internal/spatial"
 	"github.com/arx-os/arxos/pkg/models"
 )
@@ -18,25 +21,64 @@ type PostGISHybridDB struct {
 }
 
 // NewPostGISHybridDB creates a new PostGIS hybrid database
-func NewPostGISHybridDB(pgConfig PostGISConfig, sqliteConfig *Config) *PostGISHybridDB {
-	return &PostGISHybridDB{
-		PostGISDB: NewPostGISDB(pgConfig),
-		sqliteDB:  NewSQLiteDB(sqliteConfig),
+func NewPostGISHybridDB(pgConfig *config.PostGISConfig) (*PostGISHybridDB, error) {
+	if pgConfig == nil {
+		return nil, errors.NewConfigError("postgis_config", "PostGIS config is required")
 	}
+
+	// Validate required fields for PostGIS
+	if pgConfig.Host == "" {
+		return nil, errors.NewValidationError("host", "PostGIS host is required")
+	}
+	if pgConfig.Database == "" {
+		return nil, errors.NewValidationError("database", "PostGIS database name is required")
+	}
+	if pgConfig.User == "" {
+		return nil, errors.NewValidationError("user", "PostGIS user is required")
+	}
+
+	// Create default SQLite config for fallback
+	sqliteConfig := NewConfig("arxos.db")
+
+	// Convert config.PostGISConfig to database.PostGISConfig
+	dbPGConfig := PostGISConfig{
+		Host:            pgConfig.Host,
+		Port:            pgConfig.Port,
+		Database:        pgConfig.Database,
+		User:            pgConfig.User,
+		Password:        pgConfig.Password,
+		SSLMode:         pgConfig.SSLMode,
+		SpatialRef:      pgConfig.SRID,
+		MaxConnections:  25,
+		ConnMaxLifetime: 30 * time.Minute,
+	}
+
+	return &PostGISHybridDB{
+		PostGISDB: NewPostGISDB(dbPGConfig),
+		sqliteDB:  NewSQLiteDB(sqliteConfig),
+	}, nil
 }
 
 // Connect establishes connections to both databases
 func (p *PostGISHybridDB) Connect(ctx context.Context, dbPath string) error {
-	// Connect SQLite for regular operations
-	if err := p.sqliteDB.Connect(ctx, dbPath); err != nil {
-		return fmt.Errorf("failed to connect SQLite: %w", err)
+	// Use dbPath for SQLite if provided, otherwise use default
+	sqlitePath := "arxos.db"
+	if dbPath != "" {
+		sqlitePath = dbPath
+	}
+	// Connect SQLite for regular operations first
+	if err := p.sqliteDB.Connect(ctx, sqlitePath); err != nil {
+		return errors.Wrap(err, errors.ErrorTypeConnection, "SQLITE_CONNECT_FAILED",
+			"failed to connect to SQLite database")
 	}
 
 	// Try to connect PostGIS for spatial operations
 	if err := p.PostGISDB.Connect(ctx); err != nil {
 		logger.Warn("PostGIS connection failed, spatial features disabled: %v", err)
-		// Don't fail entirely - we can still work without spatial
+		// Don't fail entirely - we can still work without spatial features
 		p.connected = false
+		return errors.Wrap(err, errors.ErrorTypeConnection, "POSTGIS_CONNECT_FAILED",
+			"PostGIS connection failed, falling back to SQLite-only mode")
 	} else {
 		p.connected = true
 		logger.Info("PostGIS connected, spatial features enabled")
@@ -72,7 +114,7 @@ func (p *PostGISHybridDB) HasSpatialSupport() bool {
 // GetSpatialDB returns the spatial database interface if available
 func (p *PostGISHybridDB) GetSpatialDB() (SpatialDB, error) {
 	if !p.connected {
-		return nil, fmt.Errorf("PostGIS not connected")
+		return nil, errors.NewNotFoundError("spatial_database", "PostGIS not connected")
 	}
 	return p.PostGISDB, nil
 }

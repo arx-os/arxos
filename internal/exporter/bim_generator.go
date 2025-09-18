@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/database"
+	"github.com/arx-os/arxos/internal/spatial"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -262,12 +264,150 @@ func (g *BIMGenerator) findRoom(plan *models.FloorPlan, roomID string) *models.R
 	return nil
 }
 
-// GenerateFromDatabase generates .bim.txt by querying the database
+// GenerateFromDatabase generates .bim.txt by querying the database (PostGIS or SQLite)
 func (g *BIMGenerator) GenerateFromDatabase(ctx context.Context, db interface{}, buildingID string, w io.Writer) error {
-	// This will be implemented to query PostGIS/SQLite
-	// For now, return not implemented
-	logger.Info("Generating BIM text for building: %s", buildingID)
-	return fmt.Errorf("database generation not yet implemented")
+	logger.Info("Generating BIM text for building: %s from database", buildingID)
+
+	// Write header
+	header := []string{
+		"# ArxOS Building Information Model",
+		fmt.Sprintf("# Generated: %s", time.Now().Format("2006-01-02 15:04:05")),
+		fmt.Sprintf("# Building: %s", buildingID),
+		"# Source: PostGIS Spatial Database",
+		"# Coordinates: Millimeter precision (SRID 900913)",
+		"",
+	}
+
+	for _, line := range header {
+		if _, err := fmt.Fprintln(w, line); err != nil {
+			return err
+		}
+	}
+
+	// Check if we have a PostGIS hybrid database
+	if hybridDB, ok := db.(*database.PostGISHybridDB); ok {
+		spatialDB, err := hybridDB.GetSpatialDB()
+		if err == nil {
+			// Generate with spatial data
+			return g.generateWithSpatialData(ctx, spatialDB, buildingID, w)
+		}
+	}
+
+	// Fall back to SQLite generation
+	if sqliteDB, ok := db.(*database.SQLiteDB); ok {
+		return g.generateFromSQLite(ctx, sqliteDB, buildingID, w)
+	}
+
+	return fmt.Errorf("unsupported database type for BIM generation")
+}
+
+// generateWithSpatialData generates BIM from PostGIS spatial data
+func (g *BIMGenerator) generateWithSpatialData(ctx context.Context, spatialDB database.SpatialDB, buildingID string, w io.Writer) error {
+	// Query equipment by spatial proximity (get all within building bounds)
+	center := spatial.Point3D{X: 0, Y: 0, Z: 0}
+	radius := 1000000.0 // 1km radius in meters to get all building equipment
+
+	equipment, err := spatialDB.QueryBySpatialProximity(center, radius)
+	if err != nil {
+		return fmt.Errorf("failed to query spatial equipment: %w", err)
+	}
+
+	// Group equipment by floor based on Z coordinate
+	floorMap := make(map[int][]*database.SpatialEquipment)
+	for _, eq := range equipment {
+		if eq.SpatialData != nil {
+			// Determine floor from Z coordinate (assume 3500mm per floor)
+			floor := int(eq.SpatialData.Position.Z / 3500)
+			floorMap[floor] = append(floorMap[floor], eq)
+		}
+	}
+
+	// Sort floors
+	var floors []int
+	for f := range floorMap {
+		floors = append(floors, f)
+	}
+	sort.Ints(floors)
+
+	// Write floors and equipment
+	for _, floor := range floors {
+		fmt.Fprintf(w, "\nFLOOR: %d Level_%d\n", floor, floor)
+
+		// Sort equipment by position for consistent output
+		equipment := floorMap[floor]
+		sort.Slice(equipment, func(i, j int) bool {
+			return equipment[i].ID < equipment[j].ID
+		})
+
+		// Write equipment with spatial coordinates
+		for _, eq := range equipment {
+			if eq.SpatialData != nil {
+				fmt.Fprintf(w, "  EQUIPMENT: %s [%s] %s @ %.3f,%.3f,%.3f",
+					eq.ID, eq.Type, eq.Name,
+					eq.SpatialData.Position.X,
+					eq.SpatialData.Position.Y,
+					eq.SpatialData.Position.Z)
+
+				// Add confidence indicator
+				if eq.SpatialData.PositionConfidence == spatial.ConfidenceHigh {
+					fmt.Fprint(w, " ★")
+				}
+
+				fmt.Fprintln(w)
+
+				// Add metadata
+				if g.IncludeMetadata {
+					fmt.Fprintf(w, "    # Source: %s\n", eq.SpatialData.PositionSource)
+					fmt.Fprintf(w, "    # Updated: %s\n", eq.SpatialData.PositionUpdated.Format("2006-01-02"))
+					fmt.Fprintf(w, "    # Grid: [%d,%d]\n",
+						eq.SpatialData.GridPosition.X,
+						eq.SpatialData.GridPosition.Y)
+				}
+			}
+		}
+	}
+
+	// Add spatial statistics
+	fmt.Fprintln(w, "\n## SPATIAL STATISTICS")
+	fmt.Fprintf(w, "Total Equipment: %d\n", len(equipment))
+
+	highConfidence := 0
+	for _, eq := range equipment {
+		if eq.SpatialData != nil && eq.SpatialData.PositionConfidence == spatial.ConfidenceHigh {
+			highConfidence++
+		}
+	}
+	fmt.Fprintf(w, "High Confidence Positions: %d (%.1f%%)\n",
+		highConfidence,
+		float64(highConfidence)/float64(len(equipment))*100)
+
+	fmt.Fprintln(w, "\n# End of Building Information Model")
+
+	return nil
+}
+
+// generateFromSQLite generates BIM from SQLite database
+func (g *BIMGenerator) generateFromSQLite(ctx context.Context, db *database.SQLiteDB, buildingID string, w io.Writer) error {
+	// Query all floor plans and filter by building
+	allPlans, err := db.GetAllFloorPlans(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query floor plans: %w", err)
+	}
+
+	// Filter by building ID
+	var floorPlans []*models.FloorPlan
+	for _, plan := range allPlans {
+		if plan.Building == buildingID {
+			floorPlans = append(floorPlans, plan)
+		}
+	}
+
+	if len(floorPlans) == 0 {
+		return fmt.Errorf("no floor plans found for building: %s", buildingID)
+	}
+
+	// Use existing method
+	return g.GenerateFromFloorPlans(floorPlans, w)
 }
 
 // getVersion returns the current ArxOS version

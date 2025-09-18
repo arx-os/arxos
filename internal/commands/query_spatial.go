@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/spatial"
 )
@@ -22,20 +23,21 @@ func ExecuteSpatialQuery(opts QueryOptions) error {
 		return fmt.Errorf("no spatial parameters provided")
 	}
 
-	// Create database configuration
-	dbConfig := database.NewConfig("arxos.db")
-
 	// Try to create a PostGIS hybrid database
-	pgConfig := database.PostGISConfig{
+	pgConfig := &config.PostGISConfig{
 		Host:     getEnvOrDefault("POSTGIS_HOST", "localhost"),
 		Port:     5432,
 		Database: getEnvOrDefault("POSTGIS_DB", "arxos"),
 		User:     getEnvOrDefault("POSTGIS_USER", "postgres"),
 		Password: getEnvOrDefault("POSTGIS_PASSWORD", ""),
 		SSLMode:  "prefer",
+		SRID:     900913,
 	}
 
-	hybridDB := database.NewPostGISHybridDB(pgConfig, dbConfig)
+	hybridDB, err := database.NewPostGISHybridDB(pgConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create PostGIS database: %w", err)
+	}
 	if err := hybridDB.Connect(ctx, "arxos.db"); err != nil {
 		logger.Warn("Failed to connect to PostGIS, spatial queries unavailable: %v", err)
 		return fmt.Errorf("spatial queries require PostGIS connection")

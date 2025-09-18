@@ -2,16 +2,38 @@
 
 ## Overview
 
-ArxOS is a Building Information Management System that treats buildings as code. It provides Git-like version control for building data, universal addressing for any object in any building, and multiple interface layers from terminal to AR.
+ArxOS is a Building Operating System that provides:
+- **PostGIS Spatial Database**: Millimeter-precision spatial storage
+- **IFC Import/Export**: Professional BIM integration
+- **Multi-Format Export**: BIM, CSV, JSON output formats
+- **Daemon Automation**: File watching and auto-processing
+- **Git-like Version Control**: Track building changes over time
+- **Docker Deployment**: Production-ready containerization
+
+## Prerequisites
+
+- Docker & Docker Compose
+- Go 1.21+ (for building from source)
+- 4GB RAM minimum
+- 10GB disk space
 
 ## Installation
 
-### Prerequisites
-- Go 1.21 or higher
-- Git
-- SQLite3
+### Option 1: Docker (Recommended)
 
-### Build from Source
+```bash
+# Clone the repository
+git clone https://github.com/arx-os/arxos
+cd arxos
+
+# Start the stack
+docker-compose up -d
+
+# Verify installation
+docker-compose ps
+```
+
+### Option 2: Build from Source
 
 ```bash
 # Clone the repository
@@ -21,302 +43,316 @@ cd arxos
 # Build the CLI
 go build -o arx ./cmd/arx
 
-# Install to system path
-sudo mv arx /usr/local/bin/
+# Start PostGIS database
+docker-compose up -d postgis
 
-# Install ArxOS components
-arx install
+# Verify connection
+./arx query --health
 ```
 
-## Basic Usage
+## Quick Start Tutorial
 
-### 1. Initialize a Building Repository
-
-Every building in ArxOS has a unique identifier following the pattern:
-`ARXOS-{CONTINENT}-{COUNTRY}-{STATE}-{CITY}-{NUMBER}`
+### 1. Start the System
 
 ```bash
-# Create a new building repository
-arx repo init ARXOS-NA-US-CA-LAX-0001 --name "My Office Building"
+# Start PostGIS and API server
+docker-compose up -d
 
-# Navigate to the building directory
-cd ~/.arxos/buildings/ARXOS-NA-US-CA-LAX-0001
+# Check system health
+./arx query --health
 ```
 
-### 2. Define Building Structure
-
-Buildings are defined in `building.bim.txt` files using a simple text format:
-
-```text
-# building.bim.txt
-## FLOORS
-FLOOR 1 "Ground Floor" 0.0
-FLOOR 2 "Second Floor" 4.0
-
-## ROOMS
-ROOM 1/101 "Lobby" lobby 100.0
-ROOM 1/102 "Server Room" datacenter 50.0
-ROOM 2/201 "Office Space" office 200.0
-
-## EQUIPMENT
-EQUIPMENT 1/102/RACK_01 "Main Server" server operational
-EQUIPMENT 2/201/COMP_01 "Workstation 1" computer operational
-```
-
-### 3. Version Control
-
-ArxOS uses Git under the hood for version control:
+### 2. Import an IFC File
 
 ```bash
-# Check status
-arx repo status
+# Import a building from IFC
+./arx import ifc path/to/building.ifc --building-id ARXOS-001
 
-# Commit changes
-arx repo commit -m "Added server room equipment"
-
-# View history
-arx repo log
-
-# Create a branch for renovations
-arx repo branch renovations
+# Verify import
+./arx query buildings
 ```
 
-### 4. Query and Search
+### 3. Query Building Data
 
 ```bash
-# List all equipment
-arx list equipment
+# List all floors
+./arx query floors --building ARXOS-001
 
-# Query by floor
-arx query --floor 1
+# Find equipment on floor 2
+./arx query equipment --floor 2
 
-# Find all computers
-arx query --type computer
+# Spatial query - find equipment within 5m of a point
+./arx query equipment --near "1000,2000,0" --radius 5000
 
-# Check offline equipment
-arx query --status offline
-
-# Search for specific items
-arx search "server"
-
-# Get details of specific equipment
-arx get equipment 1/102/RACK_01
+# Get room information
+./arx query rooms --building ARXOS-001 --with-geometry
 ```
 
-### 5. Modify Building
+### 4. Export Building Data
 
 ```bash
-# Add new equipment
-arx add equipment 2/201/PRINT_01 "Network Printer" printer operational
+# Export to human-readable BIM format
+./arx export bim --building ARXOS-001 --output building.bim.txt
 
-# Add a new room
-arx add room 2/202 "Conference Room" conference 50.0
+# Export equipment list to CSV
+./arx export csv --equipment --output equipment.csv
 
-# Remove equipment
-arx remove equipment 2/201/COMP_01
-
-# Commit changes
-arx repo commit -m "Added printer and conference room"
+# Export complete building as JSON
+./arx export json --building ARXOS-001 --output building.json
 ```
 
-## Universal Addressing
-
-Every object in ArxOS has a unique address:
-
-- Building: `ARXOS-NA-US-CA-LAX-0001`
-- Floor: `ARXOS-NA-US-CA-LAX-0001/2`
-- Room: `ARXOS-NA-US-CA-LAX-0001/2/201`
-- Equipment: `ARXOS-NA-US-CA-LAX-0001/2/201/COMP_01`
-
-This enables precise references across systems and networks.
-
-## BIM File Format
-
-The Building Information Model (BIM) text format is human-readable and version-control friendly:
-
-### Floors
-```
-FLOOR <number> "<name>" <elevation>
-```
-
-### Rooms
-```
-ROOM <floor>/<number> "<name>" <type> <area>
-```
-Types: office, conference, datacenter, lobby, utility, storage, kitchen, restroom
-
-### Equipment
-```
-EQUIPMENT <floor>/<room>/<id> "<name>" <type> <status>
-```
-Types: computer, server, hvac, electrical, printer, av, network, security
-Status: operational, maintenance, offline, error
-
-### Critical Systems
-```
-CRITICAL <equipment_path> "<description>"
-```
-
-## Advanced Features
-
-### SQL Queries
-
-For complex queries, use direct SQL:
+### 5. Start the Daemon (Auto-Import)
 
 ```bash
-arx query --sql "SELECT * FROM equipment WHERE status = 'maintenance'"
+# Start daemon to watch for IFC files
+./arx daemon start --watch /path/to/ifc/folder
+
+# Check daemon status
+./arx daemon status
+
+# Stop daemon
+./arx daemon stop
 ```
 
-### API Server
+## Building Data Model
 
-Start the REST API server:
+ArxOS uses a hierarchical spatial model:
+
+```
+Building (ARXOS-001)
+├── Floor 0 (Ground)
+│   ├── Room 101 (Lobby)
+│   │   ├── Equipment: Reception Desk
+│   │   └── Equipment: Info Display
+│   ├── Room 102 (Security)
+│   │   └── Equipment: Security Console
+│   └── Room 103 (Mechanical)
+│       ├── Equipment: HVAC-001
+│       └── Equipment: Electrical Panel
+├── Floor 1
+│   ├── Room 201 (Conference)
+│   │   ├── Equipment: Projector
+│   │   └── Equipment: Conference Phone
+│   └── Room 202 (Open Office)
+│       ├── Equipment: Workstations (x20)
+│       └── Equipment: Printers (x2)
+└── Metadata
+    ├── Version: 1.0.0
+    ├── Last Modified: 2024-01-15
+    └── Total Area: 5000 m²
+```
+
+## Spatial Queries with PostGIS
+
+ArxOS leverages PostGIS for advanced spatial queries:
 
 ```bash
-# Start server on port 8080
-arx serve
+# Find all equipment in a bounding box
+./arx query equipment --bbox "0,0,10000,10000"
 
-# In another terminal, query the API
-curl http://localhost:8080/api/buildings
+# Find rooms containing a specific point
+./arx query rooms --contains-point "5000,3000"
+
+# Find nearest equipment to a location
+./arx query equipment --nearest "2000,2000,0" --limit 5
+
+# Calculate distances between equipment
+./arx query distances --from HVAC-001 --to-type electrical
 ```
 
-### Multiple Buildings
+## BIM Text Format
 
-Manage multiple buildings by switching directories:
+ArxOS uses a human-readable BIM format:
+
+```
+BUILDING: ARXOS-001
+NAME: Tech Office Building
+ADDRESS: 123 Tech Street, San Francisco, CA
+
+FLOOR: 0
+  NAME: Ground Floor
+  ELEVATION: 0mm
+
+  ROOM: 101
+    NAME: Main Lobby
+    TYPE: PUBLIC
+    AREA: 150m²
+
+    EQUIPMENT: RECEP-01
+      NAME: Reception Desk
+      TYPE: FURNITURE
+      LOCATION: (5000, 3000, 0)
+      STATUS: OPERATIONAL
+
+FLOOR: 1
+  NAME: First Floor
+  ELEVATION: 3500mm
+
+  ROOM: 201
+    NAME: Conference Room A
+    TYPE: MEETING
+    AREA: 50m²
+```
+
+## Configuration
+
+### Environment Variables
 
 ```bash
-# List all buildings
-ls ~/.arxos/buildings/
+# Database
+POSTGIS_HOST=localhost
+POSTGIS_PORT=5432
+POSTGRES_DB=arxos
+POSTGRES_USER=arxos
+POSTGRES_PASSWORD=secure_password
 
-# Switch to a different building
-cd ~/.arxos/buildings/ARXOS-NA-US-NY-NYC-0001
+# Application
+ARX_LOG_LEVEL=info
+API_PORT=8080
+
+# Daemon
+DAEMON_WATCH_PATHS=/data/ifc
+DAEMON_AUTO_IMPORT=true
+DAEMON_AUTO_EXPORT=true
 ```
 
-## Real-World Examples
+### Configuration Files
 
-### Example 1: Emergency Maintenance
+- `configs/development.yml` - Development settings
+- `configs/production.yml` - Production settings
+- `configs/daemon.yaml` - Daemon configuration
+
+## API Endpoints
+
+ArxOS provides a REST API on port 8080:
 
 ```bash
-# Find all critical systems
-arx query --critical
+# Health check
+curl http://localhost:8080/health
 
-# Check status of HVAC systems
-arx query --type hvac
+# Get all buildings
+curl http://localhost:8080/api/v1/buildings
 
-# Mark system for maintenance
-vi building.bim.txt  # Change status to 'maintenance'
-arx repo commit -m "HVAC_01 scheduled for emergency maintenance"
+# Get specific building
+curl http://localhost:8080/api/v1/buildings/ARXOS-001
+
+# Query equipment
+curl http://localhost:8080/api/v1/equipment?floor=2
+
+# Spatial query
+curl http://localhost:8080/api/v1/spatial/nearest?point=1000,2000,0&radius=5000
 ```
 
-### Example 2: Office Relocation
+## Docker Deployment
+
+### Development
 
 ```bash
-# Create a branch for the move
-arx repo branch office-move
+# Start all services
+docker-compose up -d
 
-# Add new workstations
-for i in {1..10}; do
-  arx add equipment 3/301/COMP_$(printf %02d $i) "Workstation $i" computer operational
-done
+# View logs
+docker-compose logs -f
 
-# Commit the changes
-arx repo commit -m "Added 10 workstations to floor 3"
-
-# Merge when complete
-arx repo branch main
-arx repo merge office-move
+# Stop services
+docker-compose down
 ```
 
-### Example 3: Building Audit
+### Production
 
 ```bash
-# Generate equipment summary
-echo "=== Building Equipment Audit ==="
-echo "Total Equipment: $(arx list equipment | wc -l)"
-echo "Operational: $(arx query --status operational | wc -l)"
-echo "Maintenance: $(arx query --status maintenance | wc -l)"
-echo "Offline: $(arx query --status offline | wc -l)"
+# Deploy production stack
+docker-compose -f docker/docker-compose.base.yml \
+               -f docker/docker-compose.prod.yml up -d
 
-# List equipment by floor
-for floor in 1 2 3; do
-  echo "Floor $floor: $(arx query --floor $floor | wc -l) items"
-done
-```
-
-## Integration
-
-### Git Integration
-
-Since ArxOS uses Git, you can use standard Git commands:
-
-```bash
-cd ~/.arxos/buildings/ARXOS-NA-US-CA-LAX-0001
-git remote add origin https://github.com/myorg/building-001.git
-git push -u origin main
-```
-
-### CI/CD Pipeline
-
-Example GitHub Actions workflow:
-
-```yaml
-name: Building Validation
-on: [push]
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install ArxOS
-        run: |
-          go install github.com/arx-os/arxos/cmd/arx@latest
-      - name: Validate BIM
-        run: |
-          arx validate building.bim.txt
-      - name: Check Critical Systems
-        run: |
-          arx query --critical --status offline
+# With monitoring
+docker-compose -f docker/docker-compose.base.yml \
+               -f docker/docker-compose.prod.yml \
+               -f docker/docker-compose.monitoring.yml up -d
 ```
 
 ## Troubleshooting
 
-### Database Issues
+### Database Connection Issues
 
 ```bash
-# Reset database
-rm ~/.arxos/data/arxos.db
-arx install
+# Check PostGIS is running
+docker ps | grep postgis
+
+# Test connection
+docker exec -it arxos-postgis psql -U arxos -d arxos -c "SELECT PostGIS_Version();"
+
+# View PostGIS logs
+docker logs arxos-postgis
 ```
 
-### Git Conflicts
+### Import Issues
 
 ```bash
-# Resolve conflicts in building.bim.txt
-vi building.bim.txt
-git add building.bim.txt
-git commit -m "Resolved conflicts"
+# Validate IFC file
+./arx validate ifc path/to/file.ifc
+
+# Import with verbose logging
+ARX_LOG_LEVEL=debug ./arx import ifc file.ifc --building-id ARXOS-001
+
+# Check import history
+./arx query imports --recent
 ```
 
-### Permission Errors
+### Performance
 
 ```bash
-# Fix permissions
-chmod -R 755 ~/.arxos
+# Check database statistics
+./arx admin db-stats
+
+# Optimize spatial indices
+./arx admin optimize-spatial
+
+# Monitor resource usage
+docker stats arxos-postgis arxos-api
+```
+
+## Best Practices
+
+1. **Building IDs**: Use consistent naming: `ARXOS-{REGION}-{CITY}-{NUMBER}`
+2. **IFC Files**: Validate before import using `./arx validate ifc`
+3. **Spatial Precision**: Store coordinates in millimeters for accuracy
+4. **Version Control**: Commit building changes with meaningful messages
+5. **Backups**: Regular PostGIS backups using `pg_dump`
+
+## Examples
+
+### Complete Workflow
+
+```bash
+# 1. Start system
+docker-compose up -d
+
+# 2. Import building
+./arx import ifc office_building.ifc --building-id ARXOS-NA-NYC-001
+
+# 3. Query data
+./arx query equipment --building ARXOS-NA-NYC-001 --floor 5
+
+# 4. Export for reporting
+./arx export csv --equipment --output report.csv
+
+# 5. Start daemon for automation
+./arx daemon start --watch /shared/ifc
+
+# 6. Monitor changes
+./arx repo log --building ARXOS-NA-NYC-001
 ```
 
 ## Next Steps
 
-1. **Run the Demo**: Execute `demos/demo.sh` for an interactive walkthrough
-2. **Explore Examples**: Check the `demos/` directory for sample buildings
-3. **API Documentation**: Start the server and visit http://localhost:8080/docs
-4. **Mobile AR**: See `mobile/README.md` for AR application setup
-5. **Web Visualization**: See `web/README.md` for 3D visualization setup
+- Review the [full documentation](/docs)
+- Try the [interactive demo](./demo.sh)
+- Explore the [API documentation](http://localhost:8080/swagger)
+- Join the [ArxOS community](https://github.com/arx-os/arxos/discussions)
 
 ## Support
 
 - GitHub Issues: https://github.com/arx-os/arxos/issues
-- Documentation: https://github.com/arx-os/arxos/wiki
-- Examples: `/demos` directory in the repository
-
----
-
-*ArxOS - Building Information as Code*
+- Documentation: https://arxos.io/docs
+- Discord: https://discord.gg/arxos

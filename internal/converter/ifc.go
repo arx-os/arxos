@@ -151,8 +151,13 @@ func (c *IFCConverter) ConvertFromBIM(input io.Reader, output io.Writer) error {
 	
 	fmt.Fprintln(output, "ENDSEC;")
 	fmt.Fprintln(output, "END-ISO-10303-21;")
-	
+
 	return nil
+}
+
+func (c *IFCConverter) ConvertToDB(input io.Reader, db interface{}) error {
+	// Legacy converter - use ImprovedIFCConverter for direct database import
+	return fmt.Errorf("direct database import not implemented in legacy converter")
 }
 
 // Helper functions for IFC parsing

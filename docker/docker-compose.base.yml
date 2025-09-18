@@ -1,0 +1,78 @@
+# Base Docker Compose configuration for ArxOS
+# This file contains the core services needed for all environments
+version: '3.8'
+
+services:
+  # PostGIS spatial database (primary database)
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: arxos-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-arxos}
+      POSTGRES_USER: ${POSTGRES_USER:-arxos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arxos_secure_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "${POSTGIS_PORT:-5432}:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+      - ../scripts/init-postgis.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../scripts/optimize-postgis.sql:/docker-entrypoint-initdb.d/02-optimize.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-arxos} -d ${POSTGRES_DB:-arxos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arxos-network
+
+  # ArxOS API Server
+  arxos-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: arxos-api
+    restart: unless-stopped
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      # Database configuration
+      ARX_DB_TYPE: postgis
+      POSTGIS_HOST: postgis
+      POSTGIS_PORT: 5432
+      POSTGIS_DB: ${POSTGRES_DB:-arxos}
+      POSTGIS_USER: ${POSTGRES_USER:-arxos}
+      POSTGIS_PASSWORD: ${POSTGRES_PASSWORD:-arxos_secure_password}
+
+      # Application configuration
+      ARX_LOG_LEVEL: ${LOG_LEVEL:-info}
+      ARX_STATE_DIR: /data/.arxos
+      ARX_CACHE_DIR: /data/.arxos/cache
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - arxos_data:/data
+      - ../config:/config:ro
+    command: ["arx", "serve", "--port", "8080"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - arxos-network
+
+networks:
+  arxos-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  postgis_data:
+    driver: local
+  arxos_data:
+    driver: local

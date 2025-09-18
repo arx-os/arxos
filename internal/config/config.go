@@ -55,9 +55,6 @@ type Config struct {
 
 	// Security settings
 	Security SecurityConfig `json:"security"`
-
-	// Database settings
-	Database DatabaseConfig `json:"database"`
 }
 
 // CloudConfig contains cloud-specific configuration
@@ -82,11 +79,17 @@ type StorageConfig struct {
 
 // DatabaseConfig defines database configuration
 type DatabaseConfig struct {
-	Type         string        `json:"type"` // sqlite, postgres
-	Path         string        `json:"path"` // For SQLite
-	MaxOpenConns int           `json:"max_open_conns"`
-	MaxIdleConns int           `json:"max_idle_conns"`
-	ConnLifetime time.Duration `json:"conn_lifetime"`
+	Type           string        `json:"type"`   // sqlite, postgres, hybrid
+	Path           string        `json:"path"`   // For SQLite
+	Driver         string        `json:"driver"` // Legacy field, maps to Type
+	DataSourceName string        `json:"-"`      // Never serialize connection strings
+	MaxOpenConns   int           `json:"max_open_conns"`
+	MaxConnections int           `json:"max_connections"` // Alias for MaxOpenConns
+	MaxIdleConns   int           `json:"max_idle_conns"`
+	ConnLifetime   time.Duration `json:"conn_lifetime"`
+	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"` // Alias for ConnLifetime
+	MigrationsPath  string        `json:"migrations_path"`
+	AutoMigrate     bool          `json:"auto_migrate"`
 }
 
 // PostGISConfig defines PostGIS spatial database configuration
@@ -142,16 +145,6 @@ type SecurityConfig struct {
 	BcryptCost         int           `json:"bcrypt_cost"`
 }
 
-// DatabaseConfig contains database connection settings
-type DatabaseConfig struct {
-	Driver          string        `json:"driver"` // sqlite, postgres
-	DataSourceName  string        `json:"-"` // Never serialize connection strings
-	MaxConnections  int           `json:"max_connections"`
-	MaxIdleConns    int           `json:"max_idle_conns"`
-	ConnMaxLifetime time.Duration `json:"conn_max_lifetime"`
-	MigrationsPath  string        `json:"migrations_path"`
-	AutoMigrate     bool          `json:"auto_migrate"`
-}
 
 // Default returns a default configuration for local mode
 func Default() *Config {
@@ -210,13 +203,27 @@ func Default() *Config {
 		},
 
 		Database: DatabaseConfig{
-			Driver:          "sqlite",
+			Type:            "hybrid",
+			Path:            filepath.Join(homeDir, ".arxos", "arxos.db"),
+			Driver:          "sqlite", // Legacy field
 			DataSourceName:  filepath.Join(homeDir, ".arxos", "arxos.db"),
-			MaxConnections:  25,
+			MaxOpenConns:    25,
+			MaxConnections:  25, // Alias
 			MaxIdleConns:    5,
-			ConnMaxLifetime: 30 * time.Minute,
+			ConnLifetime:    30 * time.Minute,
+			ConnMaxLifetime: 30 * time.Minute, // Alias
 			MigrationsPath:  "./migrations",
 			AutoMigrate:     true,
+		},
+
+		PostGIS: PostGISConfig{
+			Host:     "localhost",
+			Port:     5432,
+			Database: "arxos",
+			User:     "arxos",
+			Password: "",
+			SSLMode:  "disable",
+			SRID:     900913, // Web Mercator with millimeter precision
 		},
 	}
 }
@@ -346,8 +353,14 @@ func (c *Config) LoadFromEnv() {
 	}
 
 	// Database settings from environment
+	if dbType := os.Getenv("ARXOS_DB_TYPE"); dbType != "" {
+		c.Database.Type = dbType
+	}
 	if driver := os.Getenv("ARXOS_DB_DRIVER"); driver != "" {
 		c.Database.Driver = driver
+	}
+	if path := os.Getenv("ARXOS_DB_PATH"); path != "" {
+		c.Database.Path = path
 	}
 
 	if dsn := os.Getenv("ARXOS_DATABASE_URL"); dsn != "" {
@@ -360,6 +373,34 @@ func (c *Config) LoadFromEnv() {
 	if maxConn := os.Getenv("ARXOS_DB_MAX_CONNECTIONS"); maxConn != "" {
 		if val, err := parseIntEnv(maxConn); err == nil {
 			c.Database.MaxConnections = val
+			c.Database.MaxOpenConns = val
+		}
+	}
+
+	// PostGIS settings from environment
+	if host := os.Getenv("POSTGIS_HOST"); host != "" {
+		c.PostGIS.Host = host
+	}
+	if port := os.Getenv("POSTGIS_PORT"); port != "" {
+		if val, err := parseIntEnv(port); err == nil {
+			c.PostGIS.Port = val
+		}
+	}
+	if database := os.Getenv("POSTGIS_DATABASE"); database != "" {
+		c.PostGIS.Database = database
+	}
+	if user := os.Getenv("POSTGIS_USER"); user != "" {
+		c.PostGIS.User = user
+	}
+	if password := os.Getenv("POSTGIS_PASSWORD"); password != "" {
+		c.PostGIS.Password = password
+	}
+	if sslMode := os.Getenv("POSTGIS_SSLMODE"); sslMode != "" {
+		c.PostGIS.SSLMode = sslMode
+	}
+	if srid := os.Getenv("POSTGIS_SRID"); srid != "" {
+		if val, err := parseIntEnv(srid); err == nil {
+			c.PostGIS.SRID = val
 		}
 	}
 }
@@ -411,15 +452,44 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate database settings
-	switch c.Database.Driver {
-	case "sqlite", "postgres":
-		// Valid drivers
+	switch c.Database.Type {
+	case "sqlite", "postgis", "hybrid":
+		// Valid types
+	case "": // Default to checking driver for backward compatibility
+		switch c.Database.Driver {
+		case "sqlite", "postgres":
+			// Valid drivers
+		default:
+			return fmt.Errorf("invalid database driver: %s", c.Database.Driver)
+		}
 	default:
-		return fmt.Errorf("invalid database driver: %s", c.Database.Driver)
+		return fmt.Errorf("invalid database type: %s", c.Database.Type)
 	}
 
-	if c.Database.DataSourceName == "" {
-		return fmt.Errorf("database connection string required")
+	// Validate PostGIS configuration if using PostGIS
+	if c.Database.Type == "postgis" || c.Database.Type == "hybrid" {
+		if c.PostGIS.Host == "" {
+			return fmt.Errorf("PostGIS host required when using PostGIS database")
+		}
+		if c.PostGIS.Port == 0 {
+			c.PostGIS.Port = 5432 // Set default
+		}
+		if c.PostGIS.Database == "" {
+			return fmt.Errorf("PostGIS database name required")
+		}
+		if c.PostGIS.User == "" {
+			return fmt.Errorf("PostGIS user required")
+		}
+		if c.PostGIS.SRID == 0 {
+			c.PostGIS.SRID = 900913 // Set default
+		}
+	}
+
+	// Validate SQLite path for SQLite or hybrid
+	if c.Database.Type == "sqlite" || c.Database.Type == "hybrid" || c.Database.Type == "" {
+		if c.Database.Path == "" && c.Database.DataSourceName == "" {
+			return fmt.Errorf("database path or connection string required")
+		}
 	}
 
 	return nil
@@ -483,15 +553,57 @@ func GetConfigPath() string {
 	if path := os.Getenv("ARXOS_CONFIG"); path != "" {
 		return path
 	}
-	
+
 	// Check current directory
 	if _, err := os.Stat("arxos.json"); err == nil {
 		return "arxos.json"
 	}
-	
+
 	// Use home directory
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".arxos", "config.json")
+}
+
+// GetDatabaseConfig returns a database.DatabaseConfig from the main config
+func (c *Config) GetDatabaseConfig() *DatabaseConfig {
+	return &DatabaseConfig{
+		Type:            c.Database.Type,
+		Path:            c.Database.Path,
+		Driver:          c.Database.Driver,
+		DataSourceName:  c.Database.DataSourceName,
+		MaxOpenConns:    c.Database.MaxOpenConns,
+		MaxConnections:  c.Database.MaxConnections,
+		MaxIdleConns:    c.Database.MaxIdleConns,
+		ConnLifetime:    c.Database.ConnLifetime,
+		ConnMaxLifetime: c.Database.ConnMaxLifetime,
+		MigrationsPath:  c.Database.MigrationsPath,
+		AutoMigrate:     c.Database.AutoMigrate,
+	}
+}
+
+// GetPostGISConfig returns the PostGIS configuration
+func (c *Config) GetPostGISConfig() *PostGISConfig {
+	return &PostGISConfig{
+		Host:     c.PostGIS.Host,
+		Port:     c.PostGIS.Port,
+		Database: c.PostGIS.Database,
+		User:     c.PostGIS.User,
+		Password: c.PostGIS.Password,
+		SSLMode:  c.PostGIS.SSLMode,
+		SRID:     c.PostGIS.SRID,
+	}
+}
+
+// BuildPostGISConnectionString builds a PostgreSQL connection string from PostGIS config
+func (c *Config) BuildPostGISConnectionString() string {
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=%s",
+		c.PostGIS.Host, c.PostGIS.Port, c.PostGIS.User, c.PostGIS.Database, c.PostGIS.SSLMode)
+
+	if c.PostGIS.Password != "" {
+		dsn = fmt.Sprintf("%s password=%s", dsn, c.PostGIS.Password)
+	}
+
+	return dsn
 }
 
 // Helper functions

@@ -1,0 +1,385 @@
+# ArxOS Daemon Configuration
+# Daemon watches directories for IFC files and auto-imports/exports
+
+# Core daemon settings
+daemon:
+  # Service identification
+  name: "arxos-daemon"
+  pid_file: "${ARX_STATE_DIR:-/var/run}/arxos-daemon.pid"
+
+  # Run mode
+  mode: "${DAEMON_MODE:-watch}"  # watch, import, export, sync
+  daemonize: false  # Run as background service
+
+  # Resource limits
+  max_workers: ${DAEMON_MAX_WORKERS:-4}
+  max_memory_mb: 1024
+  nice_level: 10
+
+# File watching configuration
+watcher:
+  enabled: true
+
+  # Directories to watch
+  paths:
+    - path: "${DAEMON_WATCH_PATH_1:-/data/ifc}"
+      recursive: true
+      patterns:
+        - "*.ifc"
+        - "*.ifczip"
+        - "*.ifcxml"
+      ignore_patterns:
+        - "*.tmp"
+        - "*.part"
+        - "~*"
+
+    - path: "${DAEMON_WATCH_PATH_2:-/data/imports}"
+      recursive: false
+      patterns:
+        - "*.ifc"
+
+  # Polling configuration
+  poll_interval: "${DAEMON_POLL_INTERVAL:-5s}"
+  use_fsnotify: true  # Use filesystem notifications if available
+
+  # File handling
+  stable_time: 2s  # Wait for file to be stable before processing
+  retry_count: 3
+  retry_delay: 5s
+
+  # Processing queue
+  queue_size: 100
+  batch_size: 10
+
+# Import configuration
+import:
+  enabled: "${DAEMON_AUTO_IMPORT:-true}"
+
+  # Import settings
+  auto_detect_format: true
+  validate_before_import: true
+  create_backup: true
+
+  # IFC specific
+  ifc:
+    strict_mode: false
+    repair_invalid: true
+    merge_duplicates: true
+
+    # Entity filtering
+    include_entities:
+      - IfcBuilding
+      - IfcBuildingStorey
+      - IfcSpace
+      - IfcWall
+      - IfcDoor
+      - IfcWindow
+      - IfcSlab
+      - IfcRoof
+      - IfcColumn
+      - IfcBeam
+      - IfcStair
+      - IfcRamp
+      - IfcBuildingElementProxy
+      - IfcFlowController
+      - IfcFlowSegment
+      - IfcFlowTerminal
+      - IfcFlowFitting
+      - IfcDistributionElement
+
+    exclude_entities:
+      - IfcAnnotation
+      - IfcGrid
+
+    # Property extraction
+    extract_properties: true
+    extract_quantities: true
+    extract_materials: true
+    extract_classifications: true
+
+  # File handling
+  move_after_import: true
+  success_directory: "${SUCCESS_DIR:-/data/processed}"
+  error_directory: "${ERROR_DIR:-/data/failed}"
+
+  # Size limits
+  max_file_size_mb: ${MAX_FILE_SIZE_MB:-500}
+  max_entities: 1000000
+
+  # Performance
+  parallel_imports: false
+  chunk_size: 10000
+
+# Export configuration
+export:
+  enabled: "${DAEMON_AUTO_EXPORT:-true}"
+
+  # Export triggers
+  triggers:
+    - on_import_complete: true
+    - on_schedule: "${EXPORT_SCHEDULE:-0 */6 * * *}"  # Every 6 hours
+    - on_change: true
+    - on_demand: true
+
+  # Export formats
+  formats:
+    bim:
+      enabled: true
+      output_dir: "${EXPORT_DIR:-/data/exports}/bim"
+      file_pattern: "{building}_{date}.bim.txt"
+      include_metadata: true
+
+    csv:
+      enabled: true
+      output_dir: "${EXPORT_DIR:-/data/exports}/csv"
+      file_pattern: "{building}_equipment_{date}.csv"
+      include_headers: true
+      delimiter: ","
+
+    json:
+      enabled: true
+      output_dir: "${EXPORT_DIR:-/data/exports}/json"
+      file_pattern: "{building}_{date}.json"
+      pretty_print: false
+      include_spatial: true
+
+  # Export settings
+  compress_output: true
+  create_manifest: true
+  retention_days: ${EXPORT_RETENTION_DAYS:-30}
+
+  # Performance
+  parallel_exports: true
+  batch_size: 1000
+
+# Repository sync configuration
+sync:
+  enabled: "${SYNC_ENABLED:-false}"
+
+  # Remote repository
+  remote:
+    url: "${SYNC_REMOTE_URL}"
+    branch: "${SYNC_BRANCH:-main}"
+    auth:
+      type: "${SYNC_AUTH_TYPE:-token}"  # token, ssh, basic
+      token: "${SYNC_TOKEN}"
+      username: "${SYNC_USERNAME}"
+      password: "${SYNC_PASSWORD}"
+      ssh_key_path: "${SSH_KEY_PATH}"
+
+  # Sync settings
+  direction: "${SYNC_DIRECTION:-bidirectional}"  # push, pull, bidirectional
+  interval: "${SYNC_INTERVAL:-5m}"
+
+  # Conflict resolution
+  conflict_strategy: "${CONFLICT_STRATEGY:-merge}"  # merge, ours, theirs, manual
+  auto_commit: true
+  commit_message_template: "Auto-sync from daemon at {timestamp}"
+
+  # Filters
+  include_patterns:
+    - "*.ifc"
+    - "*.json"
+    - "metadata.yml"
+
+  exclude_patterns:
+    - "*.tmp"
+    - "*.log"
+    - ".git/*"
+
+# Database configuration
+database:
+  # Connection settings (uses main app database)
+  type: "${ARX_DB_TYPE:-postgis}"
+
+  postgis:
+    host: "${POSTGIS_HOST:-localhost}"
+    port: ${POSTGIS_PORT:-5432}
+    database: "${POSTGRES_DB:-arxos}"
+    user: "${POSTGRES_USER:-arxos}"
+    password: "${POSTGRES_PASSWORD}"
+    ssl_mode: "${POSTGIS_SSL_MODE:-prefer}"
+
+    # Connection pool for daemon
+    max_connections: 10
+    max_idle: 2
+
+  sqlite:
+    path: "${SQLITE_PATH:-.arxos/arxos.db}"
+
+  # Query settings
+  timeout: 30s
+  retry_on_failure: true
+  retry_count: 3
+
+# Notification configuration
+notifications:
+  enabled: "${NOTIFICATIONS_ENABLED:-false}"
+
+  # Notification channels
+  channels:
+    webhook:
+      enabled: "${WEBHOOK_ENABLED:-false}"
+      url: "${WEBHOOK_URL}"
+      method: POST
+      headers:
+        Content-Type: "application/json"
+        Authorization: "Bearer ${WEBHOOK_TOKEN}"
+
+    email:
+      enabled: "${EMAIL_ENABLED:-false}"
+      smtp_host: "${SMTP_HOST}"
+      smtp_port: ${SMTP_PORT:-587}
+      from: "${SMTP_FROM}"
+      to: "${SMTP_TO}"
+      username: "${SMTP_USERNAME}"
+      password: "${SMTP_PASSWORD}"
+
+    slack:
+      enabled: "${SLACK_ENABLED:-false}"
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+      channel: "${SLACK_CHANNEL:-#arxos-alerts}"
+      username: "ArxOS Daemon"
+
+  # Event triggers
+  events:
+    - import_started
+    - import_completed
+    - import_failed
+    - export_completed
+    - sync_completed
+    - error_occurred
+    - storage_low
+    - performance_degraded
+
+# Logging configuration
+logging:
+  level: "${DAEMON_LOG_LEVEL:-info}"
+  format: "${DAEMON_LOG_FORMAT:-json}"
+
+  # Output configuration
+  outputs:
+    - type: file
+      path: "${DAEMON_LOG_PATH:-/var/log/arxos/daemon.log}"
+      rotate: true
+      max_size_mb: 100
+      max_backups: 5
+      max_age_days: 30
+      compress: true
+
+    - type: stdout
+      enabled: "${DAEMON_LOG_STDOUT:-true}"
+
+    - type: syslog
+      enabled: "${DAEMON_LOG_SYSLOG:-false}"
+      facility: daemon
+      tag: arxos-daemon
+
+# Health monitoring
+health:
+  enabled: true
+
+  # Health check endpoint
+  endpoint:
+    enabled: true
+    port: ${HEALTH_PORT:-9091}
+    path: "/health"
+
+  # Metrics
+  metrics:
+    enabled: true
+    port: ${METRICS_PORT:-9092}
+    path: "/metrics"
+
+    # Metrics to track
+    track:
+      - files_processed
+      - import_duration
+      - export_duration
+      - error_count
+      - queue_size
+      - memory_usage
+      - cpu_usage
+
+  # Self-healing
+  auto_restart:
+    enabled: true
+    max_restarts: 3
+    restart_delay: 30s
+
+  # Resource monitoring
+  limits:
+    max_memory_percent: 80
+    max_cpu_percent: 90
+    max_disk_usage_percent: 95
+
+# Performance tuning
+performance:
+  # Processing optimization
+  prefetch_count: 2
+  buffer_size: 8192
+
+  # Caching
+  cache:
+    enabled: true
+    type: "${CACHE_TYPE:-memory}"
+    ttl: 5m
+    max_size_mb: 256
+
+  # Garbage collection
+  gc:
+    enabled: true
+    interval: 10m
+    target_percentage: 25
+
+  # CPU affinity (optional)
+  cpu_affinity: ""  # e.g., "0,1" to bind to CPU 0 and 1
+
+# Security
+security:
+  # File validation
+  validate_checksums: true
+  scan_for_malware: false
+
+  # Access control
+  file_permissions: "0644"
+  directory_permissions: "0755"
+
+  # Sandboxing
+  sandbox:
+    enabled: false
+    type: "${SANDBOX_TYPE:-none}"  # none, chroot, container
+    path: "/var/lib/arxos/sandbox"
+
+# Maintenance
+maintenance:
+  # Cleanup old files
+  cleanup:
+    enabled: true
+    schedule: "${CLEANUP_SCHEDULE:-0 3 * * *}"  # 3 AM daily
+
+    directories:
+      - path: "/data/processed"
+        max_age_days: 30
+      - path: "/data/failed"
+        max_age_days: 7
+      - path: "/data/exports"
+        max_age_days: 30
+      - path: "/tmp/arxos"
+        max_age_days: 1
+
+  # Database maintenance
+  db_maintenance:
+    enabled: true
+    schedule: "${DB_MAINT_SCHEDULE:-0 4 * * 0}"  # 4 AM Sunday
+    vacuum: true
+    analyze: true
+    reindex: true
+
+# Feature flags
+features:
+  enable_hot_reload: false
+  enable_debug_mode: false
+  enable_profiling: false
+  enable_tracing: false
+  enable_experimental: false

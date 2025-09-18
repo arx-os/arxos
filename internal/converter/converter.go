@@ -12,6 +12,7 @@ type Converter interface {
 	CanConvert(filename string) bool
 	ConvertToBIM(input io.Reader, output io.Writer) error
 	ConvertFromBIM(input io.Reader, output io.Writer) error
+	ConvertToDB(input io.Reader, db interface{}) error // New: Direct to PostGIS import
 	GetFormat() string
 	GetDescription() string
 }

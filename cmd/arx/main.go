@@ -70,6 +70,7 @@ func main() {
 	rootCmd.AddCommand(
 		// System management
 		installCmd,
+		healthCmd,
 		daemonCmd,
 
 		// Repository management
@@ -157,37 +158,25 @@ func initializeSystem() error {
 
 // loadConfiguration loads config from file or environment
 func loadConfiguration() *config.Config {
-	cfg := &config.Config{
-		Mode:     config.ModeHybrid,
-		Version:  Version,
-		StateDir: ".arxos",
-		CacheDir: ".arxos/cache",
-	}
+	// Start with defaults
+	cfg := config.Default()
+	cfg.Version = Version
 
-	// Check for config file
+	// Check for config file from command line
 	configFile, _ := rootCmd.PersistentFlags().GetString("config")
 	if configFile == "" {
-		// Check standard locations
-		for _, path := range []string{
-			".arxos/config.yaml",
-			"arxos.config.yaml",
-			os.ExpandEnv("$HOME/.arxos/config.yaml"),
-		} {
-			if _, err := os.Stat(path); err == nil {
-				configFile = path
-				break
-			}
-		}
+		configFile = config.GetConfigPath()
 	}
 
-	if configFile != "" {
-		if err := cfg.LoadFromFile(configFile); err != nil {
-			logger.Warn("Failed to load config file %s: %v", configFile, err)
-		}
+	// Load configuration using the enhanced config system
+	loadedCfg, err := config.Load(configFile)
+	if err != nil {
+		logger.Warn("Failed to load configuration: %v", err)
+		// Use defaults with environment overrides
+		cfg.LoadFromEnv()
+	} else {
+		cfg = loadedCfg
 	}
-
-	// Override with environment variables
-	loadConfigFromEnv(cfg)
 
 	return cfg
 }
@@ -222,71 +211,95 @@ func loadConfigFromEnv(cfg *config.Config) {
 
 // initializeDatabases sets up database connections
 func initializeDatabases(ctx context.Context) error {
-	// Default database path
-	dbPath := "arxos.db"
-	if appConfig.Database.Path != "" {
-		dbPath = appConfig.Database.Path
+	dbType := appConfig.Database.Type
+	if dbType == "" {
+		dbType = "hybrid" // Default to hybrid mode
 	}
 
-	// Check if PostGIS is configured
-	if appConfig.PostGIS.Host != "" {
-		// Create PostGIS configuration
-		pgConfig := database.PostGISConfig{
-			Host:     appConfig.PostGIS.Host,
-			Port:     appConfig.PostGIS.Port,
-			Database: appConfig.PostGIS.Database,
-			User:     appConfig.PostGIS.User,
-			Password: appConfig.PostGIS.Password,
-			SSLMode:  appConfig.PostGIS.SSLMode,
-		}
+	switch dbType {
+	case "postgis":
+		return initializePostGISDatabase(ctx)
+	case "sqlite":
+		return initializeSQLiteDatabase(ctx)
+	case "hybrid":
+		return initializeHybridDatabase(ctx)
+	default:
+		return fmt.Errorf("unsupported database type: %s", dbType)
+	}
+}
 
-		if pgConfig.Port == 0 {
-			pgConfig.Port = 5432
-		}
-		if pgConfig.SSLMode == "" {
-			pgConfig.SSLMode = "prefer"
-		}
+// initializePostGISDatabase initializes PostGIS-only mode
+func initializePostGISDatabase(ctx context.Context) error {
+	pgConfig := appConfig.GetPostGISConfig()
 
-		// Create hybrid database with PostGIS primary and SQLite fallback
-		sqliteConfig := database.NewConfig(dbPath)
-		hybridDB = database.NewPostGISHybridDB(pgConfig, sqliteConfig)
-
-		if err := hybridDB.Connect(ctx, dbPath); err != nil {
-			logger.Warn("PostGIS connection failed, using SQLite: %v", err)
-			// Fall back to SQLite only
-			dbConn = database.NewSQLiteDB(sqliteConfig)
-		} else {
-			logger.Info("Connected to PostGIS database")
-			dbConn = hybridDB
-
-			// Initialize PostGIS extensions if needed
-			if spatialDB, err := hybridDB.GetSpatialDB(); err == nil {
-				if err := spatialDB.InitializeSpatialExtensions(ctx); err != nil {
-					logger.Warn("Failed to initialize spatial extensions: %v", err)
-				}
-			}
-		}
-	} else {
-		// SQLite only mode
-		sqliteConfig := database.NewConfig(dbPath)
-		dbConn = database.NewSQLiteDB(sqliteConfig)
-		logger.Info("Using SQLite database: %s", dbPath)
+	var err error
+	hybridDB, err = database.NewPostGISHybridDB(pgConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create PostGIS database: %w", err)
 	}
 
-	// Connect to database
-	if dbConn != nil {
-		if err := dbConn.Connect(ctx, dbPath); err != nil {
-			return fmt.Errorf("failed to connect to database: %w", err)
-		}
-
-		// Initialize schema
-		if err := dbConn.InitSchema(ctx); err != nil {
-			logger.Warn("Failed to initialize schema: %v", err)
-		}
+	if err := hybridDB.Connect(ctx, ""); err != nil {
+		return fmt.Errorf("failed to connect to PostGIS: %w", err)
 	}
+
+	dbConn = hybridDB
+	logger.Info("Connected to PostGIS database: %s:%d/%s",
+		pgConfig.Host, pgConfig.Port, pgConfig.Database)
 
 	return nil
 }
+
+// initializeSQLiteDatabase initializes SQLite-only mode
+func initializeSQLiteDatabase(ctx context.Context) error {
+	dbPath := appConfig.Database.Path
+	if dbPath == "" {
+		dbPath = filepath.Join(appConfig.StateDir, "arxos.db")
+	}
+
+	sqliteConfig := database.NewConfig(dbPath)
+	dbConn = database.NewSQLiteDB(sqliteConfig)
+
+	if err := dbConn.Connect(ctx, dbPath); err != nil {
+		return fmt.Errorf("failed to connect to SQLite: %w", err)
+	}
+
+	logger.Info("Connected to SQLite database: %s", dbPath)
+	return nil
+}
+
+// initializeHybridDatabase initializes hybrid PostGIS+SQLite mode
+func initializeHybridDatabase(ctx context.Context) error {
+	pgConfig := appConfig.GetPostGISConfig()
+
+	// Try PostGIS first
+	var err error
+	hybridDB, err = database.NewPostGISHybridDB(pgConfig)
+	if err != nil {
+		logger.Warn("PostGIS initialization failed, falling back to SQLite: %v", err)
+		return initializeSQLiteDatabase(ctx)
+	}
+
+	// Test PostGIS connection
+	if err := hybridDB.Connect(ctx, ""); err != nil {
+		logger.Warn("PostGIS connection failed, falling back to SQLite: %v", err)
+		return initializeSQLiteDatabase(ctx)
+	}
+
+	// Test spatial database access
+	if spatialDB, err := hybridDB.GetSpatialDB(); err != nil {
+		logger.Warn("Spatial database access failed, using PostGIS without spatial features: %v", err)
+	} else {
+		_ = spatialDB
+		logger.Info("PostGIS spatial features available")
+	}
+
+	dbConn = hybridDB
+	logger.Info("Connected to hybrid PostGIS database: %s:%d/%s",
+		pgConfig.Host, pgConfig.Port, pgConfig.Database)
+
+	return nil
+}
+
 
 // ensureDirectories creates necessary directories
 func ensureDirectories() error {

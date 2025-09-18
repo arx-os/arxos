@@ -173,6 +173,12 @@ func (c *RealPDFConverter) ConvertFromBIM(input io.Reader, output io.Writer) err
 	return fmt.Errorf("PDF generation not implemented")
 }
 
+func (c *RealPDFConverter) ConvertToDB(input io.Reader, db interface{}) error {
+	// PDF files typically don't have precise spatial data
+	// This would require OCR and floor plan recognition for spatial extraction
+	return fmt.Errorf("direct PDF to database import not implemented - use ConvertToBIM first")
+}
+
 func (c *RealPDFConverter) extractPDFTextWithFallbacks(pdfPath string) (string, string, error) {
 	var lastErr error
 

@@ -45,6 +45,9 @@ func (e *CSVExporter) ExportEquipment(equipment []*models.Equipment, w io.Writer
 			"Installed",
 			"Maintained",
 			"Notes",
+			"X (mm)",
+			"Y (mm)",
+			"Z (mm)",
 		}
 		if err := writer.Write(headers); err != nil {
 			return fmt.Errorf("failed to write headers: %w", err)
@@ -58,6 +61,19 @@ func (e *CSVExporter) ExportEquipment(equipment []*models.Equipment, w io.Writer
 
 	// Write equipment data
 	for _, eq := range equipment {
+		// Get spatial coordinates
+		xStr, yStr, zStr := "", "", ""
+		if eq.Location != nil {
+			xStr = fmt.Sprintf("%.3f", eq.Location.X)
+			yStr = fmt.Sprintf("%.3f", eq.Location.Y)
+		}
+		// Check for Z in metadata
+		if eq.Metadata != nil {
+			if z, ok := eq.Metadata["location_z"]; ok {
+				zStr = fmt.Sprintf("%.3f", z)
+			}
+		}
+
 		record := []string{
 			eq.ID,
 			eq.Name,
@@ -70,6 +86,9 @@ func (e *CSVExporter) ExportEquipment(equipment []*models.Equipment, w io.Writer
 			formatTime(eq.Installed),
 			formatTime(eq.Maintained),
 			eq.Notes,
+			xStr,
+			yStr,
+			zStr,
 		}
 		if err := writer.Write(record); err != nil {
 			return fmt.Errorf("failed to write equipment %s: %w", eq.ID, err)

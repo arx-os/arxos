@@ -1,0 +1,156 @@
+# ArxOS Test Configuration
+# Configuration for running tests and CI/CD pipelines
+
+# Core settings
+mode: test
+version: "0.1.0"
+environment: test
+state_dir: "/tmp/arxos-test"
+cache_dir: "/tmp/arxos-test/cache"
+
+# PostGIS settings for testing
+postgis:
+  enabled: true
+  host: "${POSTGIS_HOST:-postgis-test}"
+  port: ${POSTGIS_PORT:-5432}
+  database: "${POSTGRES_DB:-arxos_test}"
+  user: "${POSTGRES_USER:-arxos}"
+  password: "${POSTGRES_PASSWORD:-testpass}"
+  ssl_mode: disable
+
+  # Test-specific settings
+  drop_on_start: true
+  seed_data: true
+
+# SQLite settings for unit tests
+sqlite:
+  enabled: true
+  path: ":memory:"  # In-memory database for fast tests
+
+# Database common settings
+database:
+  type: "${ARX_DB_TYPE:-sqlite}"  # Default to SQLite for speed
+  migrations_path: "./migrations"
+  auto_migrate: true
+  log_queries: false
+  transaction_mode: true  # Wrap each test in transaction
+
+# Test server settings
+server:
+  host: "localhost"
+  port: 0  # Random port to avoid conflicts
+  read_timeout: 5s
+  write_timeout: 5s
+  idle_timeout: 10s
+
+# Minimal daemon for testing
+daemon:
+  enabled: false
+  mock_mode: true
+
+# Security (relaxed for testing)
+security:
+  jwt_secret: "test-secret"
+  jwt_expiry: 1h
+  session_timeout: 1h
+  bcrypt_cost: 4  # Low cost for fast tests
+
+  # Disable rate limiting in tests
+  rate_limit: 0
+  enable_tls: false
+
+# Storage
+storage:
+  type: memory
+  temp_path: "/tmp/arxos-test/storage"
+
+# Cache
+cache:
+  type: memory
+  max_size_mb: 64
+
+# Logging
+logging:
+  level: "${TEST_LOG_LEVEL:-error}"
+  format: text
+  output: stdout
+
+# Test-specific settings
+testing:
+  # Test data
+  fixtures_path: "./test_data/fixtures"
+  sample_ifc_path: "./test_data/sample.ifc"
+
+  # Test behavior
+  parallel: true
+  randomize_order: true
+  verbose: "${TEST_VERBOSE:-false}"
+  coverage: true
+  benchmark: false
+
+  # Timeouts
+  test_timeout: 30s
+  suite_timeout: 10m
+
+  # Database
+  isolate_tests: true
+  rollback_after_test: true
+
+  # Mocking
+  mock_external_services: true
+  mock_time: true
+  fixed_time: "2024-01-01T00:00:00Z"
+
+# Feature flags for testing
+features:
+  # Enable all features for testing
+  enable_postgis: true
+  enable_sqlite_fallback: true
+  enable_hybrid_mode: true
+
+  # All imports/exports
+  enable_ifc_import: true
+  enable_bim_export: true
+  enable_csv_export: true
+  enable_json_export: true
+
+  # Test features
+  enable_debug_endpoints: true
+  enable_test_data: true
+  enable_mock_mode: true
+
+  # Disable production features
+  enable_telemetry: false
+  enable_analytics: false
+  enable_cloud_sync: false
+
+# Performance settings for tests
+performance:
+  max_concurrent_imports: 1
+  max_concurrent_exports: 1
+  batch_size: 100
+  query_timeout: 5s
+
+# Test data generation
+test_data:
+  # Sample building configuration
+  buildings:
+    - name: "Test Building 1"
+      floors: 3
+      rooms_per_floor: 5
+      equipment_per_room: 2
+
+    - name: "Test Building 2"
+      floors: 10
+      rooms_per_floor: 10
+      equipment_per_room: 5
+
+  # Equipment types to generate
+  equipment_types:
+    - hvac
+    - electrical
+    - plumbing
+    - fire_safety
+
+  # Random seed for reproducible tests
+  seed: 42

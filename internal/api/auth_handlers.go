@@ -1,8 +1,10 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -168,8 +170,15 @@ func (s *Server) handleGetCurrentUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement get current user
-	s.respondJSON(w, http.StatusOK, map[string]string{"user_id": userID.(string)})
+	// Get full user details from database
+	user, err := s.services.DB.GetUser(r.Context(), userID.(string))
+	if err != nil {
+		logger.Error("Failed to get user: %v", err)
+		s.respondError(w, http.StatusInternalServerError, "Failed to get user details")
+		return
+	}
+
+	s.respondJSON(w, http.StatusOK, user)
 }
 
 // handleGetUser returns a user by ID
@@ -187,8 +196,19 @@ func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := parts[4]
 
-	// TODO: Implement get user
-	s.respondJSON(w, http.StatusOK, map[string]string{"user_id": userID})
+	// Get user from database
+	user, err := s.services.DB.GetUser(r.Context(), userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			s.respondError(w, http.StatusNotFound, "User not found")
+		} else {
+			logger.Error("Failed to get user: %v", err)
+			s.respondError(w, http.StatusInternalServerError, "Failed to get user")
+		}
+		return
+	}
+
+	s.respondJSON(w, http.StatusOK, user)
 }
 
 // handleListUsers lists all users
@@ -198,8 +218,29 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement list users
-	s.respondJSON(w, http.StatusOK, []interface{}{})
+	// Get query parameters
+	limit := 100
+	offset := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 1000 {
+			limit = parsed
+		}
+	}
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	// List users from database
+	users, err := s.services.DB.ListUsers(r.Context(), limit, offset)
+	if err != nil {
+		logger.Error("Failed to list users: %v", err)
+		s.respondError(w, http.StatusInternalServerError, "Failed to list users")
+		return
+	}
+
+	s.respondJSON(w, http.StatusOK, users)
 }
 
 // handleListBuildings lists all buildings
@@ -223,7 +264,16 @@ func (s *Server) handleListBuildings(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters
 	limit := 100
 	offset := 0
-	// TODO: Parse limit and offset from query params
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 1000 {
+			limit = parsed
+		}
+	}
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
 
 	buildings, err := s.services.Building.ListBuildings(r.Context(), userID, limit, offset)
 	if err != nil {
@@ -513,13 +563,40 @@ func (s *Server) handleSyncPush(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement sync push logic
-	logger.Info("Received sync push for building %s with %d changes", syncReq.BuildingID, len(syncReq.Changes))
+	// Process sync push changes
+	logger.Info("Processing sync push for building %s with %d changes", syncReq.BuildingID, len(syncReq.Changes))
+
+	var conflicts []Conflict
+	var appliedChanges []Change
+
+	// Apply each change
+	for _, change := range syncReq.Changes {
+		// Check for conflicts
+		currentVersion, err := s.services.DB.GetEntityVersion(r.Context(), change.EntityID)
+		if err == nil && currentVersion > change.Version {
+			// Conflict detected
+			conflicts = append(conflicts, Conflict{
+				EntityID:       change.EntityID,
+				LocalVersion:   currentVersion,
+				RemoteVersion:  change.Version,
+				ConflictType:   "version_mismatch",
+				ResolveAction:  "manual",
+			})
+			continue
+		}
+
+		// Apply change to database
+		if err := s.services.DB.ApplyChange(r.Context(), syncReq.BuildingID, change); err != nil {
+			logger.Error("Failed to apply change %s: %v", change.ChangeID, err)
+			continue
+		}
+		appliedChanges = append(appliedChanges, change)
+	}
 
 	response := SyncResponse{
 		BuildingID: syncReq.BuildingID,
-		Changes:    []Change{},
-		Conflicts:  []Conflict{},
+		Changes:    appliedChanges,
+		Conflicts:  conflicts,
 		LastSync:   time.Now(),
 	}
 
@@ -539,13 +616,28 @@ func (s *Server) handleSyncPull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement sync pull logic
-	logger.Info("Received sync pull for building %s since %v", syncReq.BuildingID, syncReq.LastSync)
+	// Fetch changes since last sync
+	logger.Info("Processing sync pull for building %s since %v", syncReq.BuildingID, syncReq.LastSync)
+
+	// Get changes from database
+	changes, err := s.services.DB.GetChangesSince(r.Context(), syncReq.BuildingID, syncReq.LastSync)
+	if err != nil {
+		logger.Error("Failed to get changes: %v", err)
+		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve changes")
+		return
+	}
+
+	// Check for any pending conflicts
+	conflicts, err := s.services.DB.GetPendingConflicts(r.Context(), syncReq.BuildingID)
+	if err != nil {
+		logger.Warn("Failed to get conflicts: %v", err)
+		conflicts = []Conflict{}
+	}
 
 	response := SyncResponse{
 		BuildingID: syncReq.BuildingID,
-		Changes:    []Change{},
-		Conflicts:  []Conflict{},
+		Changes:    changes,
+		Conflicts:  conflicts,
 		LastSync:   time.Now(),
 	}
 
@@ -565,13 +657,38 @@ func (s *Server) handleSyncStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement sync status logic
+	// Get sync status from database
+	lastSync, err := s.services.DB.GetLastSyncTime(r.Context(), buildingID)
+	if err != nil {
+		lastSync = time.Time{}
+	}
+
+	pendingCount, err := s.services.DB.GetPendingChangesCount(r.Context(), buildingID)
+	if err != nil {
+		pendingCount = 0
+	}
+
+	conflictCount, err := s.services.DB.GetConflictCount(r.Context(), buildingID)
+	if err != nil {
+		conflictCount = 0
+	}
+
+	// Determine sync status
+	syncStatus := "synced"
+	if conflictCount > 0 {
+		syncStatus = "conflicts"
+	} else if pendingCount > 0 {
+		syncStatus = "pending"
+	} else if lastSync.IsZero() {
+		syncStatus = "never_synced"
+	}
+
 	status := map[string]interface{}{
 		"building_id": buildingID,
-		"last_sync":   time.Now().Add(-1 * time.Hour),
-		"pending":     0,
-		"conflicts":   0,
-		"status":      "synced",
+		"last_sync":   lastSync,
+		"pending":     pendingCount,
+		"conflicts":   conflictCount,
+		"status":      syncStatus,
 	}
 
 	s.respondJSON(w, http.StatusOK, status)

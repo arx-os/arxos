@@ -220,13 +220,18 @@ type Change struct {
 	Data      map[string]interface{} `json:"data"`
 	Timestamp time.Time              `json:"timestamp"`
 	UserID    string                 `json:"user_id"`
+	Version   int64                  `json:"version,omitempty"`
 }
 
 // Conflict represents a sync conflict
 type Conflict struct {
-	ID         string                 `json:"id"`
-	Entity     string                 `json:"entity"`
-	EntityID   string                 `json:"entity_id"`
+	ID            string                 `json:"id"`
+	Entity        string                 `json:"entity"`
+	EntityID      string                 `json:"entity_id"`
+	LocalVersion  int64                  `json:"local_version"`
+	RemoteVersion int64                  `json:"remote_version"`
+	ConflictType  string                 `json:"conflict_type"`
+	ResolveAction string                 `json:"resolve_action"`
 	LocalData  map[string]interface{} `json:"local_data"`
 	RemoteData map[string]interface{} `json:"remote_data"`
 	Resolution string                 `json:"resolution"` // local, remote, merge

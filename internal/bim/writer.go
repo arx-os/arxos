@@ -56,6 +56,15 @@ func (w *Writer) WriteFile(path string, building *Building) error {
 	return w.Write(file, building)
 }
 
+// WriteBuilding returns the building as a formatted byte slice
+func (w *Writer) WriteBuilding(building *Building) ([]byte, error) {
+	formatted, err := w.Format(building)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(formatted), nil
+}
+
 // Format returns the building as a formatted string
 func (w *Writer) Format(building *Building) (string, error) {
 	var sb strings.Builder

@@ -15,7 +15,7 @@ func ExecuteInit(opts InitOptions) error {
 	ctx := context.Background()
 
 	// Connect to database
-	db, err := database.NewSQLiteDBFromPath("arxos.db")
+	db, err := database.NewPostGISConnection(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}

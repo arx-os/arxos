@@ -72,7 +72,7 @@ func importPDF(ctx context.Context, opts ImportOptions) error {
 
 	// Save to database if requested
 	if opts.ToDatabase {
-		db, err := database.NewSQLiteDBFromPath("arxos.db")
+		db, err := database.NewPostGISConnection(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %w", err)
 		}
@@ -135,7 +135,7 @@ func importBIM(ctx context.Context, opts ImportOptions) error {
 
 	// Save to database if requested
 	if opts.ToDatabase {
-		db, err := database.NewSQLiteDBFromPath("arxos.db")
+		db, err := database.NewPostGISConnection(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to connect to database: %w", err)
 		}

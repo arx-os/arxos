@@ -77,11 +77,10 @@ type StorageConfig struct {
 	Credentials map[string]string `json:"-"` // Sensitive, not serialized
 }
 
-// DatabaseConfig defines database configuration
+// DatabaseConfig defines database configuration (DEPRECATED - use PostGISConfig)
 type DatabaseConfig struct {
-	Type            string        `json:"type"`   // sqlite, postgres, hybrid
-	Path            string        `json:"path"`   // For SQLite
-	Driver          string        `json:"driver"` // Legacy field, maps to Type
+	Type            string        `json:"type"`   // postgres only
+	Driver          string        `json:"driver"` // Legacy field
 	DataSourceName  string        `json:"-"`      // Never serialize connection strings
 	MaxOpenConns    int           `json:"max_open_conns"`
 	MaxConnections  int           `json:"max_connections"` // Alias for MaxOpenConns
@@ -202,10 +201,9 @@ func Default() *Config {
 		},
 
 		Database: DatabaseConfig{
-			Type:            "hybrid",
-			Path:            filepath.Join(homeDir, ".arxos", "arxos.db"),
-			Driver:          "sqlite", // Legacy field
-			DataSourceName:  filepath.Join(homeDir, ".arxos", "arxos.db"),
+			Type:            "postgres",
+			Driver:          "postgres", // Legacy field
+			DataSourceName:  "",         // Set from environment
 			MaxOpenConns:    25,
 			MaxConnections:  25, // Alias
 			MaxIdleConns:    5,
@@ -358,9 +356,7 @@ func (c *Config) LoadFromEnv() {
 	if driver := os.Getenv("ARXOS_DB_DRIVER"); driver != "" {
 		c.Database.Driver = driver
 	}
-	if path := os.Getenv("ARXOS_DB_PATH"); path != "" {
-		c.Database.Path = path
-	}
+	// Path field removed - PostGIS only uses DataSourceName
 
 	if dsn := os.Getenv("ARXOS_DATABASE_URL"); dsn != "" {
 		c.Database.DataSourceName = dsn
@@ -486,7 +482,7 @@ func (c *Config) Validate() error {
 
 	// Validate SQLite path for SQLite or hybrid
 	if c.Database.Type == "sqlite" || c.Database.Type == "hybrid" || c.Database.Type == "" {
-		if c.Database.Path == "" && c.Database.DataSourceName == "" {
+		if c.Database.DataSourceName == "" {
 			return fmt.Errorf("database path or connection string required")
 		}
 	}
@@ -567,7 +563,6 @@ func GetConfigPath() string {
 func (c *Config) GetDatabaseConfig() *DatabaseConfig {
 	return &DatabaseConfig{
 		Type:            c.Database.Type,
-		Path:            c.Database.Path,
 		Driver:          c.Database.Driver,
 		DataSourceName:  c.Database.DataSourceName,
 		MaxOpenConns:    c.Database.MaxOpenConns,

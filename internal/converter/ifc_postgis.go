@@ -68,14 +68,12 @@ func (c *ImprovedIFCConverter) ConvertToDB(input io.Reader, dbInterface interfac
 	// Process equipment with spatial data
 	equipment := c.processEquipment(ctx, db, spatialEntities, buildingID, floors, rooms)
 
-	// If PostGIS is available, store spatial data
-	if hybridDB, ok := db.(*database.PostGISHybridDB); ok {
-		if spatialDB, err := hybridDB.GetSpatialDB(); err == nil {
-			if err := c.storeSpatialData(ctx, spatialDB, equipment); err != nil {
-				logger.Warn("Failed to store spatial data: %v", err)
-			} else {
-				logger.Info("Stored %d equipment items with spatial data in PostGIS", len(equipment))
-			}
+	// If spatial database is available, store spatial data
+	if spatialDB, ok := db.(database.SpatialDB); ok {
+		if err := c.storeSpatialData(ctx, spatialDB, equipment); err != nil {
+			logger.Warn("Failed to store spatial data: %v", err)
+		} else {
+			logger.Info("Stored %d equipment items with spatial data in PostGIS", len(equipment))
 		}
 	}
 

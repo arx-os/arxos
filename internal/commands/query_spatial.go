@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/arx-os/arxos/internal/common/logger"
-	"github.com/arx-os/arxos/internal/config"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/spatial"
 )
@@ -23,34 +22,20 @@ func ExecuteSpatialQuery(opts QueryOptions) error {
 		return fmt.Errorf("no spatial parameters provided")
 	}
 
-	// Try to create a PostGIS hybrid database
-	pgConfig := &config.PostGISConfig{
-		Host:     getEnvOrDefault("POSTGIS_HOST", "localhost"),
-		Port:     5432,
-		Database: getEnvOrDefault("POSTGIS_DB", "arxos"),
-		User:     getEnvOrDefault("POSTGIS_USER", "postgres"),
-		Password: getEnvOrDefault("POSTGIS_PASSWORD", ""),
-		SSLMode:  "prefer",
-		SRID:     900913,
-	}
-
-	hybridDB, err := database.NewPostGISHybridDB(pgConfig)
+	// Connect to PostGIS database
+	db, err := database.NewPostGISConnection(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create PostGIS database: %w", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	if err := hybridDB.Connect(ctx, "arxos.db"); err != nil {
-		logger.Warn("Failed to connect to PostGIS, spatial queries unavailable: %v", err)
-		return fmt.Errorf("spatial queries require PostGIS connection")
-	}
-	defer hybridDB.Close()
+	defer db.Close()
 
 	// Check if spatial support is available
-	if !hybridDB.HasSpatialSupport() {
+	if !db.HasSpatialSupport() {
 		return fmt.Errorf("spatial queries require PostGIS to be available")
 	}
 
 	// Get spatial database
-	spatialDB, err := hybridDB.GetSpatialDB()
+	spatialDB, err := db.GetSpatialDB()
 	if err != nil {
 		return fmt.Errorf("failed to get spatial database: %w", err)
 	}

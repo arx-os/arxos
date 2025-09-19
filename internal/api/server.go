@@ -9,9 +9,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/core/user"
 	"github.com/arx-os/arxos/internal/database"
 )
 
@@ -266,6 +269,47 @@ func (s *Server) respondError(w http.ResponseWriter, status int, message string)
 		"error": message,
 		"code":  fmt.Sprintf("%d", status),
 	})
+}
+
+// authenticate verifies the request authentication and returns the user
+func (s *Server) authenticate(r *http.Request) (*user.User, error) {
+	// Extract token from Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return nil, fmt.Errorf("authorization header required")
+	}
+
+	// Parse Bearer token
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return nil, fmt.Errorf("invalid authorization header format")
+	}
+
+	token := parts[1]
+	if token == "" {
+		return nil, fmt.Errorf("token required")
+	}
+
+	// Validate token with auth service
+	return s.services.Auth.ValidateToken(r.Context(), token)
+}
+
+// parseIntParam parses an integer parameter with default and max values
+func parseIntParam(param string, defaultVal, maxVal int) int {
+	if param == "" {
+		return defaultVal
+	}
+
+	val, err := strconv.Atoi(param)
+	if err != nil || val < 0 {
+		return defaultVal
+	}
+
+	if val > maxVal {
+		return maxVal
+	}
+
+	return val
 }
 
 // Context keys are defined in middleware.go

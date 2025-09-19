@@ -103,8 +103,11 @@ func NewDaemon(config *Config) (*Daemon, error) {
 	}
 
 	// Initialize database
-	dbConfig := database.NewConfig(config.DatabasePath)
-	db := database.NewSQLiteDB(dbConfig)
+	ctx := context.Background()
+	db, err := database.NewPostGISConnection(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
 
 	d := &Daemon{
 		config:  config,
@@ -521,8 +524,9 @@ func (d *Daemon) syncDatabase(ctx context.Context) error {
 		return nil
 	}
 
-	migrator := database.NewJSONMigrator(d.db, d.config.StateDir)
-	return migrator.SyncJSONToDatabase(ctx)
+	// JSON migration not needed with PostGIS
+	// PostGIS handles all data persistence
+	return nil
 }
 
 // periodicSync runs periodic synchronization
@@ -687,14 +691,12 @@ func (d *Daemon) generateExportsFromDB(ctx context.Context, buildingID string) {
 	}
 
 	// Generate spatial GeoJSON if PostGIS is available
-	if hybridDB, ok := d.db.(*database.PostGISHybridDB); ok {
-		if spatialDB, err := hybridDB.GetSpatialDB(); err == nil {
-			geoPath := filepath.Join(exportDir, fmt.Sprintf("%s_spatial.geojson", buildingID))
-			if file, err := os.Create(geoPath); err == nil {
-				defer file.Close()
-				d.generateSpatialExport(ctx, spatialDB, buildingID, file)
-				logger.Info("✓ Generated GeoJSON: %s", geoPath)
-			}
+	if postgisDB, ok := d.db.(*database.PostGISDB); ok {
+		geoPath := filepath.Join(exportDir, fmt.Sprintf("%s_spatial.geojson", buildingID))
+		if file, err := os.Create(geoPath); err == nil {
+			defer file.Close()
+			d.generateSpatialExport(ctx, postgisDB, buildingID, file)
+			logger.Info("✓ Generated GeoJSON: %s", geoPath)
 		}
 	}
 

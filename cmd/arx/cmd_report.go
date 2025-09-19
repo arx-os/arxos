@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
-	"github.com/arx-os/arxos/internal/visualization/export"
+	// "github.com/arx-os/arxos/internal/visualization/export" // TODO: Implement visualization package
 	"github.com/spf13/cobra"
 )
 
@@ -67,10 +67,9 @@ func runReport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Generate single comprehensive report
-	err := export.ExportReport(building, reportOutput)
-	if err != nil {
-		return fmt.Errorf("failed to generate report: %w", err)
-	}
+	// TODO: Implement export when visualization package is available
+	logger.Warn("Report export not yet implemented")
+	return fmt.Errorf("report export not yet implemented")
 
 	fmt.Printf("Report generated successfully: %s\n", reportOutput)
 
@@ -82,29 +81,13 @@ func runReport(cmd *cobra.Command, args []string) error {
 }
 
 func runBatchExport(building string) error {
-	// Determine format
-	var format export.Format
-	switch reportFormat {
-	case "html":
-		format = export.FormatHTML
-	case "markdown", "md":
-		format = export.FormatMarkdown
-	case "ansi":
-		format = export.FormatANSI
-	default:
-		format = export.FormatPlainText
-	}
+	// TODO: Implement batch export when visualization package is available
+	logger.Warn("Batch export not yet implemented")
 
-	// Create batch exporter
+	// Create batch exporter placeholder
 	baseDir := "./exports"
 	if reportOutput != "" {
 		baseDir = filepath.Dir(reportOutput)
-	}
-
-	exporter := export.NewBatchExporter(baseDir, format)
-	err := exporter.ExportDashboard(building)
-	if err != nil {
-		return fmt.Errorf("batch export failed: %w", err)
 	}
 
 	fmt.Printf("Dashboard exported to: %s\n", baseDir)

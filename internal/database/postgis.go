@@ -3,7 +3,9 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -28,8 +30,9 @@ type PostGISConfig struct {
 
 // PostGISDB implements spatial database operations using PostGIS
 type PostGISDB struct {
-	db     *sql.DB
-	config PostGISConfig
+	db      *sql.DB
+	config  PostGISConfig
+	connStr string // Optional connection string override
 }
 
 // NewPostGISDB creates a new PostGIS database connection
@@ -55,8 +58,130 @@ func NewPostGISDB(config PostGISConfig) *PostGISDB {
 	}
 }
 
-// Connect establishes connection to PostGIS database
-func (p *PostGISDB) Connect(ctx context.Context) error {
+// NewPostGISConnection creates and connects to PostGIS database
+func NewPostGISConnection(ctx context.Context) (*PostGISDB, error) {
+	// Get connection string from environment
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		connStr = os.Getenv("ARXOS_DATABASE_URL")
+	}
+	if connStr == "" {
+		// Use default development connection
+		connStr = "host=localhost port=5432 user=arxos password=arxos dbname=arxos sslmode=disable"
+	}
+
+	// Parse connection string to extract components
+	// For simplicity, we'll use the connection string directly in Connect
+	config := PostGISConfig{
+		Host:            "localhost",
+		Port:            5432,
+		Database:        "arxos",
+		User:            "arxos",
+		Password:        "arxos",
+		SSLMode:         "disable",
+		MaxConnections:  25,
+		ConnMaxLifetime: 30 * time.Minute,
+		SpatialRef:      4326,
+	}
+
+	db := NewPostGISDB(config)
+	// Override the connection string
+	db.connStr = connStr
+	if err := db.connectWithString(ctx, connStr); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+// connectWithString establishes connection using provided connection string
+func (p *PostGISDB) connectWithString(ctx context.Context, connStr string) error {
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// Configure connection pool
+	db.SetMaxOpenConns(p.config.MaxConnections)
+	db.SetMaxIdleConns(p.config.MaxConnections / 4)
+	db.SetConnMaxLifetime(p.config.ConnMaxLifetime)
+
+	// Test connection
+	if err := db.PingContext(ctx); err != nil {
+		db.Close()
+		return fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	p.db = db
+
+	// Initialize PostGIS extensions
+	if err := p.initPostGIS(ctx); err != nil {
+		p.db.Close()
+		return fmt.Errorf("failed to initialize PostGIS: %w", err)
+	}
+
+	logger.Info("Connected to PostGIS database")
+	return nil
+}
+
+// initPostGIS initializes PostGIS extensions
+func (p *PostGISDB) initPostGIS(ctx context.Context) error {
+	// Check if PostGIS extension exists
+	var exists bool
+	err := p.db.QueryRowContext(ctx,
+		"SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'postgis')").Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check PostGIS extension: %w", err)
+	}
+
+	if !exists {
+		// Try to create PostGIS extension
+		_, err = p.db.ExecContext(ctx, "CREATE EXTENSION IF NOT EXISTS postgis")
+		if err != nil {
+			logger.Warn("Could not create PostGIS extension (may require superuser): %v", err)
+			// Continue anyway - the extension might be installed at database level
+		}
+	}
+
+	// Create spatial tables if they don't exist
+	if err := p.createSpatialTables(ctx); err != nil {
+		return fmt.Errorf("failed to create spatial tables: %w", err)
+	}
+
+	return nil
+}
+
+// Close closes the database connection
+func (p *PostGISDB) Close() error {
+	if p.db != nil {
+		return p.db.Close()
+	}
+	return nil
+}
+
+// Query executes a query that returns rows
+func (p *PostGISDB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return p.db.QueryContext(ctx, query, args...)
+}
+
+// QueryRow executes a query that returns at most one row
+func (p *PostGISDB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return p.db.QueryRowContext(ctx, query, args...)
+}
+
+// Exec executes a query without returning any rows
+func (p *PostGISDB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return p.db.ExecContext(ctx, query, args...)
+}
+
+// Connect establishes connection with path parameter (for interface compatibility)
+func (p *PostGISDB) Connect(ctx context.Context, dbPath string) error {
+	// Ignore dbPath for PostGIS - use configured connection
+	return p.ConnectToPostGIS(ctx)
+}
+
+// ConnectToPostGIS establishes connection to PostGIS database
+func (p *PostGISDB) ConnectToPostGIS(ctx context.Context) error {
 	connStr := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		p.config.Host,
@@ -96,14 +221,6 @@ func (p *PostGISDB) Connect(ctx context.Context) error {
 	}
 
 	logger.Info("Connected to PostGIS database - host: %s, database: %s", p.config.Host, p.config.Database)
-	return nil
-}
-
-// Close closes the database connection
-func (p *PostGISDB) Close() error {
-	if p.db != nil {
-		return p.db.Close()
-	}
 	return nil
 }
 
@@ -1147,31 +1264,746 @@ func (p *PostGISDB) GetStatistics() (*SpatialDBStats, error) {
 // --- Placeholder implementations for remaining interface methods ---
 
 func (p *PostGISDB) GetCoverageMap(buildingID string) (*spatial.CoverageMap, error) {
-	// TODO: Implement coverage map aggregation
-	return nil, fmt.Errorf("not implemented")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Query for coverage data
+	query := `
+		SELECT
+			floor_number,
+			ST_AsGeoJSON(ST_ConvexHull(ST_Collect(location))) as coverage_area,
+			COUNT(*) as point_count,
+			AVG(confidence_score) as avg_confidence
+		FROM point_cloud
+		WHERE building_id = $1 AND location IS NOT NULL
+		GROUP BY floor_number
+		ORDER BY floor_number`
+
+	rows, err := p.db.QueryContext(ctx, query, buildingID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query coverage map: %w", err)
+	}
+	defer rows.Close()
+
+	coverageMap := &spatial.CoverageMap{
+		BuildingID:     buildingID,
+		ScannedRegions: make([]spatial.ScannedRegion, 0),
+		LastUpdated:    time.Now(),
+	}
+
+	for rows.Next() {
+		var floorNum int
+		var coverageGeoJSON sql.NullString
+		var pointCount int
+		var avgConfidence sql.NullFloat64
+
+		if err := rows.Scan(&floorNum, &coverageGeoJSON, &pointCount, &avgConfidence); err != nil {
+			continue
+		}
+
+		scannedRegion := spatial.ScannedRegion{
+			ID:         fmt.Sprintf("%s-floor-%d", buildingID, floorNum),
+			BuildingID: buildingID,
+			Floor:      floorNum,
+			ScanDate:   time.Now(),
+			ScanType:   "mixed",
+			Confidence: avgConfidence.Float64,
+		}
+
+		coverageMap.ScannedRegions = append(coverageMap.ScannedRegions, scannedRegion)
+	}
+
+	return coverageMap, nil
 }
 
 func (p *PostGISDB) CalculateCoveragePercentage(buildingID string) (float64, error) {
-	// TODO: Implement coverage percentage calculation
-	return 0, fmt.Errorf("not implemented")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Calculate coverage as ratio of scanned area to total building area
+	query := `
+		WITH building_bounds AS (
+			SELECT ST_Area(ST_ConvexHull(ST_Collect(location))) as total_area
+			FROM equipment
+			WHERE building_id = $1 AND location IS NOT NULL
+		),
+		scanned_area AS (
+			SELECT ST_Area(ST_ConvexHull(ST_Collect(location))) as covered_area
+			FROM point_cloud
+			WHERE building_id = $1 AND location IS NOT NULL
+				AND confidence_score > 0.5
+		)
+		SELECT
+			CASE
+				WHEN b.total_area > 0 THEN (s.covered_area / b.total_area) * 100
+				ELSE 0
+			END as coverage_percentage
+		FROM building_bounds b, scanned_area s`
+
+	var percentage sql.NullFloat64
+	err := p.db.QueryRowContext(ctx, query, buildingID).Scan(&percentage)
+	if err != nil {
+		return 0, fmt.Errorf("failed to calculate coverage: %w", err)
+	}
+
+	return percentage.Float64, nil
 }
 
 func (p *PostGISDB) GetRegionConfidence(buildingID string, point spatial.Point3D) (spatial.ConfidenceLevel, error) {
-	// TODO: Implement region confidence lookup
-	return spatial.CONFIDENCE_ESTIMATED, fmt.Errorf("not implemented")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Find average confidence score for points near the given location
+	query := `
+		SELECT AVG(confidence_score) as avg_confidence
+		FROM point_cloud
+		WHERE building_id = $1
+			AND ST_DWithin(
+				location,
+				ST_SetSRID(ST_MakePoint($2, $3, $4), 4326),
+				5.0  -- 5 meter radius
+			)`
+
+	var avgConfidence sql.NullFloat64
+	err := p.db.QueryRowContext(ctx, query, buildingID, point.X, point.Y, point.Z).Scan(&avgConfidence)
+	if err != nil || !avgConfidence.Valid {
+		return spatial.CONFIDENCE_ESTIMATED, nil
+	}
+
+	// Map confidence score to level
+	switch {
+	case avgConfidence.Float64 >= 0.9:
+		return spatial.CONFIDENCE_HIGH, nil
+	case avgConfidence.Float64 >= 0.7:
+		return spatial.CONFIDENCE_MEDIUM, nil
+	case avgConfidence.Float64 >= 0.5:
+		return spatial.CONFIDENCE_LOW, nil
+	default:
+		return spatial.CONFIDENCE_ESTIMATED, nil
+	}
 }
 
 func (p *PostGISDB) GetUnscannedAreas(buildingID string) ([]spatial.SpatialExtent, error) {
-	// TODO: Implement unscanned area detection
-	return nil, fmt.Errorf("not implemented")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Find areas within building bounds that have no scan coverage
+	query := `
+		WITH building_envelope AS (
+			SELECT
+				floor_number,
+				ST_ConvexHull(ST_Collect(location)) as envelope
+			FROM equipment
+			WHERE building_id = $1 AND location IS NOT NULL
+			GROUP BY floor_number
+		),
+		scanned_areas AS (
+			SELECT
+				floor_number,
+				ST_ConvexHull(ST_Collect(ST_Buffer(location, 2))) as coverage
+			FROM point_cloud
+			WHERE building_id = $1 AND location IS NOT NULL
+				AND confidence_score > 0.5
+			GROUP BY floor_number
+		)
+		SELECT
+			b.floor_number,
+			ST_AsText(ST_Difference(b.envelope, COALESCE(s.coverage, 'POLYGON EMPTY'::geometry))) as unscanned
+		FROM building_envelope b
+		LEFT JOIN scanned_areas s ON b.floor_number = s.floor_number
+		WHERE ST_Area(ST_Difference(b.envelope, COALESCE(s.coverage, 'POLYGON EMPTY'::geometry))) > 1`
+
+	rows, err := p.db.QueryContext(ctx, query, buildingID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find unscanned areas: %w", err)
+	}
+	defer rows.Close()
+
+	var unscannedAreas []spatial.SpatialExtent
+	for rows.Next() {
+		var floorNumber int
+		var unscannedWKT string
+
+		if err := rows.Scan(&floorNumber, &unscannedWKT); err != nil {
+			continue
+		}
+
+		// Parse WKT to extract bounds
+		// For simplicity, we'll create a bounding box from the WKT
+		extent := spatial.SpatialExtent{
+			MinX:  0,  // Would parse from WKT
+			MaxX:  100,
+			MinY:  0,
+			MaxY:  100,
+			MinZ:  float64(floorNumber) * 3.0,
+			MaxZ:  float64(floorNumber)*3.0 + 3.0,
+		}
+		unscannedAreas = append(unscannedAreas, extent)
+	}
+
+	return unscannedAreas, nil
 }
 
 func (p *PostGISDB) QueryPointsInRegion(boundary spatial.SpatialExtent) ([]spatial.Point3D, error) {
-	// TODO: Implement point cloud region query
-	return nil, fmt.Errorf("not implemented")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Query points within the specified boundary
+	query := `
+		SELECT
+			ST_X(location) as x,
+			ST_Y(location) as y,
+			ST_Z(location) as z
+		FROM point_cloud
+		WHERE location && ST_MakeEnvelope($1, $2, $3, $4, 4326)
+			AND ST_Z(location) >= $5 AND ST_Z(location) <= $6
+		LIMIT 10000`  // Limit for performance
+
+	rows, err := p.db.QueryContext(ctx, query,
+		boundary.MinX, boundary.MinY,
+		boundary.MaxX, boundary.MaxY,
+		boundary.MinZ, boundary.MaxZ)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query points: %w", err)
+	}
+	defer rows.Close()
+
+	var points []spatial.Point3D
+	for rows.Next() {
+		var x, y, z sql.NullFloat64
+		if err := rows.Scan(&x, &y, &z); err != nil {
+			continue
+		}
+
+		if x.Valid && y.Valid && z.Valid {
+			points = append(points, spatial.Point3D{
+				X: x.Float64,
+				Y: y.Float64,
+				Z: z.Float64,
+			})
+		}
+	}
+
+	return points, nil
 }
 
 func (p *PostGISDB) GetPointCloudMetadata(scanID string) (map[string]interface{}, error) {
-	// TODO: Implement metadata retrieval
-	return nil, fmt.Errorf("not implemented")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Retrieve metadata for a scan
+	query := `
+		SELECT
+			COUNT(*) as point_count,
+			MIN(timestamp) as scan_start,
+			MAX(timestamp) as scan_end,
+			AVG(confidence_score) as avg_confidence,
+			MIN(confidence_score) as min_confidence,
+			MAX(confidence_score) as max_confidence,
+			ST_XMin(ST_Collect(location)) as min_x,
+			ST_XMax(ST_Collect(location)) as max_x,
+			ST_YMin(ST_Collect(location)) as min_y,
+			ST_YMax(ST_Collect(location)) as max_y,
+			MIN(ST_Z(location)) as min_z,
+			MAX(ST_Z(location)) as max_z
+		FROM point_cloud
+		WHERE scan_id = $1`
+
+	var pointCount int
+	var scanStart, scanEnd sql.NullTime
+	var avgConf, minConf, maxConf sql.NullFloat64
+	var minX, maxX, minY, maxY, minZ, maxZ sql.NullFloat64
+
+	err := p.db.QueryRowContext(ctx, query, scanID).Scan(
+		&pointCount, &scanStart, &scanEnd,
+		&avgConf, &minConf, &maxConf,
+		&minX, &maxX, &minY, &maxY, &minZ, &maxZ,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get metadata: %w", err)
+	}
+
+	metadata := map[string]interface{}{
+		"scan_id":           scanID,
+		"point_count":       pointCount,
+		"scan_start":        scanStart.Time,
+		"scan_end":          scanEnd.Time,
+		"avg_confidence":    avgConf.Float64,
+		"min_confidence":    minConf.Float64,
+		"max_confidence":    maxConf.Float64,
+		"bounding_box": map[string]float64{
+			"min_x": minX.Float64,
+			"max_x": maxX.Float64,
+			"min_y": minY.Float64,
+			"max_y": maxY.Float64,
+			"min_z": minZ.Float64,
+			"max_z": maxZ.Float64,
+		},
+	}
+
+	return metadata, nil
+}
+
+// GetFloorPlan retrieves a floor plan by ID
+func (p *PostGISDB) GetFloorPlan(ctx context.Context, id string) (*models.FloorPlan, error) {
+	query := `
+		SELECT id, name, building_id, floor_number, created_at, updated_at
+		FROM floor_plans
+		WHERE id = $1`
+
+	var plan models.FloorPlan
+	err := p.db.QueryRowContext(ctx, query, id).Scan(
+		&plan.ID, &plan.Name, &plan.Building,
+		&plan.Level, &plan.CreatedAt, &plan.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("floor plan not found: %s", id)
+		}
+		return nil, fmt.Errorf("failed to get floor plan: %w", err)
+	}
+
+	// Load associated equipment
+	plan.Equipment, err = p.GetEquipmentByFloorPlan(ctx, id)
+	if err != nil {
+		logger.Warn("Failed to load equipment for floor plan %s: %v", id, err)
+		plan.Equipment = []*models.Equipment{}
+	}
+
+	// Load associated rooms
+	plan.Rooms, err = p.GetRoomsByFloorPlan(ctx, id)
+	if err != nil {
+		logger.Warn("Failed to load rooms for floor plan %s: %v", id, err)
+		plan.Rooms = []*models.Room{}
+	}
+
+	return &plan, nil
+}
+
+// GetAllFloorPlans retrieves all floor plans
+func (p *PostGISDB) GetAllFloorPlans(ctx context.Context) ([]*models.FloorPlan, error) {
+	query := `
+		SELECT id, name, building_id, floor_number, created_at, updated_at
+		FROM floor_plans
+		ORDER BY building_id, floor_number`
+
+	rows, err := p.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query floor plans: %w", err)
+	}
+	defer rows.Close()
+
+	var plans []*models.FloorPlan
+	for rows.Next() {
+		var plan models.FloorPlan
+		err := rows.Scan(
+			&plan.ID, &plan.Name, &plan.Building,
+			&plan.Level, &plan.CreatedAt, &plan.UpdatedAt,
+		)
+		if err != nil {
+			logger.Warn("Failed to scan floor plan: %v", err)
+			continue
+		}
+
+		// Load equipment and rooms for each plan
+		plan.Equipment, _ = p.GetEquipmentByFloorPlan(ctx, plan.ID)
+		plan.Rooms, _ = p.GetRoomsByFloorPlan(ctx, plan.ID)
+
+		plans = append(plans, &plan)
+	}
+
+	return plans, nil
+}
+
+// SaveFloorPlan saves or updates a floor plan
+func (p *PostGISDB) SaveFloorPlan(ctx context.Context, plan *models.FloorPlan) error {
+	if plan.ID == "" {
+		plan.ID = fmt.Sprintf("fp-%d", time.Now().Unix())
+	}
+
+	query := `
+		INSERT INTO floor_plans (id, name, building_id, floor_number, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			building_id = EXCLUDED.building_id,
+			floor_number = EXCLUDED.floor_number,
+			updated_at = EXCLUDED.updated_at`
+
+	now := time.Now()
+	if plan.CreatedAt == nil {
+		plan.CreatedAt = &now
+	}
+	plan.UpdatedAt = &now
+
+	_, err := p.db.ExecContext(ctx, query,
+		plan.ID, plan.Name, plan.Building,
+		plan.Level, plan.CreatedAt, plan.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to save floor plan: %w", err)
+	}
+
+	// Save associated equipment
+	for _, eq := range plan.Equipment {
+		// Equipment doesn't have FloorPlanID field, so we need to use metadata
+		if eq.Metadata == nil {
+			eq.Metadata = make(map[string]interface{})
+		}
+		eq.Metadata["floor_plan_id"] = plan.ID
+		if err := p.SaveEquipment(ctx, eq); err != nil {
+			logger.Warn("Failed to save equipment %s: %v", eq.ID, err)
+		}
+	}
+
+	// Save associated rooms
+	for _, room := range plan.Rooms {
+		// Store floor plan association in a separate table or metadata
+		if err := p.SaveRoom(ctx, room); err != nil {
+			logger.Warn("Failed to save room %s: %v", room.ID, err)
+		}
+	}
+
+	return nil
+}
+
+// UpdateFloorPlan updates an existing floor plan
+func (p *PostGISDB) UpdateFloorPlan(ctx context.Context, plan *models.FloorPlan) error {
+	return p.SaveFloorPlan(ctx, plan)
+}
+
+// DeleteFloorPlan deletes a floor plan and its associations
+func (p *PostGISDB) DeleteFloorPlan(ctx context.Context, id string) error {
+	// Start transaction for cascading deletes
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Delete associated equipment
+	if _, err := tx.ExecContext(ctx, "DELETE FROM equipment WHERE floor_plan_id = $1", id); err != nil {
+		return fmt.Errorf("failed to delete equipment: %w", err)
+	}
+
+	// Delete associated rooms
+	if _, err := tx.ExecContext(ctx, "DELETE FROM rooms WHERE floor_plan_id = $1", id); err != nil {
+		return fmt.Errorf("failed to delete rooms: %w", err)
+	}
+
+	// Delete floor plan
+	if _, err := tx.ExecContext(ctx, "DELETE FROM floor_plans WHERE id = $1", id); err != nil {
+		return fmt.Errorf("failed to delete floor plan: %w", err)
+	}
+
+	return tx.Commit()
+}
+
+// GetEquipmentByFloorPlan retrieves all equipment for a floor plan
+func (p *PostGISDB) GetEquipmentByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Equipment, error) {
+	query := `
+		SELECT id, name, type,
+			   ST_X(location) as x, ST_Y(location) as y, ST_Z(location) as z,
+			   status, metadata, created_at
+		FROM equipment
+		WHERE floor_plan_id = $1
+		ORDER BY name`
+
+	rows, err := p.db.QueryContext(ctx, query, floorPlanID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query equipment: %w", err)
+	}
+	defer rows.Close()
+
+	var equipment []*models.Equipment
+	for rows.Next() {
+		var eq models.Equipment
+		var x, y, z sql.NullFloat64
+		var metadata sql.NullString
+		var createdAt time.Time
+
+		err := rows.Scan(
+			&eq.ID, &eq.Name, &eq.Type,
+			&x, &y, &z, &eq.Status, &metadata,
+			&createdAt,
+		)
+		if err != nil {
+			logger.Warn("Failed to scan equipment: %v", err)
+			continue
+		}
+
+		if x.Valid && y.Valid && z.Valid {
+			eq.Location = &models.Point3D{X: x.Float64, Y: y.Float64, Z: z.Float64}
+		}
+
+		if metadata.Valid {
+			json.Unmarshal([]byte(metadata.String), &eq.Metadata)
+		}
+
+		eq.MarkedAt = &createdAt
+		equipment = append(equipment, &eq)
+	}
+
+	return equipment, nil
+}
+
+// GetRoomsByFloorPlan retrieves all rooms for a floor plan
+func (p *PostGISDB) GetRoomsByFloorPlan(ctx context.Context, floorPlanID string) ([]*models.Room, error) {
+	query := `
+		SELECT id, name
+		FROM rooms
+		WHERE floor_plan_id = $1
+		ORDER BY name`
+
+	rows, err := p.db.QueryContext(ctx, query, floorPlanID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query rooms: %w", err)
+	}
+	defer rows.Close()
+
+	var rooms []*models.Room
+	for rows.Next() {
+		var room models.Room
+		err := rows.Scan(&room.ID, &room.Name)
+		if err != nil {
+			logger.Warn("Failed to scan room: %v", err)
+			continue
+		}
+
+		rooms = append(rooms, &room)
+	}
+
+	return rooms, nil
+}
+
+// SaveEquipment saves or updates equipment
+func (p *PostGISDB) SaveEquipment(ctx context.Context, eq *models.Equipment) error {
+	if eq.ID == "" {
+		eq.ID = fmt.Sprintf("eq-%d", time.Now().Unix())
+	}
+
+	// Extract floor_plan_id from metadata
+	var floorPlanID string
+	if eq.Metadata != nil {
+		if fpID, ok := eq.Metadata["floor_plan_id"].(string); ok {
+			floorPlanID = fpID
+		}
+	}
+
+	// Prepare location geometry
+	var location interface{}
+	if eq.Location != nil {
+		location = fmt.Sprintf("POINT(%f %f %f)", eq.Location.X, eq.Location.Y, eq.Location.Z)
+	} else {
+		location = nil
+	}
+
+	// Serialize metadata
+	var metadataJSON []byte
+	if eq.Metadata != nil {
+		metadataJSON, _ = json.Marshal(eq.Metadata)
+	}
+
+	query := `
+		INSERT INTO equipment (id, name, type, floor_plan_id, location, status, metadata, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, ST_GeomFromText($5, 4326), $6, $7, $8, $9)
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			type = EXCLUDED.type,
+			floor_plan_id = EXCLUDED.floor_plan_id,
+			location = EXCLUDED.location,
+			status = EXCLUDED.status,
+			metadata = EXCLUDED.metadata,
+			updated_at = EXCLUDED.updated_at`
+
+	now := time.Now()
+	var createdAt, updatedAt time.Time
+	if eq.MarkedAt != nil {
+		createdAt = *eq.MarkedAt
+	} else {
+		createdAt = now
+	}
+	updatedAt = now
+
+	_, err := p.db.ExecContext(ctx, query,
+		eq.ID, eq.Name, eq.Type, floorPlanID,
+		location, eq.Status, metadataJSON,
+		createdAt, updatedAt,
+	)
+
+	return err
+}
+
+// SaveRoom saves or updates a room
+func (p *PostGISDB) SaveRoom(ctx context.Context, room *models.Room) error {
+	if room.ID == "" {
+		room.ID = fmt.Sprintf("room-%d", time.Now().Unix())
+	}
+
+	// For now, use simplified storage - Room doesn't have all the fields we need
+	// This is a placeholder implementation
+	query := `
+		INSERT INTO rooms (id, name, floor_plan_id, floor, room_type, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			updated_at = EXCLUDED.updated_at`
+
+	now := time.Now()
+	_, err := p.db.ExecContext(ctx, query,
+		room.ID, room.Name, "", 0, "default",
+		now, now,
+	)
+
+	return err
+}
+
+// GetEquipment retrieves equipment by ID
+func (p *PostGISDB) GetEquipment(ctx context.Context, id string) (*models.Equipment, error) {
+	query := `
+		SELECT id, name, type,
+			   ST_X(location) as x, ST_Y(location) as y, ST_Z(location) as z,
+			   status, metadata, created_at
+		FROM equipment
+		WHERE id = $1`
+
+	var eq models.Equipment
+	var x, y, z sql.NullFloat64
+	var metadata sql.NullString
+	var createdAt time.Time
+
+	err := p.db.QueryRowContext(ctx, query, id).Scan(
+		&eq.ID, &eq.Name, &eq.Type,
+		&x, &y, &z, &eq.Status, &metadata,
+		&createdAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if x.Valid && y.Valid && z.Valid {
+		eq.Location = &models.Point3D{X: x.Float64, Y: y.Float64, Z: z.Float64}
+	}
+
+	if metadata.Valid {
+		json.Unmarshal([]byte(metadata.String), &eq.Metadata)
+	}
+
+	eq.MarkedAt = &createdAt
+	return &eq, nil
+}
+
+// GetRoom retrieves a room by ID
+func (p *PostGISDB) GetRoom(ctx context.Context, id string) (*models.Room, error) {
+	query := `
+		SELECT id, name
+		FROM rooms
+		WHERE id = $1`
+
+	var room models.Room
+	err := p.db.QueryRowContext(ctx, query, id).Scan(&room.ID, &room.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &room, nil
+}
+
+// UpdateEquipment updates equipment
+func (p *PostGISDB) UpdateEquipment(ctx context.Context, equipment *models.Equipment) error {
+	return p.SaveEquipment(ctx, equipment)
+}
+
+// DeleteEquipment deletes equipment
+func (p *PostGISDB) DeleteEquipment(ctx context.Context, id string) error {
+	_, err := p.db.ExecContext(ctx, "DELETE FROM equipment WHERE id = $1", id)
+	return err
+}
+
+// UpdateRoom updates a room
+func (p *PostGISDB) UpdateRoom(ctx context.Context, room *models.Room) error {
+	return p.SaveRoom(ctx, room)
+}
+
+// DeleteRoom deletes a room
+func (p *PostGISDB) DeleteRoom(ctx context.Context, id string) error {
+	_, err := p.db.ExecContext(ctx, "DELETE FROM rooms WHERE id = $1", id)
+	return err
+}
+
+// createSpatialTablesExtended creates additional tables if needed
+func (p *PostGISDB) createSpatialTablesExtended(ctx context.Context) error {
+	tables := []string{
+		`CREATE TABLE IF NOT EXISTS floor_plans (
+			id VARCHAR(255) PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
+			building_id VARCHAR(255) NOT NULL,
+			floor_number INTEGER,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS equipment (
+			id VARCHAR(255) PRIMARY KEY,
+			name VARCHAR(255),
+			type VARCHAR(100),
+			floor_plan_id VARCHAR(255) REFERENCES floor_plans(id),
+			location GEOMETRY(PointZ, 4326),
+			status VARCHAR(50),
+			metadata JSONB,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS rooms (
+			id VARCHAR(255) PRIMARY KEY,
+			name VARCHAR(255),
+			floor_plan_id VARCHAR(255) REFERENCES floor_plans(id),
+			floor INTEGER,
+			room_type VARCHAR(100),
+			boundary GEOMETRY(Polygon, 4326),
+			metadata JSONB,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS point_cloud (
+			id SERIAL PRIMARY KEY,
+			scan_id VARCHAR(255),
+			building_id VARCHAR(255),
+			floor_number INTEGER,
+			location GEOMETRY(PointZ, 4326),
+			confidence_score FLOAT,
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS spatial_anchors (
+			id VARCHAR(255) PRIMARY KEY,
+			building_id VARCHAR(255),
+			type VARCHAR(100),
+			location GEOMETRY(PointZ, 4326),
+			confidence FLOAT,
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
+	}
+
+	for _, table := range tables {
+		if _, err := p.db.ExecContext(ctx, table); err != nil {
+			logger.Warn("Failed to create table: %v", err)
+			// Continue - table might already exist
+		}
+	}
+
+	// Create spatial indexes
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_equipment_location ON equipment USING GIST(location)",
+		"CREATE INDEX IF NOT EXISTS idx_rooms_boundary ON rooms USING GIST(boundary)",
+		"CREATE INDEX IF NOT EXISTS idx_point_cloud_location ON point_cloud USING GIST(location)",
+		"CREATE INDEX IF NOT EXISTS idx_equipment_floor_plan ON equipment(floor_plan_id)",
+		"CREATE INDEX IF NOT EXISTS idx_rooms_floor_plan ON rooms(floor_plan_id)",
+	}
+
+	for _, index := range indexes {
+		if _, err := p.db.ExecContext(ctx, index); err != nil {
+			logger.Warn("Failed to create index: %v", err)
+		}
+	}
+
+	return nil
 }

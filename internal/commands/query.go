@@ -24,8 +24,8 @@ func ExecuteQuery(opts QueryOptions) error {
 
 	ctx := context.Background()
 
-	// Connect to database
-	db, err := database.NewSQLiteDBFromPath("arxos.db")
+	// Connect to PostGIS database
+	db, err := database.NewPostGISConnection(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -185,7 +185,7 @@ type QueryResult struct {
 }
 
 // executeCountQuery executes a count query and returns the result
-func executeCountQuery(ctx context.Context, db *database.SQLiteDB, query string, args []interface{}) (int, error) {
+func executeCountQuery(ctx context.Context, db *database.PostGISDB, query string, args []interface{}) (int, error) {
 	// Convert SELECT query to COUNT query
 	countQuery := strings.Replace(query, "SELECT DISTINCT", "SELECT COUNT(DISTINCT", 1)
 
@@ -208,7 +208,7 @@ func executeCountQuery(ctx context.Context, db *database.SQLiteDB, query string,
 }
 
 // executeEquipmentQuery executes the equipment query and returns results
-func executeEquipmentQuery(ctx context.Context, db *database.SQLiteDB, query string, args []interface{}, opts QueryOptions) (*QueryResult, error) {
+func executeEquipmentQuery(ctx context.Context, db *database.PostGISDB, query string, args []interface{}, opts QueryOptions) (*QueryResult, error) {
 	start := time.Now()
 
 	rows, err := db.Query(ctx, query, args...)

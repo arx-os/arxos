@@ -284,18 +284,10 @@ func (g *BIMGenerator) GenerateFromDatabase(ctx context.Context, db interface{},
 		}
 	}
 
-	// Check if we have a PostGIS hybrid database
-	if hybridDB, ok := db.(*database.PostGISHybridDB); ok {
-		spatialDB, err := hybridDB.GetSpatialDB()
-		if err == nil {
-			// Generate with spatial data
-			return g.generateWithSpatialData(ctx, spatialDB, buildingID, w)
-		}
-	}
-
-	// Fall back to SQLite generation
-	if sqliteDB, ok := db.(*database.SQLiteDB); ok {
-		return g.generateFromSQLite(ctx, sqliteDB, buildingID, w)
+	// Check if we have a PostGIS database
+	if postgisDB, ok := db.(*database.PostGISDB); ok {
+		// Generate with spatial data
+		return g.generateWithSpatialData(ctx, postgisDB, buildingID, w)
 	}
 
 	return fmt.Errorf("unsupported database type for BIM generation")
@@ -386,29 +378,7 @@ func (g *BIMGenerator) generateWithSpatialData(ctx context.Context, spatialDB da
 	return nil
 }
 
-// generateFromSQLite generates BIM from SQLite database
-func (g *BIMGenerator) generateFromSQLite(ctx context.Context, db *database.SQLiteDB, buildingID string, w io.Writer) error {
-	// Query all floor plans and filter by building
-	allPlans, err := db.GetAllFloorPlans(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to query floor plans: %w", err)
-	}
-
-	// Filter by building ID
-	var floorPlans []*models.FloorPlan
-	for _, plan := range allPlans {
-		if plan.Building == buildingID {
-			floorPlans = append(floorPlans, plan)
-		}
-	}
-
-	if len(floorPlans) == 0 {
-		return fmt.Errorf("no floor plans found for building: %s", buildingID)
-	}
-
-	// Use existing method
-	return g.GenerateFromFloorPlans(floorPlans, w)
-}
+// generateFromSQLite removed - using PostGIS only
 
 // getVersion returns the current ArxOS version
 func getVersion() string {

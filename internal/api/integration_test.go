@@ -14,7 +14,7 @@ import (
 	"github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/database"
 	"github.com/arx-os/arxos/internal/middleware"
-	_ "modernc.org/sqlite"
+	_ "github.com/lib/pq"
 )
 
 // TestServer encapsulates test server setup
@@ -26,12 +26,15 @@ type TestServer struct {
 	Shutdown    func()
 }
 
-// SetupTestServer creates a test server with in-memory database
+// SetupTestServer creates a test server with test PostgreSQL database
 func SetupTestServer(t *testing.T) *TestServer {
-	// Create in-memory database
-	sqlDB, err := sql.Open("sqlite", ":memory:")
+	// Use test PostgreSQL database (can be configured via env vars)
+	// For CI, use: "host=localhost port=5432 user=test dbname=arxos_test sslmode=disable"
+	testDSN := "host=localhost port=5432 user=arxos password=arxos dbname=arxos_test sslmode=disable"
+	sqlDB, err := sql.Open("postgres", testDSN)
 	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
+		t.Skipf("Skipping integration test: PostgreSQL not available: %v", err)
+		return nil
 	}
 
 	// Run migrations

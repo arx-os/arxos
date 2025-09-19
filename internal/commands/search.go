@@ -26,7 +26,7 @@ func ExecuteSearch(opts SearchOptions) error {
 	ctx := context.Background()
 
 	// Connect to database
-	db, err := database.NewSQLiteDBFromPath("arxos.db")
+	db, err := database.NewPostGISConnection(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -55,7 +55,7 @@ func ExecuteSearch(opts SearchOptions) error {
 	return outputSearchResults(results, opts)
 }
 
-func searchBuildings(ctx context.Context, db *database.SQLiteDB, query string) ([]*models.FloorPlan, error) {
+func searchBuildings(ctx context.Context, db *database.PostGISDB, query string) ([]*models.FloorPlan, error) {
 	all, err := db.GetAllFloorPlans(ctx)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func searchBuildings(ctx context.Context, db *database.SQLiteDB, query string) (
 	return results, nil
 }
 
-func searchEquipment(ctx context.Context, db *database.SQLiteDB, query string) ([]*models.Equipment, error) {
+func searchEquipment(ctx context.Context, db *database.PostGISDB, query string) ([]*models.Equipment, error) {
 	// Get all buildings first
 	buildings, err := db.GetAllFloorPlans(ctx)
 	if err != nil {
@@ -102,7 +102,7 @@ func searchEquipment(ctx context.Context, db *database.SQLiteDB, query string) (
 	return results, nil
 }
 
-func searchRooms(ctx context.Context, db *database.SQLiteDB, query string) ([]*models.Room, error) {
+func searchRooms(ctx context.Context, db *database.PostGISDB, query string) ([]*models.Room, error) {
 	// Get all buildings first
 	buildings, err := db.GetAllFloorPlans(ctx)
 	if err != nil {
@@ -131,7 +131,7 @@ type SearchResults struct {
 	Rooms     []*models.Room      `json:"rooms,omitempty"`
 }
 
-func searchAll(ctx context.Context, db *database.SQLiteDB, query string) (*SearchResults, error) {
+func searchAll(ctx context.Context, db *database.PostGISDB, query string) (*SearchResults, error) {
 	results := &SearchResults{}
 
 	// Search buildings

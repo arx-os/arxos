@@ -153,6 +153,12 @@ type Metadata struct {
 	Organization string   `json:"organization"`
 	Tags         []string `json:"tags"`
 	Notes        string   `json:"notes"`
+	Location     struct {
+		Address string `json:"address,omitempty"`
+		City    string `json:"city,omitempty"`
+		State   string `json:"state,omitempty"`
+		Country string `json:"country,omitempty"`
+	} `json:"location,omitempty"`
 }
 
 // Validation contains file validation information

@@ -9,7 +9,7 @@ import (
 	"github.com/arx-os/arxos/internal/bim"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/database"
-	"github.com/arx-os/arxos/internal/simulation"
+	// "github.com/arx-os/arxos/internal/simulation" // TODO: Implement simulation package
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -18,7 +18,7 @@ func ExecuteExport(opts ExportOptions) error {
 	ctx := context.Background()
 
 	// Connect to database
-	db, err := database.NewSQLiteDBFromPath("arxos.db")
+	db, err := database.NewPostGISConnection(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
@@ -31,28 +31,18 @@ func ExecuteExport(opts ExportOptions) error {
 	}
 
 	// Run simulations if requested
-	var simResults *simulation.Results
+	// TODO: Implement simulation when package is available
 	if opts.SimulateBeforeExp || opts.IncludeIntel {
-		logger.Info("Running simulations for building %s...", opts.BuildingID)
-
-		engine := simulation.NewEngine()
-		simResults, err = engine.Analyze(building)
-		if err != nil {
-			return fmt.Errorf("simulation failed: %w", err)
-		}
-
-		// Save simulation results to database
-		if err := saveSimulationResults(ctx, db, opts.BuildingID, simResults); err != nil {
-			logger.Warn("Failed to save simulation results: %v", err)
-		}
+		logger.Warn("Simulation feature not yet implemented")
+		return fmt.Errorf("simulation feature not yet implemented")
 	}
 
 	// Export based on format
 	switch opts.Format {
 	case "bim":
-		return exportBIM(building, simResults, opts)
+		return exportBIM(building, nil, opts)
 	case "json":
-		return exportJSON(building, simResults, opts)
+		return exportJSON(building, nil, opts)
 	case "pdf":
 		return fmt.Errorf("PDF export not yet implemented")
 	case "csv":
@@ -62,7 +52,7 @@ func ExecuteExport(opts ExportOptions) error {
 	}
 }
 
-func exportBIM(building *models.FloorPlan, simResults *simulation.Results, opts ExportOptions) error {
+func exportBIM(building *models.FloorPlan, simResults interface{}, opts ExportOptions) error {
 	// Convert to BIM format
 	bimBuilding := convertToSimpleBIM(building)
 
@@ -93,7 +83,7 @@ func exportBIM(building *models.FloorPlan, simResults *simulation.Results, opts 
 	return nil
 }
 
-func exportJSON(building *models.FloorPlan, simResults *simulation.Results, opts ExportOptions) error {
+func exportJSON(building *models.FloorPlan, simResults interface{}, opts ExportOptions) error {
 	// Create export structure
 	export := map[string]interface{}{
 		"building": building,
@@ -139,52 +129,13 @@ func convertToSimpleBIM(fp *models.FloorPlan) *bim.SimpleBuilding {
 	return building
 }
 
-func enrichBIMWithIntelligence(building *bim.SimpleBuilding, results *simulation.Results) {
-	// Add simulation data to each equipment
-	for i := range building.Equipment {
-		eq := &building.Equipment[i]
-
-		// Find matching simulation data
-		if eqSim, ok := results.EquipmentAnalysis[eq.ID]; ok {
-			// Add intelligence fields
-			if eq.Extensions == nil {
-				eq.Extensions = make(map[string]interface{})
-			}
-
-			eq.Extensions["intelligence"] = map[string]interface{}{
-				"energy_flow":         eqSim.EnergyFlow,
-				"particle_load":       eqSim.ParticleLoad,
-				"maintenance_due":     eqSim.NextMaintenance,
-				"failure_probability": eqSim.FailureProbability,
-				"efficiency_score":    eqSim.EfficiencyScore,
-			}
-
-			// Update status based on simulation
-			if eqSim.FailureProbability > 0.5 {
-				eq.Status = models.StatusFailed
-			} else if eqSim.FailureProbability > 0.3 {
-				eq.Status = models.StatusDegraded
-			}
-		}
-	}
-
-	// Add overall building intelligence
-	if building.Metadata == nil {
-		building.Metadata = make(map[string]interface{})
-	}
-
-	building.Metadata["simulation_results"] = map[string]interface{}{
-		"timestamp":          results.Timestamp,
-		"total_energy_flow":  results.TotalEnergyFlow,
-		"average_efficiency": results.AverageEfficiency,
-		"critical_issues":    results.CriticalIssues,
-		"recommendations":    results.Recommendations,
-	}
+func enrichBIMWithIntelligence(building *bim.SimpleBuilding, results interface{}) {
+	// TODO: Add simulation data when simulation package is implemented
+	logger.Debug("Simulation enrichment not yet implemented")
 }
 
-func saveSimulationResults(ctx context.Context, db *database.SQLiteDB, buildingID string, results *simulation.Results) error {
-	// This would save simulation results to a dedicated table
-	// For now, we'll just log it
-	logger.Info("Simulation complete: %d critical issues found", len(results.CriticalIssues))
+func saveSimulationResults(ctx context.Context, db *database.PostGISDB, buildingID string, results interface{}) error {
+	// TODO: Save simulation results when simulation package is implemented
+	logger.Debug("Simulation results saving not yet implemented")
 	return nil
 }

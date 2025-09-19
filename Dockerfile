@@ -1,5 +1,5 @@
 # Multi-stage build for ArxOS
-FROM golang:1.24-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Install build dependencies (minimal set for pure Go build)
 RUN apk add --no-cache git ca-certificates tzdata

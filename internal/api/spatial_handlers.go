@@ -10,11 +10,11 @@ import (
 
 // SpatialHandlers handles AR anchor and spatial endpoints
 type SpatialHandlers struct {
-	db *database.SQLiteDB
+	db *database.PostGISDB
 }
 
 // NewSpatialHandlers creates new spatial handlers
-func NewSpatialHandlers(db *database.SQLiteDB) *SpatialHandlers {
+func NewSpatialHandlers(db *database.PostGISDB) *SpatialHandlers {
 	return &SpatialHandlers{db: db}
 }
 

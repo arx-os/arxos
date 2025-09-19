@@ -66,11 +66,6 @@ func (m *MigrationRunner) Run() error {
 			continue
 		}
 
-		// Skip PostgreSQL-specific migrations when using SQLite
-		if strings.Contains(migration.Name, "postgres") {
-			logger.Debug("Skipping PostgreSQL migration %s for SQLite", migration.Version)
-			continue
-		}
 
 		logger.Info("Applying migration %s: %s", migration.Version, migration.Name)
 		if err := m.applyMigration(migration); err != nil {

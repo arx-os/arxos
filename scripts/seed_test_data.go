@@ -13,13 +13,12 @@ import (
 
 func main() {
 	// Connect to database
-	db, err := database.NewSQLiteDBFromPath("data/test.db")
+	ctx := context.Background()
+	db, err := database.NewPostGISConnection(ctx)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
-
-	ctx := context.Background()
 
 	// Create a test floor plan
 	floorPlanID := uuid.New().String()

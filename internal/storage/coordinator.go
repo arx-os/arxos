@@ -168,6 +168,7 @@ const (
 	QueryOverview QueryType = iota // Building manager - schematic view
 	QueryDetail                    // Systems engineer - detailed tracing
 	QuerySpatial                   // Field technician - precise coordinates
+	QueryTypeRead                  // Generic read operation
 )
 
 // DataSource represents where the data is coming from
@@ -478,7 +479,7 @@ func (sc *StorageCoordinator) hasPendingChanges(ctx context.Context, buildingID 
 // syncBuilding synchronizes all layers for a specific building
 func (sc *StorageCoordinator) syncBuilding(ctx context.Context, buildingID string) error {
 	// Load from primary source and sync to others
-	building, err := sc.GetBuilding(ctx, buildingID)
+	building, err := sc.GetBuilding(ctx, buildingID, QueryTypeRead)
 	if err != nil {
 		return err
 	}
@@ -496,33 +497,44 @@ func (sc *StorageCoordinator) syncBuilding(ctx context.Context, buildingID strin
 // convertBIMToFloorPlan converts BIM building to floor plan model
 func convertBIMToFloorPlan(bimBuilding *bim.Building) *models.FloorPlan {
 	floorPlan := &models.FloorPlan{
-		ID:        bimBuilding.ID,
+		ID:        fmt.Sprintf("bim-%s", bimBuilding.Name),
 		Name:      bimBuilding.Name,
 		Equipment: make([]*models.Equipment, 0),
 		Rooms:     make([]*models.Room, 0),
 	}
 
-	// Convert equipment
-	for _, eq := range bimBuilding.Equipment {
-		modelEq := &models.Equipment{
-			ID:   eq.ID,
-			Type: eq.Type,
-			Location: &models.Point3D{
-				X: eq.Location.X,
-				Y: eq.Location.Y,
-				Z: eq.Location.Z,
-			},
-			Status: models.EquipmentStatus(eq.Status),
+	// Convert equipment from all floors
+	for floorIdx, floor := range bimBuilding.Floors {
+		for _, eq := range floor.Equipment {
+			modelEq := &models.Equipment{
+				ID:     eq.ID,
+				Name:   fmt.Sprintf("%s-%s", eq.Type, eq.ID),
+				Type:   eq.Type,
+				RoomID: eq.Location.Room,
+				Location: &models.Point3D{
+					X: eq.Location.X,
+					Y: eq.Location.Y,
+					Z: float64(floor.Level), // Use floor level as Z coordinate
+				},
+				Status: string(eq.Status),
+				Model:  eq.Model,
+				Serial: eq.Serial,
+				Notes:  eq.Notes,
+			}
+			if eq.Installed != nil {
+				modelEq.Installed = eq.Installed
+			}
+			if eq.LastMaint != nil {
+				modelEq.Maintained = eq.LastMaint
+			}
+			floorPlan.Equipment = append(floorPlan.Equipment, modelEq)
 		}
-		floorPlan.Equipment = append(floorPlan.Equipment, modelEq)
-	}
 
-	// Convert rooms
-	for _, room := range bimBuilding.Rooms {
+		// Create a room for each floor
 		modelRoom := &models.Room{
-			ID:    room.ID,
-			Name:  room.Name,
-			Floor: room.Floor,
+			ID:          fmt.Sprintf("floor-%d", floorIdx),
+			Name:        floor.Name,
+			FloorPlanID: floorPlan.ID,
 		}
 		floorPlan.Rooms = append(floorPlan.Rooms, modelRoom)
 	}

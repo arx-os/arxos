@@ -6,13 +6,13 @@ package api
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/core/user"
 	"github.com/arx-os/arxos/internal/database"
@@ -66,7 +66,7 @@ type Services struct {
 	Building     BuildingService
 	User         UserService
 	Organization OrganizationService
-	DB           database.DB // Database interface for services that need direct DB access
+	DB           database.ExtendedDB // Extended database interface with additional operations
 }
 
 // DefaultConfig returns a default API server configuration
@@ -126,19 +126,31 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("/api/v1/auth/refresh", s.handleRefresh)
 
 	// User endpoints
+	s.router.HandleFunc("/api/v1/users", s.handleUsers)
 	s.router.HandleFunc("/api/v1/users/me", s.handleGetCurrentUser)
-	s.router.HandleFunc("/api/v1/users", s.handleListUsers)
-	s.router.HandleFunc("/api/v1/users/", s.handleGetUser)
+	s.router.HandleFunc("/api/v1/users/reset-password", s.handleRequestPasswordReset)
+	s.router.HandleFunc("/api/v1/users/reset-password/confirm", s.handleConfirmPasswordReset)
+	s.router.HandleFunc("/api/v1/users/{id}", s.handleUserOperations)
+	s.router.HandleFunc("/api/v1/users/{id}/change-password", s.handleChangePassword)
+	s.router.HandleFunc("/api/v1/users/{id}/organizations", s.handleGetUserOrganizations)
+	s.router.HandleFunc("/api/v1/users/{id}/sessions", s.handleUserSessions)
+
+	// Organization endpoints
+	s.router.HandleFunc("/api/v1/organizations", s.handleOrganizations)
+	s.router.HandleFunc("/api/v1/organizations/{id}", s.handleOrganizationOperations)
+	s.router.HandleFunc("/api/v1/organizations/{id}/members", s.handleOrganizationMembers)
+	s.router.HandleFunc("/api/v1/organizations/{id}/members/{user_id}", s.handleOrganizationMember)
+	s.router.HandleFunc("/api/v1/organizations/{id}/invitations", s.handleOrganizationInvitations)
+	s.router.HandleFunc("/api/v1/organizations/{id}/invitations/{invitation_id}", s.handleRevokeOrganizationInvitation)
+	s.router.HandleFunc("/api/v1/invitations/accept", s.handleAcceptOrganizationInvitation)
 
 	// Building endpoints
-	s.router.HandleFunc("/api/v1/buildings", s.handleListBuildings)
-	s.router.HandleFunc("/api/v1/buildings/create", s.handleCreateBuilding)
-	s.router.HandleFunc("/api/v1/buildings/", s.handleBuildingOperations)
+	s.router.HandleFunc("/api/v1/buildings", s.handleBuildings)
+	s.router.HandleFunc("/api/v1/buildings/{id}", s.handleBuildingOperations)
 
 	// Equipment endpoints
-	s.router.HandleFunc("/api/v1/equipment", s.handleListEquipment)
-	s.router.HandleFunc("/api/v1/equipment/create", s.handleCreateEquipment)
-	s.router.HandleFunc("/api/v1/equipment/", s.handleEquipmentOperations)
+	s.router.HandleFunc("/api/v1/equipment", s.handleEquipment)
+	s.router.HandleFunc("/api/v1/equipment/{id}", s.handleEquipmentOperations)
 
 	// Sync endpoints
 	s.router.HandleFunc("/api/v1/sync/push", s.handleSyncPush)
@@ -251,25 +263,7 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Response helpers
-
-func (s *Server) respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if data != nil {
-		if err := json.NewEncoder(w).Encode(data); err != nil {
-			logger.Error("Failed to encode JSON response: %v", err)
-		}
-	}
-}
-
-func (s *Server) respondError(w http.ResponseWriter, status int, message string) {
-	s.respondJSON(w, status, map[string]string{
-		"error": message,
-		"code":  fmt.Sprintf("%d", status),
-	})
-}
+// Response helpers are defined in helpers.go
 
 // authenticate verifies the request authentication and returns the user
 func (s *Server) authenticate(r *http.Request) (*user.User, error) {
@@ -291,7 +285,30 @@ func (s *Server) authenticate(r *http.Request) (*user.User, error) {
 	}
 
 	// Validate token with auth service
-	return s.services.Auth.ValidateToken(r.Context(), token)
+	claims, err := s.services.Auth.ValidateToken(r.Context(), token)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get user from database
+	apiUser, err := s.services.User.GetUser(r.Context(), claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert API User to user.User
+	userID, err := uuid.Parse(apiUser.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	return &user.User{
+		ID:       userID,
+		Email:    apiUser.Email,
+		FullName: apiUser.Name,
+		Role:     apiUser.Role,
+		Status:   "active",
+	}, nil
 }
 
 // parseIntParam parses an integer parameter with default and max values
@@ -321,4 +338,130 @@ func (s *Server) getRequestID(r *http.Request) string {
 		return id
 	}
 	return fmt.Sprintf("%d", time.Now().UnixNano())
+}
+
+// Combined handlers that dispatch based on HTTP method
+
+// handleUsers handles /api/v1/users
+func (s *Server) handleUsers(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetUsers(w, r)
+	case http.MethodPost:
+		s.handleCreateUser(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleUserOperations handles /api/v1/users/{id}
+func (s *Server) handleUserOperations(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetUser(w, r)
+	case http.MethodPut:
+		s.handleUpdateUser(w, r)
+	case http.MethodDelete:
+		s.handleDeleteUser(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleUserSessions handles /api/v1/users/{id}/sessions
+func (s *Server) handleUserSessions(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetUserSessions(w, r)
+	case http.MethodDelete:
+		s.handleRevokeUserSessions(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleOrganizations handles /api/v1/organizations
+func (s *Server) handleOrganizations(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetOrganizations(w, r)
+	case http.MethodPost:
+		s.handleCreateOrganization(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleOrganizationOperations handles /api/v1/organizations/{id}
+func (s *Server) handleOrganizationOperations(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetOrganization(w, r)
+	case http.MethodPut:
+		s.handleUpdateOrganization(w, r)
+	case http.MethodDelete:
+		s.handleDeleteOrganization(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleOrganizationMembers handles /api/v1/organizations/{id}/members
+func (s *Server) handleOrganizationMembers(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetOrganizationMembers(w, r)
+	case http.MethodPost:
+		s.handleAddOrganizationMember(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleOrganizationMember handles /api/v1/organizations/{id}/members/{user_id}
+func (s *Server) handleOrganizationMember(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPut:
+		s.handleUpdateOrganizationMember(w, r)
+	case http.MethodDelete:
+		s.handleRemoveOrganizationMember(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleOrganizationInvitations handles /api/v1/organizations/{id}/invitations
+func (s *Server) handleOrganizationInvitations(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetOrganizationInvitations(w, r)
+	case http.MethodPost:
+		s.handleCreateOrganizationInvitation(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleBuildings handles /api/v1/buildings
+func (s *Server) handleBuildings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleListBuildings(w, r)
+	case http.MethodPost:
+		s.handleCreateBuilding(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// handleEquipment handles /api/v1/equipment
+func (s *Server) handleEquipment(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleListEquipment(w, r)
+	case http.MethodPost:
+		s.handleCreateEquipment(w, r)
+	default:
+		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
 }

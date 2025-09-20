@@ -22,11 +22,23 @@ type FloorPlan struct {
 
 // Room represents a space on the floor plan
 type Room struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Bounds    Bounds   `json:"bounds"`
-	Equipment []string `json:"equipment_ids"` // References to Equipment.ID
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	FloorPlanID string   `json:"floor_plan_id,omitempty"`
+	Bounds      Bounds   `json:"bounds"`
+	Equipment   []string `json:"equipment_ids"` // References to Equipment.ID
 }
+
+// EquipmentStatus represents the status of equipment
+type EquipmentStatus string
+
+const (
+	EquipmentStatusActive       EquipmentStatus = "active"
+	EquipmentStatusInactive     EquipmentStatus = "inactive"
+	EquipmentStatusMaintenance  EquipmentStatus = "maintenance"
+	EquipmentStatusFaulty       EquipmentStatus = "faulty"
+	EquipmentStatusDecommissioned EquipmentStatus = "decommissioned"
+)
 
 // Equipment represents any marked item on the floor plan
 type Equipment struct {

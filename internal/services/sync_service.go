@@ -10,19 +10,22 @@ import (
 	"github.com/arx-os/arxos/internal/api"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/database"
+	servicesync "github.com/arx-os/arxos/internal/services/sync"
 	"github.com/arx-os/arxos/internal/storage"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
 // SyncService handles synchronization between local and cloud storage
 type SyncService struct {
-	db           database.DB
-	storage      storage.Backend
-	conflictMode ConflictResolutionMode
-	syncQueue    chan SyncTask
-	workers      int
-	mu           sync.RWMutex
-	syncStatus   map[string]*SyncStatus
+	db               database.DB
+	storage          storage.Backend
+	conflictMode     ConflictResolutionMode
+	conflictResolver *servicesync.ConflictResolver
+	changeTracker    *servicesync.ChangeTracker
+	syncQueue        chan SyncTask
+	workers          int
+	mu               sync.RWMutex
+	syncStatus       map[string]*SyncStatus
 }
 
 // ConflictResolutionMode defines how conflicts are resolved
@@ -69,13 +72,20 @@ func NewSyncService(db database.DB, storage storage.Backend, workers int) *SyncS
 		workers = 4
 	}
 
+	// TODO: Implement conflict resolver and change tracker constructors
+	// For now, initialize as nil - they need proper constructors in the sync package
+	var conflictResolver *servicesync.ConflictResolver
+	var changeTracker *servicesync.ChangeTracker
+
 	s := &SyncService{
-		db:           db,
-		storage:      storage,
-		conflictMode: ConflictModeAsk,
-		syncQueue:    make(chan SyncTask, 100),
-		workers:      workers,
-		syncStatus:   make(map[string]*SyncStatus),
+		db:               db,
+		storage:          storage,
+		conflictMode:     ConflictModeAsk,
+		conflictResolver: conflictResolver,
+		changeTracker:    changeTracker,
+		syncQueue:        make(chan SyncTask, 100),
+		workers:          workers,
+		syncStatus:       make(map[string]*SyncStatus),
 	}
 
 	// Start workers
@@ -197,10 +207,24 @@ func (s *SyncService) GetSyncStatus(buildingID string) *SyncStatus {
 }
 
 // ResolveConflict resolves a sync conflict
-func (s *SyncService) ResolveConflict(ctx context.Context, conflictID string, resolution string) error {
-	// TODO: Implement conflict resolution
-	logger.Info("Resolving conflict %s with resolution: %s", conflictID, resolution)
-	return nil
+func (s *SyncService) ResolveConflict(ctx context.Context, conflictID string, resolution string, userID string) error {
+	// Map resolution string to ResolutionType
+	var resType servicesync.ResolutionType
+	switch resolution {
+	case "local":
+		resType = servicesync.ResolutionTypeLocal
+	case "remote":
+		resType = servicesync.ResolutionTypeRemote
+	case "merge":
+		resType = servicesync.ResolutionTypeMerge
+	case "defer":
+		resType = servicesync.ResolutionTypeDefer
+	default:
+		return fmt.Errorf("invalid resolution type: %s", resolution)
+	}
+
+	// Use the conflict resolver
+	return s.conflictResolver.ResolveConflict(ctx, conflictID, resType, userID)
 }
 
 // SetConflictMode sets the conflict resolution mode
@@ -242,16 +266,43 @@ func (s *SyncService) worker() {
 
 // getLocalChanges retrieves local changes since last sync
 func (s *SyncService) getLocalChanges(ctx context.Context, buildingID string, since time.Time) ([]api.Change, error) {
+	// Use change tracker to get changes
+	trackedChanges, err := s.changeTracker.GetChanges(ctx, since, "")
+	if err != nil {
+		logger.Warn("Failed to get tracked changes: %v", err)
+		// Fall back to database query
+		return s.getLocalChangesFromDB(ctx, buildingID, since)
+	}
+
+	// Filter changes for this building
+	var changes []api.Change
+	for _, change := range trackedChanges {
+		// Include building changes and related entities
+		if change.Entity == "building" && change.EntityID == buildingID {
+			changes = append(changes, *change)
+		} else if change.Entity == "equipment" || change.Entity == "room" {
+			// Check if equipment/room belongs to this building
+			// This would require additional context in the change data
+			if buildingRef, ok := change.Data["building_id"].(string); ok && buildingRef == buildingID {
+				changes = append(changes, *change)
+			}
+		}
+	}
+
+	return changes, nil
+}
+
+// getLocalChangesFromDB fallback method to get changes from database
+func (s *SyncService) getLocalChangesFromDB(ctx context.Context, buildingID string, since time.Time) ([]api.Change, error) {
 	changes := []api.Change{}
 
 	// Query database for changes
-	// This is a simplified implementation - real version would track changes in audit table
 	building, err := s.db.GetFloorPlan(ctx, buildingID)
 	if err != nil {
 		return nil, err
 	}
 
-	if building != nil && building.UpdatedAt.After(since) {
+	if building != nil && building.UpdatedAt != nil && building.UpdatedAt.After(since) {
 		change := api.Change{
 			ID:        fmt.Sprintf("%s-%d", buildingID, time.Now().Unix()),
 			Type:      "update",
@@ -308,10 +359,30 @@ func (s *SyncService) getRemoteChanges(ctx context.Context, buildingID string, s
 }
 
 // applyRemoteChanges applies remote changes to local database
-func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string, changes []api.Change) ([]api.Conflict, error) {
-	conflicts := []api.Conflict{}
+func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string, remoteChanges []api.Change) ([]api.Conflict, error) {
+	// Get local changes to check for conflicts
+	status := s.getStatus(buildingID)
+	localChanges, err := s.getLocalChanges(ctx, buildingID, status.LastSync)
+	if err != nil {
+		logger.Warn("Failed to get local changes for conflict detection: %v", err)
+		// Continue without conflict detection
+		localChanges = []api.Change{}
+	}
 
-	for _, change := range changes {
+	// Detect conflicts using the conflict resolver
+	detectedConflicts, err := s.conflictResolver.DetectConflicts(ctx, localChanges, remoteChanges)
+	if err != nil {
+		logger.Warn("Failed to detect conflicts: %v", err)
+	}
+
+	// Convert detected conflicts to API conflicts
+	conflicts := []api.Conflict{}
+	for _, conflict := range detectedConflicts {
+		conflicts = append(conflicts, *conflict)
+	}
+
+	// Apply non-conflicting changes
+	for _, change := range remoteChanges {
 		switch change.Entity {
 		case "building":
 			if err := s.applyBuildingChange(ctx, change); err != nil {
@@ -327,12 +398,16 @@ func (s *SyncService) applyRemoteChanges(ctx context.Context, buildingID string,
 				conflicts = append(conflicts, conflict)
 			}
 		case "equipment":
-			if err := s.applyEquipmentChange(ctx, change); err != nil {
-				logger.Warn("Failed to apply equipment change: %v", err)
+			if !s.isConflicting(change, detectedConflicts) {
+				if err := s.applyEquipmentChange(ctx, change); err != nil {
+					logger.Warn("Failed to apply equipment change: %v", err)
+				}
 			}
 		case "room":
-			if err := s.applyRoomChange(ctx, change); err != nil {
-				logger.Warn("Failed to apply room change: %v", err)
+			if !s.isConflicting(change, detectedConflicts) {
+				if err := s.applyRoomChange(ctx, change); err != nil {
+					logger.Warn("Failed to apply room change: %v", err)
+				}
 			}
 		}
 	}
@@ -383,16 +458,102 @@ func (s *SyncService) applyBuildingChange(ctx context.Context, change api.Change
 
 // applyEquipmentChange applies an equipment change
 func (s *SyncService) applyEquipmentChange(ctx context.Context, change api.Change) error {
-	// TODO: Implement equipment change application
-	logger.Debug("Applying equipment change: %+v", change)
-	return nil
+	switch change.Type {
+	case "create":
+		equipment := &models.Equipment{
+			ID: change.EntityID,
+		}
+		// Apply data fields
+		if name, ok := change.Data["name"].(string); ok {
+			equipment.Name = name
+		}
+		if eType, ok := change.Data["type"].(string); ok {
+			equipment.Type = eType
+		}
+		if roomID, ok := change.Data["room_id"].(string); ok {
+			equipment.RoomID = roomID
+		}
+		if status, ok := change.Data["status"].(string); ok {
+			equipment.Status = status
+		}
+		if model, ok := change.Data["model"].(string); ok {
+			equipment.Model = model
+		}
+		if serial, ok := change.Data["serial"].(string); ok {
+			equipment.Serial = serial
+		}
+		return s.db.SaveEquipment(ctx, equipment)
+
+	case "update":
+		equipment, err := s.db.GetEquipment(ctx, change.EntityID)
+		if err != nil {
+			return fmt.Errorf("failed to get equipment: %w", err)
+		}
+		// Apply updates
+		if name, ok := change.Data["name"].(string); ok {
+			equipment.Name = name
+		}
+		if eType, ok := change.Data["type"].(string); ok {
+			equipment.Type = eType
+		}
+		if roomID, ok := change.Data["room_id"].(string); ok {
+			equipment.RoomID = roomID
+		}
+		if status, ok := change.Data["status"].(string); ok {
+			equipment.Status = status
+		}
+		if model, ok := change.Data["model"].(string); ok {
+			equipment.Model = model
+		}
+		if serial, ok := change.Data["serial"].(string); ok {
+			equipment.Serial = serial
+		}
+		return s.db.UpdateEquipment(ctx, equipment)
+
+	case "delete":
+		return s.db.DeleteEquipment(ctx, change.EntityID)
+
+	default:
+		return fmt.Errorf("unknown change type: %s", change.Type)
+	}
 }
 
 // applyRoomChange applies a room change
 func (s *SyncService) applyRoomChange(ctx context.Context, change api.Change) error {
-	// TODO: Implement room change application
-	logger.Debug("Applying room change: %+v", change)
-	return nil
+	switch change.Type {
+	case "create":
+		room := &models.Room{
+			ID: change.EntityID,
+		}
+		// Apply data fields
+		if name, ok := change.Data["name"].(string); ok {
+			room.Name = name
+		}
+		if floorPlanID, ok := change.Data["floor_plan_id"].(string); ok {
+			room.FloorPlanID = floorPlanID
+		}
+		return s.db.SaveRoom(ctx, room)
+
+	case "update":
+		room, err := s.db.GetRoom(ctx, change.EntityID)
+		if err != nil {
+			return fmt.Errorf("failed to get room: %w", err)
+		}
+		// Apply updates
+		if name, ok := change.Data["name"].(string); ok {
+			room.Name = name
+		}
+		if floorPlanID, ok := change.Data["floor_plan_id"].(string); ok {
+			room.FloorPlanID = floorPlanID
+		}
+		return s.db.UpdateRoom(ctx, room)
+
+	case "delete":
+		return s.db.DeleteRoom(ctx, change.EntityID)
+
+	default:
+		return fmt.Errorf("unknown change type: %s", change.Type)
+	}
 }
 
 // getStatus returns the sync status for a building
@@ -428,4 +589,75 @@ func (s *SyncService) updateStatus(buildingID string, update func(*SyncStatus)) 
 	}
 
 	update(status)
+}
+
+// isConflicting checks if a change is part of a conflict
+func (s *SyncService) isConflicting(change api.Change, conflicts []*api.Conflict) bool {
+	for _, conflict := range conflicts {
+		if conflict.Entity == change.Entity && conflict.EntityID == change.EntityID {
+			return true
+		}
+	}
+	return false
+}
+
+// TrackBuildingChange tracks a building modification for sync
+func (s *SyncService) TrackBuildingChange(ctx context.Context, building *models.FloorPlan, changeType string) {
+	data := map[string]interface{}{
+		"name":        building.Name,
+		"building_id": building.Building,
+		"level":       building.Level,
+	}
+
+	switch changeType {
+	case "create":
+		s.changeTracker.TrackCreate(ctx, "building", building.ID, data)
+	case "update":
+		version, _ := s.changeTracker.GetLatestVersion(ctx, building.ID)
+		s.changeTracker.TrackUpdate(ctx, "building", building.ID, data, version)
+	case "delete":
+		s.changeTracker.TrackDelete(ctx, "building", building.ID)
+	}
+}
+
+// TrackEquipmentChange tracks an equipment modification for sync
+func (s *SyncService) TrackEquipmentChange(ctx context.Context, equipment *models.Equipment, buildingID, changeType string) {
+	data := map[string]interface{}{
+		"name":        equipment.Name,
+		"type":        equipment.Type,
+		"room_id":     equipment.RoomID,
+		"building_id": buildingID,
+		"status":      equipment.Status,
+		"model":       equipment.Model,
+		"serial":      equipment.Serial,
+	}
+
+	switch changeType {
+	case "create":
+		s.changeTracker.TrackCreate(ctx, "equipment", equipment.ID, data)
+	case "update":
+		version, _ := s.changeTracker.GetLatestVersion(ctx, equipment.ID)
+		s.changeTracker.TrackUpdate(ctx, "equipment", equipment.ID, data, version)
+	case "delete":
+		s.changeTracker.TrackDelete(ctx, "equipment", equipment.ID)
+	}
+}
+
+// TrackRoomChange tracks a room modification for sync
+func (s *SyncService) TrackRoomChange(ctx context.Context, room *models.Room, buildingID, changeType string) {
+	data := map[string]interface{}{
+		"name":          room.Name,
+		"floor_plan_id": room.FloorPlanID,
+		"building_id":   buildingID,
+	}
+
+	switch changeType {
+	case "create":
+		s.changeTracker.TrackCreate(ctx, "room", room.ID, data)
+	case "update":
+		version, _ := s.changeTracker.GetLatestVersion(ctx, room.ID)
+		s.changeTracker.TrackUpdate(ctx, "room", room.ID, data, version)
+	case "delete":
+		s.changeTracker.TrackDelete(ctx, "room", room.ID)
+	}
 }

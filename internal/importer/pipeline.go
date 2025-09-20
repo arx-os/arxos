@@ -6,8 +6,9 @@ import (
 	"io"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/common/logger"
-	"github.com/arx-os/arxos/internal/models/building"
+	"github.com/arx-os/arxos/internal/core/building"
 )
 
 // ImportOptions contains options for the import process
@@ -154,18 +155,20 @@ func (p *Pipeline) Import(ctx context.Context, input io.Reader, opts ImportOptio
 	}
 
 	// Set metadata
-	model.ImportedAt = time.Now()
-	model.UpdatedAt = time.Now()
-	if model.Source == "" {
-		model.Source = building.DataSource(importer.GetFormat())
-	}
+	model.ImportMetadata.ImportedAt = time.Now()
+	model.ImportMetadata.Format = importer.GetFormat()
 
-	// Apply building ID and name from options
-	if opts.BuildingID != "" {
-		model.ID = opts.BuildingID
-	}
-	if opts.BuildingName != "" {
-		model.Name = opts.BuildingName
+	// Update building timestamp
+	if model.Building != nil {
+		model.Building.UpdatedAt = time.Now()
+
+		// Apply building ID and name from options
+		if opts.BuildingID != "" {
+			model.Building.ArxosID = opts.BuildingID
+		}
+		if opts.BuildingName != "" {
+			model.Building.Name = opts.BuildingName
+		}
 	}
 
 	// Report progress
@@ -208,8 +211,8 @@ func (p *Pipeline) Import(ctx context.Context, input io.Reader, opts ImportOptio
 		}
 	}
 
-	// Calculate coverage
-	model.Coverage = model.CalculateCoverage()
+	// TODO: Calculate coverage if needed
+	// Coverage calculation would go here
 
 	// Report progress
 	if opts.ProgressCallback != nil {
@@ -235,8 +238,13 @@ func (p *Pipeline) Import(ctx context.Context, input io.Reader, opts ImportOptio
 	}
 
 	logger.Info("Import completed in %v", time.Since(startTime))
-	logger.Info("Building: %s, Floors: %d, Equipment: %d, Coverage: %.1f%%",
-		model.Name, len(model.Floors), len(model.GetAllEquipment()), model.Coverage)
+
+	buildingName := "Unknown"
+	if model.Building != nil {
+		buildingName = model.Building.Name
+	}
+	logger.Info("Building: %s, Floors: %d, Equipment: %d",
+		buildingName, len(model.Floors), len(model.Equipment))
 
 	return model, nil
 }
@@ -247,19 +255,21 @@ func (p *Pipeline) Validate(model *building.BuildingModel) []building.Validation
 	issues := model.Validate()
 
 	// Add pipeline-specific validation
-	if model.ID == "" && model.UUID == "" {
+	if model.Building != nil && model.Building.ArxosID == "" {
 		issues = append(issues, building.ValidationIssue{
-			Level:   "error",
-			Field:   "ID/UUID",
-			Message: "Building must have either ID or UUID",
+			Level:   building.ValidationLevelError,
+			Type:    "missing_id",
+			Field:   "ArxosID",
+			Message: "Building must have an ArxosID",
 		})
 	}
 
 	// Check for minimum data
-	equipment := model.GetAllEquipment()
+	equipment := model.Equipment
 	if len(equipment) == 0 {
 		issues = append(issues, building.ValidationIssue{
-			Level:   "warning",
+			Level:   building.ValidationLevelWarning,
+			Type:    "no_equipment",
 			Field:   "Equipment",
 			Message: "No equipment found in building",
 		})
@@ -317,72 +327,40 @@ type SpatialEnhancer struct {
 
 // Enhance adds spatial enhancements
 func (s *SpatialEnhancer) Enhance(ctx context.Context, model *building.BuildingModel) error {
-	logger.Debug("Applying spatial enhancements to building %s", model.ID)
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+	}
+	logger.Debug("Applying spatial enhancements to building %s", buildingID)
 
-	// Calculate bounding box if not present
-	if model.BoundingBox == nil && len(model.Floors) > 0 {
-		// Calculate from floor bounding boxes
-		var minX, minY, minZ, maxX, maxY, maxZ float64
-		first := true
-
-		for _, floor := range model.Floors {
-			if floor.BoundingBox != nil {
-				if first {
-					minX = floor.BoundingBox.Min.X
-					minY = floor.BoundingBox.Min.Y
-					minZ = floor.BoundingBox.Min.Z
-					maxX = floor.BoundingBox.Max.X
-					maxY = floor.BoundingBox.Max.Y
-					maxZ = floor.BoundingBox.Max.Z
-					first = false
-				} else {
-					if floor.BoundingBox.Min.X < minX {
-						minX = floor.BoundingBox.Min.X
-					}
-					if floor.BoundingBox.Min.Y < minY {
-						minY = floor.BoundingBox.Min.Y
-					}
-					if floor.BoundingBox.Min.Z < minZ {
-						minZ = floor.BoundingBox.Min.Z
-					}
-					if floor.BoundingBox.Max.X > maxX {
-						maxX = floor.BoundingBox.Max.X
-					}
-					if floor.BoundingBox.Max.Y > maxY {
-						maxY = floor.BoundingBox.Max.Y
-					}
-					if floor.BoundingBox.Max.Z > maxZ {
-						maxZ = floor.BoundingBox.Max.Z
-					}
-				}
+	// Add spatial enhancements to equipment positions
+	for _, eq := range model.Equipment {
+		if eq.Position != nil {
+			// Ensure position confidence is set
+			if eq.Confidence == 0 {
+				eq.Confidence = 1 // Low confidence for imported data
 			}
 		}
 
-		if !first {
-			model.BoundingBox = &building.BoundingBox{
-				Min: building.Point3D{X: minX, Y: minY, Z: minZ},
-				Max: building.Point3D{X: maxX, Y: maxY, Z: maxZ},
-			}
+		// Ensure equipment has building reference
+		if model.Building != nil && eq.BuildingID == uuid.Nil {
+			eq.BuildingID = model.Building.ID
 		}
 	}
 
-	// Add equipment positions if missing
+	// Enhance room data
+	for i := range model.Rooms {
+		room := &model.Rooms[i]
+		if model.Building != nil && room.BuildingID == uuid.Nil {
+			room.BuildingID = model.Building.ID
+		}
+	}
+
+	// Enhance floor data
 	for i := range model.Floors {
 		floor := &model.Floors[i]
-		for j := range floor.Equipment {
-			equipment := &floor.Equipment[j]
-			if equipment.Position == nil {
-				// Try to derive from room position
-				if equipment.RoomID != "" {
-					for _, room := range floor.Rooms {
-						if room.ID == equipment.RoomID && room.Position != nil {
-							equipment.Position = room.Position
-							equipment.Confidence = building.ConfidenceEstimated
-							break
-						}
-					}
-				}
-			}
+		if model.Building != nil && floor.BuildingID == uuid.Nil {
+			floor.BuildingID = model.Building.ID
 		}
 	}
 
@@ -394,18 +372,52 @@ type ConfidenceEnhancer struct{}
 
 // Enhance updates confidence levels
 func (c *ConfidenceEnhancer) Enhance(ctx context.Context, model *building.BuildingModel) error {
-	logger.Debug("Updating confidence levels for building %s", model.ID)
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+	}
+	logger.Debug("Updating confidence levels for building %s", buildingID)
 
-	// Update model confidence based on completeness
-	coverage := model.CalculateCoverage()
-	if coverage > 80 {
-		model.Confidence = building.ConfidenceHigh
-	} else if coverage > 60 {
-		model.Confidence = building.ConfidenceMedium
-	} else if coverage > 40 {
-		model.Confidence = building.ConfidenceLow
-	} else {
-		model.Confidence = building.ConfidenceEstimated
+	// Update equipment confidence based on position data
+	for _, eq := range model.Equipment {
+		if eq.Position != nil && eq.Confidence == 0 {
+			// Set default confidence for equipment with positions
+			eq.Confidence = 1 // Low confidence for imported data
+		}
+	}
+
+	// Count data completeness
+	totalEquipment := len(model.Equipment)
+	equipmentWithPositions := 0
+	for _, eq := range model.Equipment {
+		if eq.Position != nil {
+			equipmentWithPositions++
+		}
+	}
+
+	if totalEquipment > 0 {
+		coverage := float64(equipmentWithPositions) * 100.0 / float64(totalEquipment)
+		logger.Debug("Equipment position coverage: %.1f%%", coverage)
+
+		// Store confidence level in building metadata if needed
+		if model.Building != nil {
+			if model.Building.Metadata == nil {
+				model.Building.Metadata = make(map[string]interface{})
+			}
+			if coverage > 70 {
+				model.Building.Metadata["confidence"] = "high"
+			} else if coverage > 40 {
+				model.Building.Metadata["confidence"] = "medium"
+			} else {
+				model.Building.Metadata["confidence"] = "low"
+			}
+			model.Building.Metadata["equipment_coverage"] = coverage
+		}
+	} else if model.Building != nil {
+		if model.Building.Metadata == nil {
+			model.Building.Metadata = make(map[string]interface{})
+		}
+		model.Building.Metadata["confidence"] = "estimated"
 	}
 
 	return nil

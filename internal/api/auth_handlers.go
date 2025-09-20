@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -157,59 +156,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	s.respondJSON(w, http.StatusCreated, user)
 }
 
-// handleGetCurrentUser returns the current user
-func (s *Server) handleGetCurrentUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	userID := r.Context().Value(ContextKeyUserID)
-	if userID == nil {
-		s.respondError(w, http.StatusUnauthorized, "User not authenticated")
-		return
-	}
-
-	// Get full user details from database
-	user, err := s.services.DB.GetUser(r.Context(), userID.(string))
-	if err != nil {
-		logger.Error("Failed to get user: %v", err)
-		s.respondError(w, http.StatusInternalServerError, "Failed to get user details")
-		return
-	}
-
-	s.respondJSON(w, http.StatusOK, user)
-}
-
-// handleGetUser returns a user by ID
-func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		s.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	// Extract user ID from path
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 5 {
-		s.respondError(w, http.StatusBadRequest, "Invalid user ID")
-		return
-	}
-	userID := parts[4]
-
-	// Get user from database
-	user, err := s.services.DB.GetUser(r.Context(), userID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			s.respondError(w, http.StatusNotFound, "User not found")
-		} else {
-			logger.Error("Failed to get user: %v", err)
-			s.respondError(w, http.StatusInternalServerError, "Failed to get user")
-		}
-		return
-	}
-
-	s.respondJSON(w, http.StatusOK, user)
-}
+// Duplicate methods removed - see user_handlers.go for implementation
 
 // handleListUsers lists all users
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
@@ -572,32 +519,30 @@ func (s *Server) handleSyncPush(w http.ResponseWriter, r *http.Request) {
 	// Apply each change
 	for _, change := range syncReq.Changes {
 		// Check for conflicts
-		currentVersion, err := s.services.DB.GetEntityVersion(r.Context(), change.EntityID)
+		currentVersion, err := s.services.DB.GetEntityVersion(r.Context(), change.Entity, change.EntityID)
 		if err == nil && currentVersion > change.Version {
 			// Conflict detected
 			conflicts = append(conflicts, Conflict{
-				EntityID:       change.EntityID,
-				LocalVersion:   currentVersion,
-				RemoteVersion:  change.Version,
-				ConflictType:   "version_mismatch",
-				ResolveAction:  "manual",
+				Entity:        change.Entity,
+				EntityID:      change.EntityID,
+				LocalVersion:  currentVersion,
+				RemoteVersion: change.Version,
+				ConflictType:  "version_mismatch",
 			})
 			continue
 		}
 
-		// Apply change to database
-		if err := s.services.DB.ApplyChange(r.Context(), syncReq.BuildingID, change); err != nil {
-			logger.Error("Failed to apply change %s: %v", change.ChangeID, err)
+		// Apply change to database (pass pointer)
+		if err := s.services.DB.ApplyChange(r.Context(), &change); err != nil {
+			logger.Error("Failed to apply change %s: %v", change.GetChangeID(), err)
 			continue
 		}
 		appliedChanges = append(appliedChanges, change)
 	}
 
 	response := SyncResponse{
-		BuildingID: syncReq.BuildingID,
-		Changes:    appliedChanges,
-		Conflicts:  conflicts,
-		LastSync:   time.Now(),
+		AppliedChanges: appliedChanges,
+		Conflicts:      conflicts,
 	}
 
 	s.respondJSON(w, http.StatusOK, response)
@@ -619,8 +564,8 @@ func (s *Server) handleSyncPull(w http.ResponseWriter, r *http.Request) {
 	// Fetch changes since last sync
 	logger.Info("Processing sync pull for building %s since %v", syncReq.BuildingID, syncReq.LastSync)
 
-	// Get changes from database
-	changes, err := s.services.DB.GetChangesSince(r.Context(), syncReq.BuildingID, syncReq.LastSync)
+	// Get changes from database (GetChangesSince expects: ctx, since time.Time, entityType string)
+	changes, err := s.services.DB.GetChangesSince(r.Context(), syncReq.LastSync, "")
 	if err != nil {
 		logger.Error("Failed to get changes: %v", err)
 		s.respondError(w, http.StatusInternalServerError, "Failed to retrieve changes")
@@ -631,14 +576,28 @@ func (s *Server) handleSyncPull(w http.ResponseWriter, r *http.Request) {
 	conflicts, err := s.services.DB.GetPendingConflicts(r.Context(), syncReq.BuildingID)
 	if err != nil {
 		logger.Warn("Failed to get conflicts: %v", err)
-		conflicts = []Conflict{}
+		conflicts = []*Conflict{}
+	}
+
+	// Convert changes to non-pointer for response
+	var responseChanges []Change
+	for _, change := range changes {
+		if change != nil {
+			responseChanges = append(responseChanges, *change)
+		}
+	}
+
+	// Convert conflicts to non-pointer for response
+	var responseConflicts []Conflict
+	for _, conflict := range conflicts {
+		if conflict != nil {
+			responseConflicts = append(responseConflicts, *conflict)
+		}
 	}
 
 	response := SyncResponse{
-		BuildingID: syncReq.BuildingID,
-		Changes:    changes,
-		Conflicts:  conflicts,
-		LastSync:   time.Now(),
+		AppliedChanges: responseChanges,
+		Conflicts:      responseConflicts,
 	}
 
 	s.respondJSON(w, http.StatusOK, response)

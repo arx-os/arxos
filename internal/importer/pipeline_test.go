@@ -11,7 +11,7 @@ import (
 
 	"github.com/arx-os/arxos/internal/importer"
 	"github.com/arx-os/arxos/internal/importer/formats"
-	"github.com/arx-os/arxos/internal/models/building"
+	"github.com/arx-os/arxos/internal/core/building"
 )
 
 // TestPipelineImport tests the full import pipeline

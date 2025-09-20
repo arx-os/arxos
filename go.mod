@@ -1,8 +1,6 @@
 module github.com/arx-os/arxos
 
-go 1.24.0
-
-toolchain go1.24.5
+go 1.21
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0
@@ -12,7 +10,6 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
-	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/pdfcpu/pdfcpu v0.11.0
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1

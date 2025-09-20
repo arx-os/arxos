@@ -9,9 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/importer"
-	"github.com/arx-os/arxos/internal/models/building"
+	"github.com/arx-os/arxos/internal/core/building"
+	"github.com/arx-os/arxos/internal/core/equipment"
 )
 
 // IFCImporter handles IFC file imports with spatial support
@@ -72,47 +74,76 @@ func (i *IFCImporter) ImportToModel(ctx context.Context, input io.Reader, opts i
 		return nil, fmt.Errorf("failed to parse IFC file: %w", err)
 	}
 
-	// Create building model
-	model := &building.BuildingModel{
-		ID:         opts.BuildingID,
-		Name:       opts.BuildingName,
-		Source:     building.DataSourceIFC,
-		Confidence: building.ConfidenceHigh, // IFC has precise data
-		ImportedAt: time.Now(),
-		UpdatedAt:  time.Now(),
-		Properties: make(map[string]interface{}),
+	// Create building from IFC data
+	buildingName := opts.BuildingName
+	if buildingName == "" && ifcModel.Building != nil {
+		buildingName = ifcModel.Building.Name
 	}
+	if buildingName == "" {
+		buildingName = "Untitled Building"
+	}
+
+	bldg := building.NewBuilding(opts.BuildingID, buildingName)
+	if ifcModel.Building != nil && ifcModel.Building.Description != "" {
+		if bldg.Metadata == nil {
+			bldg.Metadata = make(map[string]interface{})
+		}
+		bldg.Metadata["description"] = ifcModel.Building.Description
+	}
+
+	// Create building model
+	model := building.NewBuildingModel(bldg)
+	model.ImportMetadata.Format = building.DataSourceIFC
+	model.ImportMetadata.ImportedAt = time.Now()
+	model.ImportMetadata.SourceFile = opts.BuildingName // Store the original filename if available
 
 	// Extract building info
 	if ifcModel.Building != nil {
-		if model.Name == "" {
-			model.Name = ifcModel.Building.Name
+		if ifcModel.Building.Address != "" {
+			model.Building.Address = ifcModel.Building.Address
 		}
-		model.Description = ifcModel.Building.Description
-		model.Address = ifcModel.Building.Address
 	}
 
-	// Extract spatial data
-	model.Origin = i.spatial.ExtractOrigin(ifcModel)
-	model.BoundingBox = i.spatial.ExtractBounds(ifcModel)
+	// Extract spatial data and store in building metadata
+	if origin := i.spatial.ExtractOrigin(ifcModel); origin != nil {
+		if model.Building.Metadata == nil {
+			model.Building.Metadata = make(map[string]interface{})
+		}
+		model.Building.Metadata["origin"] = origin
+	}
+	if bounds := i.spatial.ExtractBounds(ifcModel); bounds != nil {
+		if model.Building.Metadata == nil {
+			model.Building.Metadata = make(map[string]interface{})
+		}
+		model.Building.Metadata["bounding_box"] = bounds
+	}
 
-	// Extract floors
-	model.Floors = i.extractFloors(ifcModel)
+	// Extract floors, rooms and equipment
+	i.extractFloors(ifcModel, model)
 
-	// Extract systems
-	model.Systems = i.extractSystems(ifcModel)
+	// Extract systems and store in metadata
+	systems := i.extractSystems(ifcModel)
+	if len(systems) > 0 {
+		if model.Building.Metadata == nil {
+			model.Building.Metadata = make(map[string]interface{})
+		}
+		model.Building.Metadata["systems"] = systems
+	}
 
-	// Add IFC metadata
-	model.Properties["ifc_version"] = ifcModel.Version
-	model.Properties["ifc_schema"] = ifcModel.Schema
+	// Store IFC metadata
+	if model.ImportMetadata.OriginalData == nil {
+		model.ImportMetadata.OriginalData = make(map[string]interface{})
+	}
+	model.ImportMetadata.OriginalData["ifc_version"] = ifcModel.Version
+	model.ImportMetadata.OriginalData["ifc_schema"] = ifcModel.Schema
 	if ifcModel.Project != nil {
-		model.Properties["project_name"] = ifcModel.Project.Name
+		model.ImportMetadata.OriginalData["project_name"] = ifcModel.Project.Name
 	}
 
 	// Log summary
-	equipmentCount := len(model.GetAllEquipment())
+	equipmentCount := len(model.Equipment)
 	logger.Info("IFC import complete: %d floors, %d systems, %d equipment items",
-		len(model.Floors), len(model.Systems), equipmentCount)
+		len(model.Floors), len(systems), equipmentCount)
 
 	return model, nil
 }
@@ -458,13 +489,13 @@ type IFCSpatialExtractor struct{}
 // ExtractOrigin extracts the spatial reference origin
 func (s *IFCSpatialExtractor) ExtractOrigin(model *IFCModel) *building.SpatialReference {
 	ref := &building.SpatialReference{
-		LocalOrigin: building.Point3D{X: 0, Y: 0, Z: 0},
+		LocalOrigin: &building.Point3D{X: 0, Y: 0, Z: 0},
 		Units:       "meters",
 	}
 
 	// Extract from building position if available
 	if model.Building != nil && model.Building.Position != (Point3D{}) {
-		ref.LocalOrigin = building.Point3D{
+		ref.LocalOrigin = &building.Point3D{
 			X: model.Building.Position.X,
 			Y: model.Building.Position.Y,
 			Z: model.Building.Position.Z,
@@ -530,80 +561,98 @@ func (s *IFCSpatialExtractor) ExtractBounds(model *IFCModel) *building.BoundingB
 	}
 
 	return &building.BoundingBox{
-		Min: building.Point3D{X: minX, Y: minY, Z: minZ},
-		Max: building.Point3D{X: maxX, Y: maxY, Z: maxZ},
+		Min: &building.Point3D{X: minX, Y: minY, Z: minZ},
+		Max: &building.Point3D{X: maxX, Y: maxY, Z: maxZ},
 	}
 }
 
-// extractFloors converts IFC storeys to building floors
-func (i *IFCImporter) extractFloors(model *IFCModel) []building.Floor {
-	var floors []building.Floor
-
-	for idx, storey := range model.Storeys {
-		floor := building.Floor{
-			ID:         storey.ID,
-			Number:     idx,
-			Name:       storey.Name,
-			Elevation:  storey.Elevation,
-			Height:     storey.Height,
-			Rooms:      []building.Room{},
-			Equipment:  []building.Equipment{},
-			Confidence: building.ConfidenceHigh,
-			Properties: make(map[string]interface{}),
+// extractFloors converts IFC storeys to building floors and populates rooms/equipment
+func (i *IFCImporter) extractFloors(ifcModel *IFCModel, buildingModel *building.BuildingModel) {
+	for idx, storey := range ifcModel.Storeys {
+		floorID, _ := uuid.Parse(storey.ID)
+		if floorID == uuid.Nil {
+			floorID = uuid.New()
 		}
+		floor := building.Floor{
+			ID:         floorID,
+			BuildingID: buildingModel.Building.ID,
+			Level:      idx,
+			Name:       storey.Name,
+			Height:     storey.Height,
+			Metadata:   make(map[string]interface{}),
+		}
+		floor.Metadata["elevation"] = storey.Elevation
+		floor.Metadata["confidence"] = "high" // IFC data is high confidence
+		buildingModel.AddFloor(floor)
 
 		// Add spaces as rooms
-		for _, space := range model.Spaces {
+		for _, space := range ifcModel.Spaces {
 			if space.StoreyID == storey.ID {
+				roomID, _ := uuid.Parse(space.ID)
+				if roomID == uuid.Nil {
+					roomID = uuid.New()
+				}
 				room := building.Room{
-					ID:         space.ID,
+					ID:         roomID,
+					BuildingID: buildingModel.Building.ID,
+					FloorID:    floor.ID,
 					Name:       space.Name,
 					Type:       space.Type,
 					Area:       space.Area,
-					FloorID:    floor.ID,
-					Confidence: building.ConfidenceHigh,
-					Properties: make(map[string]interface{}),
+					Metadata:   make(map[string]interface{}),
 				}
 
-				// Add spatial position
+				// Add spatial position to metadata
 				if space.Position != (Point3D{}) {
-					room.Position = &building.Point3D{
-						X: space.Position.X,
-						Y: space.Position.Y,
-						Z: space.Position.Z,
+					room.Metadata["position"] = map[string]float64{
+						"x": space.Position.X,
+						"y": space.Position.Y,
+						"z": space.Position.Z,
 					}
 				}
 
-				// Add boundary points
+				// Add boundary points to metadata
 				if len(space.Points) > 0 {
-					room.Boundary = make([]building.Point3D, len(space.Points))
+					boundary := make([]map[string]float64, len(space.Points))
 					for i, p := range space.Points {
-						room.Boundary[i] = building.Point3D{X: p.X, Y: p.Y, Z: p.Z}
+						boundary[i] = map[string]float64{"x": p.X, "y": p.Y, "z": p.Z}
 					}
+					room.Metadata["boundary"] = boundary
 				}
 
-				floor.Rooms = append(floor.Rooms, room)
+				buildingModel.AddRoom(room)
 			}
 		}
 
 		// Add elements as equipment
-		for _, element := range model.Elements {
+		for _, element := range ifcModel.Elements {
 			if element.StoreyID == storey.ID {
-				equipment := building.Equipment{
-					ID:         element.ID,
+				eqID, _ := uuid.Parse(element.ID)
+				if eqID == uuid.Nil {
+					eqID = uuid.New()
+				}
+				equip := &equipment.Equipment{
+					ID:         eqID,
+					BuildingID: buildingModel.Building.ID,
 					Name:       element.Name,
 					Type:       element.Type,
-					Subtype:    element.ObjectType,
-					Status:     "operational",
-					FloorID:    floor.ID,
-					RoomID:     element.SpaceID,
-					Confidence: building.ConfidenceHigh,
-					Properties: make(map[string]interface{}),
+					Status:     equipment.StatusOperational,
+					Confidence: equipment.ConfidenceHigh,
+					Metadata:   make(map[string]interface{}),
+				}
+
+				// Store floor and room references
+				equip.Metadata["floor_id"] = floor.ID.String()
+				if element.SpaceID != "" {
+					equip.Metadata["room_id"] = element.SpaceID
+				}
+				if element.ObjectType != "" {
+					equip.Metadata["subtype"] = element.ObjectType
 				}
 
 				// Add spatial data
 				if element.Position != (Point3D{}) {
-					equipment.Position = &building.Point3D{
+					equip.Position = &equipment.Position{
 						X: element.Position.X,
 						Y: element.Position.Y,
 						Z: element.Position.Z,
@@ -611,26 +660,22 @@ func (i *IFCImporter) extractFloors(model *IFCModel) []building.Floor {
 				}
 
 				if element.Dimensions != (Size3D{}) {
-					equipment.Size = &building.Size3D{
-						Width:  element.Dimensions.Width,
-						Depth:  element.Dimensions.Depth,
-						Height: element.Dimensions.Height,
+					equip.Metadata["dimensions"] = map[string]float64{
+						"width":  element.Dimensions.Width,
+						"depth":  element.Dimensions.Depth,
+						"height": element.Dimensions.Height,
 					}
 				}
 
 				// Add properties
 				for k, v := range element.Properties {
-					equipment.Properties[k] = v
+					equip.Metadata[k] = v
 				}
 
-				floor.Equipment = append(floor.Equipment, equipment)
+				buildingModel.AddEquipment(equip)
 			}
 		}
-
-		floors = append(floors, floor)
 	}
-
-	return floors
 }
 
 // extractSystems converts IFC systems to building systems
@@ -639,25 +684,12 @@ func (i *IFCImporter) extractSystems(model *IFCModel) []building.System {
 
 	for _, ifcSystem := range model.Systems {
 		system := building.System{
-			ID:         ifcSystem.ID,
-			Name:       ifcSystem.Name,
-			Type:       ifcSystem.Type,
-			Equipment:  ifcSystem.Elements,
-			Confidence: building.ConfidenceHigh,
-			Properties: make(map[string]interface{}),
+			ID:          ifcSystem.ID,
+			Name:        ifcSystem.Name,
+			Type:        ifcSystem.Type,
+			Description: "",
+			Equipment:   ifcSystem.Elements,
 		}
-
-		// Build connections from element relationships
-		connections := []building.Connection{}
-		for idx := 0; idx < len(ifcSystem.Elements)-1; idx++ {
-			// Simple linear connections - real implementation would parse actual relationships
-			connections = append(connections, building.Connection{
-				FromID: ifcSystem.Elements[idx],
-				ToID:   ifcSystem.Elements[idx+1],
-				Type:   ifcSystem.Type,
-			})
-		}
-		system.Connections = connections
 
 		systems = append(systems, system)
 	}

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/arx-os/arxos/internal/adapters/postgis"
 	"github.com/arx-os/arxos/internal/core/building"
@@ -69,7 +68,7 @@ func (s *Service) ImportIFC(ctx context.Context, filePath string, buildingID str
 	return s.db.InTransaction(ctx, func(tx *sqlx.Tx) error {
 		for _, eq := range data.Equipment {
 			// Create equipment entity
-			equipment := equipment.NewEquipment(
+			equip := equipment.NewEquipment(
 				bldg.ID,
 				eq.Path,
 				eq.Name,
@@ -78,24 +77,24 @@ func (s *Service) ImportIFC(ctx context.Context, filePath string, buildingID str
 
 			// Set position if available
 			if eq.Position != nil {
-				equipment.Position = &equipment.Position{
+				equip.Position = &equipment.Position{
 					X: eq.Position.X,
 					Y: eq.Position.Y,
 					Z: eq.Position.Z,
 				}
-				equipment.Confidence = equipment.ConfidenceEstimated
+				equip.Confidence = equipment.ConfidenceEstimated
 			}
 
 			// Set metadata
-			equipment.Metadata = eq.Properties
+			equip.Metadata = eq.Properties
 
 			// Save to database
-			if err := s.equipmentRepo.Create(ctx, equipment); err != nil {
+			if err := s.equipmentRepo.Create(ctx, equip); err != nil {
 				// Update if already exists
 				existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, eq.Path)
 				if getErr == nil && existing != nil {
-					equipment.ID = existing.ID
-					if err := s.equipmentRepo.Update(ctx, equipment); err != nil {
+					equip.ID = existing.ID
+					if err := s.equipmentRepo.Update(ctx, equip); err != nil {
 						return fmt.Errorf("failed to update equipment %s: %w", eq.Path, err)
 					}
 				} else {
@@ -124,37 +123,36 @@ func (s *Service) ImportCSV(ctx context.Context, filePath string, buildingID str
 	}
 
 	// Import equipment
-	return s.db.InTransaction(ctx, func(tx *postgis.Tx) error {
-		for _, row := range data.Rows {
-			// Create equipment from CSV row
-			equipment := equipment.NewEquipment(
+	return s.db.InTransaction(ctx, func(tx *sqlx.Tx) error {
+		for _, eq := range data.Equipment {
+			// Create equipment entity
+			equip := equipment.NewEquipment(
 				bldg.ID,
-				row["path"],
-				row["name"],
-				row["type"],
+				eq.Path,
+				eq.Name,
+				eq.Type,
 			)
 
-			// Parse position if available
-			if lon, lat, alt := parsePosition(row); lon != 0 || lat != 0 {
-				equipment.Position = &equipment.Position{
-					X: lon,
-					Y: lat,
-					Z: alt,
+			// Set position if available
+			if eq.Position != nil {
+				equip.Position = &equipment.Position{
+					X: eq.Position.X,
+					Y: eq.Position.Y,
+					Z: eq.Position.Z,
 				}
+				equip.Confidence = equipment.ConfidenceEstimated
 			}
 
-			// Set status
-			if status := row["status"]; status != "" {
-				equipment.Status = status
-			}
+			// Set metadata
+			equip.Metadata = eq.Properties
 
 			// Save to database
-			if err := s.equipmentRepo.Create(ctx, equipment); err != nil {
+			if err := s.equipmentRepo.Create(ctx, equip); err != nil {
 				// Try update if exists
-				existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, row["path"])
+				existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, eq.Path)
 				if getErr == nil && existing != nil {
-					equipment.ID = existing.ID
-					if err := s.equipmentRepo.Update(ctx, equipment); err != nil {
+					equip.ID = existing.ID
+					if err := s.equipmentRepo.Update(ctx, equip); err != nil {
 						return fmt.Errorf("failed to update equipment: %w", err)
 					}
 				} else {
@@ -182,13 +180,46 @@ func (s *Service) ImportJSON(ctx context.Context, filePath string, buildingID st
 		return fmt.Errorf("failed to ensure building: %w", err)
 	}
 
-	// Handle GeoJSON features
-	if data.Type == "FeatureCollection" {
-		return s.importGeoJSONFeatures(ctx, bldg, data.Features)
-	}
+	// Import equipment
+	return s.db.InTransaction(ctx, func(tx *sqlx.Tx) error {
+		for _, eq := range data.Equipment {
+			// Create equipment entity
+			equip := equipment.NewEquipment(
+				bldg.ID,
+				eq.Path,
+				eq.Name,
+				eq.Type,
+			)
 
-	// Handle regular JSON equipment list
-	return s.importJSONEquipment(ctx, bldg, data.Equipment)
+			// Set position if available
+			if eq.Position != nil {
+				equip.Position = &equipment.Position{
+					X: eq.Position.X,
+					Y: eq.Position.Y,
+					Z: eq.Position.Z,
+				}
+				equip.Confidence = equipment.ConfidenceEstimated
+			}
+
+			// Set metadata
+			equip.Metadata = eq.Properties
+
+			// Save to database
+			if err := s.equipmentRepo.Create(ctx, equip); err != nil {
+				// Try update if exists
+				existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, eq.Path)
+				if getErr == nil && existing != nil {
+					equip.ID = existing.ID
+					if err := s.equipmentRepo.Update(ctx, equip); err != nil {
+						return fmt.Errorf("failed to update equipment %s: %w", eq.Path, err)
+					}
+				} else {
+					return fmt.Errorf("failed to create equipment %s: %w", eq.Path, err)
+				}
+			}
+		}
+		return nil
+	})
 }
 
 // ImportBIM imports a .bim.txt file directly to PostGIS
@@ -201,62 +232,46 @@ func (s *Service) ImportBIM(ctx context.Context, filePath string, buildingID str
 	}
 
 	// Create or update building
-	bldg, err := s.ensureBuilding(ctx, buildingID, data.Name)
+	bldg, err := s.ensureBuilding(ctx, buildingID, data.BuildingName)
 	if err != nil {
 		return fmt.Errorf("failed to ensure building: %w", err)
 	}
 
-	// Set building metadata
-	if data.Address != "" {
-		bldg.Address = data.Address
-	}
+	// Import equipment
+	return s.db.InTransaction(ctx, func(tx *sqlx.Tx) error {
+		for _, eq := range data.Equipment {
+			// Create equipment entity
+			equip := equipment.NewEquipment(
+				bldg.ID,
+				eq.Path,
+				eq.Name,
+				eq.Type,
+			)
 
-	// Update building
-	if err := s.buildingRepo.Update(ctx, bldg); err != nil {
-		return fmt.Errorf("failed to update building: %w", err)
-	}
+			// Set position if available
+			if eq.Position != nil {
+				equip.Position = &equipment.Position{
+					X: eq.Position.X,
+					Y: eq.Position.Y,
+					Z: eq.Position.Z,
+				}
+				equip.Confidence = equipment.ConfidenceEstimated
+			}
 
-	// Import floors and equipment
-	return s.db.InTransaction(ctx, func(tx *postgis.Tx) error {
-		for _, floor := range data.Floors {
-			for _, room := range floor.Rooms {
-				for _, eq := range room.Equipment {
-					// Build equipment path
-					path := fmt.Sprintf("%d/%s/%s", floor.Number, room.Number, eq.ID)
+			// Set metadata
+			equip.Metadata = eq.Properties
 
-					// Create equipment
-					equipment := equipment.NewEquipment(
-						bldg.ID,
-						path,
-						eq.Name,
-						eq.Type,
-					)
-
-					// Set grid position (will be converted to WGS84 later)
-					if eq.GridX > 0 || eq.GridY > 0 {
-						equipment.PositionLocal = &equipment.Position{
-							X: float64(eq.GridX) * 500,  // 0.5m grid scale
-							Y: float64(eq.GridY) * 500,
-							Z: float64(floor.Number) * 3000, // 3m floor height
-						}
+			// Save to database
+			if err := s.equipmentRepo.Create(ctx, equip); err != nil {
+				// Try update if exists
+				existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, eq.Path)
+				if getErr == nil && existing != nil {
+					equip.ID = existing.ID
+					if err := s.equipmentRepo.Update(ctx, equip); err != nil {
+						return fmt.Errorf("failed to update equipment %s: %w", eq.Path, err)
 					}
-
-					// Set status
-					equipment.Status = eq.Status
-
-					// Save to database
-					if err := s.equipmentRepo.Create(ctx, equipment); err != nil {
-						// Try update if exists
-						existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, path)
-						if getErr == nil && existing != nil {
-							equipment.ID = existing.ID
-							if err := s.equipmentRepo.Update(ctx, equipment); err != nil {
-								return fmt.Errorf("failed to update equipment: %w", err)
-							}
-						} else {
-							return fmt.Errorf("failed to create equipment: %w", err)
-						}
-					}
+				} else {
+					return fmt.Errorf("failed to create equipment %s: %w", eq.Path, err)
 				}
 			}
 		}
@@ -288,7 +303,7 @@ func (s *Service) ensureBuilding(ctx context.Context, arxosID, name string) (*bu
 
 // importGeoJSONFeatures imports GeoJSON features
 func (s *Service) importGeoJSONFeatures(ctx context.Context, bldg *building.Building, features []interface{}) error {
-	return s.db.InTransaction(ctx, func(tx *postgis.Tx) error {
+	return s.db.InTransaction(ctx, func(tx *sqlx.Tx) error {
 		for _, feature := range features {
 			f, ok := feature.(map[string]interface{})
 			if !ok {
@@ -309,7 +324,7 @@ func (s *Service) importGeoJSONFeatures(ctx context.Context, bldg *building.Buil
 			}
 
 			// Create equipment
-			equipment := equipment.NewEquipment(bldg.ID, path, name, eqType)
+			equip := equipment.NewEquipment(bldg.ID, path, name, eqType)
 
 			// Extract coordinates from geometry
 			if geometry["type"] == "Point" {
@@ -321,7 +336,7 @@ func (s *Service) importGeoJSONFeatures(ctx context.Context, bldg *building.Buil
 						alt, _ = coords[2].(float64)
 					}
 
-					equipment.Position = &equipment.Position{
+					equip.Position = &equipment.Position{
 						X: lon,
 						Y: lat,
 						Z: alt,
@@ -330,12 +345,12 @@ func (s *Service) importGeoJSONFeatures(ctx context.Context, bldg *building.Buil
 			}
 
 			// Save to database
-			if err := s.equipmentRepo.Create(ctx, equipment); err != nil {
+			if err := s.equipmentRepo.Create(ctx, equip); err != nil {
 				// Try update if exists
 				existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, path)
 				if getErr == nil && existing != nil {
-					equipment.ID = existing.ID
-					if err := s.equipmentRepo.Update(ctx, equipment); err != nil {
+					equip.ID = existing.ID
+					if err := s.equipmentRepo.Update(ctx, equip); err != nil {
 						return fmt.Errorf("failed to update equipment: %w", err)
 					}
 				}
@@ -348,7 +363,7 @@ func (s *Service) importGeoJSONFeatures(ctx context.Context, bldg *building.Buil
 
 // importJSONEquipment imports regular JSON equipment
 func (s *Service) importJSONEquipment(ctx context.Context, bldg *building.Building, equipmentList []interface{}) error {
-	return s.db.InTransaction(ctx, func(tx *postgis.Tx) error {
+	return s.db.InTransaction(ctx, func(tx *sqlx.Tx) error {
 		for _, item := range equipmentList {
 			eq, ok := item.(map[string]interface{})
 			if !ok {
@@ -365,7 +380,7 @@ func (s *Service) importJSONEquipment(ctx context.Context, bldg *building.Buildi
 			}
 
 			// Create equipment
-			equipment := equipment.NewEquipment(bldg.ID, path, name, eqType)
+			equip := equipment.NewEquipment(bldg.ID, path, name, eqType)
 
 			// Extract position
 			if pos, ok := eq["position"].(map[string]interface{}); ok {
@@ -373,7 +388,7 @@ func (s *Service) importJSONEquipment(ctx context.Context, bldg *building.Buildi
 				y, _ := pos["y"].(float64)
 				z, _ := pos["z"].(float64)
 
-				equipment.Position = &equipment.Position{
+				equip.Position = &equipment.Position{
 					X: x,
 					Y: y,
 					Z: z,
@@ -382,16 +397,16 @@ func (s *Service) importJSONEquipment(ctx context.Context, bldg *building.Buildi
 
 			// Set status
 			if status, ok := eq["status"].(string); ok {
-				equipment.Status = status
+				equip.Status = status
 			}
 
 			// Save to database
-			if err := s.equipmentRepo.Create(ctx, equipment); err != nil {
+			if err := s.equipmentRepo.Create(ctx, equip); err != nil {
 				// Try update if exists
 				existing, getErr := s.equipmentRepo.GetByPath(ctx, bldg.ID, path)
 				if getErr == nil && existing != nil {
-					equipment.ID = existing.ID
-					if err := s.equipmentRepo.Update(ctx, equipment); err != nil {
+					equip.ID = existing.ID
+					if err := s.equipmentRepo.Update(ctx, equip); err != nil {
 						return fmt.Errorf("failed to update equipment: %w", err)
 					}
 				}

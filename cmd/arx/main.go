@@ -133,7 +133,7 @@ func init() {
 var (
 	appConfig *config.Config
 	dbConn    database.DB
-	hybridDB  *database.PostGISHybridDB
+	postgisDB *database.PostGISDB
 )
 
 // initializeSystem sets up core components
@@ -200,105 +200,44 @@ func loadConfigFromEnv(cfg *config.Config) {
 		cfg.PostGIS.Password = pass
 	}
 
-	// Database configuration
+	// Database configuration (deprecated - using PostGIS only)
 	if dbType := os.Getenv("ARX_DB_TYPE"); dbType != "" {
 		cfg.Database.Type = dbType
 	}
-	if dbPath := os.Getenv("ARX_DB_PATH"); dbPath != "" {
-		cfg.Database.Path = dbPath
-	}
+	// Path field no longer used with PostGIS-only architecture
 }
 
 // initializeDatabases sets up database connections
 func initializeDatabases(ctx context.Context) error {
-	dbType := appConfig.Database.Type
-	if dbType == "" {
-		dbType = "hybrid" // Default to hybrid mode
-	}
-
-	switch dbType {
-	case "postgis":
-		return initializePostGISDatabase(ctx)
-	case "sqlite":
-		return initializeSQLiteDatabase(ctx)
-	case "hybrid":
-		return initializeHybridDatabase(ctx)
-	default:
-		return fmt.Errorf("unsupported database type: %s", dbType)
-	}
+	// Always use PostGIS as the sole database
+	return initializePostGISDatabase(ctx)
 }
 
-// initializePostGISDatabase initializes PostGIS-only mode
+// initializePostGISDatabase initializes PostGIS as the sole database
 func initializePostGISDatabase(ctx context.Context) error {
 	pgConfig := appConfig.GetPostGISConfig()
 
-	var err error
-	hybridDB, err = database.NewPostGISHybridDB(pgConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create PostGIS database: %w", err)
+	dbConfig := database.PostGISConfig{
+		Host:     pgConfig.Host,
+		Port:     pgConfig.Port,
+		Database: pgConfig.Database,
+		User:     pgConfig.User,
+		Password: pgConfig.Password,
+		SSLMode:  pgConfig.SSLMode,
 	}
+	postgisDB = database.NewPostGISDB(dbConfig)
 
-	if err := hybridDB.Connect(ctx, ""); err != nil {
+	if err := postgisDB.Connect(ctx, ""); err != nil {
 		return fmt.Errorf("failed to connect to PostGIS: %w", err)
 	}
 
-	dbConn = hybridDB
+	dbConn = postgisDB
 	logger.Info("Connected to PostGIS database: %s:%d/%s",
 		pgConfig.Host, pgConfig.Port, pgConfig.Database)
 
 	return nil
 }
 
-// initializeSQLiteDatabase initializes SQLite-only mode
-func initializeSQLiteDatabase(ctx context.Context) error {
-	dbPath := appConfig.Database.Path
-	if dbPath == "" {
-		dbPath = filepath.Join(appConfig.StateDir, "arxos.db")
-	}
-
-	sqliteConfig := database.NewConfig(dbPath)
-	dbConn = database.NewSQLiteDB(sqliteConfig)
-
-	if err := dbConn.Connect(ctx, dbPath); err != nil {
-		return fmt.Errorf("failed to connect to SQLite: %w", err)
-	}
-
-	logger.Info("Connected to SQLite database: %s", dbPath)
-	return nil
-}
-
-// initializeHybridDatabase initializes hybrid PostGIS+SQLite mode
-func initializeHybridDatabase(ctx context.Context) error {
-	pgConfig := appConfig.GetPostGISConfig()
-
-	// Try PostGIS first
-	var err error
-	hybridDB, err = database.NewPostGISHybridDB(pgConfig)
-	if err != nil {
-		logger.Warn("PostGIS initialization failed, falling back to SQLite: %v", err)
-		return initializeSQLiteDatabase(ctx)
-	}
-
-	// Test PostGIS connection
-	if err := hybridDB.Connect(ctx, ""); err != nil {
-		logger.Warn("PostGIS connection failed, falling back to SQLite: %v", err)
-		return initializeSQLiteDatabase(ctx)
-	}
-
-	// Test spatial database access
-	if spatialDB, err := hybridDB.GetSpatialDB(); err != nil {
-		logger.Warn("Spatial database access failed, using PostGIS without spatial features: %v", err)
-	} else {
-		_ = spatialDB
-		logger.Info("PostGIS spatial features available")
-	}
-
-	dbConn = hybridDB
-	logger.Info("Connected to hybrid PostGIS database: %s:%d/%s",
-		pgConfig.Host, pgConfig.Port, pgConfig.Database)
-
-	return nil
-}
 
 // ensureDirectories creates necessary directories
 func ensureDirectories() error {

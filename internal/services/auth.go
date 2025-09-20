@@ -46,7 +46,7 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 	}
 
 	// Check if user is active
-	if user.Status != "active" {
+	if !user.IsActive {
 		logger.Warn("Login attempt for inactive user %s", username)
 		return nil, fmt.Errorf("account is not active")
 	}
@@ -195,7 +195,7 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenString string) (*m
 		return nil, fmt.Errorf("user not found")
 	}
 
-	if user.Status != "active" {
+	if !user.IsActive {
 		return nil, fmt.Errorf("user account is not active")
 	}
 
@@ -269,7 +269,7 @@ func (s *AuthService) ConfirmPasswordReset(ctx context.Context, token, newPasswo
 
 	// Update user password
 	user.PasswordHash = string(hashedPassword)
-	user.UpdatedAt = timePtr(time.Now())
+	user.UpdatedAt = time.Now()
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
@@ -309,7 +309,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID, oldPassword, n
 
 	// Update password
 	user.PasswordHash = string(hashedPassword)
-	user.UpdatedAt = timePtr(time.Now())
+	user.UpdatedAt = time.Now()
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}

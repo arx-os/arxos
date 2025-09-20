@@ -4,289 +4,153 @@ import (
 	"time"
 )
 
-// Organization represents a tenant in the multi-tenant system
+// Plan represents subscription plan levels
+type Plan string
+
+const (
+	PlanFree       Plan = "free"
+	PlanStarter    Plan = "starter"
+	PlanProfessional Plan = "professional"
+	PlanEnterprise Plan = "enterprise"
+)
+
+// Organization represents a company or team using the system
 type Organization struct {
-	ID          string                 `json:"id" db:"id"`
-	Name        string                 `json:"name" db:"name"`
-	Description string                 `json:"description,omitempty" db:"description"`
-	Type        string                 `json:"type" db:"type"`               // standard, enterprise, educational
-	Slug        string                 `json:"slug" db:"slug"`               // URL-friendly identifier
-	Domain      string                 `json:"domain,omitempty" db:"domain"` // Custom domain (optional)
-	Plan        PlanType               `json:"plan" db:"plan"`
-	Status      string                 `json:"status" db:"status"`
-	Settings    map[string]interface{} `json:"settings" db:"settings"`
-	Metadata    map[string]string      `json:"metadata" db:"metadata"`
-	CreatedAt   *time.Time             `json:"created_at" db:"created_at"`
-	UpdatedAt   *time.Time             `json:"updated_at" db:"updated_at"`
-
-	// Billing
-	StripeCustomerID string     `json:"-" db:"stripe_customer_id"`
-	TrialEndsAt      *time.Time `json:"trial_ends_at,omitempty" db:"trial_ends_at"`
-
-	// Limits
-	MaxUsers     int   `json:"max_users" db:"max_users"`
-	MaxBuildings int   `json:"max_buildings" db:"max_buildings"`
-	MaxStorage   int64 `json:"max_storage" db:"max_storage"` // bytes
-	UsedStorage  int64 `json:"used_storage" db:"used_storage"`
-}
-
-// OrgStatus represents the organization status
-type OrgStatus string
-
-const (
-	OrgStatusActive    OrgStatus = "active"
-	OrgStatusTrial     OrgStatus = "trial"
-	OrgStatusSuspended OrgStatus = "suspended"
-	OrgStatusCanceled  OrgStatus = "canceled"
-)
-
-// PlanType represents subscription plans
-type PlanType string
-
-const (
-	PlanFree         PlanType = "free"
-	PlanStarter      PlanType = "starter"
-	PlanProfessional PlanType = "professional"
-	PlanEnterprise   PlanType = "enterprise"
-)
-
-// OrgSettings contains organization-specific settings
-type OrgSettings struct {
-	TimeZone       string   `json:"timezone"`
-	DateFormat     string   `json:"date_format"`
-	AllowedDomains []string `json:"allowed_domains"` // For email domain restriction
-	RequireMFA     bool     `json:"require_mfa"`
-	SessionTimeout int      `json:"session_timeout"` // minutes
-	IPWhitelist    []string `json:"ip_whitelist"`
-	WebhookURL     string   `json:"webhook_url"`
-	SlackWebhook   string   `json:"slack_webhook"`
+	ID                    string                 `json:"id"`
+	Name                  string                 `json:"name"`
+	Slug                  string                 `json:"slug"`
+	Description           string                 `json:"description,omitempty"`
+	Website               string                 `json:"website,omitempty"`
+	LogoURL               string                 `json:"logo_url,omitempty"`
+	Address               string                 `json:"address,omitempty"`
+	City                  string                 `json:"city,omitempty"`
+	State                 string                 `json:"state,omitempty"`
+	Country               string                 `json:"country,omitempty"`
+	PostalCode            string                 `json:"postal_code,omitempty"`
+	Phone                 string                 `json:"phone,omitempty"`
+	Email                 string                 `json:"email,omitempty"`
+	Plan                  Plan                   `json:"plan"`
+	Status                string                 `json:"status"`
+	MaxUsers              int                    `json:"max_users"`
+	MaxBuildings          int                    `json:"max_buildings"`
+	Settings              map[string]interface{} `json:"settings,omitempty"`
+	Metadata              map[string]interface{} `json:"metadata,omitempty"`
+	IsActive              bool                   `json:"is_active"`
+	SubscriptionTier      string                 `json:"subscription_tier"`
+	SubscriptionExpiresAt *time.Time             `json:"subscription_expires_at,omitempty"`
+	CreatedAt             time.Time              `json:"created_at"`
+	UpdatedAt             time.Time              `json:"updated_at"`
 }
 
 // OrganizationMember represents a user's membership in an organization
 type OrganizationMember struct {
-	ID             string     `json:"id" db:"id"`
-	OrganizationID string     `json:"organization_id" db:"organization_id"`
-	UserID         string     `json:"user_id" db:"user_id"`
-	Role           Role       `json:"role" db:"role"`
-	Permissions    []string   `json:"permissions" db:"permissions"`
-	InvitedBy      string     `json:"invited_by" db:"invited_by"`
-	InvitedAt      time.Time  `json:"invited_at" db:"invited_at"`
-	JoinedAt       *time.Time `json:"joined_at,omitempty" db:"joined_at"`
-	LastAccessAt   *time.Time `json:"last_access_at,omitempty" db:"last_access_at"`
-
-	// Relationships
-	User         *User         `json:"user,omitempty"`
-	Organization *Organization `json:"organization,omitempty"`
+	ID             string                 `json:"id"`
+	OrganizationID string                 `json:"organization_id"`
+	UserID         string                 `json:"user_id"`
+	Role           string                 `json:"role"`
+	Permissions    map[string]interface{} `json:"permissions,omitempty"`
+	JoinedAt       time.Time              `json:"joined_at"`
+	InvitedBy      string                 `json:"invited_by,omitempty"`
+	User           *User                  `json:"user,omitempty"` // Populated when needed
+	Organization   *Organization          `json:"organization,omitempty"` // Populated when needed
 }
 
 // OrganizationInvitation represents an invitation to join an organization
 type OrganizationInvitation struct {
-	ID             string     `json:"id" db:"id"`
-	OrganizationID string     `json:"organization_id" db:"organization_id"`
-	Email          string     `json:"email" db:"email"`
-	Role           string     `json:"role" db:"role"`
-	Token          string     `json:"-" db:"token"` // Never send token to client
-	InvitedBy      string     `json:"invited_by" db:"invited_by"`
-	Status         string     `json:"status" db:"status"` // pending, accepted, revoked
-	ExpiresAt      time.Time  `json:"expires_at" db:"expires_at"`
-	AcceptedAt     *time.Time `json:"accepted_at,omitempty" db:"accepted_at"`
-	CreatedAt      *time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt      *time.Time `json:"updated_at" db:"updated_at"`
-
-	// Relationships
-	Organization  *Organization `json:"organization,omitempty"`
-	InvitedByUser *User         `json:"invited_by_user,omitempty"`
+	ID             string     `json:"id"`
+	OrganizationID string     `json:"organization_id"`
+	Email          string     `json:"email"`
+	Role           string     `json:"role"`
+	Token          string     `json:"-"` // Never expose in JSON
+	InvitedBy      string     `json:"invited_by"`
+	AcceptedAt     *time.Time `json:"accepted_at,omitempty"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	Organization   *Organization `json:"organization,omitempty"` // Populated when needed
+	InvitedByUser  *User        `json:"invited_by_user,omitempty"` // Populated when needed
 }
 
-// IsExpired checks if an invitation has expired
-func (i *OrganizationInvitation) IsExpired() bool {
-	return time.Now().After(i.ExpiresAt)
+// OrganizationCreateRequest represents an organization creation request
+type OrganizationCreateRequest struct {
+	Name        string                 `json:"name" validate:"required,min=2,max=100"`
+	Slug        string                 `json:"slug" validate:"required,min=2,max=50,alphanum"`
+	Description string                 `json:"description,omitempty"`
+	Website     string                 `json:"website,omitempty" validate:"omitempty,url"`
+	LogoURL     string                 `json:"logo_url,omitempty" validate:"omitempty,url"`
+	Address     string                 `json:"address,omitempty"`
+	City        string                 `json:"city,omitempty"`
+	State       string                 `json:"state,omitempty"`
+	Country     string                 `json:"country,omitempty"`
+	PostalCode  string                 `json:"postal_code,omitempty"`
+	Phone       string                 `json:"phone,omitempty"`
+	Email       string                 `json:"email,omitempty" validate:"omitempty,email"`
+	Settings    map[string]interface{} `json:"settings,omitempty"`
 }
 
-// IsAccepted checks if an invitation has been accepted
-func (i *OrganizationInvitation) IsAccepted() bool {
-	return i.AcceptedAt != nil
+// OrganizationUpdateRequest represents an organization update request
+type OrganizationUpdateRequest struct {
+	Name        string                 `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Description string                 `json:"description,omitempty"`
+	Website     string                 `json:"website,omitempty" validate:"omitempty,url"`
+	LogoURL     string                 `json:"logo_url,omitempty" validate:"omitempty,url"`
+	Address     string                 `json:"address,omitempty"`
+	City        string                 `json:"city,omitempty"`
+	State       string                 `json:"state,omitempty"`
+	Country     string                 `json:"country,omitempty"`
+	PostalCode  string                 `json:"postal_code,omitempty"`
+	Phone       string                 `json:"phone,omitempty"`
+	Email       string                 `json:"email,omitempty" validate:"omitempty,email"`
+	Settings    map[string]interface{} `json:"settings,omitempty"`
 }
 
-// Role represents user roles within an organization
-type Role string
+// OrganizationMemberUpdateRequest represents a member update request
+type OrganizationMemberUpdateRequest struct {
+	Role        string                 `json:"role" validate:"required,oneof=owner admin member viewer"`
+	Permissions map[string]interface{} `json:"permissions,omitempty"`
+}
+
+// OrganizationInviteRequest represents an invitation request
+type OrganizationInviteRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	Role  string `json:"role" validate:"required,oneof=admin member viewer"`
+}
+
+// OrganizationInviteResponse represents an invitation response
+type OrganizationInviteResponse struct {
+	ID             string    `json:"id"`
+	OrganizationID string    `json:"organization_id"`
+	Email          string    `json:"email"`
+	Role           string    `json:"role"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// OrganizationRole represents organization member roles
+type OrganizationRole string
 
 const (
-	RoleOwner   Role = "owner"   // Full access, billing, can delete org
-	RoleAdmin   Role = "admin"   // Full access except billing
-	RoleManager Role = "manager" // Manage buildings and equipment
-	RoleMember  Role = "member"  // View and edit assigned buildings
-	RoleViewer  Role = "viewer"  // Read-only access
+	OrgRoleOwner  OrganizationRole = "owner"
+	OrgRoleAdmin  OrganizationRole = "admin"
+	OrgRoleMember OrganizationRole = "member"
+	OrgRoleViewer OrganizationRole = "viewer"
 )
 
-// Permission represents granular permissions
-type Permission string
+// UserRole represents system-wide user roles
+type UserRole string
 
 const (
-	// Organization permissions
-	PermOrgView   Permission = "org:view"
-	PermOrgEdit   Permission = "org:edit"
-	PermOrgDelete Permission = "org:delete"
-
-	// Building permissions
-	PermBuildingCreate Permission = "building:create"
-	PermBuildingView   Permission = "building:view"
-	PermBuildingEdit   Permission = "building:edit"
-	PermBuildingDelete Permission = "building:delete"
-
-	// Equipment permissions
-	PermEquipmentCreate Permission = "equipment:create"
-	PermEquipmentView   Permission = "equipment:view"
-	PermEquipmentEdit   Permission = "equipment:edit"
-	PermEquipmentDelete Permission = "equipment:delete"
-
-	// User management permissions
-	PermUserInvite Permission = "user:invite"
-	PermUserView   Permission = "user:view"
-	PermUserEdit   Permission = "user:edit"
-	PermUserRemove Permission = "user:remove"
-
-	// Billing permissions
-	PermBillingView Permission = "billing:view"
-	PermBillingEdit Permission = "billing:edit"
+	UserRoleAdmin      UserRole = "admin"
+	UserRoleManager    UserRole = "manager"
+	UserRoleTechnician UserRole = "technician"
+	UserRoleViewer     UserRole = "viewer"
 )
 
-// GetPermissions returns the default permissions for a role
-func (r Role) GetPermissions() []Permission {
-	switch r {
-	case RoleOwner:
-		return []Permission{
-			PermOrgView, PermOrgEdit, PermOrgDelete,
-			PermBuildingCreate, PermBuildingView, PermBuildingEdit, PermBuildingDelete,
-			PermEquipmentCreate, PermEquipmentView, PermEquipmentEdit, PermEquipmentDelete,
-			PermUserInvite, PermUserView, PermUserEdit, PermUserRemove,
-			PermBillingView, PermBillingEdit,
-		}
-	case RoleAdmin:
-		return []Permission{
-			PermOrgView, PermOrgEdit,
-			PermBuildingCreate, PermBuildingView, PermBuildingEdit, PermBuildingDelete,
-			PermEquipmentCreate, PermEquipmentView, PermEquipmentEdit, PermEquipmentDelete,
-			PermUserInvite, PermUserView, PermUserEdit, PermUserRemove,
-		}
-	case RoleManager:
-		return []Permission{
-			PermOrgView,
-			PermBuildingCreate, PermBuildingView, PermBuildingEdit,
-			PermEquipmentCreate, PermEquipmentView, PermEquipmentEdit,
-			PermUserView,
-		}
-	case RoleMember:
-		return []Permission{
-			PermOrgView,
-			PermBuildingView, PermBuildingEdit,
-			PermEquipmentView, PermEquipmentEdit,
-		}
-	case RoleViewer:
-		return []Permission{
-			PermOrgView,
-			PermBuildingView,
-			PermEquipmentView,
-		}
-	default:
-		return []Permission{}
-	}
-}
+// SubscriptionTier represents subscription levels
+type SubscriptionTier string
 
-// Invitation represents a pending invitation to join an organization
-type Invitation struct {
-	ID             string     `json:"id" db:"id"`
-	OrganizationID string     `json:"organization_id" db:"organization_id"`
-	Email          string     `json:"email" db:"email"`
-	Role           Role       `json:"role" db:"role"`
-	Token          string     `json:"-" db:"token"` // Hidden from JSON
-	InvitedBy      string     `json:"invited_by" db:"invited_by"`
-	InvitedAt      time.Time  `json:"invited_at" db:"invited_at"`
-	ExpiresAt      time.Time  `json:"expires_at" db:"expires_at"`
-	AcceptedAt     *time.Time `json:"accepted_at,omitempty" db:"accepted_at"`
-
-	// Relationships
-	Organization  *Organization `json:"organization,omitempty"`
-	InvitedByUser *User         `json:"invited_by_user,omitempty"`
-}
-
-// APIKey represents an API key for programmatic access
-type APIKey struct {
-	ID             string     `json:"id" db:"id"`
-	OrganizationID string     `json:"organization_id" db:"organization_id"`
-	Name           string     `json:"name" db:"name"`
-	Key            string     `json:"key,omitempty" db:"key"` // Only shown once
-	HashedKey      string     `json:"-" db:"hashed_key"`
-	Permissions    []string   `json:"permissions" db:"permissions"`
-	LastUsedAt     *time.Time `json:"last_used_at,omitempty" db:"last_used_at"`
-	ExpiresAt      *time.Time `json:"expires_at,omitempty" db:"expires_at"`
-	CreatedBy      string     `json:"created_by" db:"created_by"`
-	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
-	RevokedAt      *time.Time `json:"revoked_at,omitempty" db:"revoked_at"`
-}
-
-// AuditLog represents an audit trail entry
-type AuditLog struct {
-	ID             string                 `json:"id" db:"id"`
-	OrganizationID string                 `json:"organization_id" db:"organization_id"`
-	UserID         string                 `json:"user_id" db:"user_id"`
-	Action         string                 `json:"action" db:"action"`
-	ResourceType   string                 `json:"resource_type" db:"resource_type"`
-	ResourceID     string                 `json:"resource_id" db:"resource_id"`
-	Changes        map[string]interface{} `json:"changes" db:"changes"`
-	IPAddress      string                 `json:"ip_address" db:"ip_address"`
-	UserAgent      string                 `json:"user_agent" db:"user_agent"`
-	CreatedAt      time.Time              `json:"created_at" db:"created_at"`
-}
-
-// CanPerform checks if a member can perform an action
-func (m *OrganizationMember) CanPerform(permission Permission) bool {
-	// Get role permissions
-	rolePerms := m.Role.GetPermissions()
-	for _, p := range rolePerms {
-		if p == permission {
-			return true
-		}
-	}
-
-	// Check custom permissions
-	for _, p := range m.Permissions {
-		if Permission(p) == permission {
-			return true
-		}
-	}
-
-	return false
-}
-
-// IsExpired checks if an invitation has expired
-func (i *Invitation) IsExpired() bool {
-	return time.Now().After(i.ExpiresAt)
-}
-
-// IsActive checks if an API key is active
-func (k *APIKey) IsActive() bool {
-	if k.RevokedAt != nil {
-		return false
-	}
-	if k.ExpiresAt != nil && time.Now().After(*k.ExpiresAt) {
-		return false
-	}
-	return true
-}
-
-// GetPlanLimits returns the limits for a plan
-func GetPlanLimits(plan PlanType) (maxUsers int, maxBuildings int, maxStorage int64) {
-	switch plan {
-	case PlanFree:
-		return 3, 1, 100 * 1024 * 1024 // 100MB
-	case PlanStarter:
-		return 10, 5, 1 * 1024 * 1024 * 1024 // 1GB
-	case PlanProfessional:
-		return 50, 25, 10 * 1024 * 1024 * 1024 // 10GB
-	case PlanEnterprise:
-		return -1, -1, -1 // Unlimited
-	default:
-		return 3, 1, 100 * 1024 * 1024
-	}
-}
+const (
+	TierFree       SubscriptionTier = "free"
+	TierBasic      SubscriptionTier = "basic"
+	TierProfessional SubscriptionTier = "professional"
+	TierEnterprise SubscriptionTier = "enterprise"
+)

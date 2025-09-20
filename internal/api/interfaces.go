@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/pkg/models"
+	syncpkg "github.com/arx-os/arxos/pkg/sync"
 )
 
 // RequestInfo contains metadata about the HTTP request
@@ -49,6 +50,9 @@ type UserService interface {
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	GetUserPermissions(ctx context.Context, userID string) ([]string, error)
 	UpdateUserActivity(ctx context.Context, userID string) error
+	ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error
+	RequestPasswordReset(ctx context.Context, email string) error
+	ConfirmPasswordReset(ctx context.Context, token, newPassword string) error
 }
 
 // UserFilter defines filtering options for listing users
@@ -194,45 +198,9 @@ type TokenClaims struct {
 	IssuedAt  time.Time `json:"iat"`
 }
 
-// SyncRequest represents a sync request from the CLI
-type SyncRequest struct {
-	BuildingID string                 `json:"building_id"`
-	LastSync   time.Time              `json:"last_sync"`
-	Changes    []Change               `json:"changes"`
-	Metadata   map[string]interface{} `json:"metadata"`
-}
-
-// SyncResponse represents a sync response
-type SyncResponse struct {
-	BuildingID string                 `json:"building_id"`
-	Changes    []Change               `json:"changes"`
-	Conflicts  []Conflict             `json:"conflicts"`
-	LastSync   time.Time              `json:"last_sync"`
-	Metadata   map[string]interface{} `json:"metadata"`
-}
-
-// Change represents a data change
-type Change struct {
-	ID        string                 `json:"id"`
-	Type      string                 `json:"type"`   // create, update, delete
-	Entity    string                 `json:"entity"` // building, equipment, room
-	EntityID  string                 `json:"entity_id"`
-	Data      map[string]interface{} `json:"data"`
-	Timestamp time.Time              `json:"timestamp"`
-	UserID    string                 `json:"user_id"`
-	Version   int64                  `json:"version,omitempty"`
-}
-
-// Conflict represents a sync conflict
-type Conflict struct {
-	ID            string                 `json:"id"`
-	Entity        string                 `json:"entity"`
-	EntityID      string                 `json:"entity_id"`
-	LocalVersion  int64                  `json:"local_version"`
-	RemoteVersion int64                  `json:"remote_version"`
-	ConflictType  string                 `json:"conflict_type"`
-	ResolveAction string                 `json:"resolve_action"`
-	LocalData  map[string]interface{} `json:"local_data"`
-	RemoteData map[string]interface{} `json:"remote_data"`
-	Resolution string                 `json:"resolution"` // local, remote, merge
-}
+// Re-export sync types for backwards compatibility
+type Change = syncpkg.Change
+type Conflict = syncpkg.Conflict
+type SyncRequest = syncpkg.SyncRequest
+type SyncResponse = syncpkg.SyncResponse
+type RejectedChange = syncpkg.RejectedChange

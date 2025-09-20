@@ -62,8 +62,8 @@ func (s *OrganizationServiceImpl) CreateOrganization(ctx context.Context, org *m
 
 	// Set timestamps
 	now := time.Now()
-	org.CreatedAt = &now
-	org.UpdatedAt = &now
+	org.CreatedAt = now
+	org.UpdatedAt = now
 
 	// Set defaults
 	if org.Status == "" {
@@ -98,7 +98,7 @@ func (s *OrganizationServiceImpl) CreateOrganization(ctx context.Context, org *m
 // UpdateOrganization updates an existing organization
 func (s *OrganizationServiceImpl) UpdateOrganization(ctx context.Context, org *models.Organization) error {
 	now := time.Now()
-	org.UpdatedAt = &now
+	org.UpdatedAt = now
 	return s.db.UpdateOrganization(ctx, org)
 }
 
@@ -139,7 +139,8 @@ func (s *OrganizationServiceImpl) GetMemberRole(ctx context.Context, orgID, user
 		return nil, err
 	}
 
-	return &member.Role, nil
+	role := models.Role(member.Role)
+	return &role, nil
 }
 
 // Invitation management
@@ -155,10 +156,8 @@ func (s *OrganizationServiceImpl) CreateInvitation(ctx context.Context, orgID, e
 		Role:           string(role),
 		Token:          s.generateInvitationToken(),
 		InvitedBy:      invitedBy,
-		Status:         "pending",
 		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour), // 7 days
-		CreatedAt:      &now,
-		UpdatedAt:      &now,
+		CreatedAt:      now,
 	}
 
 	if err := s.db.CreateOrganizationInvitation(ctx, invitation); err != nil {
@@ -203,7 +202,11 @@ func (s *OrganizationServiceImpl) HasPermission(ctx context.Context, orgID, user
 	}
 
 	// Check if the role has the required permission
-	permissions := role.GetPermissions()
+	permissions, exists := models.RolePermissions[*role]
+	if !exists {
+		return false, nil
+	}
+
 	for _, p := range permissions {
 		if p == permission {
 			return true, nil
@@ -224,7 +227,11 @@ func (s *OrganizationServiceImpl) GetUserPermissions(ctx context.Context, orgID,
 		return []models.Permission{}, nil // User is not a member
 	}
 
-	return role.GetPermissions(), nil
+	permissions, exists := models.RolePermissions[*role]
+	if !exists {
+		return []models.Permission{}, nil
+	}
+	return permissions, nil
 }
 
 // CanUserAccessOrganization checks if a user can access an organization

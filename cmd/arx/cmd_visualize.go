@@ -72,8 +72,8 @@ func runVizDemo(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 
 	// Check PostGIS availability
-	if hybridDB != nil {
-		if _, err := hybridDB.GetSpatialDB(); err == nil {
+	if postgisDB != nil {
+		if _, err := postgisDB.GetSpatialDB(); err == nil {
 			fmt.Println("✅ PostGIS spatial data available")
 		}
 	}

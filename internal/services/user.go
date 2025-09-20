@@ -26,7 +26,7 @@ func NewUserService(db database.DB) *UserService {
 }
 
 // CreateUser creates a new user
-func (s *UserService) CreateUser(ctx context.Context, req *models.CreateUserRequest) (*models.User, error) {
+func (s *UserService) CreateUser(ctx context.Context, req *models.UserCreateRequest) (*models.User, error) {
 	// Validate input
 	if err := middleware.ValidateEmail(req.Email); err != nil {
 		return nil, fmt.Errorf("invalid email: %w", err)
@@ -61,9 +61,9 @@ func (s *UserService) CreateUser(ctx context.Context, req *models.CreateUserRequ
 		PasswordHash: string(hashedPassword),
 		FullName:     req.FullName,
 		Role:         req.Role,
-		Status:       "active",
-		CreatedAt:    &now,
-		UpdatedAt:    &now,
+		IsActive:     true,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 
 	// Set default role if not provided
@@ -120,7 +120,7 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models
 }
 
 // UpdateUser updates a user's information
-func (s *UserService) UpdateUser(ctx context.Context, userID string, req *models.UpdateUserRequest) (*models.User, error) {
+func (s *UserService) UpdateUser(ctx context.Context, userID string, req *models.UserUpdateRequest) (*models.User, error) {
 	// Get existing user
 	user, err := s.db.GetUser(ctx, userID)
 	if err != nil {
@@ -131,50 +131,31 @@ func (s *UserService) UpdateUser(ctx context.Context, userID string, req *models
 	}
 
 	// Update fields if provided
-	if req.Email != "" {
-		if err := middleware.ValidateEmail(req.Email); err != nil {
-			return nil, fmt.Errorf("invalid email: %w", err)
-		}
+	// Note: Email updates are not allowed through UserUpdateRequest for security reasons
 
-		// Check if email is already taken by another user
-		existingUser, _ := s.db.GetUserByEmail(ctx, req.Email)
-		if existingUser != nil && existingUser.ID != userID {
-			return nil, fmt.Errorf("email already in use")
-		}
-
-		user.Email = strings.ToLower(req.Email)
-	}
-
-	if req.Username != "" {
-		if err := middleware.ValidateUsername(req.Username); err != nil {
-			return nil, fmt.Errorf("invalid username: %w", err)
-		}
-		user.Username = req.Username
-	}
-
+	// Update allowed fields from UserUpdateRequest
 	if req.FullName != "" {
 		user.FullName = req.FullName
 	}
 
-	if req.Role != "" {
-		validRoles := map[string]bool{"admin": true, "user": true, "viewer": true}
-		if !validRoles[req.Role] {
-			return nil, fmt.Errorf("invalid role: %s", req.Role)
-		}
-		user.Role = req.Role
+	if req.Phone != "" {
+		user.Phone = req.Phone
 	}
 
-	if req.Status != "" {
-		validStatuses := map[string]bool{"active": true, "inactive": true, "suspended": true}
-		if !validStatuses[req.Status] {
-			return nil, fmt.Errorf("invalid status: %s", req.Status)
-		}
-		user.Status = req.Status
+	if req.AvatarURL != "" {
+		user.AvatarURL = req.AvatarURL
+	}
+
+	if req.Preferences != nil {
+		user.Preferences = req.Preferences
+	}
+
+	if req.Metadata != nil {
+		user.Metadata = req.Metadata
 	}
 
 	// Update timestamp
-	now := time.Now()
-	user.UpdatedAt = &now
+	user.UpdatedAt = time.Now()
 
 	// Save changes
 	if err := s.db.UpdateUser(ctx, user); err != nil {

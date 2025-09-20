@@ -148,8 +148,8 @@ func main() {
 		Status:       "active",
 		MaxUsers:     5,
 		MaxBuildings: 2,
-		CreatedAt:    &now,
-		UpdatedAt:    &now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 
 	if err := db.CreateOrganization(ctx, org); err != nil {

@@ -9,7 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	// SQLite driver removed - migration tool deprecated
+	// Users should export data using arx export before upgrading
 	_ "github.com/lib/pq"
 )
 

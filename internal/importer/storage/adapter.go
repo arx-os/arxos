@@ -8,9 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/database"
-	"github.com/arx-os/arxos/internal/models/building"
+	"github.com/arx-os/arxos/internal/core/building"
+	"github.com/arx-os/arxos/internal/core/equipment"
 	"github.com/arx-os/arxos/pkg/models"
 )
 
@@ -42,7 +44,11 @@ func NewDatabaseAdapter(db database.DB) *DatabaseAdapter {
 
 // SaveToDatabase saves the building model to the database
 func (d *DatabaseAdapter) SaveToDatabase(ctx context.Context, model *building.BuildingModel) error {
-	logger.Debug("Saving building %s to database", model.ID)
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+	}
+	logger.Debug("Saving building %s to database", buildingID)
 
 	// Convert to database model
 	floorPlan, err := d.toFloorPlan(model)
@@ -56,7 +62,7 @@ func (d *DatabaseAdapter) SaveToDatabase(ctx context.Context, model *building.Bu
 	}
 
 	// Save spatial data if available
-	if d.spatial != nil && model.Origin != nil {
+	if d.spatial != nil && model.Building != nil && model.Building.Origin.Latitude != 0 {
 		if err := d.saveSpatialData(ctx, model); err != nil {
 			// Log but don't fail - spatial is enhancement
 			logger.Warn("Failed to save spatial data: %v", err)
@@ -64,25 +70,29 @@ func (d *DatabaseAdapter) SaveToDatabase(ctx context.Context, model *building.Bu
 	}
 
 	// Update cache
-	d.cache.Set(model.ID, model)
+	d.cache.Set(buildingID, model)
 
 	logger.Info("Saved building %s with %d floors to database",
-		model.ID, len(model.Floors))
+		buildingID, len(model.Floors))
 
 	return nil
 }
 
 // SaveToBIM saves the building model to BIM format
 func (d *DatabaseAdapter) SaveToBIM(ctx context.Context, model *building.BuildingModel) error {
-	logger.Debug("Saving building %s to BIM format", model.ID)
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+	}
+	logger.Debug("Saving building %s to BIM format", buildingID)
 
 	// Convert to BIM format
 	bimText := d.toBIMFormat(model)
 
 	// Determine output path
-	outputPath := fmt.Sprintf("%s.bim.txt", model.ID)
-	if model.Properties["output_path"] != nil {
-		if path, ok := model.Properties["output_path"].(string); ok {
+	outputPath := fmt.Sprintf("%s.bim.txt", buildingID)
+	if model.Building != nil && model.Building.Metadata != nil {
+		if path, ok := model.Building.Metadata["output_path"].(string); ok {
 			outputPath = path
 		}
 	}
@@ -92,19 +102,23 @@ func (d *DatabaseAdapter) SaveToBIM(ctx context.Context, model *building.Buildin
 		return fmt.Errorf("failed to write BIM file: %w", err)
 	}
 
-	logger.Info("Saved building %s to %s", model.ID, outputPath)
+	logger.Info("Saved building %s to %s", buildingID, outputPath)
 
 	return nil
 }
 
 // SaveToFile saves the building model to a JSON file
 func (d *DatabaseAdapter) SaveToFile(ctx context.Context, model *building.BuildingModel) error {
-	logger.Debug("Saving building %s to JSON file", model.ID)
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+	}
+	logger.Debug("Saving building %s to JSON file", buildingID)
 
 	// Determine output path
-	outputPath := fmt.Sprintf("%s.json", model.ID)
-	if model.Properties["output_path"] != nil {
-		if path, ok := model.Properties["output_path"].(string); ok {
+	outputPath := fmt.Sprintf("%s.json", buildingID)
+	if model.Building != nil && model.Building.Metadata != nil {
+		if path, ok := model.Building.Metadata["output_path"].(string); ok {
 			outputPath = path
 		}
 	}
@@ -123,7 +137,7 @@ func (d *DatabaseAdapter) SaveToFile(ctx context.Context, model *building.Buildi
 		return fmt.Errorf("failed to encode JSON: %w", err)
 	}
 
-	logger.Info("Saved building %s to %s", model.ID, outputPath)
+	logger.Info("Saved building %s to %s", buildingID, outputPath)
 
 	return nil
 }
@@ -160,46 +174,62 @@ func (d *DatabaseAdapter) LoadFromDatabase(ctx context.Context, buildingID strin
 
 // toFloorPlan converts BuildingModel to database FloorPlan
 func (d *DatabaseAdapter) toFloorPlan(model *building.BuildingModel) (*models.FloorPlan, error) {
+	// Use first floor or create a default
+	floorLevel := 1
+	floorName := "Floor 1"
+	if len(model.Floors) > 0 {
+		floorLevel = model.Floors[0].Level
+		floorName = model.Floors[0].Name
+	}
+
+	buildingName := "Unknown"
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingName = model.Building.Name
+		buildingID = model.Building.ArxosID
+	}
+
 	floorPlan := &models.FloorPlan{
-		ID:          model.ID,
-		UUID:        model.UUID,
-		Name:        model.Name,
-		Building:    model.Name, // Required field
-		Description: model.Description,
-		Level:       1, // Default to first floor
+		ID:          buildingID,
+		UUID:        buildingID,  // Use ArxosID as UUID
+		Name:        floorName,
+		Building:    buildingName,
+		Description: "",
+		Level:       floorLevel,
 		Equipment:   []*models.Equipment{},
 		Rooms:       []*models.Room{},
 	}
 
-	// Convert equipment
-	for _, floor := range model.Floors {
-		for _, eq := range floor.Equipment {
-			equipment := &models.Equipment{
-				ID:     eq.ID,
-				Name:   eq.Name,
-				Type:   eq.Type,
-				Status: models.StatusOperational, // Default status
-			}
+	// Convert equipment from model.Equipment
+	for _, eq := range model.Equipment {
+		equipment := &models.Equipment{
+			ID:     eq.ID.String(),
+			Name:   eq.Name,
+			Type:   eq.Type,
+			Status: eq.Status,
+		}
+		floorPlan.Equipment = append(floorPlan.Equipment, equipment)
+	}
 
-			// Add metadata to properties
-			// Note: models.Equipment doesn't have all these fields
-			// Store them in a metadata map if needed
-
-			floorPlan.Equipment = append(floorPlan.Equipment, equipment)
+	// Convert rooms from model.Rooms
+	for _, rm := range model.Rooms {
+		room := &models.Room{
+			ID:   rm.ID.String(),
+			Name: rm.Name,
 		}
 
-		// Convert rooms
-		for _, rm := range floor.Rooms {
-			room := &models.Room{
-				ID:   rm.ID,
-				Name: rm.Name,
+		// Build equipment list for this room from metadata
+		equipmentInRoom := []string{}
+		for _, eq := range model.Equipment {
+			if eq.Metadata != nil {
+				if roomID, ok := eq.Metadata["room_id"].(string); ok && roomID == rm.ID.String() {
+					equipmentInRoom = append(equipmentInRoom, eq.ID.String())
+				}
 			}
-
-			// Room.Equipment in models is []string (equipment IDs)
-			room.Equipment = rm.Equipment
-
-			floorPlan.Rooms = append(floorPlan.Rooms, room)
 		}
+		room.Equipment = equipmentInRoom
+
+		floorPlan.Rooms = append(floorPlan.Rooms, room)
 	}
 
 	return floorPlan, nil
@@ -207,56 +237,57 @@ func (d *DatabaseAdapter) toFloorPlan(model *building.BuildingModel) (*models.Fl
 
 // fromFloorPlan converts database FloorPlan to BuildingModel
 func (d *DatabaseAdapter) fromFloorPlan(floorPlan *models.FloorPlan) *building.BuildingModel {
-	model := &building.BuildingModel{
-		ID:         floorPlan.ID,
-		UUID:       floorPlan.UUID,
-		Name:       floorPlan.Name,
-		Properties: make(map[string]interface{}),
-		Floors:     []building.Floor{},
-	}
+	// Create building from floor plan
+	bldg := building.NewBuilding(floorPlan.ID, floorPlan.Building)
+
+	model := building.NewBuildingModel(bldg)
 
 	// Create floor
 	floor := building.Floor{
-		ID:         fmt.Sprintf("floor_%d", floorPlan.Level),
-		Number:     floorPlan.Level,
-		Name:       fmt.Sprintf("Floor %d", floorPlan.Level),
-		Rooms:      []building.Room{},
-		Equipment:  []building.Equipment{},
-		Properties: make(map[string]interface{}),
+		ID:          uuid.New(),
+		BuildingID:  bldg.ID,
+		Level:       floorPlan.Level,
+		Name:        fmt.Sprintf("Floor %d", floorPlan.Level),
+		Metadata:    make(map[string]interface{}),
 	}
 
 	// Convert rooms
 	for _, rm := range floorPlan.Rooms {
+		roomID, _ := uuid.Parse(rm.ID)
+		if roomID == uuid.Nil {
+			roomID = uuid.New()
+		}
 		room := building.Room{
-			ID:         rm.ID,
+			ID:         roomID,
+			BuildingID: bldg.ID,
+			FloorID:    floor.ID,
 			Name:       rm.Name,
 			Type:       "general", // Default type since models.Room doesn't have Type
-			FloorID:    floor.ID,
-			Equipment:  []string{},
-			Properties: make(map[string]interface{}),
+			Metadata:   make(map[string]interface{}),
 		}
 
-		// rm.Equipment is already []string, just copy it
-		room.Equipment = rm.Equipment
-
-		floor.Rooms = append(floor.Rooms, room)
+		model.AddRoom(room)
 	}
 
 	// Convert equipment
 	for _, eq := range floorPlan.Equipment {
-		equipment := building.Equipment{
-			ID:         eq.ID,
+		eqID, _ := uuid.Parse(eq.ID)
+		if eqID == uuid.Nil {
+			eqID = uuid.New()
+		}
+		equip := &equipment.Equipment{
+			ID:         eqID,
+			BuildingID: bldg.ID,
 			Name:       eq.Name,
 			Type:       eq.Type,
 			Status:     string(eq.Status),
-			FloorID:    floor.ID,
-			Properties: make(map[string]interface{}),
+			Metadata:   make(map[string]interface{}),
 		}
 
-		floor.Equipment = append(floor.Equipment, equipment)
+		model.AddEquipment(equip)
 	}
 
-	model.Floors = append(model.Floors, floor)
+	model.AddFloor(floor)
 
 	return model
 }
@@ -268,77 +299,83 @@ func (d *DatabaseAdapter) toBIMFormat(model *building.BuildingModel) string {
 	// Header
 	sb.WriteString("# ArxOS Building Information Model\n")
 	sb.WriteString(fmt.Sprintf("# Generated: %s\n", time.Now().Format(time.RFC3339)))
-	sb.WriteString(fmt.Sprintf("# Source: %s\n\n", model.Source))
+
+	// Get source from import metadata if available
+	source := "ArxOS Import Pipeline"
+	if model.ImportMetadata.SourceFile != "" {
+		source = model.ImportMetadata.SourceFile
+	}
+	sb.WriteString(fmt.Sprintf("# Source: %s\n\n", source))
 
 	// Building info
-	sb.WriteString(fmt.Sprintf("BUILDING: %s %s\n", model.ID, model.Name))
-	if model.Address != "" {
-		sb.WriteString(fmt.Sprintf("ADDRESS: %s\n", model.Address))
-	}
-	if model.Description != "" {
-		sb.WriteString(fmt.Sprintf("DESCRIPTION: %s\n", model.Description))
+	buildingID := "unknown"
+	buildingName := "Unknown Building"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+		buildingName = model.Building.Name
+		sb.WriteString(fmt.Sprintf("BUILDING: %s %s\n", buildingID, buildingName))
+		if model.Building.Address != "" {
+			sb.WriteString(fmt.Sprintf("ADDRESS: %s\n", model.Building.Address))
+		}
 	}
 	sb.WriteString("\n")
 
 	// Floors
 	for _, floor := range model.Floors {
-		sb.WriteString(fmt.Sprintf("FLOOR: %d %s\n", floor.Number, floor.Name))
+		sb.WriteString(fmt.Sprintf("FLOOR: %d %s\n", floor.Level, floor.Name))
 
-		// Rooms
-		for _, room := range floor.Rooms {
-			sb.WriteString(fmt.Sprintf("  ROOM: %s [%s] %s\n", room.Number, room.Type, room.Name))
+		// Get rooms for this floor
+		roomsOnFloor := model.GetRoomsByFloor(floor.ID)
+		for _, room := range roomsOnFloor {
+			sb.WriteString(fmt.Sprintf("  ROOM: %s [%s] %s\n", room.ID.String(), room.Type, room.Name))
 
 			// Room properties
 			if room.Area > 0 {
 				sb.WriteString(fmt.Sprintf("    AREA: %.2f sqm\n", room.Area))
 			}
-			if room.Position != nil {
-				sb.WriteString(fmt.Sprintf("    POSITION: %.2f, %.2f, %.2f\n",
-					room.Position.X, room.Position.Y, room.Position.Z))
-			}
-		}
-
-		// Equipment
-		for _, equipment := range floor.Equipment {
-			sb.WriteString(fmt.Sprintf("  EQUIPMENT: %s [%s] %s\n",
-				equipment.ID, equipment.Type, equipment.Name))
-
-			// Equipment details
-			if equipment.RoomID != "" {
-				sb.WriteString(fmt.Sprintf("    ROOM: %s\n", equipment.RoomID))
-			}
-			if equipment.Position != nil {
-				sb.WriteString(fmt.Sprintf("    POSITION: %.2f, %.2f, %.2f\n",
-					equipment.Position.X, equipment.Position.Y, equipment.Position.Z))
-			}
-			if equipment.Manufacturer != "" {
-				sb.WriteString(fmt.Sprintf("    MANUFACTURER: %s\n", equipment.Manufacturer))
-			}
-			if equipment.Model != "" {
-				sb.WriteString(fmt.Sprintf("    MODEL: %s\n", equipment.Model))
-			}
-			sb.WriteString(fmt.Sprintf("    STATUS: %s\n", equipment.Status))
 		}
 
 		sb.WriteString("\n")
 	}
 
-	// Systems
-	if len(model.Systems) > 0 {
-		sb.WriteString("# Building Systems\n")
-		for _, system := range model.Systems {
-			sb.WriteString(fmt.Sprintf("SYSTEM: %s [%s] %s\n", system.ID, system.Type, system.Name))
-			for _, eqID := range system.Equipment {
-				sb.WriteString(fmt.Sprintf("  EQUIPMENT: %s\n", eqID))
+	// Equipment section
+	if len(model.Equipment) > 0 {
+		sb.WriteString("# Equipment\n")
+		for _, eq := range model.Equipment {
+			sb.WriteString(fmt.Sprintf("EQUIPMENT: %s [%s] %s\n",
+				eq.ID.String(), eq.Type, eq.Name))
+
+			// Equipment details
+			if eq.Metadata != nil {
+				if roomID, ok := eq.Metadata["room_id"].(string); ok {
+					sb.WriteString(fmt.Sprintf("  ROOM: %s\n", roomID))
+				}
+				if manufacturer, ok := eq.Metadata["manufacturer"].(string); ok {
+					sb.WriteString(fmt.Sprintf("  MANUFACTURER: %s\n", manufacturer))
+				}
+				if modelNum, ok := eq.Metadata["model"].(string); ok {
+					sb.WriteString(fmt.Sprintf("  MODEL: %s\n", modelNum))
+				}
 			}
-			sb.WriteString("\n")
+			if eq.Position != nil {
+				sb.WriteString(fmt.Sprintf("  POSITION: %.2f, %.2f, %.2f\n",
+					eq.Position.X, eq.Position.Y, eq.Position.Z))
+			}
+			sb.WriteString(fmt.Sprintf("  STATUS: %s\n", eq.Status))
 		}
+		sb.WriteString("\n")
 	}
 
 	// Metadata
 	sb.WriteString("# Metadata\n")
-	sb.WriteString(fmt.Sprintf("CONFIDENCE: %v\n", model.Confidence))
-	sb.WriteString(fmt.Sprintf("COVERAGE: %.1f%%\n", model.Coverage))
+	if model.Building != nil && model.Building.Metadata != nil {
+		if confidence, ok := model.Building.Metadata["confidence"].(string); ok {
+			sb.WriteString(fmt.Sprintf("CONFIDENCE: %s\n", confidence))
+		}
+		if coverage, ok := model.Building.Metadata["equipment_coverage"].(float64); ok {
+			sb.WriteString(fmt.Sprintf("COVERAGE: %.1f%%\n", coverage))
+		}
+	}
 	if len(model.ValidationIssues) > 0 {
 		sb.WriteString(fmt.Sprintf("ISSUES: %d\n", len(model.ValidationIssues)))
 	}
@@ -350,24 +387,21 @@ func (d *DatabaseAdapter) toBIMFormat(model *building.BuildingModel) string {
 func (d *DatabaseAdapter) saveSpatialData(ctx context.Context, model *building.BuildingModel) error {
 	// This would interact with the spatial database
 	// Implementation depends on the spatial database interface
-	logger.Debug("Saving spatial data for building %s", model.ID)
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+	}
+	logger.Debug("Saving spatial data for building %s", buildingID)
 
 	// Example: Save building origin
-	if model.Origin != nil {
-		// d.spatial.SaveBuildingOrigin(ctx, model.ID, model.Origin)
-	}
-
-	// Example: Save bounding box
-	if model.BoundingBox != nil {
-		// d.spatial.SaveBoundingBox(ctx, model.ID, model.BoundingBox)
+	if model.Building != nil && model.Building.Origin.Latitude != 0 {
+		// d.spatial.SaveBuildingOrigin(ctx, buildingID, model.Building.Origin)
 	}
 
 	// Example: Save equipment positions
-	for _, floor := range model.Floors {
-		for _, equipment := range floor.Equipment {
-			if equipment.Position != nil {
-				// d.spatial.SaveEquipmentPosition(ctx, equipment.ID, equipment.Position)
-			}
+	for _, eq := range model.Equipment {
+		if eq.Position != nil {
+			// d.spatial.SaveEquipmentPosition(ctx, eq.ID.String(), eq.Position)
 		}
 	}
 
@@ -377,10 +411,14 @@ func (d *DatabaseAdapter) saveSpatialData(ctx context.Context, model *building.B
 // loadSpatialData loads spatial data from PostGIS
 func (d *DatabaseAdapter) loadSpatialData(ctx context.Context, model *building.BuildingModel) error {
 	// This would load spatial data from the database
-	logger.Debug("Loading spatial data for building %s", model.ID)
+	buildingID := "unknown"
+	if model.Building != nil {
+		buildingID = model.Building.ArxosID
+	}
+	logger.Debug("Loading spatial data for building %s", buildingID)
 
 	// Example implementation would load:
-	// - Building origin and bounding box
+	// - Building origin coordinates
 	// - Equipment positions
 	// - Room boundaries
 	// - System connections

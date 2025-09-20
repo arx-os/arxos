@@ -265,3 +265,65 @@ func (s *UserServiceImpl) SyncWithAuth() error {
 func generateID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
+
+// ChangePassword changes a user's password
+func (s *UserServiceImpl) ChangePassword(ctx context.Context, userID, oldPassword, newPassword string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	user, exists := s.users[userID]
+	if !exists {
+		return fmt.Errorf("user not found: %s", userID)
+	}
+
+	// Verify old password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return fmt.Errorf("invalid current password")
+	}
+
+	// Hash new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update password
+	user.PasswordHash = string(hashedPassword)
+	user.UpdatedAt = time.Now()
+
+	return nil
+}
+
+// RequestPasswordReset initiates a password reset process
+func (s *UserServiceImpl) RequestPasswordReset(ctx context.Context, email string) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	// Find user by email
+	for _, user := range s.users {
+		if user.Email == email {
+			// In a real implementation, this would:
+			// 1. Generate a secure reset token
+			// 2. Store the token with an expiration
+			// 3. Send an email with the reset link
+			logger.Info("Password reset requested for user: %s", user.ID)
+			return nil
+		}
+	}
+
+	// Don't reveal if user exists or not
+	return nil
+}
+
+// ConfirmPasswordReset confirms a password reset with token
+func (s *UserServiceImpl) ConfirmPasswordReset(ctx context.Context, token, newPassword string) error {
+	// In a real implementation, this would:
+	// 1. Validate the token
+	// 2. Check if token is expired
+	// 3. Find the associated user
+	// 4. Update the user's password
+	// 5. Invalidate the token
+
+	// For now, return error as not fully implemented
+	return fmt.Errorf("password reset not fully implemented")
+}

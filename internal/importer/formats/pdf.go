@@ -11,9 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/importer"
-	"github.com/arx-os/arxos/internal/models/building"
+	"github.com/arx-os/arxos/internal/core/building"
+	"github.com/arx-os/arxos/internal/core/equipment"
 )
 
 // PDFImporter handles PDF file imports
@@ -79,30 +81,40 @@ func (p *PDFImporter) ImportToModel(ctx context.Context, input io.Reader, opts i
 	// Parse floor plan data from text
 	planData := p.parser.Parse(text)
 
-	// Create building model
-	model := &building.BuildingModel{
-		ID:         opts.BuildingID,
-		Name:       opts.BuildingName,
-		Source:     building.DataSourcePDF,
-		ImportedAt: time.Now(),
-		UpdatedAt:  time.Now(),
-		Properties: make(map[string]interface{}),
-		Floors:     []building.Floor{},
+	// Create building from PDF data
+	buildingName := opts.BuildingName
+	if buildingName == "" {
+		buildingName = "Untitled Building"
 	}
 
-	// Add metadata
+	bldg := building.NewBuilding(opts.BuildingID, buildingName)
+	if bldg.Metadata == nil {
+		bldg.Metadata = make(map[string]interface{})
+	}
+
+	// Add metadata from PDF
 	for k, v := range metadata {
-		model.Properties[k] = v
+		bldg.Metadata[k] = v
 	}
 
-	// Build floor structure
-	model.Floors = p.buildFloors(planData)
+	// Create building model
+	model := building.NewBuildingModel(bldg)
+	model.ImportMetadata.Format = building.DataSourcePDF
+	model.ImportMetadata.ImportedAt = time.Now()
+	model.ImportMetadata.SourceFile = opts.BuildingName // Store the original filename if available
 
-	// Calculate confidence
-	model.Confidence = p.confidence.Calculate(planData, metadata)
+	// Build floor and room structure
+	p.buildFloorsAndRooms(model, planData)
+
+	// Calculate and store confidence in metadata
+	confidenceLevel := p.confidence.Calculate(planData, metadata)
+	if model.Building.Metadata == nil {
+		model.Building.Metadata = make(map[string]interface{})
+	}
+	model.Building.Metadata["confidence_score"] = confidenceLevel
 
 	// Log summary
-	equipmentCount := len(model.GetAllEquipment())
+	equipmentCount := len(model.Equipment)
 	logger.Info("PDF import complete: %d floors, %d rooms, %d equipment items",
 		len(model.Floors), p.countRooms(model), equipmentCount)
 
@@ -445,79 +457,66 @@ func (c *PDFConfidenceCalculator) Calculate(data FloorPlanData, metadata map[str
 	}
 }
 
-// buildFloors converts parsed data to building floors
-func (p *PDFImporter) buildFloors(data FloorPlanData) []building.Floor {
-	var floors []building.Floor
+// buildFloorsAndRooms converts parsed data to building floors and rooms
+func (p *PDFImporter) buildFloorsAndRooms(model *building.BuildingModel, data FloorPlanData) {
 
 	for _, parsedFloor := range data.Floors {
+		// Create floor
 		floor := building.Floor{
-			ID:         fmt.Sprintf("floor_%d", parsedFloor.Number),
-			Number:     parsedFloor.Number,
+			ID:         uuid.New(),
+			BuildingID: model.Building.ID,
+			Level:      parsedFloor.Number,
 			Name:       parsedFloor.Name,
-			Rooms:      []building.Room{},
-			Equipment:  []building.Equipment{},
-			Confidence: building.ConfidenceEstimated,
-			Properties: make(map[string]interface{}),
+			Metadata:   make(map[string]interface{}),
 		}
+		floor.Metadata["confidence"] = "estimated" // PDF extraction has low confidence
+		model.AddFloor(floor)
 
-		// Add rooms
+		// Add rooms for this floor
 		for _, parsedRoom := range parsedFloor.Rooms {
 			room := building.Room{
-				ID:         fmt.Sprintf("room_%s", parsedRoom.Number),
-				Number:     parsedRoom.Number,
+				ID:         uuid.New(),
+				BuildingID: model.Building.ID,
+				FloorID:    floor.ID,
 				Name:       parsedRoom.Name,
 				Type:       parsedRoom.Type,
 				Area:       parsedRoom.Area,
-				FloorID:    floor.ID,
-				Confidence: building.ConfidenceEstimated,
-				Properties: make(map[string]interface{}),
+				Metadata:   make(map[string]interface{}),
 			}
-			floor.Rooms = append(floor.Rooms, room)
+			room.Metadata["room_number"] = parsedRoom.Number
+			model.AddRoom(room)
 		}
-
-		// Add equipment for this floor
-		for _, parsedEq := range data.Equipment {
-			// Try to match equipment to rooms
-			var roomID string
-			for _, room := range floor.Rooms {
-				if strings.Contains(parsedEq.Name, room.Number) {
-					roomID = room.ID
-					break
-				}
-			}
-
-			equipment := building.Equipment{
-				ID:         parsedEq.ID,
-				Name:       parsedEq.Name,
-				Type:       parsedEq.Type,
-				Status:     "operational",
-				FloorID:    floor.ID,
-				RoomID:     roomID,
-				Confidence: building.ConfidenceEstimated,
-				Properties: make(map[string]interface{}),
-			}
-
-			if parsedEq.Manufacturer != "" {
-				equipment.Manufacturer = parsedEq.Manufacturer
-			}
-			if parsedEq.Model != "" {
-				equipment.Model = parsedEq.Model
-			}
-
-			floor.Equipment = append(floor.Equipment, equipment)
-		}
-
-		floors = append(floors, floor)
 	}
 
-	return floors
+	// Add equipment to model
+	for _, parsedEq := range data.Equipment {
+		eqID, _ := uuid.Parse(parsedEq.ID)
+		if eqID == uuid.Nil {
+			eqID = uuid.New()
+		}
+
+		equip := &equipment.Equipment{
+			ID:         eqID,
+			BuildingID: model.Building.ID,
+			Name:       parsedEq.Name,
+			Type:       parsedEq.Type,
+			Status:     equipment.StatusOperational,
+			Confidence: equipment.ConfidenceEstimated,
+			Metadata:   make(map[string]interface{}),
+		}
+
+		if parsedEq.Manufacturer != "" {
+			equip.Metadata["manufacturer"] = parsedEq.Manufacturer
+		}
+		if parsedEq.Model != "" {
+			equip.Metadata["model"] = parsedEq.Model
+		}
+
+		model.AddEquipment(equip)
+	}
 }
 
 // countRooms counts total rooms in the model
 func (p *PDFImporter) countRooms(model *building.BuildingModel) int {
-	count := 0
-	for _, floor := range model.Floors {
-		count += len(floor.Rooms)
-	}
-	return count
+	return len(model.Rooms)
 }

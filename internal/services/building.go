@@ -117,9 +117,10 @@ func (bs *BuildingService) CreateEquipment(ctx context.Context, equipment *model
 		equipment.ID = fmt.Sprintf("eq_%d", time.Now().UnixNano())
 	}
 
-	// Find the building and add equipment
-	// This would need to be properly implemented with building ID
-	return fmt.Errorf("not implemented: equipment must be associated with a building")
+	// Equipment is associated with rooms, not directly with floor plans
+	// The room validation happens at the database level
+	// Simply save the equipment
+	return bs.db.SaveEquipment(ctx, equipment)
 }
 
 // UpdateEquipment updates existing equipment
@@ -163,8 +164,9 @@ func (bs *BuildingService) CreateRoom(ctx context.Context, room *models.Room) er
 		room.ID = fmt.Sprintf("rm_%d", time.Now().UnixNano())
 	}
 
-	// This would need to be properly implemented with building ID
-	return fmt.Errorf("not implemented: room must be associated with a building")
+	// Rooms are stored directly in the database
+	// The database handles the association with floor plans
+	return bs.db.SaveRoom(ctx, room)
 }
 
 // UpdateRoom updates an existing room

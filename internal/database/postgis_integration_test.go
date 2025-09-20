@@ -5,14 +5,21 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"math/rand"
 	"os"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/spatial"
+	"github.com/arx-os/arxos/pkg/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 func getTestPostGISConfig() *PostGISConfig {
@@ -319,6 +326,61 @@ func TestSpatialAggregations(t *testing.T) {
 	})
 }
 
+// PostGISIntegrationTestSuite provides comprehensive integration testing
+type PostGISIntegrationTestSuite struct {
+	suite.Suite
+	db     *PostGISDB
+	config *PostGISConfig
+	ctx    context.Context
+}
+
+func (s *PostGISIntegrationTestSuite) SetupSuite() {
+	s.config = getTestPostGISConfig()
+	s.db = NewPostGISDB(*s.config)
+	s.ctx = context.Background()
+
+	err := s.db.Connect(s.ctx)
+	s.Require().NoError(err, "Failed to connect to test database")
+
+	err = s.db.InitializeSchema(s.ctx)
+	s.Require().NoError(err, "Failed to initialize schema")
+}
+
+func (s *PostGISIntegrationTestSuite) TearDownSuite() {
+	if s.db != nil {
+		s.cleanupTestData()
+		s.db.Close()
+	}
+}
+
+func (s *PostGISIntegrationTestSuite) SetupTest() {
+	// Clean up before each test
+	s.cleanupTestData()
+}
+
+func (s *PostGISIntegrationTestSuite) cleanupTestData() {
+	// Clean up test data
+	queries := []string{
+		"DELETE FROM equipment_positions WHERE equipment_id LIKE 'TEST_%' OR equipment_id LIKE 'PERF_%' OR equipment_id LIKE 'STRESS_%'",
+		"DELETE FROM floor_boundaries WHERE floor_id LIKE 'TEST_%'",
+		"DELETE FROM spatial_indexes WHERE object_id LIKE 'TEST_%'",
+	}
+
+	for _, q := range queries {
+		_, err := s.db.db.ExecContext(s.ctx, q)
+		if err != nil {
+			s.T().Logf("Warning: cleanup query failed: %v", err)
+		}
+	}
+}
+
+func TestPostGISIntegrationSuite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test suite")
+	}
+	suite.Run(t, new(PostGISIntegrationTestSuite))
+}
+
 func TestTransactionSupport(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
@@ -384,4 +446,258 @@ func TestTransactionSupport(t *testing.T) {
 		assert.InDelta(t, 300, pos.Z, 0.001)
 		assert.Equal(t, spatial.ConfidenceHigh, confidence)
 	})
+}
+
+// TestConnectionPoolStress tests database connection pool under load
+func (s *PostGISIntegrationTestSuite) TestConnectionPoolStress() {
+	const (
+		numWorkers    = 50
+		opsPerWorker  = 100
+	)
+
+	var wg sync.WaitGroup
+	errors := make(chan error, numWorkers*opsPerWorker)
+
+	// Create stress test workers
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+
+			for op := 0; op < opsPerWorker; op++ {
+				// Randomly choose operation type
+				switch rand.Intn(4) {
+				case 0: // Insert
+					id := fmt.Sprintf("STRESS_%d_%d_%s", workerID, op, uuid.New().String()[:8])
+					pos := spatial.Point3D{
+						X: rand.Float64() * 10000,
+						Y: rand.Float64() * 10000,
+						Z: rand.Float64() * 1000,
+					}
+					if err := s.db.UpdateEquipmentPosition(id, pos, spatial.ConfidenceMedium, "Stress test"); err != nil {
+						errors <- fmt.Errorf("worker %d insert failed: %w", workerID, err)
+					}
+
+				case 1: // Read
+					id := fmt.Sprintf("STRESS_%d_%d", rand.Intn(numWorkers), rand.Intn(opsPerWorker))
+					_, _, _ = s.db.GetEquipmentPosition(id)
+
+				case 2: // Proximity search
+					center := spatial.Point3D{
+						X: rand.Float64() * 10000,
+						Y: rand.Float64() * 10000,
+						Z: rand.Float64() * 1000,
+					}
+					_, _ = s.db.FindEquipmentNear(center, 1000)
+
+				case 3: // Bounding box search
+					minX := rand.Float64() * 5000
+					minY := rand.Float64() * 5000
+					bbox := spatial.BoundingBox{
+						Min: spatial.Point3D{X: minX, Y: minY, Z: 0},
+						Max: spatial.Point3D{X: minX + 2000, Y: minY + 2000, Z: 1000},
+					}
+					_, _ = s.db.FindEquipmentInBoundingBox(bbox)
+				}
+			}
+		}(w)
+	}
+
+	// Wait for all workers to complete
+	done := make(chan bool)
+	go func() {
+		wg.Wait()
+		close(errors)
+		done <- true
+	}()
+
+	// Collect errors
+	var errorCount int
+	select {
+	case <-done:
+		for err := range errors {
+			errorCount++
+			s.T().Logf("Stress test error: %v", err)
+		}
+	case <-time.After(30 * time.Second):
+		s.Fail("Stress test timeout")
+	}
+
+	s.Less(errorCount, numWorkers, "Too many errors during stress test")
+	s.T().Logf("Stress test completed with %d errors out of %d operations", errorCount, numWorkers*opsPerWorker)
+}
+
+// TestSpatialQueryAccuracy verifies spatial calculations are accurate
+func (s *PostGISIntegrationTestSuite) TestSpatialQueryAccuracy() {
+	// Create equipment in a precise grid pattern
+	gridSize := 10
+	spacing := 1000.0 // mm
+
+	for i := 0; i < gridSize; i++ {
+		for j := 0; j < gridSize; j++ {
+			id := fmt.Sprintf("GRID_TEST_%d_%d", i, j)
+			pos := spatial.Point3D{
+				X: float64(i) * spacing,
+				Y: float64(j) * spacing,
+				Z: 0,
+			}
+			err := s.db.UpdateEquipmentPosition(id, pos, spatial.ConfidenceHigh, "Grid test")
+			s.Require().NoError(err)
+		}
+	}
+
+	// Test 1: Exact distance calculations
+	center := spatial.Point3D{X: 4500, Y: 4500, Z: 0}
+	radius := 1414.3 // Should capture exactly 4 corner items at distance sqrt(2)*1000
+
+	results, err := s.db.FindEquipmentNear(center, radius)
+	s.Require().NoError(err)
+	s.Equal(4, len(results), "Should find exactly 4 items at corners")
+
+	// Test 2: Bounding box precision
+	bbox := spatial.BoundingBox{
+		Min: spatial.Point3D{X: 2000, Y: 2000, Z: -10},
+		Max: spatial.Point3D{X: 7000, Y: 7000, Z: 10},
+	}
+
+	results, err = s.db.FindEquipmentInBoundingBox(bbox)
+	s.Require().NoError(err)
+	s.Equal(36, len(results), "Should find 6x6 grid = 36 items")
+
+	// Test 3: Center of mass calculation
+	equipmentIDs := []string{"GRID_TEST_0_0", "GRID_TEST_9_0", "GRID_TEST_9_9", "GRID_TEST_0_9"}
+	centerMass, err := s.db.CalculateEquipmentCenterOfMass(equipmentIDs)
+	s.Require().NoError(err)
+
+	s.InDelta(4500, centerMass.X, 0.01, "Center X should be 4500")
+	s.InDelta(4500, centerMass.Y, 0.01, "Center Y should be 4500")
+}
+
+// TestConcurrentTransactions verifies transaction isolation
+func (s *PostGISIntegrationTestSuite) TestConcurrentTransactions() {
+	const numTransactions = 20
+	var wg sync.WaitGroup
+	successCount := int32(0)
+	rollbackCount := int32(0)
+
+	for i := 0; i < numTransactions; i++ {
+		wg.Add(1)
+		go func(txID int) {
+			defer wg.Done()
+
+			tx, err := s.db.db.BeginTx(s.ctx, &sql.TxOptions{
+				Isolation: sql.LevelSerializable,
+			})
+			if err != nil {
+				return
+			}
+
+			// Try to insert same equipment ID - only one should succeed
+			equipmentID := "CONCURRENT_TEST_SINGLE"
+			_, err = tx.ExecContext(s.ctx, `
+				INSERT INTO equipment_positions (equipment_id, position, confidence, source)
+				VALUES ($1, ST_GeomFromText('POINT(100 200 300)', 900913), $2, $3)
+				ON CONFLICT (equipment_id) DO NOTHING
+			`, equipmentID, spatial.ConfidenceHigh, fmt.Sprintf("Transaction %d", txID))
+
+			if err != nil {
+				tx.Rollback()
+				atomic.AddInt32(&rollbackCount, 1)
+			} else {
+				if err := tx.Commit(); err != nil {
+					atomic.AddInt32(&rollbackCount, 1)
+				} else {
+					atomic.AddInt32(&successCount, 1)
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	s.T().Logf("Concurrent transactions: %d succeeded, %d rolled back", successCount, rollbackCount)
+	s.Greater(int(successCount), 0, "At least one transaction should succeed")
+}
+
+// TestSpatialIndexPerformance validates spatial index effectiveness
+func (s *PostGISIntegrationTestSuite) TestSpatialIndexPerformance() {
+	// Create large dataset
+	const numItems = 10000
+
+	s.T().Log("Creating large dataset...")
+	for i := 0; i < numItems; i++ {
+		id := fmt.Sprintf("PERF_TEST_%d", i)
+		pos := spatial.Point3D{
+			X: rand.Float64() * 100000,
+			Y: rand.Float64() * 100000,
+			Z: rand.Float64() * 10000,
+		}
+		err := s.db.UpdateEquipmentPosition(id, pos, spatial.ConfidenceLow, "Performance test")
+		s.Require().NoError(err)
+	}
+
+	// Measure query performance
+	testQueries := []struct {
+		name      string
+		maxTime   time.Duration
+		queryFunc func() error
+	}{
+		{
+			name:    "Proximity search",
+			maxTime: 50 * time.Millisecond,
+			queryFunc: func() error {
+				_, err := s.db.FindEquipmentNear(spatial.Point3D{X: 50000, Y: 50000, Z: 5000}, 5000)
+				return err
+			},
+		},
+		{
+			name:    "Bounding box search",
+			maxTime: 50 * time.Millisecond,
+			queryFunc: func() error {
+				bbox := spatial.BoundingBox{
+					Min: spatial.Point3D{X: 40000, Y: 40000, Z: 0},
+					Max: spatial.Point3D{X: 60000, Y: 60000, Z: 10000},
+				}
+				_, err := s.db.FindEquipmentInBoundingBox(bbox)
+				return err
+			},
+		},
+	}
+
+	for _, test := range testQueries {
+		start := time.Now()
+		err := test.queryFunc()
+		duration := time.Since(start)
+
+		s.Require().NoError(err)
+		s.Less(duration, test.maxTime, "%s took too long: %v", test.name, duration)
+		s.T().Logf("%s completed in %v", test.name, duration)
+	}
+}
+
+// Helper function to create test floor with equipment
+func (s *PostGISIntegrationTestSuite) createTestFloor(floorID string, numEquipment int) {
+	// Create floor boundary
+	corners := []spatial.Point3D{
+		{X: 0, Y: 0, Z: 0},
+		{X: 10000, Y: 0, Z: 0},
+		{X: 10000, Y: 10000, Z: 0},
+		{X: 0, Y: 10000, Z: 0},
+		{X: 0, Y: 0, Z: 0},
+	}
+
+	err := s.db.StoreFloorBoundary(floorID, corners)
+	s.Require().NoError(err)
+
+	// Add equipment on floor
+	for i := 0; i < numEquipment; i++ {
+		id := fmt.Sprintf("%s_EQ_%d", floorID, i)
+		pos := spatial.Point3D{
+			X: rand.Float64() * 9000 + 500,  // Keep away from edges
+			Y: rand.Float64() * 9000 + 500,
+			Z: 0,
+		}
+		err := s.db.UpdateEquipmentPosition(id, pos, spatial.ConfidenceMedium, "Floor test")
+		s.Require().NoError(err)
+	}
 }

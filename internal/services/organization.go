@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
@@ -23,7 +24,7 @@ func NewOrganizationService(db database.DB) *OrganizationService {
 }
 
 // CreateOrganization creates a new organization
-func (s *OrganizationService) CreateOrganization(ctx context.Context, req *models.CreateOrganizationRequest) (*models.Organization, error) {
+func (s *OrganizationService) CreateOrganization(ctx context.Context, req *models.OrganizationCreateRequest) (*models.Organization, error) {
 	// Validate input
 	if req.Name == "" {
 		return nil, fmt.Errorf("organization name is required")
@@ -38,23 +39,25 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, req *model
 	org := &models.Organization{
 		ID:          generateID(),
 		Name:        req.Name,
+		Slug:        req.Slug,
 		Description: req.Description,
-		Type:        req.Type,
 		Status:      "active",
 		Settings:    req.Settings,
-		CreatedAt:   &now,
-		UpdatedAt:   &now,
+		Plan:        models.PlanFree,
+		IsActive:    true,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
-	// Set default type if not provided
-	if org.Type == "" {
-		org.Type = "standard"
+	// Set defaults
+	if org.Slug == "" {
+		org.Slug = strings.ToLower(strings.ReplaceAll(org.Name, " ", "-"))
 	}
-
-	// Validate type
-	validTypes := map[string]bool{"standard": true, "enterprise": true, "educational": true}
-	if !validTypes[org.Type] {
-		return nil, fmt.Errorf("invalid organization type: %s", org.Type)
+	if org.MaxUsers == 0 {
+		org.MaxUsers = 5 // Default for free plan
+	}
+	if org.MaxBuildings == 0 {
+		org.MaxBuildings = 1 // Default for free plan
 	}
 
 	// Save to database
@@ -62,12 +65,8 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, req *model
 		return nil, fmt.Errorf("failed to create organization: %w", err)
 	}
 
-	// Add creator as admin if user ID is provided
-	if req.CreatorUserID != "" {
-		if err := s.db.AddOrganizationMember(ctx, org.ID, req.CreatorUserID, "admin"); err != nil {
-			logger.Warn("Failed to add creator as admin: %v", err)
-		}
-	}
+	// Note: The creator should be added as a member through a separate API call
+	// to maintain proper separation of concerns
 
 	logger.Info("Created new organization: %s (%s)", org.Name, org.ID)
 	return org, nil
@@ -87,7 +86,7 @@ func (s *OrganizationService) GetOrganization(ctx context.Context, orgID string)
 }
 
 // UpdateOrganization updates an organization's information
-func (s *OrganizationService) UpdateOrganization(ctx context.Context, orgID string, req *models.UpdateOrganizationRequest) (*models.Organization, error) {
+func (s *OrganizationService) UpdateOrganization(ctx context.Context, orgID string, req *models.OrganizationUpdateRequest) (*models.Organization, error) {
 	// Get existing organization
 	org, err := s.db.GetOrganization(ctx, orgID)
 	if err != nil {
@@ -109,20 +108,32 @@ func (s *OrganizationService) UpdateOrganization(ctx context.Context, orgID stri
 		org.Description = req.Description
 	}
 
-	if req.Type != "" {
-		validTypes := map[string]bool{"standard": true, "enterprise": true, "educational": true}
-		if !validTypes[req.Type] {
-			return nil, fmt.Errorf("invalid organization type: %s", req.Type)
-		}
-		org.Type = req.Type
+	// Update other fields if provided
+	if req.Website != "" {
+		org.Website = req.Website
+	}
+	if req.Email != "" {
+		org.Email = req.Email
+	}
+	if req.Phone != "" {
+		org.Phone = req.Phone
 	}
 
-	if req.Status != "" {
-		validStatuses := map[string]bool{"active": true, "inactive": true, "suspended": true}
-		if !validStatuses[req.Status] {
-			return nil, fmt.Errorf("invalid status: %s", req.Status)
-		}
-		org.Status = req.Status
+	// Update address fields if provided
+	if req.Address != "" {
+		org.Address = req.Address
+	}
+	if req.City != "" {
+		org.City = req.City
+	}
+	if req.State != "" {
+		org.State = req.State
+	}
+	if req.Country != "" {
+		org.Country = req.Country
+	}
+	if req.PostalCode != "" {
+		org.PostalCode = req.PostalCode
 	}
 
 	if req.Settings != nil {
@@ -130,8 +141,7 @@ func (s *OrganizationService) UpdateOrganization(ctx context.Context, orgID stri
 	}
 
 	// Update timestamp
-	now := time.Now()
-	org.UpdatedAt = &now
+	org.UpdatedAt = time.Now()
 
 	// Save changes
 	if err := s.db.UpdateOrganization(ctx, org); err != nil {
@@ -338,10 +348,8 @@ func (s *OrganizationService) CreateInvitation(ctx context.Context, orgID, email
 		Role:           role,
 		Token:          token,
 		InvitedBy:      inviterUserID,
-		Status:         "pending",
 		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour), // 7 days
-		CreatedAt:      &now,
-		UpdatedAt:      &now,
+		CreatedAt:      now,
 	}
 
 	// Save invitation
@@ -372,8 +380,8 @@ func (s *OrganizationService) AcceptInvitation(ctx context.Context, token, userI
 	}
 
 	// Check if already accepted
-	if invitation.Status != "pending" {
-		return fmt.Errorf("invitation has already been %s", invitation.Status)
+	if invitation.AcceptedAt != nil {
+		return fmt.Errorf("invitation has already been accepted")
 	}
 
 	// Accept invitation
@@ -402,8 +410,8 @@ func (s *OrganizationService) RevokeInvitation(ctx context.Context, invitationID
 	}
 
 	// Check if already processed
-	if invitation.Status != "pending" {
-		return fmt.Errorf("invitation has already been %s", invitation.Status)
+	if invitation.AcceptedAt != nil {
+		return fmt.Errorf("invitation has already been accepted")
 	}
 
 	// Revoke invitation

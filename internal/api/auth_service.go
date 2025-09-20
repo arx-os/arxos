@@ -67,7 +67,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*A
 	}
 
 	// Check if user is active
-	if !user.IsActive() {
+	if !user.IsActive {
 		return nil, errors.New("user account is inactive")
 	}
 
@@ -100,7 +100,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*A
 	// Update last login time
 	now := time.Now()
 	user.LastLogin = &now
-	user.UpdatedAt = &now
+	user.UpdatedAt = now
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		logger.Error("Failed to update user last login: %v", err)
 	}
@@ -114,9 +114,9 @@ func (s *AuthServiceImpl) Login(ctx context.Context, email, password string) (*A
 		Name:      user.FullName,
 		OrgID:     orgID,
 		Role:      role,
-		Active:    user.IsActive(),
-		CreatedAt: *user.CreatedAt,
-		UpdatedAt: *user.UpdatedAt,
+		Active:    user.IsActive,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
 	}
 	if user.LastLogin != nil {
 		apiUser.LastLoginAt = *user.LastLogin
@@ -177,12 +177,10 @@ func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name st
 		Email:         email,
 		FullName:      name,
 		PasswordHash:  string(hashedPassword),
-		Status:        "active",
+		IsActive:      true,
 		EmailVerified: false,
-		PhoneVerified: false,
-		MFAEnabled:    false,
-		CreatedAt:     &now,
-		UpdatedAt:     &now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	// Store user in database
@@ -198,9 +196,9 @@ func (s *AuthServiceImpl) Register(ctx context.Context, email, password, name st
 		Email:     user.Email,
 		Name:      user.FullName,
 		Role:      "user",
-		Active:    user.IsActive(),
-		CreatedAt: *user.CreatedAt,
-		UpdatedAt: *user.UpdatedAt,
+		Active:    user.IsActive,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
 	}, nil
 }
 
@@ -297,9 +295,9 @@ func (s *AuthServiceImpl) RefreshToken(ctx context.Context, refreshToken string)
 		Name:      user.FullName,
 		OrgID:     orgID,
 		Role:      role,
-		Active:    user.IsActive(),
-		CreatedAt: *user.CreatedAt,
-		UpdatedAt: *user.UpdatedAt,
+		Active:    user.IsActive,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
 	}
 	if user.LastLogin != nil {
 		apiUser.LastLoginAt = *user.LastLogin
@@ -359,7 +357,7 @@ func (s *AuthServiceImpl) ChangePassword(ctx context.Context, userID, oldPasswor
 	// Update password
 	user.PasswordHash = string(hashedPassword)
 	now := time.Now()
-	user.UpdatedAt = &now
+	user.UpdatedAt = now
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
@@ -444,7 +442,7 @@ func (s *AuthServiceImpl) ConfirmPasswordReset(ctx context.Context, token, newPa
 	// Update user's password
 	user.PasswordHash = string(hashedPassword)
 	now := time.Now()
-	user.UpdatedAt = &now
+	user.UpdatedAt = now
 	if err := s.db.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
@@ -506,12 +504,10 @@ func (s *AuthServiceImpl) CreateDefaultUser() error {
 		Email:         "admin@arxos.io",
 		FullName:      "Admin User",
 		PasswordHash:  string(hashedPassword),
-		Status:        "active",
+		IsActive:      true,
 		EmailVerified: true,
-		PhoneVerified: false,
-		MFAEnabled:    false,
-		CreatedAt:     &now,
-		UpdatedAt:     &now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 	}
 
 	if err := s.db.CreateUser(ctx, user); err != nil {

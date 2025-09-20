@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arx-os/arxos/internal/adapters/postgis"
 	"github.com/arx-os/arxos/internal/core/building"
 	"github.com/arx-os/arxos/internal/core/equipment"
-	"github.com/arx-os/arxos/internal/core/spatial"
 )
 
 // Service handles all export operations

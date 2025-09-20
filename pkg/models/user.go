@@ -4,88 +4,148 @@ import (
 	"time"
 )
 
-// User represents a user account
+// User represents a system user
 type User struct {
-	ID           string     `json:"id" db:"id"`
-	Email        string     `json:"email" db:"email"`
-	Username     string     `json:"username" db:"username"`
-	FullName     string     `json:"full_name" db:"full_name"`
-	PasswordHash string     `json:"-" db:"password_hash"`
-	Avatar       string     `json:"avatar,omitempty" db:"avatar"`
-	Phone        string     `json:"phone,omitempty" db:"phone"`
-	Role         string     `json:"role" db:"role"`
-	Status       string     `json:"status" db:"status"`
-	LastLogin    *time.Time `json:"last_login,omitempty" db:"last_login"`
-	CreatedAt    *time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt    *time.Time `json:"updated_at" db:"updated_at"`
-
-	// MFA
-	MFAEnabled bool   `json:"mfa_enabled" db:"mfa_enabled"`
-	MFASecret  string `json:"-" db:"mfa_secret"`
-
-	// Email verification
-	EmailVerified bool `json:"email_verified" db:"email_verified"`
-	PhoneVerified bool `json:"phone_verified" db:"phone_verified"`
-
-	// Organization context (not stored in user table)
-	CurrentOrgID  string               `json:"current_org_id,omitempty"`
-	Organizations []OrganizationMember `json:"organizations,omitempty"`
+	ID                 string                 `json:"id"`
+	Email              string                 `json:"email"`
+	Username           string                 `json:"username"`
+	PasswordHash       string                 `json:"-"` // Never expose in JSON
+	FullName           string                 `json:"full_name,omitempty"`
+	Role               string                 `json:"role"`
+	IsActive           bool                   `json:"is_active"`
+	EmailVerified      bool                   `json:"email_verified"`
+	Phone              string                 `json:"phone,omitempty"`
+	AvatarURL          string                 `json:"avatar_url,omitempty"`
+	Preferences        map[string]interface{} `json:"preferences,omitempty"`
+	Metadata           map[string]interface{} `json:"metadata,omitempty"`
+	LastLogin          *time.Time             `json:"last_login,omitempty"`
+	FailedLoginAttempts int                   `json:"-"`
+	LockedUntil        *time.Time             `json:"-"`
+	CreatedAt          time.Time              `json:"created_at"`
+	UpdatedAt          time.Time              `json:"updated_at"`
 }
 
-// UserPreferences stores user-specific preferences
-type UserPreferences struct {
-	UserID             string `json:"user_id" db:"user_id"`
-	Theme              string `json:"theme" db:"theme"` // light, dark, auto
-	Language           string `json:"language" db:"language"`
-	TimeZone           string `json:"timezone" db:"timezone"`
-	DateFormat         string `json:"date_format" db:"date_format"`
-	EmailNotifications bool   `json:"email_notifications" db:"email_notifications"`
-	PushNotifications  bool   `json:"push_notifications" db:"push_notifications"`
-	DefaultOrgID       string `json:"default_org_id" db:"default_org_id"`
+// UserSession represents an active user session
+type UserSession struct {
+	ID               string                 `json:"id"`
+	UserID           string                 `json:"user_id"`
+	OrganizationID   string                 `json:"organization_id,omitempty"`
+	Token            string                 `json:"token"`
+	RefreshToken     string                 `json:"refresh_token"`
+	IPAddress        string                 `json:"ip_address,omitempty"`
+	UserAgent        string                 `json:"user_agent,omitempty"`
+	DeviceInfo       map[string]interface{} `json:"device_info,omitempty"`
+	IsActive         bool                   `json:"is_active"`
+	ExpiresAt        time.Time              `json:"expires_at"`
+	RefreshExpiresAt time.Time              `json:"refresh_expires_at"`
+	LastActivity     time.Time              `json:"last_activity"`
+	LastAccessAt     time.Time              `json:"last_access_at"`
+	CreatedAt        time.Time              `json:"created_at"`
+	UpdatedAt        time.Time              `json:"updated_at"`
 }
 
-// EmailVerification represents an email verification token
-type EmailVerification struct {
-	ID         string     `json:"id" db:"id"`
-	UserID     string     `json:"user_id" db:"user_id"`
-	Email      string     `json:"email" db:"email"`
-	Token      string     `json:"-" db:"token"`
-	ExpiresAt  time.Time  `json:"expires_at" db:"expires_at"`
-	VerifiedAt *time.Time `json:"verified_at,omitempty" db:"verified_at"`
-	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+// PasswordResetToken represents a password reset request
+type PasswordResetToken struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Token     string     `json:"token"`
+	Used      bool       `json:"used"`
+	UsedAt    *time.Time `json:"used_at,omitempty"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	CreatedAt time.Time  `json:"created_at"`
 }
 
-// IsActive checks if the user account is active
-func (u *User) IsActive() bool {
-	return u.Status == "active"
+// APIKey represents an API access key
+type APIKey struct {
+	ID          string                 `json:"id"`
+	UserID      string                 `json:"user_id,omitempty"`
+	OrganizationID string              `json:"organization_id,omitempty"`
+	Name        string                 `json:"name"`
+	KeyHash     string                 `json:"-"` // Never expose
+	LastFour    string                 `json:"last_four"`
+	Permissions map[string]interface{} `json:"permissions,omitempty"`
+	RateLimit   int                    `json:"rate_limit"`
+	IsActive    bool                   `json:"is_active"`
+	LastUsedAt  *time.Time             `json:"last_used_at,omitempty"`
+	ExpiresAt   *time.Time             `json:"expires_at,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
 }
 
-// HasVerifiedEmail checks if the user has verified their email
-func (u *User) HasVerifiedEmail() bool {
-	return u.EmailVerified
+// AuditLog represents an audit log entry
+type AuditLog struct {
+	ID             string                 `json:"id"`
+	UserID         string                 `json:"user_id,omitempty"`
+	OrganizationID string                 `json:"organization_id,omitempty"`
+	Action         string                 `json:"action"`
+	ResourceType   string                 `json:"resource_type,omitempty"`
+	ResourceID     string                 `json:"resource_id,omitempty"`
+	Changes        map[string]interface{} `json:"changes,omitempty"`
+	IPAddress      string                 `json:"ip_address,omitempty"`
+	UserAgent      string                 `json:"user_agent,omitempty"`
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
 }
 
-// CanAccessOrganization checks if user can access an organization
-func (u *User) CanAccessOrganization(orgID string) bool {
-	for _, org := range u.Organizations {
-		if org.OrganizationID == orgID {
-			return true
-		}
-	}
-	return false
+// UserCreateRequest represents a user creation request
+type UserCreateRequest struct {
+	Email     string `json:"email" validate:"required,email"`
+	Username  string `json:"username" validate:"required,min=3,max=50"`
+	Password  string `json:"password" validate:"required,min=8"`
+	FullName  string `json:"full_name,omitempty"`
+	Role      string `json:"role,omitempty"`
+	Phone     string `json:"phone,omitempty"`
+	AvatarURL string `json:"avatar_url,omitempty"`
 }
 
-// GetOrganizationRole returns the user's role in an organization
-func (u *User) GetOrganizationRole(orgID string) *Role {
-	for _, org := range u.Organizations {
-		if org.OrganizationID == orgID {
-			return &org.Role
-		}
-	}
-	return nil
+// UserUpdateRequest represents a user update request
+type UserUpdateRequest struct {
+	FullName    string                 `json:"full_name,omitempty"`
+	Phone       string                 `json:"phone,omitempty"`
+	AvatarURL   string                 `json:"avatar_url,omitempty"`
+	Preferences map[string]interface{} `json:"preferences,omitempty"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// IsExpired checks if an email verification token has expired
-func (e *EmailVerification) IsExpired() bool {
-	return time.Now().After(e.ExpiresAt)
+// PasswordChangeRequest represents a password change request
+type PasswordChangeRequest struct {
+	OldPassword string `json:"old_password" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=8"`
+}
+
+// PasswordResetRequest represents a password reset request
+type PasswordResetRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// PasswordResetConfirm represents password reset confirmation
+type PasswordResetConfirm struct {
+	Token       string `json:"token" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=8"`
+}
+
+// LoginRequest represents a login request
+type LoginRequest struct {
+	Email    string `json:"email,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password" validate:"required"`
+}
+
+// LoginResponse represents a successful login response
+type LoginResponse struct {
+	User         *User   `json:"user"`
+	Token        string  `json:"token"`
+	RefreshToken string  `json:"refresh_token"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+
+// TokenRefreshRequest represents a token refresh request
+type TokenRefreshRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+// TokenRefreshResponse represents a token refresh response
+type TokenRefreshResponse struct {
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresAt    time.Time `json:"expires_at"`
 }

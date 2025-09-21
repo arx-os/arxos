@@ -173,6 +173,11 @@ type ParsedEquipment struct {
 // PDFTextExtractor extracts text from PDFs
 type PDFTextExtractor struct{}
 
+// NewPDFTextExtractor creates a new PDF text extractor
+func NewPDFTextExtractor() *PDFTextExtractor {
+	return &PDFTextExtractor{}
+}
+
 // Extract extracts text and metadata from PDF
 func (e *PDFTextExtractor) Extract(input io.Reader) (string, map[string]string, error) {
 	// Save input to temporary file for processing
@@ -200,6 +205,18 @@ func (e *PDFTextExtractor) Extract(input io.Reader) (string, map[string]string, 
 	}
 
 	return text, metadata, nil
+}
+
+// ExtractEnhanced performs enhanced text extraction with metadata
+func (e *PDFTextExtractor) ExtractEnhanced(pdfPath string) (string, map[string]string, error) {
+	// Open the file and delegate to the existing Extract method
+	file, err := os.Open(pdfPath)
+	if err != nil {
+		return "", nil, err
+	}
+	defer file.Close()
+
+	return e.Extract(file)
 }
 
 // extractWithFallbacks tries multiple extraction methods

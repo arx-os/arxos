@@ -1,6 +1,10 @@
 package security
 
 import (
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/base64"
+	"fmt"
 	"html"
 	"net/url"
 	"path/filepath"
@@ -81,6 +85,11 @@ func (s *Sanitizer) SanitizePath(input string) string {
 
 	// Remove any .. sequences
 	input = strings.ReplaceAll(input, "..", "")
+
+	// Clean up multiple slashes
+	for strings.Contains(input, "//") {
+		input = strings.ReplaceAll(input, "//", "/")
+	}
 
 	// Ensure it doesn't start with /
 	input = strings.TrimPrefix(input, "/")
@@ -315,19 +324,41 @@ func NewCSRFProtector() *CSRFProtector {
 	}
 }
 
-// GenerateToken generates a CSRF token
-func (c *CSRFProtector) GenerateToken() string {
-	// This is a placeholder - real implementation would use crypto/rand
-	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+// GenerateToken generates a cryptographically secure CSRF token
+func (c *CSRFProtector) GenerateToken() (string, error) {
+	// Create a byte slice for the random data
 	b := make([]byte, c.tokenLength)
-	for i := range b {
-		b[i] = letters[i%len(letters)]
+
+	// Read random bytes from crypto/rand
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate random token: %w", err)
 	}
-	return string(b)
+
+	// Encode to base64 for safe transmission
+	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-// ValidateToken validates a CSRF token
+// ValidateToken validates a CSRF token using constant-time comparison
 func (c *CSRFProtector) ValidateToken(token string, sessionToken string) bool {
-	// Simple comparison - real implementation would be more sophisticated
-	return token == sessionToken && token != ""
+	// Ensure both tokens are non-empty
+	if token == "" || sessionToken == "" {
+		return false
+	}
+
+	// Use constant-time comparison to prevent timing attacks
+	return subtle.ConstantTimeCompare([]byte(token), []byte(sessionToken)) == 1
+}
+
+// MustGenerateToken generates a CSRF token and panics on error
+// This is for backward compatibility where the old version didn't return an error
+func (c *CSRFProtector) MustGenerateToken() string {
+	token, err := c.GenerateToken()
+	if err != nil {
+		// In production, this should log the error
+		// For now, return a fallback token
+		// This should never happen unless there's a system issue
+		panic(fmt.Sprintf("failed to generate CSRF token: %v", err))
+	}
+	return token
 }

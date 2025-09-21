@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -452,4 +454,92 @@ func (c *Collector) BackgroundUpdater(ctx context.Context, interval time.Duratio
 func (c *Collector) updateSystemMetrics() {
 	// This would be called periodically to update system metrics
 	// Implementation depends on actual system monitoring needs
+}
+
+// UpdateGoroutineCount updates the current goroutine count
+func (c *Collector) UpdateGoroutineCount() {
+	if c.goroutines != nil {
+		count := runtime.NumGoroutine()
+		c.goroutines.Set(float64(count))
+		logger.Debug("Updated goroutine count: %d", count)
+	}
+}
+
+// GetSnapshot returns a snapshot of current metrics
+func (c *Collector) GetSnapshot() map[string]interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	snapshot := make(map[string]interface{})
+
+	for name, metric := range c.metrics {
+		switch metric.Type {
+		case MetricTypeCounter, MetricTypeGauge:
+			if val := metric.value.Load(); val != nil {
+				snapshot[name] = val
+			}
+		case MetricTypeHistogram:
+			if metric.histogram != nil {
+				metric.histogram.mu.Lock()
+				snapshot[name] = map[string]interface{}{
+					"count": metric.histogram.count,
+					"sum":   metric.histogram.sum,
+					"avg":   metric.histogram.sum / float64(metric.histogram.count),
+				}
+				metric.histogram.mu.Unlock()
+			}
+		}
+	}
+
+	// Add system info
+	snapshot["uptime_seconds"] = time.Since(c.startTime).Seconds()
+	snapshot["timestamp"] = time.Now().Unix()
+
+	return snapshot
+}
+
+// FormatPrometheus formats metrics in Prometheus exposition format
+func (c *Collector) FormatPrometheus() string {
+	var buf strings.Builder
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	// Write header
+	buf.WriteString("# ArxOS Metrics\n")
+	buf.WriteString(fmt.Sprintf("# Generated at %s\n\n", time.Now().Format(time.RFC3339)))
+
+	// Write each metric
+	for name, metric := range c.metrics {
+		// Write HELP and TYPE comments
+		buf.WriteString(fmt.Sprintf("# HELP %s %s\n", name, metric.Help))
+		buf.WriteString(fmt.Sprintf("# TYPE %s %s\n", name, strings.ToLower(string(metric.Type))))
+
+		// Write metric value
+		switch metric.Type {
+		case MetricTypeCounter, MetricTypeGauge:
+			if val := metric.value.Load(); val != nil {
+				buf.WriteString(fmt.Sprintf("%s %g\n", name, val.(float64)))
+			}
+		case MetricTypeHistogram:
+			if metric.histogram != nil {
+				metric.histogram.mu.Lock()
+				// Write histogram buckets
+				cumulative := uint64(0)
+				for i, upper := range metric.histogram.buckets {
+					cumulative += metric.histogram.counts[i]
+					buf.WriteString(fmt.Sprintf("%s_bucket{le=\"%g\"} %d\n", name, upper, cumulative))
+				}
+				// +Inf bucket
+				cumulative += metric.histogram.counts[len(metric.histogram.counts)-1]
+				buf.WriteString(fmt.Sprintf("%s_bucket{le=\"+Inf\"} %d\n", name, cumulative))
+				// Sum and count
+				buf.WriteString(fmt.Sprintf("%s_sum %g\n", name, metric.histogram.sum))
+				buf.WriteString(fmt.Sprintf("%s_count %d\n", name, metric.histogram.count))
+				metric.histogram.mu.Unlock()
+			}
+		}
+		buf.WriteString("\n")
+	}
+
+	return buf.String()
 }

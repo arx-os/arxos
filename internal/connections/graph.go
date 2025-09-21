@@ -86,6 +86,11 @@ func (g *Graph) AddConnection(ctx context.Context, conn Connection) error {
 		return fmt.Errorf("target equipment %s not found: %w", conn.ToID, err)
 	}
 
+	// Check for cycles before adding the connection
+	if wouldCreateCycle, cyclePath := g.wouldCreateCycle(ctx, conn.FromID, conn.ToID); wouldCreateCycle {
+		return fmt.Errorf("adding connection would create a cycle: %v", cyclePath)
+	}
+
 	// Store connection in database
 	query := `
 		INSERT INTO connections (from_equipment_id, to_equipment_id, connection_type, metadata)
@@ -395,4 +400,125 @@ func (g *Graph) exploreSystem(ctx context.Context, equipmentID string, connType 
 	}
 
 	return nil
+}
+
+// wouldCreateCycle checks if adding a connection from fromID to toID would create a cycle
+func (g *Graph) wouldCreateCycle(ctx context.Context, fromID, toID string) (bool, []string) {
+	// If we're adding a connection from A to B, check if there's already a path from B to A
+	// This would create a cycle
+
+	// Use DFS to check if there's a path from toID to fromID
+	visited := make(map[string]bool)
+	path := []string{}
+
+	if g.dfsHasPath(ctx, toID, fromID, visited, &path) {
+		// Found a path from toID to fromID, adding fromID->toID would create a cycle
+		path = append(path, fromID) // Complete the cycle
+		return true, path
+	}
+
+	return false, nil
+}
+
+// dfsHasPath performs depth-first search to check if there's a path from source to target
+func (g *Graph) dfsHasPath(ctx context.Context, current, target string, visited map[string]bool, path *[]string) bool {
+	if current == target {
+		*path = append(*path, current)
+		return true
+	}
+
+	if visited[current] {
+		return false
+	}
+
+	visited[current] = true
+	*path = append(*path, current)
+
+	// Get all downstream connections from current
+	connections, err := g.GetConnections(ctx, current, Downstream)
+	if err != nil {
+		return false
+	}
+
+	for _, conn := range connections {
+		if g.dfsHasPath(ctx, conn.ToID, target, visited, path) {
+			return true
+		}
+	}
+
+	// Backtrack if no path found
+	if len(*path) > 0 {
+		*path = (*path)[:len(*path)-1]
+	}
+
+	return false
+}
+
+// HasCycle checks if the graph contains any cycles
+func (g *Graph) HasCycle(ctx context.Context) (bool, []string) {
+	// Get all equipment IDs by querying the database directly
+	rows, err := g.db.Query(ctx, "SELECT DISTINCT from_equipment_id FROM connections UNION SELECT DISTINCT to_equipment_id FROM connections")
+	if err != nil {
+		logger.Error("Failed to get equipment for cycle check: %v", err)
+		return false, nil
+	}
+	defer rows.Close()
+
+	var equipmentIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			continue
+		}
+		equipmentIDs = append(equipmentIDs, id)
+	}
+
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+	var cyclePath []string
+
+	for _, equipmentID := range equipmentIDs {
+		if !visited[equipmentID] {
+			if g.dfsCycleDetect(ctx, equipmentID, visited, recStack, &cyclePath) {
+				return true, cyclePath
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// dfsCycleDetect performs DFS-based cycle detection
+func (g *Graph) dfsCycleDetect(ctx context.Context, nodeID string, visited, recStack map[string]bool, path *[]string) bool {
+	visited[nodeID] = true
+	recStack[nodeID] = true
+	*path = append(*path, nodeID)
+
+	// Get all downstream connections
+	connections, err := g.GetConnections(ctx, nodeID, Downstream)
+	if err != nil {
+		recStack[nodeID] = false
+		if len(*path) > 0 {
+			*path = (*path)[:len(*path)-1]
+		}
+		return false
+	}
+
+	for _, conn := range connections {
+		if !visited[conn.ToID] {
+			if g.dfsCycleDetect(ctx, conn.ToID, visited, recStack, path) {
+				return true
+			}
+		} else if recStack[conn.ToID] {
+			// Found a cycle - add the node that completes the cycle
+			*path = append(*path, conn.ToID)
+			return true
+		}
+	}
+
+	recStack[nodeID] = false
+	if len(*path) > 0 {
+		*path = (*path)[:len(*path)-1]
+	}
+	return false
 }

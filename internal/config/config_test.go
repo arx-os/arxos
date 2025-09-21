@@ -75,7 +75,8 @@ func TestLoadFromFile(t *testing.T) {
 	assert.Equal(t, "/test/state", config.StateDir)
 	assert.True(t, config.Cloud.Enabled)
 	assert.Equal(t, "https://test.arxos.io", config.Cloud.BaseURL)
-	assert.Equal(t, "test-key-123", config.Cloud.APIKey)
+	// APIKey is not serialized to JSON (json:"-" tag) so it won't round-trip
+	assert.Equal(t, "", config.Cloud.APIKey)
 	assert.Equal(t, "s3", config.Storage.Backend)
 	assert.Equal(t, "test-bucket", config.Storage.CloudBucket)
 	assert.True(t, config.Features.CloudSync)
@@ -149,6 +150,13 @@ func TestValidate(t *testing.T) {
 				Storage: StorageConfig{
 					Backend:     "s3",
 					CloudBucket: "test-bucket",
+				},
+				Database: DatabaseConfig{
+					Type:           "sqlite",
+					DataSourceName: "/tmp/test.db",
+				},
+				Security: SecurityConfig{
+					JWTSecret: "test-jwt-secret-123",
 				},
 			},
 			wantErr: false,
@@ -268,8 +276,8 @@ func TestSaveConfig(t *testing.T) {
 	err = json.Unmarshal(data, &savedConfig)
 	require.NoError(t, err)
 
-	// Check sensitive data was masked
-	assert.Equal(t, "********5678", savedConfig.Cloud.APIKey)
+	// Check sensitive data was removed for security
+	assert.Equal(t, "", savedConfig.Cloud.APIKey)
 	assert.Nil(t, savedConfig.Storage.Credentials)
 
 	// Check other data was preserved

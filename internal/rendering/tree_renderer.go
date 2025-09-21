@@ -69,7 +69,7 @@ func (r *TreeRenderer) renderFloor(sb *strings.Builder, floor bim.Floor, user *u
 			roomBranch = "└── "
 		}
 
-		r.renderEquipmentItem(sb, floor.Equipment[i], user, roomPrefix+roomBranch)
+		r.renderEquipment(sb, floor.Equipment[i], user, roomPrefix+roomBranch)
 	}
 }
 
@@ -88,10 +88,6 @@ func (r *TreeRenderer) renderEquipment(sb *strings.Builder, eq bim.Equipment, us
 
 	if eq.Type != "" {
 		sb.WriteString(fmt.Sprintf(" [%s]", eq.Type))
-	}
-
-	if eq.Type != "" {
-		sb.WriteString(fmt.Sprintf(" (%s)", eq.Type))
 	}
 
 	if r.showStatus && eq.Status != "" {

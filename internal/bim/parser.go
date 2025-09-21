@@ -100,6 +100,36 @@ func (p *Parser) ParseWithOptions(reader io.Reader, opts ParseOptions) (*Buildin
 			continue
 		}
 
+		if strings.HasPrefix(line, "COORDINATE_SYSTEM:") {
+			coordSysStr := strings.TrimSpace(strings.TrimPrefix(line, "COORDINATE_SYSTEM:"))
+			switch coordSysStr {
+			case "TOP_LEFT_ORIGIN":
+				building.CoordinateSystem = TopLeftOrigin
+			case "BOTTOM_LEFT_ORIGIN":
+				building.CoordinateSystem = BottomLeftOrigin
+			default:
+				building.CoordinateSystem = TopLeftOrigin // Default
+			}
+			p.currentLine++
+			continue
+		}
+
+		if strings.HasPrefix(line, "UNITS:") {
+			unitsStr := strings.TrimSpace(strings.TrimPrefix(line, "UNITS:"))
+			switch unitsStr {
+			case "FEET":
+				building.Units = Feet
+			case "METERS":
+				building.Units = Meters
+			case "INCHES":
+				building.Units = Inches
+			default:
+				building.Units = Feet // Default
+			}
+			p.currentLine++
+			continue
+		}
+
 		if strings.HasPrefix(line, "FLOOR:") {
 			if err := p.parseFloorDirectly(lines, building); err != nil {
 				p.errors = append(p.errors, err)

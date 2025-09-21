@@ -1,6 +1,7 @@
 package formats
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -454,12 +455,10 @@ func (s *AdvancedConfidenceScorer) GenerateReport(score ConfidenceScore, data *P
 }
 
 func (s *AdvancedConfidenceScorer) formatScore(score float64) string {
-	return strings.TrimRight(strings.TrimRight(
-		strings.Replace(
-			strings.Replace(
-				"%.1f%%", "%.1f", score, 1),
-			"%%", "%", 1),
-		"0", ""), ".")
+	formatted := fmt.Sprintf("%.1f%%", score)
+	formatted = strings.TrimRight(formatted, "0")
+	formatted = strings.TrimRight(formatted, ".")
+	return formatted
 }
 
 func (s *AdvancedConfidenceScorer) getQualityIndicator(score float64) string {

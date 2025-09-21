@@ -72,10 +72,12 @@ func NewSyncService(db database.DB, storage storage.Backend, workers int) *SyncS
 		workers = 4
 	}
 
-	// TODO: Implement conflict resolver and change tracker constructors
-	// For now, initialize as nil - they need proper constructors in the sync package
-	var conflictResolver *servicesync.ConflictResolver
-	var changeTracker *servicesync.ChangeTracker
+	// Initialize conflict resolver with in-memory store
+	conflictStore := servicesync.NewInMemoryConflictStore()
+	conflictResolver := servicesync.NewConflictResolver(db, conflictStore)
+
+	// Initialize change tracker
+	changeTracker := servicesync.NewChangeTracker(db)
 
 	s := &SyncService{
 		db:               db,

@@ -201,9 +201,9 @@ func Default() *Config {
 		},
 
 		Database: DatabaseConfig{
-			Type:            "postgres",
-			Driver:          "postgres", // Legacy field
-			DataSourceName:  "",         // Set from environment
+			Type:            "sqlite", // Default to sqlite for local mode
+			Driver:          "sqlite", // Legacy field
+			DataSourceName:  filepath.Join(homeDir, ".arxos", "arxos.db"), // Default SQLite path
 			MaxOpenConns:    25,
 			MaxConnections:  25, // Alias
 			MaxIdleConns:    5,

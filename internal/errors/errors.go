@@ -4,10 +4,11 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"runtime"
+	"strings"
 )
 
-// Standard errors for ArxOS following Go best practices
-
+// Standard sentinel errors for ArxOS following Go best practices
 var (
 	// ErrNotFound indicates a requested resource was not found
 	ErrNotFound = errors.New("not found")
@@ -41,6 +42,24 @@ var (
 
 	// ErrInvalidFormat indicates invalid data format
 	ErrInvalidFormat = errors.New("invalid format")
+
+	// ErrUnavailable indicates a service is unavailable
+	ErrUnavailable = errors.New("service unavailable")
+
+	// ErrRateLimited indicates rate limiting is in effect
+	ErrRateLimited = errors.New("rate limited")
+
+	// ErrQuotaExceeded indicates a quota was exceeded
+	ErrQuotaExceeded = errors.New("quota exceeded")
+
+	// ErrConflict indicates a conflict occurred
+	ErrConflict = errors.New("conflict")
+
+	// ErrPreconditionFailed indicates a precondition was not met
+	ErrPreconditionFailed = errors.New("precondition failed")
+
+	// ErrDataCorruption indicates data corruption was detected
+	ErrDataCorruption = errors.New("data corruption detected")
 )
 
 // NotFoundf creates a formatted not found error
@@ -111,4 +130,272 @@ func IsCanceled(err error) bool {
 // IsDatabase checks if an error is a database error
 func IsDatabase(err error) bool {
 	return errors.Is(err, ErrDatabase)
+}
+
+// IsUnavailable checks if an error is a service unavailable error
+func IsUnavailable(err error) bool {
+	return errors.Is(err, ErrUnavailable)
+}
+
+// IsRateLimited checks if an error is a rate limited error
+func IsRateLimited(err error) bool {
+	return errors.Is(err, ErrRateLimited)
+}
+
+// IsQuotaExceeded checks if an error is a quota exceeded error
+func IsQuotaExceeded(err error) bool {
+	return errors.Is(err, ErrQuotaExceeded)
+}
+
+// IsConflict checks if an error is a conflict error
+func IsConflict(err error) bool {
+	return errors.Is(err, ErrConflict)
+}
+
+// IsPreconditionFailed checks if an error is a precondition failed error
+func IsPreconditionFailed(err error) bool {
+	return errors.Is(err, ErrPreconditionFailed)
+}
+
+// IsDataCorruption checks if an error is a data corruption error
+func IsDataCorruption(err error) bool {
+	return errors.Is(err, ErrDataCorruption)
+}
+
+// IsNotImplemented checks if an error is a not implemented error
+func IsNotImplemented(err error) bool {
+	return errors.Is(err, ErrNotImplemented)
+}
+
+// Unauthorizedf creates a formatted unauthorized error
+func Unauthorizedf(format string, args ...interface{}) error {
+	return fmt.Errorf("%w: %s", ErrUnauthorized, fmt.Sprintf(format, args...))
+}
+
+// Forbiddenf creates a formatted forbidden error
+func Forbiddenf(format string, args ...interface{}) error {
+	return fmt.Errorf("%w: %s", ErrForbidden, fmt.Sprintf(format, args...))
+}
+
+// ErrorCode represents an error code for API responses
+type ErrorCode string
+
+const (
+	CodeNotFound           ErrorCode = "NOT_FOUND"
+	CodeAlreadyExists      ErrorCode = "ALREADY_EXISTS"
+	CodeInvalidInput       ErrorCode = "INVALID_INPUT"
+	CodeUnauthorized       ErrorCode = "UNAUTHORIZED"
+	CodeForbidden          ErrorCode = "FORBIDDEN"
+	CodeTimeout            ErrorCode = "TIMEOUT"
+	CodeCanceled           ErrorCode = "CANCELED"
+	CodeInternal           ErrorCode = "INTERNAL"
+	CodeDatabase           ErrorCode = "DATABASE"
+	CodeNotImplemented     ErrorCode = "NOT_IMPLEMENTED"
+	CodeUnavailable        ErrorCode = "UNAVAILABLE"
+	CodeRateLimited        ErrorCode = "RATE_LIMITED"
+	CodeQuotaExceeded      ErrorCode = "QUOTA_EXCEEDED"
+	CodeConflict           ErrorCode = "CONFLICT"
+	CodePreconditionFailed ErrorCode = "PRECONDITION_FAILED"
+	CodeDataCorruption     ErrorCode = "DATA_CORRUPTION"
+	CodeInvalidFormat      ErrorCode = "INVALID_FORMAT"
+)
+
+// AppError represents an application error with additional context
+type AppError struct {
+	Code       ErrorCode
+	Message    string
+	Details    string
+	Err        error
+	StackTrace string
+	Context    map[string]interface{}
+}
+
+// Error implements the error interface
+func (e *AppError) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("%s: %s: %v", e.Code, e.Message, e.Err)
+	}
+	return fmt.Sprintf("%s: %s", e.Code, e.Message)
+}
+
+// Unwrap returns the wrapped error
+func (e *AppError) Unwrap() error {
+	return e.Err
+}
+
+// WithDetails adds details to the error
+func (e *AppError) WithDetails(details string) *AppError {
+	e.Details = details
+	return e
+}
+
+// WithContext adds context to the error
+func (e *AppError) WithContext(key string, value interface{}) *AppError {
+	if e.Context == nil {
+		e.Context = make(map[string]interface{})
+	}
+	e.Context[key] = value
+	return e
+}
+
+// New creates a new application error with stack trace
+func New(code ErrorCode, message string) *AppError {
+	return &AppError{
+		Code:       code,
+		Message:    message,
+		StackTrace: getStackTrace(2),
+	}
+}
+
+// Wrap wraps an error with additional context
+func Wrap(err error, code ErrorCode, message string) *AppError {
+	if err == nil {
+		return nil
+	}
+
+	// If already an AppError, preserve the original
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		appErr.Message = message + ": " + appErr.Message
+		return appErr
+	}
+
+	return &AppError{
+		Code:       code,
+		Message:    message,
+		Err:        err,
+		StackTrace: getStackTrace(2),
+	}
+}
+
+// GetCode returns the error code from an error
+func GetCode(err error) ErrorCode {
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		return appErr.Code
+	}
+
+	// Map standard errors to codes
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return CodeNotFound
+	case errors.Is(err, ErrAlreadyExists):
+		return CodeAlreadyExists
+	case errors.Is(err, ErrInvalidInput):
+		return CodeInvalidInput
+	case errors.Is(err, ErrUnauthorized):
+		return CodeUnauthorized
+	case errors.Is(err, ErrForbidden):
+		return CodeForbidden
+	case errors.Is(err, ErrTimeout):
+		return CodeTimeout
+	case errors.Is(err, ErrCanceled):
+		return CodeCanceled
+	case errors.Is(err, ErrDatabase):
+		return CodeDatabase
+	case errors.Is(err, ErrNotImplemented):
+		return CodeNotImplemented
+	case errors.Is(err, ErrUnavailable):
+		return CodeUnavailable
+	case errors.Is(err, ErrRateLimited):
+		return CodeRateLimited
+	case errors.Is(err, ErrQuotaExceeded):
+		return CodeQuotaExceeded
+	case errors.Is(err, ErrConflict):
+		return CodeConflict
+	case errors.Is(err, ErrPreconditionFailed):
+		return CodePreconditionFailed
+	case errors.Is(err, ErrDataCorruption):
+		return CodeDataCorruption
+	case errors.Is(err, ErrInvalidFormat):
+		return CodeInvalidFormat
+	default:
+		return CodeInternal
+	}
+}
+
+// HTTPStatus returns the HTTP status code for an error
+func HTTPStatus(err error) int {
+	code := GetCode(err)
+	switch code {
+	case CodeNotFound:
+		return 404
+	case CodeAlreadyExists:
+		return 409
+	case CodeInvalidInput, CodeInvalidFormat:
+		return 400
+	case CodeUnauthorized:
+		return 401
+	case CodeForbidden:
+		return 403
+	case CodeTimeout:
+		return 408
+	case CodeCanceled:
+		return 499
+	case CodeRateLimited, CodeQuotaExceeded:
+		return 429
+	case CodeConflict:
+		return 409
+	case CodePreconditionFailed:
+		return 412
+	case CodeNotImplemented:
+		return 501
+	case CodeUnavailable:
+		return 503
+	case CodeDatabase, CodeDataCorruption, CodeInternal:
+		return 500
+	default:
+		return 500
+	}
+}
+
+// IsRetryable checks if an error is retryable
+func IsRetryable(err error) bool {
+	code := GetCode(err)
+	switch code {
+	case CodeTimeout, CodeUnavailable, CodeRateLimited:
+		return true
+	case CodeInternal, CodeDatabase:
+		// Some internal/database errors might be retryable
+		return !IsFatal(err)
+	default:
+		return false
+	}
+}
+
+// IsFatal checks if an error is fatal (non-recoverable)
+func IsFatal(err error) bool {
+	code := GetCode(err)
+	switch code {
+	case CodeDataCorruption, CodePreconditionFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+// getStackTrace captures the current stack trace
+func getStackTrace(skip int) string {
+	var buf strings.Builder
+	for i := skip; i < skip+10; i++ {
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+
+		fn := runtime.FuncForPC(pc)
+		if fn == nil {
+			continue
+		}
+
+		// Skip runtime functions
+		fnName := fn.Name()
+		if strings.HasPrefix(fnName, "runtime.") {
+			continue
+		}
+
+		// Format: function_name (file:line)
+		buf.WriteString(fmt.Sprintf("  %s\n    %s:%d\n", fnName, file, line))
+	}
+	return buf.String()
 }

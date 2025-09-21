@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -18,6 +19,7 @@ type Handler struct {
 	services       *api.Services
 	searchIndexer  *search.DatabaseIndexer
 	recentSearches *search.RecentSearches
+	authService    *AuthService
 }
 
 // NewHandler creates a new web handler
@@ -37,11 +39,18 @@ func NewHandler(services *api.Services) (*Handler, error) {
 		// Continue without search functionality
 	}
 
+	// Initialize authentication service
+	jwtSecret := []byte("your-secret-key") // TODO: Load from config
+	sessionStore := NewMemorySessionStore(5 * time.Minute)
+	userServiceAdapter := &userServiceAdapter{apiUserService: services.User}
+	authService := NewAuthService(jwtSecret, sessionStore, userServiceAdapter)
+
 	return &Handler{
 		templates:      templates,
 		services:       services,
 		searchIndexer:  searchIndexer,
 		recentSearches: search.NewRecentSearches(100),
+		authService:    authService,
 	}, nil
 }
 
@@ -190,4 +199,42 @@ func (h *Handler) getFailedEquipmentCount(buildings []*models.FloorPlan) int {
 		}
 	}
 	return failed
+}
+
+// userServiceAdapter adapts api.UserService to web.UserService interface
+type userServiceAdapter struct {
+	apiUserService api.UserService
+}
+
+func (a *userServiceAdapter) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	apiUser, err := a.apiUserService.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	return &models.User{
+		ID:       apiUser.ID,
+		Email:    apiUser.Email,
+		FullName: apiUser.Name,
+		Role:     apiUser.Role,
+		IsActive: apiUser.Active,
+	}, nil
+}
+
+func (a *userServiceAdapter) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+	apiUser, err := a.apiUserService.GetUser(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &models.User{
+		ID:       apiUser.ID,
+		Email:    apiUser.Email,
+		FullName: apiUser.Name,
+		Role:     apiUser.Role,
+		IsActive: apiUser.Active,
+	}, nil
+}
+
+func (a *userServiceAdapter) ValidateCredentials(ctx context.Context, email, password string) (*models.User, error) {
+	// This would need to be implemented in the API UserService or we need to handle auth differently
+	return nil, errors.New("credential validation not implemented")
 }

@@ -206,10 +206,10 @@ func (e *OCREngine) cleanOCRText(text string) string {
 		"…":  "...",
 		"—":  "-",
 		"–":  "-",
-		""":  "\"",
-		""":  "\"",
-		"'":  "'",
-		"'":  "'",
+		"\u201C": "\"", // Left double quotation mark
+		"\u201D": "\"", // Right double quotation mark
+		"\u2018": "'",  // Left single quotation mark
+		"\u2019": "'",  // Right single quotation mark
 	}
 
 	for old, new := range replacements {

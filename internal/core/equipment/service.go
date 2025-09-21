@@ -73,7 +73,7 @@ func (s *Service) UpdateEquipmentStatus(ctx context.Context, id uuid.UUID, statu
 }
 
 // UpdateEquipmentPosition updates equipment position with confidence level
-func (s *Service) UpdateEquipmentPosition(ctx context.Context, id uuid.UUID, position Position, confidence int) error {
+func (s *Service) UpdateEquipmentPosition(ctx context.Context, id uuid.UUID, position Position, confidence ConfidenceLevel) error {
 	equipment, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err

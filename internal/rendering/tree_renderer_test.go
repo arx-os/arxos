@@ -16,49 +16,57 @@ func TestTreeRenderer_RenderBuilding(t *testing.T) {
 
 	// Create test building
 	building := &bim.Building{
-		ArxosID: "TEST-001",
-		Name:    "Test Building",
-		Address: "123 Test St",
+		Name: "Test Building",
+		Metadata: bim.Metadata{
+			Location: struct {
+				Address string `json:"address,omitempty"`
+				City    string `json:"city,omitempty"`
+				State   string `json:"state,omitempty"`
+				Country string `json:"country,omitempty"`
+			}{
+				Address: "123 Test St",
+			},
+		},
 		Floors: []bim.Floor{
 			{
-				Number: 1,
-				Name:   "Ground Floor",
-				Rooms: []bim.Room{
+				Level: 1,
+				Name:  "Ground Floor",
+				Equipment: []bim.Equipment{
 					{
-						Number: "101",
-						Name:   "Lobby",
-						Equipment: []bim.Equipment{
-							{
-								ID:     "OUTLET-001",
-								Name:   "Main Outlet",
-								Type:   "electrical",
-								Status: "OK",
-								GridX:  10,
-								GridY:  5,
-							},
-							{
-								ID:     "LIGHT-001",
-								Name:   "Entry Light",
-								Type:   "lighting",
-								Status: "FAILED",
-								GridX:  10,
-								GridY:  10,
-							},
+						ID:   "OUTLET-001",
+						Type: "electrical",
+						Location: bim.Location{
+							X:    10,
+							Y:    5,
+							Room: "101",
 						},
+						Status: bim.StatusOperational,
 					},
 					{
-						Number: "102",
-						Name:   "Office",
-						Equipment: []bim.Equipment{
-							{
-								ID:     "PANEL-001",
-								Name:   "Breaker Panel",
-								Type:   "electrical",
-								Status: "OK",
-								GridX:  2,
-								GridY:  2,
-							},
+						ID:   "LIGHT-001",
+						Type: "lighting",
+						Location: bim.Location{
+							X:    10,
+							Y:    10,
+							Room: "101",
 						},
+						Status: bim.StatusFailed,
+					},
+				},
+			},
+			{
+				Level: 2,
+				Name:  "Second Floor",
+				Equipment: []bim.Equipment{
+					{
+						ID:   "PANEL-001",
+						Type: "electrical",
+						Location: bim.Location{
+							X:    2,
+							Y:    2,
+							Room: "Office",
+						},
+						Status: bim.StatusOperational,
 					},
 				},
 			},
@@ -82,13 +90,12 @@ func TestTreeRenderer_RenderBuilding(t *testing.T) {
 		assert.Contains(t, output, "Building: Test Building")
 		assert.Contains(t, output, "Address: 123 Test St")
 		assert.Contains(t, output, "Floor 1: Ground Floor")
-		assert.Contains(t, output, "Room 101: Lobby")
 		assert.Contains(t, output, "OUTLET-001")
 		assert.Contains(t, output, "LIGHT-001")
 		assert.Contains(t, output, "[FAILED]")
 
 		// Admin sees coordinates
-		assert.Contains(t, output, "@(10,5)")
+		assert.Contains(t, output, "@(10.0,5.0)")
 	})
 
 	// Test with viewer user (no coordinates)
@@ -126,8 +133,8 @@ func TestTreeRenderer_RenderBuilding(t *testing.T) {
 		assert.NotEmpty(t, output)
 
 		// Technician sees coordinates
-		assert.Contains(t, output, "@(10,5)")
-		assert.Contains(t, output, "@(10,10)")
+		assert.Contains(t, output, "@(10.0,5.0)")
+		assert.Contains(t, output, "@(10.0,10.0)")
 	})
 }
 
@@ -162,9 +169,8 @@ func TestTreeRenderer_EmptyBuilding(t *testing.T) {
 	renderer := NewTreeRenderer()
 
 	building := &bim.Building{
-		ArxosID: "EMPTY-001",
-		Name:    "Empty Building",
-		Floors:  []bim.Floor{},
+		Name:   "Empty Building",
+		Floors: []bim.Floor{},
 	}
 
 	adminUser := &user.User{
@@ -184,20 +190,14 @@ func TestTreeRenderer_TreeFormatting(t *testing.T) {
 
 	// Create a building with specific structure to test tree formatting
 	building := &bim.Building{
-		ArxosID: "FORMAT-001",
-		Name:    "Format Test",
+		Name: "Format Test",
 		Floors: []bim.Floor{
 			{
-				Number: 1,
-				Name:   "First",
-				Rooms: []bim.Room{
-					{
-						Number: "101",
-						Equipment: []bim.Equipment{
-							{ID: "EQ1", Type: "sensor"},
-							{ID: "EQ2", Type: "sensor"},
-						},
-					},
+				Level: 1,
+				Name:  "First",
+				Equipment: []bim.Equipment{
+					{ID: "EQ1", Type: "sensor", Location: bim.Location{Room: "101"}},
+					{ID: "EQ2", Type: "sensor", Location: bim.Location{Room: "101"}},
 				},
 			},
 		},

@@ -153,18 +153,14 @@ func (m *MockDB) GetOrganizationMember(ctx context.Context, orgID, userID string
 
 func createTestUser(email string, password string, active bool) *models.User {
 	now := time.Now()
-	status := models.UserStatusActive
-	if !active {
-		status = models.UserStatusInactive
-	}
 	return &models.User{
 		ID:           "test-user-id",
 		Email:        email,
 		FullName:     "Test User", // Changed from Name to FullName
 		PasswordHash: password,    // In tests, we'll use plain password for simplicity
-		Status:       status,
-		CreatedAt:    &now, // Changed to pointer
-		UpdatedAt:    &now, // Changed to pointer
+		IsActive:     active,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 }
 

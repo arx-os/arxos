@@ -124,7 +124,7 @@ func TestEquipment_Validate(t *testing.T) {
 			name: "invalid confidence",
 			setup: func() *Equipment {
 				eq := NewEquipment(uuid.New(), "path", "name", "type")
-				eq.Confidence = 99
+				eq.Confidence = ConfidenceLevel(99)
 				return eq
 			},
 			wantErr: true,

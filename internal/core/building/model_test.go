@@ -29,7 +29,8 @@ func TestBuilding_SetOrigin(t *testing.T) {
 	alt := 10.5
 	rotation := 45.0
 
-	bldg.SetOrigin(lat, lon, alt, rotation)
+	bldg.SetOrigin(lat, lon, alt)
+	bldg.Rotation = rotation
 
 	assert.NotNil(t, bldg.Origin)
 	assert.Equal(t, lat, bldg.Origin.Latitude)
@@ -45,7 +46,7 @@ func TestBuilding_HasOrigin(t *testing.T) {
 	assert.False(t, bldg.HasOrigin())
 
 	// Set origin
-	bldg.SetOrigin(37.7749, -122.4194, 0, 0)
+	bldg.SetOrigin(37.7749, -122.4194, 0)
 	assert.True(t, bldg.HasOrigin())
 }
 

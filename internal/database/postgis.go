@@ -30,9 +30,10 @@ type PostGISConfig struct {
 
 // PostGISDB implements spatial database operations using PostGIS
 type PostGISDB struct {
-	db      *sql.DB
-	config  PostGISConfig
-	connStr string // Optional connection string override
+	db               *sql.DB
+	config           PostGISConfig
+	connStr          string // Optional connection string override
+	spatialOptimizer *SpatialIndexOptimizer
 }
 
 // NewPostGISDB creates a new PostGIS database connection
@@ -149,6 +150,28 @@ func (p *PostGISDB) initPostGIS(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// InitializeSpatialOptimizer initializes the spatial index optimizer
+func (p *PostGISDB) InitializeSpatialOptimizer(ctx context.Context) error {
+	if p.spatialOptimizer == nil {
+		p.spatialOptimizer = NewSpatialIndexOptimizer(p)
+	}
+
+	// Run initial optimization
+	if err := p.spatialOptimizer.OptimizeIndices(ctx); err != nil {
+		return fmt.Errorf("failed to optimize spatial indices: %w", err)
+	}
+
+	return nil
+}
+
+// GetSpatialOptimizer returns the spatial index optimizer
+func (p *PostGISDB) GetSpatialOptimizer() *SpatialIndexOptimizer {
+	if p.spatialOptimizer == nil {
+		p.spatialOptimizer = NewSpatialIndexOptimizer(p)
+	}
+	return p.spatialOptimizer
 }
 
 // Close closes the database connection

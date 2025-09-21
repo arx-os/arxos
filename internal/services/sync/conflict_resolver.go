@@ -19,6 +19,14 @@ type ConflictResolver struct {
 	resolutionDB ConflictResolutionStore
 }
 
+// NewConflictResolver creates a new conflict resolver
+func NewConflictResolver(db database.DB, resolutionDB ConflictResolutionStore) *ConflictResolver {
+	return &ConflictResolver{
+		db:           db,
+		resolutionDB: resolutionDB,
+	}
+}
+
 // ConflictResolutionStore stores conflict resolutions
 type ConflictResolutionStore interface {
 	SaveConflict(ctx context.Context, conflict *syncpkg.Conflict) error
@@ -59,14 +67,6 @@ const (
 	ConflictTypeSchema    ConflictType = "schema"     // Schema mismatch
 	ConflictTypeVersion   ConflictType = "version"    // Version conflict
 )
-
-// NewConflictResolver creates a new conflict resolver
-func NewConflictResolver(db database.DB, resolutionDB ConflictResolutionStore) *ConflictResolver {
-	return &ConflictResolver{
-		db:           db,
-		resolutionDB: resolutionDB,
-	}
-}
 
 // DetectConflicts detects conflicts between local and remote changes
 func (cr *ConflictResolver) DetectConflicts(ctx context.Context, localChanges, remoteChanges []syncpkg.Change) ([]*syncpkg.Conflict, error) {

@@ -51,7 +51,13 @@ func NewBuilding(arxosID, name string) *Building {
 // Validate checks if the building data is valid
 func (b *Building) Validate() error {
 	if b.ArxosID == "" {
-		return errors.New("arxos_id is required")
+		return errors.New("ArxosID is required")
+	}
+	// Validate ArxosID format (alphanumeric and hyphens only)
+	for _, r := range b.ArxosID {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+			return errors.New("ArxosID contains invalid characters")
+		}
 	}
 	if b.Name == "" {
 		return errors.New("name is required")
@@ -69,6 +75,16 @@ func (b *Building) SetOrigin(lat, lon, alt float64) {
 		Longitude: lon,
 		Altitude:  alt,
 	}
+	b.UpdatedAt = time.Now()
+}
+
+// HasOrigin returns true if the building has an origin point set
+func (b *Building) HasOrigin() bool {
+	return b.Origin.Latitude != 0 || b.Origin.Longitude != 0
+}
+
+// UpdateTimestamp updates the building's UpdatedAt timestamp
+func (b *Building) UpdateTimestamp() {
 	b.UpdatedAt = time.Now()
 }
 

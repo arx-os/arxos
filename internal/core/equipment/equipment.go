@@ -16,13 +16,41 @@ var (
 	ErrDuplicate = errors.New("equipment already exists")
 )
 
+// ConfidenceLevel represents confidence in position data
+type ConfidenceLevel int
+
 // Confidence levels for spatial data
 const (
-	ConfidenceEstimated = 0 // Derived from PDF/IFC without verification
-	ConfidenceLow       = 1 // Automated detection
-	ConfidenceMedium    = 2 // Partial verification
-	ConfidenceHigh      = 3 // LiDAR or AR verified
+	ConfidenceUnknown   ConfidenceLevel = -1 // Unknown confidence level
+	ConfidenceEstimated ConfidenceLevel = 0  // Derived from PDF/IFC without verification
+	ConfidenceLow       ConfidenceLevel = 1  // Automated detection
+	ConfidenceMedium    ConfidenceLevel = 2  // Partial verification
+	ConfidenceHigh      ConfidenceLevel = 3  // LiDAR or AR verified
+	ConfidenceScanned   ConfidenceLevel = 4  // Scanned data
+	ConfidenceSurveyed  ConfidenceLevel = 5  // Professionally surveyed
 )
+
+// String returns the string representation of confidence level
+func (c ConfidenceLevel) String() string {
+	switch c {
+	case ConfidenceUnknown:
+		return "unknown"
+	case ConfidenceEstimated:
+		return "estimated"
+	case ConfidenceLow:
+		return "low"
+	case ConfidenceMedium:
+		return "medium"
+	case ConfidenceHigh:
+		return "high"
+	case ConfidenceScanned:
+		return "scanned"
+	case ConfidenceSurveyed:
+		return "surveyed"
+	default:
+		return "unknown"
+	}
+}
 
 // Equipment status values
 const (
@@ -41,6 +69,22 @@ type Position struct {
 	Z float64 `json:"z"` // Altitude or local Z
 }
 
+// IsValid checks if position coordinates are valid
+func (p *Position) IsValid() bool {
+	if p == nil {
+		return false
+	}
+	// Check for reasonable coordinate ranges
+	// Longitude: -180 to 180, Latitude: -90 to 90
+	if p.X < -180 || p.X > 180 {
+		return false
+	}
+	if p.Y < -90 || p.Y > 90 {
+		return false
+	}
+	return true
+}
+
 // Equipment represents equipment entity in the domain
 type Equipment struct {
 	ID           uuid.UUID              `json:"id" db:"id"`
@@ -50,7 +94,7 @@ type Equipment struct {
 	Type         string                 `json:"type" db:"type"`
 	Position     *Position              `json:"position,omitempty"`
 	PositionLocal *Position             `json:"position_local,omitempty"`
-	Confidence   int                    `json:"confidence" db:"confidence"`
+	Confidence   ConfidenceLevel        `json:"confidence" db:"confidence"`
 	Status       string                 `json:"status" db:"status"`
 	Metadata     map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
 	CreatedAt    time.Time              `json:"created_at" db:"created_at"`
@@ -65,7 +109,7 @@ func NewEquipment(buildingID uuid.UUID, path, name, equipType string) *Equipment
 		Path:       path,
 		Name:       name,
 		Type:       equipType,
-		Confidence: ConfidenceEstimated,
+		Confidence: ConfidenceUnknown,
 		Status:     StatusUnknown,
 		Metadata:   make(map[string]interface{}),
 		CreatedAt:  time.Now(),
@@ -79,7 +123,7 @@ func (e *Equipment) Validate() error {
 		return ErrInvalidID
 	}
 	if e.BuildingID == uuid.Nil {
-		return errors.New("building_id is required")
+		return errors.New("building ID is required")
 	}
 	if e.Path == "" {
 		return errors.New("path is required")
@@ -90,10 +134,44 @@ func (e *Equipment) Validate() error {
 	if e.Type == "" {
 		return errors.New("type is required")
 	}
-	if e.Confidence < 0 || e.Confidence > 3 {
-		return errors.New("confidence must be between 0 and 3")
+	// Validate status
+	validStatuses := []string{StatusUnknown, StatusOperational, StatusDegraded, StatusFailed, StatusMaintenance, StatusOffline}
+	isValidStatus := false
+	for _, status := range validStatuses {
+		if e.Status == status {
+			isValidStatus = true
+			break
+		}
+	}
+	if !isValidStatus {
+		return errors.New("invalid status")
+	}
+	if e.Confidence < ConfidenceUnknown || e.Confidence > ConfidenceSurveyed {
+		return errors.New("invalid confidence level")
 	}
 	return nil
+}
+
+// SetPosition sets the position and confidence for equipment
+func (e *Equipment) SetPosition(pos *Position, confidence ConfidenceLevel) {
+	e.Position = pos
+	e.Confidence = confidence
+	e.UpdatedAt = time.Now()
+}
+
+// HasPosition returns true if equipment has a position set
+func (e *Equipment) HasPosition() bool {
+	return e.Position != nil
+}
+
+// IsOperational returns true if equipment is operational
+func (e *Equipment) IsOperational() bool {
+	return e.Status == StatusOperational
+}
+
+// NeedsAttention returns true if equipment needs attention
+func (e *Equipment) NeedsAttention() bool {
+	return e.Status == StatusFailed || e.Status == StatusDegraded || e.Status == StatusMaintenance
 }
 
 // Filter represents filtering options for equipment queries

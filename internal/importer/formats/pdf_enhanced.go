@@ -1,15 +1,12 @@
 package formats
 
 import (
-	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"image"
 	"io"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -20,9 +17,6 @@ import (
 	"github.com/arx-os/arxos/internal/core/equipment"
 	"github.com/arx-os/arxos/internal/importer"
 	"github.com/google/uuid"
-	"github.com/pdfcpu/pdfcpu/v3/pkg/api"
-	"github.com/pdfcpu/pdfcpu/v3/pkg/pdfcpu"
-	"github.com/pdfcpu/pdfcpu/v3/pkg/pdfcpu/model"
 )
 
 // EnhancedPDFImporter provides advanced PDF import capabilities
@@ -129,101 +123,6 @@ type ExtractionResult struct {
 	Images   []ExtractedImage
 	Tables   []ExtractedTable
 	Metadata map[string]string
-}
-
-// ExtractedImage represents an extracted image
-type ExtractedImage struct {
-	Data   []byte
-	Format string
-	Page   int
-	Bounds image.Rectangle
-}
-
-// ExtractedTable represents an extracted table
-type ExtractedTable struct {
-	Headers []string
-	Rows    [][]string
-	Page    int
-}
-
-// ProcessedData contains processed extraction results
-type ProcessedData struct {
-	Floors      []ProcessedFloor
-	Equipment   []ProcessedEquipment
-	Spatial     []SpatialData
-	Metadata    map[string]interface{}
-	Diagrams    []ProcessedDiagram
-	TextQuality float64
-}
-
-// ProcessedFloor represents a processed floor
-type ProcessedFloor struct {
-	ID          uuid.UUID
-	Level       int
-	Name        string
-	Rooms       []ProcessedRoom
-	Area        float64
-	Height      float64
-	Boundaries  [][]float64 // Polygon coordinates if extracted from diagram
-	Metadata    map[string]interface{}
-}
-
-// ProcessedRoom represents a processed room
-type ProcessedRoom struct {
-	ID         uuid.UUID
-	Number     string
-	Name       string
-	Type       string
-	Area       float64
-	Boundaries [][]float64 // Polygon coordinates if extracted from diagram
-	Equipment  []string    // Equipment IDs in this room
-	Metadata   map[string]interface{}
-}
-
-// ProcessedEquipment represents processed equipment
-type ProcessedEquipment struct {
-	ID           uuid.UUID
-	Name         string
-	Type         string
-	Location     SpatialLocation
-	Manufacturer string
-	Model        string
-	SerialNumber string
-	InstallDate  *time.Time
-	Metadata     map[string]interface{}
-}
-
-// SpatialLocation represents spatial location data
-type SpatialLocation struct {
-	Floor    string
-	Room     string
-	Position *Position3D
-}
-
-// Position3D represents 3D position
-type Position3D struct {
-	X, Y, Z float64
-}
-
-// SpatialData represents extracted spatial information
-type SpatialData struct {
-	Type       string // "floor_plan", "equipment_location", etc.
-	Geometry   interface{}
-	Properties map[string]interface{}
-}
-
-// ProcessedDiagram represents a processed diagram
-type ProcessedDiagram struct {
-	Type     string // "floor_plan", "equipment_layout", "electrical", etc.
-	Page     int
-	Elements []DiagramElement
-}
-
-// DiagramElement represents an element in a diagram
-type DiagramElement struct {
-	Type       string
-	Geometry   interface{}
-	Properties map[string]interface{}
 }
 
 // extractAll performs parallel extraction of all content types
@@ -351,8 +250,8 @@ func (p *EnhancedPDFImporter) processExtraction(ctx context.Context, extraction 
 // buildModel builds the building model from processed data
 func (p *EnhancedPDFImporter) buildModel(data *ProcessedData, opts importer.ImportOptions) (*building.BuildingModel, error) {
 	buildingID := opts.BuildingID
-	if buildingID == uuid.Nil {
-		buildingID = uuid.New()
+	if buildingID == "" {
+		buildingID = uuid.New().String()
 	}
 
 	buildingName := opts.BuildingName
@@ -369,13 +268,19 @@ func (p *EnhancedPDFImporter) buildModel(data *ProcessedData, opts importer.Impo
 	model := building.NewBuildingModel(bldg)
 	model.ImportMetadata.Format = building.DataSourcePDF
 	model.ImportMetadata.ImportedAt = time.Now()
-	model.ImportMetadata.SourceFile = opts.FileName
+	model.ImportMetadata.SourceFile = ""
+
+	// Parse building ID as UUID
+	buildingUUID, err := uuid.Parse(buildingID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid building ID format: %w", err)
+	}
 
 	// Add floors
 	for _, floor := range data.Floors {
 		f := building.Floor{
 			ID:         floor.ID,
-			BuildingID: buildingID,
+			BuildingID: buildingUUID,
 			Level:      floor.Level,
 			Name:       floor.Name,
 			Metadata:   floor.Metadata,
@@ -397,7 +302,7 @@ func (p *EnhancedPDFImporter) buildModel(data *ProcessedData, opts importer.Impo
 		for _, room := range floor.Rooms {
 			r := building.Room{
 				ID:         room.ID,
-				BuildingID: buildingID,
+				BuildingID: buildingUUID,
 				FloorID:    floor.ID,
 				Name:       room.Name,
 				Type:       room.Type,
@@ -420,7 +325,7 @@ func (p *EnhancedPDFImporter) buildModel(data *ProcessedData, opts importer.Impo
 	for _, eq := range data.Equipment {
 		equip := &equipment.Equipment{
 			ID:         eq.ID,
-			BuildingID: buildingID,
+			BuildingID: buildingUUID,
 			Name:       eq.Name,
 			Type:       eq.Type,
 			Status:     equipment.StatusOperational,

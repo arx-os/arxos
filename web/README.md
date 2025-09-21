@@ -2,14 +2,14 @@
 
 ## Overview
 
-This directory contains the **current HTMX-based web interface** for ArxOS building management. It provides a web-based dashboard for building operations while maintaining the ASCII terminal aesthetic.
+This directory contains the **HTMX-based web interface** for ArxOS building management. It provides a clean, functional interface for building operations - similar to how GitHub provides repository management.
 
 ## Technology Stack
 
 - **HTMX** - Dynamic HTML without JavaScript
-- **Tailwind CSS** - Utility-first CSS framework  
-- **Alpine.js** - Minimal client-side interactivity
+- **Tailwind CSS** - Utility-first CSS framework
 - **Go Templates** - Server-side HTML generation
+- **Pure CSS** - For UI interactions (no JavaScript)
 
 ## Architecture
 
@@ -32,18 +32,18 @@ This directory contains the **current HTMX-based web interface** for ArxOS build
 
 ## Features
 
-### Current HTMX Interface
+### Features
 - **Dashboard**: Building overview with statistics
 - **Building Management**: List, view, and manage buildings
-- **ASCII Floor Plans**: Terminal-style floor plan display in browser
+- **ASCII Floor Plans**: Terminal-style floor plan display
 - **Equipment Search**: Find and manage building equipment
 - **Real-time Updates**: HTMX-powered dynamic content
 
-### Key Benefits
-- **No JavaScript complexity** - Pure HTMX approach
-- **Terminal aesthetic** - ASCII art in web interface
-- **Fast and lightweight** - Server-rendered HTML
-- **Real-time updates** - HTMX handles dynamic content
+### Design Philosophy
+- **No JavaScript** - Pure HTML/CSS/HTMX approach
+- **Functional over fancy** - Like GitHub for buildings
+- **Server-side rendering** - Fast and reliable
+- **Progressive enhancement** - Works everywhere
 
 ## Directory Structure
 
@@ -81,14 +81,14 @@ arx serve
 open http://localhost:8080
 ```
 
-## Future Development
+## Interface Philosophy
 
-This HTMX interface focuses on **building operations and management**. For **advanced 3D visualization**, see the planned Svelte interface in `/frontend/`.
+ArxOS follows the GitHub model - a functional web interface for managing complex data structures. Just as developers use GitHub to manage code repositories, building operators use ArxOS to manage building infrastructure.
 
-### Interface Hierarchy
-1. **Terminal ASCII** - Primary interface for building operations
-2. **HTMX Web** - Web-based building management (this interface)
-3. **Mobile AR** - Field technician precise positioning
-4. **Frontend 3D** - Advanced visualization and analysis (future)
+The interface prioritizes:
+- **Clarity** over complexity
+- **Function** over form
+- **Speed** over effects
+- **Reliability** over novelty
 
-Each interface serves different user needs in the ArxOS ecosystem.
+No JavaScript frameworks, no build steps, no client-side state management. Just clean, server-rendered HTML with HTMX for dynamic updates.

@@ -220,7 +220,7 @@ func TestQueryResult(t *testing.T) {
 			Name:     "Test Equipment",
 			Type:     "outlet",
 			Status:   "operational",
-			Location: &models.Point{X: 10.5, Y: 20.3},
+			Location: &models.Point3D{X: 10.5, Y: 20.3, Z: 3.0},
 			Metadata: map[string]interface{}{
 				"building_name": "Test Building",
 				"floor_level":   3,

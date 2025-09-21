@@ -31,6 +31,14 @@ const (
 
 // Note: Basic Point3D methods (DistanceTo, Add, Sub, Scale, etc.) are defined in pkg/models/spatial.go
 
+// Distance calculates the Euclidean distance between two 3D points
+func Distance(p1, p2 Point3D) float64 {
+	dx := p2.X - p1.X
+	dy := p2.Y - p1.Y
+	dz := p2.Z - p1.Z
+	return math.Sqrt(dx*dx + dy*dy + dz*dz)
+}
+
 // GridCoordinate represents a position in the grid-based system
 type GridCoordinate struct {
 	X     int `json:"x"`

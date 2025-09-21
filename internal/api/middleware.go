@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/arx-os/arxos/internal/common/logger"
+	"github.com/arx-os/arxos/internal/metrics"
 	"github.com/arx-os/arxos/internal/telemetry"
 )
 
@@ -47,7 +48,10 @@ func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 		duration := time.Since(start)
 		logger.Info("[%s] %s %s %d %v", requestID, r.Method, r.URL.Path, wrapped.statusCode, duration)
 
-		// Track metrics
+		// Track metrics using both systems
+		metrics.RecordAPICall(r.URL.Path, r.Method, duration, wrapped.statusCode)
+
+		// Also track with telemetry for backward compatibility
 		telemetry.Metric("api_request_duration_ms", float64(duration.Milliseconds()), map[string]interface{}{
 			"method": r.Method,
 			"path":   r.URL.Path,

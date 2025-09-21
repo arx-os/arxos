@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/arx-os/arxos/internal/spatial"
 	"github.com/lib/pq"
 )

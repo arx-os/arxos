@@ -130,8 +130,10 @@ func (c *LRUCache) removeElement(e *list.Element) {
 
 // MemoryCache provides a simple in-memory cache with expiration
 type MemoryCache struct {
-	data map[string]*memoryCacheItem
-	mu   sync.RWMutex
+	data   map[string]*memoryCacheItem
+	mu     sync.RWMutex
+	stopCh chan struct{}
+	wg     sync.WaitGroup
 }
 
 type memoryCacheItem struct {
@@ -142,9 +144,11 @@ type memoryCacheItem struct {
 // NewMemoryCache creates a new memory cache
 func NewMemoryCache() *MemoryCache {
 	cache := &MemoryCache{
-		data: make(map[string]*memoryCacheItem),
+		data:   make(map[string]*memoryCacheItem),
+		stopCh: make(chan struct{}),
 	}
 	// Start cleanup goroutine
+	cache.wg.Add(1)
 	go cache.cleanupExpired()
 	return cache
 }
@@ -200,15 +204,30 @@ func (c *MemoryCache) Size() int {
 
 // cleanupExpired removes expired items periodically
 func (c *MemoryCache) cleanupExpired() {
+	defer c.wg.Done()
 	ticker := time.NewTicker(1 * time.Minute)
-	for range ticker.C {
-		now := time.Now()
-		c.mu.Lock()
-		for key, item := range c.data {
-			if now.After(item.expireTime) {
-				delete(c.data, key)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-c.stopCh:
+			return
+		case <-ticker.C:
+			now := time.Now()
+			c.mu.Lock()
+			for key, item := range c.data {
+				if now.After(item.expireTime) {
+					delete(c.data, key)
+				}
 			}
+			c.mu.Unlock()
 		}
-		c.mu.Unlock()
 	}
+}
+
+// Close gracefully shuts down the cache and its cleanup goroutine
+func (c *MemoryCache) Close() error {
+	close(c.stopCh)
+	c.wg.Wait()
+	return nil
 }

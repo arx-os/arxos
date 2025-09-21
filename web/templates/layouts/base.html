@@ -15,11 +15,29 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Alpine.js for minimal client-side interactivity -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <!-- Custom Styles -->
     <style>
+        /* Native dropdown using details/summary */
+        details.dropdown summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.dropdown[open] > div {
+            animation: slideDown 0.2s ease-in;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         /* ASCII floor plan styling */
         .ascii-floor-plan {
             font-family: 'Courier New', monospace;
@@ -112,38 +130,35 @@
                     </div>
                     
                     <!-- User Menu -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" 
-                                class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            <span class="sr-only">Open user menu</span>
-                            <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-                                {{if .User}}{{.User.Initials}}{{else}}?{{end}}
+                    <div class="relative">
+                        <details class="dropdown">
+                            <summary class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer">
+                                <span class="sr-only">Open user menu</span>
+                                <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                                    {{if .User}}{{.User.Initials}}{{else}}?{{end}}
+                                </div>
+                            </summary>
+                            <div class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5">
+                                {{if .User}}
+                                    <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Profile
+                                    </a>
+                                    <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Settings
+                                    </a>
+                                    <hr class="my-1">
+                                    <button hx-post="/logout"
+                                            hx-redirect="/"
+                                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Sign out
+                                    </button>
+                                {{else}}
+                                    <a href="/login" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        Sign in
+                                    </a>
+                                {{end}}
                             </div>
-                        </button>
-                        
-                        <div x-show="open" 
-                             @click.away="open = false"
-                             x-transition
-                             class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5">
-                            {{if .User}}
-                                <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                    Profile
-                                </a>
-                                <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                    Settings
-                                </a>
-                                <hr class="my-1">
-                                <button hx-post="/logout"
-                                        hx-redirect="/"
-                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                    Sign out
-                                </button>
-                            {{else}}
-                                <a href="/login" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                    Sign in
-                                </a>
-                            {{end}}
-                        </div>
+                        </details>
                     </div>
                 </div>
             </div>

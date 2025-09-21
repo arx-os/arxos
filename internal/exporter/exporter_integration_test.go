@@ -292,7 +292,7 @@ func createTestFloorPlans() []*models.FloorPlan {
 					Installed:  &installDate,
 					Maintained: &maintDate,
 					Notes:      "Regular maintenance required",
-					Location:   &models.Point{X: 5.0, Y: 5.0},
+					Location:   &models.Point3D{X: 5.0, Y: 5.0, Z: 0.0},
 				},
 				{
 					ID:     "EQ-002",

@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 
+	appmw "github.com/arx-os/arxos/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -15,6 +16,7 @@ func NewRouter(h *Handler) chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
+	r.Use(appmw.RequestID)
 
 	// Static files served from web/ directory
 	// Note: Static files are handled by the template system or file server

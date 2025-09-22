@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/arx-os/arxos/internal/api"
@@ -40,7 +41,7 @@ func NewHandler(services *api.Services) (*Handler, error) {
 	}
 
 	// Initialize authentication service
-	jwtSecret := []byte("your-secret-key") // TODO: Load from config
+	jwtSecret := []byte(getJWTSecret())
 	sessionStore := NewMemorySessionStore(5 * time.Minute)
 	userServiceAdapter := &userServiceAdapter{apiUserService: services.User}
 	authService := NewAuthService(jwtSecret, sessionStore, userServiceAdapter)
@@ -179,6 +180,14 @@ func (h *Handler) HandleBuildingFloorPlan(w http.ResponseWriter, r *http.Request
 func (h *Handler) getUser(r *http.Request) interface{} {
 	// Get user from session/context
 	return nil // Placeholder
+}
+
+// getJWTSecret returns the JWT secret from environment/config with a safe fallback for development.
+func getJWTSecret() string {
+	if val := os.Getenv("ARXOS_JWT_SECRET"); val != "" {
+		return val
+	}
+	return "dev-secret-not-for-production"
 }
 
 func (h *Handler) getTotalEquipmentCount(buildings []*models.FloorPlan) int {

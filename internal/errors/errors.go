@@ -1,4 +1,8 @@
-// Package errors provides standardized error handling for ArxOS
+// Package errors provides standardized error handling for ArxOS.
+//
+// Deprecated: Use the canonical package `pkg/errors` for all new code.
+// This package remains to avoid breaking imports in older code and will be
+// removed after consumers migrate to `pkg/errors`.
 package errors
 
 import (

@@ -2,6 +2,7 @@ package connections
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -12,12 +13,25 @@ import (
 
 // Graph represents the equipment connection graph
 type Graph struct {
-	db database.DB
+	db    database.DB
+	hooks *dbFuncs
 }
 
 // NewGraph creates a new connection graph
 func NewGraph(db database.DB) *Graph {
 	return &Graph{db: db}
+}
+
+// dbFuncs provides optional function hooks for testing to avoid full DB dependencies.
+type dbFuncs struct {
+	getEquipment func(ctx context.Context, id string) (*models.Equipment, error)
+	query        func(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+}
+
+// NewGraphWithHooks creates a Graph that uses provided function hooks (intended for tests).
+func NewGraphWithHooks(getEquipment func(ctx context.Context, id string) (*models.Equipment, error),
+	query func(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)) *Graph {
+	return &Graph{hooks: &dbFuncs{getEquipment: getEquipment, query: query}}
 }
 
 // Connection represents a connection between two pieces of equipment
@@ -171,9 +185,18 @@ func (g *Graph) GetConnections(ctx context.Context, equipmentID string, directio
 		return nil, fmt.Errorf("invalid direction: %s", direction)
 	}
 
-	rows, err := g.db.Query(ctx, query, args...)
+	var rows *sql.Rows
+	var err error
+	if g.hooks != nil && g.hooks.query != nil {
+		rows, err = g.hooks.query(ctx, query, args...)
+	} else {
+		rows, err = g.db.Query(ctx, query, args...)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query connections: %w", err)
+	}
+	if rows == nil {
+		return []Connection{}, nil
 	}
 	defer rows.Close()
 
@@ -232,7 +255,11 @@ func (g *Graph) traceRecursive(ctx context.Context, equipmentID string, directio
 	equipment, ok := equipCache[equipmentID]
 	if !ok {
 		var err error
-		equipment, err = g.db.GetEquipment(ctx, equipmentID)
+		if g.hooks != nil && g.hooks.getEquipment != nil {
+			equipment, err = g.hooks.getEquipment(ctx, equipmentID)
+		} else {
+			equipment, err = g.db.GetEquipment(ctx, equipmentID)
+		}
 		if err != nil {
 			// Equipment might not exist, just skip
 			return nil
@@ -471,12 +498,22 @@ func (g *Graph) dfsHasPath(ctx context.Context, current, target string, visited 
 // HasCycle checks if the graph contains any cycles
 func (g *Graph) HasCycle(ctx context.Context) (bool, []string) {
 	// Get all equipment IDs by querying the database directly
-	rows, err := g.db.Query(ctx, "SELECT DISTINCT from_equipment_id FROM connections UNION SELECT DISTINCT to_equipment_id FROM connections")
+    var rows *sql.Rows
+    var err error
+    query := "SELECT DISTINCT from_equipment_id FROM connections UNION SELECT DISTINCT to_equipment_id FROM connections"
+    if g.hooks != nil && g.hooks.query != nil {
+        rows, err = g.hooks.query(ctx, query)
+    } else {
+        rows, err = g.db.Query(ctx, query)
+    }
 	if err != nil {
 		logger.Error("Failed to get equipment for cycle check: %v", err)
 		return false, nil
 	}
-	defer rows.Close()
+    if rows == nil {
+        return false, nil
+    }
+    defer rows.Close()
 
 	var equipmentIDs []string
 	for rows.Next() {

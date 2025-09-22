@@ -4,13 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+
 	// SQLite driver removed - migration tool deprecated
 	// Users should export data using arx export before upgrading
+	"github.com/arx-os/arxos/internal/common/logger"
 	_ "github.com/lib/pq"
 )
 
@@ -33,12 +34,12 @@ type Config struct {
 
 // MigrationStats tracks migration statistics
 type MigrationStats struct {
-	BuildingsMigrated  int
-	EquipmentMigrated  int
-	UsersMigrated      int
-	ErrorCount         int
-	StartTime          time.Time
-	EndTime            time.Time
+	BuildingsMigrated int
+	EquipmentMigrated int
+	UsersMigrated     int
+	ErrorCount        int
+	StartTime         time.Time
+	EndTime           time.Time
 }
 
 // NewMigrator creates a new migrator instance
@@ -94,7 +95,7 @@ func (m *Migrator) Close() error {
 
 // Migrate performs the complete migration
 func (m *Migrator) Migrate(ctx context.Context) error {
-	log.Println("Starting SQLite to PostGIS migration...")
+	logger.Info("Starting SQLite to PostGIS migration...")
 
 	// Start transaction for PostGIS
 	tx, err := m.postgisDB.BeginTxx(ctx, nil)
@@ -131,7 +132,7 @@ func (m *Migrator) Migrate(ctx context.Context) error {
 
 // migrateBuildings migrates building data
 func (m *Migrator) migrateBuildings(ctx context.Context, tx *sqlx.Tx) error {
-	log.Println("Migrating buildings...")
+	logger.Info("Migrating buildings...")
 
 	// Query SQLite buildings
 	rows, err := m.sqliteDB.QueryContext(ctx, `
@@ -182,7 +183,7 @@ func (m *Migrator) migrateBuildings(ctx context.Context, tx *sqlx.Tx) error {
 			&createdAt, &updatedAt)
 		if err != nil {
 			m.stats.ErrorCount++
-			log.Printf("Error scanning building: %v", err)
+			logger.Error("Error scanning building: %v", err)
 			continue
 		}
 
@@ -202,7 +203,7 @@ func (m *Migrator) migrateBuildings(ctx context.Context, tx *sqlx.Tx) error {
 			)
 			if err != nil {
 				m.stats.ErrorCount++
-				log.Printf("Error inserting building %s: %v", arxosID, err)
+				logger.Error("Error inserting building %s: %v", arxosID, err)
 				continue
 			}
 		}
@@ -211,17 +212,17 @@ func (m *Migrator) migrateBuildings(ctx context.Context, tx *sqlx.Tx) error {
 		m.stats.BuildingsMigrated++
 
 		if m.config.Verbose && count%10 == 0 {
-			log.Printf("Migrated %d buildings...", count)
+			logger.Info("Migrated %d buildings...", count)
 		}
 	}
 
-	log.Printf("Migrated %d buildings", m.stats.BuildingsMigrated)
+	logger.Info("Migrated %d buildings", m.stats.BuildingsMigrated)
 	return nil
 }
 
 // migrateEquipment migrates equipment data
 func (m *Migrator) migrateEquipment(ctx context.Context, tx *sqlx.Tx) error {
-	log.Println("Migrating equipment...")
+	logger.Info("Migrating equipment...")
 
 	// Query SQLite equipment
 	rows, err := m.sqliteDB.QueryContext(ctx, `
@@ -266,18 +267,18 @@ func (m *Migrator) migrateEquipment(ctx context.Context, tx *sqlx.Tx) error {
 	count := 0
 	for rows.Next() {
 		var (
-			id          string
-			buildingID  string
-			path        string
-			name        string
-			eqType      string
-			xCoord      sql.NullFloat64
-			yCoord      sql.NullFloat64
-			zCoord      sql.NullFloat64
-			status      sql.NullString
-			confidence  sql.NullInt64
-			createdAt   time.Time
-			updatedAt   time.Time
+			id         string
+			buildingID string
+			path       string
+			name       string
+			eqType     string
+			xCoord     sql.NullFloat64
+			yCoord     sql.NullFloat64
+			zCoord     sql.NullFloat64
+			status     sql.NullString
+			confidence sql.NullInt64
+			createdAt  time.Time
+			updatedAt  time.Time
 		)
 
 		err := rows.Scan(&id, &buildingID, &path, &name, &eqType,
@@ -286,7 +287,7 @@ func (m *Migrator) migrateEquipment(ctx context.Context, tx *sqlx.Tx) error {
 			&createdAt, &updatedAt)
 		if err != nil {
 			m.stats.ErrorCount++
-			log.Printf("Error scanning equipment: %v", err)
+			logger.Error("Error scanning equipment: %v", err)
 			continue
 		}
 
@@ -299,7 +300,7 @@ func (m *Migrator) migrateEquipment(ctx context.Context, tx *sqlx.Tx) error {
 		bldgID, err := uuid.Parse(buildingID)
 		if err != nil {
 			m.stats.ErrorCount++
-			log.Printf("Invalid building ID for equipment %s: %v", name, err)
+			logger.Error("Invalid building ID for equipment %s: %v", name, err)
 			continue
 		}
 
@@ -330,7 +331,7 @@ func (m *Migrator) migrateEquipment(ctx context.Context, tx *sqlx.Tx) error {
 			)
 			if err != nil {
 				m.stats.ErrorCount++
-				log.Printf("Error inserting equipment %s: %v", name, err)
+				logger.Error("Error inserting equipment %s: %v", name, err)
 				continue
 			}
 		}
@@ -339,17 +340,17 @@ func (m *Migrator) migrateEquipment(ctx context.Context, tx *sqlx.Tx) error {
 		m.stats.EquipmentMigrated++
 
 		if m.config.Verbose && count%100 == 0 {
-			log.Printf("Migrated %d equipment items...", count)
+			logger.Info("Migrated %d equipment items...", count)
 		}
 	}
 
-	log.Printf("Migrated %d equipment items", m.stats.EquipmentMigrated)
+	logger.Info("Migrated %d equipment items", m.stats.EquipmentMigrated)
 	return nil
 }
 
 // migrateUsers migrates user data
 func (m *Migrator) migrateUsers(ctx context.Context, tx *sqlx.Tx) error {
-	log.Println("Migrating users...")
+	logger.Info("Migrating users...")
 
 	// Query SQLite users
 	rows, err := m.sqliteDB.QueryContext(ctx, `
@@ -360,7 +361,7 @@ func (m *Migrator) migrateUsers(ctx context.Context, tx *sqlx.Tx) error {
 	`)
 	if err != nil {
 		// Users table might not exist in SQLite
-		log.Printf("Skipping users migration: %v", err)
+		logger.Warn("Skipping users migration: %v", err)
 		return nil
 	}
 	defer rows.Close()
@@ -399,7 +400,7 @@ func (m *Migrator) migrateUsers(ctx context.Context, tx *sqlx.Tx) error {
 			&createdAt, &updatedAt)
 		if err != nil {
 			m.stats.ErrorCount++
-			log.Printf("Error scanning user: %v", err)
+			logger.Error("Error scanning user: %v", err)
 			continue
 		}
 
@@ -418,7 +419,7 @@ func (m *Migrator) migrateUsers(ctx context.Context, tx *sqlx.Tx) error {
 			)
 			if err != nil {
 				m.stats.ErrorCount++
-				log.Printf("Error inserting user %s: %v", email, err)
+				logger.Error("Error inserting user %s: %v", email, err)
 				continue
 			}
 		}
@@ -427,7 +428,7 @@ func (m *Migrator) migrateUsers(ctx context.Context, tx *sqlx.Tx) error {
 		m.stats.UsersMigrated++
 	}
 
-	log.Printf("Migrated %d users", m.stats.UsersMigrated)
+	logger.Info("Migrated %d users", m.stats.UsersMigrated)
 	return nil
 }
 

@@ -4,11 +4,11 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/arx-os/arxos/internal/common/logger"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -91,7 +91,7 @@ func (m *Manager) loadMigrations() error {
 
 		var version int
 		if _, err := fmt.Sscanf(parts[0], "%03d", &version); err != nil {
-			log.Printf("Skipping file %s: invalid version format", name)
+			logger.Warn("Skipping file %s: invalid version format", name)
 			continue
 		}
 
@@ -139,11 +139,11 @@ func (m *Manager) Up(ctx context.Context) error {
 
 	pending := m.getPendingMigrations(applied)
 	if len(pending) == 0 {
-		log.Println("No pending migrations")
+		logger.Info("No pending migrations")
 		return nil
 	}
 
-	log.Printf("Found %d pending migrations", len(pending))
+	logger.Info("Found %d pending migrations", len(pending))
 
 	for _, mig := range pending {
 		if err := m.runMigration(ctx, mig, true); err != nil {
@@ -162,7 +162,7 @@ func (m *Manager) Down(ctx context.Context) error {
 	}
 
 	if len(applied) == 0 {
-		log.Println("No migrations to roll back")
+		logger.Info("No migrations to roll back")
 		return nil
 	}
 
@@ -201,10 +201,10 @@ func (m *Manager) runMigration(ctx context.Context, mig Migration, up bool) erro
 	var sqlContent string
 	if up {
 		sqlContent = mig.UpSQL
-		log.Printf("Applying migration %d: %s", mig.Version, mig.Name)
+		logger.Info("Applying migration %d: %s", mig.Version, mig.Name)
 	} else {
 		sqlContent = mig.DownSQL
-		log.Printf("Rolling back migration %d: %s", mig.Version, mig.Name)
+		logger.Info("Rolling back migration %d: %s", mig.Version, mig.Name)
 	}
 
 	if sqlContent == "" {
@@ -234,9 +234,9 @@ func (m *Manager) runMigration(ctx context.Context, mig Migration, up bool) erro
 	}
 
 	if up {
-		log.Printf("Successfully applied migration %d", mig.Version)
+		logger.Info("Successfully applied migration %d", mig.Version)
 	} else {
-		log.Printf("Successfully rolled back migration %d", mig.Version)
+		logger.Info("Successfully rolled back migration %d", mig.Version)
 	}
 
 	return nil
@@ -304,7 +304,7 @@ func (m *Manager) Status() error {
 
 // Reset drops all tables and reruns all migrations
 func (m *Manager) Reset(ctx context.Context) error {
-	log.Println("WARNING: Resetting database - all data will be lost!")
+	logger.Warn("WARNING: Resetting database - all data will be lost!")
 
 	// Drop all tables
 	query := `
@@ -320,7 +320,7 @@ func (m *Manager) Reset(ctx context.Context) error {
 	}
 
 	for _, table := range tables {
-		log.Printf("Dropping table %s", table)
+		logger.Info("Dropping table %s", table)
 		if _, err := m.db.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", table)); err != nil {
 			return fmt.Errorf("failed to drop table %s: %w", table, err)
 		}
@@ -355,6 +355,6 @@ func (m *Manager) Validate() error {
 		}
 	}
 
-	log.Println("All applied migrations are valid")
+	logger.Info("All applied migrations are valid")
 	return nil
 }

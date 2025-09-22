@@ -3,35 +3,50 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21-blue.svg)](https://go.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-ArxOS is a building information management system that treats buildings like code repositories. It provides hierarchical equipment tracking, role-based access control, and seamless integration with BIM tools through a simple `.bim.txt` format.
+ArxOS is a next-generation Building Operating System (BuildingOps) that enables complete control of physical building systems through three unified interfaces: CLI commands, natural language, and visual workflows. It treats buildings like code repositories where every component has a path, and that path can control physical hardware - from sensors to actuators.
 
 ## 🎯 Core Features
 
-**Hierarchical Equipment Management**: Every piece of equipment has a clear path
+**BuildingOps Platform**: Three ways to control your building
+- **CLI**: `arx set /B1/3/HVAC/DAMPER-01 position:50`
+- **Natural Language**: `arx do "make conference room cooler"`
+- **Visual Workflows**: Drag-and-drop n8n automation
+
+**Bidirectional Physical Control**: Not just monitoring, actual control
+```
+Path Command → Gateway → Hardware → Physical Action
+/B1/3/LIGHTS/ZONE-A brightness:75 → ESP32 → PWM → Lights dim to 75%
+/B1/3/DOORS/MAIN state:unlocked → ESP32 → Relay → Door unlocks
+/B1/3/HVAC/DAMPER-01 position:50 → ESP32 → Servo → Damper opens 50%
+```
+
+**Hierarchical Path System**: Every component has an address
 ```
 Building: Main Office
 ├── Floor 1: Ground Floor
 │   ├── Room 101: Lobby
-│   │   ├── OUTLET-001: Main Outlet [OK]
-│   │   └── LIGHT-001: Entry Light [FAILED]
+│   │   ├── SENSORS/TEMP-01 [72°F]
+│   │   ├── LIGHTS/ZONE-A [ON: 75%]
+│   │   └── HVAC/DAMPER-01 [POSITION: 50%]
 │   └── Room 102: Office
-│       └── PANEL-001: Breaker Panel [OK]
+│       ├── DOORS/MAIN [LOCKED]
+│       └── ENERGY/METER-01 [15.2 kW]
 └── Floor 2: Second Floor
     └── Room 201: Conference
-        └── OUTLET-003: Wall Outlet [UNKNOWN]
+        └── SCENES/presentation [READY]
 ```
 
-**Role-Based Access Control**: Like Active Directory for buildings
-- **Admin**: Full control over all buildings and equipment
-- **Manager**: Manage assigned buildings
-- **Technician**: Update equipment status, view coordinates
-- **Viewer**: Read-only access
+**Open Hardware Integration**: Build your own devices
+- TinyGo edge devices ($3-15 ESP32/RP2040)
+- Pure Go gateways (Raspberry Pi)
+- No C required - 100% Go family
+- Pre-built templates for common sensors/actuators
 
-**PostGIS Spatial Database**: Professional-grade spatial operations
-- WGS84 coordinate system (SRID 4326)
-- Millimeter precision tracking
-- Spatial queries (nearby, within bounds, on floor)
-- Building origin and rotation support
+**Workflow Automation (n8n)**: Visual building automation
+- Drag-and-drop physical control
+- Integrate with 400+ services
+- CMMS/CAFM workflows included
+- Real-time bidirectional control
 
 ## 🚀 Quick Start
 
@@ -74,17 +89,32 @@ arx init
 ### Basic Usage
 
 ```bash
-# Import building data
-arx import building.bim.txt --building-id MAIN-OFFICE
+# Query operations (read sensors, check status)
+arx get /B1/3/SENSORS/TEMP-01
+arx query /B1/*/SENSORS/* --above 75
+arx watch /B1/3/ENERGY/* --interval 5s
 
-# Query equipment
-arx query --building MAIN-OFFICE --floor 1
-arx query --building MAIN-OFFICE --status failed
+# Control operations (actuate physical devices)
+arx set /B1/3/LIGHTS/ZONE-A brightness:75
+arx set /B1/3/HVAC/DAMPER-01 position:50
+arx set /B1/*/LIGHTS/* state:off
 
-# Export data
-arx export MAIN-OFFICE --format bim > building.bim.txt
-arx export MAIN-OFFICE --format json > building.json
-arx export MAIN-OFFICE --format csv > equipment.csv
+# Natural language commands
+arx do "turn off all lights on floor 3"
+arx do "set conference room to presentation mode"
+arx do "make it cooler in here"
+
+# Scene control
+arx scene /B1/3/CONF-301 presentation
+arx scene /B1/* night-mode
+
+# Workflow automation
+arx workflow trigger emergency-shutdown
+arx workflow run comfort-optimization
+
+# Import/Export building data
+arx import building.bim.txt --building-id B1
+arx export B1 --format json > building.json
 ```
 
 ## 📁 Project Structure
@@ -207,10 +237,16 @@ POSTGIS_PASSWORD=secret go test -tags=integration ./...
 
 ## 📚 Documentation
 
-- [API Documentation](docs/api.md)
+### Core Documentation
+- [BuildingOps Platform](BUILDINGOPS.md) - Complete control interface guide
+- [Hardware Integration](hardware.md) - Build your own IoT devices
+- [n8n Workflow Automation](n8n.md) - Visual automation platform
+- [API Documentation](docs/api.md) - REST API reference
+
+### Development
 - [Architecture Guide](docs/architecture.md)
-- [Development Guide](DEVELOPMENT_PLAN.md)
 - [Contributing](CONTRIBUTING.md)
+- [Development Guide](DEVELOPMENT_PLAN.md)
 
 ## 📄 License
 

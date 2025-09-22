@@ -206,16 +206,20 @@ func (g *Graph) Trace(ctx context.Context, equipmentID string, direction Directi
 	visited := make(map[string]bool)
 	results := []TraceResult{}
 
+	// Per-trace caches to avoid repeated DB hits
+	connCache := make(map[string][]Connection)
+	equipCache := make(map[string]*models.Equipment)
+
 	// Start tracing
-	if err := g.traceRecursive(ctx, equipmentID, direction, 0, maxDepth, visited, &results, []string{}); err != nil {
+	if err := g.traceRecursive(ctx, equipmentID, direction, 0, maxDepth, visited, &results, []string{}, connCache, equipCache); err != nil {
 		return nil, err
 	}
 
 	return results, nil
 }
 
-// traceRecursive performs recursive tracing
-func (g *Graph) traceRecursive(ctx context.Context, equipmentID string, direction Direction, level, maxDepth int, visited map[string]bool, results *[]TraceResult, path []string) error {
+// traceRecursive performs recursive tracing with simple per-trace caches
+func (g *Graph) traceRecursive(ctx context.Context, equipmentID string, direction Direction, level, maxDepth int, visited map[string]bool, results *[]TraceResult, path []string, connCache map[string][]Connection, equipCache map[string]*models.Equipment) error {
 	// Check if already visited or max depth reached
 	if visited[equipmentID] || level > maxDepth {
 		return nil
@@ -225,16 +229,26 @@ func (g *Graph) traceRecursive(ctx context.Context, equipmentID string, directio
 	currentPath := append(path, equipmentID)
 
 	// Get equipment details
-	equipment, err := g.db.GetEquipment(ctx, equipmentID)
-	if err != nil {
-		// Equipment might not exist, just skip
-		return nil
+	equipment, ok := equipCache[equipmentID]
+	if !ok {
+		var err error
+		equipment, err = g.db.GetEquipment(ctx, equipmentID)
+		if err != nil {
+			// Equipment might not exist, just skip
+			return nil
+		}
+		equipCache[equipmentID] = equipment
 	}
 
 	// Get connections
-	connections, err := g.GetConnections(ctx, equipmentID, direction)
-	if err != nil {
-		return err
+	connections, ok := connCache[equipmentID+"|"+string(direction)]
+	if !ok {
+		var err error
+		connections, err = g.GetConnections(ctx, equipmentID, direction)
+		if err != nil {
+			return err
+		}
+		connCache[equipmentID+"|"+string(direction)] = connections
 	}
 
 	// Add to results
@@ -261,7 +275,7 @@ func (g *Graph) traceRecursive(ctx context.Context, equipmentID string, directio
 		}
 
 		if nextID != "" && nextID != equipmentID {
-			if err := g.traceRecursive(ctx, nextID, direction, level+1, maxDepth, visited, results, currentPath); err != nil {
+			if err := g.traceRecursive(ctx, nextID, direction, level+1, maxDepth, visited, results, currentPath, connCache, equipCache); err != nil {
 				return err
 			}
 		}

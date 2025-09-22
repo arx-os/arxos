@@ -166,6 +166,21 @@ func (c *StreamingPDFConverter) ConvertToBIMStreaming(ctx context.Context, input
 	c.metrics.RoomsExtracted = len(rooms)
 	c.metrics.EquipmentExtracted = len(equipment)
 
+	// Pre-index equipment by room to avoid O(rooms × equipment) scans
+	equipByRoom := make(map[string][]Equipment, len(equipment))
+	for _, eq := range equipment {
+		roomID := eq["room"]
+		if roomID == "" {
+			continue
+		}
+		equipByRoom[roomID] = append(equipByRoom[roomID], Equipment{
+			Tag:    eq["tag"],
+			Name:   eq["name"],
+			Type:   eq["type"],
+			Status: "operational",
+		})
+	}
+
 	// Build final structure
 	floor := Floor{
 		ID:    "1",
@@ -188,16 +203,9 @@ func (c *StreamingPDFConverter) ConvertToBIMStreaming(ctx context.Context, input
 			}
 		}
 
-		// Add equipment to rooms
-		for _, eq := range equipment {
-			if eq["room"] == room.Number {
-				room.Equipment = append(room.Equipment, Equipment{
-					Tag:    eq["tag"],
-					Name:   eq["name"],
-					Type:   eq["type"],
-					Status: "operational",
-				})
-			}
+		// Add equipment to rooms using pre-indexed map (preserves original encounter order)
+		if eqs, ok := equipByRoom[room.Number]; ok {
+			room.Equipment = append(room.Equipment, eqs...)
 		}
 
 		floor.Rooms = append(floor.Rooms, room)

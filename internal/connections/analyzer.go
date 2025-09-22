@@ -194,31 +194,94 @@ func (a *Analyzer) findAllPaths(ctx context.Context, current, target string, vis
 func (a *Analyzer) FindFailurePoints(ctx context.Context, floorPlanID string) ([]*models.Equipment, error) {
 	failurePoints := []*models.Equipment{}
 
-	// Get all equipment
-	query := `
-		SELECT DISTINCT e.id 
-		FROM equipment e
-		WHERE e.floor_plan_id = ?
-	`
+	// Get candidate equipment IDs on this floor plan
+	queryIDs := `
+        SELECT DISTINCT e.id 
+        FROM equipment e
+        WHERE e.floor_plan_id = ?
+    `
 
-	rows, err := a.db.Query(ctx, query, floorPlanID)
+	rows, err := a.db.Query(ctx, queryIDs, floorPlanID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
+	// Collect IDs
+	ids := make([]string, 0, 256)
 	for rows.Next() {
-		var equipID string
-		if err := rows.Scan(&equipID); err != nil {
-			continue
+		var id string
+		if err := rows.Scan(&id); err == nil {
+			ids = append(ids, id)
 		}
+	}
 
-		// Check if this is a single point of failure
-		if a.isSinglePointOfFailure(ctx, equipID) {
-			equipment, err := a.db.GetEquipment(ctx, equipID)
-			if err == nil {
-				failurePoints = append(failurePoints, equipment)
-			}
+	if len(ids) == 0 {
+		return failurePoints, nil
+	}
+
+	// Bulk-evaluate SOPF in SQL (heuristic similar to isSinglePointOfFailure)
+	// Simplified: one upstream and >2 downstream connections
+	// Note: uses LEFT JOINs and GROUP BY to prefilter candidates
+	sopfQuery := `
+        WITH conn AS (
+            SELECT c.from_equipment_id, c.to_equipment_id
+            FROM connections c
+        ), stats AS (
+            SELECT e.id,
+                   SUM(CASE WHEN c1.to_equipment_id = e.id THEN 1 ELSE 0 END) AS upstream_cnt,
+                   SUM(CASE WHEN c2.from_equipment_id = e.id THEN 1 ELSE 0 END) AS downstream_cnt
+            FROM equipment e
+            LEFT JOIN conn c1 ON c1.to_equipment_id = e.id
+            LEFT JOIN conn c2 ON c2.from_equipment_id = e.id
+            WHERE e.id = ANY($1)
+            GROUP BY e.id
+        )
+        SELECT id FROM stats WHERE upstream_cnt = 1 AND downstream_cnt > 2
+    `
+
+	// Execute bulk SOPF query
+	sopfRows, err := a.db.Query(ctx, sopfQuery, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer sopfRows.Close()
+
+	candidateIDs := make([]string, 0, len(ids))
+	for sopfRows.Next() {
+		var id string
+		if err := sopfRows.Scan(&id); err == nil {
+			candidateIDs = append(candidateIDs, id)
+		}
+	}
+
+	if len(candidateIDs) == 0 {
+		return failurePoints, nil
+	}
+
+	// Bulk fetch equipment details
+	// Note: use a helper to fetch by IDs in one call if available; otherwise fall back to individual fetches
+	placeholders := make([]interface{}, len(candidateIDs))
+	for i, id := range candidateIDs {
+		placeholders[i] = id
+	}
+
+	eqQuery := `
+        SELECT id, name, type, status, room_id, location_x, location_y, location_z
+        FROM equipment
+        WHERE id = ANY($1)
+    `
+
+	eqRows, err := a.db.Query(ctx, eqQuery, candidateIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer eqRows.Close()
+
+	for eqRows.Next() {
+		e := &models.Equipment{}
+		if err := eqRows.Scan(&e.ID, &e.Name, &e.Type, &e.Status, &e.RoomID, &e.Location.X, &e.Location.Y, &e.Location.Z); err == nil {
+			failurePoints = append(failurePoints, e)
 		}
 	}
 

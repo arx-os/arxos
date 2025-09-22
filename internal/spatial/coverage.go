@@ -433,12 +433,21 @@ func (ct *CoverageTracker) mergeOverlappingRegions(newRegion ScannedRegion) bool
 }
 
 func (ct *CoverageTracker) regionsOverlap(r1, r2 ScannedRegion) bool {
-	// Simplified check - real implementation would use computational geometry
-	// For now, just check if any points are very close
+	// Fast-path: bounding box overlap check
+	minX1, minY1, maxX1, maxY1 := ct.getRegionBounds(r1.Region.Boundary)
+	minX2, minY2, maxX2, maxY2 := ct.getRegionBounds(r2.Region.Boundary)
+
+	// If bounding boxes do not intersect, regions cannot overlap
+	if maxX1 < minX2 || maxX2 < minX1 || maxY1 < minY2 || maxY2 < minY1 {
+		return false
+	}
+
+	// Fallback: naive point proximity check (placeholder for polygon intersection)
 	for _, p1 := range r1.Region.Boundary {
 		for _, p2 := range r2.Region.Boundary {
-			dist := math.Sqrt(math.Pow(p1.X-p2.X, 2) + math.Pow(p1.Y-p2.Y, 2))
-			if dist < 0.1 { // Within 10cm
+			dx := p1.X - p2.X
+			dy := p1.Y - p2.Y
+			if dx*dx+dy*dy < 0.01 { // Within 10cm squared
 				return true
 			}
 		}
